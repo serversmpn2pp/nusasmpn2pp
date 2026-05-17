@@ -3,49 +3,48 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Siswa extends Model
+class Kelas extends Model
 {
-    protected $table = 'siswa';
+    protected $table = 'kelas';
 
     protected $fillable = [
-        'nama_lengkap',
-        'nis',
-        'nisn',
-        'nik',
-        'foto',
-        'jenis_kelamin',
-        'tempat_lahir',
-        'tanggal_lahir',
-        'agama',
-        'status_dalam_keluarga',
-        'anak_ke',
-        'nama_ayah',
-        'nama_ibu',
-        'pekerjaan_ayah',
-        'pekerjaan_ibu',
-        'alamat',
-        'sekolah_asal',
-        'keterangan',
+        'tahun_pelajaran_id',
+        'wali_kelas_id',
+        'nama',
+        'tingkat',
+        'kapasitas',
         'aktif',
+        'keterangan',
     ];
 
     protected $casts = [
-        'tanggal_lahir' => 'date',
-        'anak_ke' => 'integer',
+        'tingkat' => 'integer',
+        'kapasitas' => 'integer',
         'aktif' => 'boolean',
     ];
+
+    public function tahunPelajaran(): BelongsTo
+    {
+        return $this->belongsTo(TahunPelajaran::class);
+    }
+
+    public function waliKelas(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'wali_kelas_id');
+    }
 
     public function anggotaKelas(): HasMany
     {
         return $this->hasMany(AnggotaKelas::class);
     }
 
-    public function kelas(): BelongsToMany
+    public function siswa(): BelongsToMany
     {
-        return $this->belongsToMany(Kelas::class, 'anggota_kelas')
+        return $this->belongsToMany(Siswa::class, 'anggota_kelas')
             ->withPivot([
                 'id',
                 'tahun_pelajaran_id',

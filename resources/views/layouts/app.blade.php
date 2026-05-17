@@ -35,6 +35,10 @@
                 box-sizing: border-box;
             }
 
+            html {
+                overflow-x: hidden;
+            }
+
             body {
                 margin: 0;
                 min-height: 100vh;
@@ -42,6 +46,7 @@
                 color: var(--text);
                 font-family: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 line-height: 1.5;
+                overflow-x: hidden;
             }
 
             a {
@@ -311,6 +316,10 @@
                 grid-template-columns: minmax(0, 1fr) 180px auto;
                 gap: 12px;
                 align-items: end;
+            }
+
+            .filter-grid-wide {
+                grid-template-columns: minmax(0, 1fr) 220px 180px auto;
             }
 
             .field label,
@@ -651,6 +660,7 @@
                 }
 
                 .filter-grid,
+                .filter-grid-wide,
                 .form-shell,
                 .detail-shell,
                 .form-grid,
@@ -755,6 +765,12 @@
                         </a>
                         <a href="{{ route('siswa.index') }}" class="nav-link {{ request()->routeIs('siswa.*') ? 'active' : '' }}">
                             Siswa
+                        </a>
+                        <a href="{{ route('tahun-pelajaran.index') }}" class="nav-link {{ request()->routeIs('tahun-pelajaran.*') ? 'active' : '' }}">
+                            Tahun Pelajaran
+                        </a>
+                        <a href="{{ route('kelas.index') }}" class="nav-link {{ request()->routeIs('kelas.*') ? 'active' : '' }}">
+                            Kelas
                         </a>
                     </nav>
                 </div>

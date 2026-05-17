@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pegawai extends Model
 {
@@ -40,4 +41,9 @@ class Pegawai extends Model
         'tanggal_mulai_bertugas' => 'date',
         'aktif' => 'boolean',
     ];
+
+    public function kelasSebagaiWali(): HasMany
+    {
+        return $this->hasMany(Kelas::class, 'wali_kelas_id');
+    }
 }

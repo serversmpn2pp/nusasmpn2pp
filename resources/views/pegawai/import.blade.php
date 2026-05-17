@@ -13,7 +13,6 @@
             <a href="{{ asset('templates/template_import_pegawai.xlsx') }}" class="button button-primary" download>
                 Unduh template Excel
             </a>
-            <a href="{{ route('pegawai.create') }}" class="button button-muted">Tambah manual</a>
             <a href="{{ route('pegawai.index') }}" class="button button-muted">Kembali</a>
         </div>
     </div>
