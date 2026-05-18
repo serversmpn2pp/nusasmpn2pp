@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Pegawai extends Model
 {
@@ -45,5 +46,10 @@ class Pegawai extends Model
     public function kelasSebagaiWali(): HasMany
     {
         return $this->hasMany(Kelas::class, 'wali_kelas_id');
+    }
+
+    public function pengguna(): HasOne
+    {
+        return $this->hasOne(Pengguna::class);
     }
 }

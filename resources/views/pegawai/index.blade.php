@@ -35,7 +35,9 @@
     @endif
 
     @if (session('ringkasan_import'))
-        @php($ringkasan = session('ringkasan_import'))
+        @php
+            $ringkasan = session('ringkasan_import');
+        @endphp
         <div class="panel panel-pad" style="margin-bottom: 20px;">
             <h2 class="panel-title">Ringkasan import</h2>
             <div class="stats-grid" style="margin: 16px 0 0;">

@@ -28,6 +28,17 @@
         </div>
     @endif
 
+    @if ($tahunPelajaranAktif)
+        <div class="alert">
+            Kolom <strong>KLS</strong> pada Excel akan menempatkan siswa ke kelas tahun pelajaran aktif:
+            <strong>{{ $tahunPelajaranAktif->nama }}</strong>. Kelas aktif tersedia: {{ $jumlahKelasAktif }}.
+        </div>
+    @else
+        <div class="alert alert-danger">
+            Belum ada tahun pelajaran aktif. Data siswa tetap bisa dibaca, tetapi penempatan ke kelas belum bisa dilakukan.
+        </div>
+    @endif
+
     <form action="{{ route('siswa.import.store') }}" method="POST" enctype="multipart/form-data" class="panel panel-pad">
         @csrf
 
@@ -35,7 +46,7 @@
             <div class="field span-2">
                 <label for="berkas_excel">Berkas Excel siswa</label>
                 <input id="berkas_excel" name="berkas_excel" type="file" accept=".xlsx" class="file-input" required>
-                <p class="help-text">Format yang diterima: .xlsx. Gunakan template yang tersedia agar posisi kolom langsung sesuai dengan NUSA.</p>
+                <p class="help-text">Format yang diterima: .xlsx. Isi kolom KLS sesuai nama kelas aktif, misalnya VII.A, VIII.B, atau IX.C.</p>
             </div>
         </div>
 

@@ -140,6 +140,39 @@
                 gap: 8px;
             }
 
+            .header-tools {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 12px;
+            }
+
+            .account-menu {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+
+            .account-name {
+                display: inline-flex;
+                min-height: 36px;
+                align-items: center;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                background: #fff;
+                padding: 7px 10px;
+                color: var(--primary-dark);
+                font-size: .85rem;
+                font-weight: 800;
+            }
+
+            .logout-form {
+                margin: 0;
+            }
+
             .nav-link.active {
                 background: var(--primary-soft);
                 color: var(--primary-dark);
@@ -236,6 +269,12 @@
 
             .button-full {
                 width: 100%;
+            }
+
+            .button-sm {
+                min-height: 36px;
+                padding: 8px 10px;
+                font-size: .84rem;
             }
 
             .panel {
@@ -443,6 +482,20 @@
                 font-size: .9rem;
             }
 
+            .input-sm,
+            .select-sm {
+                min-height: 38px;
+                padding: 8px 10px;
+                font-size: .9rem;
+            }
+
+            .member-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+
             .help-text {
                 margin: 6px 0 0;
                 color: var(--muted);
@@ -499,6 +552,10 @@
 
             .employee-table tbody tr:hover {
                 background: #fafafa;
+            }
+
+            .placement-table {
+                min-width: 1120px;
             }
 
             .person {
@@ -685,8 +742,19 @@
                 }
 
                 .actions,
-                .form-actions {
+                .form-actions,
+                .member-actions {
                     flex-direction: column;
+                }
+
+                .header-tools,
+                .account-menu {
+                    align-items: stretch;
+                    flex-direction: column;
+                }
+
+                .account-name {
+                    justify-content: center;
                 }
 
                 .button {
@@ -708,6 +776,50 @@
                 .pagination-simple {
                     flex-direction: column;
                     align-items: stretch;
+                }
+
+                .placement-table {
+                    min-width: 0;
+                }
+
+                .placement-table thead {
+                    display: none;
+                }
+
+                .placement-table,
+                .placement-table tbody,
+                .placement-table tr,
+                .placement-table td {
+                    display: block;
+                    width: 100%;
+                }
+
+                .placement-table tr {
+                    border-bottom: 1px solid var(--line);
+                    padding: 14px 16px;
+                }
+
+                .placement-table tr:last-child {
+                    border-bottom: 0;
+                }
+
+                .placement-table td {
+                    border-bottom: 0;
+                    padding: 8px 0;
+                }
+
+                .placement-table td::before {
+                    content: attr(data-label);
+                    display: block;
+                    margin-bottom: 5px;
+                    color: var(--muted);
+                    font-size: .76rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                }
+
+                .placement-table tbody tr:hover {
+                    background: transparent;
                 }
             }
 
@@ -759,20 +871,36 @@
                         </span>
                     </a>
 
-                    <nav>
-                        <a href="{{ route('pegawai.index') }}" class="nav-link {{ request()->routeIs('pegawai.*') ? 'active' : '' }}">
-                            Pegawai
-                        </a>
-                        <a href="{{ route('siswa.index') }}" class="nav-link {{ request()->routeIs('siswa.*') ? 'active' : '' }}">
-                            Siswa
-                        </a>
-                        <a href="{{ route('tahun-pelajaran.index') }}" class="nav-link {{ request()->routeIs('tahun-pelajaran.*') ? 'active' : '' }}">
-                            Tahun Pelajaran
-                        </a>
-                        <a href="{{ route('kelas.index') }}" class="nav-link {{ request()->routeIs('kelas.*') ? 'active' : '' }}">
-                            Kelas
-                        </a>
-                    </nav>
+                    <div class="header-tools">
+                        <nav>
+                            <a href="{{ route('pegawai.index') }}" class="nav-link {{ request()->routeIs('pegawai.*') ? 'active' : '' }}">
+                                Pegawai
+                            </a>
+                            <a href="{{ route('siswa.index') }}" class="nav-link {{ request()->routeIs('siswa.*') ? 'active' : '' }}">
+                                Siswa
+                            </a>
+                            <a href="{{ route('tahun-pelajaran.index') }}" class="nav-link {{ request()->routeIs('tahun-pelajaran.*') ? 'active' : '' }}">
+                                Tahun Pelajaran
+                            </a>
+                            <a href="{{ route('kelas.index') }}" class="nav-link {{ request()->routeIs('kelas.*') ? 'active' : '' }}">
+                                Kelas
+                            </a>
+                            <a href="{{ route('kenaikan-kelas.index') }}" class="nav-link {{ request()->routeIs('kenaikan-kelas.*') ? 'active' : '' }}">
+                                Kenaikan Kelas
+                            </a>
+                        </nav>
+
+                        @auth
+                            <div class="account-menu">
+                                <span class="account-name">{{ auth()->user()->nama }}</span>
+                                <a href="{{ route('kata-sandi.edit') }}" class="button button-muted button-sm">Ganti Password</a>
+                                <form action="{{ route('logout') }}" method="POST" class="logout-form">
+                                    @csrf
+                                    <button type="submit" class="button button-danger button-sm">Keluar</button>
+                                </form>
+                            </div>
+                        @endauth
+                    </div>
                 </div>
             </div>
         </header>

@@ -35,7 +35,9 @@
     @endif
 
     @if (session('ringkasan_import'))
-        @php($ringkasan = session('ringkasan_import'))
+        @php
+            $ringkasan = session('ringkasan_import');
+        @endphp
         <div class="panel panel-pad" style="margin-bottom: 20px;">
             <h2 class="panel-title">Ringkasan import</h2>
             <div class="stats-grid" style="margin: 16px 0 0;">
@@ -51,11 +53,23 @@
                     <p class="stat-label">Diperbarui</p>
                     <p class="stat-value">{{ $ringkasan['diperbarui'] }}</p>
                 </div>
+                <div class="panel stat active">
+                    <p class="stat-label">Masuk kelas</p>
+                    <p class="stat-value">{{ $ringkasan['ditempatkan_kelas'] ?? 0 }}</p>
+                </div>
+                <div class="panel stat inactive">
+                    <p class="stat-label">Gagal kelas</p>
+                    <p class="stat-value">{{ $ringkasan['gagal_ditempatkan'] ?? 0 }}</p>
+                </div>
                 <div class="panel stat">
                     <p class="stat-label">Dilewati</p>
                     <p class="stat-value">{{ $ringkasan['dilewati'] }}</p>
                 </div>
             </div>
+
+            @if (! empty($ringkasan['tahun_pelajaran']))
+                <p class="help-text">Penempatan kelas memakai tahun pelajaran aktif: {{ $ringkasan['tahun_pelajaran'] }}.</p>
+            @endif
 
             @if (! empty($ringkasan['kelas_ditemukan']))
                 <p class="help-text">Kelas dari Excel: {{ implode(', ', $ringkasan['kelas_ditemukan']) }}.</p>

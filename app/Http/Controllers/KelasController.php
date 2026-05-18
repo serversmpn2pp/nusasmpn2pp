@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Kelas;
 use App\Models\Pegawai;
+use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -106,8 +107,16 @@ class KelasController extends Controller
             ->orderBy('nomor_absen')
             ->orderBy('id')
             ->get();
+        $siswaSudahMasukTahunIni = $kelas->tahunPelajaran
+            ? $kelas->tahunPelajaran->anggotaKelas()->pluck('siswa_id')
+            : collect();
+        $siswaTersedia = Siswa::query()
+            ->where('aktif', true)
+            ->whereNotIn('id', $siswaSudahMasukTahunIni)
+            ->orderBy('nama_lengkap')
+            ->get(['id', 'nama_lengkap', 'nis', 'nisn']);
 
-        return view('kelas.show', compact('kelas', 'anggotaKelas'));
+        return view('kelas.show', compact('kelas', 'anggotaKelas', 'siswaTersedia'));
     }
 
     public function edit(Kelas $kelas)

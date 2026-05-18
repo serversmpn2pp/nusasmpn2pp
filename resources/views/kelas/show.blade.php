@@ -23,6 +23,17 @@
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <strong>Ada data anggota kelas yang perlu diperbaiki.</strong>
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="detail-shell">
         <aside class="panel panel-pad">
             <div class="detail-profile">
@@ -79,31 +90,103 @@
                 </dl>
             </section>
 
+            <section class="panel panel-pad">
+                <h2 class="panel-title">Tambah Siswa ke Kelas</h2>
+
+                @php
+                    $kelasPenuh = $kelas->kapasitas && $kelas->anggota_kelas_count >= $kelas->kapasitas;
+                @endphp
+
+                @if ($kelasPenuh)
+                    <p class="help-text">Kapasitas kelas sudah penuh. Keluarkan siswa dari kelas ini lebih dulu jika perlu mengganti anggota.</p>
+                @elseif ($siswaTersedia->isEmpty())
+                    <p class="help-text">Belum ada siswa aktif yang bebas dari kelas pada tahun pelajaran ini.</p>
+                @else
+                    <form action="{{ route('anggota-kelas.store', $kelas) }}" method="POST">
+                        @csrf
+
+                        <div class="form-grid">
+                            <div class="field span-2">
+                                <label for="siswa_id">Siswa</label>
+                                <select id="siswa_id" name="siswa_id" class="select" required>
+                                    <option value="">Pilih siswa</option>
+                                    @foreach ($siswaTersedia as $siswa)
+                                        <option value="{{ $siswa->id }}" @selected((string) old('siswa_id') === (string) $siswa->id)>
+                                            {{ $siswa->nama_lengkap }}{{ $siswa->nisn ? ' - NISN ' . $siswa->nisn : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="field">
+                                <label for="nomor_absen">Nomor absen</label>
+                                <input id="nomor_absen" name="nomor_absen" type="number" min="1" max="500" value="{{ old('nomor_absen') }}" class="input">
+                            </div>
+
+                            <div class="field">
+                                <label for="tanggal_masuk">Tanggal masuk</label>
+                                <input id="tanggal_masuk" name="tanggal_masuk" type="date" value="{{ old('tanggal_masuk', $kelas->tahunPelajaran?->tanggal_mulai?->format('Y-m-d')) }}" class="input">
+                            </div>
+
+                            <div class="field span-2">
+                                <label for="keterangan">Keterangan</label>
+                                <textarea id="keterangan" name="keterangan" class="textarea">{{ old('keterangan') }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 20px;">
+                            <button type="submit" class="button button-primary">Tambah ke kelas</button>
+                        </div>
+                    </form>
+                @endif
+            </section>
+
             <section class="panel">
                 <div class="desktop-only table-wrap">
-                    <table class="employee-table">
+                    <table class="employee-table" style="min-width: 1100px;">
                         <thead>
                             <tr>
                                 <th>No. absen</th>
                                 <th>Siswa</th>
-                                <th>Status</th>
                                 <th>Tanggal masuk</th>
+                                <th>Keterangan</th>
+                                <th class="text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($anggotaKelas as $item)
                                 <tr>
-                                    <td>{{ $item->nomor_absen ?: '-' }}</td>
+                                    <td style="width: 120px;">
+                                        <form id="ubah-anggota-desktop-{{ $item->id }}" action="{{ route('anggota-kelas.update', $item) }}" method="POST">
+                                            @csrf
+                                            @method('PATCH')
+                                        </form>
+                                        <input form="ubah-anggota-desktop-{{ $item->id }}" name="nomor_absen" type="number" min="1" max="500" value="{{ $item->nomor_absen }}" class="input input-sm">
+                                    </td>
                                     <td>
                                         <p class="person-name">{{ $item->siswa?->nama_lengkap ?: '-' }}</p>
-                                        <p class="person-meta">NISN: {{ $item->siswa?->nisn ?: '-' }}</p>
+                                        <p class="person-meta">NIS: {{ $item->siswa?->nis ?: '-' }} · NISN: {{ $item->siswa?->nisn ?: '-' }}</p>
                                     </td>
-                                    <td>{{ $item->status_keanggotaan }}</td>
-                                    <td>{{ $item->tanggal_masuk ? $item->tanggal_masuk->format('d-m-Y') : '-' }}</td>
+                                    <td style="width: 160px;">
+                                        <input form="ubah-anggota-desktop-{{ $item->id }}" name="tanggal_masuk" type="date" value="{{ $item->tanggal_masuk ? $item->tanggal_masuk->format('Y-m-d') : '' }}" class="input input-sm">
+                                    </td>
+                                    <td>
+                                        <input form="ubah-anggota-desktop-{{ $item->id }}" name="keterangan" type="text" value="{{ $item->keterangan }}" class="input input-sm">
+                                    </td>
+                                    <td>
+                                        <div class="member-actions">
+                                            <button form="ubah-anggota-desktop-{{ $item->id }}" type="submit" class="button button-dark">Simpan</button>
+                                            <form action="{{ route('anggota-kelas.destroy', $item) }}" method="POST" onsubmit="return confirm('Keluarkan siswa ini dari kelas? Data siswa tidak akan dihapus.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="button button-danger">Keluarkan</button>
+                                            </form>
+                                        </div>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="empty-state">Belum ada siswa di kelas ini.</td>
+                                    <td colspan="5" class="empty-state">Belum ada siswa di kelas ini.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -116,9 +199,40 @@
                             <div class="mobile-card-head">
                                 <div>
                                     <p class="person-name">{{ $item->siswa?->nama_lengkap ?: '-' }}</p>
-                                    <p class="person-meta">No. absen {{ $item->nomor_absen ?: '-' }}</p>
+                                    <p class="person-meta">NISN: {{ $item->siswa?->nisn ?: '-' }}</p>
                                 </div>
-                                <span class="badge badge-active">{{ $item->status_keanggotaan }}</span>
+                                <span class="badge badge-active">No. {{ $item->nomor_absen ?: '-' }}</span>
+                            </div>
+
+                            <form id="ubah-anggota-mobile-{{ $item->id }}" action="{{ route('anggota-kelas.update', $item) }}" method="POST" style="margin-top: 14px;">
+                                @csrf
+                                @method('PATCH')
+
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="nomor_absen_mobile_{{ $item->id }}">Nomor absen</label>
+                                        <input id="nomor_absen_mobile_{{ $item->id }}" name="nomor_absen" type="number" min="1" max="500" value="{{ $item->nomor_absen }}" class="input input-sm">
+                                    </div>
+
+                                    <div class="field">
+                                        <label for="tanggal_masuk_mobile_{{ $item->id }}">Tanggal masuk</label>
+                                        <input id="tanggal_masuk_mobile_{{ $item->id }}" name="tanggal_masuk" type="date" value="{{ $item->tanggal_masuk ? $item->tanggal_masuk->format('Y-m-d') : '' }}" class="input input-sm">
+                                    </div>
+
+                                    <div class="field span-2">
+                                        <label for="keterangan_mobile_{{ $item->id }}">Keterangan</label>
+                                        <input id="keterangan_mobile_{{ $item->id }}" name="keterangan" type="text" value="{{ $item->keterangan }}" class="input input-sm">
+                                    </div>
+                                </div>
+                            </form>
+
+                            <div class="member-actions" style="margin-top: 14px;">
+                                <button form="ubah-anggota-mobile-{{ $item->id }}" type="submit" class="button button-dark">Simpan</button>
+                                <form action="{{ route('anggota-kelas.destroy', $item) }}" method="POST" onsubmit="return confirm('Keluarkan siswa ini dari kelas? Data siswa tidak akan dihapus.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="button button-danger">Keluarkan</button>
+                                </form>
                             </div>
                         </article>
                     @empty

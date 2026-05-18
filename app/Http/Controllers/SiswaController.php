@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AnggotaKelas;
+use App\Models\Kelas;
 use App\Models\Siswa;
+use App\Models\TahunPelajaran;
 use App\Support\PembacaExcelSiswa;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -134,7 +137,12 @@ class SiswaController extends Controller
 
     public function createImport()
     {
-        return view('siswa.import');
+        $tahunPelajaranAktif = TahunPelajaran::where('aktif', true)->first();
+        $jumlahKelasAktif = $tahunPelajaranAktif
+            ? Kelas::where('tahun_pelajaran_id', $tahunPelajaranAktif->id)->where('aktif', true)->count()
+            : 0;
+
+        return view('siswa.import', compact('tahunPelajaranAktif', 'jumlahKelasAktif'));
     }
 
     public function storeImport(Request $request, PembacaExcelSiswa $pembacaExcelSiswa)
@@ -149,6 +157,8 @@ class SiswaController extends Controller
             'dibaca' => count($barisSiswa),
             'ditambahkan' => 0,
             'diperbarui' => 0,
+            'ditempatkan_kelas' => 0,
+            'gagal_ditempatkan' => 0,
             'dilewati' => 0,
             'kelas_ditemukan' => [],
             'catatan' => [],
@@ -158,6 +168,13 @@ class SiswaController extends Controller
             'nis' => [],
             'nik' => [],
         ];
+        $tahunPelajaranAktif = TahunPelajaran::where('aktif', true)->first();
+        $kelasAktif = $tahunPelajaranAktif
+            ? Kelas::where('tahun_pelajaran_id', $tahunPelajaranAktif->id)
+                ->where('aktif', true)
+                ->get()
+                ->keyBy(fn (Kelas $kelas) => $this->normalisasiNamaKelas($kelas->nama))
+            : collect();
 
         foreach ($barisSiswa as $baris) {
             $dataSiswa = $baris['data'];
@@ -174,9 +191,18 @@ class SiswaController extends Controller
                         $siswa->update($dataSiswa);
                         $ringkasan['diperbarui']++;
                     } else {
-                        Siswa::create($dataSiswa);
+                        $siswa = Siswa::create($dataSiswa);
                         $ringkasan['ditambahkan']++;
                     }
+
+                    $this->tempatkanSiswaSaatImport(
+                        $siswa,
+                        $baris['kelas_saat_import'],
+                        $baris['nomor_baris'],
+                        $tahunPelajaranAktif,
+                        $kelasAktif,
+                        $ringkasan,
+                    );
                 } catch (QueryException $exception) {
                     $ringkasan['dilewati']++;
                     $ringkasan['catatan'][] = 'Baris ' . $baris['nomor_baris'] . ': data tidak disimpan karena bentrok dengan data unik yang sudah ada.';
@@ -189,6 +215,7 @@ class SiswaController extends Controller
         }
 
         $ringkasan['kelas_ditemukan'] = array_keys($ringkasan['kelas_ditemukan']);
+        $ringkasan['tahun_pelajaran'] = $tahunPelajaranAktif?->nama;
 
         return redirect()
             ->route('siswa.index')
@@ -253,6 +280,96 @@ class SiswaController extends Controller
                 $query->orWhere('nik', $nik);
             })
             ->first();
+    }
+
+    private function tempatkanSiswaSaatImport(
+        Siswa $siswa,
+        ?string $namaKelas,
+        int $nomorBaris,
+        ?TahunPelajaran $tahunPelajaranAktif,
+        $kelasAktif,
+        array &$ringkasan,
+    ): void {
+        if (! $namaKelas) {
+            return;
+        }
+
+        if (! $tahunPelajaranAktif) {
+            $ringkasan['gagal_ditempatkan']++;
+            $ringkasan['catatan'][] = 'Baris ' . $nomorBaris . ': siswa belum ditempatkan karena belum ada tahun pelajaran aktif.';
+
+            return;
+        }
+
+        $kelas = $kelasAktif->get($this->normalisasiNamaKelas($namaKelas));
+
+        if (! $kelas) {
+            $ringkasan['gagal_ditempatkan']++;
+            $ringkasan['catatan'][] = 'Baris ' . $nomorBaris . ': kelas ' . $namaKelas . ' tidak ditemukan pada tahun pelajaran aktif.';
+
+            return;
+        }
+
+        $anggotaKelas = AnggotaKelas::where('tahun_pelajaran_id', $tahunPelajaranAktif->id)
+            ->where('siswa_id', $siswa->id)
+            ->first();
+
+        if ($anggotaKelas && $anggotaKelas->kelas_id === $kelas->id) {
+            return;
+        }
+
+        if ($this->kelasSudahPenuh($kelas)) {
+            $ringkasan['gagal_ditempatkan']++;
+            $ringkasan['catatan'][] = 'Baris ' . $nomorBaris . ': kelas ' . $kelas->nama . ' sudah penuh, siswa belum ditempatkan.';
+
+            return;
+        }
+
+        $dataAnggotaKelas = [
+            'tahun_pelajaran_id' => $tahunPelajaranAktif->id,
+            'kelas_id' => $kelas->id,
+            'siswa_id' => $siswa->id,
+            'nomor_absen' => $this->ambilNomorAbsenBerikutnya($kelas),
+            'status_keanggotaan' => 'aktif',
+            'tanggal_masuk' => $tahunPelajaranAktif->tanggal_mulai,
+            'keterangan' => 'Import Excel siswa',
+        ];
+
+        if ($anggotaKelas) {
+            $anggotaKelas->update($dataAnggotaKelas);
+        } else {
+            AnggotaKelas::create($dataAnggotaKelas);
+        }
+
+        $ringkasan['ditempatkan_kelas']++;
+    }
+
+    private function kelasSudahPenuh(Kelas $kelas): bool
+    {
+        return $kelas->kapasitas
+            && $kelas->anggotaKelas()->count() >= $kelas->kapasitas;
+    }
+
+    private function ambilNomorAbsenBerikutnya(Kelas $kelas): ?int
+    {
+        $nomorTerpakai = $kelas->anggotaKelas()
+            ->whereNotNull('nomor_absen')
+            ->pluck('nomor_absen')
+            ->mapWithKeys(fn ($nomor) => [(int) $nomor => true]);
+        $batas = $kelas->kapasitas ?: max(($nomorTerpakai->keys()->max() ?? 0) + 1, 500);
+
+        for ($nomor = 1; $nomor <= $batas; $nomor++) {
+            if (! $nomorTerpakai->has($nomor)) {
+                return $nomor;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalisasiNamaKelas(string $namaKelas): string
+    {
+        return preg_replace('/[^A-Z0-9]/', '', mb_strtoupper($namaKelas));
     }
 
     private function cekDuplikatDiBerkas(array $baris, array &$identitasDiBerkas): ?string
