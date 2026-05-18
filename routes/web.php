@@ -5,6 +5,7 @@ use App\Http\Controllers\AnggotaKelasController;
 use App\Http\Controllers\AutentikasiController;
 use App\Http\Controllers\KenaikanKelasController;
 use App\Http\Controllers\KelasController;
+use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\TahunPelajaranController;
@@ -36,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('siswa', SiswaController::class);
 
     Route::resource('tahun-pelajaran', TahunPelajaranController::class);
+    Route::resource('mata-pelajaran', MataPelajaranController::class);
     Route::get('kenaikan-kelas', [KenaikanKelasController::class, 'index'])->name('kenaikan-kelas.index');
     Route::post('kenaikan-kelas', [KenaikanKelasController::class, 'store'])->name('kenaikan-kelas.store');
     Route::post('kelas/{kelas}/anggota-kelas', [AnggotaKelasController::class, 'store'])->name('anggota-kelas.store');

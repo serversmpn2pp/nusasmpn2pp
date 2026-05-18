@@ -885,6 +885,9 @@
                             <a href="{{ route('kelas.index') }}" class="nav-link {{ request()->routeIs('kelas.*') ? 'active' : '' }}">
                                 Kelas
                             </a>
+                            <a href="{{ route('mata-pelajaran.index') }}" class="nav-link {{ request()->routeIs('mata-pelajaran.*') ? 'active' : '' }}">
+                                Mata Pelajaran
+                            </a>
                             <a href="{{ route('kenaikan-kelas.index') }}" class="nav-link {{ request()->routeIs('kenaikan-kelas.*') ? 'active' : '' }}">
                                 Kenaikan Kelas
                             </a>

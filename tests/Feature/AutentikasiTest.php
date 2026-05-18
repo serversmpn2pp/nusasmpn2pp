@@ -20,4 +20,11 @@ class AutentikasiTest extends TestCase
 
         $response->assertRedirect(route('login'));
     }
+
+    public function test_halaman_mata_pelajaran_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/mata-pelajaran');
+
+        $response->assertRedirect(route('login'));
+    }
 }
