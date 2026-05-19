@@ -6,25 +6,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class AnggotaKelas extends Model
+class GuruMataPelajaran extends Model
 {
-    protected $table = 'anggota_kelas';
+    protected $table = 'guru_mata_pelajaran';
 
     protected $fillable = [
         'tahun_pelajaran_id',
         'kelas_id',
-        'siswa_id',
-        'nomor_absen',
-        'status_keanggotaan',
-        'tanggal_masuk',
-        'tanggal_keluar',
+        'mata_pelajaran_id',
+        'pegawai_id',
+        'jenis_penugasan',
+        'aktif',
         'keterangan',
     ];
 
     protected $casts = [
-        'nomor_absen' => 'integer',
-        'tanggal_masuk' => 'date',
-        'tanggal_keluar' => 'date',
+        'aktif' => 'boolean',
     ];
 
     public function tahunPelajaran(): BelongsTo
@@ -37,13 +34,18 @@ class AnggotaKelas extends Model
         return $this->belongsTo(Kelas::class);
     }
 
-    public function siswa(): BelongsTo
+    public function mataPelajaran(): BelongsTo
     {
-        return $this->belongsTo(Siswa::class);
+        return $this->belongsTo(MataPelajaran::class);
     }
 
-    public function absensiSiswa(): HasMany
+    public function pegawai(): BelongsTo
     {
-        return $this->hasMany(AbsensiSiswa::class);
+        return $this->belongsTo(Pegawai::class);
+    }
+
+    public function komponenNilai(): HasMany
+    {
+        return $this->hasMany(KomponenNilai::class);
     }
 }

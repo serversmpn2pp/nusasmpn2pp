@@ -599,6 +599,21 @@
                 color: var(--warning-text);
             }
 
+            .badge-danger {
+                background: var(--danger-soft);
+                color: var(--danger);
+            }
+
+            .badge-warning {
+                background: var(--accent-soft);
+                color: var(--accent-text);
+            }
+
+            .badge-muted {
+                background: var(--soft);
+                color: #52525b;
+            }
+
             .desktop-only {
                 display: block;
             }
@@ -879,6 +894,9 @@
                             <a href="{{ route('siswa.index') }}" class="nav-link {{ request()->routeIs('siswa.*') ? 'active' : '' }}">
                                 Siswa
                             </a>
+                            <a href="{{ route('kartu-pelajar.index') }}" class="nav-link {{ request()->routeIs('kartu-pelajar.*') ? 'active' : '' }}">
+                                Kartu Pelajar
+                            </a>
                             <a href="{{ route('tahun-pelajaran.index') }}" class="nav-link {{ request()->routeIs('tahun-pelajaran.*') ? 'active' : '' }}">
                                 Tahun Pelajaran
                             </a>
@@ -887,6 +905,33 @@
                             </a>
                             <a href="{{ route('mata-pelajaran.index') }}" class="nav-link {{ request()->routeIs('mata-pelajaran.*') ? 'active' : '' }}">
                                 Mata Pelajaran
+                            </a>
+                            <a href="{{ route('guru-mata-pelajaran.index') }}" class="nav-link {{ request()->routeIs('guru-mata-pelajaran.*') ? 'active' : '' }}">
+                                Guru Mapel
+                            </a>
+                            <a href="{{ route('skema-bobot-nilai.index') }}" class="nav-link {{ request()->routeIs('skema-bobot-nilai.*') ? 'active' : '' }}">
+                                Bobot Nilai
+                            </a>
+                            <a href="{{ route('komponen-nilai.index') }}" class="nav-link {{ request()->routeIs('komponen-nilai.*') ? 'active' : '' }}">
+                                Komponen Nilai
+                            </a>
+                            <a href="{{ route('input-nilai.index') }}" class="nav-link {{ request()->routeIs('input-nilai.*') ? 'active' : '' }}">
+                                Input Nilai
+                            </a>
+                            <a href="{{ route('rekap-nilai-rapor.index') }}" class="nav-link {{ request()->routeIs('rekap-nilai-rapor.*') ? 'active' : '' }}">
+                                Rekap Rapor
+                            </a>
+                            <a href="{{ route('pengaturan-absensi.index') }}" class="nav-link {{ request()->routeIs('pengaturan-absensi.*') ? 'active' : '' }}">
+                                Jam Absensi
+                            </a>
+                            <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="nav-link {{ request()->routeIs('scan-absensi.*') ? 'active' : '' }}">
+                                Scan Absensi
+                            </a>
+                            <a href="{{ route('rekap-absensi-harian.index') }}" class="nav-link {{ request()->routeIs('rekap-absensi-harian.*') ? 'active' : '' }}">
+                                Rekap Absensi
+                            </a>
+                            <a href="{{ route('laporan-absensi.index') }}" class="nav-link {{ request()->routeIs('laporan-absensi.*') ? 'active' : '' }}">
+                                Laporan Absensi
                             </a>
                             <a href="{{ route('kenaikan-kelas.index') }}" class="nav-link {{ request()->routeIs('kenaikan-kelas.*') ? 'active' : '' }}">
                                 Kenaikan Kelas

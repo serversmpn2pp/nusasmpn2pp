@@ -43,6 +43,21 @@ class Siswa extends Model
         return $this->hasMany(AnggotaKelas::class);
     }
 
+    public function nilaiSiswa(): HasMany
+    {
+        return $this->hasMany(NilaiSiswa::class);
+    }
+
+    public function absensiSiswa(): HasMany
+    {
+        return $this->hasMany(AbsensiSiswa::class);
+    }
+
+    public function logScanAbsensi(): HasMany
+    {
+        return $this->hasMany(LogScanAbsensi::class);
+    }
+
     public function kelas(): BelongsToMany
     {
         return $this->belongsToMany(Kelas::class, 'anggota_kelas')

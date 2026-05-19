@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MataPelajaran extends Model
 {
@@ -25,4 +26,9 @@ class MataPelajaran extends Model
         'urutan' => 'integer',
         'aktif' => 'boolean',
     ];
+
+    public function guruMataPelajaran(): HasMany
+    {
+        return $this->hasMany(GuruMataPelajaran::class);
+    }
 }

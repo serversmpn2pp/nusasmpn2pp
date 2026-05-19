@@ -48,6 +48,11 @@ class Pegawai extends Model
         return $this->hasMany(Kelas::class, 'wali_kelas_id');
     }
 
+    public function guruMataPelajaran(): HasMany
+    {
+        return $this->hasMany(GuruMataPelajaran::class);
+    }
+
     public function pengguna(): HasOne
     {
         return $this->hasOne(Pengguna::class);
