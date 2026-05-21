@@ -3,6 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\PastikanAdministrator;
+use App\Http\Middleware\PastikanIzin;
+use App\Http\Middleware\PastikanKataSandiBukanDefault;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,7 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'admin' => PastikanAdministrator::class,
+            'izin' => PastikanIzin::class,
+            'kata_sandi_bukan_default' => PastikanKataSandiBukanDefault::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

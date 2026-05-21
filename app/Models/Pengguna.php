@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use RuntimeException;
@@ -50,5 +51,57 @@ class Pengguna extends Authenticatable
     public function pegawai(): BelongsTo
     {
         return $this->belongsTo(Pegawai::class);
+    }
+
+    public function daftarPeran(): BelongsToMany
+    {
+        return $this->belongsToMany(Peran::class, 'pengguna_peran')
+            ->withTimestamps();
+    }
+
+    public function memilikiPeran(string|array $kode): bool
+    {
+        $kode = (array) $kode;
+
+        if ($this->relationLoaded('daftarPeran')) {
+            return $this->daftarPeran
+                ->whereIn('kode', $kode)
+                ->where('aktif', true)
+                ->isNotEmpty();
+        }
+
+        return $this->daftarPeran()
+            ->whereIn('kode', $kode)
+            ->where('aktif', true)
+            ->exists();
+    }
+
+    public function memilikiIzin(string|array $kode): bool
+    {
+        $kode = (array) $kode;
+
+        if ($this->administrator()) {
+            return true;
+        }
+
+        return $this->daftarPeran()
+            ->where('peran.aktif', true)
+            ->whereHas('izin', function ($query) use ($kode) {
+                $query->whereIn('izin.kode', $kode)
+                    ->where('izin.aktif', true);
+            })
+            ->exists();
+    }
+
+    public function administrator(): bool
+    {
+        return $this->peran === 'administrator'
+            || $this->akun_sistem
+            || $this->memilikiPeran('administrator');
+    }
+
+    public function akunPegawai(): bool
+    {
+        return ! $this->akun_sistem && filled($this->pegawai_id);
     }
 }

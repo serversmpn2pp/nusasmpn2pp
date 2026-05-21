@@ -12,7 +12,7 @@ class AutentikasiController extends Controller
     public function createLogin()
     {
         if (Auth::check()) {
-            return redirect()->route('pegawai.index');
+            return redirect()->route('beranda');
         }
 
         return view('auth.login');
@@ -42,9 +42,11 @@ class AutentikasiController extends Controller
             'terakhir_login_pada' => now(),
         ])->save();
 
-        return redirect()
-            ->intended(route('pegawai.index'))
-            ->with('berhasil', 'Selamat datang di NUSA.');
+        $redirect = $request->user()->administrator()
+            ? redirect()->intended(route('beranda'))
+            : redirect()->route('beranda');
+
+        return $redirect->with('berhasil', 'Selamat datang di NUSA.');
     }
 
     public function logout(Request $request)

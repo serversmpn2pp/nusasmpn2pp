@@ -1,162 +1,97 @@
 <?php
 
-namespace Database\Seeders;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-use App\Models\Izin;
-use App\Models\Pengguna;
-use App\Models\Peran;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-
-class DatabaseSeeder extends Seeder
+return new class extends Migration
 {
-    use WithoutModelEvents;
-
     /**
-     * Seed the application's database.
+     * Menjalankan migration.
      */
-    public function run(): void
+    public function up(): void
     {
-        $administrator = Pengguna::firstOrNew([
-            'username' => 'administrator',
-        ]);
+        Schema::create('izin', function (Blueprint $table) {
+            $table->id();
+            $table->string('nama');
+            $table->string('kode')->unique();
+            $table->string('kelompok', 80)->index();
+            $table->text('deskripsi')->nullable();
+            $table->boolean('sistem')->default(true);
+            $table->boolean('aktif')->default(true);
+            $table->timestamps();
+        });
 
-        $administrator->fill([
-            'nama' => 'Administrator NUSA',
-            'peran' => 'administrator',
-            'aktif' => true,
-            'akun_sistem' => true,
-        ]);
+        Schema::create('peran_izin', function (Blueprint $table) {
+            $table->foreignId('peran_id')
+                ->constrained('peran')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
+            $table->foreignId('izin_id')
+                ->constrained('izin')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
+            $table->timestamps();
 
-        if (! $administrator->exists) {
-            $administrator->kata_sandi = Hash::make('administrator');
-        }
+            $table->primary(['peran_id', 'izin_id']);
+        });
 
-        $administrator->save();
-
-        $this->isiPeranBawaan();
         $this->isiIzinBawaan();
         $this->hubungkanIzinPeranBawaan();
-
-        $administrator->daftarPeran()->syncWithoutDetaching([
-            Peran::where('kode', 'administrator')->value('id'),
-        ]);
-        Pengguna::query()
-            ->where('peran', 'pegawai')
-            ->whereDoesntHave('daftarPeran', function ($query) {
-                $query->where('kode', 'pegawai');
-            })
-            ->get()
-            ->each(function (Pengguna $pengguna) {
-                $pengguna->daftarPeran()->syncWithoutDetaching([
-                    Peran::where('kode', 'pegawai')->value('id'),
-                ]);
-            });
     }
 
-    private function isiPeranBawaan(): void
+    /**
+     * Membatalkan migration.
+     */
+    public function down(): void
     {
-        $peranBawaan = [
-            [
-                'nama' => 'Administrator',
-                'kode' => 'administrator',
-                'deskripsi' => 'Akses penuh untuk mengelola seluruh data dan pengaturan NUSA.',
-            ],
-            [
-                'nama' => 'Pimpinan',
-                'kode' => 'pimpinan',
-                'deskripsi' => 'Monitoring seluruh data sekolah secara read-only.',
-            ],
-            [
-                'nama' => 'Wakil Pimpinan Kesiswaan',
-                'kode' => 'wakil_pimpinan_kesiswaan',
-                'deskripsi' => 'Monitoring data kesiswaan, perilaku siswa, dan data BK.',
-            ],
-            [
-                'nama' => 'Wakil Pimpinan Sarana Prasarana',
-                'kode' => 'wakil_pimpinan_sarana_prasarana',
-                'deskripsi' => 'Mengelola dan memonitor inventaris, peminjaman, serta keluar masuk barang.',
-            ],
-            [
-                'nama' => 'Wakil Pimpinan Kurikulum',
-                'kode' => 'wakil_pimpinan_kurikulum',
-                'deskripsi' => 'Monitoring perangkat ajar, nilai, guru mapel, dan kelengkapan kurikulum.',
-            ],
-            [
-                'nama' => 'Guru Mapel',
-                'kode' => 'guru_mapel',
-                'deskripsi' => 'Input dan melihat nilai sesuai mata pelajaran dan kelas yang diajar.',
-            ],
-            [
-                'nama' => 'Wali Kelas',
-                'kode' => 'wali_kelas',
-                'deskripsi' => 'Melihat data kelas binaan, absensi, nilai, dan perilaku siswa.',
-            ],
-            [
-                'nama' => 'BK',
-                'kode' => 'bk',
-                'deskripsi' => 'Mengelola dan memonitor catatan pembinaan, perilaku, dan konseling siswa.',
-            ],
-            [
-                'nama' => 'Pegawai',
-                'kode' => 'pegawai',
-                'deskripsi' => 'Akses dasar untuk pegawai: beranda, profil, dan ganti kata sandi.',
-            ],
-            [
-                'nama' => 'Satpam',
-                'kode' => 'satpam',
-                'deskripsi' => 'Akses petugas keamanan untuk fitur keamanan sekolah yang akan dikembangkan.',
-            ],
-            [
-                'nama' => 'Petugas Kebersihan',
-                'kode' => 'petugas_kebersihan',
-                'deskripsi' => 'Akses petugas kebersihan untuk jadwal dan laporan area kerja yang akan dikembangkan.',
-            ],
-        ];
-
-        foreach ($peranBawaan as $item) {
-            Peran::updateOrCreate(
-                ['kode' => $item['kode']],
-                [
-                    'nama' => $item['nama'],
-                    'deskripsi' => $item['deskripsi'],
-                    'sistem' => true,
-                    'aktif' => true,
-                ],
-            );
-        }
+        Schema::dropIfExists('peran_izin');
+        Schema::dropIfExists('izin');
     }
 
     private function isiIzinBawaan(): void
     {
-        foreach ($this->daftarIzinBawaan() as $item) {
-            Izin::updateOrCreate(
-                ['kode' => $item['kode']],
-                [
-                    'nama' => $item['nama'],
-                    'kelompok' => $item['kelompok'],
-                    'deskripsi' => $item['deskripsi'],
-                    'sistem' => true,
-                    'aktif' => true,
-                ],
-            );
-        }
+        $waktu = now();
+        $izin = array_map(function (array $item) use ($waktu) {
+            return array_merge($item, [
+                'sistem' => true,
+                'aktif' => true,
+                'created_at' => $waktu,
+                'updated_at' => $waktu,
+            ]);
+        }, $this->daftarIzinBawaan());
+
+        DB::table('izin')->insert($izin);
     }
 
     private function hubungkanIzinPeranBawaan(): void
     {
-        $semuaKodeIzin = Izin::pluck('kode')->all();
+        $waktu = now();
+        $peranIds = DB::table('peran')->pluck('id', 'kode');
+        $izinIds = DB::table('izin')->pluck('id', 'kode');
 
-        foreach ($this->petaIzinPeran($semuaKodeIzin) as $kodePeran => $daftarKodeIzin) {
-            $peran = Peran::where('kode', $kodePeran)->first();
+        foreach ($this->petaIzinPeran(array_keys($izinIds->all())) as $kodePeran => $daftarKodeIzin) {
+            $peranId = $peranIds[$kodePeran] ?? null;
 
-            if (! $peran) {
+            if (! $peranId) {
                 continue;
             }
 
-            $izinIds = Izin::whereIn('kode', $daftarKodeIzin)->pluck('id')->all();
-            $peran->izin()->syncWithoutDetaching($izinIds);
+            foreach ($daftarKodeIzin as $kodeIzin) {
+                $izinId = $izinIds[$kodeIzin] ?? null;
+
+                if (! $izinId) {
+                    continue;
+                }
+
+                DB::table('peran_izin')->insertOrIgnore([
+                    'peran_id' => $peranId,
+                    'izin_id' => $izinId,
+                    'created_at' => $waktu,
+                    'updated_at' => $waktu,
+                ]);
+            }
         }
     }
 
@@ -221,15 +156,83 @@ class DatabaseSeeder extends Seeder
         return [
             'administrator' => $semuaKodeIzin,
             'pimpinan' => $izinLihat,
-            'wakil_pimpinan_kesiswaan' => ['beranda.akses', 'siswa.lihat', 'kartu_pelajar.lihat', 'kartu_pelajar.cetak', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat', 'bk.kelola', 'laporan.export'],
-            'wakil_pimpinan_sarana_prasarana' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
-            'wakil_pimpinan_kurikulum' => ['beranda.akses', 'tahun_pelajaran.lihat', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'nilai.lihat', 'nilai.rekap', 'perangkat_ajar.lihat', 'perangkat_ajar.periksa', 'laporan.export'],
-            'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'nilai.lihat', 'nilai.input', 'nilai.rekap', 'perangkat_ajar.upload'],
-            'wali_kelas' => ['beranda.akses', 'siswa.lihat', 'kelas.lihat', 'nilai.lihat', 'nilai.rekap', 'absensi.lihat', 'absensi.laporan', 'bk.lihat'],
-            'bk' => ['beranda.akses', 'siswa.lihat', 'absensi.lihat', 'bk.lihat', 'bk.kelola', 'laporan.export'],
-            'pegawai' => ['beranda.akses'],
-            'satpam' => ['beranda.akses', 'absensi.scan', 'absensi.lihat', 'keamanan.lihat', 'keamanan.kelola'],
-            'petugas_kebersihan' => ['beranda.akses', 'sarpras.lihat', 'kebersihan.lihat', 'kebersihan.kelola'],
+            'wakil_pimpinan_kesiswaan' => [
+                'beranda.akses',
+                'siswa.lihat',
+                'kartu_pelajar.lihat',
+                'kartu_pelajar.cetak',
+                'absensi.lihat',
+                'absensi.koreksi',
+                'absensi.laporan',
+                'bk.lihat',
+                'bk.kelola',
+                'laporan.export',
+            ],
+            'wakil_pimpinan_sarana_prasarana' => [
+                'beranda.akses',
+                'sarpras.lihat',
+                'sarpras.kelola',
+                'barang.lihat',
+                'barang.kelola',
+                'barang.peminjaman_kelola',
+                'laporan.export',
+            ],
+            'wakil_pimpinan_kurikulum' => [
+                'beranda.akses',
+                'tahun_pelajaran.lihat',
+                'kelas.lihat',
+                'mata_pelajaran.lihat',
+                'guru_mapel.lihat',
+                'nilai.lihat',
+                'nilai.rekap',
+                'perangkat_ajar.lihat',
+                'perangkat_ajar.periksa',
+                'laporan.export',
+            ],
+            'guru_mapel' => [
+                'beranda.akses',
+                'kelas.lihat',
+                'mata_pelajaran.lihat',
+                'guru_mapel.lihat',
+                'nilai.lihat',
+                'nilai.input',
+                'nilai.rekap',
+                'perangkat_ajar.upload',
+            ],
+            'wali_kelas' => [
+                'beranda.akses',
+                'siswa.lihat',
+                'kelas.lihat',
+                'nilai.lihat',
+                'nilai.rekap',
+                'absensi.lihat',
+                'absensi.laporan',
+                'bk.lihat',
+            ],
+            'bk' => [
+                'beranda.akses',
+                'siswa.lihat',
+                'absensi.lihat',
+                'bk.lihat',
+                'bk.kelola',
+                'laporan.export',
+            ],
+            'pegawai' => [
+                'beranda.akses',
+            ],
+            'satpam' => [
+                'beranda.akses',
+                'absensi.scan',
+                'absensi.lihat',
+                'keamanan.lihat',
+                'keamanan.kelola',
+            ],
+            'petugas_kebersihan' => [
+                'beranda.akses',
+                'sarpras.lihat',
+                'kebersihan.lihat',
+                'kebersihan.kelola',
+            ],
         ];
     }
-}
+};

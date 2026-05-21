@@ -21,6 +21,27 @@ class AutentikasiTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
+    public function test_halaman_beranda_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/beranda');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_halaman_akun_pegawai_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/akun-pegawai');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_halaman_peran_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/peran');
+
+        $response->assertRedirect(route('login'));
+    }
+
     public function test_halaman_mata_pelajaran_dikunci_sebelum_login(): void
     {
         $response = $this->get('/mata-pelajaran');

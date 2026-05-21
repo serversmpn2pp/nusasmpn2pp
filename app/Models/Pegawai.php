@@ -57,4 +57,19 @@ class Pegawai extends Model
     {
         return $this->hasOne(Pengguna::class);
     }
+
+    public function pengaturanAbsensiPegawai(): HasMany
+    {
+        return $this->hasMany(PengaturanAbsensiPegawai::class);
+    }
+
+    public function absensiPegawai(): HasMany
+    {
+        return $this->hasMany(AbsensiPegawai::class);
+    }
+
+    public function logScanAbsensiPegawai(): HasMany
+    {
+        return $this->hasMany(LogScanAbsensiPegawai::class);
+    }
 }

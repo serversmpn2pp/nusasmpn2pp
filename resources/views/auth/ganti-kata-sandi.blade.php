@@ -9,8 +9,12 @@
             <h1 class="page-title">Ganti kata sandi</h1>
         </div>
 
-        <a href="{{ route('pegawai.index') }}" class="button button-muted">Kembali</a>
+        <a href="{{ route('beranda') }}" class="button button-muted">Kembali</a>
     </div>
+
+    @if (session('perlu_ganti_kata_sandi'))
+        <div class="alert alert-danger">{{ session('perlu_ganti_kata_sandi') }}</div>
+    @endif
 
     @if (session('berhasil'))
         <div class="alert">{{ session('berhasil') }}</div>

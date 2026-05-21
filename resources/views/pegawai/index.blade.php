@@ -10,6 +10,8 @@
         </div>
 
         <div class="actions">
+            <a href="{{ route('akun-pegawai.index') }}" class="button button-muted">Akun pegawai</a>
+            <a href="{{ route('kartu-pegawai.index') }}" class="button button-muted">Kartu pegawai</a>
             <a href="{{ route('pegawai.import.create') }}" class="button button-muted">Import Excel</a>
             <a href="{{ route('pegawai.create') }}" class="button button-primary">Tambah pegawai</a>
         </div>

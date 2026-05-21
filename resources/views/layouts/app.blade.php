@@ -870,91 +870,430 @@
                     grid-template-columns: 1fr;
                 }
             }
+
+            .sidebar-toggle {
+                position: fixed;
+                width: 1px;
+                height: 1px;
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .app-shell {
+                display: grid;
+                min-height: 100vh;
+                grid-template-columns: 280px minmax(0, 1fr);
+            }
+
+            .app-sidebar {
+                position: sticky;
+                top: 0;
+                z-index: 40;
+                display: flex;
+                height: 100vh;
+                flex-direction: column;
+                overflow-y: auto;
+                border-right: 1px solid rgba(255, 255, 255, .16);
+                background: var(--primary);
+                color: #fff;
+                padding: 18px;
+                box-shadow: 10px 0 30px rgba(21, 71, 122, .16);
+            }
+
+            .sidebar-brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                border-bottom: 1px solid rgba(255, 255, 255, .16);
+                padding: 4px 2px 18px;
+            }
+
+            .sidebar-brand-mark {
+                display: grid;
+                width: 50px;
+                height: 50px;
+                flex: 0 0 auto;
+                place-items: center;
+                border: 1px solid rgba(241, 196, 15, .72);
+                border-radius: 8px;
+                background: #fff;
+                padding: 5px;
+                box-shadow: 0 10px 24px rgba(0, 0, 0, .16);
+            }
+
+            .sidebar-brand-mark img {
+                display: block;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+
+            .sidebar-brand-title {
+                display: block;
+                font-size: 1.15rem;
+                font-weight: 900;
+                line-height: 1.1;
+            }
+
+            .sidebar-brand-subtitle {
+                display: block;
+                margin-top: 3px;
+                color: rgba(255, 255, 255, .78);
+                font-size: .78rem;
+                line-height: 1.25;
+            }
+
+            .sidebar-nav {
+                display: grid;
+                gap: 18px;
+                padding: 18px 0;
+            }
+
+            .sidebar-section-title {
+                margin: 0 0 8px;
+                color: rgba(255, 255, 255, .58);
+                font-size: .72rem;
+                font-weight: 900;
+                letter-spacing: 0;
+                text-transform: uppercase;
+            }
+
+            .sidebar-links {
+                display: grid;
+                gap: 6px;
+            }
+
+            .sidebar-link {
+                display: flex;
+                min-height: 42px;
+                align-items: center;
+                gap: 10px;
+                border: 1px solid transparent;
+                border-radius: 8px;
+                padding: 9px 10px;
+                color: rgba(255, 255, 255, .86);
+                font-size: .9rem;
+                font-weight: 800;
+                transition: background .15s ease, border-color .15s ease, color .15s ease;
+            }
+
+            .sidebar-link:hover,
+            .sidebar-link.active {
+                border-color: rgba(241, 196, 15, .5);
+                background: rgba(241, 196, 15, .15);
+                color: #fff;
+            }
+
+            .sidebar-link.active {
+                box-shadow: inset 4px 0 0 var(--accent);
+            }
+
+            .sidebar-link-initial {
+                display: grid;
+                width: 28px;
+                height: 28px;
+                flex: 0 0 auto;
+                place-items: center;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, .12);
+                color: var(--accent);
+                font-size: .7rem;
+                font-weight: 900;
+            }
+
+            .sidebar-foot {
+                margin-top: auto;
+                border-top: 1px solid rgba(255, 255, 255, .16);
+                padding-top: 14px;
+                color: rgba(255, 255, 255, .7);
+                font-size: .78rem;
+                font-weight: 700;
+            }
+
+            .app-content {
+                min-width: 0;
+                background: var(--bg);
+            }
+
+            .app-topbar {
+                position: sticky;
+                top: 0;
+                z-index: 25;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                border-bottom: 1px solid var(--line);
+                background: rgba(255, 255, 255, .94);
+                padding: 12px 24px;
+                backdrop-filter: blur(14px);
+            }
+
+            .mobile-menu-button {
+                display: none;
+                align-items: center;
+                justify-content: center;
+                min-height: 40px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                background: #fff;
+                padding: 9px 12px;
+                color: var(--primary-dark);
+                cursor: pointer;
+                font-size: .9rem;
+                font-weight: 900;
+            }
+
+            .topbar-title {
+                display: grid;
+                min-width: 0;
+                margin-right: auto;
+            }
+
+            .topbar-eyebrow {
+                color: var(--primary);
+                font-size: .72rem;
+                font-weight: 900;
+                line-height: 1.1;
+                text-transform: uppercase;
+            }
+
+            .topbar-current {
+                overflow: hidden;
+                color: var(--text);
+                font-size: .98rem;
+                font-weight: 900;
+                line-height: 1.2;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .content-shell {
+                width: min(100%, 1180px);
+                margin: 0 auto;
+                padding: 24px 24px 44px;
+            }
+
+            .sidebar-backdrop {
+                display: none;
+            }
+
+            .app-topbar .account-menu {
+                flex-wrap: nowrap;
+            }
+
+            .app-topbar .button {
+                width: auto;
+            }
+
+            @media (max-width: 980px) {
+                .app-shell {
+                    display: block;
+                }
+
+                .app-sidebar {
+                    position: fixed;
+                    left: 0;
+                    top: 0;
+                    width: min(84vw, 310px);
+                    transform: translateX(-100%);
+                    transition: transform .2s ease;
+                }
+
+                .sidebar-toggle:checked ~ .app-shell .app-sidebar {
+                    transform: translateX(0);
+                }
+
+                .sidebar-toggle:checked ~ .app-shell .sidebar-backdrop {
+                    display: block;
+                    position: fixed;
+                    inset: 0;
+                    z-index: 35;
+                    background: rgba(15, 23, 42, .48);
+                }
+
+                .app-topbar {
+                    padding: 10px 14px;
+                }
+
+                .mobile-menu-button {
+                    display: inline-flex;
+                    flex: 0 0 auto;
+                }
+
+                .topbar-title {
+                    margin-right: 0;
+                }
+
+                .content-shell {
+                    padding: 18px 14px 34px;
+                }
+
+                .app-topbar .account-menu {
+                    align-items: flex-end;
+                    flex-direction: row;
+                    gap: 6px;
+                }
+
+                .app-topbar .account-name {
+                    display: none;
+                }
+
+                .app-topbar .button {
+                    min-height: 38px;
+                    padding: 8px 10px;
+                    width: auto;
+                }
+            }
+
+            @media (max-width: 560px) {
+                .topbar-current {
+                    max-width: 150px;
+                }
+
+                .app-topbar .button-muted {
+                    display: none;
+                }
+            }
         </style>
     </head>
     <body>
-        <header class="app-header">
-            <div class="container">
-                <div class="header-inner">
-                    <a href="{{ route('pegawai.index') }}" class="brand">
-                        <span class="brand-mark">
-                            <img src="{{ asset('images/logo-nusa.png') }}" alt="Logo NUSA">
-                        </span>
-                        <span>
-                            <span class="brand-title">NUSA</span>
-                            <span class="brand-subtitle">SMP Negeri 2 Padang Panjang</span>
-                        </span>
-                    </a>
+        @php
+            $penggunaAktif = auth()->user();
+            $administrator = $penggunaAktif?->administrator();
+            $sidebarSections = [
+                [
+                    'title' => 'Utama',
+                    'items' => [
+                        ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB'],
+                    ],
+                ],
+            ];
 
-                    <div class="header-tools">
-                        <nav>
-                            <a href="{{ route('pegawai.index') }}" class="nav-link {{ request()->routeIs('pegawai.*') ? 'active' : '' }}">
-                                Pegawai
-                            </a>
-                            <a href="{{ route('siswa.index') }}" class="nav-link {{ request()->routeIs('siswa.*') ? 'active' : '' }}">
-                                Siswa
-                            </a>
-                            <a href="{{ route('kartu-pelajar.index') }}" class="nav-link {{ request()->routeIs('kartu-pelajar.*') ? 'active' : '' }}">
-                                Kartu Pelajar
-                            </a>
-                            <a href="{{ route('tahun-pelajaran.index') }}" class="nav-link {{ request()->routeIs('tahun-pelajaran.*') ? 'active' : '' }}">
-                                Tahun Pelajaran
-                            </a>
-                            <a href="{{ route('kelas.index') }}" class="nav-link {{ request()->routeIs('kelas.*') ? 'active' : '' }}">
-                                Kelas
-                            </a>
-                            <a href="{{ route('mata-pelajaran.index') }}" class="nav-link {{ request()->routeIs('mata-pelajaran.*') ? 'active' : '' }}">
-                                Mata Pelajaran
-                            </a>
-                            <a href="{{ route('guru-mata-pelajaran.index') }}" class="nav-link {{ request()->routeIs('guru-mata-pelajaran.*') ? 'active' : '' }}">
-                                Guru Mapel
-                            </a>
-                            <a href="{{ route('skema-bobot-nilai.index') }}" class="nav-link {{ request()->routeIs('skema-bobot-nilai.*') ? 'active' : '' }}">
-                                Bobot Nilai
-                            </a>
-                            <a href="{{ route('komponen-nilai.index') }}" class="nav-link {{ request()->routeIs('komponen-nilai.*') ? 'active' : '' }}">
-                                Komponen Nilai
-                            </a>
-                            <a href="{{ route('input-nilai.index') }}" class="nav-link {{ request()->routeIs('input-nilai.*') ? 'active' : '' }}">
-                                Input Nilai
-                            </a>
-                            <a href="{{ route('rekap-nilai-rapor.index') }}" class="nav-link {{ request()->routeIs('rekap-nilai-rapor.*') ? 'active' : '' }}">
-                                Rekap Rapor
-                            </a>
-                            <a href="{{ route('pengaturan-absensi.index') }}" class="nav-link {{ request()->routeIs('pengaturan-absensi.*') ? 'active' : '' }}">
-                                Jam Absensi
-                            </a>
-                            <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="nav-link {{ request()->routeIs('scan-absensi.*') ? 'active' : '' }}">
-                                Scan Absensi
-                            </a>
-                            <a href="{{ route('rekap-absensi-harian.index') }}" class="nav-link {{ request()->routeIs('rekap-absensi-harian.*') ? 'active' : '' }}">
-                                Rekap Absensi
-                            </a>
-                            <a href="{{ route('laporan-absensi.index') }}" class="nav-link {{ request()->routeIs('laporan-absensi.*') ? 'active' : '' }}">
-                                Laporan Absensi
-                            </a>
-                            <a href="{{ route('kenaikan-kelas.index') }}" class="nav-link {{ request()->routeIs('kenaikan-kelas.*') ? 'active' : '' }}">
-                                Kenaikan Kelas
-                            </a>
-                        </nav>
+            if ($administrator) {
+                $sidebarSections = array_merge($sidebarSections, [
+                    [
+                        'title' => 'Data Master',
+                        'items' => [
+                            ['label' => 'Pegawai', 'route' => 'pegawai.index', 'active' => ['pegawai.*'], 'initial' => 'PG'],
+                            ['label' => 'Siswa', 'route' => 'siswa.index', 'active' => ['siswa.*'], 'initial' => 'SW'],
+                            ['label' => 'Kelas', 'route' => 'kelas.index', 'active' => ['kelas.*', 'anggota-kelas.*'], 'initial' => 'KL'],
+                            ['label' => 'Tahun Pelajaran', 'route' => 'tahun-pelajaran.index', 'active' => ['tahun-pelajaran.*'], 'initial' => 'TP'],
+                            ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP'],
+                        ],
+                    ],
+                    [
+                        'title' => 'Akademik',
+                        'items' => [
+                            ['label' => 'Guru Mapel', 'route' => 'guru-mata-pelajaran.index', 'active' => ['guru-mata-pelajaran.*'], 'initial' => 'GM'],
+                            ['label' => 'Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN'],
+                            ['label' => 'Komponen Nilai', 'route' => 'komponen-nilai.index', 'active' => ['komponen-nilai.*'], 'initial' => 'KN'],
+                            ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN'],
+                            ['label' => 'Rekap Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR'],
+                        ],
+                    ],
+                    [
+                        'title' => 'Absensi',
+                        'items' => [
+                            ['label' => 'Jam Absensi', 'route' => 'pengaturan-absensi.index', 'active' => ['pengaturan-absensi.*'], 'initial' => 'JA'],
+                            ['label' => 'Jam Pegawai', 'route' => 'pengaturan-absensi-pegawai.index', 'active' => ['pengaturan-absensi-pegawai.*'], 'initial' => 'JP'],
+                            ['label' => 'Scan Absensi', 'route' => 'scan-absensi.index', 'active' => ['scan-absensi.*'], 'initial' => 'SA', 'blank' => true],
+                            ['label' => 'Scan Pegawai', 'route' => 'scan-absensi-pegawai.index', 'active' => ['scan-absensi-pegawai.*'], 'initial' => 'SP', 'blank' => true],
+                            ['label' => 'Rekap Absensi', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA'],
+                            ['label' => 'Laporan Absensi', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA'],
+                        ],
+                    ],
+                    [
+                        'title' => 'Administrasi',
+                        'items' => [
+                            ['label' => 'Kartu Pelajar', 'route' => 'kartu-pelajar.index', 'active' => ['kartu-pelajar.*'], 'initial' => 'KP'],
+                            ['label' => 'Kartu Pegawai', 'route' => 'kartu-pegawai.index', 'active' => ['kartu-pegawai.*'], 'initial' => 'KG'],
+                            ['label' => 'Kenaikan Kelas', 'route' => 'kenaikan-kelas.index', 'active' => ['kenaikan-kelas.*'], 'initial' => 'KK'],
+                        ],
+                    ],
+                    [
+                        'title' => 'Sistem',
+                        'items' => [
+                            ['label' => 'Akun Pegawai', 'route' => 'akun-pegawai.index', 'active' => ['akun-pegawai.*'], 'initial' => 'AP'],
+                            ['label' => 'Role', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RL'],
+                        ],
+                    ],
+                ]);
+            }
+        @endphp
 
-                        @auth
-                            <div class="account-menu">
-                                <span class="account-name">{{ auth()->user()->nama }}</span>
-                                <a href="{{ route('kata-sandi.edit') }}" class="button button-muted button-sm">Ganti Password</a>
-                                <form action="{{ route('logout') }}" method="POST" class="logout-form">
-                                    @csrf
-                                    <button type="submit" class="button button-danger button-sm">Keluar</button>
-                                </form>
+        <input id="sidebar-toggle" type="checkbox" class="sidebar-toggle">
+
+        <div class="app-shell">
+            <aside class="app-sidebar" aria-label="Menu utama NUSA">
+                <a href="{{ route('beranda') }}" class="sidebar-brand">
+                    <span class="sidebar-brand-mark">
+                        <img src="{{ asset('images/logo-nusa.png') }}" alt="Logo NUSA">
+                    </span>
+                    <span>
+                        <span class="sidebar-brand-title">NUSA</span>
+                        <span class="sidebar-brand-subtitle">SMP Negeri 2 Padang Panjang</span>
+                    </span>
+                </a>
+
+                <nav class="sidebar-nav">
+                    @foreach ($sidebarSections as $section)
+                        <section>
+                            <p class="sidebar-section-title">{{ $section['title'] }}</p>
+                            <div class="sidebar-links">
+                                @foreach ($section['items'] as $item)
+                                    @php
+                                        $activePatterns = (array) ($item['active'] ?? $item['route']);
+                                        $aktif = request()->routeIs(...$activePatterns);
+                                    @endphp
+
+                                    <a
+                                        href="{{ route($item['route']) }}"
+                                        class="sidebar-link {{ $aktif ? 'active' : '' }}"
+                                        @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif
+                                    >
+                                        <span class="sidebar-link-initial">{{ $item['initial'] }}</span>
+                                        <span>{{ $item['label'] }}</span>
+                                    </a>
+                                @endforeach
                             </div>
-                        @endauth
-                    </div>
-                </div>
-            </div>
-        </header>
+                        </section>
+                    @endforeach
+                </nav>
 
-        <main class="container">
-            @yield('content')
-        </main>
+                <div class="sidebar-foot">
+                    <span>NUSA</span><br>
+                    <span>Data sekolah terpadu.</span>
+                </div>
+            </aside>
+
+            <label for="sidebar-toggle" class="sidebar-backdrop" aria-hidden="true"></label>
+
+            <div class="app-content">
+                <header class="app-topbar">
+                    <label for="sidebar-toggle" class="mobile-menu-button">Menu</label>
+
+                    <div class="topbar-title">
+                        <span class="topbar-eyebrow">NUSA</span>
+                        <span class="topbar-current">@yield('title', 'NUSA')</span>
+                    </div>
+
+                    @auth
+                        <div class="account-menu">
+                            <span class="account-name">{{ auth()->user()->nama }}</span>
+                            <a href="{{ route('kata-sandi.edit') }}" class="button button-muted button-sm">Ganti Password</a>
+                            <form action="{{ route('logout') }}" method="POST" class="logout-form">
+                                @csrf
+                                <button type="submit" class="button button-danger button-sm">Keluar</button>
+                            </form>
+                        </div>
+                    @endauth
+                </header>
+
+                <main class="content-shell">
+                    @yield('content')
+                </main>
+            </div>
+        </div>
     </body>
 </html>
