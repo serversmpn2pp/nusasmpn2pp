@@ -119,6 +119,13 @@ class AutentikasiTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
+    public function test_halaman_koreksi_absensi_pegawai_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/rekap-absensi-pegawai-harian/1/koreksi');
+
+        $response->assertRedirect(route('login'));
+    }
+
     public function test_halaman_laporan_absensi_dikunci_sebelum_login(): void
     {
         $response = $this->get('/laporan-absensi');
@@ -129,6 +136,27 @@ class AutentikasiTest extends TestCase
     public function test_export_laporan_absensi_dikunci_sebelum_login(): void
     {
         $response = $this->get('/laporan-absensi/export');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_halaman_laporan_absensi_pegawai_bulanan_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/laporan-absensi-pegawai-bulanan');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_cetak_laporan_absensi_pegawai_bulanan_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/laporan-absensi-pegawai-bulanan/cetak');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_cetak_laporan_absensi_satu_pegawai_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/laporan-absensi-pegawai-bulanan/1/cetak');
 
         $response->assertRedirect(route('login'));
     }
