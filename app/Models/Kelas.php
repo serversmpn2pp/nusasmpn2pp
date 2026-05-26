@@ -52,6 +52,11 @@ class Kelas extends Model
         return $this->hasMany(AbsensiSiswa::class);
     }
 
+    public function laporanPembinaanSiswa(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class);
+    }
+
     public function siswa(): BelongsToMany
     {
         return $this->belongsToMany(Siswa::class, 'anggota_kelas')

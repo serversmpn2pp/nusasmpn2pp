@@ -46,4 +46,9 @@ class AnggotaKelas extends Model
     {
         return $this->hasMany(AbsensiSiswa::class);
     }
+
+    public function laporanPembinaanSiswa(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class);
+    }
 }

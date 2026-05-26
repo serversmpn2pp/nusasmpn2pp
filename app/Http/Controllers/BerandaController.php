@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\AbsensiSiswa;
+use App\Models\AbsensiPegawai;
+use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\Kelas;
 use App\Models\KomponenNilai;
 use App\Models\LogScanAbsensi;
+use App\Models\LogScanAbsensiPegawai;
+use App\Models\LaporanPembinaanSiswa;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
@@ -29,32 +33,92 @@ class BerandaController extends Controller
             ->where('aktif', true)
             ->orderByDesc('tanggal_mulai')
             ->first();
+        $awalBulan = $hariIni->copy()->startOfMonth();
+        $akhirBulan = $hariIni->copy()->endOfMonth();
+
+        $jumlahSiswaAktif = Siswa::query()->where('aktif', true)->count();
+        $jumlahPegawaiAktif = Pegawai::query()->where('aktif', true)->count();
+        $jumlahSiswaDipantau = $tahunPelajaranAktif
+            ? AnggotaKelas::query()
+                ->where('tahun_pelajaran_id', $tahunPelajaranAktif->id)
+                ->where('status_keanggotaan', 'aktif')
+                ->distinct('siswa_id')
+                ->count('siswa_id')
+            : $jumlahSiswaAktif;
+
+        if ($jumlahSiswaDipantau === 0) {
+            $jumlahSiswaDipantau = $jumlahSiswaAktif;
+        }
 
         $ringkasanUtama = [
-            'siswa_aktif' => Siswa::query()->where('aktif', true)->count(),
-            'pegawai_aktif' => Pegawai::query()->where('aktif', true)->count(),
+            'siswa_aktif' => $jumlahSiswaAktif,
+            'pegawai_aktif' => $jumlahPegawaiAktif,
             'kelas_aktif' => Kelas::query()->where('aktif', true)->count(),
             'mata_pelajaran_aktif' => MataPelajaran::query()->where('aktif', true)->count(),
-            'guru_mapel_aktif' => GuruMataPelajaran::query()->where('aktif', true)->count(),
-            'nilai_masuk' => NilaiSiswa::query()->count(),
         ];
 
         $absensiHariIni = AbsensiSiswa::query()->whereDate('tanggal', $tanggalHariIni);
+        $jumlahAbsensiSiswaTercatat = (clone $absensiHariIni)->distinct('siswa_id')->count('siswa_id');
         $ringkasanAbsensi = [
+            'siswa_dipantau' => $jumlahSiswaDipantau,
             'hadir' => (clone $absensiHariIni)->where('status_kehadiran', 'hadir')->count(),
             'izin' => (clone $absensiHariIni)->where('status_kehadiran', 'izin')->count(),
             'sakit' => (clone $absensiHariIni)->where('status_kehadiran', 'sakit')->count(),
             'alfa' => (clone $absensiHariIni)->where('status_kehadiran', 'alfa')->count(),
             'terlambat' => (clone $absensiHariIni)->where('menit_terlambat', '>', 0)->count(),
             'pulang_cepat' => (clone $absensiHariIni)->where('menit_pulang_cepat', '>', 0)->count(),
-        ];
-
-        $ringkasanAkademik = [
-            'komponen_nilai_aktif' => KomponenNilai::query()->where('aktif', true)->count(),
-            'kelas_terisi' => Kelas::query()->whereHas('anggotaKelas')->count(),
-            'scan_berhasil_hari_ini' => LogScanAbsensi::query()
+            'belum_scan' => max($jumlahSiswaDipantau - $jumlahAbsensiSiswaTercatat, 0),
+            'scan_berhasil' => LogScanAbsensi::query()
                 ->whereDate('tanggal', $tanggalHariIni)
                 ->where('berhasil', true)
+                ->count(),
+        ];
+
+        $absensiPegawaiHariIni = AbsensiPegawai::query()->whereDate('tanggal', $tanggalHariIni);
+        $jumlahAbsensiPegawaiTercatat = (clone $absensiPegawaiHariIni)->distinct('pegawai_id')->count('pegawai_id');
+        $ringkasanAbsensiPegawai = [
+            'pegawai_dipantau' => $jumlahPegawaiAktif,
+            'hadir' => (clone $absensiPegawaiHariIni)->where('status_kehadiran', 'hadir')->count(),
+            'izin_sakit_dinas' => (clone $absensiPegawaiHariIni)
+                ->whereIn('status_kehadiran', ['izin', 'sakit', 'dinas_luar', 'cuti'])
+                ->count(),
+            'alfa' => (clone $absensiPegawaiHariIni)->where('status_kehadiran', 'alfa')->count(),
+            'terlambat' => (clone $absensiPegawaiHariIni)->where('menit_terlambat', '>', 0)->count(),
+            'pulang_cepat' => (clone $absensiPegawaiHariIni)->where('menit_pulang_cepat', '>', 0)->count(),
+            'belum_scan' => max($jumlahPegawaiAktif - $jumlahAbsensiPegawaiTercatat, 0),
+            'scan_berhasil' => LogScanAbsensiPegawai::query()
+                ->whereDate('tanggal', $tanggalHariIni)
+                ->where('berhasil', true)
+                ->count(),
+        ];
+
+        $guruMapelAktif = GuruMataPelajaran::query()
+            ->where('aktif', true)
+            ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id));
+        $komponenNilaiAktif = KomponenNilai::query()
+            ->where('aktif', true)
+            ->when($tahunPelajaranAktif, function ($query) use ($tahunPelajaranAktif) {
+                $query->whereHas('guruMataPelajaran', fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id));
+            });
+        $nilaiSiswa = NilaiSiswa::query()
+            ->when($tahunPelajaranAktif, function ($query) use ($tahunPelajaranAktif) {
+                $query->whereHas('komponenNilai.guruMataPelajaran', fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id));
+            });
+        $ringkasanAkademik = [
+            'guru_mapel_aktif' => (clone $guruMapelAktif)->count(),
+            'komponen_nilai_aktif' => (clone $komponenNilaiAktif)->count(),
+            'komponen_belum_terisi' => (clone $komponenNilaiAktif)->whereDoesntHave('nilaiSiswa')->count(),
+            'nilai_masuk' => (clone $nilaiSiswa)->count(),
+            'kelas_terisi' => Kelas::query()->whereHas('anggotaKelas')->count(),
+        ];
+
+        $ringkasanPembinaan = [
+            'baru' => LaporanPembinaanSiswa::query()->where('status', 'baru')->count(),
+            'diproses' => LaporanPembinaanSiswa::query()->where('status', 'diproses')->count(),
+            'perlu_tindak_lanjut' => LaporanPembinaanSiswa::query()->where('status', 'perlu_tindak_lanjut')->count(),
+            'selesai_bulan_ini' => LaporanPembinaanSiswa::query()
+                ->where('status', 'selesai')
+                ->whereBetween('updated_at', [$awalBulan, $akhirBulan])
                 ->count(),
         ];
 
@@ -64,25 +128,78 @@ class BerandaController extends Controller
             ->limit(5)
             ->get();
 
-        $siswaTerbaru = Siswa::query()
-            ->latest('id')
+        $logScanPegawaiTerakhir = LogScanAbsensiPegawai::query()
+            ->with('pegawai:id,nama_lengkap,nip')
+            ->latest('waktu_scan')
             ->limit(5)
-            ->get(['id', 'nama_lengkap', 'nisn', 'aktif']);
+            ->get();
 
-        $pegawaiTerbaru = Pegawai::query()
+        $siswaTerlambatHariIni = AbsensiSiswa::query()
+            ->with(['siswa:id,nama_lengkap,nisn', 'kelas:id,nama'])
+            ->whereDate('tanggal', $tanggalHariIni)
+            ->where('menit_terlambat', '>', 0)
+            ->orderByDesc('menit_terlambat')
+            ->limit(5)
+            ->get();
+
+        $siswaAlfaHariIni = AbsensiSiswa::query()
+            ->with(['siswa:id,nama_lengkap,nisn', 'kelas:id,nama'])
+            ->whereDate('tanggal', $tanggalHariIni)
+            ->where('status_kehadiran', 'alfa')
             ->latest('id')
             ->limit(5)
-            ->get(['id', 'nama_lengkap', 'nip', 'aktif']);
+            ->get();
+
+        $siswaBelumScanHariIni = AnggotaKelas::query()
+            ->with(['siswa:id,nama_lengkap,nisn', 'kelas:id,nama'])
+            ->where('status_keanggotaan', 'aktif')
+            ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))
+            ->whereHas('siswa', fn ($query) => $query->where('aktif', true))
+            ->whereDoesntHave('siswa.absensiSiswa', fn ($query) => $query->whereDate('tanggal', $tanggalHariIni))
+            ->orderBy('kelas_id')
+            ->orderBy('nomor_absen')
+            ->limit(5)
+            ->get();
+
+        $pegawaiTerlambatHariIni = AbsensiPegawai::query()
+            ->with('pegawai:id,nama_lengkap,nip')
+            ->whereDate('tanggal', $tanggalHariIni)
+            ->where('menit_terlambat', '>', 0)
+            ->orderByDesc('menit_terlambat')
+            ->limit(5)
+            ->get();
+
+        $pegawaiBelumScanHariIni = Pegawai::query()
+            ->where('aktif', true)
+            ->whereDoesntHave('absensiPegawai', fn ($query) => $query->whereDate('tanggal', $tanggalHariIni))
+            ->orderBy('nama_lengkap')
+            ->limit(5)
+            ->get(['id', 'nama_lengkap', 'nip']);
+
+        $laporanPembinaanPerluPerhatian = LaporanPembinaanSiswa::query()
+            ->with(['siswa:id,nama_lengkap,nisn', 'kategoriPembinaanSiswa:id,nama'])
+            ->whereIn('status', ['baru', 'perlu_tindak_lanjut'])
+            ->orderByRaw("case when status = 'perlu_tindak_lanjut' then 0 else 1 end")
+            ->orderByDesc('tanggal_kejadian')
+            ->limit(5)
+            ->get();
 
         return view('beranda.index', compact(
             'hariIni',
             'tahunPelajaranAktif',
             'ringkasanUtama',
             'ringkasanAbsensi',
+            'ringkasanAbsensiPegawai',
             'ringkasanAkademik',
+            'ringkasanPembinaan',
             'logScanTerakhir',
-            'siswaTerbaru',
-            'pegawaiTerbaru',
+            'logScanPegawaiTerakhir',
+            'siswaTerlambatHariIni',
+            'siswaAlfaHariIni',
+            'siswaBelumScanHariIni',
+            'pegawaiTerlambatHariIni',
+            'pegawaiBelumScanHariIni',
+            'laporanPembinaanPerluPerhatian',
         ));
     }
 }

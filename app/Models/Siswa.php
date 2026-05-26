@@ -53,6 +53,11 @@ class Siswa extends Model
         return $this->hasMany(AbsensiSiswa::class);
     }
 
+    public function laporanPembinaanSiswa(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class);
+    }
+
     public function logScanAbsensi(): HasMany
     {
         return $this->hasMany(LogScanAbsensi::class);

@@ -147,6 +147,34 @@ class AutentikasiTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
+    public function test_halaman_kategori_pembinaan_siswa_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/kategori-pembinaan-siswa');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_halaman_laporan_pembinaan_siswa_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/laporan-pembinaan-siswa');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_halaman_tindak_lanjut_pembinaan_siswa_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/laporan-pembinaan-siswa/1/tindak-lanjut/create');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_halaman_edit_tindak_lanjut_pembinaan_siswa_dikunci_sebelum_login(): void
+    {
+        $response = $this->get('/tindak-lanjut-pembinaan-siswa/1/edit');
+
+        $response->assertRedirect(route('login'));
+    }
+
     public function test_cetak_laporan_absensi_pegawai_bulanan_dikunci_sebelum_login(): void
     {
         $response = $this->get('/laporan-absensi-pegawai-bulanan/cetak');

@@ -10,10 +10,12 @@ use App\Http\Controllers\InputNilaiController;
 use App\Http\Controllers\KartuPelajarController;
 use App\Http\Controllers\KartuPegawaiController;
 use App\Http\Controllers\KenaikanKelasController;
+use App\Http\Controllers\KategoriPembinaanSiswaController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KomponenNilaiController;
 use App\Http\Controllers\LaporanAbsensiController;
 use App\Http\Controllers\LaporanAbsensiPegawaiBulananController;
+use App\Http\Controllers\LaporanPembinaanSiswaController;
 use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PengaturanAbsensiController;
@@ -27,6 +29,7 @@ use App\Http\Controllers\ScanAbsensiPegawaiController;
 use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\TahunPelajaranController;
+use App\Http\Controllers\TindakLanjutPembinaanSiswaController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -95,6 +98,13 @@ Route::middleware('auth')->group(function () {
             Route::get('laporan-absensi-pegawai-bulanan/{pegawai}/cetak', [LaporanAbsensiPegawaiBulananController::class, 'cetakPegawai'])->name('laporan-absensi-pegawai-bulanan.cetak-pegawai');
             Route::get('kenaikan-kelas', [KenaikanKelasController::class, 'index'])->name('kenaikan-kelas.index');
             Route::post('kenaikan-kelas', [KenaikanKelasController::class, 'store'])->name('kenaikan-kelas.store');
+            Route::resource('kategori-pembinaan-siswa', KategoriPembinaanSiswaController::class);
+            Route::resource('laporan-pembinaan-siswa', LaporanPembinaanSiswaController::class);
+            Route::get('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/tindak-lanjut/create', [TindakLanjutPembinaanSiswaController::class, 'create'])->name('tindak-lanjut-pembinaan-siswa.create');
+            Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/tindak-lanjut', [TindakLanjutPembinaanSiswaController::class, 'store'])->name('tindak-lanjut-pembinaan-siswa.store');
+            Route::get('tindak-lanjut-pembinaan-siswa/{tindakLanjutPembinaanSiswa}/edit', [TindakLanjutPembinaanSiswaController::class, 'edit'])->name('tindak-lanjut-pembinaan-siswa.edit');
+            Route::put('tindak-lanjut-pembinaan-siswa/{tindakLanjutPembinaanSiswa}', [TindakLanjutPembinaanSiswaController::class, 'update'])->name('tindak-lanjut-pembinaan-siswa.update');
+            Route::delete('tindak-lanjut-pembinaan-siswa/{tindakLanjutPembinaanSiswa}', [TindakLanjutPembinaanSiswaController::class, 'destroy'])->name('tindak-lanjut-pembinaan-siswa.destroy');
             Route::post('kelas/{kelas}/anggota-kelas', [AnggotaKelasController::class, 'store'])->name('anggota-kelas.store');
             Route::resource('kelas', KelasController::class)->parameters([
                 'kelas' => 'kelas',

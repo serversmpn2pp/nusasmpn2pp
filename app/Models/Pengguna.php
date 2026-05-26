@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use RuntimeException;
@@ -57,6 +58,16 @@ class Pengguna extends Authenticatable
     {
         return $this->belongsToMany(Peran::class, 'pengguna_peran')
             ->withTimestamps();
+    }
+
+    public function laporanPembinaanSiswaDibuat(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class, 'dibuat_oleh_pengguna_id');
+    }
+
+    public function tindakLanjutPembinaanSiswaDibuat(): HasMany
+    {
+        return $this->hasMany(TindakLanjutPembinaanSiswa::class, 'dibuat_oleh_pengguna_id');
     }
 
     public function memilikiPeran(string|array $kode): bool

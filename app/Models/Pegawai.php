@@ -72,4 +72,14 @@ class Pegawai extends Model
     {
         return $this->hasMany(LogScanAbsensiPegawai::class);
     }
+
+    public function laporanPembinaanSiswaSebagaiPelapor(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class, 'pelapor_pegawai_id');
+    }
+
+    public function tindakLanjutPembinaanSiswaSebagaiPetugas(): HasMany
+    {
+        return $this->hasMany(TindakLanjutPembinaanSiswa::class, 'petugas_pegawai_id');
+    }
 }

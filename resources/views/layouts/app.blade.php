@@ -36,17 +36,19 @@
             }
 
             html {
+                height: 100%;
                 overflow-x: hidden;
             }
 
             body {
                 margin: 0;
+                height: 100vh;
                 min-height: 100vh;
                 background: var(--bg);
                 color: var(--text);
                 font-family: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 line-height: 1.5;
-                overflow-x: hidden;
+                overflow: hidden;
             }
 
             a {
@@ -881,18 +883,21 @@
 
             .app-shell {
                 display: grid;
-                min-height: 100vh;
+                height: 100vh;
+                min-height: 0;
                 grid-template-columns: 280px minmax(0, 1fr);
+                overflow: hidden;
             }
 
             .app-sidebar {
-                position: sticky;
-                top: 0;
+                position: relative;
                 z-index: 40;
                 display: flex;
                 height: 100vh;
+                max-height: 100vh;
                 flex-direction: column;
                 overflow-y: auto;
+                overscroll-behavior: contain;
                 border-right: 1px solid rgba(255, 255, 255, .16);
                 background: var(--primary);
                 color: #fff;
@@ -1011,8 +1016,13 @@
             }
 
             .app-content {
+                display: flex;
+                min-height: 0;
                 min-width: 0;
+                height: 100vh;
+                flex-direction: column;
                 background: var(--bg);
+                overflow-y: auto;
             }
 
             .app-topbar {
@@ -1070,6 +1080,7 @@
 
             .content-shell {
                 width: min(100%, 1180px);
+                flex: 0 0 auto;
                 margin: 0 auto;
                 padding: 24px 24px 44px;
             }
@@ -1087,8 +1098,18 @@
             }
 
             @media (max-width: 980px) {
+                body {
+                    height: auto;
+                    min-height: 100vh;
+                    overflow-x: hidden;
+                    overflow-y: auto;
+                }
+
                 .app-shell {
                     display: block;
+                    height: auto;
+                    min-height: 100vh;
+                    overflow: visible;
                 }
 
                 .app-sidebar {
@@ -1096,8 +1117,17 @@
                     left: 0;
                     top: 0;
                     width: min(84vw, 310px);
+                    height: 100vh;
+                    max-height: 100vh;
                     transform: translateX(-100%);
                     transition: transform .2s ease;
+                }
+
+                .app-content {
+                    display: block;
+                    height: auto;
+                    min-height: 100vh;
+                    overflow: visible;
                 }
 
                 .sidebar-toggle:checked ~ .app-shell .app-sidebar {
@@ -1203,6 +1233,13 @@
                             ['label' => 'Rekap Pegawai', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RP'],
                             ['label' => 'Laporan Absensi', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA'],
                             ['label' => 'Laporan Pegawai', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LP'],
+                        ],
+                    ],
+                    [
+                        'title' => 'Pembinaan',
+                        'items' => [
+                            ['label' => 'Kategori Pembinaan', 'route' => 'kategori-pembinaan-siswa.index', 'active' => ['kategori-pembinaan-siswa.*'], 'initial' => 'KB'],
+                            ['label' => 'Laporan Pembinaan', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*'], 'initial' => 'LP'],
                         ],
                     ],
                     [

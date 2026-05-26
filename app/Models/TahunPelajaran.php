@@ -38,6 +38,11 @@ class TahunPelajaran extends Model
         return $this->hasMany(AbsensiSiswa::class);
     }
 
+    public function laporanPembinaanSiswa(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class);
+    }
+
     public function guruMataPelajaran(): HasMany
     {
         return $this->hasMany(GuruMataPelajaran::class);
