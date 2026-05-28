@@ -117,8 +117,12 @@
         </div>
 
         <div class="actions">
-            <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan pegawai</a>
-            <a href="{{ route('pengaturan-absensi-pegawai.index') }}" class="button button-muted">Jam pegawai</a>
+            @izin('absensi.scan')
+                <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan pegawai</a>
+            @endizin
+            @izin('absensi.pengaturan_kelola')
+                <a href="{{ route('pengaturan-absensi-pegawai.index') }}" class="button button-muted">Jam pegawai</a>
+            @endizin
         </div>
     </div>
 
@@ -249,7 +253,9 @@
                         <th>Keterlambatan</th>
                         <th>Jadwal</th>
                         <th>Catatan</th>
-                        <th class="text-right">Aksi</th>
+                        @izin('absensi.koreksi')
+                            <th class="text-right">Aksi</th>
+                        @endizin
                     </tr>
                 </thead>
                 <tbody>
@@ -315,15 +321,17 @@
                                 <p class="person-meta">{{ $jadwal?->labelSasaran() ?: '-' }}</p>
                             </td>
                             <td data-label="Catatan">{{ $absensi?->catatan ?: '-' }}</td>
-                            <td data-label="Aksi">
-                                <div class="actions" style="justify-content: flex-end;">
-                                    <a href="{{ route('rekap-absensi-pegawai-harian.koreksi.edit', ['pegawai' => $pegawai, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
-                                </div>
-                            </td>
+                            @izin('absensi.koreksi')
+                                <td data-label="Aksi">
+                                    <div class="actions" style="justify-content: flex-end;">
+                                        <a href="{{ route('rekap-absensi-pegawai-harian.koreksi.edit', ['pegawai' => $pegawai, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
+                                    </div>
+                                </td>
+                            @endizin
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="empty-state">Belum ada pegawai pada pilihan ini.</td>
+                            <td colspan="{{ auth()->user()?->memilikiIzin('absensi.koreksi') ? 9 : 8 }}" class="empty-state">Belum ada pegawai pada pilihan ini.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -380,9 +388,11 @@
                                 <p class="help-text" style="margin-top: 12px;">{{ $absensi->catatan }}</p>
                             @endif
 
-                            <div class="actions" style="margin-top: 14px;">
-                                <a href="{{ route('rekap-absensi-pegawai-harian.koreksi.edit', ['pegawai' => $pegawai, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
-                            </div>
+                            @izin('absensi.koreksi')
+                                <div class="actions" style="margin-top: 14px;">
+                                    <a href="{{ route('rekap-absensi-pegawai-harian.koreksi.edit', ['pegawai' => $pegawai, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
+                                </div>
+                            @endizin
                         </div>
                     </div>
                 </article>

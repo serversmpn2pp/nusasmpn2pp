@@ -10,10 +10,14 @@
         </div>
 
         <div class="actions">
-            <a href="{{ route('akun-pegawai.index') }}" class="button button-muted">Akun pegawai</a>
+            @izin('akun.lihat', 'akun.kelola')
+                <a href="{{ route('akun-pegawai.index') }}" class="button button-muted">Akun pegawai</a>
+            @endizin
             <a href="{{ route('kartu-pegawai.index') }}" class="button button-muted">Kartu pegawai</a>
-            <a href="{{ route('pegawai.import.create') }}" class="button button-muted">Import Excel</a>
-            <a href="{{ route('pegawai.create') }}" class="button button-primary">Tambah pegawai</a>
+            @izin('pegawai.kelola')
+                <a href="{{ route('pegawai.import.create') }}" class="button button-muted">Import Excel</a>
+                <a href="{{ route('pegawai.create') }}" class="button button-primary">Tambah pegawai</a>
+            @endizin
         </div>
     </div>
 
@@ -145,7 +149,9 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('pegawai.show', $item) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @izin('pegawai.kelola')
+                                        <a href="{{ route('pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -197,7 +203,9 @@
 
                             <div class="actions" style="margin-top: 14px;">
                                 <a href="{{ route('pegawai.show', $item) }}" class="button button-muted">Lihat</a>
-                                <a href="{{ route('pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                                @izin('pegawai.kelola')
+                                    <a href="{{ route('pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                                @endizin
                             </div>
                         </div>
                     </div>

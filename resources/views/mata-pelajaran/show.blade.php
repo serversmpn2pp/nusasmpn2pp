@@ -15,7 +15,9 @@
 
         <div class="actions">
             <a href="{{ route('mata-pelajaran.index') }}" class="button button-muted">Kembali</a>
-            <a href="{{ route('mata-pelajaran.edit', $mataPelajaran) }}" class="button button-dark">Edit</a>
+            @izin('mata_pelajaran.kelola')
+                <a href="{{ route('mata-pelajaran.edit', $mataPelajaran) }}" class="button button-dark">Edit</a>
+            @endizin
         </div>
     </div>
 
@@ -39,13 +41,15 @@
                 </div>
             </div>
 
-            @if ($mataPelajaran->aktif)
-                <form action="{{ route('mata-pelajaran.destroy', $mataPelajaran) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan mata pelajaran ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
-                </form>
-            @endif
+            @izin('mata_pelajaran.kelola')
+                @if ($mataPelajaran->aktif)
+                    <form action="{{ route('mata-pelajaran.destroy', $mataPelajaran) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan mata pelajaran ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
+                    </form>
+                @endif
+            @endizin
         </aside>
 
         <div class="section-stack">

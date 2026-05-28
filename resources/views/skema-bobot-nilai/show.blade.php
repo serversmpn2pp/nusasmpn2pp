@@ -15,7 +15,9 @@
 
         <div class="actions">
             <a href="{{ route('skema-bobot-nilai.index') }}" class="button button-muted">Kembali</a>
-            <a href="{{ route('skema-bobot-nilai.edit', $skemaBobotNilai) }}" class="button button-dark">Edit</a>
+            @izin('nilai.skema_kelola')
+                <a href="{{ route('skema-bobot-nilai.edit', $skemaBobotNilai) }}" class="button button-dark">Edit</a>
+            @endizin
         </div>
     </div>
 
@@ -39,13 +41,15 @@
                 </div>
             </div>
 
-            @if ($skemaBobotNilai->aktif)
-                <form action="{{ route('skema-bobot-nilai.destroy', $skemaBobotNilai) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan skema bobot nilai ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
-                </form>
-            @endif
+            @izin('nilai.skema_kelola')
+                @if ($skemaBobotNilai->aktif)
+                    <form action="{{ route('skema-bobot-nilai.destroy', $skemaBobotNilai) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan skema bobot nilai ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
+                    </form>
+                @endif
+            @endizin
         </aside>
 
         <div class="section-stack">

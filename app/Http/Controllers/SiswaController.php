@@ -18,12 +18,13 @@ class SiswaController extends Controller
     {
         $kata_kunci = $request->kata_kunci;
         $status = $request->input('status', 'semua');
+        $cakupanWaliKelas = $request->user()?->membatasiCakupanWaliKelas() ?? false;
 
         if (! in_array($status, ['semua', 'aktif', 'nonaktif'], true)) {
             $status = 'semua';
         }
 
-        $siswa = Siswa::query()
+        $siswa = $this->querySiswaDalamCakupan($request)
             ->select([
                 'id',
                 'nama_lengkap',
@@ -57,9 +58,9 @@ class SiswaController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $jumlahSiswa = Siswa::count();
-        $jumlahAktif = Siswa::where('aktif', true)->count();
-        $jumlahNonaktif = Siswa::where('aktif', false)->count();
+        $jumlahSiswa = $this->querySiswaDalamCakupan($request)->count();
+        $jumlahAktif = $this->querySiswaDalamCakupan($request)->where('aktif', true)->count();
+        $jumlahNonaktif = $this->querySiswaDalamCakupan($request)->where('aktif', false)->count();
 
         return view('siswa.index', compact(
             'siswa',
@@ -68,6 +69,7 @@ class SiswaController extends Controller
             'jumlahSiswa',
             'jumlahAktif',
             'jumlahNonaktif',
+            'cakupanWaliKelas',
         ));
     }
 
@@ -92,18 +94,24 @@ class SiswaController extends Controller
             ->with('berhasil', 'Data siswa berhasil ditambahkan.');
     }
 
-    public function show(Siswa $siswa)
+    public function show(Request $request, Siswa $siswa)
     {
+        $this->pastikanBolehAksesSiswa($request, $siswa);
+
         return view('siswa.show', compact('siswa'));
     }
 
-    public function edit(Siswa $siswa)
+    public function edit(Request $request, Siswa $siswa)
     {
+        $this->pastikanBolehAksesSiswa($request, $siswa);
+
         return view('siswa.edit', compact('siswa'));
     }
 
     public function update(Request $request, Siswa $siswa)
     {
+        $this->pastikanBolehAksesSiswa($request, $siswa);
+
         $data = $request->validate($this->aturanValidasi($siswa));
         $data['aktif'] = $request->boolean('aktif');
 
@@ -124,8 +132,10 @@ class SiswaController extends Controller
             ->with('berhasil', 'Data siswa berhasil diperbarui.');
     }
 
-    public function destroy(Siswa $siswa)
+    public function destroy(Request $request, Siswa $siswa)
     {
+        $this->pastikanBolehAksesSiswa($request, $siswa);
+
         $siswa->update([
             'aktif' => false,
         ]);
@@ -261,6 +271,39 @@ class SiswaController extends Controller
             'keterangan' => 'nullable|string',
             'aktif' => 'nullable|boolean',
         ];
+    }
+
+    private function querySiswaDalamCakupan(Request $request)
+    {
+        $query = Siswa::query();
+        $pengguna = $request->user();
+
+        if ($pengguna?->membatasiCakupanWaliKelas()) {
+            $query->whereHas('anggotaKelas', function ($query) use ($pengguna) {
+                $query->whereIn('kelas_id', $pengguna->kelasWaliIds());
+            });
+        }
+
+        return $query;
+    }
+
+    private function pastikanBolehAksesSiswa(Request $request, Siswa $siswa): void
+    {
+        $pengguna = $request->user();
+
+        if (! $pengguna?->membatasiCakupanWaliKelas()) {
+            return;
+        }
+
+        abort_unless(
+            Siswa::query()
+                ->whereKey($siswa->id)
+                ->whereHas('anggotaKelas', function ($query) use ($pengguna) {
+                    $query->whereIn('kelas_id', $pengguna->kelasWaliIds());
+                })
+                ->exists(),
+            403,
+        );
     }
 
     private function cariSiswaUntukImport(array $dataSiswa): ?Siswa

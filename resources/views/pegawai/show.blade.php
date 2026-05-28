@@ -16,7 +16,9 @@
 
         <div class="actions">
             <a href="{{ route('pegawai.index') }}" class="button button-muted">Kembali</a>
-            <a href="{{ route('pegawai.edit', $pegawai) }}" class="button button-dark">Edit</a>
+            @izin('pegawai.kelola')
+                <a href="{{ route('pegawai.edit', $pegawai) }}" class="button button-dark">Edit</a>
+            @endizin
         </div>
     </div>
 
@@ -47,13 +49,15 @@
                 </div>
             </div>
 
-            @if ($pegawai->aktif)
-                <form action="{{ route('pegawai.destroy', $pegawai) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan pegawai ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
-                </form>
-            @endif
+            @izin('pegawai.kelola')
+                @if ($pegawai->aktif)
+                    <form action="{{ route('pegawai.destroy', $pegawai) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan pegawai ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
+                    </form>
+                @endif
+            @endizin
         </aside>
 
         <div class="section-stack">

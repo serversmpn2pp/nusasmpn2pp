@@ -9,7 +9,9 @@
             <h1 class="page-title">Guru mata pelajaran</h1>
         </div>
 
-        <a href="{{ route('guru-mata-pelajaran.create') }}" class="button button-primary">Tambah penugasan</a>
+        @izin('guru_mapel.kelola')
+            <a href="{{ route('guru-mata-pelajaran.create') }}" class="button button-primary">Tambah penugasan</a>
+        @endizin
     </div>
 
     <div class="stats-grid">
@@ -102,7 +104,9 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('guru-mata-pelajaran.show', $item) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('guru-mata-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @izin('guru_mapel.kelola')
+                                        <a href="{{ route('guru-mata-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -152,7 +156,9 @@
 
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('guru-mata-pelajaran.show', $item) }}" class="button button-muted">Lihat</a>
-                        <a href="{{ route('guru-mata-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                        @izin('guru_mapel.kelola')
+                            <a href="{{ route('guru-mata-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                        @endizin
                     </div>
                 </article>
             @empty

@@ -95,6 +95,12 @@ class Pengguna extends Authenticatable
             return true;
         }
 
+        if ($this->relationLoaded('daftarPeran')) {
+            return $this->daftarPeran
+                ->where('aktif', true)
+                ->contains(fn (Peran $peran) => $peran->memilikiIzin($kode));
+        }
+
         return $this->daftarPeran()
             ->where('peran.aktif', true)
             ->whereHas('izin', function ($query) use ($kode) {
@@ -114,5 +120,49 @@ class Pengguna extends Authenticatable
     public function akunPegawai(): bool
     {
         return ! $this->akun_sistem && filled($this->pegawai_id);
+    }
+
+    public function membatasiCakupanWaliKelas(): bool
+    {
+        if ($this->administrator()) {
+            return false;
+        }
+
+        if (! $this->memilikiPeran('wali_kelas')) {
+            return false;
+        }
+
+        return ! $this->memilikiPeran([
+            'pimpinan',
+            'wakil_pimpinan_kesiswaan',
+            'wakil_pimpinan_kurikulum',
+            'bk',
+        ]);
+    }
+
+    public function kelasWaliIds(): array
+    {
+        if (! $this->pegawai_id) {
+            return [];
+        }
+
+        return Kelas::query()
+            ->where('wali_kelas_id', $this->pegawai_id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    public function dapatMengaksesKelasSebagaiWali(?int $kelasId): bool
+    {
+        if (! $this->membatasiCakupanWaliKelas()) {
+            return true;
+        }
+
+        if (! $kelasId) {
+            return false;
+        }
+
+        return in_array($kelasId, $this->kelasWaliIds(), true);
     }
 }

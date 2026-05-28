@@ -9,7 +9,9 @@
             <h1 class="page-title">Kategori pembinaan siswa</h1>
         </div>
 
-        <a href="{{ route('kategori-pembinaan-siswa.create') }}" class="button button-primary">Tambah kategori</a>
+        @izin('bk.kelola')
+            <a href="{{ route('kategori-pembinaan-siswa.create') }}" class="button button-primary">Tambah kategori</a>
+        @endizin
     </div>
 
     <div class="stats-grid">
@@ -83,7 +85,9 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('kategori-pembinaan-siswa.show', $item) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('kategori-pembinaan-siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @izin('bk.kelola')
+                                        <a href="{{ route('kategori-pembinaan-siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -116,7 +120,9 @@
 
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('kategori-pembinaan-siswa.show', $item) }}" class="button button-muted">Lihat</a>
-                        <a href="{{ route('kategori-pembinaan-siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                        @izin('bk.kelola')
+                            <a href="{{ route('kategori-pembinaan-siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                        @endizin
                     </div>
                 </article>
             @empty

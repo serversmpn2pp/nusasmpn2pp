@@ -9,7 +9,9 @@
             <h1 class="page-title">Komponen nilai</h1>
         </div>
 
-        <a href="{{ route('komponen-nilai.create') }}" class="button button-primary">Tambah komponen</a>
+        @izin('nilai.komponen_kelola')
+            <a href="{{ route('komponen-nilai.create') }}" class="button button-primary">Tambah komponen</a>
+        @endizin
     </div>
 
     <div class="stats-grid">
@@ -124,10 +126,14 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('komponen-nilai.show', $item) }}" class="button button-muted">Lihat</a>
-                                    @if ($item->aktif)
-                                        <a href="{{ route('input-nilai.index', ['komponen_nilai_id' => $item->id]) }}" class="button button-primary">Input</a>
-                                    @endif
-                                    <a href="{{ route('komponen-nilai.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @izin('nilai.input')
+                                        @if ($item->aktif)
+                                            <a href="{{ route('input-nilai.index', ['komponen_nilai_id' => $item->id]) }}" class="button button-primary">Input</a>
+                                        @endif
+                                    @endizin
+                                    @izin('nilai.komponen_kelola')
+                                        <a href="{{ route('komponen-nilai.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -177,10 +183,14 @@
 
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('komponen-nilai.show', $item) }}" class="button button-muted">Lihat</a>
-                        @if ($item->aktif)
-                            <a href="{{ route('input-nilai.index', ['komponen_nilai_id' => $item->id]) }}" class="button button-primary">Input</a>
-                        @endif
-                        <a href="{{ route('komponen-nilai.edit', $item) }}" class="button button-dark">Edit</a>
+                        @izin('nilai.input')
+                            @if ($item->aktif)
+                                <a href="{{ route('input-nilai.index', ['komponen_nilai_id' => $item->id]) }}" class="button button-primary">Input</a>
+                            @endif
+                        @endizin
+                        @izin('nilai.komponen_kelola')
+                            <a href="{{ route('komponen-nilai.edit', $item) }}" class="button button-dark">Edit</a>
+                        @endizin
                     </div>
                 </article>
             @empty

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Izin;
 use App\Models\Peran;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -20,7 +21,10 @@ class PeranController extends Controller
         }
 
         $peran = Peran::query()
-            ->withCount(['pengguna', 'izin'])
+            ->withCount([
+                'pengguna',
+                'izin' => fn ($query) => $query->where('izin.aktif', true),
+            ])
             ->when($kataKunci, function ($query, $kataKunci) {
                 $query->where(function ($query) use ($kataKunci) {
                     $query->where('nama', 'ilike', '%' . $kataKunci . '%')
@@ -40,6 +44,10 @@ class PeranController extends Controller
             'aktif' => Peran::where('aktif', true)->count(),
             'sistem' => Peran::where('sistem', true)->count(),
             'tambahan' => Peran::where('sistem', false)->count(),
+            'izin_aktif' => Izin::where('aktif', true)->count(),
+            'pengguna_terhubung' => DB::table('pengguna_peran')
+                ->distinct('pengguna_id')
+                ->count('pengguna_id'),
         ];
 
         return view('peran.index', compact('peran', 'kataKunci', 'status', 'ringkasan'));
@@ -164,12 +172,29 @@ class PeranController extends Controller
 
     private function daftarIzinForm()
     {
+        $urutanKelompok = [
+            'Umum',
+            'Akun',
+            'Pegawai',
+            'Siswa',
+            'Akademik',
+            'Nilai',
+            'Absensi',
+            'Laporan',
+            'BK',
+            'Kurikulum',
+            'Sarpras',
+            'Keamanan',
+            'Kebersihan',
+        ];
+        $urutanKelompokMap = array_flip($urutanKelompok);
+
         return Izin::query()
             ->where('aktif', true)
-            ->orderBy('kelompok')
             ->orderBy('nama')
             ->get()
-            ->groupBy('kelompok');
+            ->groupBy('kelompok')
+            ->sortBy(fn ($izin, $kelompok) => $urutanKelompokMap[$kelompok] ?? 999);
     }
 
     private function izinUntukDisimpan(Peran $peran, array $izinIds): array

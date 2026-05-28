@@ -105,8 +105,12 @@
 
         <div class="actions">
             <a href="{{ route('rekap-absensi-pegawai-harian.index') }}" class="button button-muted">Rekap harian</a>
-            <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak', $parameterCetak) }}" target="_blank" rel="noopener" class="button button-primary">Cetak semua</a>
-            <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="button button-dark">Scan pegawai</a>
+            @izin('laporan.export')
+                <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak', $parameterCetak) }}" target="_blank" rel="noopener" class="button button-primary">Cetak semua</a>
+            @endizin
+            @izin('absensi.scan')
+                <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="button button-dark">Scan pegawai</a>
+            @endizin
         </div>
     </div>
 
@@ -226,7 +230,9 @@
                         <th>Terlambat</th>
                         <th>Pulang cepat</th>
                         <th>% Hadir</th>
-                        <th class="text-right">Aksi</th>
+                        @izin('laporan.export')
+                            <th class="text-right">Aksi</th>
+                        @endizin
                     </tr>
                 </thead>
                 <tbody>
@@ -283,15 +289,17 @@
                                     {{ $formatPersen($item['persentase_hadir']) }}
                                 </span>
                             </td>
-                            <td data-label="Aksi">
-                                <div class="actions" style="justify-content: flex-end;">
-                                    <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak-pegawai', ['pegawai' => $pegawai, ...$parameterCetak]) }}" target="_blank" rel="noopener" class="button button-dark button-sm">Cetak</a>
-                                </div>
-                            </td>
+                            @izin('laporan.export')
+                                <td data-label="Aksi">
+                                    <div class="actions" style="justify-content: flex-end;">
+                                        <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak-pegawai', ['pegawai' => $pegawai, ...$parameterCetak]) }}" target="_blank" rel="noopener" class="button button-dark button-sm">Cetak</a>
+                                    </div>
+                                </td>
+                            @endizin
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="12" class="empty-state">Belum ada pegawai pada pilihan ini.</td>
+                            <td colspan="{{ auth()->user()?->memilikiIzin('laporan.export') ? 12 : 11 }}" class="empty-state">Belum ada pegawai pada pilihan ini.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -360,9 +368,11 @@
                                 </div>
                             </dl>
 
-                            <div class="actions" style="margin-top: 14px;">
-                                <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak-pegawai', ['pegawai' => $pegawai, ...$parameterCetak]) }}" target="_blank" rel="noopener" class="button button-dark">Cetak</a>
-                            </div>
+                            @izin('laporan.export')
+                                <div class="actions" style="margin-top: 14px;">
+                                    <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak-pegawai', ['pegawai' => $pegawai, ...$parameterCetak]) }}" target="_blank" rel="noopener" class="button button-dark">Cetak</a>
+                                </div>
+                            @endizin
                         </div>
                     </div>
                 </article>

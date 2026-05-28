@@ -37,8 +37,12 @@
 
         <div class="actions">
             <a href="{{ route('rekap-absensi-harian.index') }}" class="button button-muted">Rekap harian</a>
-            <a href="{{ route('laporan-absensi.export', $parameterExport) }}" class="button button-primary">Export Excel</a>
-            <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-dark">Scan absensi</a>
+            @izin('laporan.export')
+                <a href="{{ route('laporan-absensi.export', $parameterExport) }}" class="button button-primary">Export Excel</a>
+            @endizin
+            @izin('absensi.scan')
+                <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-dark">Scan absensi</a>
+            @endizin
         </div>
     </div>
 
@@ -60,7 +64,7 @@
             <div class="field">
                 <label for="kelas_id">Kelas</label>
                 <select id="kelas_id" name="kelas_id" class="select">
-                    <option value="">Semua kelas</option>
+                    <option value="">{{ ($cakupanWaliKelas ?? false) ? 'Semua kelas wali' : 'Semua kelas' }}</option>
                     @foreach ($daftarKelas as $kelas)
                         <option value="{{ $kelas->id }}" @selected((string) $kelasId === (string) $kelas->id)>
                             {{ $kelas->nama }}
@@ -116,6 +120,10 @@
         </div>
     </form>
 
+    @if ($cakupanWaliKelas ?? false)
+        <div class="alert">Laporan absensi dibatasi pada kelas yang Anda wali.</div>
+    @endif
+
     @if (empty($hariAktif))
         <div class="alert alert-danger">
             Belum ada pengaturan absensi aktif. Laporan belum dapat menghitung hari efektif.
@@ -161,7 +169,7 @@
         <div class="panel-pad" style="border-bottom: 1px solid var(--line);">
             <h2 class="panel-title">{{ $labelPeriode }}</h2>
             <p class="help-text" style="margin-top: 6px;">
-                {{ $kelasDipilih ? 'Kelas ' . $kelasDipilih->nama : 'Semua kelas' }}.
+                {{ $kelasDipilih ? 'Kelas ' . $kelasDipilih->nama : (($cakupanWaliKelas ?? false) ? 'Semua kelas wali' : 'Semua kelas') }}.
                 Alfa otomatis dihitung dari hari efektif yang tidak memiliki catatan absensi.
             </p>
         </div>

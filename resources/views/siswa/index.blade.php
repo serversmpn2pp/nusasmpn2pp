@@ -10,10 +10,16 @@
         </div>
 
         <div class="actions">
-            <a href="{{ route('siswa.import.create') }}" class="button button-muted">Import Excel</a>
-            <a href="{{ route('siswa.create') }}" class="button button-primary">Tambah siswa</a>
+            @izin('siswa.kelola')
+                <a href="{{ route('siswa.import.create') }}" class="button button-muted">Import Excel</a>
+                <a href="{{ route('siswa.create') }}" class="button button-primary">Tambah siswa</a>
+            @endizin
         </div>
     </div>
+
+    @if ($cakupanWaliKelas ?? false)
+        <div class="alert">Data siswa dibatasi pada kelas yang Anda wali.</div>
+    @endif
 
     <div class="stats-grid">
         <div class="panel stat">
@@ -164,7 +170,9 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('siswa.show', $item) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @izin('siswa.kelola')
+                                        <a href="{{ route('siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -216,7 +224,9 @@
 
                             <div class="actions" style="margin-top: 14px;">
                                 <a href="{{ route('siswa.show', $item) }}" class="button button-muted">Lihat</a>
-                                <a href="{{ route('siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                                @izin('siswa.kelola')
+                                    <a href="{{ route('siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                                @endizin
                             </div>
                         </div>
                     </div>

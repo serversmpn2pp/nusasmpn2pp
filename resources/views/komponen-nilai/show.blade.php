@@ -15,10 +15,14 @@
 
         <div class="actions">
             <a href="{{ route('komponen-nilai.index') }}" class="button button-muted">Kembali</a>
-            @if ($komponenNilai->aktif)
-                <a href="{{ route('input-nilai.index', ['komponen_nilai_id' => $komponenNilai->id]) }}" class="button button-primary">Input nilai</a>
-            @endif
-            <a href="{{ route('komponen-nilai.edit', $komponenNilai) }}" class="button button-dark">Edit</a>
+            @izin('nilai.input')
+                @if ($komponenNilai->aktif)
+                    <a href="{{ route('input-nilai.index', ['komponen_nilai_id' => $komponenNilai->id]) }}" class="button button-primary">Input nilai</a>
+                @endif
+            @endizin
+            @izin('nilai.komponen_kelola')
+                <a href="{{ route('komponen-nilai.edit', $komponenNilai) }}" class="button button-dark">Edit</a>
+            @endizin
         </div>
     </div>
 
@@ -42,13 +46,15 @@
                 </div>
             </div>
 
-            @if ($komponenNilai->aktif)
-                <form action="{{ route('komponen-nilai.destroy', $komponenNilai) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan komponen nilai ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
-                </form>
-            @endif
+            @izin('nilai.komponen_kelola')
+                @if ($komponenNilai->aktif)
+                    <form action="{{ route('komponen-nilai.destroy', $komponenNilai) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan komponen nilai ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
+                    </form>
+                @endif
+            @endizin
         </aside>
 
         <div class="section-stack">

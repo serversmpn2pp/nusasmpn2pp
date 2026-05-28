@@ -321,8 +321,12 @@
         </div>
 
         <div class="actions">
-            <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
-            <a href="{{ route('siswa.index') }}" class="button button-muted">Data siswa</a>
+            @izin('kartu_pelajar.cetak')
+                <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
+            @endizin
+            @izin('siswa.lihat', 'siswa.kelola')
+                <a href="{{ route('siswa.index') }}" class="button button-muted">Data siswa</a>
+            @endizin
         </div>
     </div>
 
@@ -377,7 +381,9 @@
             <h2 class="panel-title">{{ $kartuPelajar->count() }} kartu siap cetak</h2>
             <p class="help-text" style="margin-top: 4px;">Ukuran kartu: 53,98mm x 85,60mm, posisi portrait.</p>
         </div>
-        <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
+        @izin('kartu_pelajar.cetak')
+            <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
+        @endizin
     </div>
 
     @if ($kartuPelajar->isEmpty())

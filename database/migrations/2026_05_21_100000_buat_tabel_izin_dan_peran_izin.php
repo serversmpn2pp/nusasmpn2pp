@@ -206,6 +206,7 @@ return new class extends Migration
                 'nilai.lihat',
                 'nilai.rekap',
                 'absensi.lihat',
+                'absensi.koreksi',
                 'absensi.laporan',
                 'bk.lihat',
             ],

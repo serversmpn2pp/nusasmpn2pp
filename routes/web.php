@@ -20,6 +20,7 @@ use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PengaturanAbsensiController;
 use App\Http\Controllers\PengaturanAbsensiPegawaiController;
+use App\Http\Controllers\PenempatanSiswaController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
 use App\Http\Controllers\RekapAbsensiHarianController;
@@ -50,67 +51,175 @@ Route::middleware('auth')->group(function () {
     Route::put('ganti-kata-sandi', [AutentikasiController::class, 'updateKataSandi'])->name('kata-sandi.update');
 
     Route::middleware('kata_sandi_bukan_default')->group(function () {
-        Route::get('beranda', [BerandaController::class, 'index'])->name('beranda');
+        Route::get('beranda', [BerandaController::class, 'index'])
+            ->middleware('izin:beranda.akses')
+            ->name('beranda');
 
-        Route::middleware('admin')->group(function () {
+        Route::middleware('izin:akun.lihat,akun.kelola')->group(function () {
             Route::get('akun-pegawai', [AkunPegawaiController::class, 'index'])->name('akun-pegawai.index');
+        });
+
+        Route::middleware('izin:akun.kelola')->group(function () {
             Route::post('akun-pegawai/buat-massal', [AkunPegawaiController::class, 'storeMassal'])->name('akun-pegawai.buat-massal');
             Route::post('akun-pegawai/{pegawai}', [AkunPegawaiController::class, 'store'])->name('akun-pegawai.store');
             Route::patch('akun-pegawai/{pengguna}/reset-password', [AkunPegawaiController::class, 'resetPassword'])->name('akun-pegawai.reset-password');
             Route::patch('akun-pegawai/{pengguna}/status', [AkunPegawaiController::class, 'ubahStatus'])->name('akun-pegawai.status');
             Route::patch('akun-pegawai/{pengguna}/peran', [AkunPegawaiController::class, 'updatePeran'])->name('akun-pegawai.peran.update');
+        });
 
-            Route::resource('peran', PeranController::class)->except(['show']);
+        Route::resource('peran', PeranController::class)
+            ->only(['index'])
+            ->middleware('izin:peran.lihat,peran.kelola');
+        Route::resource('peran', PeranController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:peran.kelola');
+
+        Route::middleware('izin:pegawai.kelola')->group(function () {
             Route::get('pegawai/import', [PegawaiController::class, 'createImport'])->name('pegawai.import.create');
             Route::post('pegawai/import', [PegawaiController::class, 'storeImport'])->name('pegawai.import.store');
-            Route::resource('pegawai', PegawaiController::class);
+        });
+        Route::resource('pegawai', PegawaiController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:pegawai.kelola');
+        Route::resource('pegawai', PegawaiController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:pegawai.lihat,pegawai.kelola');
 
+        Route::middleware('izin:siswa.kelola')->group(function () {
             Route::get('siswa/import', [SiswaController::class, 'createImport'])->name('siswa.import.create');
             Route::post('siswa/import', [SiswaController::class, 'storeImport'])->name('siswa.import.store');
-            Route::resource('siswa', SiswaController::class);
-            Route::get('kartu-pelajar', [KartuPelajarController::class, 'index'])->name('kartu-pelajar.index');
-            Route::get('kartu-pegawai', [KartuPegawaiController::class, 'index'])->name('kartu-pegawai.index');
+        });
+        Route::resource('siswa', SiswaController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:siswa.kelola');
+        Route::resource('siswa', SiswaController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:siswa.lihat,siswa.kelola');
 
-            Route::resource('tahun-pelajaran', TahunPelajaranController::class);
-            Route::resource('mata-pelajaran', MataPelajaranController::class);
-            Route::resource('guru-mata-pelajaran', GuruMataPelajaranController::class);
-            Route::resource('skema-bobot-nilai', SkemaBobotNilaiController::class);
-            Route::resource('komponen-nilai', KomponenNilaiController::class);
+        Route::get('kartu-pelajar', [KartuPelajarController::class, 'index'])
+            ->middleware('izin:kartu_pelajar.lihat,kartu_pelajar.cetak')
+            ->name('kartu-pelajar.index');
+        Route::get('kartu-pegawai', [KartuPegawaiController::class, 'index'])
+            ->middleware('izin:pegawai.lihat,pegawai.kelola')
+            ->name('kartu-pegawai.index');
+
+        Route::resource('tahun-pelajaran', TahunPelajaranController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:tahun_pelajaran.kelola');
+        Route::resource('tahun-pelajaran', TahunPelajaranController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:tahun_pelajaran.lihat,tahun_pelajaran.kelola');
+
+        Route::resource('mata-pelajaran', MataPelajaranController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:mata_pelajaran.kelola');
+        Route::resource('mata-pelajaran', MataPelajaranController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:mata_pelajaran.lihat,mata_pelajaran.kelola');
+
+        Route::resource('guru-mata-pelajaran', GuruMataPelajaranController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:guru_mapel.kelola');
+        Route::resource('guru-mata-pelajaran', GuruMataPelajaranController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:guru_mapel.lihat,guru_mapel.kelola');
+
+        Route::resource('skema-bobot-nilai', SkemaBobotNilaiController::class)
+            ->middleware('izin:nilai.skema_kelola');
+        Route::resource('komponen-nilai', KomponenNilaiController::class)
+            ->middleware('izin:nilai.komponen_kelola');
+        Route::middleware('izin:nilai.input')->group(function () {
             Route::get('input-nilai', [InputNilaiController::class, 'index'])->name('input-nilai.index');
             Route::post('input-nilai', [InputNilaiController::class, 'store'])->name('input-nilai.store');
-            Route::get('rekap-nilai-rapor', [RekapNilaiRaporController::class, 'index'])->name('rekap-nilai-rapor.index');
-            Route::resource('pengaturan-absensi', PengaturanAbsensiController::class);
-            Route::resource('pengaturan-absensi-pegawai', PengaturanAbsensiPegawaiController::class);
+        });
+        Route::get('rekap-nilai-rapor', [RekapNilaiRaporController::class, 'index'])
+            ->middleware('izin:nilai.rekap')
+            ->name('rekap-nilai-rapor.index');
+
+        Route::resource('pengaturan-absensi', PengaturanAbsensiController::class)
+            ->middleware('izin:absensi.pengaturan_kelola');
+        Route::resource('pengaturan-absensi-pegawai', PengaturanAbsensiPegawaiController::class)
+            ->middleware('izin:absensi.pengaturan_kelola');
+        Route::middleware('izin:absensi.scan')->group(function () {
             Route::get('scan-absensi', [ScanAbsensiController::class, 'index'])->name('scan-absensi.index');
             Route::post('scan-absensi', [ScanAbsensiController::class, 'store'])->name('scan-absensi.store');
             Route::get('scan-absensi-pegawai', [ScanAbsensiPegawaiController::class, 'index'])->name('scan-absensi-pegawai.index');
             Route::post('scan-absensi-pegawai', [ScanAbsensiPegawaiController::class, 'store'])->name('scan-absensi-pegawai.store');
-            Route::get('rekap-absensi-harian', [RekapAbsensiHarianController::class, 'index'])->name('rekap-absensi-harian.index');
+        });
+        Route::get('rekap-absensi-harian', [RekapAbsensiHarianController::class, 'index'])
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.laporan')
+            ->name('rekap-absensi-harian.index');
+        Route::middleware('izin:absensi.koreksi')->group(function () {
             Route::get('rekap-absensi-harian/{anggotaKelas}/koreksi', [RekapAbsensiHarianController::class, 'editKoreksi'])->name('rekap-absensi-harian.koreksi.edit');
             Route::put('rekap-absensi-harian/{anggotaKelas}/koreksi', [RekapAbsensiHarianController::class, 'updateKoreksi'])->name('rekap-absensi-harian.koreksi.update');
-            Route::get('rekap-absensi-pegawai-harian', [RekapAbsensiPegawaiHarianController::class, 'index'])->name('rekap-absensi-pegawai-harian.index');
+        });
+        Route::get('rekap-absensi-pegawai-harian', [RekapAbsensiPegawaiHarianController::class, 'index'])
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.laporan')
+            ->name('rekap-absensi-pegawai-harian.index');
+        Route::middleware('izin:absensi.koreksi')->group(function () {
             Route::get('rekap-absensi-pegawai-harian/{pegawai}/koreksi', [RekapAbsensiPegawaiHarianController::class, 'editKoreksi'])->name('rekap-absensi-pegawai-harian.koreksi.edit');
             Route::put('rekap-absensi-pegawai-harian/{pegawai}/koreksi', [RekapAbsensiPegawaiHarianController::class, 'updateKoreksi'])->name('rekap-absensi-pegawai-harian.koreksi.update');
-            Route::get('laporan-absensi', [LaporanAbsensiController::class, 'index'])->name('laporan-absensi.index');
-            Route::get('laporan-absensi/export', [LaporanAbsensiController::class, 'exportExcel'])->name('laporan-absensi.export');
-            Route::get('laporan-absensi-pegawai-bulanan', [LaporanAbsensiPegawaiBulananController::class, 'index'])->name('laporan-absensi-pegawai-bulanan.index');
+        });
+        Route::get('laporan-absensi', [LaporanAbsensiController::class, 'index'])
+            ->middleware('izin:absensi.laporan')
+            ->name('laporan-absensi.index');
+        Route::get('laporan-absensi/export', [LaporanAbsensiController::class, 'exportExcel'])
+            ->middleware('izin:laporan.export')
+            ->name('laporan-absensi.export');
+        Route::get('laporan-absensi-pegawai-bulanan', [LaporanAbsensiPegawaiBulananController::class, 'index'])
+            ->middleware('izin:absensi.laporan')
+            ->name('laporan-absensi-pegawai-bulanan.index');
+        Route::middleware('izin:laporan.export')->group(function () {
             Route::get('laporan-absensi-pegawai-bulanan/cetak', [LaporanAbsensiPegawaiBulananController::class, 'cetak'])->name('laporan-absensi-pegawai-bulanan.cetak');
             Route::get('laporan-absensi-pegawai-bulanan/{pegawai}/cetak', [LaporanAbsensiPegawaiBulananController::class, 'cetakPegawai'])->name('laporan-absensi-pegawai-bulanan.cetak-pegawai');
+        });
+
+        Route::middleware('izin:kenaikan_kelas.kelola')->group(function () {
             Route::get('kenaikan-kelas', [KenaikanKelasController::class, 'index'])->name('kenaikan-kelas.index');
             Route::post('kenaikan-kelas', [KenaikanKelasController::class, 'store'])->name('kenaikan-kelas.store');
-            Route::resource('kategori-pembinaan-siswa', KategoriPembinaanSiswaController::class);
-            Route::resource('laporan-pembinaan-siswa', LaporanPembinaanSiswaController::class);
+        });
+
+        Route::resource('kategori-pembinaan-siswa', KategoriPembinaanSiswaController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:bk.kelola');
+        Route::resource('kategori-pembinaan-siswa', KategoriPembinaanSiswaController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:bk.lihat,bk.kelola');
+
+        Route::resource('laporan-pembinaan-siswa', LaporanPembinaanSiswaController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:bk.kelola');
+        Route::resource('laporan-pembinaan-siswa', LaporanPembinaanSiswaController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:bk.lihat,bk.kelola');
+        Route::middleware('izin:bk.kelola')->group(function () {
             Route::get('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/tindak-lanjut/create', [TindakLanjutPembinaanSiswaController::class, 'create'])->name('tindak-lanjut-pembinaan-siswa.create');
             Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/tindak-lanjut', [TindakLanjutPembinaanSiswaController::class, 'store'])->name('tindak-lanjut-pembinaan-siswa.store');
             Route::get('tindak-lanjut-pembinaan-siswa/{tindakLanjutPembinaanSiswa}/edit', [TindakLanjutPembinaanSiswaController::class, 'edit'])->name('tindak-lanjut-pembinaan-siswa.edit');
             Route::put('tindak-lanjut-pembinaan-siswa/{tindakLanjutPembinaanSiswa}', [TindakLanjutPembinaanSiswaController::class, 'update'])->name('tindak-lanjut-pembinaan-siswa.update');
             Route::delete('tindak-lanjut-pembinaan-siswa/{tindakLanjutPembinaanSiswa}', [TindakLanjutPembinaanSiswaController::class, 'destroy'])->name('tindak-lanjut-pembinaan-siswa.destroy');
+        });
+
+        Route::middleware('izin:kelas.kelola')->group(function () {
+            Route::post('penempatan-siswa/masukkan', [PenempatanSiswaController::class, 'storeMassal'])->name('penempatan-siswa.store-massal');
             Route::post('kelas/{kelas}/anggota-kelas', [AnggotaKelasController::class, 'store'])->name('anggota-kelas.store');
-            Route::resource('kelas', KelasController::class)->parameters([
-                'kelas' => 'kelas',
-            ]);
             Route::patch('anggota-kelas/{anggotaKelas}', [AnggotaKelasController::class, 'update'])->name('anggota-kelas.update');
             Route::delete('anggota-kelas/{anggotaKelas}', [AnggotaKelasController::class, 'destroy'])->name('anggota-kelas.destroy');
         });
+        Route::get('penempatan-siswa', [PenempatanSiswaController::class, 'index'])
+            ->middleware('izin:kelas.lihat,kelas.kelola')
+            ->name('penempatan-siswa.index');
+        Route::resource('kelas', KelasController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:kelas.kelola')
+            ->parameters([
+                'kelas' => 'kelas',
+            ]);
+        Route::resource('kelas', KelasController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:kelas.lihat,kelas.kelola')
+            ->parameters([
+                'kelas' => 'kelas',
+            ]);
     });
 });

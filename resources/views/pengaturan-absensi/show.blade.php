@@ -15,7 +15,9 @@
 
         <div class="actions">
             <a href="{{ route('pengaturan-absensi.index') }}" class="button button-muted">Kembali</a>
-            <a href="{{ route('pengaturan-absensi.edit', $pengaturanAbsensi) }}" class="button button-dark">Edit</a>
+            @izin('absensi.pengaturan_kelola')
+                <a href="{{ route('pengaturan-absensi.edit', $pengaturanAbsensi) }}" class="button button-dark">Edit</a>
+            @endizin
         </div>
     </div>
 
@@ -39,13 +41,15 @@
                 </div>
             </div>
 
-            @if ($pengaturanAbsensi->aktif)
-                <form action="{{ route('pengaturan-absensi.destroy', $pengaturanAbsensi) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan pengaturan absensi ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
-                </form>
-            @endif
+            @izin('absensi.pengaturan_kelola')
+                @if ($pengaturanAbsensi->aktif)
+                    <form action="{{ route('pengaturan-absensi.destroy', $pengaturanAbsensi) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan pengaturan absensi ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
+                    </form>
+                @endif
+            @endizin
         </aside>
 
         <div class="section-stack">

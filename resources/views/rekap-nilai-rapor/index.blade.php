@@ -25,8 +25,12 @@
         </div>
 
         <div class="actions">
-            <a href="{{ route('input-nilai.index') }}" class="button button-muted">Input nilai</a>
-            <a href="{{ route('skema-bobot-nilai.index') }}" class="button button-muted">Bobot nilai</a>
+            @izin('nilai.input')
+                <a href="{{ route('input-nilai.index') }}" class="button button-muted">Input nilai</a>
+            @endizin
+            @izin('nilai.skema_kelola')
+                <a href="{{ route('skema-bobot-nilai.index') }}" class="button button-muted">Bobot nilai</a>
+            @endizin
         </div>
     </div>
 

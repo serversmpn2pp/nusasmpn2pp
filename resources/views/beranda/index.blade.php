@@ -338,30 +338,40 @@
         </section>
 
         <section class="dashboard-actions" aria-label="Aksi cepat">
-            <a href="{{ route('siswa.create') }}" class="dashboard-action">
-                <span>Tambah Siswa</span>
-                <span class="dashboard-action-mark">SW</span>
-            </a>
-            <a href="{{ route('pegawai.create') }}" class="dashboard-action">
-                <span>Tambah Pegawai</span>
-                <span class="dashboard-action-mark">PG</span>
-            </a>
-            <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="dashboard-action">
-                <span>Scan Siswa</span>
-                <span class="dashboard-action-mark">SA</span>
-            </a>
-            <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="dashboard-action">
-                <span>Scan Pegawai</span>
-                <span class="dashboard-action-mark">SP</span>
-            </a>
-            <a href="{{ route('input-nilai.index') }}" class="dashboard-action">
-                <span>Input Nilai</span>
-                <span class="dashboard-action-mark">IN</span>
-            </a>
-            <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="dashboard-action">
-                <span>Laporan BK</span>
-                <span class="dashboard-action-mark">BK</span>
-            </a>
+            @izin('siswa.kelola')
+                <a href="{{ route('siswa.create') }}" class="dashboard-action">
+                    <span>Tambah Siswa</span>
+                    <span class="dashboard-action-mark">SW</span>
+                </a>
+            @endizin
+            @izin('pegawai.kelola')
+                <a href="{{ route('pegawai.create') }}" class="dashboard-action">
+                    <span>Tambah Pegawai</span>
+                    <span class="dashboard-action-mark">PG</span>
+                </a>
+            @endizin
+            @izin('absensi.scan')
+                <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="dashboard-action">
+                    <span>Scan Siswa</span>
+                    <span class="dashboard-action-mark">SA</span>
+                </a>
+                <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="dashboard-action">
+                    <span>Scan Pegawai</span>
+                    <span class="dashboard-action-mark">SP</span>
+                </a>
+            @endizin
+            @izin('nilai.input')
+                <a href="{{ route('input-nilai.index') }}" class="dashboard-action">
+                    <span>Input Nilai</span>
+                    <span class="dashboard-action-mark">IN</span>
+                </a>
+            @endizin
+            @izin('bk.kelola')
+                <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="dashboard-action">
+                    <span>Laporan BK</span>
+                    <span class="dashboard-action-mark">BK</span>
+                </a>
+            @endizin
         </section>
 
         <section class="dashboard-stat-grid" aria-label="Ringkasan data sekolah">
@@ -443,7 +453,9 @@
                 <article class="dashboard-panel">
                     <div class="dashboard-panel-head">
                         <h2>Perlu Perhatian</h2>
-                        <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted button-sm">BK</a>
+                        @izin('bk.lihat', 'bk.kelola')
+                            <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted button-sm">BK</a>
+                        @endizin
                     </div>
                     <div class="dashboard-panel-body">
                         <div class="attention-list">
@@ -524,7 +536,9 @@
                 <article class="dashboard-panel">
                     <div class="dashboard-panel-head">
                         <h2>Akademik</h2>
-                        <a href="{{ route('rekap-nilai-rapor.index') }}" class="button button-muted button-sm">Rapor</a>
+                        @izin('nilai.rekap')
+                            <a href="{{ route('rekap-nilai-rapor.index') }}" class="button button-muted button-sm">Rapor</a>
+                        @endizin
                     </div>
                     <div class="dashboard-panel-body">
                         <div class="mini-grid cols-3">
@@ -555,7 +569,9 @@
                 <article class="dashboard-panel">
                     <div class="dashboard-panel-head">
                         <h2>Pembinaan/BK</h2>
-                        <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted button-sm">Lihat</a>
+                        @izin('bk.lihat', 'bk.kelola')
+                            <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted button-sm">Lihat</a>
+                        @endizin
                     </div>
                     <div class="dashboard-panel-body">
                         <div class="mini-grid">
@@ -596,7 +612,9 @@
                 <article class="dashboard-panel">
                     <div class="dashboard-panel-head">
                         <h2>Scan Terakhir</h2>
-                        <a href="{{ route('laporan-absensi.index') }}" class="button button-muted button-sm">Laporan</a>
+                        @izin('absensi.laporan')
+                            <a href="{{ route('laporan-absensi.index') }}" class="button button-muted button-sm">Laporan</a>
+                        @endizin
                     </div>
                     <div class="dashboard-panel-body">
                         <div class="split-list">

@@ -9,7 +9,9 @@
             <h1 class="page-title">Skema bobot nilai</h1>
         </div>
 
-        <a href="{{ route('skema-bobot-nilai.create') }}" class="button button-primary">Tambah skema</a>
+        @izin('nilai.skema_kelola')
+            <a href="{{ route('skema-bobot-nilai.create') }}" class="button button-primary">Tambah skema</a>
+        @endizin
     </div>
 
     <div class="stats-grid">
@@ -117,7 +119,9 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('skema-bobot-nilai.show', $item) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('skema-bobot-nilai.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @izin('nilai.skema_kelola')
+                                        <a href="{{ route('skema-bobot-nilai.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -167,7 +171,9 @@
 
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('skema-bobot-nilai.show', $item) }}" class="button button-muted">Lihat</a>
-                        <a href="{{ route('skema-bobot-nilai.edit', $item) }}" class="button button-dark">Edit</a>
+                        @izin('nilai.skema_kelola')
+                            <a href="{{ route('skema-bobot-nilai.edit', $item) }}" class="button button-dark">Edit</a>
+                        @endizin
                     </div>
                 </article>
             @empty

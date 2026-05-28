@@ -11,6 +11,8 @@ class AnggotaKelasController extends Controller
 {
     public function store(Request $request, Kelas $kelas)
     {
+        abort_unless($request->user()?->dapatMengaksesKelasSebagaiWali($kelas->id) ?? false, 403);
+
         $data = $request->validate([
             'siswa_id' => [
                 'required',
@@ -53,6 +55,8 @@ class AnggotaKelasController extends Controller
 
     public function update(Request $request, AnggotaKelas $anggotaKelas)
     {
+        abort_unless($request->user()?->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id) ?? false, 403);
+
         $data = $request->validate([
             'nomor_absen' => [
                 'nullable',
@@ -69,18 +73,42 @@ class AnggotaKelasController extends Controller
 
         $anggotaKelas->update($data);
 
-        return redirect()
-            ->route('kelas.show', $anggotaKelas->kelas)
+        return $this->redirectSetelahUbah($anggotaKelas, $request)
             ->with('berhasil', 'Data anggota kelas berhasil diperbarui.');
     }
 
-    public function destroy(AnggotaKelas $anggotaKelas)
+    public function destroy(Request $request, AnggotaKelas $anggotaKelas)
     {
+        abort_unless($request->user()?->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id) ?? false, 403);
+
         $kelas = $anggotaKelas->kelas;
+        $tahunPelajaranId = $anggotaKelas->tahun_pelajaran_id;
+        $kelasId = $anggotaKelas->kelas_id;
         $anggotaKelas->delete();
+
+        if ($request->input('kembali') === 'penempatan') {
+            return redirect()
+                ->route('penempatan-siswa.index', [
+                    'tahun_pelajaran_id' => $tahunPelajaranId,
+                    'kelas_id' => $kelasId,
+                ])
+                ->with('berhasil', 'Siswa berhasil dikeluarkan dari kelas.');
+        }
 
         return redirect()
             ->route('kelas.show', $kelas)
             ->with('berhasil', 'Siswa berhasil dikeluarkan dari kelas.');
+    }
+
+    private function redirectSetelahUbah(AnggotaKelas $anggotaKelas, Request $request)
+    {
+        if ($request->input('kembali') === 'penempatan') {
+            return redirect()->route('penempatan-siswa.index', [
+                'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
+                'kelas_id' => $anggotaKelas->kelas_id,
+            ]);
+        }
+
+        return redirect()->route('kelas.show', $anggotaKelas->kelas);
     }
 }

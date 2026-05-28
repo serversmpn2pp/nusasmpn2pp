@@ -374,7 +374,9 @@
 
         <div class="actions">
             <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
-            <a href="{{ route('pegawai.index') }}" class="button button-muted">Data pegawai</a>
+            @izin('pegawai.lihat', 'pegawai.kelola')
+                <a href="{{ route('pegawai.index') }}" class="button button-muted">Data pegawai</a>
+            @endizin
         </div>
     </div>
 

@@ -60,7 +60,9 @@
             <h1 class="page-title">Laporan pembinaan siswa</h1>
         </div>
 
-        <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="button button-primary">Tambah laporan</a>
+        @izin('bk.kelola')
+            <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="button button-primary">Tambah laporan</a>
+        @endizin
     </div>
 
     <div class="stats-grid">
@@ -211,7 +213,9 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('laporan-pembinaan-siswa.show', $laporan) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('laporan-pembinaan-siswa.edit', $laporan) }}" class="button button-dark">Edit</a>
+                                    @izin('bk.kelola')
+                                        <a href="{{ route('laporan-pembinaan-siswa.edit', $laporan) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -259,7 +263,9 @@
 
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('laporan-pembinaan-siswa.show', $laporan) }}" class="button button-muted">Lihat</a>
-                        <a href="{{ route('laporan-pembinaan-siswa.edit', $laporan) }}" class="button button-dark">Edit</a>
+                        @izin('bk.kelola')
+                            <a href="{{ route('laporan-pembinaan-siswa.edit', $laporan) }}" class="button button-dark">Edit</a>
+                        @endizin
                     </div>
                 </article>
             @empty

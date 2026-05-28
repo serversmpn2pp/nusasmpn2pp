@@ -36,6 +36,10 @@ class LaporanAbsensiController extends Controller
 
     private function bangunDataLaporan(Request $request): array
     {
+        $pengguna = $request->user();
+        $cakupanWaliKelas = $pengguna?->membatasiCakupanWaliKelas() ?? false;
+        $kelasWaliIds = $cakupanWaliKelas ? $pengguna->kelasWaliIds() : [];
+
         $data = $request->validate([
             'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
@@ -48,6 +52,9 @@ class LaporanAbsensiController extends Controller
         ]);
 
         $daftarTahunPelajaran = TahunPelajaran::query()
+            ->when($cakupanWaliKelas, function ($query) use ($kelasWaliIds) {
+                $query->whereHas('kelas', fn ($query) => $query->whereIn('id', $kelasWaliIds));
+            })
             ->orderByDesc('aktif')
             ->orderByDesc('tanggal_mulai')
             ->orderByDesc('id')
@@ -58,6 +65,7 @@ class LaporanAbsensiController extends Controller
             ? Kelas::query()
                 ->where('tahun_pelajaran_id', $tahunPelajaranId)
                 ->where('aktif', true)
+                ->when($cakupanWaliKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
                 ->orderBy('tingkat')
                 ->orderBy('nama')
                 ->get()
@@ -72,7 +80,7 @@ class LaporanAbsensiController extends Controller
             ->all();
         $tanggalEfektif = $this->ambilTanggalEfektif($rentang['mulai'], $rentang['selesai'], $hariAktif);
         $laporanAbsensi = $tahunPelajaranId
-            ? $this->ambilLaporanAbsensi($tahunPelajaranId, $kelasId, $tanggalEfektif)
+            ? $this->ambilLaporanAbsensi($tahunPelajaranId, $kelasId, $tanggalEfektif, $cakupanWaliKelas ? $kelasWaliIds : null)
             : collect();
         $ringkasan = $this->hitungRingkasan($laporanAbsensi, count($tanggalEfektif));
 
@@ -96,6 +104,7 @@ class LaporanAbsensiController extends Controller
             'jumlahHariEfektif' => count($tanggalEfektif),
             'laporanAbsensi' => $laporanAbsensi,
             'ringkasan' => $ringkasan,
+            'cakupanWaliKelas' => $cakupanWaliKelas,
         ];
     }
 
@@ -219,12 +228,13 @@ class LaporanAbsensiController extends Controller
         return $tanggalEfektif;
     }
 
-    private function ambilLaporanAbsensi(int $tahunPelajaranId, ?int $kelasId, array $tanggalEfektif)
+    private function ambilLaporanAbsensi(int $tahunPelajaranId, ?int $kelasId, array $tanggalEfektif, ?array $kelasIdsTerjangkau = null)
     {
         $anggotaKelas = AnggotaKelas::query()
             ->with(['kelas', 'siswa'])
             ->where('tahun_pelajaran_id', $tahunPelajaranId)
             ->where('status_keanggotaan', 'aktif')
+            ->when(is_array($kelasIdsTerjangkau), fn ($query) => $query->whereIn('kelas_id', $kelasIdsTerjangkau))
             ->whereHas('siswa', function ($query) {
                 $query->where('aktif', true);
             })
@@ -241,6 +251,7 @@ class LaporanAbsensiController extends Controller
             ? collect()
             : AbsensiSiswa::query()
                 ->where('tahun_pelajaran_id', $tahunPelajaranId)
+                ->when(is_array($kelasIdsTerjangkau), fn ($query) => $query->whereIn('kelas_id', $kelasIdsTerjangkau))
                 ->when($kelasId, function ($query) use ($kelasId) {
                     $query->where('kelas_id', $kelasId);
                 })

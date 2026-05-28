@@ -74,10 +74,12 @@
 
         <div class="actions">
             <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Kembali</a>
-            <a href="{{ route('laporan-pembinaan-siswa.edit', $laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>
-            @if ($laporanPembinaanSiswa->status !== 'dibatalkan')
-                <a href="{{ route('tindak-lanjut-pembinaan-siswa.create', $laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>
-            @endif
+            @izin('bk.kelola')
+                <a href="{{ route('laporan-pembinaan-siswa.edit', $laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>
+                @if ($laporanPembinaanSiswa->status !== 'dibatalkan')
+                    <a href="{{ route('tindak-lanjut-pembinaan-siswa.create', $laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>
+                @endif
+            @endizin
         </div>
     </div>
 
@@ -102,13 +104,15 @@
                 </div>
             </div>
 
-            @if ($laporanPembinaanSiswa->status !== 'dibatalkan')
-                <form action="{{ route('laporan-pembinaan-siswa.destroy', $laporanPembinaanSiswa) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Batalkan laporan pembinaan ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="button button-danger button-full">Batalkan laporan</button>
-                </form>
-            @endif
+            @izin('bk.kelola')
+                @if ($laporanPembinaanSiswa->status !== 'dibatalkan')
+                    <form action="{{ route('laporan-pembinaan-siswa.destroy', $laporanPembinaanSiswa) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Batalkan laporan pembinaan ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="button button-danger button-full">Batalkan laporan</button>
+                    </form>
+                @endif
+            @endizin
         </aside>
 
         <div class="section-stack">
@@ -189,9 +193,11 @@
                         <p class="help-text">Catatan konseling, pemanggilan, mediasi, dan keputusan akhir yang terkait dengan laporan ini.</p>
                     </div>
 
-                    @if ($laporanPembinaanSiswa->status !== 'dibatalkan')
-                        <a href="{{ route('tindak-lanjut-pembinaan-siswa.create', $laporanPembinaanSiswa) }}" class="button button-primary">Tambah</a>
-                    @endif
+                    @izin('bk.kelola')
+                        @if ($laporanPembinaanSiswa->status !== 'dibatalkan')
+                            <a href="{{ route('tindak-lanjut-pembinaan-siswa.create', $laporanPembinaanSiswa) }}" class="button button-primary">Tambah</a>
+                        @endif
+                    @endizin
                 </div>
 
                 <div class="follow-up-list">
@@ -209,12 +215,14 @@
 
                                 <div class="actions" style="justify-content: flex-end;">
                                     <span class="{{ $statusBadge($tindakLanjut->status_laporan) }}">{{ $tindakLanjut->labelStatusLaporan() }}</span>
-                                    <a href="{{ route('tindak-lanjut-pembinaan-siswa.edit', $tindakLanjut) }}" class="button button-muted button-sm">Edit</a>
-                                    <form action="{{ route('tindak-lanjut-pembinaan-siswa.destroy', $tindakLanjut) }}" method="POST" onsubmit="return confirm('Hapus tindak lanjut ini?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="button button-danger button-sm">Hapus</button>
-                                    </form>
+                                    @izin('bk.kelola')
+                                        <a href="{{ route('tindak-lanjut-pembinaan-siswa.edit', $tindakLanjut) }}" class="button button-muted button-sm">Edit</a>
+                                        <form action="{{ route('tindak-lanjut-pembinaan-siswa.destroy', $tindakLanjut) }}" method="POST" onsubmit="return confirm('Hapus tindak lanjut ini?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="button button-danger button-sm">Hapus</button>
+                                        </form>
+                                    @endizin
                                 </div>
                             </div>
 

@@ -39,8 +39,12 @@
         </div>
 
         <div class="actions">
-            <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan absensi</a>
-            <a href="{{ route('pengaturan-absensi.index') }}" class="button button-muted">Jam absensi</a>
+            @izin('absensi.scan')
+                <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan absensi</a>
+            @endizin
+            @izin('absensi.pengaturan_kelola')
+                <a href="{{ route('pengaturan-absensi.index') }}" class="button button-muted">Jam absensi</a>
+            @endizin
         </div>
     </div>
 
@@ -67,7 +71,7 @@
             <div class="field">
                 <label for="kelas_id">Kelas</label>
                 <select id="kelas_id" name="kelas_id" class="select">
-                    <option value="">Semua kelas</option>
+                    <option value="">{{ ($cakupanWaliKelas ?? false) ? 'Semua kelas wali' : 'Semua kelas' }}</option>
                     @foreach ($daftarKelas as $kelas)
                         <option value="{{ $kelas->id }}" @selected((string) $kelasId === (string) $kelas->id)>
                             {{ $kelas->nama }}
@@ -82,6 +86,10 @@
             </div>
         </div>
     </form>
+
+    @if ($cakupanWaliKelas ?? false)
+        <div class="alert">Rekap dan koreksi absensi dibatasi pada kelas yang Anda wali.</div>
+    @endif
 
     @if (session('berhasil'))
         <div class="alert">{{ session('berhasil') }}</div>
@@ -132,7 +140,7 @@
             <div class="panel-pad" style="border-bottom: 1px solid var(--line);">
                 <h2 class="panel-title">{{ $tanggalLabel }}</h2>
                 <p class="help-text" style="margin-top: 6px;">
-                    {{ $kelasId ? 'Kelas ' . ($daftarKelas->firstWhere('id', (int) $kelasId)?->nama ?? '-') : 'Semua kelas' }}
+                    {{ $kelasId ? 'Kelas ' . ($daftarKelas->firstWhere('id', (int) $kelasId)?->nama ?? '-') : (($cakupanWaliKelas ?? false) ? 'Semua kelas wali' : 'Semua kelas') }}
                 </p>
             </div>
 
@@ -148,7 +156,9 @@
                             <th>Pulang</th>
                             <th>Keterlambatan</th>
                             <th>Catatan</th>
-                            <th class="text-right">Aksi</th>
+                            @izin('absensi.koreksi')
+                                <th class="text-right">Aksi</th>
+                            @endizin
                         </tr>
                     </thead>
                     <tbody>
@@ -196,15 +206,17 @@
                                     </p>
                                 </td>
                                 <td data-label="Catatan">{{ $absensi?->catatan ?: '-' }}</td>
-                                <td data-label="Aksi">
-                                    <div class="actions" style="justify-content: flex-end;">
-                                        <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
-                                    </div>
-                                </td>
+                                @izin('absensi.koreksi')
+                                    <td data-label="Aksi">
+                                        <div class="actions" style="justify-content: flex-end;">
+                                            <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
+                                        </div>
+                                    </td>
+                                @endizin
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="empty-state">Belum ada siswa aktif pada pilihan ini.</td>
+                                <td colspan="{{ auth()->user()?->memilikiIzin('absensi.koreksi') ? 9 : 8 }}" class="empty-state">Belum ada siswa aktif pada pilihan ini.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -251,9 +263,11 @@
                             <p class="help-text" style="margin-top: 12px;">{{ $absensi->catatan }}</p>
                         @endif
 
-                        <div class="actions" style="margin-top: 14px;">
-                            <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
-                        </div>
+                        @izin('absensi.koreksi')
+                            <div class="actions" style="margin-top: 14px;">
+                                <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
+                            </div>
+                        @endizin
                     </article>
                 @empty
                     <div class="empty-state">Belum ada siswa aktif pada pilihan ini.</div>

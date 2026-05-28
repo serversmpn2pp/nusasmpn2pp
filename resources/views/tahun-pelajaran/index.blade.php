@@ -9,7 +9,9 @@
             <h1 class="page-title">Tahun pelajaran</h1>
         </div>
 
-        <a href="{{ route('tahun-pelajaran.create') }}" class="button button-primary">Tambah tahun pelajaran</a>
+        @izin('tahun_pelajaran.kelola')
+            <a href="{{ route('tahun-pelajaran.create') }}" class="button button-primary">Tambah tahun pelajaran</a>
+        @endizin
     </div>
 
     <div class="stats-grid">
@@ -88,7 +90,9 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('tahun-pelajaran.show', $item) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('tahun-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @izin('tahun_pelajaran.kelola')
+                                        <a href="{{ route('tahun-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -130,7 +134,9 @@
 
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('tahun-pelajaran.show', $item) }}" class="button button-muted">Lihat</a>
-                        <a href="{{ route('tahun-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                        @izin('tahun_pelajaran.kelola')
+                            <a href="{{ route('tahun-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                        @endizin
                     </div>
                 </article>
             @empty

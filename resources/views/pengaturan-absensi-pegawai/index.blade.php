@@ -24,7 +24,9 @@
             <h1 class="page-title">Jam absensi pegawai</h1>
         </div>
 
-        <a href="{{ route('pengaturan-absensi-pegawai.create') }}" class="button button-primary">Tambah jadwal</a>
+        @izin('absensi.pengaturan_kelola')
+            <a href="{{ route('pengaturan-absensi-pegawai.create') }}" class="button button-primary">Tambah jadwal</a>
+        @endizin
     </div>
 
     <div class="stats-grid">
@@ -131,7 +133,9 @@
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('pengaturan-absensi-pegawai.show', $item) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('pengaturan-absensi-pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @izin('absensi.pengaturan_kelola')
+                                        <a href="{{ route('pengaturan-absensi-pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                                    @endizin
                                 </div>
                             </td>
                         </tr>
@@ -181,7 +185,9 @@
 
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('pengaturan-absensi-pegawai.show', $item) }}" class="button button-muted">Lihat</a>
-                        <a href="{{ route('pengaturan-absensi-pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                        @izin('absensi.pengaturan_kelola')
+                            <a href="{{ route('pengaturan-absensi-pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                        @endizin
                     </div>
                 </article>
             @empty

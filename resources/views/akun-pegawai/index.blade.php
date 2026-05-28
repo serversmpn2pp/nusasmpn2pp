@@ -56,12 +56,18 @@
         </div>
 
         <div class="actions">
-            <form action="{{ route('akun-pegawai.buat-massal') }}" method="POST">
-                @csrf
-                <button type="submit" class="button button-primary">Buat akun semua</button>
-            </form>
-            <a href="{{ route('peran.index') }}" class="button button-muted">Kelola role</a>
-            <a href="{{ route('pegawai.index') }}" class="button button-muted">Data pegawai</a>
+            @izin('akun.kelola')
+                <form action="{{ route('akun-pegawai.buat-massal') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="button button-primary">Buat akun semua</button>
+                </form>
+            @endizin
+            @izin('peran.lihat', 'peran.kelola')
+                <a href="{{ route('peran.index') }}" class="button button-muted">Kelola role</a>
+            @endizin
+            @izin('pegawai.lihat', 'pegawai.kelola')
+                <a href="{{ route('pegawai.index') }}" class="button button-muted">Data pegawai</a>
+            @endizin
         </div>
     </div>
 
@@ -176,59 +182,65 @@
                                         $peranAkun = $item->pengguna->daftarPeran->pluck('id')->all();
                                         $punyaPeranPegawai = $item->pengguna->daftarPeran->contains('kode', 'pegawai');
                                     @endphp
-                                    <form action="{{ route('akun-pegawai.peran.update', $item->pengguna) }}" method="POST" class="role-form">
-                                        @csrf
-                                        @method('PATCH')
-                                        <div class="role-checks">
-                                            @foreach ($daftarPeran as $peran)
-                                                @php
-                                                    $peranDasar = $peran->kode === 'pegawai';
-                                                @endphp
-                                                <label class="role-check {{ $peranDasar ? 'is-base' : '' }}" for="peran-{{ $item->id }}-{{ $peran->id }}">
-                                                    <input
-                                                        id="peran-{{ $item->id }}-{{ $peran->id }}"
-                                                        type="checkbox"
-                                                        name="peran_ids[]"
-                                                        value="{{ $peran->id }}"
-                                                        @checked(in_array($peran->id, $peranAkun, true) || ($peranDasar && ! $punyaPeranPegawai))
-                                                        @disabled($peranDasar)
-                                                    >
-                                                    <span>{{ $peran->nama }}</span>
-                                                </label>
-                                                @if ($peranDasar)
-                                                    <input type="hidden" name="peran_ids[]" value="{{ $peran->id }}">
-                                                @endif
-                                            @endforeach
-                                        </div>
-                                        <button type="submit" class="button button-primary button-sm">Simpan role</button>
-                                    </form>
+                                    @izin('akun.kelola')
+                                        <form action="{{ route('akun-pegawai.peran.update', $item->pengguna) }}" method="POST" class="role-form">
+                                            @csrf
+                                            @method('PATCH')
+                                            <div class="role-checks">
+                                                @foreach ($daftarPeran as $peran)
+                                                    @php
+                                                        $peranDasar = $peran->kode === 'pegawai';
+                                                    @endphp
+                                                    <label class="role-check {{ $peranDasar ? 'is-base' : '' }}" for="peran-{{ $item->id }}-{{ $peran->id }}">
+                                                        <input
+                                                            id="peran-{{ $item->id }}-{{ $peran->id }}"
+                                                            type="checkbox"
+                                                            name="peran_ids[]"
+                                                            value="{{ $peran->id }}"
+                                                            @checked(in_array($peran->id, $peranAkun, true) || ($peranDasar && ! $punyaPeranPegawai))
+                                                            @disabled($peranDasar)
+                                                        >
+                                                        <span>{{ $peran->nama }}</span>
+                                                    </label>
+                                                    @if ($peranDasar)
+                                                        <input type="hidden" name="peran_ids[]" value="{{ $peran->id }}">
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                            <button type="submit" class="button button-primary button-sm">Simpan role</button>
+                                        </form>
+                                    @else
+                                        <span class="muted">{{ $item->pengguna->daftarPeran->pluck('nama')->join(', ') ?: '-' }}</span>
+                                    @endizin
                                 @else
                                     <span class="muted">Buat akun dulu.</span>
                                 @endif
                             </td>
                             <td>
-                                <div class="actions">
-                                    @if (! $item->pengguna)
-                                        <form action="{{ route('akun-pegawai.store', $item) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="button button-primary button-sm" @disabled(! $item->nip)>Buat</button>
-                                        </form>
-                                    @else
-                                        <form action="{{ route('akun-pegawai.reset-password', $item->pengguna) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="button button-muted button-sm">Reset password</button>
-                                        </form>
+                                @izin('akun.kelola')
+                                    <div class="actions">
+                                        @if (! $item->pengguna)
+                                            <form action="{{ route('akun-pegawai.store', $item) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="button button-primary button-sm" @disabled(! $item->nip)>Buat</button>
+                                            </form>
+                                        @else
+                                            <form action="{{ route('akun-pegawai.reset-password', $item->pengguna) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="button button-muted button-sm">Reset password</button>
+                                            </form>
 
-                                        <form action="{{ route('akun-pegawai.status', $item->pengguna) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="button {{ $item->pengguna->aktif ? 'button-danger' : 'button-primary' }} button-sm">
-                                                {{ $item->pengguna->aktif ? 'Nonaktifkan' : 'Aktifkan' }}
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
+                                            <form action="{{ route('akun-pegawai.status', $item->pengguna) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="button {{ $item->pengguna->aktif ? 'button-danger' : 'button-primary' }} button-sm">
+                                                    {{ $item->pengguna->aktif ? 'Nonaktifkan' : 'Aktifkan' }}
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                @endizin
                             </td>
                         </tr>
                     @empty
@@ -276,55 +288,61 @@
                             $peranAkun = $item->pengguna->daftarPeran->pluck('id')->all();
                             $punyaPeranPegawai = $item->pengguna->daftarPeran->contains('kode', 'pegawai');
                         @endphp
-                        <form action="{{ route('akun-pegawai.peran.update', $item->pengguna) }}" method="POST" class="role-form" style="margin-top: 12px;">
-                            @csrf
-                            @method('PATCH')
-                            <div class="role-checks">
-                                @foreach ($daftarPeran as $peran)
-                                    @php
-                                        $peranDasar = $peran->kode === 'pegawai';
-                                    @endphp
-                                    <label class="role-check {{ $peranDasar ? 'is-base' : '' }}" for="mobile-peran-{{ $item->id }}-{{ $peran->id }}">
-                                        <input
-                                            id="mobile-peran-{{ $item->id }}-{{ $peran->id }}"
-                                            type="checkbox"
-                                            name="peran_ids[]"
-                                            value="{{ $peran->id }}"
-                                            @checked(in_array($peran->id, $peranAkun, true) || ($peranDasar && ! $punyaPeranPegawai))
-                                            @disabled($peranDasar)
-                                        >
-                                        <span>{{ $peran->nama }}</span>
-                                    </label>
-                                    @if ($peranDasar)
-                                        <input type="hidden" name="peran_ids[]" value="{{ $peran->id }}">
-                                    @endif
-                                @endforeach
-                            </div>
-                            <button type="submit" class="button button-primary button-sm button-full">Simpan role</button>
-                        </form>
-                    @endif
-
-                    <div class="actions" style="margin-top: 12px;">
-                        @if (! $item->pengguna)
-                            <form action="{{ route('akun-pegawai.store', $item) }}" method="POST">
+                        @izin('akun.kelola')
+                            <form action="{{ route('akun-pegawai.peran.update', $item->pengguna) }}" method="POST" class="role-form" style="margin-top: 12px;">
                                 @csrf
-                                <button type="submit" class="button button-primary button-sm button-full" @disabled(! $item->nip)>Buat akun</button>
+                                @method('PATCH')
+                                <div class="role-checks">
+                                    @foreach ($daftarPeran as $peran)
+                                        @php
+                                            $peranDasar = $peran->kode === 'pegawai';
+                                        @endphp
+                                        <label class="role-check {{ $peranDasar ? 'is-base' : '' }}" for="mobile-peran-{{ $item->id }}-{{ $peran->id }}">
+                                            <input
+                                                id="mobile-peran-{{ $item->id }}-{{ $peran->id }}"
+                                                type="checkbox"
+                                                name="peran_ids[]"
+                                                value="{{ $peran->id }}"
+                                                @checked(in_array($peran->id, $peranAkun, true) || ($peranDasar && ! $punyaPeranPegawai))
+                                                @disabled($peranDasar)
+                                            >
+                                            <span>{{ $peran->nama }}</span>
+                                        </label>
+                                        @if ($peranDasar)
+                                            <input type="hidden" name="peran_ids[]" value="{{ $peran->id }}">
+                                        @endif
+                                    @endforeach
+                                </div>
+                                <button type="submit" class="button button-primary button-sm button-full">Simpan role</button>
                             </form>
                         @else
-                            <form action="{{ route('akun-pegawai.reset-password', $item->pengguna) }}" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="button button-muted button-sm button-full">Reset password</button>
-                            </form>
-                            <form action="{{ route('akun-pegawai.status', $item->pengguna) }}" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="button {{ $item->pengguna->aktif ? 'button-danger' : 'button-primary' }} button-sm button-full">
-                                    {{ $item->pengguna->aktif ? 'Nonaktifkan' : 'Aktifkan' }}
-                                </button>
-                            </form>
-                        @endif
-                    </div>
+                            <p class="help-text">Role: {{ $item->pengguna->daftarPeran->pluck('nama')->join(', ') ?: '-' }}</p>
+                        @endizin
+                    @endif
+
+                    @izin('akun.kelola')
+                        <div class="actions" style="margin-top: 12px;">
+                            @if (! $item->pengguna)
+                                <form action="{{ route('akun-pegawai.store', $item) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="button button-primary button-sm button-full" @disabled(! $item->nip)>Buat akun</button>
+                                </form>
+                            @else
+                                <form action="{{ route('akun-pegawai.reset-password', $item->pengguna) }}" method="POST">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="button button-muted button-sm button-full">Reset password</button>
+                                </form>
+                                <form action="{{ route('akun-pegawai.status', $item->pengguna) }}" method="POST">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="button {{ $item->pengguna->aktif ? 'button-danger' : 'button-primary' }} button-sm button-full">
+                                        {{ $item->pengguna->aktif ? 'Nonaktifkan' : 'Aktifkan' }}
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                    @endizin
                 </article>
             @empty
                 <div class="empty-state">Belum ada data pegawai yang sesuai filter.</div>

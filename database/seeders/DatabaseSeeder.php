@@ -225,7 +225,7 @@ class DatabaseSeeder extends Seeder
             'wakil_pimpinan_sarana_prasarana' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
             'wakil_pimpinan_kurikulum' => ['beranda.akses', 'tahun_pelajaran.lihat', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'nilai.lihat', 'nilai.rekap', 'perangkat_ajar.lihat', 'perangkat_ajar.periksa', 'laporan.export'],
             'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'nilai.lihat', 'nilai.input', 'nilai.rekap', 'perangkat_ajar.upload'],
-            'wali_kelas' => ['beranda.akses', 'siswa.lihat', 'kelas.lihat', 'nilai.lihat', 'nilai.rekap', 'absensi.lihat', 'absensi.laporan', 'bk.lihat'],
+            'wali_kelas' => ['beranda.akses', 'siswa.lihat', 'kelas.lihat', 'nilai.lihat', 'nilai.rekap', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat'],
             'bk' => ['beranda.akses', 'siswa.lihat', 'absensi.lihat', 'bk.lihat', 'bk.kelola', 'laporan.export'],
             'pegawai' => ['beranda.akses'],
             'satpam' => ['beranda.akses', 'absensi.scan', 'absensi.lihat', 'keamanan.lihat', 'keamanan.kelola'],

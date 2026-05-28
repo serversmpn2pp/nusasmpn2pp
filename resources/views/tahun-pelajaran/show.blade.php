@@ -15,9 +15,13 @@
         </div>
 
         <div class="actions">
-            <a href="{{ route('kelas.create', ['tahun_pelajaran_id' => $tahunPelajaran->id]) }}" class="button button-primary">Tambah kelas</a>
+            @izin('kelas.kelola')
+                <a href="{{ route('kelas.create', ['tahun_pelajaran_id' => $tahunPelajaran->id]) }}" class="button button-primary">Tambah kelas</a>
+            @endizin
             <a href="{{ route('tahun-pelajaran.index') }}" class="button button-muted">Kembali</a>
-            <a href="{{ route('tahun-pelajaran.edit', $tahunPelajaran) }}" class="button button-dark">Edit</a>
+            @izin('tahun_pelajaran.kelola')
+                <a href="{{ route('tahun-pelajaran.edit', $tahunPelajaran) }}" class="button button-dark">Edit</a>
+            @endizin
         </div>
     </div>
 
@@ -41,13 +45,15 @@
                 </div>
             </div>
 
-            @if ($tahunPelajaran->aktif)
-                <form action="{{ route('tahun-pelajaran.destroy', $tahunPelajaran) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan tahun pelajaran ini?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
-                </form>
-            @endif
+            @izin('tahun_pelajaran.kelola')
+                @if ($tahunPelajaran->aktif)
+                    <form action="{{ route('tahun-pelajaran.destroy', $tahunPelajaran) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan tahun pelajaran ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
+                    </form>
+                @endif
+            @endizin
         </aside>
 
         <div class="section-stack">
@@ -100,7 +106,10 @@
                                     <td>
                                         <div class="actions" style="justify-content: flex-end;">
                                             <a href="{{ route('kelas.show', $item) }}" class="button button-muted">Lihat</a>
-                                            <a href="{{ route('kelas.edit', $item) }}" class="button button-dark">Edit</a>
+                                            <a href="{{ route('penempatan-siswa.index', ['tahun_pelajaran_id' => $item->tahun_pelajaran_id, 'kelas_id' => $item->id]) }}" class="button button-muted">Anggota</a>
+                                            @izin('kelas.kelola')
+                                                <a href="{{ route('kelas.edit', $item) }}" class="button button-dark">Edit</a>
+                                            @endizin
                                         </div>
                                     </td>
                                 </tr>
@@ -142,7 +151,10 @@
 
                             <div class="actions" style="margin-top: 14px;">
                                 <a href="{{ route('kelas.show', $item) }}" class="button button-muted">Lihat</a>
-                                <a href="{{ route('kelas.edit', $item) }}" class="button button-dark">Edit</a>
+                                <a href="{{ route('penempatan-siswa.index', ['tahun_pelajaran_id' => $item->tahun_pelajaran_id, 'kelas_id' => $item->id]) }}" class="button button-muted">Anggota</a>
+                                @izin('kelas.kelola')
+                                    <a href="{{ route('kelas.edit', $item) }}" class="button button-dark">Edit</a>
+                                @endizin
                             </div>
                         </article>
                     @empty

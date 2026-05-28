@@ -1190,75 +1190,97 @@
     <body>
         @php
             $penggunaAktif = auth()->user();
-            $administrator = $penggunaAktif?->administrator();
-            $sidebarSections = [
+            $penggunaAktif?->loadMissing('daftarPeran.izin');
+
+            $bolehMelihatMenu = function (string|array|null $izin) use ($penggunaAktif): bool {
+                if (! $penggunaAktif) {
+                    return false;
+                }
+
+                if (blank($izin)) {
+                    return true;
+                }
+
+                return $penggunaAktif->memilikiIzin($izin);
+            };
+
+            $semuaSidebarSections = [
                 [
                     'title' => 'Utama',
                     'items' => [
-                        ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB'],
+                        ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                    ],
+                ],
+                [
+                    'title' => 'Data Master',
+                    'items' => [
+                        ['label' => 'Pegawai', 'route' => 'pegawai.index', 'active' => ['pegawai.*'], 'initial' => 'PG', 'izin' => ['pegawai.lihat', 'pegawai.kelola']],
+                        ['label' => 'Siswa', 'route' => 'siswa.index', 'active' => ['siswa.*'], 'initial' => 'SW', 'izin' => ['siswa.lihat', 'siswa.kelola']],
+                        ['label' => 'Kelas', 'route' => 'kelas.index', 'active' => ['kelas.*', 'anggota-kelas.*'], 'initial' => 'KL', 'izin' => ['kelas.lihat', 'kelas.kelola']],
+                        ['label' => 'Penempatan Siswa', 'route' => 'penempatan-siswa.index', 'active' => ['penempatan-siswa.*'], 'initial' => 'PS', 'izin' => ['kelas.lihat', 'kelas.kelola']],
+                        ['label' => 'Tahun Pelajaran', 'route' => 'tahun-pelajaran.index', 'active' => ['tahun-pelajaran.*'], 'initial' => 'TP', 'izin' => ['tahun_pelajaran.lihat', 'tahun_pelajaran.kelola']],
+                        ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP', 'izin' => ['mata_pelajaran.lihat', 'mata_pelajaran.kelola']],
+                    ],
+                ],
+                [
+                    'title' => 'Akademik',
+                    'items' => [
+                        ['label' => 'Guru Mapel', 'route' => 'guru-mata-pelajaran.index', 'active' => ['guru-mata-pelajaran.*'], 'initial' => 'GM', 'izin' => ['guru_mapel.lihat', 'guru_mapel.kelola']],
+                        ['label' => 'Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN', 'izin' => 'nilai.skema_kelola'],
+                        ['label' => 'Komponen Nilai', 'route' => 'komponen-nilai.index', 'active' => ['komponen-nilai.*'], 'initial' => 'KN', 'izin' => 'nilai.komponen_kelola'],
+                        ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input'],
+                        ['label' => 'Rekap Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR', 'izin' => 'nilai.rekap'],
+                    ],
+                ],
+                [
+                    'title' => 'Absensi',
+                    'items' => [
+                        ['label' => 'Jam Absensi', 'route' => 'pengaturan-absensi.index', 'active' => ['pengaturan-absensi.*'], 'initial' => 'JA', 'izin' => 'absensi.pengaturan_kelola'],
+                        ['label' => 'Jam Pegawai', 'route' => 'pengaturan-absensi-pegawai.index', 'active' => ['pengaturan-absensi-pegawai.*'], 'initial' => 'JP', 'izin' => 'absensi.pengaturan_kelola'],
+                        ['label' => 'Scan Absensi', 'route' => 'scan-absensi.index', 'active' => ['scan-absensi.*'], 'initial' => 'SA', 'izin' => 'absensi.scan', 'blank' => true],
+                        ['label' => 'Scan Pegawai', 'route' => 'scan-absensi-pegawai.index', 'active' => ['scan-absensi-pegawai.*'], 'initial' => 'SP', 'izin' => 'absensi.scan', 'blank' => true],
+                        ['label' => 'Rekap Absensi', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan']],
+                        ['label' => 'Rekap Pegawai', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RP', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan']],
+                        ['label' => 'Laporan Absensi', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan'],
+                        ['label' => 'Laporan Pegawai', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LP', 'izin' => 'absensi.laporan'],
+                    ],
+                ],
+                [
+                    'title' => 'Pembinaan',
+                    'items' => [
+                        ['label' => 'Kategori Pembinaan', 'route' => 'kategori-pembinaan-siswa.index', 'active' => ['kategori-pembinaan-siswa.*'], 'initial' => 'KB', 'izin' => 'bk.kelola'],
+                        ['label' => 'Laporan Pembinaan', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*'], 'initial' => 'LP', 'izin' => ['bk.lihat', 'bk.kelola']],
+                    ],
+                ],
+                [
+                    'title' => 'Administrasi',
+                    'items' => [
+                        ['label' => 'Kartu Pelajar', 'route' => 'kartu-pelajar.index', 'active' => ['kartu-pelajar.*'], 'initial' => 'KP', 'izin' => ['kartu_pelajar.lihat', 'kartu_pelajar.cetak']],
+                        ['label' => 'Kartu Pegawai', 'route' => 'kartu-pegawai.index', 'active' => ['kartu-pegawai.*'], 'initial' => 'KG', 'izin' => 'pegawai.lihat'],
+                        ['label' => 'Kenaikan Kelas', 'route' => 'kenaikan-kelas.index', 'active' => ['kenaikan-kelas.*'], 'initial' => 'KK', 'izin' => 'kenaikan_kelas.kelola'],
+                    ],
+                ],
+                [
+                    'title' => 'Sistem',
+                    'items' => [
+                        ['label' => 'Akun Pegawai', 'route' => 'akun-pegawai.index', 'active' => ['akun-pegawai.*'], 'initial' => 'AP', 'izin' => ['akun.lihat', 'akun.kelola']],
+                        ['label' => 'Role', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RL', 'izin' => ['peran.lihat', 'peran.kelola']],
                     ],
                 ],
             ];
 
-            if ($administrator) {
-                $sidebarSections = array_merge($sidebarSections, [
-                    [
-                        'title' => 'Data Master',
-                        'items' => [
-                            ['label' => 'Pegawai', 'route' => 'pegawai.index', 'active' => ['pegawai.*'], 'initial' => 'PG'],
-                            ['label' => 'Siswa', 'route' => 'siswa.index', 'active' => ['siswa.*'], 'initial' => 'SW'],
-                            ['label' => 'Kelas', 'route' => 'kelas.index', 'active' => ['kelas.*', 'anggota-kelas.*'], 'initial' => 'KL'],
-                            ['label' => 'Tahun Pelajaran', 'route' => 'tahun-pelajaran.index', 'active' => ['tahun-pelajaran.*'], 'initial' => 'TP'],
-                            ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP'],
-                        ],
-                    ],
-                    [
-                        'title' => 'Akademik',
-                        'items' => [
-                            ['label' => 'Guru Mapel', 'route' => 'guru-mata-pelajaran.index', 'active' => ['guru-mata-pelajaran.*'], 'initial' => 'GM'],
-                            ['label' => 'Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN'],
-                            ['label' => 'Komponen Nilai', 'route' => 'komponen-nilai.index', 'active' => ['komponen-nilai.*'], 'initial' => 'KN'],
-                            ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN'],
-                            ['label' => 'Rekap Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR'],
-                        ],
-                    ],
-                    [
-                        'title' => 'Absensi',
-                        'items' => [
-                            ['label' => 'Jam Absensi', 'route' => 'pengaturan-absensi.index', 'active' => ['pengaturan-absensi.*'], 'initial' => 'JA'],
-                            ['label' => 'Jam Pegawai', 'route' => 'pengaturan-absensi-pegawai.index', 'active' => ['pengaturan-absensi-pegawai.*'], 'initial' => 'JP'],
-                            ['label' => 'Scan Absensi', 'route' => 'scan-absensi.index', 'active' => ['scan-absensi.*'], 'initial' => 'SA', 'blank' => true],
-                            ['label' => 'Scan Pegawai', 'route' => 'scan-absensi-pegawai.index', 'active' => ['scan-absensi-pegawai.*'], 'initial' => 'SP', 'blank' => true],
-                            ['label' => 'Rekap Absensi', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA'],
-                            ['label' => 'Rekap Pegawai', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RP'],
-                            ['label' => 'Laporan Absensi', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA'],
-                            ['label' => 'Laporan Pegawai', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LP'],
-                        ],
-                    ],
-                    [
-                        'title' => 'Pembinaan',
-                        'items' => [
-                            ['label' => 'Kategori Pembinaan', 'route' => 'kategori-pembinaan-siswa.index', 'active' => ['kategori-pembinaan-siswa.*'], 'initial' => 'KB'],
-                            ['label' => 'Laporan Pembinaan', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*'], 'initial' => 'LP'],
-                        ],
-                    ],
-                    [
-                        'title' => 'Administrasi',
-                        'items' => [
-                            ['label' => 'Kartu Pelajar', 'route' => 'kartu-pelajar.index', 'active' => ['kartu-pelajar.*'], 'initial' => 'KP'],
-                            ['label' => 'Kartu Pegawai', 'route' => 'kartu-pegawai.index', 'active' => ['kartu-pegawai.*'], 'initial' => 'KG'],
-                            ['label' => 'Kenaikan Kelas', 'route' => 'kenaikan-kelas.index', 'active' => ['kenaikan-kelas.*'], 'initial' => 'KK'],
-                        ],
-                    ],
-                    [
-                        'title' => 'Sistem',
-                        'items' => [
-                            ['label' => 'Akun Pegawai', 'route' => 'akun-pegawai.index', 'active' => ['akun-pegawai.*'], 'initial' => 'AP'],
-                            ['label' => 'Role', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RL'],
-                        ],
-                    ],
-                ]);
-            }
+            $sidebarSections = collect($semuaSidebarSections)
+                ->map(function (array $section) use ($bolehMelihatMenu) {
+                    $section['items'] = collect($section['items'])
+                        ->filter(fn (array $item) => $bolehMelihatMenu($item['izin'] ?? null))
+                        ->values()
+                        ->all();
+
+                    return $section;
+                })
+                ->filter(fn (array $section) => count($section['items']) > 0)
+                ->values()
+                ->all();
         @endphp
 
         <input id="sidebar-toggle" type="checkbox" class="sidebar-toggle">

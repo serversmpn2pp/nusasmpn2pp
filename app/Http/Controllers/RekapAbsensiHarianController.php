@@ -17,6 +17,10 @@ class RekapAbsensiHarianController extends Controller
 {
     public function index(Request $request)
     {
+        $pengguna = $request->user();
+        $cakupanWaliKelas = $pengguna?->membatasiCakupanWaliKelas() ?? false;
+        $kelasWaliIds = $cakupanWaliKelas ? $pengguna->kelasWaliIds() : [];
+
         $data = $request->validate([
             'tanggal' => ['nullable', 'date'],
             'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
@@ -25,6 +29,9 @@ class RekapAbsensiHarianController extends Controller
 
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->toDateString();
         $daftarTahunPelajaran = TahunPelajaran::query()
+            ->when($cakupanWaliKelas, function ($query) use ($kelasWaliIds) {
+                $query->whereHas('kelas', fn ($query) => $query->whereIn('id', $kelasWaliIds));
+            })
             ->orderByDesc('aktif')
             ->orderByDesc('tanggal_mulai')
             ->orderByDesc('id')
@@ -35,6 +42,7 @@ class RekapAbsensiHarianController extends Controller
             ? Kelas::query()
                 ->where('tahun_pelajaran_id', $tahunPelajaranId)
                 ->where('aktif', true)
+                ->when($cakupanWaliKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
                 ->orderBy('tingkat')
                 ->orderBy('nama')
                 ->get()
@@ -42,7 +50,7 @@ class RekapAbsensiHarianController extends Controller
 
         $kelasId = $this->ambilKelasId($data['kelas_id'] ?? null, $daftarKelas);
         $rekapAbsensi = $tahunPelajaranId
-            ? $this->ambilRekapAbsensi($tanggal, $tahunPelajaranId, $kelasId)
+            ? $this->ambilRekapAbsensi($tanggal, $tahunPelajaranId, $kelasId, $cakupanWaliKelas ? $kelasWaliIds : null)
             : collect();
         $ringkasan = $this->hitungRingkasan($rekapAbsensi);
 
@@ -54,6 +62,7 @@ class RekapAbsensiHarianController extends Controller
             'daftarKelas' => $daftarKelas,
             'rekapAbsensi' => $rekapAbsensi,
             'ringkasan' => $ringkasan,
+            'cakupanWaliKelas' => $cakupanWaliKelas,
         ]);
     }
 
@@ -65,6 +74,8 @@ class RekapAbsensiHarianController extends Controller
 
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->toDateString();
         $anggotaKelas->load(['tahunPelajaran', 'kelas', 'siswa']);
+        $this->pastikanBolehAksesAnggotaKelas($request, $anggotaKelas);
+
         $absensi = $this->ambilAbsensi($tanggal, $anggotaKelas);
         $pengaturanAbsensi = $this->ambilPengaturanAbsensi($tanggal);
 
@@ -88,6 +99,7 @@ class RekapAbsensiHarianController extends Controller
 
         $tanggal = Carbon::parse($data['tanggal'])->toDateString();
         $anggotaKelas->load(['tahunPelajaran', 'kelas', 'siswa']);
+        $this->pastikanBolehAksesAnggotaKelas($request, $anggotaKelas);
         $this->pastikanDataKoreksiValid($data);
 
         DB::transaction(function () use ($data, $tanggal, $anggotaKelas) {
@@ -156,12 +168,13 @@ class RekapAbsensiHarianController extends Controller
         return null;
     }
 
-    private function ambilRekapAbsensi(string $tanggal, int $tahunPelajaranId, ?int $kelasId)
+    private function ambilRekapAbsensi(string $tanggal, int $tahunPelajaranId, ?int $kelasId, ?array $kelasIdsTerjangkau = null)
     {
         $anggotaKelas = AnggotaKelas::query()
             ->with(['kelas', 'siswa'])
             ->where('tahun_pelajaran_id', $tahunPelajaranId)
             ->where('status_keanggotaan', 'aktif')
+            ->when(is_array($kelasIdsTerjangkau), fn ($query) => $query->whereIn('kelas_id', $kelasIdsTerjangkau))
             ->whereHas('siswa', function ($query) {
                 $query->where('aktif', true);
             })
@@ -177,6 +190,7 @@ class RekapAbsensiHarianController extends Controller
         $absensi = AbsensiSiswa::query()
             ->whereDate('tanggal', $tanggal)
             ->where('tahun_pelajaran_id', $tahunPelajaranId)
+            ->when(is_array($kelasIdsTerjangkau), fn ($query) => $query->whereIn('kelas_id', $kelasIdsTerjangkau))
             ->when($kelasId, function ($query) use ($kelasId) {
                 $query->where('kelas_id', $kelasId);
             })
@@ -207,6 +221,14 @@ class RekapAbsensiHarianController extends Controller
             ->whereDate('tanggal', $tanggal)
             ->where('siswa_id', $anggotaKelas->siswa_id)
             ->first();
+    }
+
+    private function pastikanBolehAksesAnggotaKelas(Request $request, AnggotaKelas $anggotaKelas): void
+    {
+        abort_unless(
+            $request->user()?->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id) ?? false,
+            403,
+        );
     }
 
     private function ambilPengaturanAbsensi(string $tanggal): ?PengaturanAbsensi

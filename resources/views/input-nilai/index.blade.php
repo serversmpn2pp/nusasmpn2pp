@@ -47,7 +47,9 @@
             <h1 class="page-title">Input nilai</h1>
         </div>
 
-        <a href="{{ route('komponen-nilai.index') }}" class="button button-muted">Komponen nilai</a>
+        @izin('nilai.komponen_kelola')
+            <a href="{{ route('komponen-nilai.index') }}" class="button button-muted">Komponen nilai</a>
+        @endizin
     </div>
 
     @if (session('berhasil'))
