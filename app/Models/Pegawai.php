@@ -82,4 +82,19 @@ class Pegawai extends Model
     {
         return $this->hasMany(TindakLanjutPembinaanSiswa::class, 'petugas_pegawai_id');
     }
+
+    public function perangkatAjar(): HasMany
+    {
+        return $this->hasMany(PerangkatAjar::class);
+    }
+
+    public function lokasiBarangSebagaiPenanggungJawab(): HasMany
+    {
+        return $this->hasMany(LokasiBarang::class, 'penanggung_jawab_pegawai_id');
+    }
+
+    public function peminjamanBarang(): HasMany
+    {
+        return $this->hasMany(PeminjamanBarang::class);
+    }
 }

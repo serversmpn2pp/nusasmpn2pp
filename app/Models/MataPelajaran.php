@@ -31,4 +31,9 @@ class MataPelajaran extends Model
     {
         return $this->hasMany(GuruMataPelajaran::class);
     }
+
+    public function perangkatAjar(): HasMany
+    {
+        return $this->hasMany(PerangkatAjar::class);
+    }
 }

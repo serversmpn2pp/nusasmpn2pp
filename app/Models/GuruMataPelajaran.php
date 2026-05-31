@@ -48,4 +48,9 @@ class GuruMataPelajaran extends Model
     {
         return $this->hasMany(KomponenNilai::class);
     }
+
+    public function jadwalPelajaran(): HasMany
+    {
+        return $this->hasMany(JadwalPelajaran::class);
+    }
 }

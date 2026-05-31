@@ -1220,16 +1220,27 @@
                         ['label' => 'Penempatan Siswa', 'route' => 'penempatan-siswa.index', 'active' => ['penempatan-siswa.*'], 'initial' => 'PS', 'izin' => ['kelas.lihat', 'kelas.kelola']],
                         ['label' => 'Tahun Pelajaran', 'route' => 'tahun-pelajaran.index', 'active' => ['tahun-pelajaran.*'], 'initial' => 'TP', 'izin' => ['tahun_pelajaran.lihat', 'tahun_pelajaran.kelola']],
                         ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP', 'izin' => ['mata_pelajaran.lihat', 'mata_pelajaran.kelola']],
+                        ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola']],
                     ],
                 ],
                 [
                     'title' => 'Akademik',
                     'items' => [
                         ['label' => 'Guru Mapel', 'route' => 'guru-mata-pelajaran.index', 'active' => ['guru-mata-pelajaran.*'], 'initial' => 'GM', 'izin' => ['guru_mapel.lihat', 'guru_mapel.kelola']],
+                        ['label' => 'Jadwal Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JS', 'izin' => 'jadwal.pribadi', 'pegawai_only' => true],
+                        ['label' => 'Jadwal Pelajaran', 'route' => 'jadwal-pelajaran.index', 'active' => ['jadwal-pelajaran.*'], 'initial' => 'JP', 'izin' => ['jadwal.lihat', 'jadwal.kelola']],
                         ['label' => 'Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN', 'izin' => 'nilai.skema_kelola'],
                         ['label' => 'Komponen Nilai', 'route' => 'komponen-nilai.index', 'active' => ['komponen-nilai.*'], 'initial' => 'KN', 'izin' => 'nilai.komponen_kelola'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input'],
                         ['label' => 'Rekap Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR', 'izin' => 'nilai.rekap'],
+                    ],
+                ],
+                [
+                    'title' => 'Kurikulum',
+                    'items' => [
+                        ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PS', 'izin' => 'perangkat_ajar.upload', 'pegawai_only' => true],
+                        ['label' => 'Pemeriksaan Perangkat', 'route' => 'pemeriksaan-perangkat-ajar.index', 'active' => ['pemeriksaan-perangkat-ajar.*'], 'initial' => 'PP', 'izin' => ['perangkat_ajar.lihat', 'perangkat_ajar.periksa']],
+                        ['label' => 'Jenis Perangkat Ajar', 'route' => 'jenis-perangkat-ajar.index', 'active' => ['jenis-perangkat-ajar.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.jenis_kelola'],
                     ],
                 ],
                 [
@@ -1240,9 +1251,10 @@
                         ['label' => 'Scan Absensi', 'route' => 'scan-absensi.index', 'active' => ['scan-absensi.*'], 'initial' => 'SA', 'izin' => 'absensi.scan', 'blank' => true],
                         ['label' => 'Scan Pegawai', 'route' => 'scan-absensi-pegawai.index', 'active' => ['scan-absensi-pegawai.*'], 'initial' => 'SP', 'izin' => 'absensi.scan', 'blank' => true],
                         ['label' => 'Rekap Absensi', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan']],
-                        ['label' => 'Rekap Pegawai', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RP', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan']],
+                        ['label' => 'Rekap Pegawai', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RP', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'absensi_pegawai.pribadi']],
                         ['label' => 'Laporan Absensi', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan'],
-                        ['label' => 'Laporan Pegawai', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LP', 'izin' => 'absensi.laporan'],
+                        ['label' => 'Notifikasi WA Siswa', 'route' => 'notifikasi-absensi-siswa.index', 'active' => ['notifikasi-absensi-siswa.*'], 'initial' => 'WA', 'izin' => 'absensi.laporan'],
+                        ['label' => 'Laporan Pegawai', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LP', 'izin' => ['absensi.laporan', 'absensi_pegawai.pribadi']],
                     ],
                 ],
                 [
@@ -1250,6 +1262,20 @@
                     'items' => [
                         ['label' => 'Kategori Pembinaan', 'route' => 'kategori-pembinaan-siswa.index', 'active' => ['kategori-pembinaan-siswa.*'], 'initial' => 'KB', 'izin' => 'bk.kelola'],
                         ['label' => 'Laporan Pembinaan', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*'], 'initial' => 'LP', 'izin' => ['bk.lihat', 'bk.kelola']],
+                    ],
+                ],
+                [
+                    'title' => 'Sarana Prasarana',
+                    'items' => [
+                        ['label' => 'Inventaris Barang', 'route' => 'barang.index', 'active' => ['barang.*'], 'initial' => 'IB', 'izin' => ['barang.lihat', 'barang.kelola']],
+                        ['label' => 'Unit Aset', 'route' => 'unit-barang.index', 'active' => ['unit-barang.*'], 'initial' => 'UA', 'izin' => ['barang.lihat', 'barang.kelola']],
+                        ['label' => 'Label Barcode', 'route' => 'label-barcode-inventaris.index', 'active' => ['label-barcode-inventaris.*'], 'initial' => 'BC', 'izin' => ['barang.lihat', 'barang.kelola']],
+                        ['label' => 'Saldo Stok', 'route' => 'saldo-stok-barang.index', 'active' => ['saldo-stok-barang.*'], 'initial' => 'SS', 'izin' => ['barang.lihat', 'barang.kelola']],
+                        ['label' => 'Mutasi Stok', 'route' => 'mutasi-stok-barang.index', 'active' => ['mutasi-stok-barang.*'], 'initial' => 'MS', 'izin' => ['barang.lihat', 'barang.kelola']],
+                        ['label' => 'Peminjaman Barang', 'route' => 'peminjaman-barang.index', 'active' => ['peminjaman-barang.*', 'pengembalian-barang.*'], 'initial' => 'PB', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola']],
+                        ['label' => 'Kategori Barang', 'route' => 'kategori-barang.index', 'active' => ['kategori-barang.*'], 'initial' => 'KB', 'izin' => ['barang.lihat', 'barang.kelola']],
+                        ['label' => 'Satuan Barang', 'route' => 'satuan-barang.index', 'active' => ['satuan-barang.*'], 'initial' => 'SB', 'izin' => ['barang.lihat', 'barang.kelola']],
+                        ['label' => 'Lokasi Barang', 'route' => 'lokasi-barang.index', 'active' => ['lokasi-barang.*'], 'initial' => 'LB', 'izin' => ['barang.lihat', 'barang.kelola']],
                     ],
                 ],
                 [
@@ -1263,6 +1289,7 @@
                 [
                     'title' => 'Sistem',
                     'items' => [
+                        ['label' => 'Profil Saya', 'route' => 'profil-pegawai.edit', 'active' => ['profil-pegawai.*'], 'initial' => 'PR', 'izin' => 'pegawai.profil', 'pegawai_only' => true],
                         ['label' => 'Akun Pegawai', 'route' => 'akun-pegawai.index', 'active' => ['akun-pegawai.*'], 'initial' => 'AP', 'izin' => ['akun.lihat', 'akun.kelola']],
                         ['label' => 'Role', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RL', 'izin' => ['peran.lihat', 'peran.kelola']],
                     ],
@@ -1270,9 +1297,15 @@
             ];
 
             $sidebarSections = collect($semuaSidebarSections)
-                ->map(function (array $section) use ($bolehMelihatMenu) {
+                ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif) {
                     $section['items'] = collect($section['items'])
-                        ->filter(fn (array $item) => $bolehMelihatMenu($item['izin'] ?? null))
+                        ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif) {
+                            if (($item['pegawai_only'] ?? false) && ! $penggunaAktif?->pegawai_id) {
+                                return false;
+                            }
+
+                            return $bolehMelihatMenu($item['izin'] ?? null);
+                        })
                         ->values()
                         ->all();
 
@@ -1342,6 +1375,9 @@
                     @auth
                         <div class="account-menu">
                             <span class="account-name">{{ auth()->user()->nama }}</span>
+                            @if (auth()->user()->pegawai_id && auth()->user()->memilikiIzin('pegawai.profil'))
+                                <a href="{{ route('profil-pegawai.edit') }}" class="button button-muted button-sm">Profil Saya</a>
+                            @endif
                             <a href="{{ route('kata-sandi.edit') }}" class="button button-muted button-sm">Ganti Password</a>
                             <form action="{{ route('logout') }}" method="POST" class="logout-form">
                                 @csrf

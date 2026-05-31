@@ -52,4 +52,9 @@ class TahunPelajaran extends Model
     {
         return $this->hasMany(SkemaBobotNilai::class);
     }
+
+    public function perangkatAjar(): HasMany
+    {
+        return $this->hasMany(PerangkatAjar::class);
+    }
 }

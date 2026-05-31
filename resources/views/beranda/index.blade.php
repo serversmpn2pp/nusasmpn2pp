@@ -66,6 +66,10 @@
             margin-bottom: 18px;
         }
 
+        .dashboard-actions.employee-actions {
+            grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+        }
+
         .dashboard-action {
             display: flex;
             min-height: 68px;
@@ -264,6 +268,93 @@
             gap: 12px;
         }
 
+        .employee-dashboard-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(320px, .72fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .employee-hero .dashboard-hero-side {
+            gap: 14px;
+        }
+
+        .dashboard-chart {
+            display: grid;
+            gap: 12px;
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: minmax(88px, .24fr) minmax(0, 1fr) minmax(34px, auto);
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chart-label {
+            color: var(--primary-dark);
+            font-size: .84rem;
+            font-weight: 900;
+        }
+
+        .chart-track {
+            position: relative;
+            height: 12px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #e8eef5;
+        }
+
+        .chart-fill {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            background: var(--chart-color, var(--primary));
+        }
+
+        .chart-row strong {
+            color: var(--primary-dark);
+            font-size: .9rem;
+            font-weight: 900;
+            text-align: right;
+        }
+
+        .class-chip-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .class-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            border: 1px solid rgba(21, 71, 122, .18);
+            border-radius: 999px;
+            background: var(--primary-soft);
+            padding: 8px 11px;
+            color: var(--primary-dark);
+            font-size: .84rem;
+            font-weight: 900;
+        }
+
+        .class-chip span {
+            display: inline-grid;
+            min-width: 24px;
+            height: 24px;
+            place-items: center;
+            border-radius: 999px;
+            background: #fff;
+            color: var(--primary);
+            font-size: .74rem;
+        }
+
+        .dashboard-note {
+            margin: 10px 0 0;
+            color: rgba(255, 255, 255, .78);
+            font-weight: 700;
+        }
+
         @media (max-width: 1180px) {
             .dashboard-actions {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -278,6 +369,7 @@
         @media (max-width: 900px) {
             .dashboard-hero,
             .dashboard-grid,
+            .employee-dashboard-grid,
             .split-list {
                 grid-template-columns: 1fr;
             }
@@ -661,23 +753,276 @@
             </div>
         </section>
     @else
-        <div class="page-header">
-            <div>
-                <p class="eyebrow">NUSA</p>
-                <h1 class="page-title">Beranda</h1>
+        @php
+            $formatAngka = fn (int|float $nilai) => number_format($nilai, 0, ',', '.');
+            $statusPembinaanBadge = fn (string $status) => match ($status) {
+                'baru' => 'badge badge-warning',
+                'perlu_tindak_lanjut' => 'badge badge-danger',
+                'diproses' => 'badge badge-active',
+                'selesai' => 'badge badge-muted',
+                default => 'badge badge-muted',
+            };
+        @endphp
+
+        <section class="dashboard-hero employee-hero">
+            <div class="dashboard-hero-main">
+                <p class="eyebrow">Dashboard Pegawai</p>
+                <h1 class="dashboard-title">Selamat datang, {{ auth()->user()->nama }}</h1>
+                <p class="dashboard-subtitle">
+                    Rekap pribadi bulan {{ $labelBulan }} tersaji ringkas untuk membantu memantau kehadiran.
+                </p>
             </div>
 
-            <div class="actions">
-                <a href="{{ route('kata-sandi.edit') }}" class="button button-muted">Ganti password</a>
+            <div class="dashboard-hero-side">
+                <p class="dashboard-date">{{ $hariIni->locale('id')->translatedFormat('l, d F Y') }}</p>
+                <div>
+                    <p class="dashboard-year">{{ $tahunPelajaranAktif?->nama ?? 'Tahun pelajaran belum aktif' }}</p>
+                    <p class="dashboard-note">{{ $pegawaiLogin?->nip ?: 'NIP belum diisi' }}</p>
+                </div>
+                <span class="badge badge-inactive">{{ $kelasWali->isNotEmpty() ? 'Pegawai dan Wali Kelas' : 'Pegawai' }}</span>
             </div>
-        </div>
+        </section>
 
-        <section class="panel panel-pad">
-            <p class="eyebrow">Selamat datang</p>
-            <h2 class="panel-title">{{ auth()->user()->nama }}</h2>
-            <p class="help-text" style="margin-top: 8px;">
-                Akun pegawai sudah aktif. Fitur guru, wali kelas, dan monitoring akan dibuka bertahap sesuai hak akses.
-            </p>
+        <section class="dashboard-actions employee-actions" aria-label="Aksi cepat pegawai">
+            <a href="{{ route('kata-sandi.edit') }}" class="dashboard-action">
+                <span>Ganti Password</span>
+                <span class="dashboard-action-mark">PW</span>
+            </a>
+            @if ($pegawaiLogin)
+                <a href="{{ route('profil-pegawai.edit') }}" class="dashboard-action">
+                    <span>Profil Saya</span>
+                    <span class="dashboard-action-mark">PR</span>
+                </a>
+            @endif
+            @izin('absensi_pegawai.pribadi', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan')
+                <a href="{{ route('rekap-absensi-pegawai-harian.index') }}" class="dashboard-action">
+                    <span>Rekap Saya</span>
+                    <span class="dashboard-action-mark">RS</span>
+                </a>
+            @endizin
+            @izin('absensi_pegawai.pribadi', 'absensi.laporan')
+                <a href="{{ route('laporan-absensi-pegawai-bulanan.index') }}" class="dashboard-action">
+                    <span>Laporan Saya</span>
+                    <span class="dashboard-action-mark">LS</span>
+                </a>
+            @endizin
+            @if ($kelasWali->isNotEmpty())
+                @izin('absensi.lihat', 'absensi.koreksi')
+                    <a href="{{ route('rekap-absensi-harian.index') }}" class="dashboard-action">
+                        <span>Rekap Kelas</span>
+                        <span class="dashboard-action-mark">RK</span>
+                    </a>
+                @endizin
+                @izin('bk.lihat', 'bk.kelola')
+                    <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="dashboard-action">
+                        <span>Pembinaan Kelas</span>
+                        <span class="dashboard-action-mark">BK</span>
+                    </a>
+                @endizin
+            @endif
+        </section>
+
+        @if (! $pegawaiLogin)
+            <section class="panel panel-pad">
+                <p class="eyebrow">Data pegawai</p>
+                <h2 class="panel-title">Akun belum terhubung ke data pegawai</h2>
+                <p class="help-text" style="margin-top: 8px;">Hubungkan akun ini dengan data pegawai agar rekap absensi pribadi dapat tampil.</p>
+            </section>
+        @endif
+
+        <section class="employee-dashboard-grid">
+            <div class="dashboard-stack">
+                <article class="dashboard-panel">
+                    <div class="dashboard-panel-head">
+                        <h2>Absensi Saya Bulan Ini</h2>
+                        <span class="badge badge-muted">{{ $labelBulan }}</span>
+                    </div>
+                    <div class="dashboard-panel-body">
+                        <div class="mini-grid">
+                            @foreach ([
+                                ['label' => 'Hadir', 'value' => $ringkasanAbsensiPegawaiPribadi['hadir']],
+                                ['label' => 'Sakit', 'value' => $ringkasanAbsensiPegawaiPribadi['sakit']],
+                                ['label' => 'Izin', 'value' => $ringkasanAbsensiPegawaiPribadi['izin']],
+                                ['label' => 'Alfa', 'value' => $ringkasanAbsensiPegawaiPribadi['alfa']],
+                                ['label' => 'Dinas luar', 'value' => $ringkasanAbsensiPegawaiPribadi['dinas_luar']],
+                                ['label' => 'Cuti', 'value' => $ringkasanAbsensiPegawaiPribadi['cuti']],
+                                ['label' => 'Terlambat', 'value' => $ringkasanAbsensiPegawaiPribadi['terlambat']],
+                                ['label' => 'Pulang cepat', 'value' => $ringkasanAbsensiPegawaiPribadi['pulang_cepat']],
+                            ] as $item)
+                                <div class="mini-card">
+                                    <strong>{{ $formatAngka($item['value']) }}</strong>
+                                    <span>{{ $item['label'] }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="dashboard-chart" style="margin-top: 16px;">
+                            @foreach ($rekapAbsensiPegawaiBulan as $item)
+                                @php
+                                    $lebar = $maksGrafikPegawai > 0 ? round(($item['jumlah'] / $maksGrafikPegawai) * 100, 2) : 0;
+                                @endphp
+                                <div class="chart-row">
+                                    <span class="chart-label">{{ $item['label'] }}</span>
+                                    <span class="chart-track" aria-hidden="true">
+                                        <span class="chart-fill" style="width: {{ $lebar }}%; --chart-color: {{ $item['warna'] }};"></span>
+                                    </span>
+                                    <strong>{{ $formatAngka($item['jumlah']) }}</strong>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </article>
+
+                @if ($kelasWali->isNotEmpty())
+                    <article class="dashboard-panel">
+                        <div class="dashboard-panel-head">
+                            <h2>Kehadiran Siswa Wali</h2>
+                            <span class="badge badge-muted">{{ $labelBulan }}</span>
+                        </div>
+                        <div class="dashboard-panel-body">
+                            <div class="mini-grid">
+                                @foreach ([
+                                    ['label' => 'Siswa aktif', 'value' => $ringkasanAbsensiSiswaWali['jumlah_siswa']],
+                                    ['label' => 'Hadir', 'value' => $ringkasanAbsensiSiswaWali['hadir']],
+                                    ['label' => 'Sakit', 'value' => $ringkasanAbsensiSiswaWali['sakit']],
+                                    ['label' => 'Izin', 'value' => $ringkasanAbsensiSiswaWali['izin']],
+                                    ['label' => 'Alfa', 'value' => $ringkasanAbsensiSiswaWali['alfa']],
+                                    ['label' => 'Terlambat', 'value' => $ringkasanAbsensiSiswaWali['terlambat']],
+                                    ['label' => 'Pulang cepat', 'value' => $ringkasanAbsensiSiswaWali['pulang_cepat']],
+                                    ['label' => 'Catatan absensi', 'value' => $ringkasanAbsensiSiswaWali['total_catatan']],
+                                ] as $item)
+                                    <div class="mini-card">
+                                        <strong>{{ $formatAngka($item['value']) }}</strong>
+                                        <span>{{ $item['label'] }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div class="dashboard-chart" style="margin-top: 16px;">
+                                @foreach ($rekapAbsensiSiswaWaliBulan as $item)
+                                    @php
+                                        $lebar = $maksGrafikSiswaWali > 0 ? round(($item['jumlah'] / $maksGrafikSiswaWali) * 100, 2) : 0;
+                                    @endphp
+                                    <div class="chart-row">
+                                        <span class="chart-label">{{ $item['label'] }}</span>
+                                        <span class="chart-track" aria-hidden="true">
+                                            <span class="chart-fill" style="width: {{ $lebar }}%; --chart-color: {{ $item['warna'] }};"></span>
+                                        </span>
+                                        <strong>{{ $formatAngka($item['jumlah']) }}</strong>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </article>
+                @endif
+            </div>
+
+            <div class="dashboard-stack">
+                <article class="dashboard-panel">
+                    <div class="dashboard-panel-head">
+                        <h2>Data Pegawai</h2>
+                        @if ($pegawaiLogin)
+                            <a href="{{ route('profil-pegawai.edit') }}" class="button button-muted button-sm">Edit</a>
+                        @endif
+                    </div>
+                    <div class="dashboard-panel-body">
+                        <div class="dashboard-list">
+                            <div class="dashboard-list-item">
+                                <div>
+                                    <p>{{ $pegawaiLogin?->nama_lengkap ?? auth()->user()->nama }}</p>
+                                    <small>{{ $pegawaiLogin?->jabatan_utama ?: ($pegawaiLogin?->jenis_pegawai ?: 'Pegawai') }}</small>
+                                </div>
+                            </div>
+                            <div class="dashboard-list-item">
+                                <div>
+                                    <p>{{ $pegawaiLogin?->nip ?: 'NIP belum diisi' }}</p>
+                                    <small>{{ $pegawaiLogin?->email ?: 'Email belum diisi' }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                @if ($kelasWali->isNotEmpty())
+                    <article class="dashboard-panel">
+                        <div class="dashboard-panel-head">
+                            <h2>Kelas Wali</h2>
+                            <span class="badge badge-active">{{ $formatAngka($kelasWali->count()) }} kelas</span>
+                        </div>
+                        <div class="dashboard-panel-body">
+                            <div class="class-chip-list">
+                                @foreach ($kelasWali as $kelas)
+                                    <span class="class-chip">
+                                        {{ $kelas->nama }}
+                                        <span>{{ $formatAngka((int) $kelas->jumlah_siswa_aktif) }}</span>
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="dashboard-panel">
+                        <div class="dashboard-panel-head">
+                            <h2>Pembinaan/BK Siswa Wali</h2>
+                            <span class="badge badge-muted">{{ $labelBulan }}</span>
+                        </div>
+                        <div class="dashboard-panel-body">
+                            <div class="mini-grid">
+                                @foreach ([
+                                    ['label' => 'Total laporan', 'value' => $ringkasanPembinaanWali['total_laporan']],
+                                    ['label' => 'Siswa terlapor', 'value' => $ringkasanPembinaanWali['siswa_terlapor']],
+                                    ['label' => 'Baru', 'value' => $ringkasanPembinaanWali['baru']],
+                                    ['label' => 'Perlu tindak lanjut', 'value' => $ringkasanPembinaanWali['perlu_tindak_lanjut']],
+                                ] as $item)
+                                    <div class="mini-card">
+                                        <strong>{{ $formatAngka($item['value']) }}</strong>
+                                        <span>{{ $item['label'] }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div class="dashboard-chart" style="margin-top: 16px;">
+                                @foreach ($rekapPembinaanWaliBulan as $item)
+                                    @php
+                                        $lebar = $maksGrafikPembinaanWali > 0 ? round(($item['jumlah'] / $maksGrafikPembinaanWali) * 100, 2) : 0;
+                                    @endphp
+                                    <div class="chart-row">
+                                        <span class="chart-label">{{ $item['label'] }}</span>
+                                        <span class="chart-track" aria-hidden="true">
+                                            <span class="chart-fill" style="width: {{ $lebar }}%; --chart-color: {{ $item['warna'] }};"></span>
+                                        </span>
+                                        <strong>{{ $formatAngka($item['jumlah']) }}</strong>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div class="dashboard-list" style="margin-top: 14px;">
+                                @forelse ($laporanPembinaanWali as $laporan)
+                                    <div class="dashboard-list-item">
+                                        <div>
+                                            <p>{{ $laporan->siswa?->nama_lengkap ?? 'Siswa tidak ditemukan' }}</p>
+                                            <small>{{ $laporan->kelas?->nama ?? '-' }} - {{ $laporan->kategoriPembinaanSiswa?->nama ?? '-' }} - {{ $laporan->tanggal_kejadian?->format('d/m/Y') ?? '-' }}</small>
+                                        </div>
+                                        <span class="{{ $statusPembinaanBadge($laporan->status) }}">{{ $laporan->labelStatus() }}</span>
+                                    </div>
+                                @empty
+                                    <div class="empty-state">Belum ada laporan pembinaan untuk siswa wali bulan ini.</div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </article>
+                @else
+                    <article class="dashboard-panel">
+                        <div class="dashboard-panel-head">
+                            <h2>Wali Kelas</h2>
+                            <span class="badge badge-muted">Belum aktif</span>
+                        </div>
+                        <div class="dashboard-panel-body">
+                            <p class="help-text">Belum ada kelas aktif yang menjadikan akun ini sebagai wali kelas.</p>
+                        </div>
+                    </article>
+                @endif
+            </div>
         </section>
     @endif
 @endsection

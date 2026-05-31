@@ -105,7 +105,7 @@
 
         <div class="actions">
             <a href="{{ route('rekap-absensi-pegawai-harian.index') }}" class="button button-muted">Rekap harian</a>
-            @izin('laporan.export')
+            @izin('laporan.export', 'absensi_pegawai.pribadi')
                 <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak', $parameterCetak) }}" target="_blank" rel="noopener" class="button button-primary">Cetak semua</a>
             @endizin
             @izin('absensi.scan')
@@ -139,7 +139,7 @@
             <div class="field report-person">
                 <label for="pegawai_id">Pegawai</label>
                 <select id="pegawai_id" name="pegawai_id" class="select">
-                    <option value="">Semua pegawai</option>
+                    <option value="">{{ ($cakupanAbsensiPegawaiPribadi ?? false) ? 'Data saya' : 'Semua pegawai' }}</option>
                     @foreach ($daftarPegawai as $pegawai)
                         <option value="{{ $pegawai->id }}" @selected((string) $pegawaiId === (string) $pegawai->id)>
                             {{ $pegawai->nama_lengkap }} - {{ $pegawai->nip ?: 'NIP kosong' }}
@@ -163,6 +163,10 @@
             </div>
         </div>
     </form>
+
+    @if ($cakupanAbsensiPegawaiPribadi ?? false)
+        <div class="alert">Laporan absensi pegawai dibatasi pada data absensi Anda sendiri.</div>
+    @endif
 
     <div class="employee-report-stats">
         <div class="panel stat">
@@ -230,7 +234,7 @@
                         <th>Terlambat</th>
                         <th>Pulang cepat</th>
                         <th>% Hadir</th>
-                        @izin('laporan.export')
+                        @izin('laporan.export', 'absensi_pegawai.pribadi')
                             <th class="text-right">Aksi</th>
                         @endizin
                     </tr>
@@ -289,7 +293,7 @@
                                     {{ $formatPersen($item['persentase_hadir']) }}
                                 </span>
                             </td>
-                            @izin('laporan.export')
+                            @izin('laporan.export', 'absensi_pegawai.pribadi')
                                 <td data-label="Aksi">
                                     <div class="actions" style="justify-content: flex-end;">
                                         <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak-pegawai', ['pegawai' => $pegawai, ...$parameterCetak]) }}" target="_blank" rel="noopener" class="button button-dark button-sm">Cetak</a>
@@ -299,7 +303,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->user()?->memilikiIzin('laporan.export') ? 12 : 11 }}" class="empty-state">Belum ada pegawai pada pilihan ini.</td>
+                            <td colspan="{{ auth()->user()?->memilikiIzin(['laporan.export', 'absensi_pegawai.pribadi']) ? 12 : 11 }}" class="empty-state">Belum ada pegawai pada pilihan ini.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -368,7 +372,7 @@
                                 </div>
                             </dl>
 
-                            @izin('laporan.export')
+                            @izin('laporan.export', 'absensi_pegawai.pribadi')
                                 <div class="actions" style="margin-top: 14px;">
                                     <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak-pegawai', ['pegawai' => $pegawai, ...$parameterCetak]) }}" target="_blank" rel="noopener" class="button button-dark">Cetak</a>
                                 </div>

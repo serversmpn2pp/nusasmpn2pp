@@ -48,11 +48,16 @@ class RekapAbsensiHarianController extends Controller
                 ->get()
             : collect();
 
-        $kelasId = $this->ambilKelasId($data['kelas_id'] ?? null, $daftarKelas);
+        $kelasId = $this->ambilKelasId($data['kelas_id'] ?? null, $daftarKelas, $cakupanWaliKelas);
         $rekapAbsensi = $tahunPelajaranId
             ? $this->ambilRekapAbsensi($tanggal, $tahunPelajaranId, $kelasId, $cakupanWaliKelas ? $kelasWaliIds : null)
             : collect();
         $ringkasan = $this->hitungRingkasan($rekapAbsensi);
+        $labelCakupan = $this->labelCakupan($kelasId, $daftarKelas, $cakupanWaliKelas);
+        $bolehSalinRangkumanWhatsapp = $cakupanWaliKelas || filled($kelasId);
+        $rangkumanWhatsapp = $bolehSalinRangkumanWhatsapp
+            ? $this->buatRangkumanWhatsapp($tanggal, $labelCakupan, $ringkasan, $rekapAbsensi)
+            : '';
 
         return view('rekap-absensi-harian.index', [
             'tanggal' => $tanggal,
@@ -63,6 +68,9 @@ class RekapAbsensiHarianController extends Controller
             'rekapAbsensi' => $rekapAbsensi,
             'ringkasan' => $ringkasan,
             'cakupanWaliKelas' => $cakupanWaliKelas,
+            'labelCakupan' => $labelCakupan,
+            'rangkumanWhatsapp' => $rangkumanWhatsapp,
+            'bolehSalinRangkumanWhatsapp' => $bolehSalinRangkumanWhatsapp,
         ]);
     }
 
@@ -159,10 +167,14 @@ class RekapAbsensiHarianController extends Controller
         return $tahunAktif?->id ?? $daftarTahunPelajaran->first()?->id;
     }
 
-    private function ambilKelasId(?int $kelasId, $daftarKelas): ?int
+    private function ambilKelasId(?int $kelasId, $daftarKelas, bool $cakupanWaliKelas): ?int
     {
         if ($kelasId && $daftarKelas->contains('id', $kelasId)) {
             return $kelasId;
+        }
+
+        if ($cakupanWaliKelas && $daftarKelas->count() === 1) {
+            return (int) $daftarKelas->first()->id;
         }
 
         return null;
@@ -318,5 +330,80 @@ class RekapAbsensiHarianController extends Controller
             'pulang_cepat' => $rekapAbsensi->where('pulang_cepat', '>', 0)->count(),
             'belum_pulang' => $rekapAbsensi->where('belum_pulang', true)->count(),
         ];
+    }
+
+    private function labelCakupan(?int $kelasId, $daftarKelas, bool $cakupanWaliKelas): string
+    {
+        if ($kelasId) {
+            return 'Kelas ' . ($daftarKelas->firstWhere('id', $kelasId)?->nama ?? '-');
+        }
+
+        return $cakupanWaliKelas ? 'Semua kelas wali' : 'Semua kelas';
+    }
+
+    private function buatRangkumanWhatsapp(string $tanggal, string $labelCakupan, array $ringkasan, $rekapAbsensi): string
+    {
+        $tanggalLabel = Carbon::parse($tanggal)->locale('id')->translatedFormat('d F Y');
+        $hadirTepatWaktu = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'hadir' && (int) $item['terlambat'] === 0);
+        $terlambat = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'hadir' && (int) $item['terlambat'] > 0);
+        $izin = $rekapAbsensi->where('status_kehadiran', 'izin');
+        $sakit = $rekapAbsensi->where('status_kehadiran', 'sakit');
+        $alfa = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'alfa' && $item['status_sumber'] !== 'inferensi');
+        $belumScan = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'alfa' && $item['status_sumber'] === 'inferensi');
+
+        $baris = [
+            '*REKAP KEHADIRAN SISWA*',
+            'SMP Negeri 2 Padang Panjang',
+            'Tanggal: ' . $tanggalLabel,
+            'Cakupan: ' . $labelCakupan,
+            '',
+            'Total siswa: ' . $ringkasan['total'],
+            'Hadir tepat waktu: ' . $hadirTepatWaktu->count(),
+            'Terlambat: ' . $terlambat->count(),
+            'Sakit: ' . $sakit->count(),
+            'Izin: ' . $izin->count(),
+            'Alfa: ' . $alfa->count(),
+            'Belum scan: ' . $belumScan->count(),
+        ];
+
+        $this->tambahkanBagianWhatsapp($baris, 'Terlambat', $terlambat, fn (array $item) => $this->barisSiswaWhatsapp($item, $this->formatJamRangkuman($item['absensi']?->jam_masuk) . ' - terlambat ' . $item['terlambat'] . ' menit'));
+        $this->tambahkanBagianWhatsapp($baris, 'Sakit', $sakit, fn (array $item) => $this->barisSiswaWhatsapp($item, $item['absensi']?->catatan ?: 'Sakit'));
+        $this->tambahkanBagianWhatsapp($baris, 'Izin', $izin, fn (array $item) => $this->barisSiswaWhatsapp($item, $item['absensi']?->catatan ?: 'Izin'));
+        $this->tambahkanBagianWhatsapp($baris, 'Alfa', $alfa, fn (array $item) => $this->barisSiswaWhatsapp($item, $item['absensi']?->catatan ?: 'Alfa'));
+        $this->tambahkanBagianWhatsapp($baris, 'Belum Scan', $belumScan, fn (array $item) => $this->barisSiswaWhatsapp($item, 'Belum ada catatan scan/manual'));
+
+        $baris[] = '';
+        $baris[] = 'Catatan: Siswa yang hadir tepat waktu tidak ditampilkan agar pesan lebih ringkas. Jika ada keterangan sakit/izin yang belum tercatat, silakan menghubungi wali kelas.';
+        $baris[] = 'NUSA - SMP Negeri 2 Padang Panjang';
+
+        return implode("\n", $baris);
+    }
+
+    private function tambahkanBagianWhatsapp(array &$baris, string $judul, $items, callable $pembuatBaris): void
+    {
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $baris[] = '';
+        $baris[] = '*' . $judul . '*';
+
+        foreach ($items->values() as $index => $item) {
+            $baris[] = ($index + 1) . '. ' . $pembuatBaris($item);
+        }
+    }
+
+    private function barisSiswaWhatsapp(array $item, string $keterangan): string
+    {
+        $anggota = $item['anggota_kelas'];
+        $nama = $anggota->siswa?->nama_lengkap ?: '-';
+        $kelas = $anggota->kelas?->nama ? ' (' . $anggota->kelas->nama . ')' : '';
+
+        return $nama . $kelas . ' - ' . $keterangan;
+    }
+
+    private function formatJamRangkuman(?string $jam): string
+    {
+        return $jam ? substr($jam, 0, 5) : '-';
     }
 }

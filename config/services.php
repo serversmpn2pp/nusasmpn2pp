@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'mode' => env('WHATSAPP_MODE', 'simulasi'),
+        'kirim_otomatis_absensi_siswa' => env('WHATSAPP_KIRIM_OTOMATIS_ABSENSI_SISWA', true),
+        'cloud_api_url' => env('WHATSAPP_CLOUD_API_URL', 'https://graph.facebook.com/v20.0'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+    ],
+
 ];

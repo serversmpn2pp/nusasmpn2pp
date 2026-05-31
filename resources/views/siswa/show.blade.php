@@ -125,12 +125,36 @@
                         <dd>{{ $teks($siswa->nama_ibu) }}</dd>
                     </div>
                     <div class="detail-item">
+                        <dt>Nomor WA ayah</dt>
+                        <dd>{{ $teks($siswa->nomor_wa_ayah) }}</dd>
+                    </div>
+                    <div class="detail-item">
+                        <dt>Nomor WA ibu</dt>
+                        <dd>{{ $teks($siswa->nomor_wa_ibu) }}</dd>
+                    </div>
+                    <div class="detail-item">
                         <dt>Pekerjaan ayah</dt>
                         <dd>{{ $teks($siswa->pekerjaan_ayah) }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Pekerjaan ibu</dt>
                         <dd>{{ $teks($siswa->pekerjaan_ibu) }}</dd>
+                    </div>
+                    <div class="detail-item">
+                        <dt>Nama wali lain</dt>
+                        <dd>{{ $teks($siswa->nama_wali) }}</dd>
+                    </div>
+                    <div class="detail-item">
+                        <dt>Hubungan wali</dt>
+                        <dd>{{ $teks($siswa->hubungan_wali) }}</dd>
+                    </div>
+                    <div class="detail-item">
+                        <dt>Nomor WA wali lain</dt>
+                        <dd>{{ $teks($siswa->nomor_wa_wali) }}</dd>
+                    </div>
+                    <div class="detail-item">
+                        <dt>Tujuan notifikasi absensi</dt>
+                        <dd>{{ $teks($siswa->kontak_absensi_utama ? str($siswa->kontak_absensi_utama)->headline()->toString() : null) }}</dd>
                     </div>
                 </dl>
             </section>

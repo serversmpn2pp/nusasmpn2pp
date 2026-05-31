@@ -14,6 +14,7 @@ use App\Models\LaporanPembinaanSiswa;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
+use App\Models\Pengguna;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 
@@ -23,10 +24,6 @@ class BerandaController extends Controller
     {
         $pengguna = auth()->user();
 
-        if (! $pengguna?->administrator()) {
-            return view('beranda.index');
-        }
-
         $hariIni = now();
         $tanggalHariIni = $hariIni->toDateString();
         $tahunPelajaranAktif = TahunPelajaran::query()
@@ -35,6 +32,16 @@ class BerandaController extends Controller
             ->first();
         $awalBulan = $hariIni->copy()->startOfMonth();
         $akhirBulan = $hariIni->copy()->endOfMonth();
+
+        if (! $pengguna?->administrator()) {
+            return view('beranda.index', $this->dataDashboardPegawai(
+                pengguna: $pengguna,
+                hariIni: $hariIni,
+                tahunPelajaranAktif: $tahunPelajaranAktif,
+                awalBulan: $awalBulan,
+                akhirBulan: $akhirBulan,
+            ));
+        }
 
         $jumlahSiswaAktif = Siswa::query()->where('aktif', true)->count();
         $jumlahPegawaiAktif = Pegawai::query()->where('aktif', true)->count();
@@ -201,5 +208,199 @@ class BerandaController extends Controller
             'pegawaiBelumScanHariIni',
             'laporanPembinaanPerluPerhatian',
         ));
+    }
+
+    private function dataDashboardPegawai(
+        Pengguna $pengguna,
+        $hariIni,
+        ?TahunPelajaran $tahunPelajaranAktif,
+        $awalBulan,
+        $akhirBulan,
+    ): array {
+        $pegawaiLogin = $pengguna->pegawai()->first();
+        $labelBulan = $hariIni->copy()->locale('id')->translatedFormat('F Y');
+        $awalBulanTanggal = $awalBulan->toDateString();
+        $akhirBulanTanggal = $akhirBulan->toDateString();
+
+        $absensiPegawaiBulan = AbsensiPegawai::query()
+            ->where('pegawai_id', $pengguna->pegawai_id ?: 0)
+            ->whereBetween('tanggal', [$awalBulanTanggal, $akhirBulanTanggal]);
+        $jumlahStatusPegawaiBulan = (clone $absensiPegawaiBulan)
+            ->selectRaw('status_kehadiran, count(*) as jumlah')
+            ->groupBy('status_kehadiran')
+            ->pluck('jumlah', 'status_kehadiran');
+
+        $rekapAbsensiPegawaiBulan = collect(AbsensiPegawai::DAFTAR_STATUS_KEHADIRAN)
+            ->map(fn (string $label, string $status) => [
+                'kode' => $status,
+                'label' => $label,
+                'jumlah' => (int) ($jumlahStatusPegawaiBulan[$status] ?? 0),
+                'warna' => $this->warnaStatusAbsensiPegawai($status),
+            ])
+            ->values();
+
+        $ringkasanAbsensiPegawaiPribadi = [
+            'total_catatan' => (int) $jumlahStatusPegawaiBulan->sum(),
+            'hadir' => (int) ($jumlahStatusPegawaiBulan['hadir'] ?? 0),
+            'sakit' => (int) ($jumlahStatusPegawaiBulan['sakit'] ?? 0),
+            'izin' => (int) ($jumlahStatusPegawaiBulan['izin'] ?? 0),
+            'dinas_luar' => (int) ($jumlahStatusPegawaiBulan['dinas_luar'] ?? 0),
+            'cuti' => (int) ($jumlahStatusPegawaiBulan['cuti'] ?? 0),
+            'alfa' => (int) ($jumlahStatusPegawaiBulan['alfa'] ?? 0),
+            'terlambat' => (clone $absensiPegawaiBulan)->where('menit_terlambat', '>', 0)->count(),
+            'pulang_cepat' => (clone $absensiPegawaiBulan)->where('menit_pulang_cepat', '>', 0)->count(),
+            'belum_pulang' => (clone $absensiPegawaiBulan)
+                ->where('status_kehadiran', 'hadir')
+                ->whereNotNull('jam_masuk')
+                ->whereNull('jam_pulang')
+                ->count(),
+        ];
+
+        $kelasWali = Kelas::query()
+            ->withCount([
+                'anggotaKelas as jumlah_siswa_aktif' => function ($query) use ($tahunPelajaranAktif) {
+                    $query->where('status_keanggotaan', 'aktif')
+                        ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id));
+                },
+            ])
+            ->where('wali_kelas_id', $pengguna->pegawai_id ?: 0)
+            ->where('aktif', true)
+            ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))
+            ->orderBy('tingkat')
+            ->orderBy('nama')
+            ->get(['id', 'tahun_pelajaran_id', 'nama', 'tingkat']);
+
+        $kelasWaliIds = $kelasWali->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        $absensiSiswaWaliBulan = AbsensiSiswa::query()
+            ->whereIn('kelas_id', $kelasWaliIds)
+            ->whereBetween('tanggal', [$awalBulanTanggal, $akhirBulanTanggal])
+            ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id));
+        $jumlahStatusSiswaWaliBulan = (clone $absensiSiswaWaliBulan)
+            ->selectRaw('status_kehadiran, count(*) as jumlah')
+            ->groupBy('status_kehadiran')
+            ->pluck('jumlah', 'status_kehadiran');
+
+        $labelStatusSiswa = [
+            'hadir' => 'Hadir',
+            'sakit' => 'Sakit',
+            'izin' => 'Izin',
+            'alfa' => 'Alfa',
+        ];
+
+        $rekapAbsensiSiswaWaliBulan = collect($labelStatusSiswa)
+            ->map(fn (string $label, string $status) => [
+                'kode' => $status,
+                'label' => $label,
+                'jumlah' => (int) ($jumlahStatusSiswaWaliBulan[$status] ?? 0),
+                'warna' => $this->warnaStatusAbsensiSiswa($status),
+            ])
+            ->values();
+
+        $jumlahSiswaWali = AnggotaKelas::query()
+            ->whereIn('kelas_id', $kelasWaliIds)
+            ->where('status_keanggotaan', 'aktif')
+            ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))
+            ->distinct('siswa_id')
+            ->count('siswa_id');
+
+        $ringkasanAbsensiSiswaWali = [
+            'jumlah_siswa' => $jumlahSiswaWali,
+            'total_catatan' => (int) $jumlahStatusSiswaWaliBulan->sum(),
+            'hadir' => (int) ($jumlahStatusSiswaWaliBulan['hadir'] ?? 0),
+            'sakit' => (int) ($jumlahStatusSiswaWaliBulan['sakit'] ?? 0),
+            'izin' => (int) ($jumlahStatusSiswaWaliBulan['izin'] ?? 0),
+            'alfa' => (int) ($jumlahStatusSiswaWaliBulan['alfa'] ?? 0),
+            'terlambat' => (clone $absensiSiswaWaliBulan)->where('menit_terlambat', '>', 0)->count(),
+            'pulang_cepat' => (clone $absensiSiswaWaliBulan)->where('menit_pulang_cepat', '>', 0)->count(),
+        ];
+
+        $laporanPembinaanWaliBulan = LaporanPembinaanSiswa::query()
+            ->whereIn('kelas_id', $kelasWaliIds)
+            ->whereBetween('tanggal_kejadian', [$awalBulanTanggal, $akhirBulanTanggal])
+            ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id));
+        $jumlahStatusPembinaanWaliBulan = (clone $laporanPembinaanWaliBulan)
+            ->selectRaw('status, count(*) as jumlah')
+            ->groupBy('status')
+            ->pluck('jumlah', 'status');
+
+        $rekapPembinaanWaliBulan = collect(LaporanPembinaanSiswa::DAFTAR_STATUS)
+            ->except('dibatalkan')
+            ->map(fn (string $label, string $status) => [
+                'kode' => $status,
+                'label' => $label,
+                'jumlah' => (int) ($jumlahStatusPembinaanWaliBulan[$status] ?? 0),
+                'warna' => $this->warnaStatusPembinaan($status),
+            ])
+            ->values();
+
+        $ringkasanPembinaanWali = [
+            'total_laporan' => (int) $jumlahStatusPembinaanWaliBulan->sum(),
+            'siswa_terlapor' => (clone $laporanPembinaanWaliBulan)->distinct('siswa_id')->count('siswa_id'),
+            'baru' => (int) ($jumlahStatusPembinaanWaliBulan['baru'] ?? 0),
+            'diproses' => (int) ($jumlahStatusPembinaanWaliBulan['diproses'] ?? 0),
+            'perlu_tindak_lanjut' => (int) ($jumlahStatusPembinaanWaliBulan['perlu_tindak_lanjut'] ?? 0),
+            'selesai' => (int) ($jumlahStatusPembinaanWaliBulan['selesai'] ?? 0),
+        ];
+
+        $laporanPembinaanWali = (clone $laporanPembinaanWaliBulan)
+            ->with(['siswa:id,nama_lengkap,nisn', 'kelas:id,nama', 'kategoriPembinaanSiswa:id,nama'])
+            ->orderByDesc('tanggal_kejadian')
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
+        return [
+            'hariIni' => $hariIni,
+            'tahunPelajaranAktif' => $tahunPelajaranAktif,
+            'labelBulan' => $labelBulan,
+            'pegawaiLogin' => $pegawaiLogin,
+            'rekapAbsensiPegawaiBulan' => $rekapAbsensiPegawaiBulan,
+            'ringkasanAbsensiPegawaiPribadi' => $ringkasanAbsensiPegawaiPribadi,
+            'maksGrafikPegawai' => max((int) $rekapAbsensiPegawaiBulan->max('jumlah'), 1),
+            'kelasWali' => $kelasWali,
+            'rekapAbsensiSiswaWaliBulan' => $rekapAbsensiSiswaWaliBulan,
+            'ringkasanAbsensiSiswaWali' => $ringkasanAbsensiSiswaWali,
+            'maksGrafikSiswaWali' => max((int) $rekapAbsensiSiswaWaliBulan->max('jumlah'), 1),
+            'rekapPembinaanWaliBulan' => $rekapPembinaanWaliBulan,
+            'ringkasanPembinaanWali' => $ringkasanPembinaanWali,
+            'laporanPembinaanWali' => $laporanPembinaanWali,
+            'maksGrafikPembinaanWali' => max((int) $rekapPembinaanWaliBulan->max('jumlah'), 1),
+        ];
+    }
+
+    private function warnaStatusAbsensiPegawai(string $status): string
+    {
+        return match ($status) {
+            'hadir' => '#15477A',
+            'sakit' => '#F1C40F',
+            'izin' => '#2B83C6',
+            'dinas_luar' => '#16A34A',
+            'cuti' => '#7C3AED',
+            'alfa' => '#DC2626',
+            default => '#64748B',
+        };
+    }
+
+    private function warnaStatusAbsensiSiswa(string $status): string
+    {
+        return match ($status) {
+            'hadir' => '#15477A',
+            'sakit' => '#F1C40F',
+            'izin' => '#2B83C6',
+            'alfa' => '#DC2626',
+            default => '#64748B',
+        };
+    }
+
+    private function warnaStatusPembinaan(string $status): string
+    {
+        return match ($status) {
+            'baru' => '#F1C40F',
+            'diproses' => '#2B83C6',
+            'perlu_tindak_lanjut' => '#DC2626',
+            'selesai' => '#16A34A',
+            default => '#64748B',
+        };
     }
 }

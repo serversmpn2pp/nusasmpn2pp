@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LogScanAbsensi extends Model
 {
@@ -39,5 +40,10 @@ class LogScanAbsensi extends Model
     public function siswa(): BelongsTo
     {
         return $this->belongsTo(Siswa::class);
+    }
+
+    public function notifikasiAbsensiSiswa(): HasMany
+    {
+        return $this->hasMany(NotifikasiAbsensiSiswa::class);
     }
 }

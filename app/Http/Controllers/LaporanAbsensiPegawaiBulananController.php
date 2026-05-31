@@ -30,18 +30,27 @@ class LaporanAbsensiPegawaiBulananController extends Controller
 
     private function bangunDataLaporan(Request $request, ?Pegawai $pegawaiCetak = null): array
     {
+        $pengguna = $request->user();
+        $cakupanAbsensiPegawaiPribadi = $pengguna?->membatasiCakupanAbsensiPegawai() ?? false;
+        $pegawaiIdsTerjangkau = $cakupanAbsensiPegawaiPribadi ? $this->pegawaiIdsPribadi($request) : null;
+
+        if ($pegawaiCetak) {
+            $this->pastikanBolehAksesPegawai($request, $pegawaiCetak);
+        }
+
         $data = $request->validate($this->aturanFilter());
         $bulan = $data['bulan'] ?? now()->format('Y-m');
         $bulanCarbon = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
         $tanggalMulai = $bulanCarbon->copy()->startOfMonth();
         $tanggalSelesai = $bulanCarbon->copy()->endOfMonth();
-        $kataKunci = trim((string) ($data['kata_kunci'] ?? ''));
-        $jenisPegawai = $data['jenis_pegawai'] ?? '';
-        $pegawaiId = $data['pegawai_id'] ?? null;
-        $statusPegawai = $data['status_pegawai'] ?? 'aktif';
+        $kataKunci = $cakupanAbsensiPegawaiPribadi ? '' : trim((string) ($data['kata_kunci'] ?? ''));
+        $jenisPegawai = $cakupanAbsensiPegawaiPribadi ? '' : ($data['jenis_pegawai'] ?? '');
+        $pegawaiId = $cakupanAbsensiPegawaiPribadi ? $request->user()?->pegawai_id : ($data['pegawai_id'] ?? null);
+        $statusPegawai = $cakupanAbsensiPegawaiPribadi ? 'semua' : ($data['status_pegawai'] ?? 'aktif');
         $tanggalPeriode = $this->tanggalPeriode($tanggalMulai, $tanggalSelesai);
 
         $daftarJenisPegawai = Pegawai::query()
+            ->when(is_array($pegawaiIdsTerjangkau), fn ($query) => $query->whereIn('id', $pegawaiIdsTerjangkau))
             ->whereNotNull('jenis_pegawai')
             ->where('jenis_pegawai', '!=', '')
             ->select('jenis_pegawai')
@@ -50,6 +59,7 @@ class LaporanAbsensiPegawaiBulananController extends Controller
             ->pluck('jenis_pegawai');
 
         $daftarPegawai = Pegawai::query()
+            ->when(is_array($pegawaiIdsTerjangkau), fn ($query) => $query->whereIn('id', $pegawaiIdsTerjangkau))
             ->when($statusPegawai === 'aktif', fn ($query) => $query->where('aktif', true))
             ->when($statusPegawai === 'nonaktif', fn ($query) => $query->where('aktif', false))
             ->orderBy('nama_lengkap')
@@ -62,6 +72,7 @@ class LaporanAbsensiPegawaiBulananController extends Controller
                 jenisPegawai: $jenisPegawai,
                 pegawaiId: $pegawaiId,
                 statusPegawai: $statusPegawai,
+                pegawaiIdsTerjangkau: $pegawaiIdsTerjangkau,
             );
 
         $jadwalAbsensiPegawai = PengaturanAbsensiPegawai::query()
@@ -88,6 +99,7 @@ class LaporanAbsensiPegawaiBulananController extends Controller
             'daftarPegawai',
             'laporanAbsensiPegawai',
             'ringkasan',
+            'cakupanAbsensiPegawaiPribadi',
         ) + [
             'tanggalCetak' => now()->copy()->locale('id')->translatedFormat('d F Y'),
             'jumlahLembar' => $laporanAbsensiPegawai->count(),
@@ -110,6 +122,7 @@ class LaporanAbsensiPegawaiBulananController extends Controller
         string $jenisPegawai,
         ?int $pegawaiId,
         string $statusPegawai,
+        ?array $pegawaiIdsTerjangkau = null,
     ) {
         return Pegawai::query()
             ->select([
@@ -122,6 +135,7 @@ class LaporanAbsensiPegawaiBulananController extends Controller
                 'status_kepegawaian',
                 'aktif',
             ])
+            ->when(is_array($pegawaiIdsTerjangkau), fn ($query) => $query->whereIn('id', $pegawaiIdsTerjangkau))
             ->when($statusPegawai === 'aktif', fn ($query) => $query->where('aktif', true))
             ->when($statusPegawai === 'nonaktif', fn ($query) => $query->where('aktif', false))
             ->when($jenisPegawai !== '', fn ($query) => $query->where('jenis_pegawai', $jenisPegawai))
@@ -136,6 +150,21 @@ class LaporanAbsensiPegawaiBulananController extends Controller
             })
             ->orderBy('nama_lengkap')
             ->get();
+    }
+
+    private function pegawaiIdsPribadi(Request $request): array
+    {
+        abort_unless($request->user()?->pegawai_id, 403);
+
+        return [(int) $request->user()->pegawai_id];
+    }
+
+    private function pastikanBolehAksesPegawai(Request $request, Pegawai $pegawai): void
+    {
+        abort_unless(
+            $request->user()?->dapatMengaksesAbsensiPegawai($pegawai->id) ?? false,
+            403,
+        );
     }
 
     private function ambilAbsensiPerPegawai(Carbon $tanggalMulai, Carbon $tanggalSelesai, Collection $pegawai): Collection

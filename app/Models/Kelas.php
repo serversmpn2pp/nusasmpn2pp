@@ -52,6 +52,11 @@ class Kelas extends Model
         return $this->hasMany(AbsensiSiswa::class);
     }
 
+    public function jadwalPelajaran(): HasMany
+    {
+        return $this->hasMany(JadwalPelajaran::class);
+    }
+
     public function laporanPembinaanSiswa(): HasMany
     {
         return $this->hasMany(LaporanPembinaanSiswa::class);

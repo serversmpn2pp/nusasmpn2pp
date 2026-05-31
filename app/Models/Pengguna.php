@@ -70,6 +70,21 @@ class Pengguna extends Authenticatable
         return $this->hasMany(TindakLanjutPembinaanSiswa::class, 'dibuat_oleh_pengguna_id');
     }
 
+    public function mutasiStokBarangDibuat(): HasMany
+    {
+        return $this->hasMany(MutasiStokBarang::class, 'dibuat_oleh_pengguna_id');
+    }
+
+    public function peminjamanBarangDibuat(): HasMany
+    {
+        return $this->hasMany(PeminjamanBarang::class, 'dibuat_oleh_pengguna_id');
+    }
+
+    public function pengembalianBarangDibuat(): HasMany
+    {
+        return $this->hasMany(PengembalianBarang::class, 'dibuat_oleh_pengguna_id');
+    }
+
     public function memilikiPeran(string|array $kode): bool
     {
         $kode = (array) $kode;
@@ -164,5 +179,34 @@ class Pengguna extends Authenticatable
         }
 
         return in_array($kelasId, $this->kelasWaliIds(), true);
+    }
+
+    public function melihatAbsensiPegawaiSemua(): bool
+    {
+        return $this->administrator()
+            || $this->memilikiPeran([
+                'pimpinan',
+                'wakil_pimpinan_kesiswaan',
+                'wakil_pimpinan_sarana_prasarana',
+                'wakil_pimpinan_kurikulum',
+            ]);
+    }
+
+    public function membatasiCakupanAbsensiPegawai(): bool
+    {
+        return ! $this->melihatAbsensiPegawaiSemua();
+    }
+
+    public function dapatMengaksesAbsensiPegawai(?int $pegawaiId): bool
+    {
+        if ($this->melihatAbsensiPegawaiSemua()) {
+            return true;
+        }
+
+        if (! $pegawaiId || ! $this->pegawai_id) {
+            return false;
+        }
+
+        return (int) $this->pegawai_id === (int) $pegawaiId;
     }
 }

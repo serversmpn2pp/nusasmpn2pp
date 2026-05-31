@@ -188,6 +188,22 @@
                 </div>
 
                 <div class="field">
+                    <label for="nomor_wa_ayah">Nomor WA ayah</label>
+                    <input id="nomor_wa_ayah" name="nomor_wa_ayah" type="text" value="{{ $nilai('nomor_wa_ayah') }}" class="{{ $inputClass('nomor_wa_ayah') }}" placeholder="08xxxxxxxxxx">
+                    @error('nomor_wa_ayah')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
+                    <label for="nomor_wa_ibu">Nomor WA ibu</label>
+                    <input id="nomor_wa_ibu" name="nomor_wa_ibu" type="text" value="{{ $nilai('nomor_wa_ibu') }}" class="{{ $inputClass('nomor_wa_ibu') }}" placeholder="08xxxxxxxxxx">
+                    @error('nomor_wa_ibu')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
                     <label for="pekerjaan_ayah">Pekerjaan ayah</label>
                     <input id="pekerjaan_ayah" name="pekerjaan_ayah" type="text" value="{{ $nilai('pekerjaan_ayah') }}" class="{{ $inputClass('pekerjaan_ayah') }}">
                     @error('pekerjaan_ayah')
@@ -201,6 +217,44 @@
                     @error('pekerjaan_ibu')
                         <p class="error-text">{{ $message }}</p>
                     @enderror
+                </div>
+
+                <div class="field">
+                    <label for="nama_wali">Nama wali lain</label>
+                    <input id="nama_wali" name="nama_wali" type="text" value="{{ $nilai('nama_wali') }}" class="{{ $inputClass('nama_wali') }}">
+                    @error('nama_wali')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
+                    <label for="hubungan_wali">Hubungan wali</label>
+                    <input id="hubungan_wali" name="hubungan_wali" type="text" value="{{ $nilai('hubungan_wali') }}" class="{{ $inputClass('hubungan_wali') }}" placeholder="Contoh: paman, kakak, nenek">
+                    @error('hubungan_wali')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
+                    <label for="nomor_wa_wali">Nomor WA wali lain</label>
+                    <input id="nomor_wa_wali" name="nomor_wa_wali" type="text" value="{{ $nilai('nomor_wa_wali') }}" class="{{ $inputClass('nomor_wa_wali') }}" placeholder="08xxxxxxxxxx">
+                    @error('nomor_wa_wali')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
+                    <label for="kontak_absensi_utama">Tujuan notifikasi absensi</label>
+                    <select id="kontak_absensi_utama" name="kontak_absensi_utama" class="select @error('kontak_absensi_utama') is-invalid @enderror">
+                        <option value="">Otomatis dari nomor yang tersedia</option>
+                        <option value="ayah" @selected($nilai('kontak_absensi_utama') === 'ayah')>Ayah</option>
+                        <option value="ibu" @selected($nilai('kontak_absensi_utama') === 'ibu')>Ibu</option>
+                        <option value="wali" @selected($nilai('kontak_absensi_utama') === 'wali')>Wali lain</option>
+                    </select>
+                    @error('kontak_absensi_utama')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                    <p class="help-text">Jika kosong, sistem memilih nomor ayah, lalu ibu, lalu wali lain.</p>
                 </div>
             </div>
         </section>

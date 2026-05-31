@@ -57,4 +57,9 @@ class AbsensiSiswa extends Model
     {
         return $this->hasMany(LogScanAbsensi::class);
     }
+
+    public function notifikasiAbsensiSiswa(): HasMany
+    {
+        return $this->hasMany(NotifikasiAbsensiSiswa::class);
+    }
 }

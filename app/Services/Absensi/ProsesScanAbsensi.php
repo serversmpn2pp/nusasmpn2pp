@@ -8,6 +8,7 @@ use App\Models\LogScanAbsensi;
 use App\Models\PengaturanAbsensi;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\Notifikasi\NotifikasiAbsensiSiswaService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,10 @@ class ProsesScanAbsensi
         6 => 'sabtu',
         7 => 'minggu',
     ];
+
+    public function __construct(private NotifikasiAbsensiSiswaService $notifikasiAbsensiSiswaService)
+    {
+    }
 
     public function proses(
         string $isiScan,
@@ -259,11 +264,14 @@ class ProsesScanAbsensi
                 userAgent: $userAgent,
             );
 
+            $notifikasi = $this->notifikasiAbsensiSiswaService->jadwalkanScanMasuk($absensi, $log);
+
             return $this->hasil(true, 'berhasil_masuk', $pesan, $siswa, $absensi, $log, 'masuk', [
                 'status_masuk' => $statusMasuk,
                 'menit_terlambat' => $menitTerlambat,
                 'scanner_id' => $parsed['scanner_id'],
                 'nisn' => $parsed['nisn'],
+                'notifikasi_absensi_id' => $notifikasi?->id,
             ]);
         });
     }

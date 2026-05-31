@@ -23,9 +23,15 @@ class Siswa extends Model
         'status_dalam_keluarga',
         'anak_ke',
         'nama_ayah',
+        'nomor_wa_ayah',
         'nama_ibu',
+        'nomor_wa_ibu',
         'pekerjaan_ayah',
         'pekerjaan_ibu',
+        'nama_wali',
+        'hubungan_wali',
+        'nomor_wa_wali',
+        'kontak_absensi_utama',
         'alamat',
         'sekolah_asal',
         'keterangan',
@@ -61,6 +67,16 @@ class Siswa extends Model
     public function logScanAbsensi(): HasMany
     {
         return $this->hasMany(LogScanAbsensi::class);
+    }
+
+    public function notifikasiAbsensiSiswa(): HasMany
+    {
+        return $this->hasMany(NotifikasiAbsensiSiswa::class);
+    }
+
+    public function peminjamanBarang(): HasMany
+    {
+        return $this->hasMany(PeminjamanBarang::class);
     }
 
     public function kelas(): BelongsToMany

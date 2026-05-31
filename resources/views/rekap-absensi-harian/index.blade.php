@@ -32,6 +32,96 @@
         ];
     @endphp
 
+    <style>
+        .wa-summary-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            display: grid;
+            place-items: center;
+            background: rgba(15, 23, 42, .58);
+            padding: 18px;
+        }
+
+        .wa-summary-modal[hidden] {
+            display: none;
+        }
+
+        .wa-summary-dialog {
+            width: min(100%, 760px);
+            max-height: min(86vh, 780px);
+            overflow: hidden;
+            border: 1px solid rgba(21, 71, 122, .16);
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, .28);
+        }
+
+        .wa-summary-head,
+        .wa-summary-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+        }
+
+        .wa-summary-head {
+            border-bottom: 1px solid var(--line);
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .wa-summary-head .panel-title,
+        .wa-summary-head .help-text {
+            color: inherit;
+        }
+
+        .wa-summary-body {
+            padding: 18px;
+        }
+
+        .wa-summary-textarea {
+            min-height: 420px;
+            font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+            font-size: .88rem;
+            line-height: 1.5;
+            white-space: pre;
+        }
+
+        .wa-summary-foot {
+            border-top: 1px solid var(--line);
+            background: #fafafa;
+        }
+
+        .wa-copy-status {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: .84rem;
+            font-weight: 800;
+        }
+
+        @media (max-width: 620px) {
+            .wa-summary-head,
+            .wa-summary-foot {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .wa-summary-foot .actions {
+                width: 100%;
+            }
+
+            .wa-summary-foot .button {
+                flex: 1;
+            }
+
+            .wa-summary-textarea {
+                min-height: 360px;
+            }
+        }
+    </style>
+
     <div class="page-header">
         <div>
             <p class="eyebrow">Absensi</p>
@@ -42,6 +132,15 @@
             @izin('absensi.scan')
                 <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan absensi</a>
             @endizin
+            <button
+                type="button"
+                class="button button-dark"
+                data-wa-summary-open
+                @disabled(! $bolehSalinRangkumanWhatsapp)
+                title="{{ $bolehSalinRangkumanWhatsapp ? 'Buat pesan WA grup sesuai kelas yang dipilih' : 'Pilih kelas terlebih dahulu' }}"
+            >
+                Pesan WA Grup
+            </button>
             @izin('absensi.pengaturan_kelola')
                 <a href="{{ route('pengaturan-absensi.index') }}" class="button button-muted">Jam absensi</a>
             @endizin
@@ -91,6 +190,10 @@
         <div class="alert">Rekap dan koreksi absensi dibatasi pada kelas yang Anda wali.</div>
     @endif
 
+    @if (! ($cakupanWaliKelas ?? false) && ! $kelasId)
+        <div class="alert">Untuk membuat pesan WA grup orang tua, pilih satu kelas terlebih dahulu. Rekap tabel tetap boleh menampilkan semua kelas.</div>
+    @endif
+
     @if (session('berhasil'))
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
@@ -127,6 +230,32 @@
         <div class="panel stat">
             <p class="stat-label">Belum pulang</p>
             <p class="stat-value">{{ $ringkasan['belum_pulang'] }}</p>
+        </div>
+    </div>
+
+    <div id="wa-summary-modal" class="wa-summary-modal" hidden>
+        <div class="wa-summary-dialog" role="dialog" aria-modal="true" aria-labelledby="wa-summary-title">
+            <div class="wa-summary-head">
+                <div>
+                    <h2 id="wa-summary-title" class="panel-title">Pesan WA Grup Orang Tua</h2>
+                    <p class="help-text" style="margin-top: 4px;">{{ $tanggalLabel }} - {{ $labelCakupan }}</p>
+                </div>
+                <button type="button" class="button button-muted button-sm" data-wa-summary-close>Tutup</button>
+            </div>
+
+            <div class="wa-summary-body">
+                <label for="wa-summary-text" class="form-label">Rangkuman siap salin</label>
+                <textarea id="wa-summary-text" class="textarea wa-summary-textarea" readonly>{{ $rangkumanWhatsapp }}</textarea>
+                <p class="help-text">Silakan salin pesan ini lalu tempelkan ke grup WhatsApp orang tua siswa.</p>
+            </div>
+
+            <div class="wa-summary-foot">
+                <p id="wa-copy-status" class="wa-copy-status" aria-live="polite"></p>
+                <div class="actions">
+                    <button type="button" class="button button-muted" data-wa-summary-close>Batal</button>
+                    <button type="button" class="button button-primary" data-wa-summary-copy>Salin Pesan</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -275,4 +404,58 @@
             </div>
         </section>
     @endif
+
+    <script>
+        (() => {
+            const modal = document.getElementById('wa-summary-modal');
+            const textArea = document.getElementById('wa-summary-text');
+            const statusText = document.getElementById('wa-copy-status');
+            const openButtons = document.querySelectorAll('[data-wa-summary-open]');
+            const closeButtons = document.querySelectorAll('[data-wa-summary-close]');
+            const copyButton = document.querySelector('[data-wa-summary-copy]');
+
+            const bukaModal = () => {
+                modal.hidden = false;
+                statusText.textContent = '';
+                window.setTimeout(() => textArea.focus(), 50);
+            };
+
+            const tutupModal = () => {
+                modal.hidden = true;
+            };
+
+            const salinPesan = async () => {
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(textArea.value);
+                    } else {
+                        document.execCommand('copy');
+                    }
+
+                    statusText.textContent = 'Pesan berhasil disalin.';
+                } catch (error) {
+                    statusText.textContent = 'Belum bisa menyalin otomatis. Pilih teks lalu tekan Ctrl+C.';
+                }
+            };
+
+            openButtons.forEach((button) => button.addEventListener('click', bukaModal));
+            closeButtons.forEach((button) => button.addEventListener('click', tutupModal));
+            copyButton?.addEventListener('click', salinPesan);
+
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    tutupModal();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && ! modal.hidden) {
+                    tutupModal();
+                }
+            });
+        })();
+    </script>
 @endsection

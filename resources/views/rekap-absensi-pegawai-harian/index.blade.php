@@ -151,7 +151,7 @@
             <div class="field filter-person">
                 <label for="pegawai_id">Pegawai</label>
                 <select id="pegawai_id" name="pegawai_id" class="select">
-                    <option value="">Semua pegawai</option>
+                    <option value="">{{ ($cakupanAbsensiPegawaiPribadi ?? false) ? 'Data saya' : 'Semua pegawai' }}</option>
                     @foreach ($daftarPegawai as $pegawai)
                         <option value="{{ $pegawai->id }}" @selected((string) $pegawaiId === (string) $pegawai->id)>
                             {{ $pegawai->nama_lengkap }} - {{ $pegawai->nip ?: 'NIP kosong' }}
@@ -185,6 +185,10 @@
             </div>
         </div>
     </form>
+
+    @if ($cakupanAbsensiPegawaiPribadi ?? false)
+        <div class="alert">Rekap absensi pegawai dibatasi pada data absensi Anda sendiri.</div>
+    @endif
 
     @if (session('berhasil'))
         <div class="alert">{{ session('berhasil') }}</div>
@@ -237,7 +241,7 @@
         <div class="panel-pad" style="border-bottom: 1px solid var(--line);">
             <h2 class="panel-title">{{ $tanggalLabel }}</h2>
             <p class="help-text" style="margin-top: 6px;">
-                {{ $jenisPegawai ? 'Jenis pegawai: ' . $jenisPegawai : 'Semua jenis pegawai' }}
+                {{ ($cakupanAbsensiPegawaiPribadi ?? false) ? 'Data absensi pribadi' : ($jenisPegawai ? 'Jenis pegawai: ' . $jenisPegawai : 'Semua jenis pegawai') }}
             </p>
         </div>
 
