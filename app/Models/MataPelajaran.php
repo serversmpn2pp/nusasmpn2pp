@@ -36,4 +36,19 @@ class MataPelajaran extends Model
     {
         return $this->hasMany(PerangkatAjar::class);
     }
+
+    public function ujianOmr(): HasMany
+    {
+        return $this->hasMany(UjianOmr::class);
+    }
+
+    public function ujianCbt(): HasMany
+    {
+        return $this->hasMany(UjianCbt::class);
+    }
+
+    public function soalCbt(): HasMany
+    {
+        return $this->hasMany(SoalCbt::class);
+    }
 }

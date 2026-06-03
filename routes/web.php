@@ -1,26 +1,34 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AksesUjianCbtController;
 use App\Http\Controllers\AkunPegawaiController;
 use App\Http\Controllers\AnggotaKelasController;
 use App\Http\Controllers\AutentikasiController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\BerandaController;
+use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\InputNilaiController;
 use App\Http\Controllers\JadwalPelajaranController;
 use App\Http\Controllers\JadwalSayaController;
 use App\Http\Controllers\JamPelajaranController;
 use App\Http\Controllers\JenisPerangkatAjarController;
+use App\Http\Controllers\JenisUjianCbtController;
 use App\Http\Controllers\KartuPelajarController;
+use App\Http\Controllers\KartuPesertaUjianCbtController;
 use App\Http\Controllers\KartuPegawaiController;
 use App\Http\Controllers\KenaikanKelasController;
 use App\Http\Controllers\KategoriBarangController;
 use App\Http\Controllers\KategoriPembinaanSiswaController;
+use App\Http\Controllers\KunciJawabanUjianOmrController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KomponenNilaiController;
+use App\Http\Controllers\KoreksiHasilScanLjkOmrController;
+use App\Http\Controllers\LembarJawabUjianOmrController;
 use App\Http\Controllers\LaporanAbsensiController;
 use App\Http\Controllers\LaporanAbsensiPegawaiBulananController;
+use App\Http\Controllers\LaporanInventarisBulananController;
 use App\Http\Controllers\LaporanPembinaanSiswaController;
 use App\Http\Controllers\LabelBarcodeInventarisController;
 use App\Http\Controllers\LokasiBarangController;
@@ -29,6 +37,7 @@ use App\Http\Controllers\MutasiStokBarangController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PeminjamanBarangController;
+use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\PerangkatAjarSayaController;
 use App\Http\Controllers\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\PengembalianBarangController;
@@ -40,15 +49,23 @@ use App\Http\Controllers\ProfilPegawaiController;
 use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
 use App\Http\Controllers\RekapAbsensiHarianController;
 use App\Http\Controllers\RekapNilaiRaporController;
+use App\Http\Controllers\RekapPeminjamanBarangController;
 use App\Http\Controllers\ScanAbsensiController;
 use App\Http\Controllers\ScanAbsensiPegawaiController;
+use App\Http\Controllers\ScanLjkUjianOmrController;
 use App\Http\Controllers\SaldoStokBarangController;
+use App\Http\Controllers\SesiUjianCbtController;
 use App\Http\Controllers\SatuanBarangController;
 use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SiswaController;
+use App\Http\Controllers\SoalCbtController;
+use App\Http\Controllers\SoalUjianCbtController;
 use App\Http\Controllers\TahunPelajaranController;
 use App\Http\Controllers\TindakLanjutPembinaanSiswaController;
+use App\Http\Controllers\TerapkanNilaiOmrController;
 use App\Http\Controllers\UnitBarangController;
+use App\Http\Controllers\UjianCbtController;
+use App\Http\Controllers\UjianOmrController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -61,6 +78,17 @@ Route::get('/', function () {
 Route::middleware('guest')->group(function () {
     Route::get('login', [AutentikasiController::class, 'createLogin'])->name('login');
     Route::post('login', [AutentikasiController::class, 'storeLogin'])->name('login.store');
+});
+
+Route::prefix('cbt')->name('cbt.')->group(function () {
+    Route::get('masuk', [AksesUjianCbtController::class, 'createLogin'])->name('login');
+    Route::post('masuk', [AksesUjianCbtController::class, 'storeLogin'])->name('login.store');
+    Route::post('keluar', [AksesUjianCbtController::class, 'logout'])->name('logout');
+    Route::get('ujian', [AksesUjianCbtController::class, 'show'])->name('ujian.show');
+    Route::post('ujian/mulai', [AksesUjianCbtController::class, 'mulai'])->name('ujian.mulai');
+    Route::get('ujian/kerjakan', [AksesUjianCbtController::class, 'kerjakan'])->name('ujian.kerjakan');
+    Route::post('ujian/simpan', [AksesUjianCbtController::class, 'simpan'])->name('ujian.simpan');
+    Route::get('ujian/selesai', [AksesUjianCbtController::class, 'selesai'])->name('ujian.selesai');
 });
 
 Route::middleware('auth')->group(function () {
@@ -162,6 +190,35 @@ Route::middleware('auth')->group(function () {
             ->name('jadwal-saya.index');
         Route::resource('jenis-perangkat-ajar', JenisPerangkatAjarController::class)
             ->middleware('izin:perangkat_ajar.jenis_kelola');
+        Route::resource('jenis-ujian-cbt', JenisUjianCbtController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:cbt.kelola');
+        Route::resource('jenis-ujian-cbt', JenisUjianCbtController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:cbt.lihat,cbt.kelola');
+        Route::resource('ujian-cbt', UjianCbtController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:cbt.kelola');
+        Route::middleware('izin:cbt.kelola')->group(function () {
+            Route::get('ujian-cbt/{ujianCbt}/soal', [SoalUjianCbtController::class, 'edit'])->name('ujian-cbt.soal.edit');
+            Route::put('ujian-cbt/{ujianCbt}/soal', [SoalUjianCbtController::class, 'update'])->name('ujian-cbt.soal.update');
+            Route::get('ujian-cbt/{ujianCbt}/peserta', [PesertaUjianCbtController::class, 'index'])->name('ujian-cbt.peserta.index');
+            Route::post('ujian-cbt/{ujianCbt}/peserta/generate', [PesertaUjianCbtController::class, 'storeMassal'])->name('ujian-cbt.peserta.generate');
+            Route::put('ujian-cbt/{ujianCbt}/peserta', [PesertaUjianCbtController::class, 'update'])->name('ujian-cbt.peserta.update');
+            Route::get('ujian-cbt/{ujianCbt}/kartu-peserta', [KartuPesertaUjianCbtController::class, 'index'])->name('ujian-cbt.kartu-peserta.index');
+            Route::post('ujian-cbt/{ujianCbt}/sesi', [SesiUjianCbtController::class, 'store'])->name('ujian-cbt.sesi.store');
+            Route::put('ujian-cbt/{ujianCbt}/sesi/{sesiUjianCbt}', [SesiUjianCbtController::class, 'update'])->name('ujian-cbt.sesi.update');
+            Route::delete('ujian-cbt/{ujianCbt}/sesi/{sesiUjianCbt}', [SesiUjianCbtController::class, 'destroy'])->name('ujian-cbt.sesi.destroy');
+        });
+        Route::resource('ujian-cbt', UjianCbtController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:cbt.lihat,cbt.kelola');
+        Route::resource('soal-cbt', SoalCbtController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:cbt.kelola,cbt.soal_kelola');
+        Route::resource('soal-cbt', SoalCbtController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola');
         Route::middleware('izin:perangkat_ajar.upload')->group(function () {
             Route::get('perangkat-ajar-saya', [PerangkatAjarSayaController::class, 'index'])->name('perangkat-ajar-saya.index');
             Route::get('perangkat-ajar-saya/create', [PerangkatAjarSayaController::class, 'create'])->name('perangkat-ajar-saya.create');
@@ -186,6 +243,15 @@ Route::middleware('auth')->group(function () {
         Route::resource('barang', BarangController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:barang.kelola');
+        Route::get('dashboard-sarana-prasarana', [DashboardSaranaPrasaranaController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola,barang.peminjaman_kelola')
+            ->name('dashboard-sarana-prasarana.index');
+        Route::get('laporan-inventaris-bulanan', [LaporanInventarisBulananController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('laporan-inventaris-bulanan.index');
+        Route::get('laporan-inventaris-bulanan/cetak', [LaporanInventarisBulananController::class, 'cetak'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('laporan-inventaris-bulanan.cetak');
         Route::resource('barang', BarangController::class)
             ->only(['index', 'show'])
             ->middleware('izin:barang.lihat,barang.kelola');
@@ -236,6 +302,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('peminjaman-barang', PeminjamanBarangController::class)
             ->only(['index', 'show'])
             ->middleware('izin:barang.lihat,barang.peminjaman_kelola');
+        Route::get('rekap-peminjaman-barang', [RekapPeminjamanBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.peminjaman_kelola')
+            ->name('rekap-peminjaman-barang.index');
+        Route::get('rekap-peminjaman-barang/cetak', [RekapPeminjamanBarangController::class, 'cetak'])
+            ->middleware('izin:barang.lihat,barang.peminjaman_kelola')
+            ->name('rekap-peminjaman-barang.cetak');
 
         Route::resource('skema-bobot-nilai', SkemaBobotNilaiController::class)
             ->middleware('izin:nilai.skema_kelola');
@@ -248,6 +320,29 @@ Route::middleware('auth')->group(function () {
         Route::get('rekap-nilai-rapor', [RekapNilaiRaporController::class, 'index'])
             ->middleware('izin:nilai.rekap')
             ->name('rekap-nilai-rapor.index');
+        Route::middleware('izin:omr.kelola')->group(function () {
+            Route::get('ujian-omr/{ujianOmr}/versi-soal/{versiSoalUjianOmr}/kunci-jawaban', [KunciJawabanUjianOmrController::class, 'edit'])->name('ujian-omr.kunci-jawaban.edit');
+            Route::put('ujian-omr/{ujianOmr}/versi-soal/{versiSoalUjianOmr}/kunci-jawaban', [KunciJawabanUjianOmrController::class, 'update'])->name('ujian-omr.kunci-jawaban.update');
+            Route::post('ujian-omr/{ujianOmr}/lembar-jawab/generate', [LembarJawabUjianOmrController::class, 'store'])->name('ujian-omr.lembar-jawab.generate');
+            Route::get('ujian-omr/{ujianOmr}/scan', [ScanLjkUjianOmrController::class, 'index'])->name('ujian-omr.scan.index');
+            Route::post('ujian-omr/{ujianOmr}/scan', [ScanLjkUjianOmrController::class, 'store'])->name('ujian-omr.scan.store');
+            Route::get('ujian-omr/{ujianOmr}/scan/{batchScan}', [ScanLjkUjianOmrController::class, 'show'])->name('ujian-omr.scan.show');
+            Route::post('ujian-omr/{ujianOmr}/scan/{batchScan}/terapkan-nilai', [TerapkanNilaiOmrController::class, 'store'])->name('ujian-omr.scan.terapkan-nilai');
+            Route::get('ujian-omr/{ujianOmr}/scan/{batchScan}/hasil/{hasilScan}/periksa', [KoreksiHasilScanLjkOmrController::class, 'edit'])->name('ujian-omr.scan.hasil.periksa');
+            Route::put('ujian-omr/{ujianOmr}/scan/{batchScan}/hasil/{hasilScan}/periksa', [KoreksiHasilScanLjkOmrController::class, 'update'])->name('ujian-omr.scan.hasil.koreksi');
+            Route::get('ujian-omr/{ujianOmr}/scan/{batchScan}/hasil/{hasilScan}/pratinjau', [ScanLjkUjianOmrController::class, 'pratinjau'])->name('ujian-omr.scan.pratinjau');
+        });
+        Route::get('ujian-omr/{ujianOmr}/lembar-jawab/cetak', [LembarJawabUjianOmrController::class, 'cetak'])
+            ->middleware('izin:omr.lihat,omr.kelola')
+            ->name('ujian-omr.lembar-jawab.cetak');
+        Route::resource('ujian-omr', UjianOmrController::class)
+            ->parameters(['ujian-omr' => 'ujianOmr'])
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:omr.kelola');
+        Route::resource('ujian-omr', UjianOmrController::class)
+            ->parameters(['ujian-omr' => 'ujianOmr'])
+            ->only(['index', 'show'])
+            ->middleware('izin:omr.lihat,omr.kelola');
 
         Route::resource('pengaturan-absensi', PengaturanAbsensiController::class)
             ->middleware('izin:absensi.pengaturan_kelola');

@@ -1233,6 +1233,10 @@
                         ['label' => 'Komponen Nilai', 'route' => 'komponen-nilai.index', 'active' => ['komponen-nilai.*'], 'initial' => 'KN', 'izin' => 'nilai.komponen_kelola'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input'],
                         ['label' => 'Rekap Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR', 'izin' => 'nilai.rekap'],
+                        ['label' => 'Ujian & LJK', 'route' => 'ujian-omr.index', 'active' => ['ujian-omr.*'], 'initial' => 'LJ', 'izin' => ['omr.lihat', 'omr.kelola']],
+                        ['label' => 'Jenis Ujian CBT', 'route' => 'jenis-ujian-cbt.index', 'active' => ['jenis-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola']],
+                        ['label' => 'Bank Soal CBT', 'route' => 'soal-cbt.index', 'active' => ['soal-cbt.*'], 'initial' => 'BS', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola']],
+                        ['label' => 'Paket CBT', 'route' => 'ujian-cbt.index', 'active' => ['ujian-cbt.*'], 'initial' => 'PC', 'izin' => ['cbt.lihat', 'cbt.kelola']],
                     ],
                 ],
                 [
@@ -1267,12 +1271,15 @@
                 [
                     'title' => 'Sarana Prasarana',
                     'items' => [
+                        ['label' => 'Dashboard Sarpras', 'route' => 'dashboard-sarana-prasarana.index', 'active' => ['dashboard-sarana-prasarana.*'], 'initial' => 'DS', 'izin' => ['barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola']],
+                        ['label' => 'Laporan Inventaris', 'route' => 'laporan-inventaris-bulanan.index', 'active' => ['laporan-inventaris-bulanan.*'], 'initial' => 'LI', 'izin' => ['barang.lihat', 'barang.kelola']],
                         ['label' => 'Inventaris Barang', 'route' => 'barang.index', 'active' => ['barang.*'], 'initial' => 'IB', 'izin' => ['barang.lihat', 'barang.kelola']],
                         ['label' => 'Unit Aset', 'route' => 'unit-barang.index', 'active' => ['unit-barang.*'], 'initial' => 'UA', 'izin' => ['barang.lihat', 'barang.kelola']],
                         ['label' => 'Label Barcode', 'route' => 'label-barcode-inventaris.index', 'active' => ['label-barcode-inventaris.*'], 'initial' => 'BC', 'izin' => ['barang.lihat', 'barang.kelola']],
                         ['label' => 'Saldo Stok', 'route' => 'saldo-stok-barang.index', 'active' => ['saldo-stok-barang.*'], 'initial' => 'SS', 'izin' => ['barang.lihat', 'barang.kelola']],
                         ['label' => 'Mutasi Stok', 'route' => 'mutasi-stok-barang.index', 'active' => ['mutasi-stok-barang.*'], 'initial' => 'MS', 'izin' => ['barang.lihat', 'barang.kelola']],
                         ['label' => 'Peminjaman Barang', 'route' => 'peminjaman-barang.index', 'active' => ['peminjaman-barang.*', 'pengembalian-barang.*'], 'initial' => 'PB', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola']],
+                        ['label' => 'Rekap Peminjaman', 'route' => 'rekap-peminjaman-barang.index', 'active' => ['rekap-peminjaman-barang.*'], 'initial' => 'RP', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola']],
                         ['label' => 'Kategori Barang', 'route' => 'kategori-barang.index', 'active' => ['kategori-barang.*'], 'initial' => 'KB', 'izin' => ['barang.lihat', 'barang.kelola']],
                         ['label' => 'Satuan Barang', 'route' => 'satuan-barang.index', 'active' => ['satuan-barang.*'], 'initial' => 'SB', 'izin' => ['barang.lihat', 'barang.kelola']],
                         ['label' => 'Lokasi Barang', 'route' => 'lokasi-barang.index', 'active' => ['lokasi-barang.*'], 'initial' => 'LB', 'izin' => ['barang.lihat', 'barang.kelola']],

@@ -27,9 +27,12 @@
             <h1 class="page-title">Peminjaman barang</h1>
         </div>
 
-        @izin('barang.peminjaman_kelola')
-            <a href="{{ route('peminjaman-barang.create') }}" class="button button-primary">Catat peminjaman</a>
-        @endizin
+        <div class="actions">
+            <a href="{{ route('rekap-peminjaman-barang.index') }}" class="button button-muted">Rekap peminjaman</a>
+            @izin('barang.peminjaman_kelola')
+                <a href="{{ route('peminjaman-barang.create') }}" class="button button-primary">Catat peminjaman</a>
+            @endizin
+        </div>
     </div>
 
     <div class="stats-grid">

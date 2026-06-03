@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Izin;
+use App\Models\JenisUjianCbt;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -37,6 +38,7 @@ class DatabaseSeeder extends Seeder
 
         $this->isiPeranBawaan();
         $this->isiIzinBawaan();
+        $this->isiJenisUjianCbtBawaan();
         $this->hubungkanIzinPeranBawaan();
 
         $administrator->daftarPeran()->syncWithoutDetaching([
@@ -113,6 +115,11 @@ class DatabaseSeeder extends Seeder
                 'kode' => 'petugas_kebersihan',
                 'deskripsi' => 'Akses petugas kebersihan untuk jadwal dan laporan area kerja yang akan dikembangkan.',
             ],
+            [
+                'nama' => 'Petugas Inventaris',
+                'kode' => 'petugas_inventaris',
+                'deskripsi' => 'Mengelola inventaris, stok, peminjaman, pengembalian, dan laporan sarana prasarana.',
+            ],
         ];
 
         foreach ($peranBawaan as $item) {
@@ -160,6 +167,25 @@ class DatabaseSeeder extends Seeder
         }
     }
 
+    private function isiJenisUjianCbtBawaan(): void
+    {
+        $jenisUjian = [
+            ['kode' => 'STS', 'nama' => 'Sumatif Tengah Semester', 'deskripsi' => 'Ujian tengah semester yang nilainya dapat diterapkan ke komponen STS.', 'memerlukan_token' => true, 'dapat_diterapkan_ke_nilai' => true, 'tampil_di_kartu_peserta' => true, 'urutan' => 1],
+            ['kode' => 'SAS', 'nama' => 'Sumatif Akhir Semester', 'deskripsi' => 'Ujian akhir semester yang nilainya dapat diterapkan ke komponen SAS.', 'memerlukan_token' => true, 'dapat_diterapkan_ke_nilai' => true, 'tampil_di_kartu_peserta' => true, 'urutan' => 2],
+            ['kode' => 'SAJ', 'nama' => 'Sumatif Akhir Jenjang', 'deskripsi' => 'Ujian akhir jenjang untuk kelas IX yang nilainya dapat diterapkan ke komponen SAJ.', 'memerlukan_token' => true, 'dapat_diterapkan_ke_nilai' => true, 'tampil_di_kartu_peserta' => true, 'urutan' => 3],
+            ['kode' => 'TKA', 'nama' => 'Tes Kemampuan Akademik', 'deskripsi' => 'Profil ujian untuk simulasi atau pelaksanaan TKA berbasis CBT.', 'memerlukan_token' => true, 'dapat_diterapkan_ke_nilai' => true, 'tampil_di_kartu_peserta' => true, 'urutan' => 4],
+            ['kode' => 'SIMULASI_AN', 'nama' => 'Simulasi AN', 'deskripsi' => 'Latihan literasi dan numerasi yang dapat digunakan untuk persiapan asesmen nasional.', 'memerlukan_token' => true, 'dapat_diterapkan_ke_nilai' => false, 'tampil_di_kartu_peserta' => true, 'urutan' => 5],
+            ['kode' => 'OSN', 'nama' => 'OSN', 'deskripsi' => 'Profil ujian untuk latihan atau seleksi olimpiade sains.', 'memerlukan_token' => true, 'dapat_diterapkan_ke_nilai' => false, 'tampil_di_kartu_peserta' => true, 'urutan' => 6],
+        ];
+
+        foreach ($jenisUjian as $item) {
+            JenisUjianCbt::updateOrCreate(
+                ['kode' => $item['kode']],
+                $item + ['aktif' => true],
+            );
+        }
+    }
+
     private function daftarIzinBawaan(): array
     {
         return [
@@ -192,6 +218,11 @@ class DatabaseSeeder extends Seeder
             ['kelompok' => 'Nilai', 'nama' => 'Rekap nilai', 'kode' => 'nilai.rekap', 'deskripsi' => 'Melihat rekap nilai rapor.'],
             ['kelompok' => 'Nilai', 'nama' => 'Kelola skema bobot nilai', 'kode' => 'nilai.skema_kelola', 'deskripsi' => 'Mengelola skema bobot nilai.'],
             ['kelompok' => 'Nilai', 'nama' => 'Kelola komponen nilai', 'kode' => 'nilai.komponen_kelola', 'deskripsi' => 'Mengelola komponen nilai.'],
+            ['kelompok' => 'Penilaian OMR', 'nama' => 'Lihat ujian OMR', 'kode' => 'omr.lihat', 'deskripsi' => 'Melihat ujian dan kunci jawaban untuk pemeriksaan lembar jawaban.'],
+            ['kelompok' => 'Penilaian OMR', 'nama' => 'Kelola ujian OMR', 'kode' => 'omr.kelola', 'deskripsi' => 'Membuat ujian, mengatur kelas peserta, versi soal, dan kunci jawaban.'],
+            ['kelompok' => 'CBT', 'nama' => 'Lihat CBT', 'kode' => 'cbt.lihat', 'deskripsi' => 'Melihat data dasar, bank soal, paket ujian, dan hasil CBT sesuai cakupan peran.'],
+            ['kelompok' => 'CBT', 'nama' => 'Kelola CBT', 'kode' => 'cbt.kelola', 'deskripsi' => 'Mengelola pengaturan dasar, bank soal, paket ujian, peserta, dan pelaksanaan CBT.'],
+            ['kelompok' => 'CBT', 'nama' => 'Kelola soal CBT', 'kode' => 'cbt.soal_kelola', 'deskripsi' => 'Membuat dan mengelola bank soal CBT sesuai cakupan mata pelajaran.'],
             ['kelompok' => 'Absensi', 'nama' => 'Lihat absensi', 'kode' => 'absensi.lihat', 'deskripsi' => 'Melihat data absensi.'],
             ['kelompok' => 'Absensi', 'nama' => 'Scan absensi', 'kode' => 'absensi.scan', 'deskripsi' => 'Membuka dan menggunakan halaman scan absensi.'],
             ['kelompok' => 'Absensi', 'nama' => 'Koreksi absensi', 'kode' => 'absensi.koreksi', 'deskripsi' => 'Mengoreksi absensi siswa.'],
@@ -229,13 +260,14 @@ class DatabaseSeeder extends Seeder
             'pimpinan' => $izinLihat,
             'wakil_pimpinan_kesiswaan' => ['beranda.akses', 'siswa.lihat', 'kartu_pelajar.lihat', 'kartu_pelajar.cetak', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat', 'bk.kelola', 'laporan.export'],
             'wakil_pimpinan_sarana_prasarana' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
-            'wakil_pimpinan_kurikulum' => ['beranda.akses', 'tahun_pelajaran.lihat', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.lihat', 'jadwal.kelola', 'nilai.lihat', 'nilai.rekap', 'perangkat_ajar.lihat', 'perangkat_ajar.periksa', 'perangkat_ajar.jenis_kelola', 'laporan.export'],
-            'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.pribadi', 'nilai.lihat', 'nilai.input', 'nilai.rekap', 'perangkat_ajar.upload'],
+            'wakil_pimpinan_kurikulum' => ['beranda.akses', 'tahun_pelajaran.lihat', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.lihat', 'jadwal.kelola', 'nilai.lihat', 'nilai.rekap', 'omr.lihat', 'cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'perangkat_ajar.lihat', 'perangkat_ajar.periksa', 'perangkat_ajar.jenis_kelola', 'laporan.export'],
+            'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.pribadi', 'nilai.lihat', 'nilai.input', 'nilai.rekap', 'omr.lihat', 'omr.kelola', 'cbt.lihat', 'cbt.soal_kelola', 'perangkat_ajar.upload'],
             'wali_kelas' => ['beranda.akses', 'siswa.lihat', 'kelas.lihat', 'jadwal.lihat', 'nilai.lihat', 'nilai.rekap', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat'],
             'bk' => ['beranda.akses', 'siswa.lihat', 'absensi.lihat', 'bk.lihat', 'bk.kelola', 'laporan.export'],
             'pegawai' => ['beranda.akses', 'pegawai.profil', 'absensi_pegawai.pribadi'],
             'satpam' => ['beranda.akses', 'absensi.scan', 'absensi.lihat', 'keamanan.lihat', 'keamanan.kelola'],
             'petugas_kebersihan' => ['beranda.akses', 'sarpras.lihat', 'kebersihan.lihat', 'kebersihan.kelola'],
+            'petugas_inventaris' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
         ];
     }
 }

@@ -60,6 +60,59 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('jadwal-saya.index', 'izin:jadwal.pribadi');
     }
 
+    public function test_route_ujian_omr_memakai_permission_penilaian_omr(): void
+    {
+        $this->assertRouteMemakaiMiddleware('ujian-omr.index', 'izin:omr.lihat,omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.show', 'izin:omr.lihat,omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.create', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.store', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.kunci-jawaban.edit', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.kunci-jawaban.update', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.lembar-jawab.generate', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.lembar-jawab.cetak', 'izin:omr.lihat,omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.index', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.store', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.show', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.terapkan-nilai', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.hasil.periksa', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.hasil.koreksi', 'izin:omr.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.pratinjau', 'izin:omr.kelola');
+    }
+
+    public function test_route_jenis_ujian_cbt_memakai_permission_cbt(): void
+    {
+        $this->assertRouteMemakaiMiddleware('jenis-ujian-cbt.index', 'izin:cbt.lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('jenis-ujian-cbt.show', 'izin:cbt.lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('jenis-ujian-cbt.create', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('jenis-ujian-cbt.store', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('jenis-ujian-cbt.edit', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('jenis-ujian-cbt.update', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('jenis-ujian-cbt.destroy', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.index', 'izin:cbt.lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.show', 'izin:cbt.lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.create', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.store', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.edit', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.update', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.destroy', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.soal.edit', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.soal.update', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.peserta.index', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.peserta.generate', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.peserta.update', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.kartu-peserta.index', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.sesi.store', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.sesi.update', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.sesi.destroy', 'izin:cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('soal-cbt.index', 'izin:cbt.lihat,cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('soal-cbt.show', 'izin:cbt.lihat,cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('soal-cbt.create', 'izin:cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('soal-cbt.store', 'izin:cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('soal-cbt.edit', 'izin:cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('soal-cbt.update', 'izin:cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('soal-cbt.destroy', 'izin:cbt.kelola,cbt.soal_kelola');
+    }
+
     public function test_route_jenis_perangkat_ajar_memakai_permission_kurikulum(): void
     {
         $this->assertRouteMemakaiMiddleware('jenis-perangkat-ajar.index', 'izin:perangkat_ajar.jenis_kelola');
@@ -75,6 +128,9 @@ class PermissionRouteTest extends TestCase
 
     public function test_route_master_inventaris_memakai_permission_barang(): void
     {
+        $this->assertRouteMemakaiMiddleware('dashboard-sarana-prasarana.index', 'izin:barang.lihat,barang.kelola,barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('laporan-inventaris-bulanan.index', 'izin:barang.lihat,barang.kelola');
+        $this->assertRouteMemakaiMiddleware('laporan-inventaris-bulanan.cetak', 'izin:barang.lihat,barang.kelola');
         $this->assertRouteMemakaiMiddleware('barang.index', 'izin:barang.lihat,barang.kelola');
         $this->assertRouteMemakaiMiddleware('barang.create', 'izin:barang.kelola');
         $this->assertRouteMemakaiMiddleware('kategori-barang.index', 'izin:barang.lihat,barang.kelola');
@@ -93,6 +149,8 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('peminjaman-barang.show', 'izin:barang.lihat,barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('peminjaman-barang.store', 'izin:barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('pengembalian-barang.store', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('rekap-peminjaman-barang.index', 'izin:barang.lihat,barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('rekap-peminjaman-barang.cetak', 'izin:barang.lihat,barang.peminjaman_kelola');
     }
 
     private function assertRouteMemakaiMiddleware(string $namaRoute, string $middleware): void

@@ -5,13 +5,16 @@ namespace Tests\Feature;
 use App\Models\Barang;
 use App\Models\KategoriBarang;
 use App\Models\LokasiBarang;
+use App\Models\Pegawai;
 use App\Models\Pengguna;
+use App\Models\Peran;
 use App\Models\SaldoStokBarang;
 use App\Models\SatuanBarang;
 use App\Models\Siswa;
 use App\Models\UnitBarang;
 use App\Services\Inventaris\ProsesPeminjamanBarang;
 use App\Services\Inventaris\ProsesPengembalianBarang;
+use App\Services\Inventaris\ProsesMutasiStokBarang;
 use PDO;
 use Tests\TestCase;
 
@@ -138,6 +141,131 @@ class TransaksiPeminjamanBarangTest extends TestCase
         $this->get(route('label-barcode-inventaris.index', ['jenis_label' => 'stok']))
             ->assertOk()
             ->assertSee($barangDikembalikan->kode);
+    }
+
+    public function test_rekap_menampilkan_transaksi_terlambat_dan_dapat_dicetak(): void
+    {
+        [$siswa, $lokasi, , $barangDikembalikan] = $this->buatDataDasar();
+        SaldoStokBarang::create(['barang_id' => $barangDikembalikan->id, 'lokasi_barang_id' => $lokasi->id, 'jumlah' => 10]);
+        $peminjaman = app(ProsesPeminjamanBarang::class)->catat([
+            'jenis_peminjam' => 'siswa',
+            'siswa_id' => $siswa->id,
+            'cara_input_peminjam' => 'manual',
+            'tanggal_peminjaman' => now()->subDays(10)->toDateString(),
+            'rencana_kembali' => now()->subDays(3)->toDateString(),
+            'items' => [
+                ['tipe_item' => 'stok', 'barang_id' => $barangDikembalikan->id, 'lokasi_barang_id' => $lokasi->id, 'jumlah' => 2, 'cara_input_barang' => 'manual'],
+            ],
+        ]);
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $this->assertTrue($peminjaman->terlambat());
+        $this->assertSame(3, $peminjaman->jumlahHariTerlambat());
+        $this->assertSame('Terlambat 3 hari', $peminjaman->labelPemantauan());
+
+        $this->actingAs($administrator)
+            ->get(route('rekap-peminjaman-barang.index', ['status_pemantauan' => 'terlambat']))
+            ->assertOk()
+            ->assertSee($peminjaman->nomor_peminjaman)
+            ->assertSee('Terlambat 3 hari');
+
+        $this->get(route('rekap-peminjaman-barang.cetak', ['status_pemantauan' => 'terlambat']))
+            ->assertOk()
+            ->assertSee('REKAP PEMINJAMAN BARANG')
+            ->assertSee($peminjaman->nomor_peminjaman);
+    }
+
+    public function test_administrator_dapat_membuka_dashboard_sarpras(): void
+    {
+        [, $lokasi, $barangUnit, $barangDikembalikan] = $this->buatDataDasar();
+        UnitBarang::create([
+            'barang_id' => $barangUnit->id,
+            'nomor_unit' => 1,
+            'kode_inventaris' => 'AST-LAPTOP-001',
+            'lokasi_barang_id' => $lokasi->id,
+            'kondisi' => 'rusak_ringan',
+            'status_unit' => 'dalam_perbaikan',
+            'aktif' => true,
+        ]);
+        SaldoStokBarang::create(['barang_id' => $barangDikembalikan->id, 'lokasi_barang_id' => $lokasi->id, 'jumlah' => 0]);
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $this->actingAs($administrator)
+            ->get(route('dashboard-sarana-prasarana.index'))
+            ->assertOk()
+            ->assertSee('Dashboard inventaris sekolah')
+            ->assertSee('Stok perlu perhatian')
+            ->assertSee('Unit Aset Perlu Perhatian')
+            ->assertSee('AST-LAPTOP-001');
+    }
+
+    public function test_laporan_inventaris_bulanan_menghitung_rekap_stok_dan_dapat_dicetak(): void
+    {
+        [, $lokasi, , $barangDikembalikan] = $this->buatDataDasar();
+        $tanggal = now()->startOfMonth()->toDateString();
+        $periode = now()->format('Y-m');
+
+        app(ProsesMutasiStokBarang::class)->catat([
+            'barang_id' => $barangDikembalikan->id,
+            'lokasi_barang_id' => $lokasi->id,
+            'jenis_mutasi' => 'masuk',
+            'kategori_mutasi' => 'stok_awal',
+            'tanggal_mutasi' => $tanggal,
+            'jumlah' => 12,
+        ]);
+        app(ProsesMutasiStokBarang::class)->catat([
+            'barang_id' => $barangDikembalikan->id,
+            'lokasi_barang_id' => $lokasi->id,
+            'jenis_mutasi' => 'keluar',
+            'kategori_mutasi' => 'pengeluaran_pemakaian',
+            'tanggal_mutasi' => $tanggal,
+            'jumlah' => 2,
+        ]);
+        $this->buatPegawaiPenandatangan('pimpinan', 'Dra. Rahmawati', '197001011995012001');
+        $this->buatPegawaiPenandatangan('wakil_pimpinan_sarana_prasarana', 'Budi Santoso, S.Pd.', '198002022006041001');
+        $this->buatPegawaiPenandatangan('petugas_inventaris', 'Rina Kurnia, S.Pd.', '198503032010012002');
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $this->actingAs($administrator)
+            ->get(route('laporan-inventaris-bulanan.index', ['periode' => $periode]))
+            ->assertOk()
+            ->assertSee('Laporan inventaris bulanan')
+            ->assertSee($barangDikembalikan->nama)
+            ->assertSee('12,00')
+            ->assertSee('2,00')
+            ->assertSee('10,00');
+
+        $this->get(route('laporan-inventaris-bulanan.cetak', ['periode' => $periode]))
+            ->assertOk()
+            ->assertSee('LAPORAN INVENTARIS BULANAN')
+            ->assertSee('RINCIAN MUTASI STOK')
+            ->assertSee('Dra. Rahmawati')
+            ->assertSee('Budi Santoso, S.Pd.')
+            ->assertSee('Rina Kurnia, S.Pd.')
+            ->assertSee($barangDikembalikan->nama);
+    }
+
+    private function buatPegawaiPenandatangan(string $kodePeran, string $nama, string $nip): Pegawai
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => $nama,
+            'nip' => $nip,
+            'aktif' => true,
+        ]);
+        $pengguna = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $nama,
+            'username' => $nip,
+            'kata_sandi' => 'kata-sandi-uji',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+        $pengguna->daftarPeran()->syncWithoutDetaching([
+            Peran::where('kode', $kodePeran)->value('id'),
+        ]);
+
+        return $pegawai;
     }
 
     private function buatDataDasar(): array

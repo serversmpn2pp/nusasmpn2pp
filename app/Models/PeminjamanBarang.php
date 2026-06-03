@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -81,5 +82,53 @@ class PeminjamanBarang extends Model
     public function labelStatus(): string
     {
         return self::DAFTAR_STATUS[$this->status] ?? str($this->status)->headline()->toString();
+    }
+
+    public function masihAktif(): bool
+    {
+        return in_array($this->status, ['dipinjam', 'sebagian_dikembalikan'], true);
+    }
+
+    public function terlambat(?CarbonInterface $tanggalAcuan = null): bool
+    {
+        if (! $this->masihAktif() || ! $this->rencana_kembali) {
+            return false;
+        }
+
+        return $this->rencana_kembali->startOfDay()->lt(($tanggalAcuan ?? now())->startOfDay());
+    }
+
+    public function jumlahHariTerlambat(?CarbonInterface $tanggalAcuan = null): int
+    {
+        if (! $this->terlambat($tanggalAcuan)) {
+            return 0;
+        }
+
+        return (int) $this->rencana_kembali
+            ->startOfDay()
+            ->diffInDays(($tanggalAcuan ?? now())->startOfDay());
+    }
+
+    public function labelPemantauan(?CarbonInterface $tanggalAcuan = null): string
+    {
+        if ($this->status === 'selesai') {
+            return 'Selesai';
+        }
+
+        if (! $this->rencana_kembali) {
+            return 'Belum ada rencana kembali';
+        }
+
+        if ($this->terlambat($tanggalAcuan)) {
+            return 'Terlambat ' . $this->jumlahHariTerlambat($tanggalAcuan) . ' hari';
+        }
+
+        $selisihHari = (int) ($tanggalAcuan ?? now())
+            ->startOfDay()
+            ->diffInDays($this->rencana_kembali->startOfDay(), false);
+
+        return $selisihHari === 0
+            ? 'Jatuh tempo hari ini'
+            : 'Jatuh tempo ' . $selisihHari . ' hari lagi';
     }
 }
