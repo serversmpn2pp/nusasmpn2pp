@@ -146,6 +146,10 @@
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('ujian-cbt.show', $item) }}" class="button button-muted">Lihat</a>
                                     @izin('cbt.kelola')
+                                        <a href="{{ route('ujian-cbt.monitoring.index', $item) }}" class="button button-primary">Monitoring</a>
+                                        <a href="{{ route('ujian-cbt.hasil.index', $item) }}" class="button button-muted">Hasil</a>
+                                        <a href="{{ route('ujian-cbt.ruang.index', $item) }}" class="button button-muted">Ruang</a>
+                                        <a href="{{ route('ujian-cbt.koreksi-manual.index', $item) }}" class="button button-muted">Koreksi</a>
                                         <a href="{{ route('ujian-cbt.soal.edit', $item) }}" class="button button-muted">Soal</a>
                                         <a href="{{ route('ujian-cbt.peserta.index', $item) }}" class="button button-muted">Peserta</a>
                                         <a href="{{ route('ujian-cbt.kartu-peserta.index', $item) }}" class="button button-muted">Kartu</a>
@@ -184,6 +188,10 @@
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('ujian-cbt.show', $item) }}" class="button button-muted">Lihat</a>
                         @izin('cbt.kelola')
+                            <a href="{{ route('ujian-cbt.monitoring.index', $item) }}" class="button button-primary">Monitoring</a>
+                            <a href="{{ route('ujian-cbt.hasil.index', $item) }}" class="button button-muted">Hasil</a>
+                            <a href="{{ route('ujian-cbt.ruang.index', $item) }}" class="button button-muted">Ruang</a>
+                            <a href="{{ route('ujian-cbt.koreksi-manual.index', $item) }}" class="button button-muted">Koreksi</a>
                             <a href="{{ route('ujian-cbt.soal.edit', $item) }}" class="button button-muted">Soal</a>
                             <a href="{{ route('ujian-cbt.peserta.index', $item) }}" class="button button-muted">Peserta</a>
                             <a href="{{ route('ujian-cbt.kartu-peserta.index', $item) }}" class="button button-muted">Kartu</a>

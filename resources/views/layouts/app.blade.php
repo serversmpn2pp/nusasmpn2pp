@@ -1236,6 +1236,8 @@
                         ['label' => 'Ujian & LJK', 'route' => 'ujian-omr.index', 'active' => ['ujian-omr.*'], 'initial' => 'LJ', 'izin' => ['omr.lihat', 'omr.kelola']],
                         ['label' => 'Jenis Ujian CBT', 'route' => 'jenis-ujian-cbt.index', 'active' => ['jenis-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola']],
                         ['label' => 'Bank Soal CBT', 'route' => 'soal-cbt.index', 'active' => ['soal-cbt.*'], 'initial' => 'BS', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola']],
+                        ['label' => 'Jadwal Ujian CBT', 'route' => 'jadwal-ujian-cbt.index', 'active' => ['jadwal-ujian-cbt.*'], 'initial' => 'JU', 'izin' => ['cbt.lihat', 'cbt.kelola']],
+                        ['label' => 'Status Panitia CBT', 'route' => 'status-kelengkapan-panitia-cbt.index', 'active' => ['status-kelengkapan-panitia-cbt.*'], 'initial' => 'SP', 'izin' => ['cbt.lihat', 'cbt.kelola']],
                         ['label' => 'Paket CBT', 'route' => 'ujian-cbt.index', 'active' => ['ujian-cbt.*'], 'initial' => 'PC', 'izin' => ['cbt.lihat', 'cbt.kelola']],
                     ],
                 ],
@@ -1399,5 +1401,6 @@
                 </main>
             </div>
         </div>
+        @stack('scripts')
     </body>
 </html>

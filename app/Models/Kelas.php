@@ -86,4 +86,10 @@ class Kelas extends Model
     {
         return $this->hasMany(KelasUjianCbt::class);
     }
+
+    public function jadwalUjianCbt(): BelongsToMany
+    {
+        return $this->belongsToMany(JadwalUjianCbt::class, 'jadwal_ujian_cbt_kelas')
+            ->withTimestamps();
+    }
 }

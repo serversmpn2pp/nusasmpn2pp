@@ -89,9 +89,19 @@ class UjianCbt extends Model
         return $this->hasMany(SesiUjianCbt::class);
     }
 
+    public function ruangUjianCbt(): HasMany
+    {
+        return $this->hasMany(RuangUjianCbt::class);
+    }
+
     public function pesertaUjianCbt(): HasMany
     {
         return $this->hasMany(PesertaUjianCbt::class);
+    }
+
+    public function jadwalUjianCbt(): HasMany
+    {
+        return $this->hasMany(JadwalUjianCbt::class);
     }
 
     public function dibuatOleh(): BelongsTo

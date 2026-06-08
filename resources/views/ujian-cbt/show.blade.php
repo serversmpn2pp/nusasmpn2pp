@@ -26,9 +26,17 @@
         <div class="actions">
             <a href="{{ route('ujian-cbt.index') }}" class="button button-muted">Kembali</a>
             @izin('cbt.kelola')
+                <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-primary">Monitoring</a>
+                <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Hasil</a>
+                <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
                 <a href="{{ route('ujian-cbt.peserta.index', $ujianCbt) }}" class="button button-muted">Peserta & sesi</a>
                 <a href="{{ route('ujian-cbt.kartu-peserta.index', $ujianCbt) }}" class="button button-muted">Kartu peserta</a>
-                <a href="{{ route('ujian-cbt.soal.edit', $ujianCbt) }}" class="button button-primary">Kelola soal</a>
+                <a href="{{ route('ujian-cbt.soal.edit', $ujianCbt) }}" class="button button-muted">Kelola soal</a>
+                <form action="{{ route('ujian-cbt.koreksi-otomatis.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Jalankan koreksi otomatis untuk jawaban objektif pada paket ini?')">
+                    @csrf
+                    <button type="submit" class="button button-muted">Koreksi otomatis</button>
+                </form>
+                <a href="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" class="button button-muted">Koreksi manual</a>
                 <a href="{{ route('ujian-cbt.edit', $ujianCbt) }}" class="button button-dark">Edit</a>
             @endizin
         </div>
@@ -196,6 +204,10 @@
                     <h2 class="panel-title">Peserta dan Sesi</h2>
                     @izin('cbt.kelola')
                         <div class="actions">
+                            <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-primary">Monitoring</a>
+                            <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Hasil CBT</a>
+                            <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
+                            <a href="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" class="button button-muted">Koreksi manual</a>
                             <a href="{{ route('ujian-cbt.kartu-peserta.index', $ujianCbt) }}" class="button button-muted">Cetak kartu</a>
                             <a href="{{ route('ujian-cbt.peserta.index', $ujianCbt) }}" class="button button-muted">Atur peserta</a>
                         </div>

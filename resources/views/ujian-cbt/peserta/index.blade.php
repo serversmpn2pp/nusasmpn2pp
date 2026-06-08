@@ -82,6 +82,9 @@
         </div>
 
         <div class="actions">
+            <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-primary">Monitoring</a>
+            <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
+            <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Hasil</a>
             <a href="{{ route('ujian-cbt.kartu-peserta.index', $ujianCbt) }}" class="button button-primary">Kartu peserta</a>
             <a href="{{ route('ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail paket</a>
             <a href="{{ route('ujian-cbt.index') }}" class="button button-muted">Daftar paket</a>

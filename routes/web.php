@@ -11,6 +11,7 @@ use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\InputNilaiController;
 use App\Http\Controllers\JadwalPelajaranController;
+use App\Http\Controllers\JadwalUjianCbtController;
 use App\Http\Controllers\JadwalSayaController;
 use App\Http\Controllers\JamPelajaranController;
 use App\Http\Controllers\JenisPerangkatAjarController;
@@ -21,6 +22,8 @@ use App\Http\Controllers\KartuPegawaiController;
 use App\Http\Controllers\KenaikanKelasController;
 use App\Http\Controllers\KategoriBarangController;
 use App\Http\Controllers\KategoriPembinaanSiswaController;
+use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
+use App\Http\Controllers\KoreksiManualUjianCbtController;
 use App\Http\Controllers\KunciJawabanUjianOmrController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KomponenNilaiController;
@@ -33,6 +36,7 @@ use App\Http\Controllers\LaporanPembinaanSiswaController;
 use App\Http\Controllers\LabelBarcodeInventarisController;
 use App\Http\Controllers\LokasiBarangController;
 use App\Http\Controllers\MataPelajaranController;
+use App\Http\Controllers\MonitoringUjianCbtController;
 use App\Http\Controllers\MutasiStokBarangController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
 use App\Http\Controllers\PegawaiController;
@@ -48,8 +52,10 @@ use App\Http\Controllers\PeranController;
 use App\Http\Controllers\ProfilPegawaiController;
 use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
 use App\Http\Controllers\RekapAbsensiHarianController;
+use App\Http\Controllers\RekapHasilUjianCbtController;
 use App\Http\Controllers\RekapNilaiRaporController;
 use App\Http\Controllers\RekapPeminjamanBarangController;
+use App\Http\Controllers\RuangUjianCbtController;
 use App\Http\Controllers\ScanAbsensiController;
 use App\Http\Controllers\ScanAbsensiPegawaiController;
 use App\Http\Controllers\ScanLjkUjianOmrController;
@@ -60,7 +66,9 @@ use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\SoalCbtController;
 use App\Http\Controllers\SoalUjianCbtController;
+use App\Http\Controllers\StatusKelengkapanPanitiaCbtController;
 use App\Http\Controllers\TahunPelajaranController;
+use App\Http\Controllers\TerapkanNilaiCbtController;
 use App\Http\Controllers\TindakLanjutPembinaanSiswaController;
 use App\Http\Controllers\TerapkanNilaiOmrController;
 use App\Http\Controllers\UnitBarangController;
@@ -196,6 +204,22 @@ Route::middleware('auth')->group(function () {
         Route::resource('jenis-ujian-cbt', JenisUjianCbtController::class)
             ->only(['index', 'show'])
             ->middleware('izin:cbt.lihat,cbt.kelola');
+        Route::get('jadwal-ujian-cbt', [JadwalUjianCbtController::class, 'index'])
+            ->middleware('izin:cbt.lihat,cbt.kelola')
+            ->name('jadwal-ujian-cbt.index');
+        Route::get('status-kelengkapan-panitia-cbt', [StatusKelengkapanPanitiaCbtController::class, 'index'])
+            ->middleware('izin:cbt.lihat,cbt.kelola')
+            ->name('status-kelengkapan-panitia-cbt.index');
+        Route::middleware('izin:cbt.kelola')->group(function () {
+            Route::post('jadwal-ujian-cbt/kegiatan', [JadwalUjianCbtController::class, 'storeKegiatan'])->name('jadwal-ujian-cbt.kegiatan.store');
+            Route::put('jadwal-ujian-cbt/kegiatan/{kegiatanUjianCbt}', [JadwalUjianCbtController::class, 'updateKegiatan'])->name('jadwal-ujian-cbt.kegiatan.update');
+            Route::delete('jadwal-ujian-cbt/kegiatan/{kegiatanUjianCbt}', [JadwalUjianCbtController::class, 'destroyKegiatan'])->name('jadwal-ujian-cbt.kegiatan.destroy');
+            Route::post('jadwal-ujian-cbt/jadwal', [JadwalUjianCbtController::class, 'storeJadwal'])->name('jadwal-ujian-cbt.jadwal.store');
+            Route::put('jadwal-ujian-cbt/jadwal/{jadwalUjianCbt}', [JadwalUjianCbtController::class, 'updateJadwal'])->name('jadwal-ujian-cbt.jadwal.update');
+            Route::delete('jadwal-ujian-cbt/jadwal/{jadwalUjianCbt}', [JadwalUjianCbtController::class, 'destroyJadwal'])->name('jadwal-ujian-cbt.jadwal.destroy');
+            Route::put('jadwal-ujian-cbt/jadwal/{jadwalUjianCbt}/kunci', [JadwalUjianCbtController::class, 'kunciJadwal'])->name('jadwal-ujian-cbt.jadwal.kunci');
+            Route::put('jadwal-ujian-cbt/jadwal/{jadwalUjianCbt}/buka-kunci', [JadwalUjianCbtController::class, 'bukaKunciJadwal'])->name('jadwal-ujian-cbt.jadwal.buka-kunci');
+        });
         Route::resource('ujian-cbt', UjianCbtController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:cbt.kelola');
@@ -205,11 +229,32 @@ Route::middleware('auth')->group(function () {
             Route::get('ujian-cbt/{ujianCbt}/peserta', [PesertaUjianCbtController::class, 'index'])->name('ujian-cbt.peserta.index');
             Route::post('ujian-cbt/{ujianCbt}/peserta/generate', [PesertaUjianCbtController::class, 'storeMassal'])->name('ujian-cbt.peserta.generate');
             Route::put('ujian-cbt/{ujianCbt}/peserta', [PesertaUjianCbtController::class, 'update'])->name('ujian-cbt.peserta.update');
+            Route::get('ujian-cbt/{ujianCbt}/monitoring', [MonitoringUjianCbtController::class, 'index'])->name('ujian-cbt.monitoring.index');
+            Route::post('ujian-cbt/{ujianCbt}/koreksi-otomatis', [KoreksiOtomatisUjianCbtController::class, 'store'])->name('ujian-cbt.koreksi-otomatis.store');
+            Route::get('ujian-cbt/{ujianCbt}/koreksi-manual', [KoreksiManualUjianCbtController::class, 'index'])->name('ujian-cbt.koreksi-manual.index');
+            Route::put('ujian-cbt/{ujianCbt}/koreksi-manual', [KoreksiManualUjianCbtController::class, 'update'])->name('ujian-cbt.koreksi-manual.update');
+            Route::post('ujian-cbt/{ujianCbt}/terapkan-nilai', [TerapkanNilaiCbtController::class, 'store'])->name('ujian-cbt.terapkan-nilai.store');
+            Route::get('ujian-cbt/{ujianCbt}/ruang', [RuangUjianCbtController::class, 'index'])->name('ujian-cbt.ruang.index');
+            Route::get('ujian-cbt/{ujianCbt}/ruang/cetak', [RuangUjianCbtController::class, 'cetak'])->name('ujian-cbt.ruang.cetak');
+            Route::post('ujian-cbt/{ujianCbt}/ruang', [RuangUjianCbtController::class, 'store'])->name('ujian-cbt.ruang.store');
+            Route::post('ujian-cbt/{ujianCbt}/ruang/generate', [RuangUjianCbtController::class, 'storeMassal'])->name('ujian-cbt.ruang.generate');
+            Route::post('ujian-cbt/{ujianCbt}/ruang/bagi-otomatis', [RuangUjianCbtController::class, 'bagiOtomatis'])->name('ujian-cbt.ruang.bagi-otomatis');
+            Route::put('ujian-cbt/{ujianCbt}/ruang/peserta', [RuangUjianCbtController::class, 'updatePeserta'])->name('ujian-cbt.ruang.peserta.update');
+            Route::post('ujian-cbt/{ujianCbt}/ruang/{ruangUjianCbt}/bukti', [RuangUjianCbtController::class, 'updateBukti'])->name('ujian-cbt.ruang.bukti.update');
+            Route::get('ujian-cbt/{ujianCbt}/ruang/{ruangUjianCbt}/bukti/{jenis}', [RuangUjianCbtController::class, 'downloadBukti'])->name('ujian-cbt.ruang.bukti.download');
+            Route::delete('ujian-cbt/{ujianCbt}/ruang/{ruangUjianCbt}/bukti/{jenis}', [RuangUjianCbtController::class, 'destroyBukti'])->name('ujian-cbt.ruang.bukti.destroy');
+            Route::put('ujian-cbt/{ujianCbt}/ruang/{ruangUjianCbt}', [RuangUjianCbtController::class, 'update'])->name('ujian-cbt.ruang.update');
+            Route::delete('ujian-cbt/{ujianCbt}/ruang/{ruangUjianCbt}', [RuangUjianCbtController::class, 'destroy'])->name('ujian-cbt.ruang.destroy');
+            Route::put('ujian-cbt/{ujianCbt}/ruang/{ruangUjianCbt}/kunci', [RuangUjianCbtController::class, 'kunci'])->name('ujian-cbt.ruang.kunci');
+            Route::put('ujian-cbt/{ujianCbt}/ruang/{ruangUjianCbt}/buka-kunci', [RuangUjianCbtController::class, 'bukaKunci'])->name('ujian-cbt.ruang.buka-kunci');
             Route::get('ujian-cbt/{ujianCbt}/kartu-peserta', [KartuPesertaUjianCbtController::class, 'index'])->name('ujian-cbt.kartu-peserta.index');
             Route::post('ujian-cbt/{ujianCbt}/sesi', [SesiUjianCbtController::class, 'store'])->name('ujian-cbt.sesi.store');
             Route::put('ujian-cbt/{ujianCbt}/sesi/{sesiUjianCbt}', [SesiUjianCbtController::class, 'update'])->name('ujian-cbt.sesi.update');
             Route::delete('ujian-cbt/{ujianCbt}/sesi/{sesiUjianCbt}', [SesiUjianCbtController::class, 'destroy'])->name('ujian-cbt.sesi.destroy');
         });
+        Route::get('ujian-cbt/{ujianCbt}/hasil', [RekapHasilUjianCbtController::class, 'index'])
+            ->middleware('izin:cbt.lihat,cbt.kelola')
+            ->name('ujian-cbt.hasil.index');
         Route::resource('ujian-cbt', UjianCbtController::class)
             ->only(['index', 'show'])
             ->middleware('izin:cbt.lihat,cbt.kelola');

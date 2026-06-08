@@ -18,10 +18,21 @@ class PesertaUjianCbt extends Model
         'terblokir' => 'Terblokir',
     ];
 
+    public const DAFTAR_STATUS_KEHADIRAN = [
+        'belum_absen' => 'Belum absen',
+        'hadir' => 'Hadir',
+        'terlambat' => 'Terlambat',
+        'sakit' => 'Sakit',
+        'izin' => 'Izin',
+        'alfa' => 'Alfa',
+    ];
+
     protected $fillable = [
         'ujian_cbt_id',
         'sesi_ujian_cbt_id',
         'kelas_ujian_cbt_id',
+        'ruang_ujian_cbt_id',
+        'nomor_meja',
         'anggota_kelas_id',
         'akun_peserta_cbt_id',
         'nomor_peserta',
@@ -29,6 +40,9 @@ class PesertaUjianCbt extends Model
         'kata_sandi',
         'token_akses',
         'status',
+        'status_kehadiran_ujian',
+        'absen_ujian_pada',
+        'absen_ujian_oleh_pengguna_id',
         'waktu_mulai',
         'waktu_selesai',
         'menit_tersisa',
@@ -36,6 +50,10 @@ class PesertaUjianCbt extends Model
         'perangkat_terakhir',
         'user_agent_terakhir',
         'catatan',
+        'catatan_kehadiran_ujian',
+        'nilai_siswa_id',
+        'nilai_diterapkan_pada',
+        'nilai_diterapkan_oleh_pengguna_id',
         'dibuat_oleh_pengguna_id',
     ];
 
@@ -43,6 +61,9 @@ class PesertaUjianCbt extends Model
         'waktu_mulai' => 'datetime',
         'waktu_selesai' => 'datetime',
         'menit_tersisa' => 'integer',
+        'nomor_meja' => 'integer',
+        'absen_ujian_pada' => 'datetime',
+        'nilai_diterapkan_pada' => 'datetime',
     ];
 
     public function ujianCbt(): BelongsTo
@@ -60,6 +81,11 @@ class PesertaUjianCbt extends Model
         return $this->belongsTo(KelasUjianCbt::class);
     }
 
+    public function ruangUjianCbt(): BelongsTo
+    {
+        return $this->belongsTo(RuangUjianCbt::class);
+    }
+
     public function anggotaKelas(): BelongsTo
     {
         return $this->belongsTo(AnggotaKelas::class);
@@ -75,6 +101,21 @@ class PesertaUjianCbt extends Model
         return $this->belongsTo(Pengguna::class, 'dibuat_oleh_pengguna_id');
     }
 
+    public function nilaiSiswa(): BelongsTo
+    {
+        return $this->belongsTo(NilaiSiswa::class);
+    }
+
+    public function nilaiDiterapkanOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'nilai_diterapkan_oleh_pengguna_id');
+    }
+
+    public function absenUjianOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'absen_ujian_oleh_pengguna_id');
+    }
+
     public function jawabanPesertaUjianCbt(): HasMany
     {
         return $this->hasMany(JawabanPesertaUjianCbt::class);
@@ -83,5 +124,10 @@ class PesertaUjianCbt extends Model
     public function labelStatus(): string
     {
         return self::DAFTAR_STATUS[$this->status] ?? str($this->status)->headline()->toString();
+    }
+
+    public function labelStatusKehadiranUjian(): string
+    {
+        return self::DAFTAR_STATUS_KEHADIRAN[$this->status_kehadiran_ujian] ?? str($this->status_kehadiran_ujian)->headline()->toString();
     }
 }

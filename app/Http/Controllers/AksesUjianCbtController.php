@@ -7,6 +7,7 @@ use App\Models\JawabanPesertaUjianCbt;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
+use App\Services\Cbt\KoreksiOtomatisCbtService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -131,7 +132,7 @@ class AksesUjianCbtController extends Controller
         return redirect()->route('cbt.ujian.kerjakan');
     }
 
-    public function kerjakan(Request $request)
+    public function kerjakan(Request $request, KoreksiOtomatisCbtService $koreksiOtomatisCbtService)
     {
         $peserta = $this->ambilPesertaDariSesi($request);
         $peserta->load([
@@ -158,6 +159,8 @@ class AksesUjianCbtController extends Controller
                 'waktu_selesai' => now(),
                 'menit_tersisa' => 0,
             ]);
+            $peserta->refresh();
+            $koreksiOtomatisCbtService->koreksiPeserta($peserta);
 
             return redirect()->route('cbt.ujian.selesai');
         }
@@ -171,7 +174,7 @@ class AksesUjianCbtController extends Controller
         return view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'sisaDetik'));
     }
 
-    public function simpan(Request $request)
+    public function simpan(Request $request, KoreksiOtomatisCbtService $koreksiOtomatisCbtService)
     {
         $peserta = $this->ambilPesertaDariSesi($request);
         $peserta->load('ujianCbt');
@@ -207,6 +210,8 @@ class AksesUjianCbtController extends Controller
                         'soal_cbt_id' => $relasiSoal->soal_cbt_id,
                         'jawaban' => $nilaiJawaban,
                         'ragu' => in_array((int) $relasiSoal->id, $ragu, true),
+                        'skor' => null,
+                        'benar' => null,
                         'waktu_dijawab' => $nilaiJawaban === null ? null : now(),
                     ],
                 );
@@ -222,6 +227,9 @@ class AksesUjianCbtController extends Controller
         });
 
         if (($data['aksi'] ?? 'simpan') === 'selesai') {
+            $peserta->refresh();
+            $koreksiOtomatisCbtService->koreksiPeserta($peserta);
+
             return redirect()->route('cbt.ujian.selesai');
         }
 

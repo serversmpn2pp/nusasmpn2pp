@@ -44,6 +44,11 @@ class SesiUjianCbt extends Model
         return $this->hasMany(PesertaUjianCbt::class);
     }
 
+    public function ruangUjianCbt(): HasMany
+    {
+        return $this->hasMany(RuangUjianCbt::class);
+    }
+
     public function labelStatus(): string
     {
         return self::DAFTAR_STATUS[$this->status] ?? str($this->status)->headline()->toString();
