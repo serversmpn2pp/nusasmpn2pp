@@ -205,6 +205,7 @@ return new class extends Migration
                 'guru_mapel.lihat',
                 'jadwal.pribadi',
                 'nilai.lihat',
+                'nilai.komponen_kelola',
                 'nilai.input',
                 'nilai.rekap',
                 'perangkat_ajar.upload',

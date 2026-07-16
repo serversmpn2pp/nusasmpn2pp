@@ -26,6 +26,7 @@ use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
 use App\Http\Controllers\KoreksiManualUjianCbtController;
 use App\Http\Controllers\KunciJawabanUjianOmrController;
 use App\Http\Controllers\KelasController;
+use App\Http\Controllers\KelasWaliController;
 use App\Http\Controllers\KomponenNilaiController;
 use App\Http\Controllers\KoreksiHasilScanLjkOmrController;
 use App\Http\Controllers\LembarJawabUjianOmrController;
@@ -196,6 +197,9 @@ Route::middleware('auth')->group(function () {
         Route::get('jadwal-saya', [JadwalSayaController::class, 'index'])
             ->middleware('izin:jadwal.pribadi')
             ->name('jadwal-saya.index');
+        Route::get('kelas-wali', [KelasWaliController::class, 'index'])
+            ->middleware('izin:kelas.lihat')
+            ->name('kelas-wali.index');
         Route::resource('jenis-perangkat-ajar', JenisPerangkatAjarController::class)
             ->middleware('izin:perangkat_ajar.jenis_kelola');
         Route::resource('jenis-ujian-cbt', JenisUjianCbtController::class)

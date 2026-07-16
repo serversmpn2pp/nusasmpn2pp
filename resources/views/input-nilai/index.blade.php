@@ -3,6 +3,27 @@
 @section('title', 'Input Nilai - NUSA')
 
 @section('content')
+    <style>
+        .input-nilai-filter {
+            grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .input-nilai-filter .actions {
+            align-self: end;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 900px) {
+            .input-nilai-filter {
+                grid-template-columns: 1fr;
+            }
+
+            .input-nilai-filter .actions {
+                align-self: stretch;
+            }
+        }
+    </style>
+
     @php
         $labelKomponen = function ($item) {
             $guruMapel = $item->guruMataPelajaran;
@@ -68,7 +89,7 @@
     @endif
 
     <form action="{{ route('input-nilai.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
-        <div class="filter-grid">
+        <div class="filter-grid input-nilai-filter">
             <div class="field">
                 <label for="komponen_nilai_id">Komponen nilai</label>
                 <select id="komponen_nilai_id" name="komponen_nilai_id" class="select" required>

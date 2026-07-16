@@ -3,6 +3,20 @@
 @section('title', 'Profil Saya - NUSA')
 
 @section('content')
+    <style>
+        .profil-facts > div {
+            min-width: 0;
+        }
+
+        .profil-fact-wide {
+            grid-column: 1 / -1;
+        }
+
+        .profil-facts dd {
+            overflow-wrap: anywhere;
+        }
+    </style>
+
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
         $nilai = fn (string $field, mixed $default = '') => old($field, $pegawai?->{$field} ?? $default);
@@ -75,8 +89,8 @@
                     <p class="help-text">JPG, PNG, atau WebP. Maksimal 5 MB.</p>
                 </div>
 
-                <dl class="quick-facts" style="margin-top: 18px;">
-                    <div>
+                <dl class="quick-facts profil-facts" style="margin-top: 18px;">
+                    <div class="profil-fact-wide">
                         <dt>NIP</dt>
                         <dd>{{ $teks($pegawai->nip) }}</dd>
                     </div>

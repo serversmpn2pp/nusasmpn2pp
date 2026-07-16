@@ -36,7 +36,7 @@ class KomponenNilaiController extends Controller
             ->orderByDesc('nama')
             ->get();
 
-        $komponenNilai = KomponenNilai::query()
+        $komponenNilai = $this->queryKomponenDalamCakupan($request)
             ->with([
                 'guruMataPelajaran.tahunPelajaran',
                 'guruMataPelajaran.kelas',
@@ -83,9 +83,9 @@ class KomponenNilaiController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $jumlahKomponenNilai = KomponenNilai::count();
-        $jumlahAktif = KomponenNilai::where('aktif', true)->count();
-        $jumlahNonaktif = KomponenNilai::where('aktif', false)->count();
+        $jumlahKomponenNilai = $this->queryKomponenDalamCakupan($request)->count();
+        $jumlahAktif = $this->queryKomponenDalamCakupan($request)->where('aktif', true)->count();
+        $jumlahNonaktif = $this->queryKomponenDalamCakupan($request)->where('aktif', false)->count();
 
         return view('komponen-nilai.index', compact(
             'komponenNilai',
@@ -103,7 +103,7 @@ class KomponenNilaiController extends Controller
 
     public function create(Request $request)
     {
-        return view('komponen-nilai.create', $this->dataForm([
+        return view('komponen-nilai.create', $this->dataForm($request, [
             'guruMataPelajaranDipilih' => $request->input('guru_mata_pelajaran_id'),
         ]));
     }
@@ -112,6 +112,7 @@ class KomponenNilaiController extends Controller
     {
         $data = $this->rapikanData($request->validate($this->aturanValidasi()));
         $data['aktif'] = $request->boolean('aktif');
+        $this->pastikanBolehAksesGuruMataPelajaran($request, (int) $data['guru_mata_pelajaran_id']);
         $this->pastikanStsDanSasTunggal($data);
 
         $komponenNilai = KomponenNilai::create($data);
@@ -121,8 +122,10 @@ class KomponenNilaiController extends Controller
             ->with('berhasil', 'Komponen nilai berhasil ditambahkan.');
     }
 
-    public function show(KomponenNilai $komponenNilai)
+    public function show(Request $request, KomponenNilai $komponenNilai)
     {
+        $this->pastikanBolehAksesKomponen($request, $komponenNilai);
+
         $komponenNilai->load([
             'guruMataPelajaran.tahunPelajaran',
             'guruMataPelajaran.kelas',
@@ -133,9 +136,11 @@ class KomponenNilaiController extends Controller
         return view('komponen-nilai.show', compact('komponenNilai'));
     }
 
-    public function edit(KomponenNilai $komponenNilai)
+    public function edit(Request $request, KomponenNilai $komponenNilai)
     {
-        return view('komponen-nilai.edit', $this->dataForm([
+        $this->pastikanBolehAksesKomponen($request, $komponenNilai);
+
+        return view('komponen-nilai.edit', $this->dataForm($request, [
             'komponenNilai' => $komponenNilai,
             'guruMataPelajaranDipilih' => null,
         ]));
@@ -145,6 +150,8 @@ class KomponenNilaiController extends Controller
     {
         $data = $this->rapikanData($request->validate($this->aturanValidasi($komponenNilai)));
         $data['aktif'] = $request->boolean('aktif');
+        $this->pastikanBolehAksesKomponen($request, $komponenNilai);
+        $this->pastikanBolehAksesGuruMataPelajaran($request, (int) $data['guru_mata_pelajaran_id']);
         $this->pastikanStsDanSasTunggal($data, $komponenNilai);
 
         $komponenNilai->update($data);
@@ -154,8 +161,10 @@ class KomponenNilaiController extends Controller
             ->with('berhasil', 'Komponen nilai berhasil diperbarui.');
     }
 
-    public function destroy(KomponenNilai $komponenNilai)
+    public function destroy(Request $request, KomponenNilai $komponenNilai)
     {
+        $this->pastikanBolehAksesKomponen($request, $komponenNilai);
+
         $komponenNilai->update(['aktif' => false]);
 
         return redirect()
@@ -163,10 +172,10 @@ class KomponenNilaiController extends Controller
             ->with('berhasil', 'Komponen nilai berhasil dinonaktifkan.');
     }
 
-    private function dataForm(array $tambahan = []): array
+    private function dataForm(Request $request, array $tambahan = []): array
     {
         return array_merge([
-            'guruMataPelajaran' => GuruMataPelajaran::query()
+            'guruMataPelajaran' => $this->queryGuruMataPelajaranDalamCakupan($request)
                 ->with(['tahunPelajaran', 'kelas', 'mataPelajaran', 'pegawai'])
                 ->where('aktif', true)
                 ->orderByDesc(
@@ -179,7 +188,7 @@ class KomponenNilaiController extends Controller
                         ->whereColumn('tahun_pelajaran.id', 'guru_mata_pelajaran.tahun_pelajaran_id')
                         ->limit(1)
                 )
-                ->get(),
+            ->get(),
         ], $tambahan);
     }
 
@@ -237,5 +246,73 @@ class KomponenNilaiController extends Controller
                 'jenis_komponen' => $label . ' hanya boleh dibuat satu kali untuk guru mapel dan semester yang sama.',
             ]);
         }
+    }
+
+    private function queryKomponenDalamCakupan(Request $request)
+    {
+        $query = KomponenNilai::query();
+
+        if ($this->membatasiCakupanGuruMapel($request)) {
+            $query->whereHas('guruMataPelajaran', function ($query) use ($request) {
+                $query->where('pegawai_id', $request->user()->pegawai_id ?: 0);
+            });
+        }
+
+        return $query;
+    }
+
+    private function queryGuruMataPelajaranDalamCakupan(Request $request)
+    {
+        $query = GuruMataPelajaran::query();
+
+        if ($this->membatasiCakupanGuruMapel($request)) {
+            $query->where('pegawai_id', $request->user()->pegawai_id ?: 0);
+        }
+
+        return $query;
+    }
+
+    private function pastikanBolehAksesKomponen(Request $request, KomponenNilai $komponenNilai): void
+    {
+        if (! $this->membatasiCakupanGuruMapel($request)) {
+            return;
+        }
+
+        $komponenNilai->loadMissing('guruMataPelajaran:id,pegawai_id');
+
+        abort_unless(
+            (int) $komponenNilai->guruMataPelajaran?->pegawai_id === (int) $request->user()->pegawai_id,
+            403,
+        );
+    }
+
+    private function pastikanBolehAksesGuruMataPelajaran(Request $request, int $guruMataPelajaranId): void
+    {
+        if (! $this->membatasiCakupanGuruMapel($request)) {
+            return;
+        }
+
+        abort_unless(
+            GuruMataPelajaran::query()
+                ->whereKey($guruMataPelajaranId)
+                ->where('pegawai_id', $request->user()->pegawai_id ?: 0)
+                ->exists(),
+            403,
+        );
+    }
+
+    private function membatasiCakupanGuruMapel(Request $request): bool
+    {
+        $pengguna = $request->user();
+
+        if (! $pengguna || $pengguna->administrator()) {
+            return false;
+        }
+
+        if (! $pengguna->memilikiPeran('guru_mapel')) {
+            return false;
+        }
+
+        return ! $pengguna->memilikiPeran(['pimpinan', 'wakil_pimpinan_kurikulum']);
     }
 }

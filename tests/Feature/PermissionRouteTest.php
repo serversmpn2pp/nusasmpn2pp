@@ -45,6 +45,7 @@ class PermissionRouteTest extends TestCase
 
     public function test_route_penempatan_siswa_memakai_permission_kelas(): void
     {
+        $this->assertRouteMemakaiMiddleware('kelas-wali.index', 'izin:kelas.lihat');
         $this->assertRouteMemakaiMiddleware('penempatan-siswa.index', 'izin:kelas.lihat,kelas.kelola');
         $this->assertRouteMemakaiMiddleware('penempatan-siswa.store-massal', 'izin:kelas.kelola');
         $this->assertRouteMemakaiMiddleware('anggota-kelas.update', 'izin:kelas.kelola');

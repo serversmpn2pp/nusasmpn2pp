@@ -17,6 +17,8 @@ class LaporanPembinaanSiswaController extends Controller
 {
     public function index(Request $request)
     {
+        $pengguna = $request->user();
+        $cakupanWaliKelas = $pengguna?->membatasiCakupanWaliKelas() ?? false;
         $kataKunci = trim((string) $request->input('kata_kunci', ''));
         $status = $request->input('status', 'semua');
         $tingkat = $request->input('tingkat', 'semua');
@@ -32,7 +34,7 @@ class LaporanPembinaanSiswaController extends Controller
             $tingkat = 'semua';
         }
 
-        $laporanPembinaanSiswa = LaporanPembinaanSiswa::query()
+        $laporanPembinaanSiswa = $this->queryLaporanDalamCakupan($request)
             ->with(['siswa', 'kategoriPembinaanSiswa', 'tahunPelajaran', 'kelas', 'pelaporPegawai'])
             ->when($status !== 'semua', fn ($query) => $query->where('status', $status))
             ->when($tingkat !== 'semua', fn ($query) => $query->where('tingkat', $tingkat))
@@ -65,11 +67,11 @@ class LaporanPembinaanSiswaController extends Controller
             ->withQueryString();
 
         $ringkasan = [
-            'total' => LaporanPembinaanSiswa::count(),
-            'baru' => LaporanPembinaanSiswa::where('status', 'baru')->count(),
-            'diproses' => LaporanPembinaanSiswa::where('status', 'diproses')->count(),
-            'tindak_lanjut' => LaporanPembinaanSiswa::where('status', 'perlu_tindak_lanjut')->count(),
-            'selesai' => LaporanPembinaanSiswa::where('status', 'selesai')->count(),
+            'total' => $this->queryLaporanDalamCakupan($request)->count(),
+            'baru' => $this->queryLaporanDalamCakupan($request)->where('status', 'baru')->count(),
+            'diproses' => $this->queryLaporanDalamCakupan($request)->where('status', 'diproses')->count(),
+            'tindak_lanjut' => $this->queryLaporanDalamCakupan($request)->where('status', 'perlu_tindak_lanjut')->count(),
+            'selesai' => $this->queryLaporanDalamCakupan($request)->where('status', 'selesai')->count(),
         ];
 
         return view('laporan-pembinaan-siswa.index', array_merge(
@@ -82,12 +84,13 @@ class LaporanPembinaanSiswaController extends Controller
                 'tahunPelajaranDipilih',
                 'kelasDipilih',
                 'ringkasan',
+                'cakupanWaliKelas',
             ),
-            $this->pilihanFilter(),
+            $this->pilihanFilter($request),
         ));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $laporanPembinaanSiswa = new LaporanPembinaanSiswa([
             'tanggal_kejadian' => now()->toDateString(),
@@ -98,7 +101,7 @@ class LaporanPembinaanSiswaController extends Controller
 
         return view('laporan-pembinaan-siswa.create', array_merge(
             compact('laporanPembinaanSiswa'),
-            $this->pilihanForm(),
+            $this->pilihanForm($request),
         ));
     }
 
@@ -115,8 +118,10 @@ class LaporanPembinaanSiswaController extends Controller
             ->with('berhasil', 'Laporan pembinaan siswa berhasil ditambahkan.');
     }
 
-    public function show(LaporanPembinaanSiswa $laporanPembinaanSiswa)
+    public function show(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
+        $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+
         $laporanPembinaanSiswa->load([
             'siswa',
             'kategoriPembinaanSiswa',
@@ -136,16 +141,20 @@ class LaporanPembinaanSiswaController extends Controller
         return view('laporan-pembinaan-siswa.show', compact('laporanPembinaanSiswa'));
     }
 
-    public function edit(LaporanPembinaanSiswa $laporanPembinaanSiswa)
+    public function edit(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
+        $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+
         return view('laporan-pembinaan-siswa.edit', array_merge(
             compact('laporanPembinaanSiswa'),
-            $this->pilihanForm(),
+            $this->pilihanForm($request),
         ));
     }
 
     public function update(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
+        $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+
         $data = $this->rapikanData($request->validate($this->aturanValidasi()));
 
         $laporanPembinaanSiswa->update($data);
@@ -155,8 +164,10 @@ class LaporanPembinaanSiswaController extends Controller
             ->with('berhasil', 'Laporan pembinaan siswa berhasil diperbarui.');
     }
 
-    public function destroy(LaporanPembinaanSiswa $laporanPembinaanSiswa)
+    public function destroy(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
+        $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+
         $laporanPembinaanSiswa->update(['status' => 'dibatalkan']);
 
         return redirect()
@@ -251,14 +262,19 @@ class LaporanPembinaanSiswaController extends Controller
         return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
     }
 
-    private function pilihanFilter(): array
+    private function pilihanFilter(Request $request): array
     {
+        $pengguna = $request->user();
+        $cakupanWaliKelas = $pengguna?->membatasiCakupanWaliKelas() ?? false;
+        $kelasWaliIds = $cakupanWaliKelas ? $pengguna->kelasWaliIds() : [];
+
         return [
             'daftarKategoriPembinaan' => KategoriPembinaanSiswa::orderByDesc('aktif')->orderBy('nama')->get(['id', 'nama', 'kode', 'aktif']),
             'daftarTingkat' => LaporanPembinaanSiswa::DAFTAR_TINGKAT,
             'daftarStatus' => LaporanPembinaanSiswa::DAFTAR_STATUS,
             'daftarTahunPelajaran' => TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get(['id', 'nama', 'aktif']),
             'daftarKelas' => Kelas::with('tahunPelajaran:id,nama,aktif')
+                ->when($cakupanWaliKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
                 ->when(request('tahun_pelajaran_id'), fn ($query) => $query->where('tahun_pelajaran_id', request('tahun_pelajaran_id')))
                 ->orderBy('tingkat')
                 ->orderBy('nama')
@@ -266,8 +282,12 @@ class LaporanPembinaanSiswaController extends Controller
         ];
     }
 
-    private function pilihanForm(): array
+    private function pilihanForm(Request $request): array
     {
+        $pengguna = $request->user();
+        $cakupanWaliKelas = $pengguna?->membatasiCakupanWaliKelas() ?? false;
+        $kelasWaliIds = $cakupanWaliKelas ? $pengguna->kelasWaliIds() : [];
+
         return [
             'daftarKategoriPembinaan' => KategoriPembinaanSiswa::where('aktif', true)->orderBy('nama')->get(['id', 'nama', 'kode']),
             'daftarSiswa' => Siswa::with([
@@ -276,11 +296,18 @@ class LaporanPembinaanSiswaController extends Controller
                         ->select('id', 'tahun_pelajaran_id', 'kelas_id', 'siswa_id', 'status_keanggotaan');
                 },
             ])
+                ->when($cakupanWaliKelas, function ($query) use ($kelasWaliIds) {
+                    $query->whereHas('anggotaKelas', function ($query) use ($kelasWaliIds) {
+                        $query->whereIn('kelas_id', $kelasWaliIds)
+                            ->where('status_keanggotaan', 'aktif');
+                    });
+                })
                 ->where('aktif', true)
                 ->orderBy('nama_lengkap')
                 ->get(['id', 'nama_lengkap', 'nis', 'nisn']),
             'daftarTahunPelajaran' => TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get(['id', 'nama', 'aktif']),
             'daftarKelas' => Kelas::with('tahunPelajaran:id,nama,aktif')
+                ->when($cakupanWaliKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
                 ->where('aktif', true)
                 ->orderBy('tingkat')
                 ->orderBy('nama')
@@ -289,5 +316,42 @@ class LaporanPembinaanSiswaController extends Controller
             'daftarTingkat' => LaporanPembinaanSiswa::DAFTAR_TINGKAT,
             'daftarStatus' => LaporanPembinaanSiswa::DAFTAR_STATUS,
         ];
+    }
+
+    private function queryLaporanDalamCakupan(Request $request)
+    {
+        $query = LaporanPembinaanSiswa::query();
+        $pengguna = $request->user();
+
+        if ($pengguna?->membatasiCakupanWaliKelas()) {
+            $kelasWaliIds = $pengguna->kelasWaliIds();
+
+            $query->where(function ($query) use ($kelasWaliIds) {
+                $query->whereIn('kelas_id', $kelasWaliIds)
+                    ->orWhereHas('anggotaKelas', fn ($query) => $query->whereIn('kelas_id', $kelasWaliIds));
+            });
+        }
+
+        return $query;
+    }
+
+    private function pastikanBolehAksesLaporan(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa): void
+    {
+        $pengguna = $request->user();
+
+        if (! $pengguna?->membatasiCakupanWaliKelas()) {
+            return;
+        }
+
+        $kelasWaliIds = $pengguna->kelasWaliIds();
+
+        abort_unless(
+            (filled($laporanPembinaanSiswa->kelas_id) && in_array((int) $laporanPembinaanSiswa->kelas_id, $kelasWaliIds, true))
+                || (filled($laporanPembinaanSiswa->anggota_kelas_id) && AnggotaKelas::query()
+                    ->whereKey($laporanPembinaanSiswa->anggota_kelas_id)
+                    ->whereIn('kelas_id', $kelasWaliIds)
+                    ->exists()),
+            403,
+        );
     }
 }

@@ -1204,6 +1204,17 @@
                 return $penggunaAktif->memilikiIzin($izin);
             };
 
+            $peranMenuLengkap = [
+                'pimpinan',
+                'wakil_pimpinan_kesiswaan',
+                'wakil_pimpinan_sarana_prasarana',
+                'wakil_pimpinan_kurikulum',
+                'bk',
+            ];
+            $pakaiSidebarPegawai = $penggunaAktif?->akunPegawai()
+                && ! $penggunaAktif->administrator()
+                && ! $penggunaAktif->memilikiPeran($peranMenuLengkap);
+
             $semuaSidebarSections = [
                 [
                     'title' => 'Utama',
@@ -1230,7 +1241,6 @@
                         ['label' => 'Jadwal Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JS', 'izin' => 'jadwal.pribadi', 'pegawai_only' => true],
                         ['label' => 'Jadwal Pelajaran', 'route' => 'jadwal-pelajaran.index', 'active' => ['jadwal-pelajaran.*'], 'initial' => 'JP', 'izin' => ['jadwal.lihat', 'jadwal.kelola']],
                         ['label' => 'Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN', 'izin' => 'nilai.skema_kelola'],
-                        ['label' => 'Komponen Nilai', 'route' => 'komponen-nilai.index', 'active' => ['komponen-nilai.*'], 'initial' => 'KN', 'izin' => 'nilai.komponen_kelola'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input'],
                         ['label' => 'Rekap Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR', 'izin' => 'nilai.rekap'],
                         ['label' => 'Ujian & LJK', 'route' => 'ujian-omr.index', 'active' => ['ujian-omr.*'], 'initial' => 'LJ', 'izin' => ['omr.lihat', 'omr.kelola']],
@@ -1259,7 +1269,6 @@
                         ['label' => 'Rekap Absensi', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan']],
                         ['label' => 'Rekap Pegawai', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RP', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'absensi_pegawai.pribadi']],
                         ['label' => 'Laporan Absensi', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan'],
-                        ['label' => 'Notifikasi WA Siswa', 'route' => 'notifikasi-absensi-siswa.index', 'active' => ['notifikasi-absensi-siswa.*'], 'initial' => 'WA', 'izin' => 'absensi.laporan'],
                         ['label' => 'Laporan Pegawai', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LP', 'izin' => ['absensi.laporan', 'absensi_pegawai.pribadi']],
                     ],
                 ],
@@ -1305,11 +1314,54 @@
                 ],
             ];
 
+            $sidebarPegawaiSections = [
+                [
+                    'title' => 'Utama',
+                    'items' => [
+                        ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                    ],
+                ],
+                [
+                    'title' => 'Wali Kelas',
+                    'items' => [
+                        ['label' => 'Kelas', 'route' => 'kelas-wali.index', 'active' => ['kelas-wali.*', 'siswa.show'], 'initial' => 'KL', 'izin' => 'kelas.lihat', 'peran' => 'wali_kelas'],
+                        ['label' => 'Rekap Absensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi'], 'peran' => 'wali_kelas'],
+                        ['label' => 'Laporan Absensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan', 'peran' => 'wali_kelas'],
+                        ['label' => 'Laporan Pembinaan Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PB', 'izin' => ['bk.lihat', 'bk.kelola'], 'peran' => 'wali_kelas'],
+                    ],
+                ],
+                [
+                    'title' => 'Guru Mapel',
+                    'items' => [
+                        ['label' => 'Jadwal Pelajaran', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JP', 'izin' => 'jadwal.pribadi', 'peran' => 'guru_mapel'],
+                        ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'peran' => 'guru_mapel'],
+                        ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'peran' => 'guru_mapel'],
+                        ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.upload', 'peran' => 'guru_mapel'],
+                    ],
+                ],
+                [
+                    'title' => 'Profil Saya',
+                    'items' => [
+                        ['label' => 'Data Saya', 'route' => 'profil-pegawai.edit', 'active' => ['profil-pegawai.*'], 'initial' => 'DS', 'izin' => 'pegawai.profil', 'pegawai_only' => true],
+                        ['label' => 'Rekap Absensi Saya', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RS', 'izin' => 'absensi_pegawai.pribadi', 'pegawai_only' => true],
+                        ['label' => 'Laporan Absensi Saya', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LS', 'izin' => 'absensi_pegawai.pribadi', 'pegawai_only' => true],
+                    ],
+                ],
+            ];
+
+            if ($pakaiSidebarPegawai) {
+                $semuaSidebarSections = $sidebarPegawaiSections;
+            }
+
             $sidebarSections = collect($semuaSidebarSections)
                 ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif) {
                     $section['items'] = collect($section['items'])
                         ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif) {
                             if (($item['pegawai_only'] ?? false) && ! $penggunaAktif?->pegawai_id) {
+                                return false;
+                            }
+
+                            if (isset($item['peran']) && ! $penggunaAktif?->memilikiPeran($item['peran'])) {
                                 return false;
                             }
 
