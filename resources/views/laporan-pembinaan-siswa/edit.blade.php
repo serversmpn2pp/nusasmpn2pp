@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <form action="{{ route('laporan-pembinaan-siswa.update', $laporanPembinaanSiswa) }}" method="POST">
+    <form action="{{ route('laporan-pembinaan-siswa.update', $laporanPembinaanSiswa) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
         @include('laporan-pembinaan-siswa.partials.form', ['tombol' => 'Simpan perubahan'])

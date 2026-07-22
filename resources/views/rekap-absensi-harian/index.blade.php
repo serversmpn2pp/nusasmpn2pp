@@ -30,6 +30,28 @@
             'pulang_cepat' => 'Pulang cepat',
             'manual' => 'Manual',
         ];
+        $statusPoinKeterlambatan = function ($absensi, $laporan): array {
+            if ($laporan) {
+                return match ($laporan->status_verifikasi) {
+                    'diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi' => ['Menunggu BK', 'badge badge-warning'],
+                    'menunggu_persetujuan', 'disetujui_sebagian' => ['Menunggu persetujuan', 'badge badge-warning'],
+                    'perlu_musyawarah' => ['Perlu musyawarah', 'badge badge-danger'],
+                    'disahkan' => ['Poin disahkan', 'badge badge-active'],
+                    'tidak_terbukti' => ['Tidak terbukti', 'badge badge-muted'],
+                    'dibatalkan' => ['Dibatalkan', 'badge badge-muted'],
+                    default => [$laporan->labelStatusVerifikasi(), 'badge badge-muted'],
+                };
+            }
+
+            return match ($absensi?->status_poin_keterlambatan) {
+                'toleransi' => ['Toleransi 0 poin', 'badge badge-muted'],
+                'otomatis_nonaktif' => ['Otomatis nonaktif', 'badge badge-muted'],
+                'laporan_dibatalkan' => ['Dibatalkan', 'badge badge-muted'],
+                'laporan_tidak_terbukti' => ['Tidak terbukti', 'badge badge-muted'],
+                default => [(int) ($absensi?->menit_terlambat ?? 0) > 0 ? 'Belum diproses' : '-', 'badge badge-muted'],
+            };
+        };
+        $bolehLihatLaporanPoin = auth()->user()?->memilikiIzin(['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat']) ?? false;
     @endphp
 
     <style>
@@ -144,6 +166,15 @@
             @izin('absensi.pengaturan_kelola')
                 <a href="{{ route('pengaturan-absensi.index') }}" class="button button-muted">Jam absensi</a>
             @endizin
+            @if (auth()->user()?->memilikiIzin(['poin_siswa.pengaturan', 'poin_siswa.verifikasi_bk']))
+                <form method="POST" action="{{ route('rekap-absensi-harian.proses-poin-keterlambatan') }}">
+                    @csrf
+                    <input type="hidden" name="tanggal" value="{{ $tanggal }}">
+                    <input type="hidden" name="tahun_pelajaran_id" value="{{ $tahunPelajaranId }}">
+                    <input type="hidden" name="kelas_id" value="{{ $kelasId }}">
+                    <button class="button button-muted" @disabled(! $tahunPelajaranId)>Sinkronkan poin</button>
+                </form>
+            @endif
         </div>
     </div>
 
@@ -274,7 +305,7 @@
             </div>
 
             <div class="desktop-only table-wrap">
-                <table class="employee-table placement-table" style="min-width: 1180px;">
+                <table class="employee-table placement-table" style="min-width: 1320px;">
                     <thead>
                         <tr>
                             <th>No.</th>
@@ -284,6 +315,7 @@
                             <th>Masuk</th>
                             <th>Pulang</th>
                             <th>Keterlambatan</th>
+                            <th>Status poin</th>
                             <th>Catatan</th>
                             @izin('absensi.koreksi')
                                 <th class="text-right">Aksi</th>
@@ -296,6 +328,8 @@
                                 $anggota = $item['anggota_kelas'];
                                 $absensi = $item['absensi'];
                                 $status = $item['status_kehadiran'];
+                                $laporanKeterlambatan = $item['laporan_keterlambatan'];
+                                [$labelPoin, $badgePoin] = $statusPoinKeterlambatan($absensi, $laporanKeterlambatan);
                             @endphp
                             <tr>
                                 <td data-label="No.">{{ $anggota->nomor_absen ?: '-' }}</td>
@@ -334,6 +368,17 @@
                                         @endif
                                     </p>
                                 </td>
+                                <td data-label="Status poin">
+                                    <span class="{{ $badgePoin }}">{{ $labelPoin }}</span>
+                                    @if ($laporanKeterlambatan)
+                                        <p class="person-meta" style="margin-top: 5px;">{{ $laporanKeterlambatan->total_poin }} poin</p>
+                                        @if ($bolehLihatLaporanPoin)
+                                            <a href="{{ route('laporan-pembinaan-siswa.show', $laporanKeterlambatan) }}" class="text-link">Lihat laporan</a>
+                                        @endif
+                                    @elseif ((int) ($absensi?->poin_keterlambatan_terhitung ?? 0) > 0)
+                                        <p class="person-meta" style="margin-top: 5px;">{{ $absensi->poin_keterlambatan_terhitung }} poin</p>
+                                    @endif
+                                </td>
                                 <td data-label="Catatan">{{ $absensi?->catatan ?: '-' }}</td>
                                 @izin('absensi.koreksi')
                                     <td data-label="Aksi">
@@ -345,7 +390,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ auth()->user()?->memilikiIzin('absensi.koreksi') ? 9 : 8 }}" class="empty-state">Belum ada siswa aktif pada pilihan ini.</td>
+                                <td colspan="{{ auth()->user()?->memilikiIzin('absensi.koreksi') ? 10 : 9 }}" class="empty-state">Belum ada siswa aktif pada pilihan ini.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -358,6 +403,8 @@
                         $anggota = $item['anggota_kelas'];
                         $absensi = $item['absensi'];
                         $status = $item['status_kehadiran'];
+                        $laporanKeterlambatan = $item['laporan_keterlambatan'];
+                        [$labelPoin, $badgePoin] = $statusPoinKeterlambatan($absensi, $laporanKeterlambatan);
                     @endphp
                     <article class="mobile-card">
                         <div class="mobile-card-head">
@@ -387,6 +434,18 @@
                                 <dd>{{ $item['pulang_cepat'] > 0 ? $item['pulang_cepat'] . ' menit' : '-' }}</dd>
                             </div>
                         </dl>
+
+                        @if ($item['terlambat'] > 0 || $laporanKeterlambatan)
+                            <div style="align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px;">
+                                <span class="{{ $badgePoin }}">{{ $labelPoin }}</span>
+                                @if ($laporanKeterlambatan)
+                                    <span class="person-meta">{{ $laporanKeterlambatan->total_poin }} poin</span>
+                                    @if ($bolehLihatLaporanPoin)
+                                        <a href="{{ route('laporan-pembinaan-siswa.show', $laporanKeterlambatan) }}" class="text-link">Lihat laporan</a>
+                                    @endif
+                                @endif
+                            </div>
+                        @endif
 
                         @if ($absensi?->catatan)
                             <p class="help-text" style="margin-top: 12px;">{{ $absensi->catatan }}</p>

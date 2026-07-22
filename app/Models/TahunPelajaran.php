@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TahunPelajaran extends Model
 {
@@ -26,6 +27,16 @@ class TahunPelajaran extends Model
     public function kelas(): HasMany
     {
         return $this->hasMany(Kelas::class);
+    }
+
+    public function pengaturanBatasProsesPelanggaran(): HasOne
+    {
+        return $this->hasOne(PengaturanBatasProsesPelanggaran::class);
+    }
+
+    public function pengaturanPoinKeterlambatan(): HasOne
+    {
+        return $this->hasOne(PengaturanPoinKeterlambatan::class);
     }
 
     public function anggotaKelas(): HasMany

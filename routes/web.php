@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AksesUjianCbtController;
 use App\Http\Controllers\AkunPegawaiController;
 use App\Http\Controllers\AnggotaKelasController;
@@ -8,35 +7,38 @@ use App\Http\Controllers\AturanSanksiPoinController;
 use App\Http\Controllers\AutentikasiController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\BerandaController;
+use App\Http\Controllers\BuktiLaporanPembinaanController;
+use App\Http\Controllers\BuktiPelaksanaanSanksiController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\InputNilaiController;
 use App\Http\Controllers\JadwalPelajaranController;
-use App\Http\Controllers\JadwalUjianCbtController;
 use App\Http\Controllers\JadwalSayaController;
+use App\Http\Controllers\JadwalUjianCbtController;
 use App\Http\Controllers\JamPelajaranController;
-use App\Http\Controllers\JenisPerangkatAjarController;
 use App\Http\Controllers\JenisPelanggaranSiswaController;
+use App\Http\Controllers\JenisPerangkatAjarController;
 use App\Http\Controllers\JenisUjianCbtController;
+use App\Http\Controllers\KartuPegawaiController;
 use App\Http\Controllers\KartuPelajarController;
 use App\Http\Controllers\KartuPesertaUjianCbtController;
-use App\Http\Controllers\KartuPegawaiController;
-use App\Http\Controllers\KenaikanKelasController;
 use App\Http\Controllers\KategoriBarangController;
 use App\Http\Controllers\KategoriPembinaanSiswaController;
-use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
-use App\Http\Controllers\KoreksiManualUjianCbtController;
-use App\Http\Controllers\KunciJawabanUjianOmrController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KelasWaliController;
+use App\Http\Controllers\KenaikanKelasController;
+use App\Http\Controllers\KlarifikasiSiswaPembinaanController;
 use App\Http\Controllers\KomponenNilaiController;
 use App\Http\Controllers\KoreksiHasilScanLjkOmrController;
-use App\Http\Controllers\LembarJawabUjianOmrController;
+use App\Http\Controllers\KoreksiManualUjianCbtController;
+use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
+use App\Http\Controllers\KunciJawabanUjianOmrController;
+use App\Http\Controllers\LabelBarcodeInventarisController;
 use App\Http\Controllers\LaporanAbsensiController;
 use App\Http\Controllers\LaporanAbsensiPegawaiBulananController;
 use App\Http\Controllers\LaporanInventarisBulananController;
 use App\Http\Controllers\LaporanPembinaanSiswaController;
-use App\Http\Controllers\LabelBarcodeInventarisController;
+use App\Http\Controllers\LembarJawabUjianOmrController;
 use App\Http\Controllers\LokasiBarangController;
 use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\MonitoringUjianCbtController;
@@ -44,46 +46,51 @@ use App\Http\Controllers\MutasiStokBarangController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
 use App\Http\Controllers\NotifikasiPenggunaController;
 use App\Http\Controllers\PegawaiController;
-use App\Http\Controllers\PeminjamanBarangController;
-use App\Http\Controllers\PesertaUjianCbtController;
-use App\Http\Controllers\PerangkatAjarSayaController;
 use App\Http\Controllers\PemeriksaanPerangkatAjarController;
-use App\Http\Controllers\PengembalianBarangController;
-use App\Http\Controllers\PenguranganPoinSiswaController;
+use App\Http\Controllers\PeminjamanBarangController;
+use App\Http\Controllers\PenempatanSiswaController;
 use App\Http\Controllers\PengaturanAbsensiController;
 use App\Http\Controllers\PengaturanAbsensiPegawaiController;
-use App\Http\Controllers\PenempatanSiswaController;
+use App\Http\Controllers\PengaturanBatasProsesPelanggaranController;
+use App\Http\Controllers\PengaturanPoinKeterlambatanController;
+use App\Http\Controllers\PengembalianBarangController;
+use App\Http\Controllers\PenguranganPoinSiswaController;
 use App\Http\Controllers\PenugasanGuruWaliController;
 use App\Http\Controllers\PeranController;
+use App\Http\Controllers\PerangkatAjarSayaController;
+use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\ProfilPegawaiController;
-use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
+use App\Http\Controllers\PusatVerifikasiPelanggaranController;
 use App\Http\Controllers\RekapAbsensiHarianController;
+use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
 use App\Http\Controllers\RekapHasilUjianCbtController;
 use App\Http\Controllers\RekapNilaiRaporController;
 use App\Http\Controllers\RekapPeminjamanBarangController;
 use App\Http\Controllers\RekapPoinSiswaController;
 use App\Http\Controllers\RuangUjianCbtController;
+use App\Http\Controllers\SaksiLaporanPembinaanController;
+use App\Http\Controllers\SaldoStokBarangController;
+use App\Http\Controllers\SanksiPoinSiswaController;
+use App\Http\Controllers\SatuanBarangController;
 use App\Http\Controllers\ScanAbsensiController;
 use App\Http\Controllers\ScanAbsensiPegawaiController;
 use App\Http\Controllers\ScanLjkUjianOmrController;
-use App\Http\Controllers\SaldoStokBarangController;
 use App\Http\Controllers\SesiUjianCbtController;
-use App\Http\Controllers\SatuanBarangController;
-use App\Http\Controllers\SanksiPoinSiswaController;
-use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\SiswaWaliSayaController;
+use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SoalCbtController;
 use App\Http\Controllers\SoalUjianCbtController;
 use App\Http\Controllers\StatusKelengkapanPanitiaCbtController;
 use App\Http\Controllers\TahunPelajaranController;
 use App\Http\Controllers\TerapkanNilaiCbtController;
-use App\Http\Controllers\TindakLanjutPembinaanSiswaController;
-use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use App\Http\Controllers\TerapkanNilaiOmrController;
-use App\Http\Controllers\UnitBarangController;
+use App\Http\Controllers\TindakLanjutPembinaanSiswaController;
 use App\Http\Controllers\UjianCbtController;
 use App\Http\Controllers\UjianOmrController;
+use App\Http\Controllers\UnitBarangController;
+use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -421,6 +428,9 @@ Route::middleware('auth')->group(function () {
         Route::get('rekap-absensi-harian', [RekapAbsensiHarianController::class, 'index'])
             ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.laporan')
             ->name('rekap-absensi-harian.index');
+        Route::post('rekap-absensi-harian/proses-poin-keterlambatan', [RekapAbsensiHarianController::class, 'prosesPoinKeterlambatan'])
+            ->middleware('izin:poin_siswa.pengaturan,poin_siswa.verifikasi_bk')
+            ->name('rekap-absensi-harian.proses-poin-keterlambatan');
         Route::middleware('izin:absensi.koreksi')->group(function () {
             Route::get('rekap-absensi-harian/{anggotaKelas}/koreksi', [RekapAbsensiHarianController::class, 'editKoreksi'])->name('rekap-absensi-harian.koreksi.edit');
             Route::put('rekap-absensi-harian/{anggotaKelas}/koreksi', [RekapAbsensiHarianController::class, 'updateKoreksi'])->name('rekap-absensi-harian.koreksi.update');
@@ -467,6 +477,28 @@ Route::middleware('auth')->group(function () {
         Route::resource('laporan-pembinaan-siswa', LaporanPembinaanSiswaController::class)
             ->only(['index', 'show'])
             ->middleware('izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat');
+        Route::get('pusat-verifikasi-pelanggaran', [PusatVerifikasiPelanggaranController::class, 'index'])
+            ->middleware('izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.menyetujui,poin_siswa.putus_konflik')
+            ->name('pusat-verifikasi-pelanggaran.index');
+
+        Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/bukti', [BuktiLaporanPembinaanController::class, 'store'])
+            ->middleware('izin:bk.kelola,poin_siswa.lapor,poin_siswa.verifikasi_bk')
+            ->name('bukti-laporan-pembinaan.store');
+        Route::get('bukti-laporan-pembinaan/{buktiLaporanPembinaanSiswa}/unduh', [BuktiLaporanPembinaanController::class, 'download'])
+            ->middleware('izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat,poin_siswa.menyetujui,poin_siswa.verifikasi_bk')
+            ->name('bukti-laporan-pembinaan.download');
+        Route::delete('bukti-laporan-pembinaan/{buktiLaporanPembinaanSiswa}', [BuktiLaporanPembinaanController::class, 'destroy'])
+            ->middleware('izin:bk.kelola,poin_siswa.lapor,poin_siswa.verifikasi_bk')
+            ->name('bukti-laporan-pembinaan.destroy');
+        Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/saksi', [SaksiLaporanPembinaanController::class, 'store'])
+            ->middleware('izin:bk.kelola,poin_siswa.lapor,poin_siswa.verifikasi_bk')
+            ->name('saksi-laporan-pembinaan.store');
+        Route::delete('saksi-laporan-pembinaan/{saksiLaporanPembinaanSiswa}', [SaksiLaporanPembinaanController::class, 'destroy'])
+            ->middleware('izin:bk.kelola,poin_siswa.lapor,poin_siswa.verifikasi_bk')
+            ->name('saksi-laporan-pembinaan.destroy');
+        Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/klarifikasi', [KlarifikasiSiswaPembinaanController::class, 'store'])
+            ->middleware('izin:poin_siswa.verifikasi_bk')
+            ->name('klarifikasi-siswa-pembinaan.store');
 
         Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/verifikasi-bk', [VerifikasiPelanggaranSiswaController::class, 'verifikasiBk'])
             ->middleware('izin:poin_siswa.verifikasi_bk')
@@ -475,14 +507,41 @@ Route::middleware('auth')->group(function () {
             ->middleware('izin:poin_siswa.menyetujui,poin_siswa.putus_konflik')
             ->name('verifikasi-pelanggaran.persetujuan');
 
+        Route::get('pengaturan-poin-keterlambatan', [PengaturanPoinKeterlambatanController::class, 'index'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-poin-keterlambatan.index');
+        Route::get('pengaturan-poin-keterlambatan/{tahunPelajaran}/edit', [PengaturanPoinKeterlambatanController::class, 'edit'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-poin-keterlambatan.edit');
+        Route::put('pengaturan-poin-keterlambatan/{tahunPelajaran}', [PengaturanPoinKeterlambatanController::class, 'update'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-poin-keterlambatan.update');
+
         Route::get('rekap-poin-siswa', [RekapPoinSiswaController::class, 'index'])
             ->middleware('izin:poin_siswa.lihat')
             ->name('rekap-poin-siswa.index');
         Route::middleware('izin:poin_siswa.reward_kelola')->group(function () {
             Route::get('pengurangan-poin-siswa', [PenguranganPoinSiswaController::class, 'index'])->name('pengurangan-poin-siswa.index');
             Route::post('pengurangan-poin-siswa', [PenguranganPoinSiswaController::class, 'store'])->name('pengurangan-poin-siswa.store');
-            Route::put('sanksi-poin-siswa/{sanksiPoinSiswa}', [SanksiPoinSiswaController::class, 'update'])->name('sanksi-poin-siswa.update');
         });
+        Route::get('sanksi-poin-siswa', [SanksiPoinSiswaController::class, 'index'])
+            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->name('sanksi-poin-siswa.index');
+        Route::get('sanksi-poin-siswa/{sanksiPoinSiswa}', [SanksiPoinSiswaController::class, 'show'])
+            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->name('sanksi-poin-siswa.show');
+        Route::put('sanksi-poin-siswa/{sanksiPoinSiswa}', [SanksiPoinSiswaController::class, 'update'])
+            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->name('sanksi-poin-siswa.update');
+        Route::post('sanksi-poin-siswa/{sanksiPoinSiswa}/bukti', [BuktiPelaksanaanSanksiController::class, 'store'])
+            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->name('bukti-pelaksanaan-sanksi.store');
+        Route::get('bukti-pelaksanaan-sanksi/{buktiPelaksanaanSanksi}/unduh', [BuktiPelaksanaanSanksiController::class, 'download'])
+            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->name('bukti-pelaksanaan-sanksi.download');
+        Route::delete('bukti-pelaksanaan-sanksi/{buktiPelaksanaanSanksi}', [BuktiPelaksanaanSanksiController::class, 'destroy'])
+            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->name('bukti-pelaksanaan-sanksi.destroy');
         Route::patch('pengurangan-poin-siswa/{penguranganPoinSiswa}/putusan', [PenguranganPoinSiswaController::class, 'putuskan'])
             ->middleware('izin:poin_siswa.putus_konflik')
             ->name('pengurangan-poin-siswa.putuskan');
@@ -493,6 +552,15 @@ Route::middleware('auth')->group(function () {
         Route::resource('aturan-sanksi-poin', AturanSanksiPoinController::class)
             ->except(['show'])
             ->middleware('izin:poin_siswa.pengaturan');
+        Route::get('pengaturan-batas-proses-pelanggaran', [PengaturanBatasProsesPelanggaranController::class, 'index'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-batas-proses-pelanggaran.index');
+        Route::get('pengaturan-batas-proses-pelanggaran/{tahunPelajaran}/edit', [PengaturanBatasProsesPelanggaranController::class, 'edit'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-batas-proses-pelanggaran.edit');
+        Route::put('pengaturan-batas-proses-pelanggaran/{tahunPelajaran}', [PengaturanBatasProsesPelanggaranController::class, 'update'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-batas-proses-pelanggaran.update');
 
         Route::get('penugasan-guru-wali', [PenugasanGuruWaliController::class, 'index'])
             ->middleware('izin:guru_wali.kelola')

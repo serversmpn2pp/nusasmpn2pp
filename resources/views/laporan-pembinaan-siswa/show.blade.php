@@ -7,15 +7,17 @@
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
         $pengguna = auth()->user();
         $statusFinal = in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan','tidak_terbukti','dibatalkan'], true);
-        $bolehEdit = !$statusFinal && ($pengguna?->memilikiIzin(['bk.kelola','poin_siswa.lapor']) ?? false);
+        $bolehEdit = !$statusFinal && !$laporanPembinaanSiswa->berasalDariAbsensi() && ($pengguna?->memilikiIzin(['bk.kelola','poin_siswa.lapor']) ?? false);
         $bolehVerifikasiBk = $pengguna?->memilikiIzin('poin_siswa.verifikasi_bk') ?? false;
         $pegawaiId = (int) ($pengguna?->pegawai_id ?? 0);
         $adalahWaliKelas = $pegawaiId > 0 && $pegawaiId === (int) $laporanPembinaanSiswa->wali_kelas_pegawai_id;
         $adalahGuruWali = $pegawaiId > 0 && $pegawaiId === (int) $laporanPembinaanSiswa->guru_wali_pegawai_id;
         $bolehPutusKonflik = $pengguna?->memilikiIzin('poin_siswa.putus_konflik') ?? false;
+        $perluPenyetujuPengganti = !$laporanPembinaanSiswa->wali_kelas_pegawai_id || !$laporanPembinaanSiswa->guru_wali_pegawai_id || (int)$laporanPembinaanSiswa->wali_kelas_pegawai_id === (int)$laporanPembinaanSiswa->guru_wali_pegawai_id;
         $sudahDiperiksaTerbukti = $laporanPembinaanSiswa->verifikasiBkPelanggaran->first()?->hasil === 'terbukti';
         $persetujuan = $laporanPembinaanSiswa->persetujuanPelanggaran->keyBy('jenis_persetujuan');
         $badgeVerifikasi = fn(string $status) => match($status){'disahkan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_musyawarah','perlu_klarifikasi'=>'badge badge-danger',default=>'badge badge-warning'};
+        $labelTahapBatas = match($laporanPembinaanSiswa->tahap_batas_proses){'pemeriksaan_bk'=>'Pemeriksaan BK','persetujuan'=>'Persetujuan Wali Kelas dan Guru Wali','musyawarah'=>'Musyawarah/Penyetuju Pengganti',default=>'Proses verifikasi'};
     @endphp
 
     <style>
@@ -27,19 +29,36 @@
         .decision-grid { display:grid; gap:16px; grid-template-columns:repeat(3,minmax(0,1fr)); }
         .decision-form { border-top:1px solid var(--line); margin-top:12px; padding-top:12px; }
         .follow-up-body { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:12px; }
+        .fact-list { display:grid; gap:10px; margin-top:14px; }
+        .fact-item { align-items:start; border:1px solid var(--line); border-radius:8px; display:grid; gap:12px; grid-template-columns:minmax(0,1fr) auto; padding:13px; }
+        .fact-item p { overflow-wrap:anywhere; }
+        .fact-form { border-top:1px solid var(--line); margin-top:16px; padding-top:16px; }
+        .timeline-list { border-left:2px solid #d7e2ee; display:grid; gap:0; margin:16px 0 0 8px; padding-left:20px; }
+        .timeline-item { padding:0 0 18px; position:relative; }
+        .timeline-item::before { background:var(--secondary); border:3px solid #fff; border-radius:50%; box-shadow:0 0 0 1px #b8c9da; content:""; height:12px; left:-27px; position:absolute; top:3px; width:12px; }
+        .timeline-item:last-child { padding-bottom:0; }
+        .timeline-status { color:var(--muted); font-size:12px; font-weight:700; }
         @media(max-width:900px){.decision-grid,.follow-up-body{grid-template-columns:1fr}.point-summary{grid-template-columns:1fr}.violation-detail{grid-template-columns:1fr}}
+        @media(max-width:640px){.fact-item{grid-template-columns:1fr}.fact-item .actions{justify-content:flex-start}}
     </style>
 
     <div class="page-header">
         <div><p class="eyebrow">Kesiswaan & BK</p><h1 class="page-title">Detail {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1><p class="page-subtitle">{{ $laporanPembinaanSiswa->nomor_laporan }}</p></div>
-        <div class="actions"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Kembali</a>@if($bolehEdit)<a href="{{ route('laporan-pembinaan-siswa.edit',$laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>@endif @izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>@endif @endizin</div>
+        <div class="actions"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Kembali</a>@izin('poin_siswa.lihat','poin_siswa.verifikasi_bk','poin_siswa.menyetujui','poin_siswa.putus_konflik')<a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pusat Verifikasi</a>@endizin @if($bolehEdit)<a href="{{ route('laporan-pembinaan-siswa.edit',$laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>@endif @izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>@endif @endizin</div>
     </div>
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
     @if(session('gagal'))<div class="alert alert-danger">{{ session('gagal') }}</div>@endif
+    @if($errors->any())<div class="alert alert-danger"><strong>Ada data yang perlu diperbaiki.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+    @if($laporanPembinaanSiswa->berasalDariAbsensi())
+        <div class="alert"><strong>Laporan otomatis dari absensi.</strong> Tercatat terlambat {{ $laporanPembinaanSiswa->menit_terlambat_tercatat }} menit. Perubahan waktu dilakukan melalui koreksi rekap absensi.</div>
+    @endif
+    @if($laporanMirip->isNotEmpty())
+        <div class="alert alert-danger"><strong>Periksa kemungkinan laporan ganda.</strong> Ada {{ $laporanMirip->count() }} laporan lain untuk siswa ini pada tanggal yang sama: @foreach($laporanMirip as $mirip)<a href="{{ route('laporan-pembinaan-siswa.show',$mirip) }}">{{ $mirip->nomor_laporan }}</a>{{ !$loop->last?', ':'.' }}@endforeach</div>
+    @endif
 
     @if($laporanPembinaanSiswa->jenis_laporan==='pelanggaran')
         <section class="panel panel-pad point-summary" style="margin-bottom:20px;">
-            <div><p class="eyebrow" style="color:#d9e8f7">Status penetapan</p><h2 style="margin:4px 0 8px">{{ $laporanPembinaanSiswa->labelStatusVerifikasi() }}</h2><span class="{{ $badgeVerifikasi($laporanPembinaanSiswa->status_verifikasi) }}">{{ $laporanPembinaanSiswa->labelTingkat() }}</span></div>
+            <div><p class="eyebrow" style="color:#d9e8f7">Status penetapan</p><h2 style="margin:4px 0 8px">{{ $laporanPembinaanSiswa->labelStatusVerifikasi() }}</h2><span class="{{ $badgeVerifikasi($laporanPembinaanSiswa->status_verifikasi) }}">{{ $laporanPembinaanSiswa->labelTingkat() }}</span>@if(!$statusFinal && $laporanPembinaanSiswa->batas_proses_pada)<p style="margin:12px 0 0;color:#d9e8f7">Batas {{ $labelTahapBatas }}: <strong style="color:#fff;font-size:inherit">{{ $laporanPembinaanSiswa->batas_proses_pada->format('d/m/Y H:i') }}</strong></p>@endif</div>
             <div><p style="margin:0">Total laporan</p><strong>{{ $laporanPembinaanSiswa->total_poin }}</strong><span> poin</span></div>
         </section>
     @endif
@@ -52,7 +71,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad"><h2 class="panel-title">Informasi Kejadian</h2><dl class="detail-grid"><div class="detail-item"><dt>Jenis laporan</dt><dd>{{ $laporanPembinaanSiswa->labelJenisLaporan() }}</dd></div><div class="detail-item"><dt>Tanggal dan waktu</dt><dd>{{ $laporanPembinaanSiswa->tanggal_kejadian?->format('d/m/Y') }} {{ $laporanPembinaanSiswa->waktuKejadianRingkas()?'pukul '.$laporanPembinaanSiswa->waktuKejadianRingkas():'' }}</dd></div><div class="detail-item"><dt>Tempat</dt><dd>{{ $teks($laporanPembinaanSiswa->tempat_kejadian) }}</dd></div><div class="detail-item"><dt>Kategori</dt><dd>{{ $laporanPembinaanSiswa->kategoriPembinaanSiswa?->nama ?: '-' }}</dd></div><div class="detail-item"><dt>Pelapor</dt><dd>{{ $laporanPembinaanSiswa->pelaporPegawai?->nama_lengkap ?: '-' }}</dd></div><div class="detail-item"><dt>Dibuat pada</dt><dd>{{ $laporanPembinaanSiswa->created_at?->format('d/m/Y H:i') }}</dd></div></dl></section>
+            <section class="panel panel-pad"><h2 class="panel-title">Informasi Kejadian</h2><dl class="detail-grid"><div class="detail-item"><dt>Jenis laporan</dt><dd>{{ $laporanPembinaanSiswa->labelJenisLaporan() }}</dd></div><div class="detail-item"><dt>Sumber</dt><dd>{{ $laporanPembinaanSiswa->berasalDariAbsensi() ? 'Rekap absensi otomatis' : 'Laporan manual' }}</dd></div><div class="detail-item"><dt>Tanggal dan waktu</dt><dd>{{ $laporanPembinaanSiswa->tanggal_kejadian?->format('d/m/Y') }} {{ $laporanPembinaanSiswa->waktuKejadianRingkas()?'pukul '.$laporanPembinaanSiswa->waktuKejadianRingkas():'' }}</dd></div><div class="detail-item"><dt>Tempat</dt><dd>{{ $teks($laporanPembinaanSiswa->tempat_kejadian) }}</dd></div><div class="detail-item"><dt>Kategori</dt><dd>{{ $laporanPembinaanSiswa->kategoriPembinaanSiswa?->nama ?: '-' }}</dd></div><div class="detail-item"><dt>Pelapor</dt><dd>{{ $laporanPembinaanSiswa->pelaporPegawai?->nama_lengkap ?: ($laporanPembinaanSiswa->berasalDariAbsensi() ? 'Sistem NUSA' : '-') }}</dd></div><div class="detail-item"><dt>Dibuat pada</dt><dd>{{ $laporanPembinaanSiswa->created_at?->format('d/m/Y H:i') }}</dd></div></dl></section>
 
             @if($laporanPembinaanSiswa->jenis_laporan==='pelanggaran')
                 <section class="panel panel-pad"><h2 class="panel-title">Butir Pelanggaran</h2><div class="violation-detail-list">@foreach($laporanPembinaanSiswa->butirPelanggaranLaporan as $butir)<article class="violation-detail"><div><p class="person-meta">{{ $butir->kode_pelanggaran }} · {{ str($butir->tingkat)->headline() }}</p><p class="person-name">{{ $butir->nama_pelanggaran }}</p></div><span class="violation-points"><strong>{{ $butir->poin }}</strong> poin</span></article>@endforeach</div></section>
@@ -67,18 +86,58 @@
                             @if($bolehVerifikasiBk && !$statusFinal)<form method="POST" action="{{ route('verifikasi-pelanggaran.bk',$laporanPembinaanSiswa) }}" class="decision-form">@csrf<div class="field"><label>Hasil pemeriksaan</label><select name="hasil" class="select">@foreach(\App\Models\VerifikasiBkPelanggaran::DAFTAR_HASIL as $kode=>$label)<option value="{{ $kode }}">{{ $label }}</option>@endforeach</select></div><div class="field" style="margin-top:8px"><label>Catatan</label><textarea name="catatan" class="textarea"></textarea></div><button class="button button-primary button-full" style="margin-top:10px">Simpan pemeriksaan</button></form>@endif
                         </article>
                         @foreach(['wali_kelas'=>'Wali Kelas','guru_wali'=>'Guru Wali'] as $jenis=>$label)
-                            @php $putusan=$persetujuan->get($jenis);$boleh=($jenis==='wali_kelas'&&$adalahWaliKelas)||($jenis==='guru_wali'&&$adalahGuruWali); @endphp
+                            @php $putusan=$persetujuan->get($jenis);$sudahSetujuSebagaiPihakLain=$persetujuan->where('jenis_persetujuan','<>',$jenis)->where('pegawai_id',$pegawaiId)->where('keputusan','setuju')->isNotEmpty();$boleh=(($jenis==='wali_kelas'&&$adalahWaliKelas)||($jenis==='guru_wali'&&$adalahGuruWali))&&!$sudahSetujuSebagaiPihakLain; @endphp
                             <article class="decision-item"><p class="person-meta">Pemberi Persetujuan</p><h3>{{ $label }}</h3><p class="person-name">{{ $jenis==='wali_kelas'?($laporanPembinaanSiswa->waliKelasPegawai?->nama_lengkap?:'Belum ditentukan'):($laporanPembinaanSiswa->guruWaliPegawai?->nama_lengkap?:'Belum ditugaskan') }}</p>@if($putusan)<span class="badge {{ $putusan->keputusan==='setuju'?'badge-active':'badge-danger' }}">{{ \App\Models\PersetujuanPelanggaran::DAFTAR_KEPUTUSAN[$putusan->keputusan] }}</span><p>{{ $teks($putusan->catatan) }}</p>@else<p class="help-text">Belum memberi keputusan.</p>@endif
                                 @if($boleh && $sudahDiperiksaTerbukti && !$statusFinal)<form method="POST" action="{{ route('verifikasi-pelanggaran.persetujuan',$laporanPembinaanSiswa) }}" class="decision-form">@csrf<input type="hidden" name="jenis_persetujuan" value="{{ $jenis }}"><div class="field"><label>Keputusan</label><select name="keputusan" class="select"><option value="setuju">Setuju</option><option value="tidak_setuju">Tidak setuju</option></select></div><div class="field" style="margin-top:8px"><label>Pertimbangan</label><textarea name="catatan" class="textarea" required></textarea></div><button class="button button-primary button-full" style="margin-top:10px">Kirim keputusan</button></form>@endif
                             </article>
                         @endforeach
                     </div>
-                    @if($bolehPutusKonflik && $sudahDiperiksaTerbukti && !$statusFinal)
+                    @if($bolehPutusKonflik && $sudahDiperiksaTerbukti && !$statusFinal && ($laporanPembinaanSiswa->status_verifikasi==='perlu_musyawarah' || $perluPenyetujuPengganti))
                         @php $putusanWakil=$persetujuan->get('wakil_kesiswaan'); @endphp
                         <article class="decision-item" style="margin-top:16px"><p class="person-meta">Musyawarah/Pengganti</p><h3>Wakil Kesiswaan</h3>@if($putusanWakil)<span class="badge {{ $putusanWakil->keputusan==='setuju'?'badge-active':'badge-danger' }}">{{ \App\Models\PersetujuanPelanggaran::DAFTAR_KEPUTUSAN[$putusanWakil->keputusan] }}</span><p>{{ $teks($putusanWakil->catatan) }}</p>@endif<form method="POST" action="{{ route('verifikasi-pelanggaran.persetujuan',$laporanPembinaanSiswa) }}" class="decision-form">@csrf<input type="hidden" name="jenis_persetujuan" value="wakil_kesiswaan"><div class="form-grid"><div class="field"><label>Keputusan pengganti</label><select name="keputusan" class="select"><option value="setuju">Setuju</option><option value="tidak_setuju">Tidak setuju</option></select></div><div class="field"><label>Catatan musyawarah</label><textarea name="catatan" class="textarea" required></textarea></div></div><button class="button button-dark" style="margin-top:10px">Simpan keputusan musyawarah</button></form></article>
                     @endif
                 </section>
             @endif
+
+            <section class="panel panel-pad">
+                <div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Bukti Pendukung</h2><p class="help-text">File tersimpan privat dan hanya dapat dibuka oleh pengguna yang berhak melihat laporan.</p></div><span class="badge badge-muted">{{ $laporanPembinaanSiswa->buktiLaporanPembinaanSiswa->count() }} file</span></div>
+                <div class="fact-list">
+                    @forelse($laporanPembinaanSiswa->buktiLaporanPembinaanSiswa as $bukti)
+                        @php $bolehHapusBukti=$bolehKelolaFakta && ($pengguna?->administrator() || $pengguna?->memilikiIzin(['bk.kelola','poin_siswa.verifikasi_bk']) || (int)$bukti->diunggah_oleh_pengguna_id===(int)$pengguna?->id); @endphp
+                        <article class="fact-item"><div><p class="person-name">{{ $bukti->nama_file_asli }}</p><p class="person-meta">{{ str($bukti->jenis)->headline() }} &middot; {{ $bukti->ukuranRingkas() }} &middot; {{ $bukti->diunggah_pada?->format('d/m/Y H:i') }}</p>@if($bukti->keterangan)<p style="margin:7px 0 0">{{ $bukti->keterangan }}</p>@endif</div><div class="actions"><a class="button button-muted button-sm" href="{{ route('bukti-laporan-pembinaan.download',$bukti) }}">Unduh</a>@if($bolehHapusBukti)<form method="POST" action="{{ route('bukti-laporan-pembinaan.destroy',$bukti) }}" onsubmit="return confirm('Hapus bukti ini?')">@csrf @method('DELETE')<button class="button button-danger button-sm">Hapus</button></form>@endif</div></article>
+                    @empty<div class="empty-state">Belum ada bukti pendukung.</div>@endforelse
+                </div>
+                @if($bolehKelolaFakta)
+                    <form class="fact-form" method="POST" enctype="multipart/form-data" action="{{ route('bukti-laporan-pembinaan.store',$laporanPembinaanSiswa) }}">@csrf<div class="form-grid"><div class="field"><label for="bukti_laporan_detail">Tambah foto/PDF</label><input id="bukti_laporan_detail" class="input" type="file" name="bukti_laporan[]" accept=".jpg,.jpeg,.png,.webp,.pdf" multiple required><p class="help-text">Maksimal 5 file, masing-masing 10 MB.</p></div><div class="field"><label for="keterangan_bukti_detail">Keterangan</label><input id="keterangan_bukti_detail" class="input" name="keterangan_bukti" placeholder="Sumber atau konteks bukti"></div></div><button class="button button-primary" style="margin-top:12px">Unggah bukti</button></form>
+                @endif
+            </section>
+
+            <section class="panel panel-pad">
+                <div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Saksi Kejadian</h2><p class="help-text">Pernyataan saksi dicatat terpisah dari kronologi pelapor.</p></div><span class="badge badge-muted">{{ $laporanPembinaanSiswa->saksiLaporanPembinaanSiswa->count() }} saksi</span></div>
+                <div class="fact-list">
+                    @forelse($laporanPembinaanSiswa->saksiLaporanPembinaanSiswa as $saksi)
+                        @php $bolehHapusSaksi=$bolehKelolaFakta && ($pengguna?->administrator() || $pengguna?->memilikiIzin(['bk.kelola','poin_siswa.verifikasi_bk']) || (int)$saksi->dibuat_oleh_pengguna_id===(int)$pengguna?->id); @endphp
+                        <article class="fact-item"><div><p class="person-name">{{ $saksi->nama_saksi }}</p><p class="person-meta">{{ $saksi->labelJenis() }} &middot; dicatat {{ $saksi->created_at?->format('d/m/Y H:i') }}</p><p style="white-space:pre-line;margin:7px 0 0">{{ $saksi->pernyataan }}</p></div>@if($bolehHapusSaksi)<form method="POST" action="{{ route('saksi-laporan-pembinaan.destroy',$saksi) }}" onsubmit="return confirm('Hapus pernyataan saksi ini?')">@csrf @method('DELETE')<button class="button button-danger button-sm">Hapus</button></form>@endif</article>
+                    @empty<div class="empty-state">Belum ada saksi yang dicatat.</div>@endforelse
+                </div>
+                @if($bolehKelolaFakta)
+                    <form class="fact-form" method="POST" action="{{ route('saksi-laporan-pembinaan.store',$laporanPembinaanSiswa) }}" data-witness-form>@csrf<div class="form-grid"><div class="field"><label for="jenis_saksi">Jenis saksi</label><select id="jenis_saksi" name="jenis_saksi" class="select" data-witness-type><option value="siswa">Siswa</option><option value="pegawai">Pegawai</option><option value="lainnya">Lainnya</option></select></div><div class="field" data-witness-student><label for="saksi_siswa_id">Pilih siswa</label><select id="saksi_siswa_id" name="siswa_id" class="select"><option value="">Pilih siswa</option>@foreach($daftarSiswaSaksi as $siswaSaksi)<option value="{{ $siswaSaksi->id }}">{{ $siswaSaksi->nama_lengkap }}{{ $siswaSaksi->nisn?' - '.$siswaSaksi->nisn:'' }}</option>@endforeach</select></div><div class="field" data-witness-employee hidden><label for="saksi_pegawai_id">Pilih pegawai</label><select id="saksi_pegawai_id" name="pegawai_id" class="select"><option value="">Pilih pegawai</option>@foreach($daftarPegawaiSaksi as $pegawaiSaksi)<option value="{{ $pegawaiSaksi->id }}">{{ $pegawaiSaksi->nama_lengkap }}{{ $pegawaiSaksi->nip?' - '.$pegawaiSaksi->nip:'' }}</option>@endforeach</select></div><div class="field" data-witness-other hidden><label for="nama_saksi">Nama saksi</label><input id="nama_saksi" name="nama_saksi" class="input"></div><div class="field span-2"><label for="pernyataan_saksi">Pernyataan faktual</label><textarea id="pernyataan_saksi" name="pernyataan" class="textarea" required placeholder="Tuliskan hal yang dilihat atau didengar langsung oleh saksi."></textarea></div></div><button class="button button-primary" style="margin-top:12px">Simpan saksi</button></form>
+                @endif
+            </section>
+
+            <section class="panel panel-pad">
+                <div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Klarifikasi Siswa</h2><p class="help-text">Keterangan siswa tidak mengganti kronologi pelapor dan menjadi bagian pemeriksaan fakta.</p></div></div>
+                <div class="fact-list">
+                    @forelse($laporanPembinaanSiswa->klarifikasiSiswaPembinaan as $klarifikasi)
+                        <article class="fact-item"><div><p class="person-name">{{ $klarifikasi->labelMetode() }}</p><p class="person-meta">{{ $klarifikasi->disampaikan_pada?->format('d/m/Y H:i') }} &middot; dicatat oleh {{ $klarifikasi->dicatatOlehPengguna?->nama ?? '-' }}</p>@if($klarifikasi->pendamping)<p class="person-meta">Pendamping: {{ $klarifikasi->pendamping }}</p>@endif<p style="white-space:pre-line;margin:8px 0 0">{{ $klarifikasi->isi_klarifikasi }}</p></div></article>
+                    @empty<div class="empty-state">Belum ada klarifikasi siswa.</div>@endforelse
+                </div>
+                @if($bolehMencatatKlarifikasi)
+                    <form class="fact-form" method="POST" action="{{ route('klarifikasi-siswa-pembinaan.store',$laporanPembinaanSiswa) }}">@csrf<div class="form-grid"><div class="field"><label for="metode_klarifikasi">Metode</label><select id="metode_klarifikasi" name="metode" class="select">@foreach(\App\Models\KlarifikasiSiswaPembinaan::DAFTAR_METODE as $kode=>$label)<option value="{{ $kode }}">{{ $label }}</option>@endforeach</select></div><div class="field"><label for="waktu_klarifikasi">Disampaikan pada</label><input id="waktu_klarifikasi" name="disampaikan_pada" type="datetime-local" class="input" value="{{ now()->format('Y-m-d\TH:i') }}" required></div><div class="field span-2"><label for="pendamping_klarifikasi">Pendamping (opsional)</label><input id="pendamping_klarifikasi" name="pendamping" class="input" placeholder="Nama orang tua, guru, atau pendamping"></div><div class="field span-2"><label for="isi_klarifikasi">Isi klarifikasi</label><textarea id="isi_klarifikasi" name="isi_klarifikasi" class="textarea" required></textarea></div></div><button class="button button-primary" style="margin-top:12px">Catat klarifikasi</button></form>
+                @endif
+            </section>
+
+            <section class="panel panel-pad"><h2 class="panel-title">Linimasa Proses</h2><p class="help-text">Jejak perubahan utama disimpan berurutan dan tidak dapat diedit dari halaman ini.</p><div class="timeline-list">@forelse($laporanPembinaanSiswa->riwayatProsesPembinaanSiswa as $riwayat)<article class="timeline-item"><p class="person-name">{{ $riwayat->judul }}</p><p class="person-meta">{{ $riwayat->terjadi_pada?->format('d/m/Y H:i') }} &middot; {{ $riwayat->pengguna?->nama ?? 'Sistem' }}</p>@if($riwayat->status_sebelum!==$riwayat->status_sesudah && $riwayat->status_sesudah)<p class="timeline-status">{{ $riwayat->status_sebelum?str($riwayat->status_sebelum)->headline():'Awal' }} &rarr; {{ str($riwayat->status_sesudah)->headline() }}</p>@endif @if($riwayat->keterangan)<p style="margin:5px 0 0">{{ $riwayat->keterangan }}</p>@endif</article>@empty<div class="empty-state">Belum ada riwayat proses.</div>@endforelse</div></section>
 
             <section class="panel panel-pad"><h2 class="panel-title">Kronologi</h2><p style="white-space:pre-line;margin-bottom:0">{{ $laporanPembinaanSiswa->kronologi }}</p></section>
             <section class="panel panel-pad"><h2 class="panel-title">Tindakan Awal</h2><p style="white-space:pre-line;margin-bottom:0">{{ $teks($laporanPembinaanSiswa->tindakan_awal) }}</p></section>
@@ -87,4 +146,7 @@
             <section class="panel panel-pad"><div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Riwayat Tindak Lanjut</h2><p class="help-text">Konseling, pemanggilan, mediasi, dan keputusan akhir.</p></div>@izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah</a>@endif @endizin</div><div class="follow-up-list">@forelse($laporanPembinaanSiswa->tindakLanjutPembinaanSiswa as $tindak)<article class="follow-up-item"><div class="mobile-card-head"><div><p class="person-name">{{ $tindak->labelJenis() }}</p><p class="person-meta">{{ $tindak->tanggal_tindak_lanjut?->format('d/m/Y') }} · {{ $tindak->petugasPegawai?->nama_lengkap ?: '-' }}</p></div><span class="badge badge-muted">{{ $tindak->labelStatusLaporan() }}</span></div><div class="follow-up-body"><div><p class="person-meta">Ringkasan</p><p style="white-space:pre-line">{{ $tindak->ringkasan }}</p></div><div><p class="person-meta">Hasil</p><p style="white-space:pre-line">{{ $teks($tindak->hasil) }}</p></div></div>@izin('bk.kelola')<div class="actions"><a href="{{ route('tindak-lanjut-pembinaan-siswa.edit',$tindak) }}" class="button button-muted button-sm">Edit</a></div>@endizin</article>@empty<div class="empty-state">Belum ada tindak lanjut.</div>@endforelse</div></section>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded',()=>{const type=document.querySelector('[data-witness-type]');if(!type)return;const student=document.querySelector('[data-witness-student]');const employee=document.querySelector('[data-witness-employee]');const other=document.querySelector('[data-witness-other]');const update=()=>{student.hidden=type.value!=='siswa';employee.hidden=type.value!=='pegawai';other.hidden=type.value!=='lainnya';student.querySelector('select').required=type.value==='siswa';employee.querySelector('select').required=type.value==='pegawai';other.querySelector('input').required=type.value==='lainnya'};type.addEventListener('change',update);update()});
+    </script>
 @endsection

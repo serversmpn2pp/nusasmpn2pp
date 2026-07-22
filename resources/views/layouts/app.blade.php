@@ -1874,12 +1874,16 @@
                     'id' => 'kesiswaan-bk',
                     'title' => 'Kesiswaan & BK',
                     'items' => [
+                        ['label' => 'Pusat Verifikasi', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'PV', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.menyetujui', 'poin_siswa.putus_konflik'], 'subgroup' => 'Operasional'],
                         ['label' => 'Pembinaan & Poin Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PP', 'izin' => ['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.menyetujui'], 'subgroup' => 'Operasional'],
-                        ['label' => 'Rekap Poin Siswa', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*', 'sanksi-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Monitoring'],
+                        ['label' => 'Pelaksanaan Sanksi', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Rekap Poin Siswa', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Monitoring'],
                         ['label' => 'Reward & Pengurangan Poin', 'route' => 'pengurangan-poin-siswa.index', 'active' => ['pengurangan-poin-siswa.*'], 'initial' => 'RW', 'izin' => ['poin_siswa.reward_kelola', 'poin_siswa.putus_konflik'], 'subgroup' => 'Monitoring'],
                         ['label' => 'Penugasan Guru Wali', 'route' => 'penugasan-guru-wali.index', 'active' => ['penugasan-guru-wali.*'], 'initial' => 'GW', 'izin' => 'guru_wali.kelola', 'subgroup' => 'Guru Wali'],
                         ['label' => 'Jenis Pelanggaran & Poin', 'route' => 'jenis-pelanggaran-siswa.index', 'active' => ['jenis-pelanggaran-siswa.*'], 'initial' => 'JP', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
                         ['label' => 'Aturan Sanksi Poin', 'route' => 'aturan-sanksi-poin.index', 'active' => ['aturan-sanksi-poin.*'], 'initial' => 'AS', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
+                        ['label' => 'Poin Keterlambatan', 'route' => 'pengaturan-poin-keterlambatan.index', 'active' => ['pengaturan-poin-keterlambatan.*'], 'initial' => 'PK', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
+                        ['label' => 'Batas Proses Pelanggaran', 'route' => 'pengaturan-batas-proses-pelanggaran.index', 'active' => ['pengaturan-batas-proses-pelanggaran.*'], 'initial' => 'BP', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
                         ['label' => 'Kategori Pembinaan Non-Poin', 'route' => 'kategori-pembinaan-siswa.index', 'active' => ['kategori-pembinaan-siswa.*'], 'initial' => 'KP', 'izin' => 'bk.kelola', 'subgroup' => 'Pengaturan'],
                     ],
                 ],
@@ -1917,6 +1921,15 @@
                     'title' => 'Utama',
                     'items' => [
                         ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                    ],
+                ],
+                [
+                    'id' => 'verifikasi-poin',
+                    'title' => 'Tugas Pembinaan',
+                    'items' => [
+                        ['label' => 'Pusat Verifikasi Poin', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'PV', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.menyetujui', 'poin_siswa.putus_konflik']],
+                        ['label' => 'Pelaksanaan Sanksi', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola']],
+                        ['label' => 'Batas Proses Pelanggaran', 'route' => 'pengaturan-batas-proses-pelanggaran.index', 'active' => ['pengaturan-batas-proses-pelanggaran.*'], 'initial' => 'BP', 'izin' => 'poin_siswa.pengaturan'],
                     ],
                 ],
                 [

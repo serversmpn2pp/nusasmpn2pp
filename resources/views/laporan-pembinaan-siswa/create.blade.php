@@ -12,7 +12,7 @@
         <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Kembali</a>
     </div>
 
-    <form action="{{ route('laporan-pembinaan-siswa.store') }}" method="POST">
+    <form action="{{ route('laporan-pembinaan-siswa.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         @include('laporan-pembinaan-siswa.partials.form', ['tombol' => 'Simpan laporan'])
     </form>

@@ -84,6 +84,26 @@ class NotifikasiPenggunaService
             ->get();
     }
 
+    public function penggunaDenganIzin(string|array $kodeIzin, ?int $kecualiPenggunaId = null): EloquentCollection
+    {
+        $kodeIzin = (array) $kodeIzin;
+
+        return Pengguna::query()
+            ->where('aktif', true)
+            ->when($kecualiPenggunaId, fn ($query) => $query->where('id', '<>', $kecualiPenggunaId))
+            ->where(function ($query) use ($kodeIzin) {
+                $query->where('akun_sistem', true)
+                    ->orWhere('peran', 'administrator')
+                    ->orWhereHas('daftarPeran', fn ($query) => $query
+                        ->where('peran.aktif', true)
+                        ->whereHas('izin', fn ($query) => $query
+                            ->whereIn('izin.kode', $kodeIzin)
+                            ->where('izin.aktif', true)));
+            })
+            ->distinct()
+            ->get();
+    }
+
     public function penggunaUntukPegawai(int $pegawaiId): EloquentCollection
     {
         return Pengguna::query()
@@ -100,9 +120,9 @@ class NotifikasiPenggunaService
 
         $bagian = parse_url($tautan);
         $path = $bagian['path'] ?? '/';
-        $query = isset($bagian['query']) ? '?' . $bagian['query'] : '';
-        $fragment = isset($bagian['fragment']) ? '#' . $bagian['fragment'] : '';
+        $query = isset($bagian['query']) ? '?'.$bagian['query'] : '';
+        $fragment = isset($bagian['fragment']) ? '#'.$bagian['fragment'] : '';
 
-        return str_starts_with($path, '/') ? $path . $query . $fragment : '/' . $path . $query . $fragment;
+        return str_starts_with($path, '/') ? $path.$query.$fragment : '/'.$path.$query.$fragment;
     }
 }

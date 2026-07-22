@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Kelas;
-use App\Models\SanksiPoinSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use Illuminate\Http\Request;
@@ -35,9 +34,9 @@ class RekapPoinSiswaController extends Controller
                 ->where('kelas_id', $kelasId)
                 ->where('status_keanggotaan', 'aktif')))
             ->when($kataKunci !== '', fn ($query) => $query->where(function ($query) use ($kataKunci) {
-                $query->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
-                    ->orWhere('nisn', 'ilike', '%' . $kataKunci . '%')
-                    ->orWhere('nis', 'ilike', '%' . $kataKunci . '%');
+                $query->where('nama_lengkap', 'ilike', '%'.$kataKunci.'%')
+                    ->orWhere('nisn', 'ilike', '%'.$kataKunci.'%')
+                    ->orWhere('nis', 'ilike', '%'.$kataKunci.'%');
             }));
 
         if (! $this->aksesLuas($request)) {
@@ -54,37 +53,12 @@ class RekapPoinSiswaController extends Controller
         }
 
         $daftarSiswa = $query->orderBy('nama_lengkap')->paginate(15)->withQueryString();
-        $sanksiMenunggu = SanksiPoinSiswa::query()
-            ->with(['siswa:id,nama_lengkap,nisn', 'aturanSanksiPoin:id,batas_poin,nama'])
-            ->when($tahunPelajaranId, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranId))
-            ->when(! $this->aksesLuas($request), function ($query) use ($pengguna) {
-                $kelasWaliIds = $pengguna?->kelasWaliIds() ?? [];
-                $siswaWaliIds = $pengguna?->siswaWaliIds() ?? [];
-
-                if ($kelasWaliIds === [] && $siswaWaliIds === []) {
-                    $query->whereRaw('1 = 0');
-
-                    return;
-                }
-
-                $query->whereHas('siswa', function ($query) use ($kelasWaliIds, $siswaWaliIds) {
-                    $query->where(function ($query) use ($kelasWaliIds, $siswaWaliIds) {
-                        $query->when($kelasWaliIds !== [], fn ($query) => $query->whereHas('anggotaKelas', fn ($query) => $query->whereIn('kelas_id', $kelasWaliIds)))
-                            ->when($siswaWaliIds !== [], fn ($query) => $query->orWhereIn('id', $siswaWaliIds));
-                    });
-                });
-            })
-            ->whereIn('status', ['menunggu', 'diproses'])
-            ->latest('terpicu_pada')
-            ->limit(20)
-            ->get();
-
         $daftarTahunPelajaran = TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get();
         $daftarKelas = Kelas::when($tahunPelajaranId, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranId))
             ->orderBy('tingkat')->orderBy('nama')->get();
 
         return view('rekap-poin-siswa.index', compact(
-            'daftarSiswa', 'sanksiMenunggu', 'daftarTahunPelajaran', 'daftarKelas',
+            'daftarSiswa', 'daftarTahunPelajaran', 'daftarKelas',
             'tahunPelajaranId', 'kelasId', 'kataKunci',
         ));
     }

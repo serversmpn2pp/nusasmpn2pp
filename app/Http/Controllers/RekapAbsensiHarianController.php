@@ -5,16 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
+use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
 use App\Models\TahunPelajaran;
+use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class RekapAbsensiHarianController extends Controller
 {
+    public function __construct(private ProsesPoinKeterlambatanService $prosesPoinKeterlambatan) {}
+
     public function index(Request $request)
     {
         $pengguna = $request->user();
@@ -110,7 +114,7 @@ class RekapAbsensiHarianController extends Controller
         $this->pastikanBolehAksesAnggotaKelas($request, $anggotaKelas);
         $this->pastikanDataKoreksiValid($data);
 
-        DB::transaction(function () use ($data, $tanggal, $anggotaKelas) {
+        $absensi = DB::transaction(function () use ($data, $tanggal, $anggotaKelas) {
             $pengaturanAbsensi = $this->ambilPengaturanAbsensi($tanggal);
             $statusKehadiran = $data['status_kehadiran'];
             $jamMasuk = $statusKehadiran === 'hadir' ? ($data['jam_masuk'] ?? null) : null;
@@ -125,27 +129,33 @@ class RekapAbsensiHarianController extends Controller
                 [$statusPulang, $menitPulangCepat] = $this->hitungStatusPulang($jamPulang, $pengaturanAbsensi);
             }
 
-            AbsensiSiswa::updateOrCreate(
-                [
+            $absensi = AbsensiSiswa::query()
+                ->whereDate('tanggal', $tanggal)
+                ->where('siswa_id', $anggotaKelas->siswa_id)
+                ->first() ?? new AbsensiSiswa([
                     'tanggal' => $tanggal,
                     'siswa_id' => $anggotaKelas->siswa_id,
-                ],
-                [
-                    'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
-                    'kelas_id' => $anggotaKelas->kelas_id,
-                    'anggota_kelas_id' => $anggotaKelas->id,
-                    'jam_masuk' => $jamMasuk,
-                    'status_masuk' => $statusMasuk,
-                    'menit_terlambat' => $menitTerlambat,
-                    'jam_pulang' => $jamPulang,
-                    'status_pulang' => $statusPulang,
-                    'menit_pulang_cepat' => $menitPulangCepat,
-                    'status_kehadiran' => $statusKehadiran,
-                    'sumber' => 'manual',
-                    'catatan' => $data['catatan'] ?? null,
-                ],
-            );
+                ]);
+
+            $absensi->fill([
+                'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
+                'kelas_id' => $anggotaKelas->kelas_id,
+                'anggota_kelas_id' => $anggotaKelas->id,
+                'jam_masuk' => $jamMasuk,
+                'status_masuk' => $statusMasuk,
+                'menit_terlambat' => $menitTerlambat,
+                'jam_pulang' => $jamPulang,
+                'status_pulang' => $statusPulang,
+                'menit_pulang_cepat' => $menitPulangCepat,
+                'status_kehadiran' => $statusKehadiran,
+                'sumber' => 'manual',
+                'catatan' => $data['catatan'] ?? null,
+            ])->save();
+
+            return $absensi;
         });
+
+        $this->prosesPoinKeterlambatan->sinkronkanAbsensi($absensi, $request->user()?->id);
 
         return redirect()
             ->route('rekap-absensi-harian.index', [
@@ -154,6 +164,37 @@ class RekapAbsensiHarianController extends Controller
                 'kelas_id' => $anggotaKelas->kelas_id,
             ])
             ->with('berhasil', 'Koreksi absensi berhasil disimpan.');
+    }
+
+    public function prosesPoinKeterlambatan(Request $request)
+    {
+        $data = $request->validate([
+            'tanggal' => ['required', 'date'],
+            'tahun_pelajaran_id' => ['required', 'integer', 'exists:tahun_pelajaran,id'],
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+        ]);
+
+        $hasil = $this->prosesPoinKeterlambatan->prosesTanggal(
+            $data['tanggal'],
+            (int) $data['tahun_pelajaran_id'],
+            filled($data['kelas_id'] ?? null) ? (int) $data['kelas_id'] : null,
+            $request->user()?->id,
+            true,
+        );
+
+        $pesan = sprintf(
+            'Sinkronisasi selesai: %d laporan baru, %d diperbarui, %d dibatalkan, dan %d tanpa perubahan.',
+            $hasil['dibuat'],
+            $hasil['diperbarui'],
+            $hasil['dibatalkan'],
+            $hasil['diabaikan'],
+        );
+
+        return redirect()->route('rekap-absensi-harian.index', [
+            'tanggal' => $data['tanggal'],
+            'tahun_pelajaran_id' => $data['tahun_pelajaran_id'],
+            'kelas_id' => $data['kelas_id'] ?? null,
+        ])->with('berhasil', $pesan);
     }
 
     private function ambilTahunPelajaranId(?int $tahunPelajaranId, $daftarTahunPelajaran): ?int
@@ -210,14 +251,22 @@ class RekapAbsensiHarianController extends Controller
 
         $absensiPerAnggota = $absensi->whereNotNull('anggota_kelas_id')->keyBy('anggota_kelas_id');
         $absensiPerSiswa = $absensi->keyBy('siswa_id');
+        $laporanPerAbsensi = LaporanPembinaanSiswa::query()
+            ->where('sumber_laporan', 'absensi_otomatis')
+            ->whereIn('absensi_siswa_id', $absensi->pluck('id'))
+            ->latest('id')
+            ->get()
+            ->groupBy('absensi_siswa_id')
+            ->map(fn ($items) => $items->first(fn ($item) => $item->status_verifikasi !== 'dibatalkan') ?? $items->first());
 
-        return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($absensiPerAnggota, $absensiPerSiswa) {
+        return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($absensiPerAnggota, $absensiPerSiswa, $laporanPerAbsensi) {
             $absen = $absensiPerAnggota->get($anggota->id) ?? $absensiPerSiswa->get($anggota->siswa_id);
             $statusKehadiran = $absen?->status_kehadiran ?? 'alfa';
 
             return [
                 'anggota_kelas' => $anggota,
                 'absensi' => $absen,
+                'laporan_keterlambatan' => $absen ? $laporanPerAbsensi->get($absen->id) : null,
                 'status_kehadiran' => $statusKehadiran,
                 'status_sumber' => $absen ? 'catatan' : 'inferensi',
                 'terlambat' => (int) ($absen?->menit_terlambat ?? 0),
@@ -335,7 +384,7 @@ class RekapAbsensiHarianController extends Controller
     private function labelCakupan(?int $kelasId, $daftarKelas, bool $cakupanWaliKelas): string
     {
         if ($kelasId) {
-            return 'Kelas ' . ($daftarKelas->firstWhere('id', $kelasId)?->nama ?? '-');
+            return 'Kelas '.($daftarKelas->firstWhere('id', $kelasId)?->nama ?? '-');
         }
 
         return $cakupanWaliKelas ? 'Semua kelas wali' : 'Semua kelas';
@@ -354,19 +403,19 @@ class RekapAbsensiHarianController extends Controller
         $baris = [
             '*REKAP KEHADIRAN SISWA*',
             'SMP Negeri 2 Padang Panjang',
-            'Tanggal: ' . $tanggalLabel,
-            'Cakupan: ' . $labelCakupan,
+            'Tanggal: '.$tanggalLabel,
+            'Cakupan: '.$labelCakupan,
             '',
-            'Total siswa: ' . $ringkasan['total'],
-            'Hadir tepat waktu: ' . $hadirTepatWaktu->count(),
-            'Terlambat: ' . $terlambat->count(),
-            'Sakit: ' . $sakit->count(),
-            'Izin: ' . $izin->count(),
-            'Alfa: ' . $alfa->count(),
-            'Belum scan: ' . $belumScan->count(),
+            'Total siswa: '.$ringkasan['total'],
+            'Hadir tepat waktu: '.$hadirTepatWaktu->count(),
+            'Terlambat: '.$terlambat->count(),
+            'Sakit: '.$sakit->count(),
+            'Izin: '.$izin->count(),
+            'Alfa: '.$alfa->count(),
+            'Belum scan: '.$belumScan->count(),
         ];
 
-        $this->tambahkanBagianWhatsapp($baris, 'Terlambat', $terlambat, fn (array $item) => $this->barisSiswaWhatsapp($item, $this->formatJamRangkuman($item['absensi']?->jam_masuk) . ' - terlambat ' . $item['terlambat'] . ' menit'));
+        $this->tambahkanBagianWhatsapp($baris, 'Terlambat', $terlambat, fn (array $item) => $this->barisSiswaWhatsapp($item, $this->formatJamRangkuman($item['absensi']?->jam_masuk).' - terlambat '.$item['terlambat'].' menit'));
         $this->tambahkanBagianWhatsapp($baris, 'Sakit', $sakit, fn (array $item) => $this->barisSiswaWhatsapp($item, $item['absensi']?->catatan ?: 'Sakit'));
         $this->tambahkanBagianWhatsapp($baris, 'Izin', $izin, fn (array $item) => $this->barisSiswaWhatsapp($item, $item['absensi']?->catatan ?: 'Izin'));
         $this->tambahkanBagianWhatsapp($baris, 'Alfa', $alfa, fn (array $item) => $this->barisSiswaWhatsapp($item, $item['absensi']?->catatan ?: 'Alfa'));
@@ -386,10 +435,10 @@ class RekapAbsensiHarianController extends Controller
         }
 
         $baris[] = '';
-        $baris[] = '*' . $judul . '*';
+        $baris[] = '*'.$judul.'*';
 
         foreach ($items->values() as $index => $item) {
-            $baris[] = ($index + 1) . '. ' . $pembuatBaris($item);
+            $baris[] = ($index + 1).'. '.$pembuatBaris($item);
         }
     }
 
@@ -397,9 +446,9 @@ class RekapAbsensiHarianController extends Controller
     {
         $anggota = $item['anggota_kelas'];
         $nama = $anggota->siswa?->nama_lengkap ?: '-';
-        $kelas = $anggota->kelas?->nama ? ' (' . $anggota->kelas->nama . ')' : '';
+        $kelas = $anggota->kelas?->nama ? ' ('.$anggota->kelas->nama.')' : '';
 
-        return $nama . $kelas . ' - ' . $keterangan;
+        return $nama.$kelas.' - '.$keterangan;
     }
 
     private function formatJamRangkuman(?string $jam): string

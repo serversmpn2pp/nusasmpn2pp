@@ -19,6 +19,9 @@ class AbsensiSiswa extends Model
         'jam_masuk',
         'status_masuk',
         'menit_terlambat',
+        'status_poin_keterlambatan',
+        'poin_keterlambatan_terhitung',
+        'poin_keterlambatan_diproses_pada',
         'jam_pulang',
         'status_pulang',
         'menit_pulang_cepat',
@@ -30,6 +33,8 @@ class AbsensiSiswa extends Model
     protected $casts = [
         'tanggal' => 'date',
         'menit_terlambat' => 'integer',
+        'poin_keterlambatan_terhitung' => 'integer',
+        'poin_keterlambatan_diproses_pada' => 'datetime',
         'menit_pulang_cepat' => 'integer',
     ];
 
@@ -61,5 +66,10 @@ class AbsensiSiswa extends Model
     public function notifikasiAbsensiSiswa(): HasMany
     {
         return $this->hasMany(NotifikasiAbsensiSiswa::class);
+    }
+
+    public function laporanKeterlambatan(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class);
     }
 }

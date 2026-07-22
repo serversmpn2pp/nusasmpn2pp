@@ -7,11 +7,19 @@ use App\Models\LaporanPembinaanSiswa;
 use App\Models\PenguranganPoinSiswa;
 use App\Models\SanksiPoinSiswa;
 use App\Models\TransaksiPoinSiswa;
+use App\Services\Notifikasi\NotifikasiPenggunaService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ProsesPoinSiswaService
 {
+    public function __construct(
+        private CatatRiwayatPembinaanService $riwayatPembinaan,
+        private PengaturanBatasProsesPelanggaranService $pengaturanBatasProses,
+        private CatatRiwayatSanksiPoinService $riwayatSanksi,
+        private NotifikasiPenggunaService $notifikasi,
+    ) {}
+
     public function totalPoin(int $siswaId, int $tahunPelajaranId): int
     {
         return max(0, (int) TransaksiPoinSiswa::query()
@@ -55,6 +63,10 @@ class ProsesPoinSiswaService
         };
 
         $laporan->update(['status_verifikasi' => $status]);
+        [$tahapBaru] = $this->pengaturanBatasProses->tahapDanJumlahHari($status, $laporan->tahun_pelajaran_id);
+        if ($tahapBaru && $laporan->tahap_batas_proses !== $tahapBaru) {
+            $this->pengaturanBatasProses->tetapkanBatas($laporan, $status);
+        }
 
         return false;
     }
@@ -77,7 +89,7 @@ class ProsesPoinSiswaService
                 ]);
             }
 
-            $kunci = 'pelanggaran:' . $laporan->id;
+            $kunci = 'pelanggaran:'.$laporan->id;
             if (TransaksiPoinSiswa::where('kunci_sumber', $kunci)->exists()) {
                 $laporan->update([
                     'status_verifikasi' => 'disahkan',
@@ -88,6 +100,7 @@ class ProsesPoinSiswaService
             }
 
             $poinSebelum = $this->totalPoin($laporan->siswa_id, $laporan->tahun_pelajaran_id);
+            $statusSebelum = $laporan->status_verifikasi;
 
             TransaksiPoinSiswa::create([
                 'siswa_id' => $laporan->siswa_id,
@@ -96,7 +109,7 @@ class ProsesPoinSiswaService
                 'kunci_sumber' => $kunci,
                 'jenis' => 'pelanggaran',
                 'poin' => $totalButir,
-                'keterangan' => 'Poin dari laporan ' . $laporan->nomor_laporan,
+                'keterangan' => 'Poin dari laporan '.$laporan->nomor_laporan,
                 'tercatat_pada' => now(),
                 'dibuat_oleh_pengguna_id' => auth()->id(),
             ]);
@@ -109,27 +122,39 @@ class ProsesPoinSiswaService
                 'poin_ditetapkan_pada' => now(),
             ]);
 
+            $this->riwayatPembinaan->catat(
+                $laporan,
+                'poin_disahkan',
+                'Poin pelanggaran disahkan',
+                $totalButir.' poin resmi ditetapkan setelah dua persetujuan.',
+                $statusSebelum,
+                'disahkan',
+                auth()->id(),
+                ['total_poin' => $totalButir],
+            );
+
             $this->buatSanksiYangTerpicu($laporan->siswa_id, $laporan->tahun_pelajaran_id, $poinSebelum, $poinSesudah);
         });
     }
 
-    public function batalkanPoinLaporan(LaporanPembinaanSiswa $laporan): void
+    public function batalkanPoinLaporan(LaporanPembinaanSiswa $laporan, ?int $penggunaId = null, ?string $alasan = null): void
     {
-        DB::transaction(function () use ($laporan) {
+        DB::transaction(function () use ($laporan, $penggunaId, $alasan) {
             $laporan = LaporanPembinaanSiswa::query()->lockForUpdate()->findOrFail($laporan->id);
-            $transaksiAwal = TransaksiPoinSiswa::where('kunci_sumber', 'pelanggaran:' . $laporan->id)->first();
+            $statusSebelum = $laporan->status_verifikasi;
+            $transaksiAwal = TransaksiPoinSiswa::where('kunci_sumber', 'pelanggaran:'.$laporan->id)->first();
 
-            if ($transaksiAwal && ! TransaksiPoinSiswa::where('kunci_sumber', 'pembatalan:' . $laporan->id)->exists()) {
+            if ($transaksiAwal && ! TransaksiPoinSiswa::where('kunci_sumber', 'pembatalan:'.$laporan->id)->exists()) {
                 TransaksiPoinSiswa::create([
                     'siswa_id' => $laporan->siswa_id,
                     'tahun_pelajaran_id' => $laporan->tahun_pelajaran_id,
                     'laporan_pembinaan_siswa_id' => $laporan->id,
-                    'kunci_sumber' => 'pembatalan:' . $laporan->id,
+                    'kunci_sumber' => 'pembatalan:'.$laporan->id,
                     'jenis' => 'pembatalan',
                     'poin' => -abs($transaksiAwal->poin),
-                    'keterangan' => 'Pembatalan poin laporan ' . $laporan->nomor_laporan,
+                    'keterangan' => 'Pembatalan poin laporan '.$laporan->nomor_laporan,
                     'tercatat_pada' => now(),
-                    'dibuat_oleh_pengguna_id' => auth()->id(),
+                    'dibuat_oleh_pengguna_id' => $penggunaId ?? auth()->id(),
                 ]);
             }
 
@@ -137,6 +162,15 @@ class ProsesPoinSiswaService
                 'status' => 'dibatalkan',
                 'status_verifikasi' => 'dibatalkan',
             ]);
+            $this->riwayatPembinaan->catat(
+                $laporan,
+                'laporan_dibatalkan',
+                'Laporan dibatalkan',
+                $alasan ?: ($transaksiAwal ? 'Laporan dibatalkan dan transaksi poin dikoreksi.' : 'Laporan dibatalkan sebelum poin ditetapkan.'),
+                $statusSebelum,
+                'dibatalkan',
+                $penggunaId ?? auth()->id(),
+            );
         });
     }
 
@@ -157,14 +191,14 @@ class ProsesPoinSiswaService
 
             if ($diterapkan > 0) {
                 TransaksiPoinSiswa::firstOrCreate(
-                    ['kunci_sumber' => 'reward:' . $pengurangan->id],
+                    ['kunci_sumber' => 'reward:'.$pengurangan->id],
                     [
                         'siswa_id' => $pengurangan->siswa_id,
                         'tahun_pelajaran_id' => $pengurangan->tahun_pelajaran_id,
                         'pengurangan_poin_siswa_id' => $pengurangan->id,
                         'jenis' => 'pengurangan',
                         'poin' => -$diterapkan,
-                        'keterangan' => 'Pengurangan poin: ' . $pengurangan->jenis_kegiatan,
+                        'keterangan' => 'Pengurangan poin: '.$pengurangan->jenis_kegiatan,
                         'tercatat_pada' => now(),
                         'dibuat_oleh_pengguna_id' => auth()->id(),
                     ],
@@ -183,7 +217,7 @@ class ProsesPoinSiswaService
             ->where('batas_poin', '<=', $sesudah)
             ->orderBy('batas_poin')
             ->each(function (AturanSanksiPoin $aturan) use ($siswaId, $tahunPelajaranId, $sesudah) {
-                SanksiPoinSiswa::firstOrCreate(
+                $sanksi = SanksiPoinSiswa::firstOrCreate(
                     [
                         'siswa_id' => $siswaId,
                         'tahun_pelajaran_id' => $tahunPelajaranId,
@@ -195,6 +229,29 @@ class ProsesPoinSiswaService
                         'terpicu_pada' => now(),
                     ],
                 );
+
+                if ($sanksi->wasRecentlyCreated) {
+                    $this->riwayatSanksi->catat(
+                        $sanksi,
+                        'sanksi_terpicu',
+                        'Sanksi terbentuk dari akumulasi poin',
+                        null,
+                        'menunggu',
+                        $aturan->nama.' terpicu saat saldo mencapai '.$sesudah.' poin.',
+                        auth()->id(),
+                        ['poin_saat_terpicu' => $sesudah, 'batas_poin' => $aturan->batas_poin],
+                    );
+
+                    $sanksi->loadMissing(['siswa:id,nama_lengkap', 'aturanSanksiPoin:id,nama']);
+                    $this->notifikasi->kirimKeBanyak(
+                        $this->notifikasi->penggunaDenganIzin('poin_siswa.sanksi_kelola', auth()->id()),
+                        'peringatan',
+                        'Sanksi siswa perlu ditindaklanjuti',
+                        sprintf('%s untuk %s terpicu pada saldo %d poin.', $aturan->nama, $sanksi->siswa?->nama_lengkap ?? 'siswa', $sesudah),
+                        route('sanksi-poin-siswa.show', $sanksi, false),
+                        "sanksi-terpicu:{$sanksi->id}",
+                    );
+                }
             });
     }
 }

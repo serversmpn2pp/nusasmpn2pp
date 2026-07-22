@@ -25,7 +25,12 @@
     .violation-points { background:#fff7cc; border-radius:6px; color:#6f5900; font-size:13px; font-weight:800; padding:5px 8px; white-space:nowrap; }
     .student-picker-help { align-items:center; display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; }
     .student-picker-count { color:var(--primary-dark); font-weight:800; }
+    .section-stack { min-width:0; }
+    .initial-witness-list { display:grid; gap:12px; margin-top:14px; min-width:0; }
+    .initial-witness-row { background:#f7f9fc; border:1px solid var(--line); border-radius:8px; display:grid; gap:12px; grid-template-columns:120px minmax(0,.8fr) minmax(0,1.4fr) auto; min-width:0; padding:12px; }
+    .initial-witness-remove { align-self:end; }
     @media(max-width:760px){.violation-toolbar{grid-template-columns:1fr}.violation-choice{grid-template-columns:20px 1fr}.violation-points{grid-column:2}}
+    @media(max-width:900px){.initial-witness-row{grid-template-columns:1fr}.initial-witness-remove{justify-self:start}}
 </style>
 
 @if ($errors->any())
@@ -93,6 +98,45 @@
 
         <section class="panel panel-pad"><h2 class="panel-title">Kronologi dan tindakan</h2><div class="form-grid"><div class="field span-2"><label for="kronologi">Kronologi faktual</label><textarea id="kronologi" name="kronologi" class="textarea" required placeholder="Tuliskan siapa, apa yang terjadi, dan informasi saksi atau bukti yang tersedia.">{{ $nilai('kronologi') }}</textarea></div><div class="field span-2"><label for="tindakan_awal">Tindakan awal</label><textarea id="tindakan_awal" name="tindakan_awal" class="textarea" placeholder="Tindakan yang sudah dilakukan saat kejadian.">{{ $nilai('tindakan_awal') }}</textarea></div>@izin('bk.kelola')<div class="field span-2"><label for="catatan_rahasia">Catatan rahasia BK</label><textarea id="catatan_rahasia" name="catatan_rahasia" class="textarea">{{ $nilai('catatan_rahasia') }}</textarea></div>@endizin</div></section>
 
+        <section class="panel panel-pad">
+            <div class="page-header" style="margin-bottom:0">
+                <div><h2 class="panel-title">Bukti pendukung</h2><p class="help-text">Opsional. Unggah foto atau PDF, maksimal 5 file dan 10 MB per file.</p></div>
+            </div>
+            <div class="form-grid" style="margin-top:14px">
+                <div class="field"><label for="bukti_laporan">Pilih file</label><input id="bukti_laporan" name="bukti_laporan[]" type="file" class="input" accept=".jpg,.jpeg,.png,.webp,.pdf" multiple></div>
+                <div class="field"><label for="keterangan_bukti">Keterangan bukti</label><input id="keterangan_bukti" name="keterangan_bukti" class="input" value="{{ old('keterangan_bukti') }}" placeholder="Contoh: foto dari kamera koridor"></div>
+            </div>
+        </section>
+
+        @if(! $laporanPembinaanSiswa?->exists)
+            @php $saksiAwal = collect(old('daftar_saksi', [])); @endphp
+            <section class="panel panel-pad">
+                <div class="page-header" style="margin-bottom:0">
+                    <div><h2 class="panel-title">Saksi awal</h2><p class="help-text">Opsional. Identitas rinci saksi masih dapat dilengkapi setelah laporan disimpan.</p></div>
+                    <button type="button" class="button button-muted" data-add-initial-witness>Tambah saksi</button>
+                </div>
+                <div class="initial-witness-list" data-initial-witness-list>
+                    @foreach($saksiAwal as $index => $saksi)
+                        <div class="initial-witness-row" data-initial-witness-row>
+                            <div class="field"><label>Jenis saksi</label><select class="select" name="daftar_saksi[{{ $index }}][jenis_saksi]"><option value="siswa" @selected(($saksi['jenis_saksi'] ?? '') === 'siswa')>Siswa</option><option value="pegawai" @selected(($saksi['jenis_saksi'] ?? '') === 'pegawai')>Pegawai</option><option value="lainnya" @selected(($saksi['jenis_saksi'] ?? 'lainnya') === 'lainnya')>Lainnya</option></select></div>
+                            <div class="field"><label>Nama saksi</label><input class="input" name="daftar_saksi[{{ $index }}][nama_saksi]" value="{{ $saksi['nama_saksi'] ?? '' }}"></div>
+                            <div class="field"><label>Pernyataan singkat</label><textarea class="textarea" name="daftar_saksi[{{ $index }}][pernyataan]">{{ $saksi['pernyataan'] ?? '' }}</textarea></div>
+                            <button type="button" class="button button-muted button-sm initial-witness-remove" data-remove-initial-witness>Hapus</button>
+                        </div>
+                    @endforeach
+                </div>
+                <p class="empty-state" data-initial-witness-empty @if($saksiAwal->isNotEmpty()) hidden @endif>Belum ada saksi awal yang dicatat.</p>
+                <template data-initial-witness-template>
+                    <div class="initial-witness-row" data-initial-witness-row>
+                        <div class="field"><label>Jenis saksi</label><select class="select" data-name="jenis_saksi"><option value="siswa">Siswa</option><option value="pegawai">Pegawai</option><option value="lainnya" selected>Lainnya</option></select></div>
+                        <div class="field"><label>Nama saksi</label><input class="input" data-name="nama_saksi"></div>
+                        <div class="field"><label>Pernyataan singkat</label><textarea class="textarea" data-name="pernyataan"></textarea></div>
+                        <button type="button" class="button button-muted button-sm initial-witness-remove" data-remove-initial-witness>Hapus</button>
+                    </div>
+                </template>
+            </section>
+        @endif
+
         <div class="form-actions"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Batal</a><button type="submit" class="button button-primary">{{ $tombol ?? 'Simpan laporan' }}</button></div>
     </div>
 </div>
@@ -105,5 +149,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     const violationSearch=document.getElementById('cari_pelanggaran');const violationLevel=document.getElementById('filter_tingkat_pelanggaran');const choices=[...document.querySelectorAll('[data-violation-choice]')];const groups=[...document.querySelectorAll('[data-violation-group]')];const filterViolations=()=>{const keyword=(violationSearch.value||'').toLowerCase().trim();const levelValue=violationLevel.value;choices.forEach(choice=>choice.hidden=(keyword&&!choice.dataset.search.includes(keyword))||(levelValue&&choice.dataset.level!==levelValue));groups.forEach(group=>group.hidden=!group.querySelector('[data-violation-choice]:not([hidden])'));};violationSearch.addEventListener('input',filterViolations);violationLevel.addEventListener('change',filterViolations);
     const year=document.getElementById('tahun_pelajaran_id');const classroom=document.getElementById('kelas_id');const studentSearch=document.getElementById('cari_siswa_pembinaan');const student=document.getElementById('siswa_id');const count=document.getElementById('jumlah_siswa_terlihat');const empty=document.getElementById('pesan_siswa_kosong');const classOptions=[...classroom.options].filter(o=>o.value);const studentOptions=[...student.options].filter(o=>o.value);const hasId=(csv,id)=>!id||(csv||'').split(',').filter(Boolean).includes(id);const normalize=v=>(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const updateClass=()=>{classOptions.forEach(o=>{const show=!year.value||o.dataset.tahunId===year.value;o.hidden=!show;o.disabled=!show});if(classroom.selectedOptions[0]?.disabled)classroom.value='';};const updateStudent=()=>{let visible=0;studentOptions.forEach(o=>{const show=hasId(o.dataset.tahunIds,year.value)&&hasId(o.dataset.kelasIds,classroom.value)&&(!studentSearch.value||normalize(o.dataset.pencarian).includes(normalize(studentSearch.value.trim())));o.hidden=!show;o.disabled=!show;if(show)visible++});if(student.selectedOptions[0]?.disabled)student.value='';count.textContent=visible;empty.hidden=visible!==0;};year.addEventListener('change',()=>{updateClass();updateStudent()});classroom.addEventListener('change',updateStudent);studentSearch.addEventListener('input',updateStudent);updateClass();updateStudent();
+    const witnessList=document.querySelector('[data-initial-witness-list]');const witnessTemplate=document.querySelector('[data-initial-witness-template]');const witnessEmpty=document.querySelector('[data-initial-witness-empty]');let witnessIndex=witnessList?.querySelectorAll('[data-initial-witness-row]').length||0;const updateWitnessEmpty=()=>{if(witnessEmpty)witnessEmpty.hidden=(witnessList?.children.length||0)>0};document.querySelector('[data-add-initial-witness]')?.addEventListener('click',()=>{if(!witnessList||!witnessTemplate)return;const fragment=witnessTemplate.content.cloneNode(true);fragment.querySelectorAll('[data-name]').forEach(field=>field.name=`daftar_saksi[${witnessIndex}][${field.dataset.name}]`);witnessIndex++;witnessList.appendChild(fragment);updateWitnessEmpty()});witnessList?.addEventListener('click',event=>{const button=event.target.closest('[data-remove-initial-witness]');if(!button)return;button.closest('[data-initial-witness-row]')?.remove();updateWitnessEmpty()});updateWitnessEmpty();
 });
 </script>
