@@ -70,6 +70,16 @@ class Pengguna extends Authenticatable
         return $this->hasMany(TindakLanjutPembinaanSiswa::class, 'dibuat_oleh_pengguna_id');
     }
 
+    public function notifikasiPengguna(): HasMany
+    {
+        return $this->hasMany(NotifikasiPengguna::class);
+    }
+
+    public function penugasanGuruWaliSiswaDibuat(): HasMany
+    {
+        return $this->hasMany(PenugasanGuruWaliSiswa::class, 'dibuat_oleh_pengguna_id');
+    }
+
     public function mutasiStokBarangDibuat(): HasMany
     {
         return $this->hasMany(MutasiStokBarang::class, 'dibuat_oleh_pengguna_id');
@@ -191,6 +201,29 @@ class Pengguna extends Authenticatable
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
+    }
+
+    public function siswaWaliIds(): array
+    {
+        if (! $this->pegawai_id) {
+            return [];
+        }
+
+        return PenugasanGuruWaliSiswa::query()
+            ->where('guru_wali_pegawai_id', $this->pegawai_id)
+            ->where('aktif', true)
+            ->pluck('siswa_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    public function menjadiGuruWali(): bool
+    {
+        return $this->pegawai_id
+            && PenugasanGuruWaliSiswa::query()
+                ->where('guru_wali_pegawai_id', $this->pegawai_id)
+                ->where('aktif', true)
+                ->exists();
     }
 
     public function dapatMengaksesKelasSebagaiWali(?int $kelasId): bool

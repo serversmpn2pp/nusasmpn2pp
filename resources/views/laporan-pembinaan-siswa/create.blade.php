@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Tambah Laporan Pembinaan - NUSA')
+@section('title', 'Tambah Pembinaan atau Pelanggaran - NUSA')
 
 @section('content')
-    <div class="page-header">
+    <div class="page-header pembinaan-create-header">
         <div>
-            <p class="eyebrow">Pembinaan</p>
-            <h1 class="page-title">Tambah laporan pembinaan</h1>
+            <p class="eyebrow">Kesiswaan & BK</p>
+            <h1 class="page-title pembinaan-page-title">Tambah pembinaan atau pelanggaran</h1>
         </div>
 
         <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Kembali</a>

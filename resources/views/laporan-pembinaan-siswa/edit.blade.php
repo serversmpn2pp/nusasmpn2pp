@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Laporan Pembinaan - NUSA')
+@section('title', 'Edit Pembinaan atau Pelanggaran - NUSA')
 
 @section('content')
-    <div class="page-header">
+    <div class="page-header pembinaan-create-header">
         <div>
-            <p class="eyebrow">Pembinaan</p>
-            <h1 class="page-title">Edit laporan pembinaan</h1>
+            <p class="eyebrow">Kesiswaan & BK</p>
+            <h1 class="page-title pembinaan-page-title">Edit pembinaan atau pelanggaran</h1>
         </div>
 
         <div class="actions">

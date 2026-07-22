@@ -83,6 +83,21 @@ class Pegawai extends Model
         return $this->hasMany(TindakLanjutPembinaanSiswa::class, 'petugas_pegawai_id');
     }
 
+    public function penugasanGuruWaliSiswa(): HasMany
+    {
+        return $this->hasMany(PenugasanGuruWaliSiswa::class, 'guru_wali_pegawai_id');
+    }
+
+    public function laporanPembinaanSebagaiWaliKelas(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class, 'wali_kelas_pegawai_id');
+    }
+
+    public function laporanPembinaanSebagaiGuruWali(): HasMany
+    {
+        return $this->hasMany(LaporanPembinaanSiswa::class, 'guru_wali_pegawai_id');
+    }
+
     public function perangkatAjar(): HasMany
     {
         return $this->hasMany(PerangkatAjar::class);

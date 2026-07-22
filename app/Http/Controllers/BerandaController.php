@@ -15,8 +15,10 @@ use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
+use App\Models\SanksiPoinSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Models\TransaksiPoinSiswa;
 
 class BerandaController extends Controller
 {
@@ -127,6 +129,19 @@ class BerandaController extends Controller
                 ->where('status', 'selesai')
                 ->whereBetween('updated_at', [$awalBulan, $akhirBulan])
                 ->count(),
+            'menunggu_bk' => LaporanPembinaanSiswa::query()
+                ->whereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi'])
+                ->count(),
+            'menunggu_persetujuan' => LaporanPembinaanSiswa::query()
+                ->whereIn('status_verifikasi', ['menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah'])
+                ->count(),
+            'poin_aktif' => (int) TransaksiPoinSiswa::query()
+                ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))
+                ->sum('poin'),
+            'sanksi_menunggu' => SanksiPoinSiswa::query()
+                ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))
+                ->whereIn('status', ['menunggu', 'diproses'])
+                ->count(),
         ];
 
         $logScanTerakhir = LogScanAbsensi::query()
@@ -185,8 +200,11 @@ class BerandaController extends Controller
 
         $laporanPembinaanPerluPerhatian = LaporanPembinaanSiswa::query()
             ->with(['siswa:id,nama_lengkap,nisn', 'kategoriPembinaanSiswa:id,nama'])
-            ->whereIn('status', ['baru', 'perlu_tindak_lanjut'])
-            ->orderByRaw("case when status = 'perlu_tindak_lanjut' then 0 else 1 end")
+            ->where(function ($query) {
+                $query->whereIn('status', ['baru', 'perlu_tindak_lanjut'])
+                    ->orWhereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah']);
+            })
+            ->orderByRaw("case when status_verifikasi = 'perlu_musyawarah' then 0 when status = 'perlu_tindak_lanjut' then 1 else 2 end")
             ->orderByDesc('tanggal_kejadian')
             ->limit(5)
             ->get();
@@ -271,6 +289,9 @@ class BerandaController extends Controller
             ->get(['id', 'tahun_pelajaran_id', 'nama', 'tingkat']);
 
         $kelasWaliIds = $kelasWali->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $siswaGuruWaliIds = $pengguna->siswaWaliIds();
+        $jumlahSiswaGuruWali = count($siswaGuruWaliIds);
+        $memilikiPerwalian = $kelasWaliIds !== [] || $siswaGuruWaliIds !== [];
 
         $absensiSiswaWaliBulan = AbsensiSiswa::query()
             ->whereIn('kelas_id', $kelasWaliIds)
@@ -316,7 +337,16 @@ class BerandaController extends Controller
         ];
 
         $laporanPembinaanWaliBulan = LaporanPembinaanSiswa::query()
-            ->whereIn('kelas_id', $kelasWaliIds)
+            ->where(function ($query) use ($kelasWaliIds, $siswaGuruWaliIds) {
+                if ($kelasWaliIds === [] && $siswaGuruWaliIds === []) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->when($kelasWaliIds !== [], fn ($query) => $query->whereIn('kelas_id', $kelasWaliIds))
+                    ->when($siswaGuruWaliIds !== [], fn ($query) => $query->orWhereIn('siswa_id', $siswaGuruWaliIds));
+            })
             ->whereBetween('tanggal_kejadian', [$awalBulanTanggal, $akhirBulanTanggal])
             ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id));
         $jumlahStatusPembinaanWaliBulan = (clone $laporanPembinaanWaliBulan)
@@ -341,6 +371,26 @@ class BerandaController extends Controller
             'diproses' => (int) ($jumlahStatusPembinaanWaliBulan['diproses'] ?? 0),
             'perlu_tindak_lanjut' => (int) ($jumlahStatusPembinaanWaliBulan['perlu_tindak_lanjut'] ?? 0),
             'selesai' => (int) ($jumlahStatusPembinaanWaliBulan['selesai'] ?? 0),
+            'menunggu_persetujuan' => (clone $laporanPembinaanWaliBulan)
+                ->whereIn('status_verifikasi', ['menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah'])
+                ->count(),
+            'poin_aktif' => (int) TransaksiPoinSiswa::query()
+                ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))
+                ->where(function ($query) use ($kelasWaliIds, $siswaGuruWaliIds) {
+                    if ($kelasWaliIds === [] && $siswaGuruWaliIds === []) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->whereHas('siswa', function ($query) use ($kelasWaliIds, $siswaGuruWaliIds) {
+                        $query->where(function ($query) use ($kelasWaliIds, $siswaGuruWaliIds) {
+                            $query->when($kelasWaliIds !== [], fn ($query) => $query->whereHas('anggotaKelas', fn ($query) => $query->whereIn('kelas_id', $kelasWaliIds)))
+                                ->when($siswaGuruWaliIds !== [], fn ($query) => $query->orWhereIn('id', $siswaGuruWaliIds));
+                        });
+                    });
+                })
+                ->sum('poin'),
         ];
 
         $laporanPembinaanWali = (clone $laporanPembinaanWaliBulan)
@@ -359,6 +409,8 @@ class BerandaController extends Controller
             'ringkasanAbsensiPegawaiPribadi' => $ringkasanAbsensiPegawaiPribadi,
             'maksGrafikPegawai' => max((int) $rekapAbsensiPegawaiBulan->max('jumlah'), 1),
             'kelasWali' => $kelasWali,
+            'jumlahSiswaGuruWali' => $jumlahSiswaGuruWali,
+            'memilikiPerwalian' => $memilikiPerwalian,
             'rekapAbsensiSiswaWaliBulan' => $rekapAbsensiSiswaWaliBulan,
             'ringkasanAbsensiSiswaWali' => $ringkasanAbsensiSiswaWali,
             'maksGrafikSiswaWali' => max((int) $rekapAbsensiSiswaWaliBulan->max('jumlah'), 1),

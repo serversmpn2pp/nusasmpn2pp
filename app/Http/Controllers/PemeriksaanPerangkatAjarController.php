@@ -7,6 +7,7 @@ use App\Models\JenisPerangkatAjar;
 use App\Models\Pegawai;
 use App\Models\PerangkatAjar;
 use App\Models\TahunPelajaran;
+use App\Services\Notifikasi\NotifikasiPenggunaService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -15,6 +16,10 @@ use Illuminate\Validation\Rule;
 
 class PemeriksaanPerangkatAjarController extends Controller
 {
+    public function __construct(private NotifikasiPenggunaService $notifikasiPenggunaService)
+    {
+    }
+
     public function index(Request $request)
     {
         $data = $request->validate([
@@ -140,6 +145,22 @@ class PemeriksaanPerangkatAjarController extends Controller
         $data['pemeriksa_pegawai_id'] = $request->user()?->pegawai_id;
         $data['diperiksa_pada'] = now();
         $perangkatAjar->update($data);
+        $perangkatAjar->loadMissing(['mataPelajaran', 'jenisPerangkatAjar']);
+
+        $statusDisetujui = $perangkatAjar->status === 'sudah_diperiksa';
+        $this->notifikasiPenggunaService->kirimKeBanyak(
+            $this->notifikasiPenggunaService->penggunaUntukPegawai($perangkatAjar->pegawai_id),
+            $statusDisetujui ? 'berhasil' : 'penting',
+            $statusDisetujui ? 'Perangkat ajar sudah diperiksa' : 'Perangkat ajar perlu diperbaiki',
+            sprintf(
+                '%s untuk mata pelajaran %s telah diperiksa.%s',
+                $perangkatAjar->jenisPerangkatAjar?->nama ?? 'Perangkat ajar',
+                $perangkatAjar->mataPelajaran?->nama ?? '-',
+                $perangkatAjar->catatan_pemeriksa ? ' Catatan: ' . $perangkatAjar->catatan_pemeriksa : '',
+            ),
+            route('perangkat-ajar-saya.show', $perangkatAjar, false),
+            "perangkat-ajar-diperiksa:{$perangkatAjar->id}:{$perangkatAjar->status}:{$perangkatAjar->diperiksa_pada->format('Uv')}",
+        );
 
         return redirect()
             ->route('pemeriksaan-perangkat-ajar.show', [

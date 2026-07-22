@@ -1,297 +1,34 @@
 @extends('layouts.app')
 
-@section('title', 'Laporan Pembinaan Siswa - NUSA')
+@section('title', 'Pembinaan & Poin Siswa - NUSA')
 
 @section('content')
     @php
-        $statusBadge = fn (string $status) => match ($status) {
-            'baru' => 'badge badge-warning',
-            'diproses' => 'badge badge-active',
-            'perlu_tindak_lanjut' => 'badge badge-danger',
-            'selesai' => 'badge badge-muted',
-            'dibatalkan' => 'badge badge-inactive',
-            default => 'badge badge-muted',
-        };
-        $tingkatBadge = fn (string $tingkat) => match ($tingkat) {
-            'ringan' => 'badge badge-active',
-            'sedang' => 'badge badge-warning',
-            'berat' => 'badge badge-danger',
-            default => 'badge badge-muted',
-        };
+        $badgeVerifikasi=fn(string $status)=>match($status){'disahkan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_musyawarah','perlu_klarifikasi'=>'badge badge-danger',default=>'badge badge-warning'};
+        $bolehLapor=auth()->user()?->memilikiIzin(['bk.kelola','poin_siswa.lapor'])??false;
     @endphp
+    <style>.report-filter{align-items:end;display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}.report-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}@media(max-width:1050px){.report-filter{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.report-filter{grid-template-columns:1fr}}</style>
 
-    <style>
-        .laporan-filter-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-            align-items: end;
-        }
+    <div class="page-header"><div><p class="eyebrow">Kesiswaan & BK</p><h1 class="page-title">Pembinaan & Poin Siswa</h1><p class="page-subtitle">Catatan konseling dan pelanggaran berpoin dikelola dari satu tempat.</p></div>@if($bolehLapor)<div class="actions"><a href="{{ route('laporan-pembinaan-siswa.create',['jenis'=>'pembinaan']) }}" class="button button-muted">Catat pembinaan</a><a href="{{ route('laporan-pembinaan-siswa.create',['jenis'=>'pelanggaran']) }}" class="button button-primary">Laporkan pelanggaran</a></div>@endif</div>
+    @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 
-        .laporan-filter-actions {
-            grid-column: 1 / -1;
-            justify-content: flex-end;
-            padding-top: 2px;
-        }
+    <div class="stats-grid"><div class="panel stat"><p class="stat-label">Semua laporan</p><p class="stat-value">{{ $ringkasan['total'] }}</p></div><div class="panel stat active"><p class="stat-label">Pembinaan non-poin</p><p class="stat-value">{{ $ringkasan['pembinaan'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Pelanggaran</p><p class="stat-value">{{ $ringkasan['pelanggaran'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Menunggu proses</p><p class="stat-value">{{ $ringkasan['menunggu'] }}</p></div><div class="panel stat active"><p class="stat-label">Disahkan</p><p class="stat-value">{{ $ringkasan['disahkan'] }}</p></div></div>
 
-        .report-meta-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 6px;
-        }
-
-        @media (max-width: 1100px) {
-            .laporan-filter-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        @media (max-width: 900px) {
-            .laporan-filter-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-
-    <div class="page-header">
-        <div>
-            <p class="eyebrow">Pembinaan</p>
-            <h1 class="page-title">Laporan pembinaan siswa</h1>
-        </div>
-
-        @izin('bk.kelola')
-            <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="button button-primary">Tambah laporan</a>
-        @endizin
-    </div>
-
-    <div class="stats-grid">
-        <div class="panel stat">
-            <p class="stat-label">Total laporan</p>
-            <p class="stat-value">{{ $ringkasan['total'] }}</p>
-        </div>
-        <div class="panel stat inactive">
-            <p class="stat-label">Baru</p>
-            <p class="stat-value">{{ $ringkasan['baru'] }}</p>
-        </div>
-        <div class="panel stat active">
-            <p class="stat-label">Diproses</p>
-            <p class="stat-value">{{ $ringkasan['diproses'] }}</p>
-        </div>
-        <div class="panel stat inactive">
-            <p class="stat-label">Tindak lanjut</p>
-            <p class="stat-value">{{ $ringkasan['tindak_lanjut'] }}</p>
-        </div>
-        <div class="panel stat">
-            <p class="stat-label">Selesai</p>
-            <p class="stat-value">{{ $ringkasan['selesai'] }}</p>
-        </div>
-    </div>
-
-    @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
-    @endif
-
-    <form action="{{ route('laporan-pembinaan-siswa.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
-        <div class="laporan-filter-grid">
-            <div class="field">
-                <label for="kata_kunci">Cari laporan</label>
-                <input id="kata_kunci" name="kata_kunci" type="search" value="{{ $kataKunci }}" placeholder="Nomor, siswa, NISN, kategori" class="input">
-            </div>
-
-            <div class="field">
-                <label for="kategori_pembinaan_siswa_id">Kategori</label>
-                <select id="kategori_pembinaan_siswa_id" name="kategori_pembinaan_siswa_id" class="select">
-                    <option value="">Semua</option>
-                    @foreach ($daftarKategoriPembinaan as $kategori)
-                        <option value="{{ $kategori->id }}" @selected((string) $kategoriDipilih === (string) $kategori->id)>
-                            {{ $kategori->nama }}{{ $kategori->aktif ? '' : ' (nonaktif)' }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="field">
-                <label for="status">Status</label>
-                <select id="status" name="status" class="select">
-                    <option value="semua" @selected($status === 'semua')>Semua</option>
-                    @foreach ($daftarStatus as $kode => $label)
-                        <option value="{{ $kode }}" @selected($status === $kode)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="field">
-                <label for="tingkat">Tingkat</label>
-                <select id="tingkat" name="tingkat" class="select">
-                    <option value="semua" @selected($tingkat === 'semua')>Semua</option>
-                    @foreach ($daftarTingkat as $kode => $label)
-                        <option value="{{ $kode }}" @selected($tingkat === $kode)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="field">
-                <label for="tahun_pelajaran_id">Tahun</label>
-                <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select">
-                    <option value="">Semua</option>
-                    @foreach ($daftarTahunPelajaran as $tahunPelajaran)
-                        <option value="{{ $tahunPelajaran->id }}" @selected((string) $tahunPelajaranDipilih === (string) $tahunPelajaran->id)>
-                            {{ $tahunPelajaran->nama }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="field">
-                <label for="kelas_id">Kelas</label>
-                <select id="kelas_id" name="kelas_id" class="select">
-                    <option value="">Semua</option>
-                    @foreach ($daftarKelas as $kelas)
-                        <option value="{{ $kelas->id }}" @selected((string) $kelasDipilih === (string) $kelas->id)>
-                            {{ $kelas->nama }}{{ $kelas->tahunPelajaran ? ' - ' . $kelas->tahunPelajaran->nama : '' }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="actions laporan-filter-actions">
-                <button type="submit" class="button button-dark">Terapkan</button>
-                <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Reset</a>
-            </div>
-        </div>
-    </form>
+    <form method="GET" class="panel panel-pad" style="margin-bottom:20px"><div class="report-filter">
+        <div class="field"><label for="kata_kunci">Cari laporan</label><input id="kata_kunci" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nomor, siswa, NISN, pelanggaran"></div>
+        <div class="field"><label for="jenis_laporan">Jenis laporan</label><select id="jenis_laporan" name="jenis_laporan" class="select"><option value="semua">Semua</option>@foreach($daftarJenisLaporan as $kode=>$label)<option value="{{ $kode }}" @selected($jenisLaporan===$kode)>{{ $label }}</option>@endforeach</select></div>
+        <div class="field"><label for="status_verifikasi">Status verifikasi</label><select id="status_verifikasi" name="status_verifikasi" class="select"><option value="semua">Semua</option>@foreach($daftarStatusVerifikasi as $kode=>$label)<option value="{{ $kode }}" @selected($statusVerifikasi===$kode)>{{ $label }}</option>@endforeach</select></div>
+        <div class="field"><label for="tingkat">Tingkat</label><select id="tingkat" name="tingkat" class="select"><option value="semua">Semua</option>@foreach($daftarTingkat as $kode=>$label)<option value="{{ $kode }}" @selected($tingkat===$kode)>{{ $label }}</option>@endforeach</select></div>
+        <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select"><option value="">Semua</option>@foreach($daftarTahunPelajaran as $tahun)<option value="{{ $tahun->id }}" @selected((string)$tahunPelajaranDipilih===(string)$tahun->id)>{{ $tahun->nama }}</option>@endforeach</select></div>
+        <div class="field"><label for="kelas_id">Kelas</label><select id="kelas_id" name="kelas_id" class="select"><option value="">Semua</option>@foreach($daftarKelas as $kelas)<option value="{{ $kelas->id }}" @selected((string)$kelasDipilih===(string)$kelas->id)>{{ $kelas->nama }}</option>@endforeach</select></div>
+    </div><div class="actions" style="justify-content:flex-end;margin-top:14px"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Reset</a><button class="button button-dark">Terapkan</button></div></form>
 
     <section class="panel">
-        <div class="desktop-only table-wrap">
-            <table class="employee-table" style="min-width: 1040px;">
-                <thead>
-                    <tr>
-                        <th>Laporan</th>
-                        <th>Siswa</th>
-                        <th>Kategori</th>
-                        <th>Status</th>
-                        <th>Pelapor</th>
-                        <th class="text-right">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($laporanPembinaanSiswa as $laporan)
-                        <tr>
-                            <td>
-                                <p class="person-name">{{ $laporan->nomor_laporan }}</p>
-                                <p class="person-meta">
-                                    {{ $laporan->tanggal_kejadian?->format('d/m/Y') ?: '-' }}
-                                    {{ $laporan->waktuKejadianRingkas() ? 'pukul ' . $laporan->waktuKejadianRingkas() : '' }}
-                                </p>
-                                @if ($laporan->tempat_kejadian)
-                                    <p class="person-meta">{{ $laporan->tempat_kejadian }}</p>
-                                @endif
-                            </td>
-                            <td>
-                                <p class="person-name">{{ $laporan->siswa?->nama_lengkap ?: '-' }}</p>
-                                <p class="person-meta">
-                                    NISN {{ $laporan->siswa?->nisn ?: '-' }}
-                                    @if ($laporan->kelas)
-                                        - {{ $laporan->kelas->nama }}
-                                    @endif
-                                </p>
-                            </td>
-                            <td>
-                                <p class="person-name">{{ $laporan->kategoriPembinaanSiswa?->nama ?: '-' }}</p>
-                                <div class="report-meta-row">
-                                    <span class="{{ $tingkatBadge($laporan->tingkat) }}">{{ $laporan->labelTingkat() }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="{{ $statusBadge($laporan->status) }}">{{ $laporan->labelStatus() }}</span>
-                            </td>
-                            <td>
-                                <p class="person-name">{{ $laporan->pelaporPegawai?->nama_lengkap ?: '-' }}</p>
-                                <p class="person-meta">{{ $laporan->pelaporPegawai?->nip ?: 'Pelapor belum diisi' }}</p>
-                            </td>
-                            <td>
-                                <div class="actions" style="justify-content: flex-end;">
-                                    <a href="{{ route('laporan-pembinaan-siswa.show', $laporan) }}" class="button button-muted">Lihat</a>
-                                    @izin('bk.kelola')
-                                        <a href="{{ route('laporan-pembinaan-siswa.edit', $laporan) }}" class="button button-dark">Edit</a>
-                                    @endizin
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="empty-state">Belum ada laporan pembinaan siswa.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <div class="mobile-only mobile-list">
-            @forelse ($laporanPembinaanSiswa as $laporan)
-                <article class="mobile-card">
-                    <div class="mobile-card-head">
-                        <div>
-                            <p class="person-name">{{ $laporan->siswa?->nama_lengkap ?: '-' }}</p>
-                            <p class="person-meta">{{ $laporan->nomor_laporan }} - {{ $laporan->tanggal_kejadian?->format('d/m/Y') ?: '-' }}</p>
-                            @if ($laporan->tempat_kejadian)
-                                <p class="person-meta">{{ $laporan->tempat_kejadian }}</p>
-                            @endif
-                        </div>
-                        <span class="{{ $statusBadge($laporan->status) }}">{{ $laporan->labelStatus() }}</span>
-                    </div>
-
-                    <dl class="quick-facts">
-                        <div>
-                            <dt>Kategori</dt>
-                            <dd>{{ $laporan->kategoriPembinaanSiswa?->nama ?: '-' }}</dd>
-                        </div>
-                        <div>
-                            <dt>Tingkat</dt>
-                            <dd><span class="{{ $tingkatBadge($laporan->tingkat) }}">{{ $laporan->labelTingkat() }}</span></dd>
-                        </div>
-                        <div>
-                            <dt>Kelas</dt>
-                            <dd>{{ $laporan->kelas?->nama ?: '-' }}</dd>
-                        </div>
-                        <div>
-                            <dt>Pelapor</dt>
-                            <dd>{{ $laporan->pelaporPegawai?->nama_lengkap ?: '-' }}</dd>
-                        </div>
-                    </dl>
-
-                    <div class="actions" style="margin-top: 14px;">
-                        <a href="{{ route('laporan-pembinaan-siswa.show', $laporan) }}" class="button button-muted">Lihat</a>
-                        @izin('bk.kelola')
-                            <a href="{{ route('laporan-pembinaan-siswa.edit', $laporan) }}" class="button button-dark">Edit</a>
-                        @endizin
-                    </div>
-                </article>
-            @empty
-                <div class="empty-state">Belum ada laporan pembinaan siswa.</div>
-            @endforelse
-        </div>
+        <div class="desktop-only table-wrap"><table class="employee-table" style="min-width:1080px"><thead><tr><th>Laporan</th><th>Siswa</th><th>Jenis/Butir</th><th>Status</th><th>Poin</th><th>Pelapor</th><th class="text-right">Aksi</th></tr></thead><tbody>
+            @forelse($laporanPembinaanSiswa as $laporan)<tr><td><p class="person-name">{{ $laporan->nomor_laporan }}</p><p class="person-meta">{{ $laporan->tanggal_kejadian?->format('d/m/Y') }}{{ $laporan->tempat_kejadian?' · '.$laporan->tempat_kejadian:'' }}</p></td><td><p class="person-name">{{ $laporan->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $laporan->kelas?->nama?:'-' }} · NISN {{ $laporan->siswa?->nisn?:'-' }}</p></td><td><p class="person-name">{{ $laporan->labelJenisLaporan() }}</p><p class="person-meta">{{ $laporan->jenis_laporan==='pelanggaran'?($laporan->butirPelanggaranLaporan->first()?->nama_pelanggaran?:'-'):($laporan->kategoriPembinaanSiswa?->nama?:'-') }}</p></td><td>@if($laporan->jenis_laporan==='pelanggaran')<span class="{{ $badgeVerifikasi($laporan->status_verifikasi) }}">{{ $laporan->labelStatusVerifikasi() }}</span>@else<span class="badge badge-muted">{{ $laporan->labelStatus() }}</span>@endif</td><td><strong>{{ $laporan->jenis_laporan==='pelanggaran'?$laporan->total_poin:'-' }}</strong></td><td>{{ $laporan->pelaporPegawai?->nama_lengkap?:'-' }}</td><td><a href="{{ route('laporan-pembinaan-siswa.show',$laporan) }}" class="button button-muted button-sm">Lihat</a></td></tr>
+            @empty<tr><td colspan="7" class="empty-state">Belum ada laporan pembinaan atau pelanggaran.</td></tr>@endforelse
+        </tbody></table></div>
+        <div class="mobile-only mobile-list">@forelse($laporanPembinaanSiswa as $laporan)<article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $laporan->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $laporan->nomor_laporan }} · {{ $laporan->kelas?->nama?:'-' }}</p></div>@if($laporan->jenis_laporan==='pelanggaran')<span class="{{ $badgeVerifikasi($laporan->status_verifikasi) }}">{{ $laporan->total_poin }} poin</span>@else<span class="badge badge-muted">Pembinaan</span>@endif</div><p style="margin:12px 0">{{ $laporan->jenis_laporan==='pelanggaran'?($laporan->butirPelanggaranLaporan->first()?->nama_pelanggaran?:'-'):($laporan->kategoriPembinaanSiswa?->nama?:'-') }}</p><a href="{{ route('laporan-pembinaan-siswa.show',$laporan) }}" class="button button-muted button-sm">Lihat</a></article>@empty<div class="empty-state">Belum ada laporan.</div>@endforelse</div>
     </section>
-
-    @if ($laporanPembinaanSiswa->hasPages())
-        <nav class="pagination-simple">
-            <div>
-                Halaman {{ $laporanPembinaanSiswa->currentPage() }} dari {{ $laporanPembinaanSiswa->lastPage() }}
-            </div>
-            <div class="actions">
-                @if ($laporanPembinaanSiswa->onFirstPage())
-                    <span class="button button-muted" aria-disabled="true">Sebelumnya</span>
-                @else
-                    <a href="{{ $laporanPembinaanSiswa->previousPageUrl() }}" class="button button-muted">Sebelumnya</a>
-                @endif
-
-                @if ($laporanPembinaanSiswa->hasMorePages())
-                    <a href="{{ $laporanPembinaanSiswa->nextPageUrl() }}" class="button button-muted">Berikutnya</a>
-                @else
-                    <span class="button button-muted" aria-disabled="true">Berikutnya</span>
-                @endif
-            </div>
-        </nav>
-    @endif
+    @if($laporanPembinaanSiswa->hasPages())<nav class="pagination-simple"><span>Halaman {{ $laporanPembinaanSiswa->currentPage() }} dari {{ $laporanPembinaanSiswa->lastPage() }}</span><div class="actions">@if($laporanPembinaanSiswa->onFirstPage())<span class="button button-muted">Sebelumnya</span>@else<a href="{{ $laporanPembinaanSiswa->previousPageUrl() }}" class="button button-muted">Sebelumnya</a>@endif @if($laporanPembinaanSiswa->hasMorePages())<a href="{{ $laporanPembinaanSiswa->nextPageUrl() }}" class="button button-muted">Berikutnya</a>@else<span class="button button-muted">Berikutnya</span>@endif</div></nav>@endif
 @endsection

@@ -1,0 +1,7 @@
+@extends('layouts.app')
+@section('title','Aturan Sanksi Poin - NUSA')
+@section('content')
+    <div class="page-header"><div><p class="eyebrow">Pengaturan Pembinaan</p><h1 class="page-title">Aturan Sanksi Poin</h1><p class="page-subtitle">Tindak lanjut dibuat otomatis ketika total poin pertama kali melewati ambang.</p></div><a href="{{ route('aturan-sanksi-poin.create') }}" class="button button-primary">Tambah</a></div>
+    @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
+    <section class="panel"><div class="table-wrap"><table class="employee-table"><thead><tr><th>Ambang</th><th>Sanksi</th><th>Penjelasan</th><th>Status</th><th class="text-right">Aksi</th></tr></thead><tbody>@forelse($aturanSanksi as $aturan)<tr><td><strong>{{ $aturan->batas_poin }} poin</strong></td><td>{{ $aturan->nama }}</td><td>{{ $aturan->deskripsi }}</td><td><span class="badge {{ $aturan->aktif?'badge-active':'badge-inactive' }}">{{ $aturan->aktif?'Aktif':'Nonaktif' }}</span></td><td><div class="actions" style="justify-content:flex-end"><a href="{{ route('aturan-sanksi-poin.edit',$aturan) }}" class="button button-dark button-sm">Edit</a>@if($aturan->aktif)<form method="POST" action="{{ route('aturan-sanksi-poin.destroy',$aturan) }}">@csrf @method('DELETE')<button class="button button-danger button-sm">Nonaktifkan</button></form>@endif</div></td></tr>@empty<tr><td colspan="5" class="empty-state">Belum ada aturan sanksi.</td></tr>@endforelse</tbody></table></div></section>
+@endsection

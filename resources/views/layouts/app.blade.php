@@ -950,22 +950,185 @@
 
             .sidebar-nav {
                 display: grid;
-                gap: 18px;
-                padding: 18px 0;
+                gap: 7px;
+                padding: 12px 0 18px;
+            }
+
+            .sidebar-search {
+                padding-top: 14px;
+            }
+
+            .sidebar-search-control {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+
+            .sidebar-search-control > svg {
+                position: absolute;
+                left: 11px;
+                width: 17px;
+                height: 17px;
+                fill: none;
+                stroke: rgba(255, 255, 255, .64);
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                stroke-width: 2;
+                pointer-events: none;
+            }
+
+            .sidebar-search-control input {
+                width: 100%;
+                height: 40px;
+                border: 1px solid rgba(255, 255, 255, .2);
+                border-radius: 8px;
+                outline: 0;
+                background: rgba(255, 255, 255, .1);
+                padding: 8px 38px 8px 36px;
+                color: #fff;
+                font-size: .82rem;
+                font-weight: 750;
+            }
+
+            .sidebar-search-control input::placeholder {
+                color: rgba(255, 255, 255, .58);
+            }
+
+            .sidebar-search-control input:focus {
+                border-color: rgba(241, 196, 15, .8);
+                background: rgba(255, 255, 255, .14);
+                box-shadow: 0 0 0 3px rgba(241, 196, 15, .12);
+            }
+
+            .sidebar-search-clear {
+                position: absolute;
+                right: 5px;
+                display: grid;
+                width: 30px;
+                height: 30px;
+                place-items: center;
+                border: 0;
+                border-radius: 6px;
+                background: transparent;
+                color: rgba(255, 255, 255, .72);
+                cursor: pointer;
+            }
+
+            .sidebar-search-clear:hover {
+                background: rgba(255, 255, 255, .12);
+                color: #fff;
+            }
+
+            .sidebar-search-clear svg {
+                width: 16px;
+                height: 16px;
+                fill: none;
+                stroke: currentColor;
+                stroke-linecap: round;
+                stroke-width: 2;
+            }
+
+            .sidebar-section {
+                min-width: 0;
+                border: 1px solid transparent;
+                border-radius: 8px;
+            }
+
+            .sidebar-section[open] {
+                border-color: rgba(255, 255, 255, .1);
+                background: rgba(5, 34, 65, .16);
+            }
+
+            .sidebar-section > summary {
+                list-style: none;
+            }
+
+            .sidebar-section > summary::-webkit-details-marker {
+                display: none;
+            }
+
+            .sidebar-section-summary {
+                display: grid;
+                min-height: 42px;
+                grid-template-columns: minmax(0, 1fr) auto auto;
+                align-items: center;
+                gap: 7px;
+                border-radius: 7px;
+                padding: 9px 9px 9px 11px;
+                color: rgba(255, 255, 255, .68);
+                cursor: pointer;
+                transition: background .15s ease, color .15s ease;
+            }
+
+            .sidebar-section-summary:hover,
+            .sidebar-section[open] > .sidebar-section-summary {
+                background: rgba(255, 255, 255, .07);
+                color: #fff;
             }
 
             .sidebar-section-title {
-                margin: 0 0 8px;
-                color: rgba(255, 255, 255, .58);
-                font-size: .72rem;
+                min-width: 0;
+                font-size: .76rem;
                 font-weight: 900;
                 letter-spacing: 0;
                 text-transform: uppercase;
             }
 
+            .sidebar-section.has-active > .sidebar-section-summary .sidebar-section-title {
+                color: var(--accent);
+            }
+
+            .sidebar-section-count {
+                display: grid;
+                min-width: 23px;
+                height: 22px;
+                place-items: center;
+                border-radius: 6px;
+                background: rgba(255, 255, 255, .1);
+                padding: 0 5px;
+                color: rgba(255, 255, 255, .72);
+                font-size: .66rem;
+                font-weight: 900;
+            }
+
+            .sidebar-section-chevron {
+                width: 15px;
+                height: 15px;
+                fill: none;
+                stroke: currentColor;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                stroke-width: 2;
+                transition: transform .16s ease;
+            }
+
+            .sidebar-section[open] .sidebar-section-chevron {
+                transform: rotate(90deg);
+            }
+
+            .sidebar-section-content {
+                display: grid;
+                gap: 3px;
+                padding: 2px 7px 8px;
+            }
+
+            .sidebar-subgroup + .sidebar-subgroup {
+                margin-top: 7px;
+                border-top: 1px solid rgba(255, 255, 255, .08);
+                padding-top: 8px;
+            }
+
+            .sidebar-subgroup-title {
+                margin: 0 7px 5px;
+                color: rgba(255, 255, 255, .48);
+                font-size: .65rem;
+                font-weight: 900;
+                text-transform: uppercase;
+            }
+
             .sidebar-links {
                 display: grid;
-                gap: 6px;
+                gap: 3px;
             }
 
             .sidebar-link {
@@ -980,6 +1143,11 @@
                 font-size: .9rem;
                 font-weight: 800;
                 transition: background .15s ease, border-color .15s ease, color .15s ease;
+            }
+
+            .sidebar-link-label {
+                min-width: 0;
+                overflow-wrap: anywhere;
             }
 
             .sidebar-link:hover,
@@ -1004,6 +1172,20 @@
                 color: var(--accent);
                 font-size: .7rem;
                 font-weight: 900;
+            }
+
+            .sidebar-search-empty {
+                border: 1px dashed rgba(255, 255, 255, .24);
+                border-radius: 8px;
+                padding: 18px 12px;
+                color: rgba(255, 255, 255, .66);
+                font-size: .8rem;
+                font-weight: 750;
+                text-align: center;
+            }
+
+            [hidden] {
+                display: none !important;
             }
 
             .sidebar-foot {
@@ -1097,6 +1279,359 @@
                 width: auto;
             }
 
+            .topbar-actions {
+                display: flex;
+                flex: 0 0 auto;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .topbar-menu {
+                position: relative;
+            }
+
+            .topbar-menu > summary {
+                list-style: none;
+            }
+
+            .topbar-menu > summary::-webkit-details-marker {
+                display: none;
+            }
+
+            .topbar-icon-button {
+                position: relative;
+                display: inline-flex;
+                width: 42px;
+                height: 42px;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                background: #fff;
+                color: var(--primary-dark);
+                cursor: pointer;
+                transition: border-color .16s ease, background .16s ease;
+            }
+
+            .topbar-icon-button:hover,
+            .topbar-menu[open] > .topbar-icon-button {
+                border-color: rgba(21, 71, 122, .3);
+                background: var(--primary-soft);
+            }
+
+            .topbar-icon-button svg,
+            .account-trigger svg,
+            .account-dropdown-link svg {
+                width: 19px;
+                height: 19px;
+                fill: none;
+                stroke: currentColor;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                stroke-width: 2;
+            }
+
+            .notification-count {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                display: grid;
+                min-width: 21px;
+                height: 21px;
+                place-items: center;
+                border: 2px solid #fff;
+                border-radius: 999px;
+                background: var(--accent);
+                padding: 0 5px;
+                color: #3f3100;
+                font-size: .68rem;
+                font-weight: 900;
+                line-height: 1;
+            }
+
+            .notification-count[hidden] {
+                display: none;
+            }
+
+            .topbar-popover {
+                position: absolute;
+                top: calc(100% + 10px);
+                right: 0;
+                z-index: 60;
+                width: min(390px, calc(100vw - 28px));
+                overflow: hidden;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                background: #fff;
+                box-shadow: 0 20px 50px rgba(15, 53, 92, .2);
+            }
+
+            .notification-popover-head,
+            .notification-popover-foot {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 13px 15px;
+            }
+
+            .notification-popover-head {
+                border-bottom: 1px solid var(--line);
+            }
+
+            .notification-popover-head strong {
+                color: var(--primary-dark);
+                font-size: .92rem;
+            }
+
+            .notification-text-button {
+                border: 0;
+                background: transparent;
+                padding: 2px;
+                color: var(--primary);
+                cursor: pointer;
+                font-size: .76rem;
+                font-weight: 850;
+            }
+
+            .notification-popover-list {
+                display: grid;
+                max-height: 410px;
+                overflow-y: auto;
+            }
+
+            .notification-popover-form {
+                margin: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .notification-popover-form:last-child {
+                border-bottom: 0;
+            }
+
+            .notification-popover-item {
+                display: grid;
+                width: 100%;
+                grid-template-columns: auto minmax(0, 1fr);
+                gap: 11px;
+                border: 0;
+                background: #fff;
+                padding: 13px 15px;
+                color: inherit;
+                cursor: pointer;
+                text-align: left;
+            }
+
+            .notification-popover-item:hover {
+                background: #f7f9fc;
+            }
+
+            .notification-popover-item.unread {
+                background: #f3f8fd;
+            }
+
+            .notification-dot {
+                width: 9px;
+                height: 9px;
+                margin-top: 5px;
+                border: 2px solid #d8e1eb;
+                border-radius: 50%;
+                background: #fff;
+            }
+
+            .notification-popover-item.unread .notification-dot {
+                border-color: var(--accent);
+                background: var(--primary);
+            }
+
+            .notification-popover-copy {
+                min-width: 0;
+            }
+
+            .notification-popover-title,
+            .notification-popover-message,
+            .notification-popover-time {
+                display: block;
+            }
+
+            .notification-popover-title {
+                color: var(--text);
+                font-size: .86rem;
+                font-weight: 850;
+                line-height: 1.3;
+            }
+
+            .notification-popover-message {
+                display: -webkit-box;
+                margin-top: 3px;
+                overflow: hidden;
+                color: var(--muted);
+                font-size: .78rem;
+                line-height: 1.4;
+                overflow-wrap: anywhere;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+            }
+
+            .notification-popover-time {
+                margin-top: 6px;
+                color: #8a94a3;
+                font-size: .7rem;
+                font-weight: 700;
+            }
+
+            .notification-popover-empty {
+                padding: 30px 18px;
+                color: var(--muted);
+                font-size: .85rem;
+                text-align: center;
+            }
+
+            .notification-popover-foot {
+                justify-content: center;
+                border-top: 1px solid var(--line);
+                background: #fbfcfe;
+                color: var(--primary);
+                font-size: .8rem;
+                font-weight: 900;
+            }
+
+            .account-trigger {
+                display: flex;
+                min-height: 42px;
+                align-items: center;
+                gap: 9px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                background: #fff;
+                padding: 4px 9px 4px 5px;
+                color: var(--primary-dark);
+                cursor: pointer;
+            }
+
+            .topbar-menu[open] > .account-trigger,
+            .account-trigger:hover {
+                border-color: rgba(21, 71, 122, .3);
+                background: var(--primary-soft);
+            }
+
+            .account-avatar {
+                display: grid;
+                width: 32px;
+                height: 32px;
+                flex: 0 0 auto;
+                place-items: center;
+                border-radius: 6px;
+                background: var(--primary);
+                color: #fff;
+                font-size: .76rem;
+                font-weight: 900;
+            }
+
+            .account-identity {
+                display: grid;
+                max-width: 190px;
+                min-width: 0;
+                text-align: left;
+            }
+
+            .account-identity strong,
+            .account-identity small {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .account-identity strong {
+                font-size: .8rem;
+                line-height: 1.25;
+            }
+
+            .account-identity small {
+                color: var(--muted);
+                font-size: .68rem;
+                font-weight: 700;
+            }
+
+            .account-chevron {
+                width: 15px !important;
+                height: 15px !important;
+                transition: transform .16s ease;
+            }
+
+            .topbar-menu[open] .account-chevron {
+                transform: rotate(180deg);
+            }
+
+            .account-popover {
+                width: 260px;
+                padding: 7px;
+            }
+
+            .account-popover-head {
+                border-bottom: 1px solid var(--line);
+                padding: 10px 10px 12px;
+            }
+
+            .account-popover-head strong,
+            .account-popover-head span {
+                display: block;
+                overflow-wrap: anywhere;
+            }
+
+            .account-popover-head strong {
+                color: var(--primary-dark);
+                font-size: .88rem;
+            }
+
+            .account-popover-head span {
+                margin-top: 2px;
+                color: var(--muted);
+                font-size: .74rem;
+            }
+
+            .account-dropdown-link {
+                display: flex;
+                width: 100%;
+                min-height: 40px;
+                align-items: center;
+                gap: 10px;
+                border: 0;
+                border-radius: 6px;
+                background: transparent;
+                padding: 9px 10px;
+                color: #3f4854;
+                cursor: pointer;
+                font-size: .82rem;
+                font-weight: 800;
+                text-align: left;
+            }
+
+            .account-dropdown-link:hover {
+                background: var(--primary-soft);
+                color: var(--primary-dark);
+            }
+
+            .account-dropdown-link.danger {
+                color: var(--danger);
+            }
+
+            .account-popover .logout-form {
+                border-top: 1px solid var(--line);
+                margin-top: 5px;
+                padding-top: 5px;
+            }
+
+            .sr-only {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                clip-path: inset(50%);
+            }
+
             @media (max-width: 980px) {
                 body {
                     height: auto;
@@ -1174,6 +1709,20 @@
                     padding: 8px 10px;
                     width: auto;
                 }
+
+                .account-identity {
+                    display: none;
+                }
+
+                .account-trigger {
+                    width: 42px;
+                    justify-content: center;
+                    padding: 4px;
+                }
+
+                .account-chevron {
+                    display: none;
+                }
             }
 
             @media (max-width: 560px) {
@@ -1184,13 +1733,51 @@
                 .app-topbar .button-muted {
                     display: none;
                 }
+
+                .topbar-title {
+                    overflow: hidden;
+                }
+
+                .topbar-actions {
+                    gap: 6px;
+                }
+
+                .topbar-popover {
+                    position: fixed;
+                    top: 64px;
+                    right: 10px;
+                    left: 10px;
+                    width: auto;
+                    max-height: calc(100vh - 78px);
+                }
+
+                .account-popover {
+                    left: auto;
+                }
             }
         </style>
     </head>
     <body>
         @php
             $penggunaAktif = auth()->user();
-            $penggunaAktif?->loadMissing('daftarPeran.izin');
+            $penggunaAktif?->loadMissing(['pegawai', 'daftarPeran.izin']);
+            $notifikasiTerbaru = $penggunaAktif
+                ? $penggunaAktif->notifikasiPengguna()->latest()->limit(6)->get()
+                : collect();
+            $jumlahNotifikasiBelumDibaca = $penggunaAktif
+                ? $penggunaAktif->notifikasiPengguna()->belumDibaca()->count()
+                : 0;
+            $labelPeranAktif = $penggunaAktif?->daftarPeran
+                ->where('aktif', true)
+                ->pluck('nama')
+                ->take(2)
+                ->implode(', ');
+            $labelPeranAktif = $labelPeranAktif ?: str((string) ($penggunaAktif?->peran ?? 'pengguna'))->headline();
+            $inisialPengguna = collect(preg_split('/\s+/', trim((string) ($penggunaAktif?->nama ?? 'NUSA'))))
+                ->filter()
+                ->take(2)
+                ->map(fn ($kata) => mb_strtoupper(mb_substr($kata, 0, 1)))
+                ->implode('');
 
             $bolehMelihatMenu = function (string|array|null $izin) use ($penggunaAktif): bool {
                 if (! $penggunaAktif) {
@@ -1210,6 +1797,9 @@
                 'wakil_pimpinan_sarana_prasarana',
                 'wakil_pimpinan_kurikulum',
                 'bk',
+                'satpam',
+                'petugas_kebersihan',
+                'petugas_inventaris',
             ];
             $pakaiSidebarPegawai = $penggunaAktif?->akunPegawai()
                 && ! $penggunaAktif->administrator()
@@ -1217,134 +1807,162 @@
 
             $semuaSidebarSections = [
                 [
+                    'id' => 'utama',
                     'title' => 'Utama',
                     'items' => [
                         ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
                     ],
                 ],
                 [
-                    'title' => 'Data Master',
+                    'id' => 'data-sekolah',
+                    'title' => 'Data Sekolah',
                     'items' => [
-                        ['label' => 'Pegawai', 'route' => 'pegawai.index', 'active' => ['pegawai.*'], 'initial' => 'PG', 'izin' => ['pegawai.lihat', 'pegawai.kelola']],
-                        ['label' => 'Siswa', 'route' => 'siswa.index', 'active' => ['siswa.*'], 'initial' => 'SW', 'izin' => ['siswa.lihat', 'siswa.kelola']],
-                        ['label' => 'Kelas', 'route' => 'kelas.index', 'active' => ['kelas.*', 'anggota-kelas.*'], 'initial' => 'KL', 'izin' => ['kelas.lihat', 'kelas.kelola']],
-                        ['label' => 'Penempatan Siswa', 'route' => 'penempatan-siswa.index', 'active' => ['penempatan-siswa.*'], 'initial' => 'PS', 'izin' => ['kelas.lihat', 'kelas.kelola']],
-                        ['label' => 'Tahun Pelajaran', 'route' => 'tahun-pelajaran.index', 'active' => ['tahun-pelajaran.*'], 'initial' => 'TP', 'izin' => ['tahun_pelajaran.lihat', 'tahun_pelajaran.kelola']],
-                        ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP', 'izin' => ['mata_pelajaran.lihat', 'mata_pelajaran.kelola']],
-                        ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola']],
+                        ['label' => 'Tahun Pelajaran', 'route' => 'tahun-pelajaran.index', 'active' => ['tahun-pelajaran.*'], 'initial' => 'TP', 'izin' => ['tahun_pelajaran.lihat', 'tahun_pelajaran.kelola'], 'subgroup' => 'Periode Akademik'],
+                        ['label' => 'Pegawai', 'route' => 'pegawai.index', 'active' => ['pegawai.*'], 'initial' => 'PG', 'izin' => ['pegawai.lihat', 'pegawai.kelola'], 'subgroup' => 'Pegawai'],
+                        ['label' => 'Kartu Pegawai', 'route' => 'kartu-pegawai.index', 'active' => ['kartu-pegawai.*'], 'initial' => 'KG', 'izin' => 'pegawai.lihat', 'subgroup' => 'Pegawai'],
+                        ['label' => 'Siswa', 'route' => 'siswa.index', 'active' => ['siswa.*'], 'initial' => 'SW', 'izin' => ['siswa.lihat', 'siswa.kelola'], 'subgroup' => 'Siswa dan Kelas'],
+                        ['label' => 'Kartu Pelajar', 'route' => 'kartu-pelajar.index', 'active' => ['kartu-pelajar.*'], 'initial' => 'KP', 'izin' => ['kartu_pelajar.lihat', 'kartu_pelajar.cetak'], 'subgroup' => 'Siswa dan Kelas'],
+                        ['label' => 'Kelas', 'route' => 'kelas.index', 'active' => ['kelas.*', 'anggota-kelas.*'], 'initial' => 'KL', 'izin' => ['kelas.lihat', 'kelas.kelola'], 'subgroup' => 'Siswa dan Kelas'],
+                        ['label' => 'Penempatan Siswa', 'route' => 'penempatan-siswa.index', 'active' => ['penempatan-siswa.*'], 'initial' => 'PS', 'izin' => ['kelas.lihat', 'kelas.kelola'], 'subgroup' => 'Siswa dan Kelas'],
+                        ['label' => 'Kenaikan Kelas', 'route' => 'kenaikan-kelas.index', 'active' => ['kenaikan-kelas.*'], 'initial' => 'KK', 'izin' => 'kenaikan_kelas.kelola', 'subgroup' => 'Siswa dan Kelas'],
+                        ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP', 'izin' => ['mata_pelajaran.lihat', 'mata_pelajaran.kelola'], 'subgroup' => 'Referensi Akademik'],
                     ],
                 ],
                 [
+                    'id' => 'akademik',
                     'title' => 'Akademik',
                     'items' => [
-                        ['label' => 'Guru Mapel', 'route' => 'guru-mata-pelajaran.index', 'active' => ['guru-mata-pelajaran.*'], 'initial' => 'GM', 'izin' => ['guru_mapel.lihat', 'guru_mapel.kelola']],
-                        ['label' => 'Jadwal Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JS', 'izin' => 'jadwal.pribadi', 'pegawai_only' => true],
-                        ['label' => 'Jadwal Pelajaran', 'route' => 'jadwal-pelajaran.index', 'active' => ['jadwal-pelajaran.*'], 'initial' => 'JP', 'izin' => ['jadwal.lihat', 'jadwal.kelola']],
-                        ['label' => 'Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN', 'izin' => 'nilai.skema_kelola'],
-                        ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input'],
-                        ['label' => 'Rekap Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR', 'izin' => 'nilai.rekap'],
-                        ['label' => 'Ujian & LJK', 'route' => 'ujian-omr.index', 'active' => ['ujian-omr.*'], 'initial' => 'LJ', 'izin' => ['omr.lihat', 'omr.kelola']],
-                        ['label' => 'Jenis Ujian CBT', 'route' => 'jenis-ujian-cbt.index', 'active' => ['jenis-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola']],
-                        ['label' => 'Bank Soal CBT', 'route' => 'soal-cbt.index', 'active' => ['soal-cbt.*'], 'initial' => 'BS', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola']],
-                        ['label' => 'Jadwal Ujian CBT', 'route' => 'jadwal-ujian-cbt.index', 'active' => ['jadwal-ujian-cbt.*'], 'initial' => 'JU', 'izin' => ['cbt.lihat', 'cbt.kelola']],
-                        ['label' => 'Status Panitia CBT', 'route' => 'status-kelengkapan-panitia-cbt.index', 'active' => ['status-kelengkapan-panitia-cbt.*'], 'initial' => 'SP', 'izin' => ['cbt.lihat', 'cbt.kelola']],
-                        ['label' => 'Paket CBT', 'route' => 'ujian-cbt.index', 'active' => ['ujian-cbt.*'], 'initial' => 'PC', 'izin' => ['cbt.lihat', 'cbt.kelola']],
+                        ['label' => 'Guru Mata Pelajaran', 'route' => 'guru-mata-pelajaran.index', 'active' => ['guru-mata-pelajaran.*'], 'initial' => 'GM', 'izin' => ['guru_mapel.lihat', 'guru_mapel.kelola'], 'subgroup' => 'Pembelajaran'],
+                        ['label' => 'Jadwal Mengajar Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JS', 'izin' => 'jadwal.pribadi', 'pegawai_only' => true, 'subgroup' => 'Pembelajaran'],
+                        ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'subgroup' => 'Pembelajaran'],
+                        ['label' => 'Jadwal Pelajaran', 'route' => 'jadwal-pelajaran.index', 'active' => ['jadwal-pelajaran.*'], 'initial' => 'JP', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'subgroup' => 'Pembelajaran'],
+                        ['label' => 'Skema Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN', 'izin' => 'nilai.skema_kelola', 'subgroup' => 'Penilaian'],
+                        ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'subgroup' => 'Penilaian'],
+                        ['label' => 'Rekap Nilai Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR', 'izin' => 'nilai.rekap', 'subgroup' => 'Penilaian'],
+                        ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PS', 'izin' => 'perangkat_ajar.upload', 'pegawai_only' => true, 'subgroup' => 'Perangkat Ajar'],
+                        ['label' => 'Pemeriksaan Perangkat Ajar', 'route' => 'pemeriksaan-perangkat-ajar.index', 'active' => ['pemeriksaan-perangkat-ajar.*'], 'initial' => 'PP', 'izin' => ['perangkat_ajar.lihat', 'perangkat_ajar.periksa'], 'subgroup' => 'Perangkat Ajar'],
+                        ['label' => 'Jenis Perangkat Ajar', 'route' => 'jenis-perangkat-ajar.index', 'active' => ['jenis-perangkat-ajar.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.jenis_kelola', 'subgroup' => 'Perangkat Ajar'],
                     ],
                 ],
                 [
-                    'title' => 'Kurikulum',
+                    'id' => 'ujian-asesmen',
+                    'title' => 'Ujian & Asesmen',
                     'items' => [
-                        ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PS', 'izin' => 'perangkat_ajar.upload', 'pegawai_only' => true],
-                        ['label' => 'Pemeriksaan Perangkat', 'route' => 'pemeriksaan-perangkat-ajar.index', 'active' => ['pemeriksaan-perangkat-ajar.*'], 'initial' => 'PP', 'izin' => ['perangkat_ajar.lihat', 'perangkat_ajar.periksa']],
-                        ['label' => 'Jenis Perangkat Ajar', 'route' => 'jenis-perangkat-ajar.index', 'active' => ['jenis-perangkat-ajar.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.jenis_kelola'],
+                        ['label' => 'Ujian OMR & LJK', 'route' => 'ujian-omr.index', 'active' => ['ujian-omr.*'], 'initial' => 'LJ', 'izin' => ['omr.lihat', 'omr.kelola'], 'subgroup' => 'OMR'],
+                        ['label' => 'Jenis Ujian CBT', 'route' => 'jenis-ujian-cbt.index', 'active' => ['jenis-ujian-cbt.*'], 'initial' => 'JU', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
+                        ['label' => 'Bank Soal CBT', 'route' => 'soal-cbt.index', 'active' => ['soal-cbt.*'], 'initial' => 'BS', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola'], 'subgroup' => 'CBT'],
+                        ['label' => 'Paket Ujian CBT', 'route' => 'ujian-cbt.index', 'active' => ['ujian-cbt.*'], 'initial' => 'PU', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
+                        ['label' => 'Jadwal Ujian CBT', 'route' => 'jadwal-ujian-cbt.index', 'active' => ['jadwal-ujian-cbt.*'], 'initial' => 'JD', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
+                        ['label' => 'Status Panitia CBT', 'route' => 'status-kelengkapan-panitia-cbt.index', 'active' => ['status-kelengkapan-panitia-cbt.*'], 'initial' => 'SP', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
                     ],
                 ],
                 [
-                    'title' => 'Absensi',
+                    'id' => 'kehadiran',
+                    'title' => 'Kehadiran',
                     'items' => [
-                        ['label' => 'Jam Absensi', 'route' => 'pengaturan-absensi.index', 'active' => ['pengaturan-absensi.*'], 'initial' => 'JA', 'izin' => 'absensi.pengaturan_kelola'],
-                        ['label' => 'Jam Pegawai', 'route' => 'pengaturan-absensi-pegawai.index', 'active' => ['pengaturan-absensi-pegawai.*'], 'initial' => 'JP', 'izin' => 'absensi.pengaturan_kelola'],
-                        ['label' => 'Scan Absensi', 'route' => 'scan-absensi.index', 'active' => ['scan-absensi.*'], 'initial' => 'SA', 'izin' => 'absensi.scan', 'blank' => true],
-                        ['label' => 'Scan Pegawai', 'route' => 'scan-absensi-pegawai.index', 'active' => ['scan-absensi-pegawai.*'], 'initial' => 'SP', 'izin' => 'absensi.scan', 'blank' => true],
-                        ['label' => 'Rekap Absensi', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan']],
-                        ['label' => 'Rekap Pegawai', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RP', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'absensi_pegawai.pribadi']],
-                        ['label' => 'Laporan Absensi', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan'],
-                        ['label' => 'Laporan Pegawai', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LP', 'izin' => ['absensi.laporan', 'absensi_pegawai.pribadi']],
+                        ['label' => 'Pengaturan Absensi Siswa', 'route' => 'pengaturan-absensi.index', 'active' => ['pengaturan-absensi.*'], 'initial' => 'PA', 'izin' => 'absensi.pengaturan_kelola', 'subgroup' => 'Absensi Siswa'],
+                        ['label' => 'Scan Absensi Siswa', 'route' => 'scan-absensi.index', 'active' => ['scan-absensi.*'], 'initial' => 'SS', 'izin' => 'absensi.scan', 'blank' => true, 'subgroup' => 'Absensi Siswa'],
+                        ['label' => 'Rekap Absensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RS', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan'], 'subgroup' => 'Absensi Siswa'],
+                        ['label' => 'Laporan Absensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LS', 'izin' => 'absensi.laporan', 'subgroup' => 'Absensi Siswa'],
+                        ['label' => 'Pengaturan Absensi Pegawai', 'route' => 'pengaturan-absensi-pegawai.index', 'active' => ['pengaturan-absensi-pegawai.*'], 'initial' => 'PA', 'izin' => 'absensi.pengaturan_kelola', 'subgroup' => 'Absensi Pegawai'],
+                        ['label' => 'Scan Absensi Pegawai', 'route' => 'scan-absensi-pegawai.index', 'active' => ['scan-absensi-pegawai.*'], 'initial' => 'SP', 'izin' => 'absensi.scan', 'blank' => true, 'subgroup' => 'Absensi Pegawai'],
+                        ['label' => 'Rekap Absensi Pegawai', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RP', 'izin' => ['absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'absensi_pegawai.pribadi'], 'subgroup' => 'Absensi Pegawai'],
+                        ['label' => 'Laporan Absensi Pegawai', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LP', 'izin' => ['absensi.laporan', 'absensi_pegawai.pribadi'], 'subgroup' => 'Absensi Pegawai'],
                     ],
                 ],
                 [
-                    'title' => 'Pembinaan',
+                    'id' => 'kesiswaan-bk',
+                    'title' => 'Kesiswaan & BK',
                     'items' => [
-                        ['label' => 'Kategori Pembinaan', 'route' => 'kategori-pembinaan-siswa.index', 'active' => ['kategori-pembinaan-siswa.*'], 'initial' => 'KB', 'izin' => 'bk.kelola'],
-                        ['label' => 'Laporan Pembinaan', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*'], 'initial' => 'LP', 'izin' => ['bk.lihat', 'bk.kelola']],
+                        ['label' => 'Pembinaan & Poin Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PP', 'izin' => ['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.menyetujui'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Rekap Poin Siswa', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*', 'sanksi-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Monitoring'],
+                        ['label' => 'Reward & Pengurangan Poin', 'route' => 'pengurangan-poin-siswa.index', 'active' => ['pengurangan-poin-siswa.*'], 'initial' => 'RW', 'izin' => ['poin_siswa.reward_kelola', 'poin_siswa.putus_konflik'], 'subgroup' => 'Monitoring'],
+                        ['label' => 'Penugasan Guru Wali', 'route' => 'penugasan-guru-wali.index', 'active' => ['penugasan-guru-wali.*'], 'initial' => 'GW', 'izin' => 'guru_wali.kelola', 'subgroup' => 'Guru Wali'],
+                        ['label' => 'Jenis Pelanggaran & Poin', 'route' => 'jenis-pelanggaran-siswa.index', 'active' => ['jenis-pelanggaran-siswa.*'], 'initial' => 'JP', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
+                        ['label' => 'Aturan Sanksi Poin', 'route' => 'aturan-sanksi-poin.index', 'active' => ['aturan-sanksi-poin.*'], 'initial' => 'AS', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
+                        ['label' => 'Kategori Pembinaan Non-Poin', 'route' => 'kategori-pembinaan-siswa.index', 'active' => ['kategori-pembinaan-siswa.*'], 'initial' => 'KP', 'izin' => 'bk.kelola', 'subgroup' => 'Pengaturan'],
                     ],
                 ],
                 [
+                    'id' => 'sarana-prasarana',
                     'title' => 'Sarana Prasarana',
                     'items' => [
-                        ['label' => 'Dashboard Sarpras', 'route' => 'dashboard-sarana-prasarana.index', 'active' => ['dashboard-sarana-prasarana.*'], 'initial' => 'DS', 'izin' => ['barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola']],
-                        ['label' => 'Laporan Inventaris', 'route' => 'laporan-inventaris-bulanan.index', 'active' => ['laporan-inventaris-bulanan.*'], 'initial' => 'LI', 'izin' => ['barang.lihat', 'barang.kelola']],
-                        ['label' => 'Inventaris Barang', 'route' => 'barang.index', 'active' => ['barang.*'], 'initial' => 'IB', 'izin' => ['barang.lihat', 'barang.kelola']],
-                        ['label' => 'Unit Aset', 'route' => 'unit-barang.index', 'active' => ['unit-barang.*'], 'initial' => 'UA', 'izin' => ['barang.lihat', 'barang.kelola']],
-                        ['label' => 'Label Barcode', 'route' => 'label-barcode-inventaris.index', 'active' => ['label-barcode-inventaris.*'], 'initial' => 'BC', 'izin' => ['barang.lihat', 'barang.kelola']],
-                        ['label' => 'Saldo Stok', 'route' => 'saldo-stok-barang.index', 'active' => ['saldo-stok-barang.*'], 'initial' => 'SS', 'izin' => ['barang.lihat', 'barang.kelola']],
-                        ['label' => 'Mutasi Stok', 'route' => 'mutasi-stok-barang.index', 'active' => ['mutasi-stok-barang.*'], 'initial' => 'MS', 'izin' => ['barang.lihat', 'barang.kelola']],
-                        ['label' => 'Peminjaman Barang', 'route' => 'peminjaman-barang.index', 'active' => ['peminjaman-barang.*', 'pengembalian-barang.*'], 'initial' => 'PB', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola']],
-                        ['label' => 'Rekap Peminjaman', 'route' => 'rekap-peminjaman-barang.index', 'active' => ['rekap-peminjaman-barang.*'], 'initial' => 'RP', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola']],
-                        ['label' => 'Kategori Barang', 'route' => 'kategori-barang.index', 'active' => ['kategori-barang.*'], 'initial' => 'KB', 'izin' => ['barang.lihat', 'barang.kelola']],
-                        ['label' => 'Satuan Barang', 'route' => 'satuan-barang.index', 'active' => ['satuan-barang.*'], 'initial' => 'SB', 'izin' => ['barang.lihat', 'barang.kelola']],
-                        ['label' => 'Lokasi Barang', 'route' => 'lokasi-barang.index', 'active' => ['lokasi-barang.*'], 'initial' => 'LB', 'izin' => ['barang.lihat', 'barang.kelola']],
+                        ['label' => 'Dashboard Sarpras', 'route' => 'dashboard-sarana-prasarana.index', 'active' => ['dashboard-sarana-prasarana.*'], 'initial' => 'DS', 'izin' => ['barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola'], 'subgroup' => 'Ringkasan'],
+                        ['label' => 'Inventaris Barang', 'route' => 'barang.index', 'active' => ['barang.*'], 'initial' => 'IB', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Inventaris'],
+                        ['label' => 'Unit Aset', 'route' => 'unit-barang.index', 'active' => ['unit-barang.*'], 'initial' => 'UA', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Inventaris'],
+                        ['label' => 'Label Barcode', 'route' => 'label-barcode-inventaris.index', 'active' => ['label-barcode-inventaris.*'], 'initial' => 'LB', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Inventaris'],
+                        ['label' => 'Saldo Stok', 'route' => 'saldo-stok-barang.index', 'active' => ['saldo-stok-barang.*'], 'initial' => 'SS', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Stok Barang'],
+                        ['label' => 'Mutasi Stok', 'route' => 'mutasi-stok-barang.index', 'active' => ['mutasi-stok-barang.*'], 'initial' => 'MS', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Stok Barang'],
+                        ['label' => 'Peminjaman & Pengembalian', 'route' => 'peminjaman-barang.index', 'active' => ['peminjaman-barang.*', 'pengembalian-barang.*'], 'initial' => 'PB', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola'], 'subgroup' => 'Peminjaman'],
+                        ['label' => 'Rekap Peminjaman', 'route' => 'rekap-peminjaman-barang.index', 'active' => ['rekap-peminjaman-barang.*'], 'initial' => 'RP', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola'], 'subgroup' => 'Peminjaman'],
+                        ['label' => 'Laporan Inventaris', 'route' => 'laporan-inventaris-bulanan.index', 'active' => ['laporan-inventaris-bulanan.*'], 'initial' => 'LI', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Laporan'],
+                        ['label' => 'Kategori Barang', 'route' => 'kategori-barang.index', 'active' => ['kategori-barang.*'], 'initial' => 'KB', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Pengaturan'],
+                        ['label' => 'Satuan Barang', 'route' => 'satuan-barang.index', 'active' => ['satuan-barang.*'], 'initial' => 'SB', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Pengaturan'],
+                        ['label' => 'Lokasi Barang', 'route' => 'lokasi-barang.index', 'active' => ['lokasi-barang.*'], 'initial' => 'LK', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Pengaturan'],
                     ],
                 ],
                 [
-                    'title' => 'Administrasi',
-                    'items' => [
-                        ['label' => 'Kartu Pelajar', 'route' => 'kartu-pelajar.index', 'active' => ['kartu-pelajar.*'], 'initial' => 'KP', 'izin' => ['kartu_pelajar.lihat', 'kartu_pelajar.cetak']],
-                        ['label' => 'Kartu Pegawai', 'route' => 'kartu-pegawai.index', 'active' => ['kartu-pegawai.*'], 'initial' => 'KG', 'izin' => 'pegawai.lihat'],
-                        ['label' => 'Kenaikan Kelas', 'route' => 'kenaikan-kelas.index', 'active' => ['kenaikan-kelas.*'], 'initial' => 'KK', 'izin' => 'kenaikan_kelas.kelola'],
-                    ],
-                ],
-                [
+                    'id' => 'sistem',
                     'title' => 'Sistem',
                     'items' => [
-                        ['label' => 'Profil Saya', 'route' => 'profil-pegawai.edit', 'active' => ['profil-pegawai.*'], 'initial' => 'PR', 'izin' => 'pegawai.profil', 'pegawai_only' => true],
                         ['label' => 'Akun Pegawai', 'route' => 'akun-pegawai.index', 'active' => ['akun-pegawai.*'], 'initial' => 'AP', 'izin' => ['akun.lihat', 'akun.kelola']],
-                        ['label' => 'Role', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RL', 'izin' => ['peran.lihat', 'peran.kelola']],
+                        ['label' => 'Role & Hak Akses', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RA', 'izin' => ['peran.lihat', 'peran.kelola']],
                     ],
                 ],
             ];
 
             $sidebarPegawaiSections = [
                 [
+                    'id' => 'utama',
                     'title' => 'Utama',
                     'items' => [
                         ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
                     ],
                 ],
                 [
+                    'id' => 'wali-kelas',
                     'title' => 'Wali Kelas',
                     'items' => [
-                        ['label' => 'Kelas', 'route' => 'kelas-wali.index', 'active' => ['kelas-wali.*', 'siswa.show'], 'initial' => 'KL', 'izin' => 'kelas.lihat', 'peran' => 'wali_kelas'],
+                        ['label' => 'Kelas Wali Saya', 'route' => 'kelas-wali.index', 'active' => ['kelas-wali.*', 'siswa.show'], 'initial' => 'KL', 'izin' => 'kelas.lihat', 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Absensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi'], 'peran' => 'wali_kelas'],
                         ['label' => 'Laporan Absensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan', 'peran' => 'wali_kelas'],
-                        ['label' => 'Laporan Pembinaan Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PB', 'izin' => ['bk.lihat', 'bk.kelola'], 'peran' => 'wali_kelas'],
+                        ['label' => 'Pembinaan & Poin Kelas', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PB', 'izin' => ['poin_siswa.lihat', 'poin_siswa.lapor'], 'peran' => 'wali_kelas'],
+                        ['label' => 'Rekap Poin Kelas', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'peran' => 'wali_kelas'],
                     ],
                 ],
                 [
-                    'title' => 'Guru Mapel',
+                    'id' => 'guru-wali',
+                    'title' => 'Guru Wali',
                     'items' => [
-                        ['label' => 'Jadwal Pelajaran', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JP', 'izin' => 'jadwal.pribadi', 'peran' => 'guru_mapel'],
+                        ['label' => 'Siswa Wali Saya', 'route' => 'siswa-wali-saya.index', 'active' => ['siswa-wali-saya.*', 'siswa.show'], 'initial' => 'SW', 'izin' => 'guru_wali.lihat', 'peran' => 'guru_wali'],
+                        ['label' => 'Pembinaan Siswa Wali', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PB', 'izin' => ['poin_siswa.lihat', 'poin_siswa.lapor'], 'peran' => 'guru_wali'],
+                        ['label' => 'Rekap Poin Siswa Wali', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'peran' => 'guru_wali'],
+                    ],
+                ],
+                [
+                    'id' => 'pembelajaran',
+                    'title' => 'Pembelajaran',
+                    'items' => [
+                        ['label' => 'Jadwal Mengajar Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JP', 'izin' => 'jadwal.pribadi', 'peran' => 'guru_mapel'],
                         ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'peran' => 'guru_mapel'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'peran' => 'guru_mapel'],
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.upload', 'peran' => 'guru_mapel'],
+                        ['label' => 'Laporkan Pelanggaran', 'route' => 'laporan-pembinaan-siswa.create', 'active' => ['laporan-pembinaan-siswa.create'], 'initial' => 'LP', 'izin' => 'poin_siswa.lapor', 'peran' => 'guru_mapel'],
                     ],
                 ],
                 [
-                    'title' => 'Profil Saya',
+                    'id' => 'kehadiran-saya',
+                    'title' => 'Kehadiran Saya',
                     'items' => [
-                        ['label' => 'Data Saya', 'route' => 'profil-pegawai.edit', 'active' => ['profil-pegawai.*'], 'initial' => 'DS', 'izin' => 'pegawai.profil', 'pegawai_only' => true],
                         ['label' => 'Rekap Absensi Saya', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RS', 'izin' => 'absensi_pegawai.pribadi', 'pegawai_only' => true],
                         ['label' => 'Laporan Absensi Saya', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LS', 'izin' => 'absensi_pegawai.pribadi', 'pegawai_only' => true],
+                    ],
+                ],
+                [
+                    'id' => 'akun-saya',
+                    'title' => 'Akun Saya',
+                    'items' => [
+                        ['label' => 'Data Saya', 'route' => 'profil-pegawai.edit', 'active' => ['profil-pegawai.*'], 'initial' => 'DS', 'izin' => 'pegawai.profil', 'pegawai_only' => true],
                     ],
                 ],
             ];
@@ -1367,6 +1985,21 @@
 
                             return $bolehMelihatMenu($item['izin'] ?? null);
                         })
+                        ->map(function (array $item) {
+                            $activePatterns = (array) ($item['active'] ?? $item['route']);
+                            $item['is_active'] = request()->routeIs(...$activePatterns);
+
+                            return $item;
+                        })
+                        ->values()
+                        ->all();
+                    $section['active'] = collect($section['items'])->contains('is_active', true);
+                    $section['groups'] = collect($section['items'])
+                        ->groupBy(fn (array $item) => $item['subgroup'] ?? '')
+                        ->map(fn ($items, $nama) => [
+                            'name' => $nama,
+                            'items' => $items->values()->all(),
+                        ])
                         ->values()
                         ->all();
 
@@ -1391,29 +2024,82 @@
                     </span>
                 </a>
 
-                <nav class="sidebar-nav">
-                    @foreach ($sidebarSections as $section)
-                        <section>
-                            <p class="sidebar-section-title">{{ $section['title'] }}</p>
-                            <div class="sidebar-links">
-                                @foreach ($section['items'] as $item)
-                                    @php
-                                        $activePatterns = (array) ($item['active'] ?? $item['route']);
-                                        $aktif = request()->routeIs(...$activePatterns);
-                                    @endphp
+                @if ($penggunaAktif?->administrator())
+                    <div class="sidebar-search" data-sidebar-search>
+                        <label for="sidebar-menu-search" class="sr-only">Cari menu</label>
+                        <div class="sidebar-search-control">
+                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="7"></circle>
+                                <path d="m20 20-4-4"></path>
+                            </svg>
+                            <input
+                                id="sidebar-menu-search"
+                                type="search"
+                                placeholder="Cari menu..."
+                                autocomplete="off"
+                                data-sidebar-search-input
+                            >
+                            <button type="button" class="sidebar-search-clear" title="Hapus pencarian" aria-label="Hapus pencarian" data-sidebar-search-clear hidden>
+                                <svg aria-hidden="true" viewBox="0 0 24 24">
+                                    <path d="M18 6 6 18M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                @endif
 
-                                    <a
-                                        href="{{ route($item['route']) }}"
-                                        class="sidebar-link {{ $aktif ? 'active' : '' }}"
-                                        @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif
+                <nav class="sidebar-nav" data-sidebar-nav>
+                    @foreach ($sidebarSections as $section)
+                        <details
+                            class="sidebar-section {{ $section['active'] ? 'has-active' : '' }}"
+                            data-sidebar-section
+                            data-sidebar-section-id="{{ $section['id'] }}"
+                            data-sidebar-section-title="{{ str($section['title'])->lower() }}"
+                            @if ($section['active']) open @endif
+                        >
+                            <summary class="sidebar-section-summary">
+                                <span class="sidebar-section-title">{{ $section['title'] }}</span>
+                                <span class="sidebar-section-count">{{ count($section['items']) }}</span>
+                                <svg class="sidebar-section-chevron" aria-hidden="true" viewBox="0 0 24 24">
+                                    <path d="m9 18 6-6-6-6"></path>
+                                </svg>
+                            </summary>
+
+                            <div class="sidebar-section-content">
+                                @foreach ($section['groups'] as $group)
+                                    <div
+                                        class="sidebar-subgroup"
+                                        data-sidebar-subgroup
+                                        data-sidebar-subgroup-title="{{ str($group['name'])->lower() }}"
                                     >
-                                        <span class="sidebar-link-initial">{{ $item['initial'] }}</span>
-                                        <span>{{ $item['label'] }}</span>
-                                    </a>
+                                        @if ($group['name'] !== '')
+                                            <p class="sidebar-subgroup-title">{{ $group['name'] }}</p>
+                                        @endif
+
+                                        <div class="sidebar-links">
+                                            @foreach ($group['items'] as $item)
+                                                <a
+                                                    href="{{ route($item['route']) }}"
+                                                    class="sidebar-link {{ $item['is_active'] ? 'active' : '' }}"
+                                                    data-sidebar-item
+                                                    data-sidebar-search-text="{{ str($section['title'] . ' ' . ($group['name'] ?? '') . ' ' . $item['label'])->lower() }}"
+                                                    @if ($item['is_active']) aria-current="page" @endif
+                                                    @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif
+                                                >
+                                                    <span class="sidebar-link-initial">{{ $item['initial'] }}</span>
+                                                    <span class="sidebar-link-label">{{ $item['label'] }}</span>
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
                                 @endforeach
                             </div>
-                        </section>
+                        </details>
                     @endforeach
+
+                    <div class="sidebar-search-empty" data-sidebar-search-empty hidden>
+                        Menu tidak ditemukan.
+                    </div>
                 </nav>
 
                 <div class="sidebar-foot">
@@ -1426,7 +2112,12 @@
 
             <div class="app-content">
                 <header class="app-topbar">
-                    <label for="sidebar-toggle" class="mobile-menu-button">Menu</label>
+                    <label for="sidebar-toggle" class="mobile-menu-button" title="Buka menu utama" aria-label="Buka menu utama">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                        <span class="sr-only">Menu</span>
+                    </label>
 
                     <div class="topbar-title">
                         <span class="topbar-eyebrow">NUSA</span>
@@ -1434,16 +2125,104 @@
                     </div>
 
                     @auth
-                        <div class="account-menu">
-                            <span class="account-name">{{ auth()->user()->nama }}</span>
-                            @if (auth()->user()->pegawai_id && auth()->user()->memilikiIzin('pegawai.profil'))
-                                <a href="{{ route('profil-pegawai.edit') }}" class="button button-muted button-sm">Profil Saya</a>
-                            @endif
-                            <a href="{{ route('kata-sandi.edit') }}" class="button button-muted button-sm">Ganti Password</a>
-                            <form action="{{ route('logout') }}" method="POST" class="logout-form">
-                                @csrf
-                                <button type="submit" class="button button-danger button-sm">Keluar</button>
-                            </form>
+                        <div class="topbar-actions">
+                            <details class="topbar-menu notification-menu">
+                                <summary class="topbar-icon-button" title="Notifikasi" aria-label="Notifikasi, {{ $jumlahNotifikasiBelumDibaca }} belum dibaca">
+                                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                                        <path d="M10.27 21a2 2 0 0 0 3.46 0"></path>
+                                        <path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.82 18 12.24 18 8a6 6 0 0 0-12 0c0 4.24-1.41 5.82-2.74 7.33"></path>
+                                    </svg>
+                                    <span
+                                        class="notification-count"
+                                        data-notification-count
+                                        @if ($jumlahNotifikasiBelumDibaca === 0) hidden @endif
+                                    >{{ $jumlahNotifikasiBelumDibaca > 99 ? '99+' : $jumlahNotifikasiBelumDibaca }}</span>
+                                </summary>
+
+                                <div class="topbar-popover notification-popover">
+                                    <header class="notification-popover-head">
+                                        <strong>Notifikasi</strong>
+                                        @if ($jumlahNotifikasiBelumDibaca > 0)
+                                            <form action="{{ route('notifikasi.baca-semua') }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="notification-text-button">Tandai semua dibaca</button>
+                                            </form>
+                                        @endif
+                                    </header>
+
+                                    <div class="notification-popover-list">
+                                        @forelse ($notifikasiTerbaru as $item)
+                                            <form action="{{ route('notifikasi.buka', $item) }}" method="POST" class="notification-popover-form">
+                                                @csrf
+                                                <button type="submit" class="notification-popover-item {{ $item->masihBelumDibaca() ? 'unread' : '' }}">
+                                                    <span class="notification-dot" aria-hidden="true"></span>
+                                                    <span class="notification-popover-copy">
+                                                        <span class="notification-popover-title">{{ $item->judul }}</span>
+                                                        <span class="notification-popover-message">{{ $item->pesan }}</span>
+                                                        <time class="notification-popover-time" datetime="{{ $item->created_at->toIso8601String() }}">
+                                                            {{ $item->created_at->diffForHumans() }}
+                                                        </time>
+                                                    </span>
+                                                </button>
+                                            </form>
+                                        @empty
+                                            <div class="notification-popover-empty">Belum ada notifikasi untuk akun ini.</div>
+                                        @endforelse
+                                    </div>
+
+                                    <a href="{{ route('notifikasi.index') }}" class="notification-popover-foot">Lihat semua notifikasi</a>
+                                </div>
+                            </details>
+
+                            <details class="topbar-menu account-menu-dropdown">
+                                <summary class="account-trigger" title="Menu akun" aria-label="Buka menu akun">
+                                    <span class="account-avatar" aria-hidden="true">{{ $inisialPengguna ?: 'N' }}</span>
+                                    <span class="account-identity">
+                                        <strong>{{ $penggunaAktif->nama }}</strong>
+                                        <small>{{ $labelPeranAktif }}</small>
+                                    </span>
+                                    <svg class="account-chevron" aria-hidden="true" viewBox="0 0 24 24">
+                                        <path d="m6 9 6 6 6-6"></path>
+                                    </svg>
+                                </summary>
+
+                                <div class="topbar-popover account-popover">
+                                    <div class="account-popover-head">
+                                        <strong>{{ $penggunaAktif->nama }}</strong>
+                                        <span>{{ $labelPeranAktif }}</span>
+                                    </div>
+
+                                    @if ($penggunaAktif->pegawai_id && $penggunaAktif->memilikiIzin('pegawai.profil'))
+                                        <a href="{{ route('profil-pegawai.edit') }}" class="account-dropdown-link">
+                                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                                                <path d="M20 21a8 8 0 0 0-16 0"></path>
+                                                <circle cx="12" cy="7" r="4"></circle>
+                                            </svg>
+                                            <span>Profil Saya</span>
+                                        </a>
+                                    @endif
+
+                                    <a href="{{ route('kata-sandi.edit') }}" class="account-dropdown-link">
+                                        <svg aria-hidden="true" viewBox="0 0 24 24">
+                                            <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                                            <path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"></path>
+                                        </svg>
+                                        <span>Ganti Kata Sandi</span>
+                                    </a>
+
+                                    <form action="{{ route('logout') }}" method="POST" class="logout-form">
+                                        @csrf
+                                        <button type="submit" class="account-dropdown-link danger">
+                                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                                                <path d="M10 17l5-5-5-5M15 12H3"></path>
+                                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                                            </svg>
+                                            <span>Keluar</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </details>
                         </div>
                     @endauth
                 </header>
@@ -1453,6 +2232,188 @@
                 </main>
             </div>
         </div>
+        @auth
+            <script>
+                (() => {
+                    const sidebarSections = [...document.querySelectorAll('[data-sidebar-section]')];
+                    const sidebarSearchInput = document.querySelector('[data-sidebar-search-input]');
+                    const sidebarSearchClear = document.querySelector('[data-sidebar-search-clear]');
+                    const sidebarSearchEmpty = document.querySelector('[data-sidebar-search-empty]');
+                    const sidebarStorageKey = @js('nusa.sidebar.terbuka.' . $penggunaAktif->id);
+                    let sedangMencariMenu = false;
+                    let sedangMengaturSidebar = false;
+
+                    const normalisasiPencarian = (nilai) => nilai
+                        .toLocaleLowerCase('id-ID')
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .trim();
+
+                    const ambilBagianTersimpan = () => {
+                        try {
+                            return window.localStorage.getItem(sidebarStorageKey);
+                        } catch (error) {
+                            return null;
+                        }
+                    };
+
+                    const simpanBagianTerbuka = (id) => {
+                        try {
+                            if (id) {
+                                window.localStorage.setItem(sidebarStorageKey, id);
+                            } else {
+                                window.localStorage.removeItem(sidebarStorageKey);
+                            }
+                        } catch (error) {
+                            // Sidebar tetap dapat digunakan saat penyimpanan browser dibatasi.
+                        }
+                    };
+
+                    const bukaSatuBagian = (bagian) => {
+                        sedangMengaturSidebar = true;
+                        sidebarSections.forEach((item) => {
+                            item.open = item === bagian;
+                        });
+                        window.requestAnimationFrame(() => {
+                            sedangMengaturSidebar = false;
+                        });
+                    };
+
+                    if (sidebarSections.length > 0) {
+                        const bagianAktif = sidebarSections.find((item) => item.classList.contains('has-active'));
+                        const idTersimpan = ambilBagianTersimpan();
+                        const bagianTersimpan = sidebarSections.find((item) => item.dataset.sidebarSectionId === idTersimpan);
+                        const bagianAwal = bagianAktif || bagianTersimpan || sidebarSections[0];
+
+                        bukaSatuBagian(bagianAwal);
+
+                        sidebarSections.forEach((bagian) => {
+                            bagian.addEventListener('toggle', () => {
+                                if (sedangMencariMenu || sedangMengaturSidebar || !bagian.open) return;
+
+                                sedangMengaturSidebar = true;
+                                sidebarSections.forEach((item) => {
+                                    if (item !== bagian) item.removeAttribute('open');
+                                });
+                                simpanBagianTerbuka(bagian.dataset.sidebarSectionId);
+                                window.requestAnimationFrame(() => {
+                                    sedangMengaturSidebar = false;
+                                });
+                            });
+                        });
+                    }
+
+                    const saringMenu = () => {
+                        const kataKunci = normalisasiPencarian(sidebarSearchInput?.value || '');
+                        sedangMencariMenu = kataKunci !== '';
+                        let jumlahCocok = 0;
+
+                        sidebarSections.forEach((bagian) => {
+                            const judulBagianCocok = normalisasiPencarian(bagian.dataset.sidebarSectionTitle || '')
+                                .includes(kataKunci);
+                            let jumlahCocokBagian = 0;
+
+                            bagian.querySelectorAll('[data-sidebar-subgroup]').forEach((subgroup) => {
+                                const judulSubgroupCocok = normalisasiPencarian(subgroup.dataset.sidebarSubgroupTitle || '')
+                                    .includes(kataKunci);
+                                let jumlahCocokSubgroup = 0;
+
+                                subgroup.querySelectorAll('[data-sidebar-item]').forEach((item) => {
+                                    const itemCocok = kataKunci === ''
+                                        || judulBagianCocok
+                                        || judulSubgroupCocok
+                                        || normalisasiPencarian(item.dataset.sidebarSearchText || '').includes(kataKunci);
+
+                                    item.hidden = !itemCocok;
+                                    if (itemCocok) {
+                                        jumlahCocokSubgroup++;
+                                        jumlahCocokBagian++;
+                                        jumlahCocok++;
+                                    }
+                                });
+
+                                subgroup.hidden = jumlahCocokSubgroup === 0;
+                            });
+
+                            bagian.hidden = jumlahCocokBagian === 0;
+                            if (kataKunci !== '' && jumlahCocokBagian > 0) {
+                                bagian.open = true;
+                            }
+                        });
+
+                        if (kataKunci === '') {
+                            const bagianAktif = sidebarSections.find((item) => item.classList.contains('has-active'));
+                            const idTersimpan = ambilBagianTersimpan();
+                            const bagianTersimpan = sidebarSections.find((item) => item.dataset.sidebarSectionId === idTersimpan);
+                            bukaSatuBagian(bagianAktif || bagianTersimpan || sidebarSections[0]);
+                        }
+
+                        if (sidebarSearchClear) sidebarSearchClear.hidden = kataKunci === '';
+                        if (sidebarSearchEmpty) sidebarSearchEmpty.hidden = jumlahCocok > 0;
+                    };
+
+                    sidebarSearchInput?.addEventListener('input', saringMenu);
+                    sidebarSearchClear?.addEventListener('click', () => {
+                        sidebarSearchInput.value = '';
+                        saringMenu();
+                        sidebarSearchInput.focus();
+                    });
+
+                    document.addEventListener('keydown', (event) => {
+                        if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase('id-ID') === 'k' && sidebarSearchInput) {
+                            event.preventDefault();
+                            sidebarSearchInput.focus();
+                            sidebarSearchInput.select();
+                        }
+                    });
+
+                    const menus = [...document.querySelectorAll('.topbar-menu')];
+
+                    menus.forEach((menu) => {
+                        menu.addEventListener('toggle', () => {
+                            if (!menu.open) return;
+
+                            menus.forEach((item) => {
+                                if (item !== menu) item.removeAttribute('open');
+                            });
+                        });
+                    });
+
+                    document.addEventListener('click', (event) => {
+                        menus.forEach((menu) => {
+                            if (menu.open && !menu.contains(event.target)) {
+                                menu.removeAttribute('open');
+                            }
+                        });
+                    });
+
+                    const perbaruiJumlahNotifikasi = async () => {
+                        try {
+                            const respons = await fetch(@js(route('notifikasi.ringkasan')), {
+                                headers: { 'Accept': 'application/json' },
+                            });
+
+                            if (!respons.ok) return;
+
+                            const data = await respons.json();
+                            const jumlah = Number(data.jumlah_belum_dibaca || 0);
+                            const badge = document.querySelector('[data-notification-count]');
+                            const tombol = badge?.closest('summary');
+
+                            if (!badge || !tombol) return;
+
+                            badge.textContent = jumlah > 99 ? '99+' : String(jumlah);
+                            badge.hidden = jumlah === 0;
+                            tombol.setAttribute('aria-label', `Notifikasi, ${jumlah} belum dibaca`);
+                        } catch (error) {
+                            // Kegagalan pembaruan badge tidak mengganggu penggunaan halaman.
+                        }
+                    };
+
+                    window.setInterval(perbaruiJumlahNotifikasi, 60000);
+                })();
+            </script>
+        @endauth
         @stack('scripts')
     </body>
 </html>

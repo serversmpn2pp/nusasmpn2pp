@@ -660,8 +660,8 @@
 
                 <article class="dashboard-panel">
                     <div class="dashboard-panel-head">
-                        <h2>Pembinaan/BK</h2>
-                        @izin('bk.lihat', 'bk.kelola')
+                        <h2>Pembinaan & Poin Siswa</h2>
+                        @izin('bk.lihat', 'bk.kelola', 'poin_siswa.lihat')
                             <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted button-sm">Lihat</a>
                         @endizin
                     </div>
@@ -683,6 +683,22 @@
                                 <strong>{{ $formatAngka($ringkasanPembinaan['selesai_bulan_ini']) }}</strong>
                                 <span>Selesai bulan ini</span>
                             </div>
+                            <div class="mini-card">
+                                <strong>{{ $formatAngka($ringkasanPembinaan['menunggu_bk']) }}</strong>
+                                <span>Menunggu verifikasi BK</span>
+                            </div>
+                            <div class="mini-card">
+                                <strong>{{ $formatAngka($ringkasanPembinaan['menunggu_persetujuan']) }}</strong>
+                                <span>Menunggu persetujuan</span>
+                            </div>
+                            <div class="mini-card">
+                                <strong>{{ $formatAngka($ringkasanPembinaan['poin_aktif']) }}</strong>
+                                <span>Total poin aktif</span>
+                            </div>
+                            <div class="mini-card">
+                                <strong>{{ $formatAngka($ringkasanPembinaan['sanksi_menunggu']) }}</strong>
+                                <span>Sanksi belum selesai</span>
+                            </div>
                         </div>
 
                         <div class="dashboard-list" style="margin-top: 12px;">
@@ -695,7 +711,7 @@
                                     <span class="{{ $statusPembinaanBadge($laporan->status) }}">{{ $laporan->labelStatus() }}</span>
                                 </div>
                             @empty
-                                <div class="empty-state">Tidak ada laporan pembinaan yang perlu perhatian.</div>
+                                <div class="empty-state">Tidak ada laporan pembinaan atau pelanggaran yang perlu perhatian.</div>
                             @endforelse
                         </div>
                     </div>
@@ -762,6 +778,9 @@
                 'selesai' => 'badge badge-muted',
                 default => 'badge badge-muted',
             };
+            $labelPeranWali = $kelasWali->isNotEmpty() && $jumlahSiswaGuruWali > 0
+                ? 'Wali Kelas dan Guru Wali'
+                : ($kelasWali->isNotEmpty() ? 'Wali Kelas' : ($jumlahSiswaGuruWali > 0 ? 'Guru Wali' : 'Pegawai'));
         @endphp
 
         <section class="dashboard-hero employee-hero">
@@ -779,7 +798,7 @@
                     <p class="dashboard-year">{{ $tahunPelajaranAktif?->nama ?? 'Tahun pelajaran belum aktif' }}</p>
                     <p class="dashboard-note">{{ $pegawaiLogin?->nip ?: 'NIP belum diisi' }}</p>
                 </div>
-                <span class="badge badge-inactive">{{ $kelasWali->isNotEmpty() ? 'Pegawai dan Wali Kelas' : 'Pegawai' }}</span>
+                <span class="badge badge-inactive">{{ $labelPeranWali }}</span>
             </div>
         </section>
 
@@ -813,9 +832,11 @@
                         <span class="dashboard-action-mark">RK</span>
                     </a>
                 @endizin
-                @izin('bk.lihat', 'bk.kelola')
+            @endif
+            @if ($memilikiPerwalian)
+                @izin('poin_siswa.lihat', 'poin_siswa.lapor')
                     <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="dashboard-action">
-                        <span>Pembinaan Kelas</span>
+                        <span>Pembinaan & Poin</span>
                         <span class="dashboard-action-mark">BK</span>
                     </a>
                 @endizin
@@ -961,9 +982,12 @@
                         </div>
                     </article>
 
+                @endif
+
+                @if ($memilikiPerwalian)
                     <article class="dashboard-panel">
                         <div class="dashboard-panel-head">
-                            <h2>Pembinaan/BK Siswa Wali</h2>
+                            <h2>Pembinaan & Poin Siswa Wali</h2>
                             <span class="badge badge-muted">{{ $labelBulan }}</span>
                         </div>
                         <div class="dashboard-panel-body">
@@ -971,8 +995,8 @@
                                 @foreach ([
                                     ['label' => 'Total laporan', 'value' => $ringkasanPembinaanWali['total_laporan']],
                                     ['label' => 'Siswa terlapor', 'value' => $ringkasanPembinaanWali['siswa_terlapor']],
-                                    ['label' => 'Baru', 'value' => $ringkasanPembinaanWali['baru']],
-                                    ['label' => 'Perlu tindak lanjut', 'value' => $ringkasanPembinaanWali['perlu_tindak_lanjut']],
+                                    ['label' => 'Menunggu persetujuan', 'value' => $ringkasanPembinaanWali['menunggu_persetujuan']],
+                                    ['label' => 'Poin aktif', 'value' => $ringkasanPembinaanWali['poin_aktif']],
                                 ] as $item)
                                     <div class="mini-card">
                                         <strong>{{ $formatAngka($item['value']) }}</strong>
@@ -1014,11 +1038,11 @@
                 @else
                     <article class="dashboard-panel">
                         <div class="dashboard-panel-head">
-                            <h2>Wali Kelas</h2>
+                            <h2>Perwalian Siswa</h2>
                             <span class="badge badge-muted">Belum aktif</span>
                         </div>
                         <div class="dashboard-panel-body">
-                            <p class="help-text">Belum ada kelas aktif yang menjadikan akun ini sebagai wali kelas.</p>
+                            <p class="help-text">Belum ada kelas atau siswa aktif yang menjadi tanggung jawab perwalian akun ini.</p>
                         </div>
                     </article>
                 @endif

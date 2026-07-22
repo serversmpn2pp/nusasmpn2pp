@@ -8,6 +8,7 @@ use App\Models\MataPelajaran;
 use App\Models\PerangkatAjar;
 use App\Models\RiwayatFilePerangkatAjar;
 use App\Models\TahunPelajaran;
+use App\Services\Notifikasi\NotifikasiPenggunaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,10 @@ use Illuminate\Validation\ValidationException;
 
 class PerangkatAjarSayaController extends Controller
 {
+    public function __construct(private NotifikasiPenggunaService $notifikasiPenggunaService)
+    {
+    }
+
     public function index(Request $request)
     {
         $data = $request->validate([
@@ -145,6 +150,8 @@ class PerangkatAjarSayaController extends Controller
             throw $exception;
         }
 
+        $this->kirimNotifikasiMenungguPemeriksaan($request, $perangkatAjar);
+
         return redirect()
             ->route('perangkat-ajar-saya.show', $perangkatAjar)
             ->with('berhasil', 'Perangkat ajar berhasil diunggah dan menunggu pemeriksaan.');
@@ -222,6 +229,8 @@ class PerangkatAjarSayaController extends Controller
             throw $exception;
         }
 
+        $this->kirimNotifikasiMenungguPemeriksaan($request, $perangkatAjar);
+
         return redirect()
             ->route('perangkat-ajar-saya.show', $perangkatAjar)
             ->with('berhasil', 'Revisi PDF berhasil diunggah dan kembali menunggu pemeriksaan.');
@@ -260,6 +269,34 @@ class PerangkatAjarSayaController extends Controller
             'catatan_guru' => ['nullable', 'string'],
             'file_pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
         ];
+    }
+
+    private function kirimNotifikasiMenungguPemeriksaan(Request $request, PerangkatAjar $perangkatAjar): void
+    {
+        $perangkatAjar->loadMissing(['pegawai', 'mataPelajaran', 'jenisPerangkatAjar']);
+        $penerima = $this->notifikasiPenggunaService->penggunaDenganPeran(
+            ['administrator', 'wakil_pimpinan_kurikulum'],
+            $request->user()?->id,
+        );
+        $waktuVersi = $perangkatAjar->diunggah_pada?->format('Uv') ?? $perangkatAjar->updated_at?->format('Uv');
+
+        $this->notifikasiPenggunaService->kirimKeBanyak(
+            $penerima,
+            'peringatan',
+            'Perangkat ajar menunggu pemeriksaan',
+            sprintf(
+                '%s mengunggah %s untuk mata pelajaran %s.',
+                $perangkatAjar->pegawai?->nama_lengkap ?? 'Seorang guru',
+                $perangkatAjar->jenisPerangkatAjar?->nama ?? 'perangkat ajar',
+                $perangkatAjar->mataPelajaran?->nama ?? '-',
+            ),
+            route('pemeriksaan-perangkat-ajar.show', [
+                'pegawai' => $perangkatAjar->pegawai_id,
+                'tahun_pelajaran_id' => $perangkatAjar->tahun_pelajaran_id,
+                'semester' => $perangkatAjar->semester,
+            ], false),
+            "perangkat-ajar-menunggu:{$perangkatAjar->id}:{$waktuVersi}",
+        );
     }
 
     private function pegawaiAktif(Request $request)

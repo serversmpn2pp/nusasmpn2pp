@@ -3,25 +3,36 @@
 namespace App\Http\Controllers;
 
 use App\Models\AnggotaKelas;
+use App\Models\JenisPelanggaranSiswa;
 use App\Models\KategoriPembinaanSiswa;
 use App\Models\Kelas;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\Pegawai;
+use App\Models\PenugasanGuruWaliSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\Notifikasi\NotifikasiPenggunaService;
+use App\Services\Pembinaan\ProsesPoinSiswaService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class LaporanPembinaanSiswaController extends Controller
 {
+    public function __construct(
+        private NotifikasiPenggunaService $notifikasiPenggunaService,
+        private ProsesPoinSiswaService $prosesPoinSiswaService,
+    ) {
+    }
+
     public function index(Request $request)
     {
-        $pengguna = $request->user();
-        $cakupanWaliKelas = $pengguna?->membatasiCakupanWaliKelas() ?? false;
         $kataKunci = trim((string) $request->input('kata_kunci', ''));
-        $status = $request->input('status', 'semua');
-        $tingkat = $request->input('tingkat', 'semua');
+        $status = (string) $request->input('status', 'semua');
+        $tingkat = (string) $request->input('tingkat', 'semua');
+        $jenisLaporan = (string) $request->input('jenis_laporan', 'semua');
+        $statusVerifikasi = (string) $request->input('status_verifikasi', 'semua');
         $kategoriDipilih = $this->inputId($request, 'kategori_pembinaan_siswa_id');
         $tahunPelajaranDipilih = $this->inputId($request, 'tahun_pelajaran_id');
         $kelasDipilih = $this->inputId($request, 'kelas_id');
@@ -29,15 +40,22 @@ class LaporanPembinaanSiswaController extends Controller
         if (! array_key_exists($status, LaporanPembinaanSiswa::DAFTAR_STATUS) && $status !== 'semua') {
             $status = 'semua';
         }
-
         if (! array_key_exists($tingkat, LaporanPembinaanSiswa::DAFTAR_TINGKAT) && $tingkat !== 'semua') {
             $tingkat = 'semua';
         }
+        if (! array_key_exists($jenisLaporan, LaporanPembinaanSiswa::DAFTAR_JENIS_LAPORAN) && $jenisLaporan !== 'semua') {
+            $jenisLaporan = 'semua';
+        }
+        if (! array_key_exists($statusVerifikasi, LaporanPembinaanSiswa::DAFTAR_STATUS_VERIFIKASI) && $statusVerifikasi !== 'semua') {
+            $statusVerifikasi = 'semua';
+        }
 
         $laporanPembinaanSiswa = $this->queryLaporanDalamCakupan($request)
-            ->with(['siswa', 'kategoriPembinaanSiswa', 'tahunPelajaran', 'kelas', 'pelaporPegawai'])
+            ->with(['siswa', 'kategoriPembinaanSiswa', 'tahunPelajaran', 'kelas', 'pelaporPegawai', 'butirPelanggaranLaporan'])
             ->when($status !== 'semua', fn ($query) => $query->where('status', $status))
             ->when($tingkat !== 'semua', fn ($query) => $query->where('tingkat', $tingkat))
+            ->when($jenisLaporan !== 'semua', fn ($query) => $query->where('jenis_laporan', $jenisLaporan))
+            ->when($statusVerifikasi !== 'semua', fn ($query) => $query->where('status_verifikasi', $statusVerifikasi))
             ->when($kategoriDipilih, fn ($query) => $query->where('kategori_pembinaan_siswa_id', $kategoriDipilih))
             ->when($tahunPelajaranDipilih, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranDipilih))
             ->when($kelasDipilih, fn ($query) => $query->where('kelas_id', $kelasDipilih))
@@ -46,19 +64,13 @@ class LaporanPembinaanSiswaController extends Controller
                     $query->where('nomor_laporan', 'ilike', '%' . $kataKunci . '%')
                         ->orWhere('tempat_kejadian', 'ilike', '%' . $kataKunci . '%')
                         ->orWhere('kronologi', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhereHas('siswa', function ($query) use ($kataKunci) {
-                            $query->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
-                                ->orWhere('nis', 'ilike', '%' . $kataKunci . '%')
-                                ->orWhere('nisn', 'ilike', '%' . $kataKunci . '%');
-                        })
-                        ->orWhereHas('kategoriPembinaanSiswa', function ($query) use ($kataKunci) {
-                            $query->where('nama', 'ilike', '%' . $kataKunci . '%')
-                                ->orWhere('kode', 'ilike', '%' . $kataKunci . '%');
-                        })
-                        ->orWhereHas('pelaporPegawai', function ($query) use ($kataKunci) {
-                            $query->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
-                                ->orWhere('nip', 'ilike', '%' . $kataKunci . '%');
-                        });
+                        ->orWhereHas('siswa', fn ($query) => $query
+                            ->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
+                            ->orWhere('nis', 'ilike', '%' . $kataKunci . '%')
+                            ->orWhere('nisn', 'ilike', '%' . $kataKunci . '%'))
+                        ->orWhereHas('butirPelanggaranLaporan', fn ($query) => $query
+                            ->where('nama_pelanggaran', 'ilike', '%' . $kataKunci . '%')
+                            ->orWhere('kode_pelanggaran', 'ilike', '%' . $kataKunci . '%'));
                 });
             })
             ->orderByDesc('tanggal_kejadian')
@@ -66,37 +78,43 @@ class LaporanPembinaanSiswaController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        $cakupan = $this->queryLaporanDalamCakupan($request);
         $ringkasan = [
-            'total' => $this->queryLaporanDalamCakupan($request)->count(),
-            'baru' => $this->queryLaporanDalamCakupan($request)->where('status', 'baru')->count(),
-            'diproses' => $this->queryLaporanDalamCakupan($request)->where('status', 'diproses')->count(),
-            'tindak_lanjut' => $this->queryLaporanDalamCakupan($request)->where('status', 'perlu_tindak_lanjut')->count(),
-            'selesai' => $this->queryLaporanDalamCakupan($request)->where('status', 'selesai')->count(),
+            'total' => (clone $cakupan)->count(),
+            'pembinaan' => (clone $cakupan)->where('jenis_laporan', 'pembinaan')->count(),
+            'pelanggaran' => (clone $cakupan)->where('jenis_laporan', 'pelanggaran')->count(),
+            'menunggu' => (clone $cakupan)->whereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah'])->count(),
+            'disahkan' => (clone $cakupan)->where('status_verifikasi', 'disahkan')->count(),
         ];
 
-        return view('laporan-pembinaan-siswa.index', array_merge(
-            compact(
-                'laporanPembinaanSiswa',
-                'kataKunci',
-                'status',
-                'tingkat',
-                'kategoriDipilih',
-                'tahunPelajaranDipilih',
-                'kelasDipilih',
-                'ringkasan',
-                'cakupanWaliKelas',
-            ),
-            $this->pilihanFilter($request),
-        ));
+        return view('laporan-pembinaan-siswa.index', array_merge(compact(
+            'laporanPembinaanSiswa',
+            'kataKunci',
+            'status',
+            'tingkat',
+            'jenisLaporan',
+            'statusVerifikasi',
+            'kategoriDipilih',
+            'tahunPelajaranDipilih',
+            'kelasDipilih',
+            'ringkasan',
+        ), $this->pilihanFilter($request)));
     }
 
     public function create(Request $request)
     {
+        $jenisAwal = array_key_exists((string) $request->input('jenis'), LaporanPembinaanSiswa::DAFTAR_JENIS_LAPORAN)
+            ? (string) $request->input('jenis')
+            : 'pelanggaran';
+
         $laporanPembinaanSiswa = new LaporanPembinaanSiswa([
+            'jenis_laporan' => $jenisAwal,
             'tanggal_kejadian' => now()->toDateString(),
             'tingkat' => 'ringan',
             'status' => 'baru',
+            'status_verifikasi' => $jenisAwal === 'pelanggaran' ? 'diajukan' : 'tidak_perlu',
             'tahun_pelajaran_id' => TahunPelajaran::where('aktif', true)->latest('tanggal_mulai')->value('id'),
+            'pelapor_pegawai_id' => $request->user()?->pegawai_id,
         ]);
 
         return view('laporan-pembinaan-siswa.create', array_merge(
@@ -107,15 +125,30 @@ class LaporanPembinaanSiswaController extends Controller
 
     public function store(Request $request)
     {
-        $data = $this->rapikanData($request->validate($this->aturanValidasi()));
-        $data['nomor_laporan'] = $this->buatNomorLaporan($data['tanggal_kejadian']);
-        $data['dibuat_oleh_pengguna_id'] = auth()->id();
+        $data = $request->validate($this->aturanValidasi());
 
-        $laporanPembinaanSiswa = LaporanPembinaanSiswa::create($data);
+        $laporan = DB::transaction(function () use ($request, $data) {
+            $data = $this->rapikanData($data, $request);
+            $jenisIds = array_map('intval', $data['jenis_pelanggaran_ids'] ?? []);
+            unset($data['jenis_pelanggaran_ids']);
+
+            $data['nomor_laporan'] = $this->buatNomorLaporan($data['tanggal_kejadian']);
+            $data['dibuat_oleh_pengguna_id'] = auth()->id();
+            $data['status'] = 'baru';
+
+            $laporan = LaporanPembinaanSiswa::create($data);
+            $this->sinkronkanButirPelanggaran($laporan, $jenisIds);
+
+            return $laporan;
+        });
+
+        $this->kirimNotifikasiLaporanBaru($request, $laporan);
 
         return redirect()
-            ->route('laporan-pembinaan-siswa.show', $laporanPembinaanSiswa)
-            ->with('berhasil', 'Laporan pembinaan siswa berhasil ditambahkan.');
+            ->route('laporan-pembinaan-siswa.show', $laporan)
+            ->with('berhasil', $laporan->jenis_laporan === 'pelanggaran'
+                ? 'Laporan pelanggaran berhasil diajukan untuk pemeriksaan BK.'
+                : 'Catatan pembinaan siswa berhasil ditambahkan.');
     }
 
     public function show(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
@@ -123,19 +156,13 @@ class LaporanPembinaanSiswaController extends Controller
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
 
         $laporanPembinaanSiswa->load([
-            'siswa',
-            'kategoriPembinaanSiswa',
-            'tahunPelajaran',
-            'kelas',
-            'anggotaKelas',
-            'pelaporPegawai',
-            'dibuatOlehPengguna',
-            'tindakLanjutPembinaanSiswa' => function ($query) {
-                $query->with(['petugasPegawai', 'dibuatOlehPengguna'])
-                    ->orderByDesc('tanggal_tindak_lanjut')
-                    ->orderByDesc('waktu_tindak_lanjut')
-                    ->orderByDesc('id');
-            },
+            'siswa', 'kategoriPembinaanSiswa', 'tahunPelajaran', 'kelas', 'anggotaKelas',
+            'pelaporPegawai', 'waliKelasPegawai', 'guruWaliPegawai', 'dibuatOlehPengguna',
+            'butirPelanggaranLaporan',
+            'verifikasiBkPelanggaran' => fn ($query) => $query->with(['bkPegawai', 'pengguna'])->latest('diverifikasi_pada'),
+            'persetujuanPelanggaran' => fn ($query) => $query->with(['pegawai', 'pengguna'])->orderBy('jenis_persetujuan'),
+            'tindakLanjutPembinaanSiswa' => fn ($query) => $query->with(['petugasPegawai', 'dibuatOlehPengguna'])
+                ->orderByDesc('tanggal_tindak_lanjut')->orderByDesc('waktu_tindak_lanjut')->orderByDesc('id'),
         ]);
 
         return view('laporan-pembinaan-siswa.show', compact('laporanPembinaanSiswa'));
@@ -144,6 +171,9 @@ class LaporanPembinaanSiswaController extends Controller
     public function edit(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+        abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diputuskan tidak dapat diedit.');
+
+        $laporanPembinaanSiswa->load('butirPelanggaranLaporan');
 
         return view('laporan-pembinaan-siswa.edit', array_merge(
             compact('laporanPembinaanSiswa'),
@@ -154,67 +184,124 @@ class LaporanPembinaanSiswaController extends Controller
     public function update(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+        abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diputuskan tidak dapat diedit.');
 
-        $data = $this->rapikanData($request->validate($this->aturanValidasi()));
+        $data = $request->validate($this->aturanValidasi());
+        DB::transaction(function () use ($request, $data, $laporanPembinaanSiswa) {
+            $data = $this->rapikanData($data, $request, $laporanPembinaanSiswa);
+            $jenisIds = array_map('intval', $data['jenis_pelanggaran_ids'] ?? []);
+            unset($data['jenis_pelanggaran_ids']);
 
-        $laporanPembinaanSiswa->update($data);
+            $laporanPembinaanSiswa->update($data);
+            $this->sinkronkanButirPelanggaran($laporanPembinaanSiswa, $jenisIds);
 
-        return redirect()
-            ->route('laporan-pembinaan-siswa.show', $laporanPembinaanSiswa)
-            ->with('berhasil', 'Laporan pembinaan siswa berhasil diperbarui.');
+            if ($laporanPembinaanSiswa->jenis_laporan === 'pelanggaran') {
+                $laporanPembinaanSiswa->verifikasiBkPelanggaran()->delete();
+                $laporanPembinaanSiswa->persetujuanPelanggaran()->delete();
+            }
+        });
+
+        return redirect()->route('laporan-pembinaan-siswa.show', $laporanPembinaanSiswa)
+            ->with('berhasil', 'Laporan berhasil diperbarui dan proses verifikasi dimulai kembali.');
     }
 
     public function destroy(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+        $this->prosesPoinSiswaService->batalkanPoinLaporan($laporanPembinaanSiswa);
 
-        $laporanPembinaanSiswa->update(['status' => 'dibatalkan']);
-
-        return redirect()
-            ->route('laporan-pembinaan-siswa.index')
-            ->with('berhasil', 'Laporan pembinaan siswa berhasil dibatalkan.');
+        return redirect()->route('laporan-pembinaan-siswa.index')->with('berhasil', 'Laporan dibatalkan dan poin dikoreksi jika sebelumnya sudah ditetapkan.');
     }
 
     private function aturanValidasi(): array
     {
         return [
+            'jenis_laporan' => ['required', Rule::in(array_keys(LaporanPembinaanSiswa::DAFTAR_JENIS_LAPORAN))],
             'tanggal_kejadian' => ['required', 'date'],
             'waktu_kejadian' => ['nullable', 'date_format:H:i'],
             'tempat_kejadian' => ['nullable', 'string', 'max:150'],
             'siswa_id' => ['required', 'integer', Rule::exists('siswa', 'id')],
-            'kategori_pembinaan_siswa_id' => ['required', 'integer', Rule::exists('kategori_pembinaan_siswa', 'id')],
+            'kategori_pembinaan_siswa_id' => ['nullable', 'integer', Rule::exists('kategori_pembinaan_siswa', 'id'), 'required_if:jenis_laporan,pembinaan'],
+            'jenis_pelanggaran_ids' => ['nullable', 'array', 'min:1', 'required_if:jenis_laporan,pelanggaran'],
+            'jenis_pelanggaran_ids.*' => ['integer', 'distinct', Rule::exists('jenis_pelanggaran_siswa', 'id')->where('aktif', true)],
             'tahun_pelajaran_id' => ['nullable', 'integer', Rule::exists('tahun_pelajaran', 'id')],
             'kelas_id' => ['nullable', 'integer', Rule::exists('kelas', 'id')],
             'pelapor_pegawai_id' => ['nullable', 'integer', Rule::exists('pegawai', 'id')],
-            'tingkat' => ['required', Rule::in(array_keys(LaporanPembinaanSiswa::DAFTAR_TINGKAT))],
-            'status' => ['required', Rule::in(array_keys(LaporanPembinaanSiswa::DAFTAR_STATUS))],
+            'tingkat' => ['nullable', Rule::in(array_keys(LaporanPembinaanSiswa::DAFTAR_TINGKAT)), 'required_if:jenis_laporan,pembinaan'],
             'kronologi' => ['required', 'string'],
             'tindakan_awal' => ['nullable', 'string'],
             'catatan_rahasia' => ['nullable', 'string'],
         ];
     }
 
-    private function rapikanData(array $data): array
+    private function rapikanData(array $data, Request $request, ?LaporanPembinaanSiswa $laporan = null): array
     {
+        if ($laporan && ! ($request->user()?->administrator() || $request->user()?->memilikiPeran('bk'))) {
+            $data['catatan_rahasia'] = $laporan->catatan_rahasia;
+        }
+
         foreach (['waktu_kejadian', 'tempat_kejadian', 'tahun_pelajaran_id', 'kelas_id', 'pelapor_pegawai_id', 'tindakan_awal', 'catatan_rahasia'] as $field) {
             $data[$field] = filled($data[$field] ?? null) ? $data[$field] : null;
         }
-
         foreach (['tempat_kejadian', 'kronologi', 'tindakan_awal', 'catatan_rahasia'] as $field) {
             $data[$field] = filled($data[$field] ?? null) ? trim($data[$field]) : null;
         }
 
-        return $this->lengkapiKonteksKelas($data);
+        if (! $data['pelapor_pegawai_id'] && $request->user()?->pegawai_id) {
+            $data['pelapor_pegawai_id'] = $request->user()->pegawai_id;
+        }
+
+        $data = $this->lengkapiKonteksKelas($data);
+
+        if ($data['jenis_laporan'] === 'pelanggaran') {
+            $jenis = JenisPelanggaranSiswa::query()
+                ->whereIn('id', $data['jenis_pelanggaran_ids'] ?? [])
+                ->where('aktif', true)
+                ->get();
+            $urutanTingkat = ['ringan' => 1, 'sedang' => 2, 'berat' => 3];
+            $tingkatTertinggi = $jenis->sortByDesc(fn ($item) => $urutanTingkat[$item->tingkat] ?? 0)->first()?->tingkat ?? 'ringan';
+
+            $data['kategori_pembinaan_siswa_id'] = $jenis->first()?->kategori_pembinaan_siswa_id;
+            $data['tingkat'] = $tingkatTertinggi;
+            $data['total_poin'] = (int) $jenis->sum('poin');
+            $data['status_verifikasi'] = 'diajukan';
+        } else {
+            $data['jenis_pelanggaran_ids'] = [];
+            $data['total_poin'] = 0;
+            $data['status_verifikasi'] = 'tidak_perlu';
+        }
+
+        if ($laporan && $laporan->status === 'dibatalkan') {
+            $data['status'] = 'dibatalkan';
+        }
+
+        return $data;
+    }
+
+    private function sinkronkanButirPelanggaran(LaporanPembinaanSiswa $laporan, array $jenisIds): void
+    {
+        $laporan->butirPelanggaranLaporan()->delete();
+        if ($laporan->jenis_laporan !== 'pelanggaran') {
+            return;
+        }
+
+        JenisPelanggaranSiswa::whereIn('id', $jenisIds)->orderBy('urutan')->get()->each(function ($jenis) use ($laporan) {
+            $laporan->butirPelanggaranLaporan()->create([
+                'jenis_pelanggaran_siswa_id' => $jenis->id,
+                'kode_pelanggaran' => $jenis->kode,
+                'nama_pelanggaran' => $jenis->nama,
+                'tingkat' => $jenis->tingkat,
+                'poin' => $jenis->poin,
+            ]);
+        });
     }
 
     private function lengkapiKonteksKelas(array $data): array
     {
         $tahunPelajaranId = $data['tahun_pelajaran_id'] ?? null;
-
         if (! $tahunPelajaranId && filled($data['kelas_id'] ?? null)) {
             $tahunPelajaranId = Kelas::whereKey($data['kelas_id'])->value('tahun_pelajaran_id');
         }
-
         if (! $tahunPelajaranId) {
             $tahunPelajaranId = TahunPelajaran::where('aktif', true)->latest('tanggal_mulai')->value('id');
         }
@@ -238,6 +325,17 @@ class LaporanPembinaanSiswaController extends Controller
         }
 
         $data['kelas_id'] = filled($data['kelas_id'] ?? null) ? (int) $data['kelas_id'] : null;
+        $data['wali_kelas_pegawai_id'] = $data['kelas_id'] ? Kelas::whereKey($data['kelas_id'])->value('wali_kelas_id') : null;
+
+        $tanggal = $data['tanggal_kejadian'] ?? now()->toDateString();
+        $data['guru_wali_pegawai_id'] = PenugasanGuruWaliSiswa::query()
+            ->where('siswa_id', $data['siswa_id'])
+            ->where('tanggal_mulai', '<=', $tanggal)
+            ->where(function ($query) use ($tanggal) {
+                $query->whereNull('tanggal_selesai')->orWhere('tanggal_selesai', '>=', $tanggal);
+            })
+            ->latest('tanggal_mulai')
+            ->value('guru_wali_pegawai_id');
 
         return $data;
     }
@@ -246,75 +344,43 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $prefix = 'PB-' . CarbonImmutable::parse($tanggalKejadian)->format('Ymd');
         $urut = LaporanPembinaanSiswa::where('nomor_laporan', 'like', $prefix . '-%')->count() + 1;
-
         do {
-            $nomorLaporan = sprintf('%s-%04d', $prefix, $urut);
-            $urut++;
+            $nomorLaporan = sprintf('%s-%04d', $prefix, $urut++);
         } while (LaporanPembinaanSiswa::where('nomor_laporan', $nomorLaporan)->exists());
 
         return $nomorLaporan;
     }
 
-    private function inputId(Request $request, string $field): ?int
-    {
-        $value = $request->input($field);
-
-        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
-    }
-
     private function pilihanFilter(Request $request): array
     {
-        $pengguna = $request->user();
-        $cakupanWaliKelas = $pengguna?->membatasiCakupanWaliKelas() ?? false;
-        $kelasWaliIds = $cakupanWaliKelas ? $pengguna->kelasWaliIds() : [];
+        $kelasWaliIds = $request->user()?->kelasWaliIds() ?? [];
+        $batasiKelas = ! $this->aksesPembinaanLuas($request) && $request->user()?->memilikiPeran('wali_kelas');
 
         return [
-            'daftarKategoriPembinaan' => KategoriPembinaanSiswa::orderByDesc('aktif')->orderBy('nama')->get(['id', 'nama', 'kode', 'aktif']),
+            'daftarKategoriPembinaan' => KategoriPembinaanSiswa::orderByDesc('aktif')->orderBy('nama')->get(),
             'daftarTingkat' => LaporanPembinaanSiswa::DAFTAR_TINGKAT,
             'daftarStatus' => LaporanPembinaanSiswa::DAFTAR_STATUS,
-            'daftarTahunPelajaran' => TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get(['id', 'nama', 'aktif']),
+            'daftarJenisLaporan' => LaporanPembinaanSiswa::DAFTAR_JENIS_LAPORAN,
+            'daftarStatusVerifikasi' => LaporanPembinaanSiswa::DAFTAR_STATUS_VERIFIKASI,
+            'daftarTahunPelajaran' => TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get(),
             'daftarKelas' => Kelas::with('tahunPelajaran:id,nama,aktif')
-                ->when($cakupanWaliKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
-                ->when(request('tahun_pelajaran_id'), fn ($query) => $query->where('tahun_pelajaran_id', request('tahun_pelajaran_id')))
-                ->orderBy('tingkat')
-                ->orderBy('nama')
-                ->get(['id', 'tahun_pelajaran_id', 'nama', 'tingkat', 'aktif']),
+                ->when($batasiKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
+                ->orderBy('tingkat')->orderBy('nama')->get(),
         ];
     }
 
     private function pilihanForm(Request $request): array
     {
-        $pengguna = $request->user();
-        $cakupanWaliKelas = $pengguna?->membatasiCakupanWaliKelas() ?? false;
-        $kelasWaliIds = $cakupanWaliKelas ? $pengguna->kelasWaliIds() : [];
-
         return [
-            'daftarKategoriPembinaan' => KategoriPembinaanSiswa::where('aktif', true)->orderBy('nama')->get(['id', 'nama', 'kode']),
-            'daftarSiswa' => Siswa::with([
-                'anggotaKelas' => function ($query) {
-                    $query->where('status_keanggotaan', 'aktif')
-                        ->select('id', 'tahun_pelajaran_id', 'kelas_id', 'siswa_id', 'status_keanggotaan');
-                },
-            ])
-                ->when($cakupanWaliKelas, function ($query) use ($kelasWaliIds) {
-                    $query->whereHas('anggotaKelas', function ($query) use ($kelasWaliIds) {
-                        $query->whereIn('kelas_id', $kelasWaliIds)
-                            ->where('status_keanggotaan', 'aktif');
-                    });
-                })
-                ->where('aktif', true)
-                ->orderBy('nama_lengkap')
-                ->get(['id', 'nama_lengkap', 'nis', 'nisn']),
-            'daftarTahunPelajaran' => TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get(['id', 'nama', 'aktif']),
-            'daftarKelas' => Kelas::with('tahunPelajaran:id,nama,aktif')
-                ->when($cakupanWaliKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
-                ->where('aktif', true)
-                ->orderBy('tingkat')
-                ->orderBy('nama')
-                ->get(['id', 'tahun_pelajaran_id', 'nama', 'tingkat', 'aktif']),
-            'daftarPegawai' => Pegawai::where('aktif', true)->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip', 'jabatan_utama']),
+            'daftarKategoriPembinaan' => KategoriPembinaanSiswa::where('aktif', true)->orderBy('nama')->get(),
+            'daftarJenisPelanggaran' => JenisPelanggaranSiswa::where('aktif', true)->orderBy('urutan')->get(),
+            'daftarSiswa' => Siswa::with(['anggotaKelas' => fn ($query) => $query->where('status_keanggotaan', 'aktif')])
+                ->where('aktif', true)->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nis', 'nisn']),
+            'daftarTahunPelajaran' => TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get(),
+            'daftarKelas' => Kelas::with('tahunPelajaran:id,nama,aktif')->where('aktif', true)->orderBy('tingkat')->orderBy('nama')->get(),
+            'daftarPegawai' => Pegawai::where('aktif', true)->orderBy('nama_lengkap')->get(),
             'daftarTingkat' => LaporanPembinaanSiswa::DAFTAR_TINGKAT,
-            'daftarStatus' => LaporanPembinaanSiswa::DAFTAR_STATUS,
+            'daftarJenisLaporan' => LaporanPembinaanSiswa::DAFTAR_JENIS_LAPORAN,
         ];
     }
 
@@ -323,35 +389,67 @@ class LaporanPembinaanSiswaController extends Controller
         $query = LaporanPembinaanSiswa::query();
         $pengguna = $request->user();
 
-        if ($pengguna?->membatasiCakupanWaliKelas()) {
-            $kelasWaliIds = $pengguna->kelasWaliIds();
-
-            $query->where(function ($query) use ($kelasWaliIds) {
-                $query->whereIn('kelas_id', $kelasWaliIds)
-                    ->orWhereHas('anggotaKelas', fn ($query) => $query->whereIn('kelas_id', $kelasWaliIds));
-            });
+        if ($this->aksesPembinaanLuas($request)) {
+            return $query;
         }
 
-        return $query;
+        $kelasWaliIds = $pengguna?->kelasWaliIds() ?? [];
+        $siswaWaliIds = $pengguna?->siswaWaliIds() ?? [];
+
+        return $query->where(function ($query) use ($pengguna, $kelasWaliIds, $siswaWaliIds) {
+            $query->where('dibuat_oleh_pengguna_id', $pengguna?->id)
+                ->when($pengguna?->pegawai_id, fn ($query) => $query->orWhere('pelapor_pegawai_id', $pengguna->pegawai_id))
+                ->when($kelasWaliIds !== [], fn ($query) => $query->orWhereIn('kelas_id', $kelasWaliIds))
+                ->when($siswaWaliIds !== [], fn ($query) => $query->orWhereIn('siswa_id', $siswaWaliIds));
+        });
     }
 
-    private function pastikanBolehAksesLaporan(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa): void
+    private function pastikanBolehAksesLaporan(Request $request, LaporanPembinaanSiswa $laporan): void
     {
-        $pengguna = $request->user();
-
-        if (! $pengguna?->membatasiCakupanWaliKelas()) {
+        if ($this->aksesPembinaanLuas($request)) {
             return;
         }
 
-        $kelasWaliIds = $pengguna->kelasWaliIds();
+        $pengguna = $request->user();
+        $boleh = (int) $laporan->dibuat_oleh_pengguna_id === (int) $pengguna?->id
+            || (filled($pengguna?->pegawai_id) && (int) $laporan->pelapor_pegawai_id === (int) $pengguna->pegawai_id)
+            || in_array((int) $laporan->kelas_id, $pengguna?->kelasWaliIds() ?? [], true)
+            || in_array((int) $laporan->siswa_id, $pengguna?->siswaWaliIds() ?? [], true);
 
-        abort_unless(
-            (filled($laporanPembinaanSiswa->kelas_id) && in_array((int) $laporanPembinaanSiswa->kelas_id, $kelasWaliIds, true))
-                || (filled($laporanPembinaanSiswa->anggota_kelas_id) && AnggotaKelas::query()
-                    ->whereKey($laporanPembinaanSiswa->anggota_kelas_id)
-                    ->whereIn('kelas_id', $kelasWaliIds)
-                    ->exists()),
-            403,
+        abort_unless($boleh, 403);
+    }
+
+    private function aksesPembinaanLuas(Request $request): bool
+    {
+        $pengguna = $request->user();
+
+        return $pengguna?->administrator()
+            || $pengguna?->memilikiPeran(['pimpinan', 'wakil_pimpinan_kesiswaan', 'bk'])
+            || $pengguna?->memilikiIzin('poin_siswa.verifikasi_bk');
+    }
+
+    private function kirimNotifikasiLaporanBaru(Request $request, LaporanPembinaanSiswa $laporan): void
+    {
+        $laporan->loadMissing(['siswa', 'kelas', 'kategoriPembinaanSiswa']);
+        $kodePeran = $laporan->jenis_laporan === 'pelanggaran'
+            ? ['administrator', 'bk', 'wakil_pimpinan_kesiswaan']
+            : ['administrator', 'bk'];
+
+        $penerima = $this->notifikasiPenggunaService->penggunaDenganPeran($kodePeran, $request->user()?->id);
+        $this->notifikasiPenggunaService->kirimKeBanyak(
+            $penerima,
+            $laporan->tingkat === 'berat' ? 'penting' : 'peringatan',
+            $laporan->jenis_laporan === 'pelanggaran' ? 'Laporan pelanggaran menunggu pemeriksaan' : 'Catatan pembinaan siswa baru',
+            sprintf('%s dari %s memiliki laporan %s.', $laporan->siswa?->nama_lengkap ?? 'Siswa', $laporan->kelas?->nama ?? 'kelas belum ditentukan', mb_strtolower($laporan->labelJenisLaporan())),
+            route('laporan-pembinaan-siswa.show', $laporan, false),
+            "laporan-pembinaan-baru:{$laporan->id}",
         );
+    }
+
+    private function inputId(Request $request, string $field): ?int
+    {
+        $value = $request->input($field);
+
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
     }
 }

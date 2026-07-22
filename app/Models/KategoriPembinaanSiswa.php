@@ -24,4 +24,9 @@ class KategoriPembinaanSiswa extends Model
     {
         return $this->hasMany(LaporanPembinaanSiswa::class);
     }
+
+    public function jenisPelanggaranSiswa(): HasMany
+    {
+        return $this->hasMany(JenisPelanggaranSiswa::class);
+    }
 }
