@@ -39,6 +39,21 @@ class TahunPelajaran extends Model
         return $this->hasOne(PengaturanPoinKeterlambatan::class);
     }
 
+    public function pengaturanPeringatanDiniPoin(): HasOne
+    {
+        return $this->hasOne(PengaturanPeringatanDiniPoin::class);
+    }
+
+    public function peringatanDiniSiswa(): HasMany
+    {
+        return $this->hasMany(PeringatanDiniSiswa::class);
+    }
+
+    public function pendampinganSiswa(): HasMany
+    {
+        return $this->hasMany(PendampinganSiswa::class);
+    }
+
     public function anggotaKelas(): HasMany
     {
         return $this->hasMany(AnggotaKelas::class);

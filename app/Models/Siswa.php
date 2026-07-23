@@ -84,6 +84,16 @@ class Siswa extends Model
         return $this->hasMany(SanksiPoinSiswa::class);
     }
 
+    public function peringatanDiniSiswa(): HasMany
+    {
+        return $this->hasMany(PeringatanDiniSiswa::class);
+    }
+
+    public function pendampinganSiswa(): HasMany
+    {
+        return $this->hasMany(PendampinganSiswa::class);
+    }
+
     public function logScanAbsensi(): HasMany
     {
         return $this->hasMany(LogScanAbsensi::class);

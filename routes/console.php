@@ -15,3 +15,7 @@ Schedule::command('pembinaan:ingatkan-batas-proses')
 Schedule::command('pembinaan:proses-poin-keterlambatan')
     ->everyFifteenMinutes()
     ->withoutOverlapping();
+
+Schedule::command('pembinaan:proses-peringatan-dini')
+    ->dailyAt('05:30')
+    ->withoutOverlapping();

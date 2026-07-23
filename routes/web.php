@@ -46,18 +46,21 @@ use App\Http\Controllers\MutasiStokBarangController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
 use App\Http\Controllers\NotifikasiPenggunaController;
 use App\Http\Controllers\PegawaiController;
+use App\Http\Controllers\PendampinganSiswaController;
 use App\Http\Controllers\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\PeminjamanBarangController;
 use App\Http\Controllers\PenempatanSiswaController;
 use App\Http\Controllers\PengaturanAbsensiController;
 use App\Http\Controllers\PengaturanAbsensiPegawaiController;
 use App\Http\Controllers\PengaturanBatasProsesPelanggaranController;
+use App\Http\Controllers\PengaturanPeringatanDiniPoinController;
 use App\Http\Controllers\PengaturanPoinKeterlambatanController;
 use App\Http\Controllers\PengembalianBarangController;
 use App\Http\Controllers\PenguranganPoinSiswaController;
 use App\Http\Controllers\PenugasanGuruWaliController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PerangkatAjarSayaController;
+use App\Http\Controllers\PeringatanDiniSiswaController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\ProfilPegawaiController;
 use App\Http\Controllers\PusatVerifikasiPelanggaranController;
@@ -517,9 +520,43 @@ Route::middleware('auth')->group(function () {
             ->middleware('izin:poin_siswa.pengaturan')
             ->name('pengaturan-poin-keterlambatan.update');
 
+        Route::get('pengaturan-peringatan-dini-poin', [PengaturanPeringatanDiniPoinController::class, 'index'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-peringatan-dini-poin.index');
+        Route::get('pengaturan-peringatan-dini-poin/{tahunPelajaran}/edit', [PengaturanPeringatanDiniPoinController::class, 'edit'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-peringatan-dini-poin.edit');
+        Route::put('pengaturan-peringatan-dini-poin/{tahunPelajaran}', [PengaturanPeringatanDiniPoinController::class, 'update'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-peringatan-dini-poin.update');
+
+        Route::get('peringatan-dini-siswa', [PeringatanDiniSiswaController::class, 'index'])
+            ->middleware('izin:poin_siswa.lihat')
+            ->name('peringatan-dini-siswa.index');
+        Route::post('peringatan-dini-siswa/proses', [PeringatanDiniSiswaController::class, 'proses'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('peringatan-dini-siswa.proses');
+
+        Route::get('tindak-lanjut-siswa', [PendampinganSiswaController::class, 'index'])
+            ->middleware('izin:poin_siswa.lihat')
+            ->name('pendampingan-siswa.index');
+        Route::middleware('izin:poin_siswa.pendampingan_kelola')->group(function () {
+            Route::get('tindak-lanjut-siswa/tambah', [PendampinganSiswaController::class, 'create'])
+                ->name('pendampingan-siswa.create');
+            Route::post('tindak-lanjut-siswa', [PendampinganSiswaController::class, 'store'])
+                ->name('pendampingan-siswa.store');
+            Route::get('tindak-lanjut-siswa/{pendampinganSiswa}/edit', [PendampinganSiswaController::class, 'edit'])
+                ->name('pendampingan-siswa.edit');
+            Route::put('tindak-lanjut-siswa/{pendampinganSiswa}', [PendampinganSiswaController::class, 'update'])
+                ->name('pendampingan-siswa.update');
+        });
+
         Route::get('rekap-poin-siswa', [RekapPoinSiswaController::class, 'index'])
             ->middleware('izin:poin_siswa.lihat')
             ->name('rekap-poin-siswa.index');
+        Route::get('rekap-poin-siswa/{siswa}', [RekapPoinSiswaController::class, 'show'])
+            ->middleware('izin:poin_siswa.lihat')
+            ->name('rekap-poin-siswa.show');
         Route::middleware('izin:poin_siswa.reward_kelola')->group(function () {
             Route::get('pengurangan-poin-siswa', [PenguranganPoinSiswaController::class, 'index'])->name('pengurangan-poin-siswa.index');
             Route::post('pengurangan-poin-siswa', [PenguranganPoinSiswaController::class, 'store'])->name('pengurangan-poin-siswa.store');

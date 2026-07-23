@@ -70,6 +70,11 @@ class Pengguna extends Authenticatable
         return $this->hasMany(TindakLanjutPembinaanSiswa::class, 'dibuat_oleh_pengguna_id');
     }
 
+    public function pendampinganSiswaDibuat(): HasMany
+    {
+        return $this->hasMany(PendampinganSiswa::class, 'dibuat_oleh_pengguna_id');
+    }
+
     public function notifikasiPengguna(): HasMany
     {
         return $this->hasMany(NotifikasiPengguna::class);

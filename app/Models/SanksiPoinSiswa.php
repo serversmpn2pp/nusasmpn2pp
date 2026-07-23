@@ -78,6 +78,11 @@ class SanksiPoinSiswa extends Model
         return $this->hasMany(BuktiPelaksanaanSanksi::class);
     }
 
+    public function peringatanDiniSiswa(): HasMany
+    {
+        return $this->hasMany(PeringatanDiniSiswa::class);
+    }
+
     public function labelStatus(): string
     {
         return self::DAFTAR_STATUS[$this->status] ?? str($this->status)->headline()->toString();
