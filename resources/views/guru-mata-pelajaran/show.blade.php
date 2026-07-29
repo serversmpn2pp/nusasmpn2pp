@@ -5,6 +5,10 @@
 @section('content')
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
+        $pengaturanMapel = $guruMataPelajaran->mataPelajaran?->pengaturanUntuk(
+            (int) $guruMataPelajaran->tahun_pelajaran_id,
+            (int) $guruMataPelajaran->kelas?->tingkat,
+        );
     @endphp
 
     <div class="page-header">
@@ -16,6 +20,9 @@
         <div class="actions">
             <a href="{{ route('guru-mata-pelajaran.index') }}" class="button button-muted">Kembali</a>
             @izin('guru_mapel.kelola')
+                @if ($guruMataPelajaran->aktif && $guruMataPelajaran->jenis_penugasan === 'pengampu')
+                    <a href="{{ route('guru-mata-pelajaran.ganti-guru', $guruMataPelajaran) }}" class="button button-primary">Ganti Guru</a>
+                @endif
                 <a href="{{ route('guru-mata-pelajaran.edit', $guruMataPelajaran) }}" class="button button-dark">Edit</a>
             @endizin
         </div>
@@ -70,7 +77,7 @@
                     </div>
                     <div class="detail-item">
                         <dt>Kode mapel</dt>
-                        <dd>{{ $teks($guruMataPelajaran->mataPelajaran?->kode) }}</dd>
+                        <dd>{{ $teks($pengaturanMapel?->kode) }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Guru</dt>
@@ -91,9 +98,57 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
-                <h2 class="panel-title">Catatan pengembangan</h2>
-                <p class="help-text" style="margin-top: 8px;">Penugasan ini nanti menjadi pintu masuk guru saat memilih kelas dan mata pelajaran untuk input nilai.</p>
+            <section class="panel">
+                <div class="panel-pad" style="border-bottom: 1px solid var(--line);">
+                    <h2 class="panel-title">Riwayat Pergantian Guru</h2>
+                    <p class="help-text" style="margin-top: 6px;">Pergantian dicatat tanpa memutus jadwal dan nilai pada penugasan ini.</p>
+                </div>
+
+                <div class="desktop-only table-wrap">
+                    <table class="employee-table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal efektif</th>
+                                <th>Guru lama</th>
+                                <th>Guru baru</th>
+                                <th>Alasan</th>
+                                <th>Dicatat oleh</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($guruMataPelajaran->riwayatPergantian as $riwayat)
+                                <tr>
+                                    <td>{{ $riwayat->tanggal_efektif?->translatedFormat('d F Y') ?: '-' }}</td>
+                                    <td>{{ $riwayat->pegawaiLama?->nama_lengkap ?: '-' }}</td>
+                                    <td>{{ $riwayat->pegawaiBaru?->nama_lengkap ?: '-' }}</td>
+                                    <td style="white-space: pre-line;">{{ $riwayat->alasan }}</td>
+                                    <td>{{ $riwayat->digantiOleh?->nama ?: 'Sistem' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="empty-state">Belum ada pergantian guru pada penugasan ini.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mobile-only mobile-list">
+                    @forelse ($guruMataPelajaran->riwayatPergantian as $riwayat)
+                        <article class="mobile-card">
+                            <div class="mobile-card-head">
+                                <div>
+                                    <p class="person-name">{{ $riwayat->pegawaiLama?->nama_lengkap ?: '-' }} ke {{ $riwayat->pegawaiBaru?->nama_lengkap ?: '-' }}</p>
+                                    <p class="person-meta">{{ $riwayat->tanggal_efektif?->translatedFormat('d F Y') ?: '-' }}</p>
+                                </div>
+                            </div>
+                            <p style="margin-top: 12px; white-space: pre-line;">{{ $riwayat->alasan }}</p>
+                            <p class="person-meta" style="margin-top: 8px;">Dicatat oleh {{ $riwayat->digantiOleh?->nama ?: 'Sistem' }}</p>
+                        </article>
+                    @empty
+                        <div class="empty-state">Belum ada pergantian guru pada penugasan ini.</div>
+                    @endforelse
+                </div>
             </section>
         </div>
     </div>

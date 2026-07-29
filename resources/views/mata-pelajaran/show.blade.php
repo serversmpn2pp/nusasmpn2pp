@@ -5,6 +5,8 @@
 @section('content')
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
+        $romawi = [7 => 'VII', 8 => 'VIII', 9 => 'IX'];
+        $tahunDipilih = $tahunPelajaran->firstWhere('id', $tahunPelajaranId);
     @endphp
 
     <div class="page-header">
@@ -14,9 +16,9 @@
         </div>
 
         <div class="actions">
-            <a href="{{ route('mata-pelajaran.index') }}" class="button button-muted">Kembali</a>
+            <a href="{{ route('mata-pelajaran.index', ['tahun_pelajaran_id' => $tahunPelajaranId]) }}" class="button button-muted">Kembali</a>
             @izin('mata_pelajaran.kelola')
-                <a href="{{ route('mata-pelajaran.edit', $mataPelajaran) }}" class="button button-dark">Edit</a>
+                <a href="{{ route('mata-pelajaran.edit', [$mataPelajaran, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}" class="button button-dark">Edit</a>
             @endizin
         </div>
     </div>
@@ -30,14 +32,12 @@
             <div class="detail-profile">
                 <div class="avatar avatar-lg">MP</div>
                 <h2>{{ $mataPelajaran->nama }}</h2>
-                <p>{{ $mataPelajaran->kode ?: 'Kode belum diisi' }}</p>
+                <p>{{ $mataPelajaran->kelompok ?: 'Kelompok belum diisi' }}</p>
 
                 <div style="margin-top: 16px;">
-                    @if ($mataPelajaran->aktif)
-                        <span class="badge badge-active">Aktif</span>
-                    @else
-                        <span class="badge badge-inactive">Nonaktif</span>
-                    @endif
+                    <span class="badge {{ $mataPelajaran->aktif ? 'badge-active' : 'badge-inactive' }}">
+                        {{ $mataPelajaran->aktif ? 'Aktif' : 'Nonaktif' }}
+                    </span>
                 </div>
             </div>
 
@@ -54,23 +54,53 @@
 
         <div class="section-stack">
             <section class="panel panel-pad">
+                <div class="page-header" style="margin-bottom: 18px;">
+                    <div>
+                        <h2 class="panel-title">Pengaturan per Tingkat</h2>
+                        <p class="help-text">{{ $tahunDipilih?->nama ?? 'Tahun pelajaran belum tersedia' }}</p>
+                    </div>
+                    <form action="{{ route('mata-pelajaran.show', $mataPelajaran) }}" method="GET">
+                        <select name="tahun_pelajaran_id" class="select" onchange="this.form.submit()" aria-label="Pilih tahun pelajaran">
+                            @foreach ($tahunPelajaran as $item)
+                                <option value="{{ $item->id }}" @selected((int) $tahunPelajaranId === (int) $item->id)>
+                                    {{ $item->nama }}{{ $item->aktif ? ' - aktif' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                </div>
+
+                <div class="detail-grid">
+                    @forelse ($mataPelajaran->pengaturanTingkat as $pengaturan)
+                        <div class="detail-item">
+                            <dt>Kelas {{ $romawi[$pengaturan->tingkat] ?? $pengaturan->tingkat }}</dt>
+                            <dd>
+                                {{ $pengaturan->kode }} ·
+                                {{ $mataPelajaran->menggunakanPredikat() ? 'Predikat SB/B/C/K' : 'KKM/KKTP '.($pengaturan->kkm ?? '-') }}
+                            </dd>
+                            <span class="badge {{ $pengaturan->aktif ? 'badge-active' : 'badge-inactive' }}" style="margin-top: 8px;">
+                                {{ $pengaturan->aktif ? 'Digunakan' : 'Tidak digunakan' }}
+                            </span>
+                        </div>
+                    @empty
+                        <div class="detail-item span-2">
+                            <dt>Pengaturan tingkat</dt>
+                            <dd>Belum ada pengaturan untuk tahun pelajaran ini.</dd>
+                        </div>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="panel panel-pad">
                 <h2 class="panel-title">Informasi Mata Pelajaran</h2>
                 <dl class="detail-grid">
-                    <div class="detail-item">
-                        <dt>Kode</dt>
-                        <dd>{{ $teks($mataPelajaran->kode) }}</dd>
-                    </div>
                     <div class="detail-item">
                         <dt>Kelompok</dt>
                         <dd>{{ $teks($mataPelajaran->kelompok) }}</dd>
                     </div>
                     <div class="detail-item">
-                        <dt>Tingkat khusus</dt>
-                        <dd>{{ $mataPelajaran->tingkat ? 'Kelas ' . $mataPelajaran->tingkat : 'Semua tingkat' }}</dd>
-                    </div>
-                    <div class="detail-item">
-                        <dt>KKM/KKTP</dt>
-                        <dd>{{ $mataPelajaran->kkm ?? '-' }}</dd>
+                        <dt>Jenis penilaian</dt>
+                        <dd>{{ $mataPelajaran->labelJenisPenilaian() }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Urutan tampil</dt>
@@ -81,11 +111,6 @@
                         <dd style="white-space: pre-line;">{{ $teks($mataPelajaran->keterangan) }}</dd>
                     </div>
                 </dl>
-            </section>
-
-            <section class="panel panel-pad">
-                <h2 class="panel-title">Catatan pengembangan</h2>
-                <p class="help-text" style="margin-top: 8px;">Nanti mata pelajaran ini dapat dihubungkan dengan guru pengampu, kelas, tahun pelajaran, komponen nilai, dan rekap nilai.</p>
             </section>
         </div>
     </div>

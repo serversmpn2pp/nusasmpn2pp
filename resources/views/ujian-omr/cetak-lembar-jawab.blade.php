@@ -444,7 +444,13 @@
                                         <p class="meta-line">NISN: {{ $siswa?->nisn ?: '-' }}</p>
                                         <p class="meta-line">Kelas: {{ $anggota?->kelas?->nama ?: '-' }}</p>
                                         <p class="meta-line">No. absen: {{ $anggota?->nomor_absen ?: '-' }}</p>
-                                        <p class="meta-line">Mapel: {{ $ujianOmr->mataPelajaran?->kode ?: $ujianOmr->mataPelajaran?->nama ?: '-' }}</p>
+                                        @php
+                                            $pengaturanMapel = $ujianOmr->mataPelajaran?->pengaturanUntuk(
+                                                (int) $ujianOmr->tahun_pelajaran_id,
+                                                (int) $anggota?->kelas?->tingkat,
+                                            );
+                                        @endphp
+                                        <p class="meta-line">Mapel: {{ $pengaturanMapel?->kode ?: $ujianOmr->mataPelajaran?->nama ?: '-' }}</p>
                                     </div>
                                 </div>
                                 <div class="version-box">

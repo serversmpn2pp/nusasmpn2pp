@@ -10,7 +10,7 @@
         </div>
 
         @izin('guru_mapel.kelola')
-            <a href="{{ route('guru-mata-pelajaran.create') }}" class="button button-primary">Tambah penugasan</a>
+            <a href="{{ route('guru-mata-pelajaran.create', ['tahun_pelajaran_id' => $tahunPelajaranId]) }}" class="button button-primary">Tambah Penugasan</a>
         @endizin
     </div>
 
@@ -83,6 +83,12 @@
                 </thead>
                 <tbody>
                     @forelse ($guruMataPelajaran as $item)
+                        @php
+                            $pengaturanMapel = $item->mataPelajaran?->pengaturanUntuk(
+                                (int) $item->tahun_pelajaran_id,
+                                (int) $item->kelas?->tingkat,
+                            );
+                        @endphp
                         <tr>
                             <td>
                                 <p class="person-name">{{ $item->pegawai?->nama_lengkap ?: '-' }}</p>
@@ -90,7 +96,7 @@
                             </td>
                             <td>
                                 <p class="person-name">{{ $item->mataPelajaran?->nama ?: '-' }}</p>
-                                <p class="person-meta">{{ $item->mataPelajaran?->kode ?: 'Kode belum diisi' }}</p>
+                                <p class="person-meta">{{ $pengaturanMapel?->kode ?: 'Kode belum diatur' }}</p>
                             </td>
                             <td>{{ $item->kelas?->nama ?: '-' }}</td>
                             <td>{{ $item->tahunPelajaran?->nama ?: '-' }}</td>
@@ -105,6 +111,9 @@
                                 <div class="actions" style="justify-content: flex-end;">
                                     <a href="{{ route('guru-mata-pelajaran.show', $item) }}" class="button button-muted">Lihat</a>
                                     @izin('guru_mapel.kelola')
+                                        @if ($item->aktif && $item->jenis_penugasan === 'pengampu')
+                                            <a href="{{ route('guru-mata-pelajaran.ganti-guru', $item) }}" class="button button-primary">Ganti Guru</a>
+                                        @endif
                                         <a href="{{ route('guru-mata-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
                                     @endizin
                                 </div>
@@ -121,6 +130,12 @@
 
         <div class="mobile-only mobile-list">
             @forelse ($guruMataPelajaran as $item)
+                @php
+                    $pengaturanMapel = $item->mataPelajaran?->pengaturanUntuk(
+                        (int) $item->tahun_pelajaran_id,
+                        (int) $item->kelas?->tingkat,
+                    );
+                @endphp
                 <article class="mobile-card">
                     <div class="mobile-card-head">
                         <div>
@@ -142,7 +157,7 @@
                         </div>
                         <div>
                             <dt>Kode mapel</dt>
-                            <dd>{{ $item->mataPelajaran?->kode ?: '-' }}</dd>
+                            <dd>{{ $pengaturanMapel?->kode ?: '-' }}</dd>
                         </div>
                         <div>
                             <dt>Jenis</dt>
@@ -157,6 +172,9 @@
                     <div class="actions" style="margin-top: 14px;">
                         <a href="{{ route('guru-mata-pelajaran.show', $item) }}" class="button button-muted">Lihat</a>
                         @izin('guru_mapel.kelola')
+                            @if ($item->aktif && $item->jenis_penugasan === 'pengampu')
+                                <a href="{{ route('guru-mata-pelajaran.ganti-guru', $item) }}" class="button button-primary">Ganti Guru</a>
+                            @endif
                             <a href="{{ route('guru-mata-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
                         @endizin
                     </div>

@@ -18,6 +18,6 @@
     <form action="{{ route('jam-pelajaran.update', $jamPelajaran) }}" method="POST">
         @csrf
         @method('PUT')
-        @include('jam-pelajaran.partials.form', ['tombol' => 'Simpan perubahan'])
+        @include('jam-pelajaran.partials.form', ['tombol' => 'Simpan dan Terapkan'])
     </form>
 @endsection

@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\AnggotaKelas;
 use App\Models\KomponenNilai;
+use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class InputNilaiController extends Controller
@@ -18,9 +20,12 @@ class InputNilaiController extends Controller
         $komponenDipilih = null;
         $anggotaKelas = collect();
         $nilaiTersimpan = collect();
+        $penilaianPredikat = false;
 
         if ($komponenNilaiId) {
             $komponenDipilih = $this->ambilKomponenDipilih($komponenNilaiId);
+            $penilaianPredikat = $komponenDipilih
+                ->guruMataPelajaran?->mataPelajaran?->menggunakanPredikat() ?? false;
             $kelasId = $komponenDipilih->guruMataPelajaran?->kelas_id;
 
             if ($kelasId) {
@@ -36,11 +41,15 @@ class InputNilaiController extends Controller
 
         $jumlahSiswa = $anggotaKelas->count();
         $jumlahTerisi = $nilaiTersimpan
-            ->filter(fn (NilaiSiswa $nilaiSiswa) => $nilaiSiswa->nilai !== null)
+            ->filter(fn (NilaiSiswa $nilaiSiswa) => $penilaianPredikat
+                ? filled($nilaiSiswa->predikat)
+                : $nilaiSiswa->nilai !== null)
             ->count();
-        $rataRata = $nilaiTersimpan
-            ->filter(fn (NilaiSiswa $nilaiSiswa) => $nilaiSiswa->nilai !== null)
-            ->avg('nilai');
+        $rataRata = $penilaianPredikat
+            ? null
+            : $nilaiTersimpan
+                ->filter(fn (NilaiSiswa $nilaiSiswa) => $nilaiSiswa->nilai !== null)
+                ->avg('nilai');
 
         return view('input-nilai.index', compact(
             'daftarKomponenNilai',
@@ -51,28 +60,45 @@ class InputNilaiController extends Controller
             'jumlahSiswa',
             'jumlahTerisi',
             'rataRata',
+            'penilaianPredikat',
         ));
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $request->validate([
+            'komponen_nilai_id' => ['required', 'exists:komponen_nilai,id'],
+        ]);
+
+        $komponenDipilih = $this->ambilKomponenDipilih($request->input('komponen_nilai_id'));
+        $penilaianPredikat = $komponenDipilih
+            ->guruMataPelajaran?->mataPelajaran?->menggunakanPredikat() ?? false;
+        $aturan = [
             'komponen_nilai_id' => ['required', 'exists:komponen_nilai,id'],
             'nilai' => ['nullable', 'array'],
-            'nilai.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'predikat' => ['nullable', 'array'],
             'catatan' => ['nullable', 'array'],
             'catatan.*' => ['nullable', 'string', 'max:255'],
-        ], [
+        ];
+
+        if ($penilaianPredikat) {
+            $aturan['predikat.*'] = ['nullable', Rule::in(MataPelajaran::PREDIKAT_NILAI)];
+        } else {
+            $aturan['nilai.*'] = ['nullable', 'numeric', 'min:0', 'max:100'];
+        }
+
+        $data = $request->validate($aturan, [
             'nilai.*.numeric' => 'Nilai harus berupa angka.',
             'nilai.*.min' => 'Nilai minimal 0.',
             'nilai.*.max' => 'Nilai maksimal 100.',
+            'predikat.*.in' => 'Predikat harus SB, B, C, atau K.',
         ]);
 
-        $komponenDipilih = $this->ambilKomponenDipilih($data['komponen_nilai_id']);
         $kelasId = $komponenDipilih->guruMataPelajaran?->kelas_id;
         $anggotaKelas = $kelasId ? $this->ambilAnggotaKelas($kelasId) : collect();
         $siswaIds = $anggotaKelas->pluck('siswa_id')->map(fn ($id) => (int) $id);
         $idsDikirim = collect(array_keys($data['nilai'] ?? []))
+            ->merge(array_keys($data['predikat'] ?? []))
             ->merge(array_keys($data['catatan'] ?? []))
             ->map(fn ($id) => (int) $id)
             ->unique()
@@ -84,15 +110,19 @@ class InputNilaiController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($komponenDipilih, $siswaIds, $data) {
+        DB::transaction(function () use ($komponenDipilih, $siswaIds, $data, $penilaianPredikat) {
             foreach ($siswaIds as $siswaId) {
                 $nilaiMentah = $data['nilai'][$siswaId] ?? null;
+                $predikatMentah = $data['predikat'][$siswaId] ?? null;
                 $catatan = trim((string) ($data['catatan'][$siswaId] ?? ''));
-                $nilai = $nilaiMentah === null || $nilaiMentah === ''
+                $nilai = $penilaianPredikat || $nilaiMentah === null || $nilaiMentah === ''
                     ? null
                     : round((float) $nilaiMentah, 2);
+                $predikat = ! $penilaianPredikat || blank($predikatMentah)
+                    ? null
+                    : mb_strtoupper(trim((string) $predikatMentah));
 
-                if ($nilai === null && $catatan === '') {
+                if ($nilai === null && $predikat === null && $catatan === '') {
                     NilaiSiswa::query()
                         ->where('komponen_nilai_id', $komponenDipilih->id)
                         ->where('siswa_id', $siswaId)
@@ -108,6 +138,7 @@ class InputNilaiController extends Controller
                     ],
                     [
                         'nilai' => $nilai,
+                        'predikat' => $predikat,
                         'catatan' => $catatan ?: null,
                     ]
                 );

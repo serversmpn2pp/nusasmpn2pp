@@ -2,19 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AbsensiSiswa;
 use App\Models\AbsensiPegawai;
+use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
+use App\Models\JadwalPelajaran;
+use App\Models\JamPelajaran;
 use App\Models\Kelas;
 use App\Models\KomponenNilai;
+use App\Models\LaporanPembinaanSiswa;
 use App\Models\LogScanAbsensi;
 use App\Models\LogScanAbsensiPegawai;
-use App\Models\LaporanPembinaanSiswa;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
+use App\Models\PenugasanGuruWaliSiswa;
 use App\Models\SanksiPoinSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
@@ -34,6 +37,16 @@ class BerandaController extends Controller
             ->first();
         $awalBulan = $hariIni->copy()->startOfMonth();
         $akhirBulan = $hariIni->copy()->endOfMonth();
+
+        if ($pengguna?->akunSiswa() || $pengguna?->memilikiPeran('siswa')) {
+            return view('beranda.siswa', $this->dataDashboardSiswa(
+                pengguna: $pengguna,
+                hariIni: $hariIni,
+                tahunPelajaranAktif: $tahunPelajaranAktif,
+                awalBulan: $awalBulan,
+                akhirBulan: $akhirBulan,
+            ));
+        }
 
         if (! $pengguna?->administrator()) {
             return view('beranda.index', $this->dataDashboardPegawai(
@@ -226,6 +239,145 @@ class BerandaController extends Controller
             'pegawaiBelumScanHariIni',
             'laporanPembinaanPerluPerhatian',
         ));
+    }
+
+    private function dataDashboardSiswa(
+        Pengguna $pengguna,
+        $hariIni,
+        ?TahunPelajaran $tahunPelajaranAktif,
+        $awalBulan,
+        $akhirBulan,
+    ): array {
+        $siswa = $pengguna->siswa()->first();
+        $anggotaKelas = null;
+
+        if ($siswa) {
+            $queryAnggota = AnggotaKelas::query()
+                ->with(['kelas.tahunPelajaran', 'kelas.waliKelas', 'tahunPelajaran'])
+                ->where('siswa_id', $siswa->id)
+                ->where('status_keanggotaan', 'aktif');
+
+            if ($tahunPelajaranAktif) {
+                $anggotaKelas = (clone $queryAnggota)
+                    ->where('tahun_pelajaran_id', $tahunPelajaranAktif->id)
+                    ->first();
+            }
+
+            $anggotaKelas ??= $queryAnggota
+                ->latest('tahun_pelajaran_id')
+                ->latest('id')
+                ->first();
+        }
+
+        $kelas = $anggotaKelas?->kelas;
+        $tahunDashboard = $tahunPelajaranAktif ?: $anggotaKelas?->tahunPelajaran;
+        $kodeHari = [
+            1 => 'senin',
+            2 => 'selasa',
+            3 => 'rabu',
+            4 => 'kamis',
+            5 => 'jumat',
+            6 => 'sabtu',
+            7 => 'minggu',
+        ][$hariIni->dayOfWeekIso];
+
+        $jadwalHariIni = JadwalPelajaran::query()
+            ->with([
+                'jamPelajaran',
+                'mataPelajaran',
+                'guruMataPelajaran.mataPelajaran',
+                'guruMataPelajaran.pegawai',
+            ])
+            ->where('kelas_id', $kelas?->id ?: 0)
+            ->where('tahun_pelajaran_id', $tahunDashboard?->id ?: 0)
+            ->where('hari', $kodeHari)
+            ->where('aktif', true)
+            ->whereHas('jamPelajaran', fn ($query) => $query->where('aktif', true))
+            ->orderBy(
+                JamPelajaran::select('nomor_jam')
+                    ->whereColumn('jam_pelajaran.id', 'jadwal_pelajaran.jam_pelajaran_id')
+                    ->limit(1),
+            )
+            ->get();
+
+        $absensiBulan = AbsensiSiswa::query()
+            ->where('siswa_id', $siswa?->id ?: 0)
+            ->whereBetween('tanggal', [$awalBulan->toDateString(), $akhirBulan->toDateString()])
+            ->when($tahunDashboard, fn ($query) => $query->where('tahun_pelajaran_id', $tahunDashboard->id));
+        $jumlahStatusBulan = (clone $absensiBulan)
+            ->selectRaw('status_kehadiran, count(*) as jumlah')
+            ->groupBy('status_kehadiran')
+            ->pluck('jumlah', 'status_kehadiran');
+        $absensiHariIni = (clone $absensiBulan)
+            ->whereDate('tanggal', $hariIni->toDateString())
+            ->first();
+        $ringkasanKehadiran = [
+            'hadir' => (int) ($jumlahStatusBulan['hadir'] ?? 0),
+            'sakit' => (int) ($jumlahStatusBulan['sakit'] ?? 0),
+            'izin' => (int) ($jumlahStatusBulan['izin'] ?? 0),
+            'alfa' => (int) ($jumlahStatusBulan['alfa'] ?? 0),
+            'terlambat' => (clone $absensiBulan)->where('menit_terlambat', '>', 0)->count(),
+            'menit_terlambat' => (int) (clone $absensiBulan)->sum('menit_terlambat'),
+            'pulang_cepat' => (clone $absensiBulan)->where('menit_pulang_cepat', '>', 0)->count(),
+            'total_catatan' => (int) $jumlahStatusBulan->sum(),
+        ];
+
+        $transaksiPoin = TransaksiPoinSiswa::query()
+            ->where('siswa_id', $siswa?->id ?: 0)
+            ->when($tahunDashboard, fn ($query) => $query->where('tahun_pelajaran_id', $tahunDashboard->id));
+        $ringkasanPoin = [
+            'total' => (int) (clone $transaksiPoin)->sum('poin'),
+            'pelanggaran' => (clone $transaksiPoin)->where('jenis', 'pelanggaran')->count(),
+            'pengurangan' => abs((int) (clone $transaksiPoin)->where('jenis', 'pengurangan')->sum('poin')),
+        ];
+        $riwayatPoinTerbaru = (clone $transaksiPoin)
+            ->latest('tercatat_pada')
+            ->latest('id')
+            ->limit(4)
+            ->get();
+
+        $guruWali = PenugasanGuruWaliSiswa::query()
+            ->with('guruWali')
+            ->where('siswa_id', $siswa?->id ?: 0)
+            ->where('aktif', true)
+            ->where(function ($query) use ($hariIni) {
+                $query->whereNull('tanggal_mulai')
+                    ->orWhereDate('tanggal_mulai', '<=', $hariIni->toDateString());
+            })
+            ->where(function ($query) use ($hariIni) {
+                $query->whereNull('tanggal_selesai')
+                    ->orWhereDate('tanggal_selesai', '>=', $hariIni->toDateString());
+            })
+            ->latest('tanggal_mulai')
+            ->latest('id')
+            ->first()
+            ?->guruWali;
+        $notifikasiDashboard = $pengguna->notifikasiPengguna()
+            ->latest()
+            ->limit(4)
+            ->get();
+        $urlFotoSiswa = $siswa?->foto
+            ? asset('storage/'.$siswa->foto)
+            : asset('images/kartu-pelajar/default-user.png');
+
+        return [
+            'hariIni' => $hariIni,
+            'labelBulan' => $hariIni->copy()->locale('id')->translatedFormat('F Y'),
+            'tahunPelajaranAktif' => $tahunDashboard,
+            'siswaLogin' => $siswa,
+            'anggotaKelasAktif' => $anggotaKelas,
+            'kelasAktif' => $kelas,
+            'waliKelas' => $kelas?->waliKelas,
+            'guruWali' => $guruWali,
+            'kodeHari' => $kodeHari,
+            'jadwalHariIni' => $jadwalHariIni,
+            'absensiHariIni' => $absensiHariIni,
+            'ringkasanKehadiran' => $ringkasanKehadiran,
+            'ringkasanPoin' => $ringkasanPoin,
+            'riwayatPoinTerbaru' => $riwayatPoinTerbaru,
+            'notifikasiDashboard' => $notifikasiDashboard,
+            'urlFotoSiswa' => $urlFotoSiswa,
+        ];
     }
 
     private function dataDashboardPegawai(

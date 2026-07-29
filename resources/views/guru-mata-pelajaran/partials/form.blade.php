@@ -82,7 +82,7 @@
                         <option value="">Pilih mata pelajaran</option>
                         @foreach ($mataPelajaran as $item)
                             <option value="{{ $item->id }}" @selected((string) $nilai('mata_pelajaran_id') === (string) $item->id)>
-                                {{ $item->nama }}{{ $item->kode ? ' - ' . $item->kode : '' }}{{ $item->tingkat ? ' - kelas ' . $item->tingkat : '' }}
+                                {{ $item->nama }}{{ $item->pengaturanTingkat->isNotEmpty() ? ' - ' . $item->pengaturanTingkat->pluck('kode')->join(' / ') : '' }}
                             </option>
                         @endforeach
                     </select>

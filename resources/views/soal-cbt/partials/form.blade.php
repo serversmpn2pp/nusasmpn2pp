@@ -131,7 +131,7 @@
                     <select id="mata_pelajaran_id" name="mata_pelajaran_id" class="{{ $selectClass('mata_pelajaran_id') }}" required>
                         <option value="">Pilih mata pelajaran</option>
                         @foreach ($daftarMataPelajaran as $item)
-                            <option value="{{ $item->id }}" data-tingkat="{{ $item->tingkat }}" @selected((string) $nilai('mata_pelajaran_id') === (string) $item->id)>{{ $item->nama }}{{ $item->tingkat ? ' - kelas ' . $item->tingkat : '' }}</option>
+                            <option value="{{ $item->id }}" @selected((string) $nilai('mata_pelajaran_id') === (string) $item->id)>{{ $item->nama }}</option>
                         @endforeach
                     </select>
                     @error('mata_pelajaran_id') <p class="error-text">{{ $message }}</p> @enderror
@@ -287,8 +287,6 @@
         const sections = document.querySelectorAll('[data-answer-section]');
         const pgKeys = document.querySelectorAll('[data-pg-key]');
         const pgkKeys = document.querySelectorAll('[data-pgk-key]');
-        const mapel = document.getElementById('mata_pelajaran_id');
-        const tingkat = document.getElementById('tingkat');
 
         const sinkronkanJenis = () => {
             const value = jenis.value;
@@ -309,17 +307,7 @@
             });
         };
 
-        const sinkronkanTingkat = () => {
-            const selected = mapel.selectedOptions[0];
-
-            if (selected?.dataset.tingkat && ! tingkat.value) {
-                tingkat.value = selected.dataset.tingkat;
-            }
-        };
-
         jenis.addEventListener('change', sinkronkanJenis);
-        mapel.addEventListener('change', sinkronkanTingkat);
         sinkronkanJenis();
-        sinkronkanTingkat();
     })();
 </script>

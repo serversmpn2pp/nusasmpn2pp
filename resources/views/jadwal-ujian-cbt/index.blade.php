@@ -420,7 +420,7 @@
                                     <select id="mata_pelajaran_id" name="mata_pelajaran_id" class="select" required>
                                         <option value="">Pilih mapel</option>
                                         @foreach ($daftarMataPelajaran as $mapel)
-                                            <option value="{{ $mapel->id }}" @selected((string) old('mata_pelajaran_id') === (string) $mapel->id)>Kelas {{ $mapel->tingkat ?: '-' }} - {{ $mapel->nama }}</option>
+                                            <option value="{{ $mapel->id }}" @selected((string) old('mata_pelajaran_id') === (string) $mapel->id)>{{ $mapel->nama }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -546,7 +546,7 @@
                                             <label for="mapel_{{ $jadwal->id }}">Mata pelajaran</label>
                                             <select id="mapel_{{ $jadwal->id }}" name="mata_pelajaran_id" class="select" required>
                                                 @foreach ($daftarMataPelajaran as $mapel)
-                                                    <option value="{{ $mapel->id }}" @selected((string) $jadwal->mata_pelajaran_id === (string) $mapel->id)>Kelas {{ $mapel->tingkat ?: '-' }} - {{ $mapel->nama }}</option>
+                                                    <option value="{{ $mapel->id }}" @selected((string) $jadwal->mata_pelajaran_id === (string) $mapel->id)>{{ $mapel->nama }}</option>
                                                 @endforeach
                                             </select>
                                         </div>

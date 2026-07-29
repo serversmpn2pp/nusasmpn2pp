@@ -14,6 +14,12 @@ class PastikanKataSandiBukanDefault
         $pengguna = $request->user();
         $kataSandiDefault = config('nusa.kata_sandi_default_pegawai');
 
+        if ($pengguna?->wajib_ganti_kata_sandi) {
+            return redirect()
+                ->route('kata-sandi.edit')
+                ->with('perlu_ganti_kata_sandi', 'Silakan ganti kata sandi awal sebelum menggunakan NUSA.');
+        }
+
         if (
             $pengguna?->akunPegawai()
             && $kataSandiDefault

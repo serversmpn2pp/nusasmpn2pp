@@ -62,16 +62,16 @@ class KomponenNilaiController extends Controller
             })
             ->when($kata_kunci, function ($query, $kata_kunci) {
                 $query->where(function ($query) use ($kata_kunci) {
-                    $query->where('nama', 'ilike', '%' . $kata_kunci . '%')
+                    $query->where('nama', 'ilike', '%'.$kata_kunci.'%')
                         ->orWhereHas('guruMataPelajaran.pegawai', function ($query) use ($kata_kunci) {
-                            $query->where('nama_lengkap', 'ilike', '%' . $kata_kunci . '%');
+                            $query->where('nama_lengkap', 'ilike', '%'.$kata_kunci.'%');
                         })
                         ->orWhereHas('guruMataPelajaran.mataPelajaran', function ($query) use ($kata_kunci) {
-                            $query->where('nama', 'ilike', '%' . $kata_kunci . '%')
-                                ->orWhere('kode', 'ilike', '%' . $kata_kunci . '%');
+                            $query->where('nama', 'ilike', '%'.$kata_kunci.'%')
+                                ->orWhere('kode', 'ilike', '%'.$kata_kunci.'%');
                         })
                         ->orWhereHas('guruMataPelajaran.kelas', function ($query) use ($kata_kunci) {
-                            $query->where('nama', 'ilike', '%' . $kata_kunci . '%');
+                            $query->where('nama', 'ilike', '%'.$kata_kunci.'%');
                         });
                 });
             })
@@ -129,7 +129,7 @@ class KomponenNilaiController extends Controller
         $komponenNilai->load([
             'guruMataPelajaran.tahunPelajaran',
             'guruMataPelajaran.kelas',
-            'guruMataPelajaran.mataPelajaran',
+            'guruMataPelajaran.mataPelajaran.pengaturanTingkat',
             'guruMataPelajaran.pegawai',
         ]);
 
@@ -188,7 +188,7 @@ class KomponenNilaiController extends Controller
                         ->whereColumn('tahun_pelajaran.id', 'guru_mata_pelajaran.tahun_pelajaran_id')
                         ->limit(1)
                 )
-            ->get(),
+                ->get(),
         ], $tambahan);
     }
 
@@ -243,7 +243,7 @@ class KomponenNilaiController extends Controller
             $label = $data['jenis_komponen'] === 'sts' ? 'STS' : 'SAS/SAJ';
 
             throw ValidationException::withMessages([
-                'jenis_komponen' => $label . ' hanya boleh dibuat satu kali untuk guru mapel dan semester yang sama.',
+                'jenis_komponen' => $label.' hanya boleh dibuat satu kali untuk guru mapel dan semester yang sama.',
             ]);
         }
     }

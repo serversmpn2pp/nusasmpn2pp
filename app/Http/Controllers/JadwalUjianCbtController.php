@@ -74,7 +74,6 @@ class JadwalUjianCbtController extends Controller
                 ->get(),
             'daftarMataPelajaran' => MataPelajaran::query()
                 ->where('aktif', true)
-                ->orderBy('tingkat')
                 ->orderBy('urutan')
                 ->orderBy('nama')
                 ->get(),

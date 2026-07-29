@@ -19,9 +19,12 @@ class Pengguna extends Authenticatable
 
     protected $fillable = [
         'pegawai_id',
+        'siswa_id',
         'nama',
         'username',
         'kata_sandi',
+        'kata_sandi_awal',
+        'wajib_ganti_kata_sandi',
         'peran',
         'aktif',
         'akun_sistem',
@@ -30,11 +33,14 @@ class Pengguna extends Authenticatable
 
     protected $hidden = [
         'kata_sandi',
+        'kata_sandi_awal',
         'remember_token',
     ];
 
     protected $casts = [
         'kata_sandi' => 'hashed',
+        'kata_sandi_awal' => 'encrypted',
+        'wajib_ganti_kata_sandi' => 'boolean',
         'aktif' => 'boolean',
         'akun_sistem' => 'boolean',
         'terakhir_login_pada' => 'datetime',
@@ -52,6 +58,11 @@ class Pengguna extends Authenticatable
     public function pegawai(): BelongsTo
     {
         return $this->belongsTo(Pegawai::class);
+    }
+
+    public function siswa(): BelongsTo
+    {
+        return $this->belongsTo(Siswa::class);
     }
 
     public function daftarPeran(): BelongsToMany
@@ -175,6 +186,11 @@ class Pengguna extends Authenticatable
     public function akunPegawai(): bool
     {
         return ! $this->akun_sistem && filled($this->pegawai_id);
+    }
+
+    public function akunSiswa(): bool
+    {
+        return ! $this->akun_sistem && filled($this->siswa_id);
     }
 
     public function membatasiCakupanWaliKelas(): bool

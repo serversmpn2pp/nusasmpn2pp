@@ -8,6 +8,7 @@ use App\Models\MataPelajaran;
 use App\Models\Pegawai;
 use App\Models\TahunPelajaran;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -29,7 +30,7 @@ class GuruMataPelajaranController extends Controller
             ->get();
 
         $guruMataPelajaran = GuruMataPelajaran::query()
-            ->with(['tahunPelajaran', 'kelas', 'mataPelajaran', 'pegawai'])
+            ->with(['tahunPelajaran', 'kelas', 'mataPelajaran.pengaturanTingkat', 'pegawai'])
             ->when($tahunPelajaranId, function ($query, $tahunPelajaranId) {
                 $query->where('tahun_pelajaran_id', $tahunPelajaranId);
             })
@@ -42,15 +43,17 @@ class GuruMataPelajaranController extends Controller
             ->when($kata_kunci, function ($query, $kata_kunci) {
                 $query->where(function ($query) use ($kata_kunci) {
                     $query->whereHas('pegawai', function ($query) use ($kata_kunci) {
-                        $query->where('nama_lengkap', 'ilike', '%' . $kata_kunci . '%')
-                            ->orWhere('nip', 'ilike', '%' . $kata_kunci . '%');
+                        $query->where('nama_lengkap', 'ilike', '%'.$kata_kunci.'%')
+                            ->orWhere('nip', 'ilike', '%'.$kata_kunci.'%');
                     })
                         ->orWhereHas('mataPelajaran', function ($query) use ($kata_kunci) {
-                            $query->where('nama', 'ilike', '%' . $kata_kunci . '%')
-                                ->orWhere('kode', 'ilike', '%' . $kata_kunci . '%');
+                            $query->where('nama', 'ilike', '%'.$kata_kunci.'%')
+                                ->orWhere('kode', 'ilike', '%'.$kata_kunci.'%')
+                                ->orWhereHas('pengaturanTingkat', fn ($query) => $query
+                                    ->where('kode', 'ilike', '%'.$kata_kunci.'%'));
                         })
                         ->orWhereHas('kelas', function ($query) use ($kata_kunci) {
-                            $query->where('nama', 'ilike', '%' . $kata_kunci . '%');
+                            $query->where('nama', 'ilike', '%'.$kata_kunci.'%');
                         });
                 });
             })
@@ -97,20 +100,78 @@ class GuruMataPelajaranController extends Controller
 
     public function store(Request $request)
     {
-        $data = $this->rapikanData($request->validate($this->aturanValidasi()));
+        $data = $this->rapikanData($request->validate($this->aturanValidasiMassal()));
         $data['aktif'] = $request->boolean('aktif');
-        $this->pastikanRelasiCocok($data);
+        $kelasIds = collect($data['kelas_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+        $this->pastikanRelasiMassalCocok($data, $kelasIds->all());
 
-        $guruMataPelajaran = GuruMataPelajaran::create($data);
+        [$jumlahBaru, $jumlahDiperbarui] = DB::transaction(function () use ($data, $kelasIds) {
+            $jumlahBaru = 0;
+            $jumlahDiperbarui = 0;
+            $dataPenugasan = collect($data)
+                ->except('kelas_ids')
+                ->all();
+
+            foreach ($kelasIds as $kelasId) {
+                $kunci = [
+                    'tahun_pelajaran_id' => $data['tahun_pelajaran_id'],
+                    'kelas_id' => $kelasId,
+                    'mata_pelajaran_id' => $data['mata_pelajaran_id'],
+                    'pegawai_id' => $data['pegawai_id'],
+                ];
+                $penugasan = GuruMataPelajaran::query()->where($kunci)->first();
+
+                if ($penugasan) {
+                    $penugasan->update([
+                        'jenis_penugasan' => $data['jenis_penugasan'],
+                        'aktif' => $data['aktif'],
+                        'keterangan' => $data['keterangan'] ?? null,
+                    ]);
+                    $jumlahDiperbarui++;
+
+                    continue;
+                }
+
+                GuruMataPelajaran::create([
+                    ...$dataPenugasan,
+                    'kelas_id' => $kelasId,
+                ]);
+                $jumlahBaru++;
+            }
+
+            return [$jumlahBaru, $jumlahDiperbarui];
+        });
+
+        $rincian = collect([
+            $jumlahBaru > 0 ? "{$jumlahBaru} baru" : null,
+            $jumlahDiperbarui > 0 ? "{$jumlahDiperbarui} diperbarui" : null,
+        ])->filter()->implode(', ');
 
         return redirect()
-            ->route('guru-mata-pelajaran.show', $guruMataPelajaran)
-            ->with('berhasil', 'Guru mata pelajaran berhasil ditambahkan.');
+            ->route('guru-mata-pelajaran.index', [
+                'tahun_pelajaran_id' => $data['tahun_pelajaran_id'],
+                'status' => $data['aktif'] ? 'aktif' : 'semua',
+            ])
+            ->with(
+                'berhasil',
+                "Penugasan guru mata pelajaran berhasil disimpan untuk {$kelasIds->count()} kelas ({$rincian}).",
+            );
     }
 
     public function show(GuruMataPelajaran $guruMataPelajaran)
     {
-        $guruMataPelajaran->load(['tahunPelajaran', 'kelas', 'mataPelajaran', 'pegawai']);
+        $guruMataPelajaran->load([
+            'tahunPelajaran',
+            'kelas',
+            'mataPelajaran.pengaturanTingkat',
+            'pegawai',
+            'riwayatPergantian.pegawaiLama',
+            'riwayatPergantian.pegawaiBaru',
+            'riwayatPergantian.digantiOleh',
+        ]);
 
         return view('guru-mata-pelajaran.show', compact('guruMataPelajaran'));
     }
@@ -168,6 +229,9 @@ class GuruMataPelajaranController extends Controller
                 ->orderBy('nama')
                 ->get(),
             'mataPelajaran' => MataPelajaran::query()
+                ->with(['pengaturanTingkat' => fn ($query) => $query
+                    ->where('aktif', true)
+                    ->orderBy('tingkat')])
                 ->where('aktif', true)
                 ->orderBy('urutan')
                 ->orderBy('nama')
@@ -200,6 +264,20 @@ class GuruMataPelajaranController extends Controller
         ];
     }
 
+    private function aturanValidasiMassal(): array
+    {
+        return [
+            'tahun_pelajaran_id' => ['required', 'integer', 'exists:tahun_pelajaran,id'],
+            'kelas_ids' => ['required', 'array', 'min:1'],
+            'kelas_ids.*' => ['required', 'integer', 'distinct', 'exists:kelas,id'],
+            'mata_pelajaran_id' => ['required', 'integer', 'exists:mata_pelajaran,id'],
+            'pegawai_id' => ['required', 'integer', 'exists:pegawai,id'],
+            'jenis_penugasan' => ['required', Rule::in(['pengampu', 'pendamping', 'koordinator'])],
+            'aktif' => ['nullable', 'boolean'],
+            'keterangan' => ['nullable', 'string'],
+        ];
+    }
+
     private function rapikanData(array $data): array
     {
         $data['jenis_penugasan'] = $data['jenis_penugasan'] ?: 'pengampu';
@@ -218,9 +296,54 @@ class GuruMataPelajaranController extends Controller
             ]);
         }
 
-        if ($mataPelajaran?->tingkat && $kelas->tingkat && (int) $mataPelajaran->tingkat !== (int) $kelas->tingkat) {
+        if (
+            ! $mataPelajaran
+            || ! $mataPelajaran->tersediaUntuk(
+                (int) $data['tahun_pelajaran_id'],
+                (int) $kelas->tingkat,
+            )
+        ) {
             throw ValidationException::withMessages([
-                'mata_pelajaran_id' => 'Mata pelajaran ini khusus kelas ' . $mataPelajaran->tingkat . ', sedangkan kelas tujuan adalah kelas ' . $kelas->tingkat . '.',
+                'mata_pelajaran_id' => 'Mata pelajaran belum diaktifkan untuk tingkat kelas dan tahun pelajaran yang dipilih.',
+            ]);
+        }
+    }
+
+    private function pastikanRelasiMassalCocok(array $data, array $kelasIds): void
+    {
+        $kelas = Kelas::query()
+            ->whereIn('id', $kelasIds)
+            ->get();
+        $mataPelajaran = MataPelajaran::find($data['mata_pelajaran_id']);
+
+        if ($kelas->count() !== count($kelasIds)) {
+            throw ValidationException::withMessages([
+                'kelas_ids' => 'Ada kelas yang tidak ditemukan.',
+            ]);
+        }
+
+        $kelasTidakCocok = $kelas->first(fn (Kelas $item) => (
+            ! $item->aktif
+            || (int) $item->tahun_pelajaran_id !== (int) $data['tahun_pelajaran_id']
+        ));
+
+        if ($kelasTidakCocok) {
+            throw ValidationException::withMessages([
+                'kelas_ids' => 'Semua kelas harus aktif dan berada pada tahun pelajaran yang dipilih.',
+            ]);
+        }
+
+        $tingkatTidakTersedia = $kelas
+            ->pluck('tingkat')
+            ->unique()
+            ->first(fn ($tingkat) => ! $mataPelajaran?->tersediaUntuk(
+                (int) $data['tahun_pelajaran_id'],
+                (int) $tingkat,
+            ));
+
+        if ($tingkatTidakTersedia) {
+            throw ValidationException::withMessages([
+                'mata_pelajaran_id' => "Mata pelajaran belum diaktifkan untuk tingkat {$tingkatTidakTersedia} pada tahun pelajaran yang dipilih.",
             ]);
         }
     }

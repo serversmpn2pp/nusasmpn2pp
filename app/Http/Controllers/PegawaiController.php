@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pegawai;
+use App\Services\FotoProfilService;
 use App\Support\PembacaExcelPegawai;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class PegawaiController extends Controller
 {
@@ -40,10 +41,10 @@ class PegawaiController extends Controller
             })
             ->when($kata_kunci, function ($query, $kata_kunci) {
                 $query->where(function ($query) use ($kata_kunci) {
-                    $query->where('nama_lengkap', 'ilike', '%' . $kata_kunci . '%')
-                        ->orWhere('nip', 'ilike', '%' . $kata_kunci . '%')
-                        ->orWhere('nuptk', 'ilike', '%' . $kata_kunci . '%')
-                        ->orWhere('nik', 'ilike', '%' . $kata_kunci . '%');
+                    $query->where('nama_lengkap', 'ilike', '%'.$kata_kunci.'%')
+                        ->orWhere('nip', 'ilike', '%'.$kata_kunci.'%')
+                        ->orWhere('nuptk', 'ilike', '%'.$kata_kunci.'%')
+                        ->orWhere('nik', 'ilike', '%'.$kata_kunci.'%');
                 });
             })
             ->orderBy('nama_lengkap')
@@ -69,14 +70,14 @@ class PegawaiController extends Controller
         return view('pegawai.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, FotoProfilService $fotoProfilService)
     {
         $data = $request->validate([
             'nama_lengkap' => 'required|string|max:255',
             'nip' => 'nullable|string|max:50|unique:pegawai,nip',
             'nuptk' => 'nullable|string|max:50|unique:pegawai,nuptk',
             'nik' => 'nullable|string|max:50|unique:pegawai,nik',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'foto' => $fotoProfilService->aturan(),
             'jenis_kelamin' => 'nullable|in:L,P',
             'tempat_lahir' => 'nullable|string|max:100',
             'tanggal_lahir' => 'nullable|date',
@@ -95,15 +96,23 @@ class PegawaiController extends Controller
             'tahun_lulus' => 'nullable|integer|min:1900|max:2100',
             'keterangan' => 'nullable|string',
             'aktif' => 'nullable|boolean',
-        ]);
+        ], $fotoProfilService->pesanValidasi());
 
         $data['aktif'] = $request->boolean('aktif');
+        $fotoBaru = null;
 
         if ($request->hasFile('foto')) {
-            $data['foto'] = $request->file('foto')->store('pegawai/foto', 'public');
+            $fotoBaru = $fotoProfilService->simpan($request->file('foto'), 'pegawai/foto');
+            $data['foto'] = $fotoBaru;
         }
 
-        Pegawai::create($data);
+        try {
+            Pegawai::create($data);
+        } catch (Throwable $exception) {
+            $fotoProfilService->hapus($fotoBaru);
+
+            throw $exception;
+        }
 
         return redirect()
             ->route('pegawai.index')
@@ -120,19 +129,19 @@ class PegawaiController extends Controller
         return view('pegawai.edit', compact('pegawai'));
     }
 
-    public function update(Request $request, Pegawai $pegawai)
+    public function update(Request $request, Pegawai $pegawai, FotoProfilService $fotoProfilService)
     {
         $data = $request->validate([
             'nama_lengkap' => 'required|string|max:255',
-            'nip' => 'nullable|string|max:50|unique:pegawai,nip,' . $pegawai->id,
-            'nuptk' => 'nullable|string|max:50|unique:pegawai,nuptk,' . $pegawai->id,
-            'nik' => 'nullable|string|max:50|unique:pegawai,nik,' . $pegawai->id,
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'nip' => 'nullable|string|max:50|unique:pegawai,nip,'.$pegawai->id,
+            'nuptk' => 'nullable|string|max:50|unique:pegawai,nuptk,'.$pegawai->id,
+            'nik' => 'nullable|string|max:50|unique:pegawai,nik,'.$pegawai->id,
+            'foto' => $fotoProfilService->aturan(),
             'jenis_kelamin' => 'nullable|in:L,P',
             'tempat_lahir' => 'nullable|string|max:100',
             'tanggal_lahir' => 'nullable|date',
             'alamat' => 'nullable|string',
-            'email' => 'nullable|email|max:255|unique:pegawai,email,' . $pegawai->id,
+            'email' => 'nullable|email|max:255|unique:pegawai,email,'.$pegawai->id,
             'no_hp' => 'nullable|string|max:30',
             'status_kepegawaian' => 'nullable|string|max:100',
             'golongan' => 'nullable|string|max:50',
@@ -146,25 +155,58 @@ class PegawaiController extends Controller
             'tahun_lulus' => 'nullable|integer|min:1900|max:2100',
             'keterangan' => 'nullable|string',
             'aktif' => 'nullable|boolean',
-        ]);
+        ], $fotoProfilService->pesanValidasi());
 
         $data['aktif'] = $request->boolean('aktif');
+        $fotoLama = $pegawai->foto;
+        $fotoBaru = null;
 
         if ($request->hasFile('foto')) {
-            if ($pegawai->foto) {
-                Storage::disk('public')->delete($pegawai->foto);
-            }
-
-            $data['foto'] = $request->file('foto')->store('pegawai/foto', 'public');
+            $fotoBaru = $fotoProfilService->simpan($request->file('foto'), 'pegawai/foto');
+            $data['foto'] = $fotoBaru;
         } else {
             unset($data['foto']);
         }
 
-        $pegawai->update($data);
+        try {
+            $pegawai->update($data);
+        } catch (Throwable $exception) {
+            $fotoProfilService->hapus($fotoBaru);
+
+            throw $exception;
+        }
+
+        if ($fotoBaru) {
+            $fotoProfilService->hapus($fotoLama);
+        }
 
         return redirect()
             ->route('pegawai.index')
             ->with('berhasil', 'Data pegawai berhasil diperbarui.');
+    }
+
+    public function updateFoto(Request $request, Pegawai $pegawai, FotoProfilService $fotoProfilService)
+    {
+        $data = $request->validate([
+            'foto' => $fotoProfilService->aturan(wajib: true),
+        ], $fotoProfilService->pesanValidasi());
+        $fotoLama = $pegawai->foto;
+        $fotoBaru = $fotoProfilService->simpan($data['foto'], 'pegawai/foto');
+
+        try {
+            $pegawai->update(['foto' => $fotoBaru]);
+        } catch (Throwable $exception) {
+            $fotoProfilService->hapus($fotoBaru);
+
+            throw $exception;
+        }
+
+        $fotoProfilService->hapus($fotoLama);
+
+        return response()->json([
+            'pesan' => 'Foto pegawai berhasil diperbarui.',
+            'url' => asset('storage/'.$fotoBaru),
+        ]);
     }
 
     public function destroy(Pegawai $pegawai)
@@ -212,6 +254,7 @@ class PegawaiController extends Controller
             if ($duplikatBerkas) {
                 $ringkasan['dilewati']++;
                 $ringkasan['catatan'][] = $duplikatBerkas;
+
                 continue;
             }
 
@@ -227,7 +270,7 @@ class PegawaiController extends Controller
                 }
             } catch (QueryException $exception) {
                 $ringkasan['dilewati']++;
-                $ringkasan['catatan'][] = 'Baris ' . $baris['nomor_baris'] . ': data tidak disimpan karena bentrok dengan data unik yang sudah ada.';
+                $ringkasan['catatan'][] = 'Baris '.$baris['nomor_baris'].': data tidak disimpan karena bentrok dengan data unik yang sudah ada.';
             }
         }
 
@@ -274,10 +317,10 @@ class PegawaiController extends Controller
             }
 
             if (isset($identitasDiBerkas[$field][$nilai])) {
-                return 'Baris ' . $baris['nomor_baris'] . ': ' . $label . ' ' . $nilai . ' sudah dipakai pada ' . $identitasDiBerkas[$field][$nilai] . '.';
+                return 'Baris '.$baris['nomor_baris'].': '.$label.' '.$nilai.' sudah dipakai pada '.$identitasDiBerkas[$field][$nilai].'.';
             }
 
-            $identitasDiBerkas[$field][$nilai] = 'baris ' . $baris['nomor_baris'] . ' (' . $baris['data']['nama_lengkap'] . ')';
+            $identitasDiBerkas[$field][$nilai] = 'baris '.$baris['nomor_baris'].' ('.$baris['data']['nama_lengkap'].')';
         }
 
         return null;

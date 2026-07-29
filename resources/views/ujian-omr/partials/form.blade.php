@@ -101,7 +101,7 @@
                     <select id="mata_pelajaran_id" name="mata_pelajaran_id" class="{{ $selectClass('mata_pelajaran_id') }}" required>
                         <option value="">Pilih mata pelajaran</option>
                         @foreach ($daftarMataPelajaran as $item)
-                            <option value="{{ $item->id }}" @selected((string) $nilai('mata_pelajaran_id') === (string) $item->id)>{{ $item->nama }}{{ $item->tingkat ? ' - kelas ' . $item->tingkat : '' }}</option>
+                            <option value="{{ $item->id }}" @selected((string) $nilai('mata_pelajaran_id') === (string) $item->id)>{{ $item->nama }}</option>
                         @endforeach
                     </select>
                 </div>

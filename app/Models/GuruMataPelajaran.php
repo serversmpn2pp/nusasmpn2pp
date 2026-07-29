@@ -53,4 +53,11 @@ class GuruMataPelajaran extends Model
     {
         return $this->hasMany(JadwalPelajaran::class);
     }
+
+    public function riwayatPergantian(): HasMany
+    {
+        return $this->hasMany(RiwayatPergantianGuruMapel::class)
+            ->latest('tanggal_efektif')
+            ->latest('id');
+    }
 }

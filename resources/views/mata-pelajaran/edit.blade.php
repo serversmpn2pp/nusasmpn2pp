@@ -10,8 +10,8 @@
         </div>
 
         <div class="actions">
-            <a href="{{ route('mata-pelajaran.show', $mataPelajaran) }}" class="button button-muted">Detail</a>
-            <a href="{{ route('mata-pelajaran.index') }}" class="button button-muted">Kembali</a>
+            <a href="{{ route('mata-pelajaran.show', [$mataPelajaran, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}" class="button button-muted">Detail</a>
+            <a href="{{ route('mata-pelajaran.index', ['tahun_pelajaran_id' => $tahunPelajaranId]) }}" class="button button-muted">Kembali</a>
         </div>
     </div>
 

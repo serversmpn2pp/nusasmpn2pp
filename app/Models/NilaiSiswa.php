@@ -13,6 +13,7 @@ class NilaiSiswa extends Model
         'komponen_nilai_id',
         'siswa_id',
         'nilai',
+        'predikat',
         'catatan',
     ];
 

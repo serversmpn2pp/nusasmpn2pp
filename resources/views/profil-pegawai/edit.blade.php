@@ -60,13 +60,14 @@
         <div class="form-shell">
             <aside class="panel panel-pad">
                 <div class="detail-profile">
-                    <div class="avatar avatar-lg">
-                        @if ($pegawai->foto)
-                            <img src="{{ asset('storage/' . $pegawai->foto) }}" alt="Foto {{ $pegawai->nama_lengkap }}">
-                        @else
-                            {{ strtoupper(mb_substr($pegawai->nama_lengkap, 0, 1)) }}
-                        @endif
-                    </div>
+                    <x-input-foto-profil
+                        label="Foto profil"
+                        :foto-url="$pegawai->foto ? asset('storage/' . $pegawai->foto) : null"
+                        :inisial="strtoupper(mb_substr($pegawai->nama_lengkap, 0, 1))"
+                        :alt="'Foto ' . $pegawai->nama_lengkap"
+                        :upload-url="route('profil-pegawai.foto.update')"
+                        variant="profile"
+                    />
 
                     <h2>{{ $pegawai->nama_lengkap }}</h2>
                     <p>{{ $teks($pegawai->jabatan_utama ?: $pegawai->jenis_pegawai) }}</p>
@@ -78,15 +79,6 @@
                             <span class="badge badge-inactive">Nonaktif</span>
                         @endif
                     </div>
-                </div>
-
-                <div style="margin-top: 22px;">
-                    <label for="foto" class="form-label">Foto profil</label>
-                    <input id="foto" name="foto" type="file" accept="image/png,image/jpeg,image/webp" class="file-input">
-                    @error('foto')
-                        <p class="error-text">{{ $message }}</p>
-                    @enderror
-                    <p class="help-text">JPG, PNG, atau WebP. Maksimal 5 MB.</p>
                 </div>
 
                 <dl class="quick-facts profil-facts" style="margin-top: 18px;">

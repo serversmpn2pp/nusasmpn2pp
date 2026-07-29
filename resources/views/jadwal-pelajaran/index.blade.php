@@ -30,7 +30,8 @@
         <div class="actions">
             @izin('jadwal.kelola')
                 <a href="{{ route('jam-pelajaran.index') }}" class="button button-muted">Jam pelajaran</a>
-                <a href="{{ route('jadwal-pelajaran.create', ['tahun_pelajaran_id' => $tahunPelajaranId, 'kelas_id' => $kelasId]) }}" class="button button-primary">Tambah jadwal</a>
+                <a href="{{ route('jadwal-pelajaran.create', ['tahun_pelajaran_id' => $tahunPelajaranId, 'kelas_id' => $kelasId]) }}" class="button button-muted">Tambah satu</a>
+                <a href="{{ route('jadwal-pelajaran.susun', ['tahun_pelajaran_id' => $tahunPelajaranId, 'kelas_id' => $kelasId]) }}" class="button button-primary">Susun jadwal</a>
             @endizin
         </div>
     </div>
@@ -121,6 +122,11 @@
                     @forelse ($jadwalPelajaran as $item)
                         @php
                             $guruMapel = $item->guruMataPelajaran;
+                            $mataPelajaran = $item->mataPelajaranTerjadwal();
+                            $pengaturanMapel = $mataPelajaran?->pengaturanUntuk(
+                                (int) $item->tahun_pelajaran_id,
+                                (int) $item->kelas?->tingkat,
+                            );
                         @endphp
                         <tr>
                             <td>{{ $item->labelHari() }}</td>
@@ -130,12 +136,12 @@
                             </td>
                             <td>{{ $item->kelas?->nama ?? '-' }}</td>
                             <td>
-                                <p class="person-name">{{ $guruMapel?->mataPelajaran?->nama ?? '-' }}</p>
-                                <p class="person-meta">{{ $guruMapel?->mataPelajaran?->kode ?: 'Kode belum diisi' }}</p>
+                                <p class="person-name">{{ $mataPelajaran?->nama ?? '-' }}</p>
+                                <p class="person-meta">{{ $pengaturanMapel?->kode ?: 'Kode belum diatur' }}</p>
                             </td>
                             <td>
-                                <p class="person-name">{{ $guruMapel?->pegawai?->nama_lengkap ?? '-' }}</p>
-                                <p class="person-meta">{{ $guruMapel?->pegawai?->nip ?: 'NIP belum diisi' }}</p>
+                                <p class="person-name">{{ $guruMapel?->pegawai?->nama_lengkap ?? 'Kegiatan kelas' }}</p>
+                                <p class="person-meta">{{ $guruMapel?->pegawai?->nip ?: ($mataPelajaran?->kelompok ?? '-') }}</p>
                             </td>
                             <td>
                                 @if ($item->aktif)
@@ -164,13 +170,18 @@
 
         <div class="mobile-only mobile-list">
             @forelse ($jadwalPelajaran as $item)
-                @php
-                    $guruMapel = $item->guruMataPelajaran;
+                        @php
+                            $guruMapel = $item->guruMataPelajaran;
+                            $mataPelajaran = $item->mataPelajaranTerjadwal();
+                            $pengaturanMapel = $mataPelajaran?->pengaturanUntuk(
+                                (int) $item->tahun_pelajaran_id,
+                                (int) $item->kelas?->tingkat,
+                            );
                 @endphp
                 <article class="mobile-card">
                     <div class="mobile-card-head">
                         <div>
-                            <p class="person-name">{{ $guruMapel?->mataPelajaran?->nama ?? '-' }}</p>
+                            <p class="person-name">{{ $mataPelajaran?->nama ?? '-' }}</p>
                             <p class="person-meta">{{ $item->labelHari() }} - {{ $item->jamPelajaran?->labelJam() ?? '-' }}</p>
                         </div>
 
@@ -188,7 +199,7 @@
                         </div>
                         <div>
                             <dt>Guru</dt>
-                            <dd>{{ $guruMapel?->pegawai?->nama_lengkap ?? '-' }}</dd>
+                            <dd>{{ $guruMapel?->pegawai?->nama_lengkap ?? 'Kegiatan kelas' }}</dd>
                         </div>
                     </dl>
 

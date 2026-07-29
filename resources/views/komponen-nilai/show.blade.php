@@ -5,6 +5,11 @@
 @section('content')
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
+        $guruMapel = $komponenNilai->guruMataPelajaran;
+        $pengaturanMapel = $guruMapel?->mataPelajaran?->pengaturanUntuk(
+            (int) $guruMapel?->tahun_pelajaran_id,
+            (int) $guruMapel?->kelas?->tingkat,
+        );
     @endphp
 
     <div class="page-header">
@@ -105,7 +110,7 @@
                     </div>
                     <div class="detail-item">
                         <dt>Kode mapel</dt>
-                        <dd>{{ $teks($komponenNilai->guruMataPelajaran?->mataPelajaran?->kode) }}</dd>
+                        <dd>{{ $teks($pengaturanMapel?->kode) }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Guru</dt>

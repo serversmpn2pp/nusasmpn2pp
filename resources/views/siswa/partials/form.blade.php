@@ -23,24 +23,13 @@
 
 <div class="form-shell">
     <aside class="panel panel-pad">
-        <div class="avatar-upload">
-            <div class="avatar avatar-lg">
-                @if ($siswa?->foto)
-                    <img src="{{ asset('storage/' . $siswa->foto) }}" alt="Foto {{ $siswa->nama_lengkap }}">
-                @else
-                    {{ $siswa?->nama_lengkap ? strtoupper(mb_substr($siswa->nama_lengkap, 0, 1)) : 'S' }}
-                @endif
-            </div>
-
-            <div>
-                <label for="foto" class="form-label">Foto siswa</label>
-                <input id="foto" name="foto" type="file" accept="image/png,image/jpeg,image/webp" class="file-input">
-                @error('foto')
-                    <p class="error-text">{{ $message }}</p>
-                @enderror
-                <p class="help-text">JPG, PNG, atau WebP. Maksimal 5 MB.</p>
-            </div>
-        </div>
+        <x-input-foto-profil
+            label="Foto siswa"
+            :foto-url="$siswa?->foto ? asset('storage/' . $siswa->foto) : null"
+            :inisial="$siswa?->nama_lengkap ? strtoupper(mb_substr($siswa->nama_lengkap, 0, 1)) : 'S'"
+            :alt="$siswa?->nama_lengkap ? 'Foto ' . $siswa->nama_lengkap : 'Pratinjau foto siswa'"
+            :upload-url="$siswa ? route('siswa.foto.update', $siswa) : null"
+        />
 
         <label class="status-toggle">
             <span>

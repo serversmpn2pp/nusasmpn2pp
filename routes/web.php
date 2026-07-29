@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AksesUjianCbtController;
 use App\Http\Controllers\AkunPegawaiController;
+use App\Http\Controllers\AkunSiswaController;
 use App\Http\Controllers\AnggotaKelasController;
 use App\Http\Controllers\AturanSanksiPoinController;
 use App\Http\Controllers\AutentikasiController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\BuktiLaporanPembinaanController;
 use App\Http\Controllers\BuktiPelaksanaanSanksiController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
+use App\Http\Controllers\DokumenPoinSiswaController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\InputNilaiController;
 use App\Http\Controllers\JadwalPelajaranController;
@@ -46,9 +48,9 @@ use App\Http\Controllers\MutasiStokBarangController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
 use App\Http\Controllers\NotifikasiPenggunaController;
 use App\Http\Controllers\PegawaiController;
-use App\Http\Controllers\PendampinganSiswaController;
 use App\Http\Controllers\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\PeminjamanBarangController;
+use App\Http\Controllers\PendampinganSiswaController;
 use App\Http\Controllers\PenempatanSiswaController;
 use App\Http\Controllers\PengaturanAbsensiController;
 use App\Http\Controllers\PengaturanAbsensiPegawaiController;
@@ -58,6 +60,7 @@ use App\Http\Controllers\PengaturanPoinKeterlambatanController;
 use App\Http\Controllers\PengembalianBarangController;
 use App\Http\Controllers\PenguranganPoinSiswaController;
 use App\Http\Controllers\PenugasanGuruWaliController;
+use App\Http\Controllers\PergantianGuruMataPelajaranController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PerangkatAjarSayaController;
 use App\Http\Controllers\PeringatanDiniSiswaController;
@@ -139,12 +142,27 @@ Route::middleware('auth')->group(function () {
             Route::get('akun-pegawai', [AkunPegawaiController::class, 'index'])->name('akun-pegawai.index');
         });
 
+        Route::middleware('izin:akun_siswa.lihat,akun_siswa.kelola,akun_siswa.cetak')->group(function () {
+            Route::get('akun-siswa', [AkunSiswaController::class, 'index'])->name('akun-siswa.index');
+        });
+
+        Route::middleware('izin:akun_siswa.cetak,akun_siswa.kelola')->group(function () {
+            Route::get('akun-siswa/kelas/{kelas}/cetak', [AkunSiswaController::class, 'cetak'])->name('akun-siswa.cetak');
+        });
+
         Route::middleware('izin:akun.kelola')->group(function () {
             Route::post('akun-pegawai/buat-massal', [AkunPegawaiController::class, 'storeMassal'])->name('akun-pegawai.buat-massal');
             Route::post('akun-pegawai/{pegawai}', [AkunPegawaiController::class, 'store'])->name('akun-pegawai.store');
             Route::patch('akun-pegawai/{pengguna}/reset-password', [AkunPegawaiController::class, 'resetPassword'])->name('akun-pegawai.reset-password');
             Route::patch('akun-pegawai/{pengguna}/status', [AkunPegawaiController::class, 'ubahStatus'])->name('akun-pegawai.status');
             Route::patch('akun-pegawai/{pengguna}/peran', [AkunPegawaiController::class, 'updatePeran'])->name('akun-pegawai.peran.update');
+        });
+
+        Route::middleware('izin:akun_siswa.kelola')->group(function () {
+            Route::post('akun-siswa/kelas/{kelas}/buat-massal', [AkunSiswaController::class, 'storeMassal'])->name('akun-siswa.buat-massal');
+            Route::post('akun-siswa/{siswa}', [AkunSiswaController::class, 'store'])->name('akun-siswa.store');
+            Route::patch('akun-siswa/{pengguna}/reset-password', [AkunSiswaController::class, 'resetPassword'])->name('akun-siswa.reset-password');
+            Route::patch('akun-siswa/{pengguna}/status', [AkunSiswaController::class, 'ubahStatus'])->name('akun-siswa.status');
         });
 
         Route::resource('peran', PeranController::class)
@@ -161,7 +179,11 @@ Route::middleware('auth')->group(function () {
         Route::middleware('izin:pegawai.profil')->group(function () {
             Route::get('profil-saya', [ProfilPegawaiController::class, 'edit'])->name('profil-pegawai.edit');
             Route::put('profil-saya', [ProfilPegawaiController::class, 'update'])->name('profil-pegawai.update');
+            Route::post('profil-saya/foto', [ProfilPegawaiController::class, 'updateFoto'])->name('profil-pegawai.foto.update');
         });
+        Route::post('pegawai/{pegawai}/foto', [PegawaiController::class, 'updateFoto'])
+            ->middleware('izin:pegawai.kelola')
+            ->name('pegawai.foto.update');
         Route::resource('pegawai', PegawaiController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:pegawai.kelola');
@@ -172,6 +194,7 @@ Route::middleware('auth')->group(function () {
         Route::middleware('izin:siswa.kelola')->group(function () {
             Route::get('siswa/import', [SiswaController::class, 'createImport'])->name('siswa.import.create');
             Route::post('siswa/import', [SiswaController::class, 'storeImport'])->name('siswa.import.store');
+            Route::post('siswa/{siswa}/foto', [SiswaController::class, 'updateFoto'])->name('siswa.foto.update');
         });
         Route::resource('siswa', SiswaController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
@@ -204,6 +227,18 @@ Route::middleware('auth')->group(function () {
         Route::resource('guru-mata-pelajaran', GuruMataPelajaranController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:guru_mapel.kelola');
+        Route::get(
+            'guru-mata-pelajaran/{guruMataPelajaran}/ganti-guru',
+            [PergantianGuruMataPelajaranController::class, 'edit'],
+        )
+            ->middleware('izin:guru_mapel.kelola')
+            ->name('guru-mata-pelajaran.ganti-guru');
+        Route::put(
+            'guru-mata-pelajaran/{guruMataPelajaran}/ganti-guru',
+            [PergantianGuruMataPelajaranController::class, 'update'],
+        )
+            ->middleware('izin:guru_mapel.kelola')
+            ->name('guru-mata-pelajaran.simpan-pergantian');
         Route::resource('guru-mata-pelajaran', GuruMataPelajaranController::class)
             ->only(['index', 'show'])
             ->middleware('izin:guru_mapel.lihat,guru_mapel.kelola');
@@ -213,6 +248,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('jam-pelajaran', JamPelajaranController::class)
             ->only(['index', 'show'])
             ->middleware('izin:jadwal.lihat,jadwal.kelola');
+        Route::get('jadwal-pelajaran/susun', [JadwalPelajaranController::class, 'susun'])
+            ->middleware('izin:jadwal.kelola')
+            ->name('jadwal-pelajaran.susun');
+        Route::post('jadwal-pelajaran/susun', [JadwalPelajaranController::class, 'simpanMassal'])
+            ->middleware('izin:jadwal.kelola')
+            ->name('jadwal-pelajaran.simpan-massal');
         Route::resource('jadwal-pelajaran', JadwalPelajaranController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:jadwal.kelola');
@@ -557,6 +598,15 @@ Route::middleware('auth')->group(function () {
         Route::get('rekap-poin-siswa/{siswa}', [RekapPoinSiswaController::class, 'show'])
             ->middleware('izin:poin_siswa.lihat')
             ->name('rekap-poin-siswa.show');
+        Route::get('rekap-poin-siswa/{siswa}/laporan', [DokumenPoinSiswaController::class, 'laporan'])
+            ->middleware('izin:poin_siswa.lihat')
+            ->name('dokumen-poin-siswa.laporan');
+        Route::get('rekap-poin-siswa/{siswa}/surat', [DokumenPoinSiswaController::class, 'surat'])
+            ->middleware('izin:poin_siswa.lihat')
+            ->name('dokumen-poin-siswa.surat');
+        Route::get('rekap-poin-siswa/{siswa}/surat/cetak', [DokumenPoinSiswaController::class, 'cetakSurat'])
+            ->middleware('izin:poin_siswa.lihat')
+            ->name('dokumen-poin-siswa.cetak-surat');
         Route::middleware('izin:poin_siswa.reward_kelola')->group(function () {
             Route::get('pengurangan-poin-siswa', [PenguranganPoinSiswaController::class, 'index'])->name('pengurangan-poin-siswa.index');
             Route::post('pengurangan-poin-siswa', [PenguranganPoinSiswaController::class, 'store'])->name('pengurangan-poin-siswa.store');

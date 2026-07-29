@@ -6,11 +6,12 @@ use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\FotoProfilService;
 use App\Support\PembacaExcelSiswa;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class SiswaController extends Controller
 {
@@ -48,10 +49,10 @@ class SiswaController extends Controller
             })
             ->when($kata_kunci, function ($query, $kata_kunci) {
                 $query->where(function ($query) use ($kata_kunci) {
-                    $query->where('nama_lengkap', 'ilike', '%' . $kata_kunci . '%')
-                        ->orWhere('nis', 'ilike', '%' . $kata_kunci . '%')
-                        ->orWhere('nisn', 'ilike', '%' . $kata_kunci . '%')
-                        ->orWhere('nik', 'ilike', '%' . $kata_kunci . '%');
+                    $query->where('nama_lengkap', 'ilike', '%'.$kata_kunci.'%')
+                        ->orWhere('nis', 'ilike', '%'.$kata_kunci.'%')
+                        ->orWhere('nisn', 'ilike', '%'.$kata_kunci.'%')
+                        ->orWhere('nik', 'ilike', '%'.$kata_kunci.'%');
                 });
             })
             ->orderBy('nama_lengkap')
@@ -78,16 +79,27 @@ class SiswaController extends Controller
         return view('siswa.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, FotoProfilService $fotoProfilService)
     {
-        $data = $request->validate($this->aturanValidasi());
+        $data = $request->validate(
+            $this->aturanValidasi(fotoProfilService: $fotoProfilService),
+            $fotoProfilService->pesanValidasi(),
+        );
         $data['aktif'] = $request->boolean('aktif');
+        $fotoBaru = null;
 
         if ($request->hasFile('foto')) {
-            $data['foto'] = $request->file('foto')->store('siswa/foto', 'public');
+            $fotoBaru = $fotoProfilService->simpan($request->file('foto'), 'siswa/foto');
+            $data['foto'] = $fotoBaru;
         }
 
-        Siswa::create($data);
+        try {
+            Siswa::create($data);
+        } catch (Throwable $exception) {
+            $fotoProfilService->hapus($fotoBaru);
+
+            throw $exception;
+        }
 
         return redirect()
             ->route('siswa.index')
@@ -108,28 +120,66 @@ class SiswaController extends Controller
         return view('siswa.edit', compact('siswa'));
     }
 
-    public function update(Request $request, Siswa $siswa)
+    public function update(Request $request, Siswa $siswa, FotoProfilService $fotoProfilService)
     {
         $this->pastikanBolehAksesSiswa($request, $siswa);
 
-        $data = $request->validate($this->aturanValidasi($siswa));
+        $data = $request->validate(
+            $this->aturanValidasi($siswa, $fotoProfilService),
+            $fotoProfilService->pesanValidasi(),
+        );
         $data['aktif'] = $request->boolean('aktif');
+        $fotoLama = $siswa->foto;
+        $fotoBaru = null;
 
         if ($request->hasFile('foto')) {
-            if ($siswa->foto) {
-                Storage::disk('public')->delete($siswa->foto);
-            }
-
-            $data['foto'] = $request->file('foto')->store('siswa/foto', 'public');
+            $fotoBaru = $fotoProfilService->simpan($request->file('foto'), 'siswa/foto');
+            $data['foto'] = $fotoBaru;
         } else {
             unset($data['foto']);
         }
 
-        $siswa->update($data);
+        try {
+            $siswa->update($data);
+        } catch (Throwable $exception) {
+            $fotoProfilService->hapus($fotoBaru);
+
+            throw $exception;
+        }
+
+        if ($fotoBaru) {
+            $fotoProfilService->hapus($fotoLama);
+        }
 
         return redirect()
             ->route('siswa.index')
             ->with('berhasil', 'Data siswa berhasil diperbarui.');
+    }
+
+    public function updateFoto(Request $request, Siswa $siswa, FotoProfilService $fotoProfilService)
+    {
+        $this->pastikanBolehAksesSiswa($request, $siswa);
+
+        $data = $request->validate([
+            'foto' => $fotoProfilService->aturan(wajib: true),
+        ], $fotoProfilService->pesanValidasi());
+        $fotoLama = $siswa->foto;
+        $fotoBaru = $fotoProfilService->simpan($data['foto'], 'siswa/foto');
+
+        try {
+            $siswa->update(['foto' => $fotoBaru]);
+        } catch (Throwable $exception) {
+            $fotoProfilService->hapus($fotoBaru);
+
+            throw $exception;
+        }
+
+        $fotoProfilService->hapus($fotoLama);
+
+        return response()->json([
+            'pesan' => 'Foto siswa berhasil diperbarui.',
+            'url' => asset('storage/'.$fotoBaru),
+        ]);
     }
 
     public function destroy(Request $request, Siswa $siswa)
@@ -215,7 +265,7 @@ class SiswaController extends Controller
                     );
                 } catch (QueryException $exception) {
                     $ringkasan['dilewati']++;
-                    $ringkasan['catatan'][] = 'Baris ' . $baris['nomor_baris'] . ': data tidak disimpan karena bentrok dengan data unik yang sudah ada.';
+                    $ringkasan['catatan'][] = 'Baris '.$baris['nomor_baris'].': data tidak disimpan karena bentrok dengan data unik yang sudah ada.';
                 }
             }
 
@@ -233,8 +283,12 @@ class SiswaController extends Controller
             ->with('ringkasan_import', $ringkasan);
     }
 
-    private function aturanValidasi(?Siswa $siswa = null): array
-    {
+    private function aturanValidasi(
+        ?Siswa $siswa = null,
+        ?FotoProfilService $fotoProfilService = null,
+    ): array {
+        $fotoProfilService ??= app(FotoProfilService::class);
+
         return [
             'nama_lengkap' => 'required|string|max:255',
             'nis' => [
@@ -255,7 +309,7 @@ class SiswaController extends Controller
                 'max:50',
                 Rule::unique('siswa', 'nik')->ignore($siswa),
             ],
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'foto' => $fotoProfilService->aturan(),
             'jenis_kelamin' => 'nullable|in:L,P',
             'tempat_lahir' => 'nullable|string|max:100',
             'tanggal_lahir' => 'nullable|date',
@@ -345,7 +399,7 @@ class SiswaController extends Controller
 
         if (! $tahunPelajaranAktif) {
             $ringkasan['gagal_ditempatkan']++;
-            $ringkasan['catatan'][] = 'Baris ' . $nomorBaris . ': siswa belum ditempatkan karena belum ada tahun pelajaran aktif.';
+            $ringkasan['catatan'][] = 'Baris '.$nomorBaris.': siswa belum ditempatkan karena belum ada tahun pelajaran aktif.';
 
             return;
         }
@@ -354,7 +408,7 @@ class SiswaController extends Controller
 
         if (! $kelas) {
             $ringkasan['gagal_ditempatkan']++;
-            $ringkasan['catatan'][] = 'Baris ' . $nomorBaris . ': kelas ' . $namaKelas . ' tidak ditemukan pada tahun pelajaran aktif.';
+            $ringkasan['catatan'][] = 'Baris '.$nomorBaris.': kelas '.$namaKelas.' tidak ditemukan pada tahun pelajaran aktif.';
 
             return;
         }
@@ -369,7 +423,7 @@ class SiswaController extends Controller
 
         if ($this->kelasSudahPenuh($kelas)) {
             $ringkasan['gagal_ditempatkan']++;
-            $ringkasan['catatan'][] = 'Baris ' . $nomorBaris . ': kelas ' . $kelas->nama . ' sudah penuh, siswa belum ditempatkan.';
+            $ringkasan['catatan'][] = 'Baris '.$nomorBaris.': kelas '.$kelas->nama.' sudah penuh, siswa belum ditempatkan.';
 
             return;
         }
@@ -431,10 +485,10 @@ class SiswaController extends Controller
             }
 
             if (isset($identitasDiBerkas[$field][$nilai])) {
-                return 'Baris ' . $baris['nomor_baris'] . ': ' . $label . ' ' . $nilai . ' sudah dipakai pada ' . $identitasDiBerkas[$field][$nilai] . '.';
+                return 'Baris '.$baris['nomor_baris'].': '.$label.' '.$nilai.' sudah dipakai pada '.$identitasDiBerkas[$field][$nilai].'.';
             }
 
-            $identitasDiBerkas[$field][$nilai] = 'baris ' . $baris['nomor_baris'] . ' (' . $baris['data']['nama_lengkap'] . ')';
+            $identitasDiBerkas[$field][$nilai] = 'baris '.$baris['nomor_baris'].' ('.$baris['data']['nama_lengkap'].')';
         }
 
         return null;

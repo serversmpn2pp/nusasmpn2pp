@@ -340,6 +340,10 @@
             <p class="page-subtitle">Poin resmi dan riwayat penanganan ditampilkan terpisah dari proses yang belum disahkan.</p>
         </div>
         <div class="actions">
+            <a href="{{ route('dokumen-poin-siswa.laporan', ['siswa' => $siswa, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}"
+                class="button button-primary" target="_blank" rel="noopener">Cetak Laporan</a>
+            <a href="{{ route('dokumen-poin-siswa.surat', ['siswa' => $siswa, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}"
+                class="button button-dark">Buat Surat</a>
             <a href="{{ route('rekap-poin-siswa.index', ['tahun_pelajaran_id' => $tahunPelajaranId]) }}"
                 class="button button-muted">Kembali</a>
         </div>

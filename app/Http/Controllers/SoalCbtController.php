@@ -41,11 +41,11 @@ class SoalCbtController extends Controller
             ->when($status !== 'semua', fn ($query) => $query->where('status', $status))
             ->when($kataKunci !== '', function ($query) use ($kataKunci) {
                 $query->where(function ($query) use ($kataKunci) {
-                    $query->where('kode', 'like', '%' . $kataKunci . '%')
-                        ->orWhere('topik', 'like', '%' . $kataKunci . '%')
-                        ->orWhere('materi', 'like', '%' . $kataKunci . '%')
-                        ->orWhere('pertanyaan', 'like', '%' . $kataKunci . '%')
-                        ->orWhereHas('mataPelajaran', fn ($query) => $query->where('nama', 'like', '%' . $kataKunci . '%'));
+                    $query->where('kode', 'like', '%'.$kataKunci.'%')
+                        ->orWhere('topik', 'like', '%'.$kataKunci.'%')
+                        ->orWhere('materi', 'like', '%'.$kataKunci.'%')
+                        ->orWhere('pertanyaan', 'like', '%'.$kataKunci.'%')
+                        ->orWhereHas('mataPelajaran', fn ($query) => $query->where('nama', 'like', '%'.$kataKunci.'%'));
                 });
             })
             ->orderByDesc('updated_at')
@@ -81,6 +81,7 @@ class SoalCbtController extends Controller
     {
         $data = $this->rapikanData($request->validate($this->aturanValidasi()));
         $this->pastikanMataPelajaranBoleh($request, (int) $data['mata_pelajaran_id']);
+        $this->pastikanTingkatMataPelajaranTersedia($request, $data);
         $konten = $this->susunKontenJawaban($data);
 
         $soalCbt = SoalCbt::create([
@@ -116,6 +117,7 @@ class SoalCbtController extends Controller
         $this->pastikanBolehMengakses($request, $soalCbt, perluKelola: true);
         $data = $this->rapikanData($request->validate($this->aturanValidasi($soalCbt)));
         $this->pastikanMataPelajaranBoleh($request, (int) $data['mata_pelajaran_id']);
+        $this->pastikanTingkatMataPelajaranTersedia($request, $data);
         $konten = $this->susunKontenJawaban($data);
 
         $soalCbt->update($this->dataSoal($data, $konten));
@@ -412,7 +414,6 @@ class SoalCbtController extends Controller
         return MataPelajaran::query()
             ->whereIn('id', $ids)
             ->where('aktif', true)
-            ->orderBy('tingkat')
             ->orderBy('urutan')
             ->orderBy('nama')
             ->get();
@@ -422,7 +423,6 @@ class SoalCbtController extends Controller
     {
         return MataPelajaran::query()
             ->where('aktif', true)
-            ->orderBy('tingkat')
             ->orderBy('urutan')
             ->orderBy('nama')
             ->get();
@@ -430,10 +430,48 @@ class SoalCbtController extends Controller
 
     private function buatKodeSaran(): string
     {
-        $prefix = 'SOAL-CBT-' . now()->format('Ymd');
-        $urutan = SoalCbt::where('kode', 'like', $prefix . '-%')->count() + 1;
+        $prefix = 'SOAL-CBT-'.now()->format('Ymd');
+        $urutan = SoalCbt::where('kode', 'like', $prefix.'-%')->count() + 1;
 
         return sprintf('%s-%03d', $prefix, $urutan);
+    }
+
+    private function pastikanTingkatMataPelajaranTersedia(Request $request, array $data): void
+    {
+        $mataPelajaran = MataPelajaran::find($data['mata_pelajaran_id']);
+
+        if (
+            $data['tahun_pelajaran_id']
+            && ! $mataPelajaran?->tersediaUntuk(
+                (int) $data['tahun_pelajaran_id'],
+                (int) $data['tingkat'],
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'mata_pelajaran_id' => 'Mata pelajaran belum diaktifkan untuk tingkat dan tahun pelajaran soal.',
+            ]);
+        }
+
+        if ($this->bisaLihatSemua($request)) {
+            return;
+        }
+
+        $ditugaskan = GuruMataPelajaran::query()
+            ->where('pegawai_id', $request->user()?->pegawai_id)
+            ->where('mata_pelajaran_id', $data['mata_pelajaran_id'])
+            ->where('aktif', true)
+            ->when(
+                $data['tahun_pelajaran_id'],
+                fn ($query, $tahunPelajaranId) => $query->where('tahun_pelajaran_id', $tahunPelajaranId),
+            )
+            ->whereHas('kelas', fn ($query) => $query->where('tingkat', $data['tingkat']))
+            ->exists();
+
+        if (! $ditugaskan) {
+            throw ValidationException::withMessages([
+                'tingkat' => 'Pilih tingkat yang memang diajar oleh akun guru untuk mata pelajaran ini.',
+            ]);
+        }
     }
 
     private function teksAtauNull(mixed $value): ?string

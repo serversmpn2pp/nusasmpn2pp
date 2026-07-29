@@ -39,6 +39,7 @@
         };
 
         $nilaiLama = is_array(old('nilai')) ? old('nilai') : [];
+        $predikatLama = is_array(old('predikat')) ? old('predikat') : [];
         $catatanLama = is_array(old('catatan')) ? old('catatan') : [];
         $ambilNilai = function ($siswaId) use ($nilaiLama, $nilaiTersimpan) {
             if (array_key_exists($siswaId, $nilaiLama)) {
@@ -52,6 +53,13 @@
             }
 
             return rtrim(rtrim(number_format((float) $nilai, 2, '.', ''), '0'), '.');
+        };
+        $ambilPredikat = function ($siswaId) use ($predikatLama, $nilaiTersimpan) {
+            if (array_key_exists($siswaId, $predikatLama)) {
+                return $predikatLama[$siswaId];
+            }
+
+            return $nilaiTersimpan->get($siswaId)?->predikat;
         };
         $ambilCatatan = function ($siswaId) use ($catatanLama, $nilaiTersimpan) {
             if (array_key_exists($siswaId, $catatanLama)) {
@@ -130,8 +138,8 @@
                 <p class="stat-value">{{ $jumlahTerisi }}</p>
             </div>
             <div class="panel stat inactive">
-                <p class="stat-label">Rata-rata</p>
-                <p class="stat-value">{{ $rataRata === null ? '-' : number_format($rataRata, 2, ',', '.') }}</p>
+                <p class="stat-label">{{ $penilaianPredikat ? 'Skala nilai' : 'Rata-rata' }}</p>
+                <p class="stat-value">{{ $penilaianPredikat ? 'SB-K' : ($rataRata === null ? '-' : number_format($rataRata, 2, ',', '.')) }}</p>
             </div>
         </div>
 
@@ -164,6 +172,10 @@
                         <dt>Jenis</dt>
                         <dd>{{ $komponenDipilih->labelJenis() }}</dd>
                     </div>
+                    <div>
+                        <dt>Penilaian</dt>
+                        <dd>{{ $komponenDipilih->guruMataPelajaran?->mataPelajaran?->labelJenisPenilaian() }}</dd>
+                    </div>
                 </dl>
             </aside>
 
@@ -182,7 +194,7 @@
                                         <th>No. absen</th>
                                         <th>Siswa</th>
                                         <th>NIS/NISN</th>
-                                        <th>Nilai</th>
+                                        <th>{{ $penilaianPredikat ? 'Predikat' : 'Nilai' }}</th>
                                         <th>Catatan</th>
                                     </tr>
                                 </thead>
@@ -203,21 +215,45 @@
                                                 <p class="person-name">{{ $anggota->siswa?->nis ?: '-' }}</p>
                                                 <p class="person-meta">NISN: {{ $anggota->siswa?->nisn ?: '-' }}</p>
                                             </td>
-                                            <td data-label="Nilai" style="width: 160px;">
-                                                <input
-                                                    id="nilai_{{ $siswaId }}"
-                                                    name="nilai[{{ $siswaId }}]"
-                                                    type="number"
-                                                    min="0"
-                                                    max="100"
-                                                    step="0.01"
-                                                    value="{{ $ambilNilai($siswaId) }}"
-                                                    class="input input-sm @error('nilai.' . $siswaId) is-invalid @enderror"
-                                                    placeholder="0-100"
-                                                >
-                                                @error('nilai.' . $siswaId)
-                                                    <p class="error-text">{{ $message }}</p>
-                                                @enderror
+                                            <td data-label="{{ $penilaianPredikat ? 'Predikat' : 'Nilai' }}" style="width: 160px;">
+                                                @if ($penilaianPredikat)
+                                                    <select
+                                                        id="predikat_{{ $siswaId }}"
+                                                        name="predikat[{{ $siswaId }}]"
+                                                        class="select input-sm @error('predikat.' . $siswaId) is-invalid @enderror"
+                                                    >
+                                                        <option value="">Belum dinilai</option>
+                                                        @foreach (\App\Models\MataPelajaran::PREDIKAT_NILAI as $predikat)
+                                                            <option value="{{ $predikat }}" @selected($ambilPredikat($siswaId) === $predikat)>
+                                                                {{ $predikat }} -
+                                                                {{ match ($predikat) {
+                                                                    'SB' => 'Sangat Baik',
+                                                                    'B' => 'Baik',
+                                                                    'C' => 'Cukup',
+                                                                    'K' => 'Kurang',
+                                                                } }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('predikat.' . $siswaId)
+                                                        <p class="error-text">{{ $message }}</p>
+                                                    @enderror
+                                                @else
+                                                    <input
+                                                        id="nilai_{{ $siswaId }}"
+                                                        name="nilai[{{ $siswaId }}]"
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        step="0.01"
+                                                        value="{{ $ambilNilai($siswaId) }}"
+                                                        class="input input-sm @error('nilai.' . $siswaId) is-invalid @enderror"
+                                                        placeholder="0-100"
+                                                    >
+                                                    @error('nilai.' . $siswaId)
+                                                        <p class="error-text">{{ $message }}</p>
+                                                    @enderror
+                                                @endif
                                             </td>
                                             <td data-label="Catatan">
                                                 <input

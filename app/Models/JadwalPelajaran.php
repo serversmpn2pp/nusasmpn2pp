@@ -15,6 +15,7 @@ class JadwalPelajaran extends Model
         'hari',
         'jam_pelajaran_id',
         'guru_mata_pelajaran_id',
+        'mata_pelajaran_id',
         'aktif',
         'keterangan',
     ];
@@ -41,6 +42,16 @@ class JadwalPelajaran extends Model
     public function guruMataPelajaran(): BelongsTo
     {
         return $this->belongsTo(GuruMataPelajaran::class);
+    }
+
+    public function mataPelajaran(): BelongsTo
+    {
+        return $this->belongsTo(MataPelajaran::class);
+    }
+
+    public function mataPelajaranTerjadwal(): ?MataPelajaran
+    {
+        return $this->mataPelajaran ?? $this->guruMataPelajaran?->mataPelajaran;
     }
 
     public function labelHari(): string

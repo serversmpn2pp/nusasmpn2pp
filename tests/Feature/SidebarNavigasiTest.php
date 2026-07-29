@@ -28,9 +28,16 @@ class SidebarNavigasiTest extends TestCase
                 'Sarana Prasarana',
                 'Sistem',
             ], false)
+            ->assertSeeInOrder([
+                'Mata Pelajaran',
+                'Guru Mata Pelajaran',
+                'Jam Pelajaran',
+                'Jadwal Pelajaran',
+            ])
             ->assertSee('Penempatan Siswa')
             ->assertSee('Pengaturan Absensi Siswa')
             ->assertSee('Peminjaman &amp; Pengembalian', false)
+            ->assertSee('Akun Siswa')
             ->assertSee('Role &amp; Hak Akses', false)
             ->assertDontSee('Data Master');
     }

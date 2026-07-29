@@ -74,6 +74,11 @@ class TahunPelajaran extends Model
         return $this->hasMany(GuruMataPelajaran::class);
     }
 
+    public function pengaturanMataPelajaran(): HasMany
+    {
+        return $this->hasMany(PengaturanMataPelajaran::class);
+    }
+
     public function skemaBobotNilai(): HasMany
     {
         return $this->hasMany(SkemaBobotNilai::class);

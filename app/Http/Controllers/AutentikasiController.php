@@ -77,6 +77,8 @@ class AutentikasiController extends Controller
 
         $request->user()->forceFill([
             'kata_sandi' => Hash::make($data['kata_sandi_baru']),
+            'kata_sandi_awal' => null,
+            'wajib_ganti_kata_sandi' => false,
         ])->save();
 
         return back()->with('berhasil', 'Kata sandi berhasil diganti.');

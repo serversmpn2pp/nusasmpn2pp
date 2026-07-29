@@ -6,6 +6,7 @@
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
         $guruMapel = $jadwalPelajaran->guruMataPelajaran;
+        $mataPelajaran = $jadwalPelajaran->mataPelajaranTerjadwal();
     @endphp
 
     <div class="page-header">
@@ -30,7 +31,7 @@
         <aside class="panel panel-pad">
             <div class="detail-profile">
                 <div class="avatar avatar-lg">JP</div>
-                <h2>{{ $guruMapel?->mataPelajaran?->nama ?? 'Jadwal pelajaran' }}</h2>
+                <h2>{{ $mataPelajaran?->nama ?? 'Jadwal pelajaran' }}</h2>
                 <p>{{ $jadwalPelajaran->kelas?->nama ?? '-' }}</p>
 
                 <div style="margin-top: 16px;">
@@ -75,11 +76,11 @@
                     </div>
                     <div class="detail-item">
                         <dt>Mata pelajaran</dt>
-                        <dd>{{ $guruMapel?->mataPelajaran?->nama ?? '-' }}</dd>
+                        <dd>{{ $mataPelajaran?->nama ?? '-' }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Guru</dt>
-                        <dd>{{ $guruMapel?->pegawai?->nama_lengkap ?? '-' }}</dd>
+                        <dd>{{ $guruMapel?->pegawai?->nama_lengkap ?? 'Kegiatan kelas' }}</dd>
                     </div>
                     <div class="detail-item span-2">
                         <dt>Keterangan</dt>

@@ -14,6 +14,6 @@
 
     <form action="{{ route('jam-pelajaran.store') }}" method="POST">
         @csrf
-        @include('jam-pelajaran.partials.form', ['tombol' => 'Simpan jam pelajaran'])
+        @include('jam-pelajaran.partials.form', ['tombol' => 'Terapkan Jam'])
     </form>
 @endsection

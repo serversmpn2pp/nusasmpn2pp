@@ -40,10 +40,10 @@ class UjianCbtController extends Controller
             ->when($status !== 'semua', fn ($query) => $query->where('status', $status))
             ->when($kataKunci !== '', function ($query) use ($kataKunci) {
                 $query->where(function ($query) use ($kataKunci) {
-                    $query->where('nama', 'like', '%' . $kataKunci . '%')
-                        ->orWhere('kode', 'like', '%' . $kataKunci . '%')
-                        ->orWhereHas('mataPelajaran', fn ($query) => $query->where('nama', 'like', '%' . $kataKunci . '%'))
-                        ->orWhereHas('jenisUjianCbt', fn ($query) => $query->where('nama', 'like', '%' . $kataKunci . '%'));
+                    $query->where('nama', 'like', '%'.$kataKunci.'%')
+                        ->orWhere('kode', 'like', '%'.$kataKunci.'%')
+                        ->orWhereHas('mataPelajaran', fn ($query) => $query->where('nama', 'like', '%'.$kataKunci.'%'))
+                        ->orWhereHas('jenisUjianCbt', fn ($query) => $query->where('nama', 'like', '%'.$kataKunci.'%'));
                 });
             })
             ->orderByDesc('tanggal_mulai')
@@ -154,7 +154,6 @@ class UjianCbtController extends Controller
             'daftarJenisUjianCbt' => $this->daftarJenisUjianCbt(),
             'daftarMataPelajaran' => MataPelajaran::query()
                 ->where('aktif', true)
-                ->orderBy('tingkat')
                 ->orderBy('urutan')
                 ->orderBy('nama')
                 ->get(),
@@ -293,9 +292,15 @@ class UjianCbtController extends Controller
         $jenisUjian = JenisUjianCbt::find($data['jenis_ujian_cbt_id']);
         $mataPelajaran = MataPelajaran::find($data['mata_pelajaran_id']);
 
-        if ($mataPelajaran?->tingkat && (int) $mataPelajaran->tingkat !== (int) $data['tingkat']) {
+        if (
+            ! $mataPelajaran
+            || ! $mataPelajaran->tersediaUntuk(
+                (int) $data['tahun_pelajaran_id'],
+                (int) $data['tingkat'],
+            )
+        ) {
             throw ValidationException::withMessages([
-                'mata_pelajaran_id' => 'Tingkat kelas mata pelajaran tidak sesuai dengan tingkat paket ujian.',
+                'mata_pelajaran_id' => 'Mata pelajaran belum diaktifkan untuk tingkat dan tahun pelajaran paket ujian.',
             ]);
         }
 
@@ -379,8 +384,8 @@ class UjianCbtController extends Controller
 
     private function buatKodeSaran(): string
     {
-        $prefix = 'CBT-' . now()->format('Ymd');
-        $urutan = UjianCbt::where('kode', 'like', $prefix . '-%')->count() + 1;
+        $prefix = 'CBT-'.now()->format('Ymd');
+        $urutan = UjianCbt::where('kode', 'like', $prefix.'-%')->count() + 1;
 
         return sprintf('%s-%03d', $prefix, $urutan);
     }

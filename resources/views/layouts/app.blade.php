@@ -1760,7 +1760,7 @@
     <body>
         @php
             $penggunaAktif = auth()->user();
-            $penggunaAktif?->loadMissing(['pegawai', 'daftarPeran.izin']);
+            $penggunaAktif?->loadMissing(['pegawai', 'siswa', 'daftarPeran.izin']);
             $notifikasiTerbaru = $penggunaAktif
                 ? $penggunaAktif->notifikasiPengguna()->latest()->limit(6)->get()
                 : collect();
@@ -1804,6 +1804,8 @@
             $pakaiSidebarPegawai = $penggunaAktif?->akunPegawai()
                 && ! $penggunaAktif->administrator()
                 && ! $penggunaAktif->memilikiPeran($peranMenuLengkap);
+            $pakaiSidebarSiswa = $penggunaAktif?->akunSiswa()
+                || $penggunaAktif?->memilikiPeran('siswa');
 
             $semuaSidebarSections = [
                 [
@@ -1825,13 +1827,13 @@
                         ['label' => 'Kelas', 'route' => 'kelas.index', 'active' => ['kelas.*', 'anggota-kelas.*'], 'initial' => 'KL', 'izin' => ['kelas.lihat', 'kelas.kelola'], 'subgroup' => 'Siswa dan Kelas'],
                         ['label' => 'Penempatan Siswa', 'route' => 'penempatan-siswa.index', 'active' => ['penempatan-siswa.*'], 'initial' => 'PS', 'izin' => ['kelas.lihat', 'kelas.kelola'], 'subgroup' => 'Siswa dan Kelas'],
                         ['label' => 'Kenaikan Kelas', 'route' => 'kenaikan-kelas.index', 'active' => ['kenaikan-kelas.*'], 'initial' => 'KK', 'izin' => 'kenaikan_kelas.kelola', 'subgroup' => 'Siswa dan Kelas'],
-                        ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP', 'izin' => ['mata_pelajaran.lihat', 'mata_pelajaran.kelola'], 'subgroup' => 'Referensi Akademik'],
                     ],
                 ],
                 [
                     'id' => 'akademik',
                     'title' => 'Akademik',
                     'items' => [
+                        ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP', 'izin' => ['mata_pelajaran.lihat', 'mata_pelajaran.kelola'], 'subgroup' => 'Pembelajaran'],
                         ['label' => 'Guru Mata Pelajaran', 'route' => 'guru-mata-pelajaran.index', 'active' => ['guru-mata-pelajaran.*'], 'initial' => 'GM', 'izin' => ['guru_mapel.lihat', 'guru_mapel.kelola'], 'subgroup' => 'Pembelajaran'],
                         ['label' => 'Jadwal Mengajar Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JS', 'izin' => 'jadwal.pribadi', 'pegawai_only' => true, 'subgroup' => 'Pembelajaran'],
                         ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'subgroup' => 'Pembelajaran'],
@@ -1913,6 +1915,7 @@
                     'title' => 'Sistem',
                     'items' => [
                         ['label' => 'Akun Pegawai', 'route' => 'akun-pegawai.index', 'active' => ['akun-pegawai.*'], 'initial' => 'AP', 'izin' => ['akun.lihat', 'akun.kelola']],
+                        ['label' => 'Akun Siswa', 'route' => 'akun-siswa.index', 'active' => ['akun-siswa.*'], 'initial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.kelola', 'akun_siswa.cetak']],
                         ['label' => 'Role & Hak Akses', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RA', 'izin' => ['peran.lihat', 'peran.kelola']],
                     ],
                 ],
@@ -1942,6 +1945,7 @@
                     'title' => 'Wali Kelas',
                     'items' => [
                         ['label' => 'Kelas Wali Saya', 'route' => 'kelas-wali.index', 'active' => ['kelas-wali.*', 'siswa.show'], 'initial' => 'KL', 'izin' => 'kelas.lihat', 'peran' => 'wali_kelas'],
+                        ['label' => 'Akun Siswa Kelas', 'route' => 'akun-siswa.index', 'active' => ['akun-siswa.*'], 'initial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.cetak'], 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Absensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi'], 'peran' => 'wali_kelas'],
                         ['label' => 'Laporan Absensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan', 'peran' => 'wali_kelas'],
                         ['label' => 'Pembinaan & Poin Kelas', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PB', 'izin' => ['poin_siswa.lihat', 'poin_siswa.lapor'], 'peran' => 'wali_kelas'],
@@ -1987,7 +1991,26 @@
                 ],
             ];
 
-            if ($pakaiSidebarPegawai) {
+            $sidebarSiswaSections = [
+                [
+                    'id' => 'utama',
+                    'title' => 'Utama',
+                    'items' => [
+                        ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                    ],
+                ],
+                [
+                    'id' => 'akun-saya',
+                    'title' => 'Akun Saya',
+                    'items' => [
+                        ['label' => 'Ganti Password', 'route' => 'kata-sandi.edit', 'active' => ['kata-sandi.*'], 'initial' => 'KS', 'izin' => null],
+                    ],
+                ],
+            ];
+
+            if ($pakaiSidebarSiswa) {
+                $semuaSidebarSections = $sidebarSiswaSections;
+            } elseif ($pakaiSidebarPegawai) {
                 $semuaSidebarSections = $sidebarPegawaiSections;
             }
 

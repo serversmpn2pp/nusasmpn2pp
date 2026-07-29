@@ -15,6 +15,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('siswa.store', 'izin:siswa.kelola');
         $this->assertRouteMemakaiMiddleware('siswa.edit', 'izin:siswa.kelola');
         $this->assertRouteMemakaiMiddleware('siswa.update', 'izin:siswa.kelola');
+        $this->assertRouteMemakaiMiddleware('siswa.foto.update', 'izin:siswa.kelola');
         $this->assertRouteMemakaiMiddleware('siswa.destroy', 'izin:siswa.kelola');
     }
 
@@ -24,8 +25,13 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('peran.create', 'izin:peran.kelola');
         $this->assertRouteMemakaiMiddleware('akun-pegawai.index', 'izin:akun.lihat,akun.kelola');
         $this->assertRouteMemakaiMiddleware('akun-pegawai.peran.update', 'izin:akun.kelola');
+        $this->assertRouteMemakaiMiddleware('akun-siswa.index', 'izin:akun_siswa.lihat,akun_siswa.kelola,akun_siswa.cetak');
+        $this->assertRouteMemakaiMiddleware('akun-siswa.cetak', 'izin:akun_siswa.cetak,akun_siswa.kelola');
+        $this->assertRouteMemakaiMiddleware('akun-siswa.store', 'izin:akun_siswa.kelola');
         $this->assertRouteMemakaiMiddleware('profil-pegawai.edit', 'izin:pegawai.profil');
         $this->assertRouteMemakaiMiddleware('profil-pegawai.update', 'izin:pegawai.profil');
+        $this->assertRouteMemakaiMiddleware('profil-pegawai.foto.update', 'izin:pegawai.profil');
+        $this->assertRouteMemakaiMiddleware('pegawai.foto.update', 'izin:pegawai.kelola');
     }
 
     public function test_route_absensi_dan_bk_memakai_permission_modul(): void
@@ -59,10 +65,14 @@ class PermissionRouteTest extends TestCase
 
     public function test_route_jadwal_pelajaran_memakai_permission_jadwal(): void
     {
+        $this->assertRouteMemakaiMiddleware('guru-mata-pelajaran.ganti-guru', 'izin:guru_mapel.kelola');
+        $this->assertRouteMemakaiMiddleware('guru-mata-pelajaran.simpan-pergantian', 'izin:guru_mapel.kelola');
         $this->assertRouteMemakaiMiddleware('jam-pelajaran.index', 'izin:jadwal.lihat,jadwal.kelola');
         $this->assertRouteMemakaiMiddleware('jam-pelajaran.create', 'izin:jadwal.kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.index', 'izin:jadwal.lihat,jadwal.kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.create', 'izin:jadwal.kelola');
+        $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.susun', 'izin:jadwal.kelola');
+        $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.simpan-massal', 'izin:jadwal.kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-saya.index', 'izin:jadwal.pribadi');
     }
 
