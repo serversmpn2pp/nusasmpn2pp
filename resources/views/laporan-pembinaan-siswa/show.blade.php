@@ -6,18 +6,13 @@
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
         $pengguna = auth()->user();
-        $statusFinal = in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan','tidak_terbukti','dibatalkan'], true);
+        $statusFinal = in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan','ditetapkan_pembinaan','tidak_terbukti','dibatalkan'], true);
         $bolehEdit = !$statusFinal && !$laporanPembinaanSiswa->berasalDariAbsensi() && ($pengguna?->memilikiIzin(['bk.kelola','poin_siswa.lapor']) ?? false);
         $bolehVerifikasiBk = $pengguna?->memilikiIzin('poin_siswa.verifikasi_bk') ?? false;
-        $pegawaiId = (int) ($pengguna?->pegawai_id ?? 0);
-        $adalahWaliKelas = $pegawaiId > 0 && $pegawaiId === (int) $laporanPembinaanSiswa->wali_kelas_pegawai_id;
-        $adalahGuruWali = $pegawaiId > 0 && $pegawaiId === (int) $laporanPembinaanSiswa->guru_wali_pegawai_id;
-        $bolehPutusKonflik = $pengguna?->memilikiIzin('poin_siswa.putus_konflik') ?? false;
-        $perluPenyetujuPengganti = !$laporanPembinaanSiswa->wali_kelas_pegawai_id || !$laporanPembinaanSiswa->guru_wali_pegawai_id || (int)$laporanPembinaanSiswa->wali_kelas_pegawai_id === (int)$laporanPembinaanSiswa->guru_wali_pegawai_id;
-        $sudahDiperiksaTerbukti = $laporanPembinaanSiswa->verifikasiBkPelanggaran->first()?->hasil === 'terbukti';
-        $persetujuan = $laporanPembinaanSiswa->persetujuanPelanggaran->keyBy('jenis_persetujuan');
-        $badgeVerifikasi = fn(string $status) => match($status){'disahkan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_musyawarah','perlu_klarifikasi'=>'badge badge-danger',default=>'badge badge-warning'};
-        $labelTahapBatas = match($laporanPembinaanSiswa->tahap_batas_proses){'pemeriksaan_bk'=>'Pemeriksaan BK','persetujuan'=>'Persetujuan Wali Kelas dan Guru Wali','musyawarah'=>'Musyawarah/Penyetuju Pengganti',default=>'Proses verifikasi'};
+        $melaluiPemeriksaanBk = $laporanPembinaanSiswa->status_verifikasi !== 'tidak_perlu';
+        $butirKeputusan = collect(old('jenis_pelanggaran_ids', $laporanPembinaanSiswa->butirPelanggaranLaporan->pluck('jenis_pelanggaran_siswa_id')->all()))->map(fn($id)=>(int)$id)->all();
+        $badgeVerifikasi = fn(string $status) => match($status){'disahkan','ditetapkan_pembinaan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_klarifikasi'=>'badge badge-danger',default=>'badge badge-warning'};
+        $labelTahapBatas = 'Keputusan BK';
     @endphp
 
     <style>
@@ -26,8 +21,14 @@
         .violation-detail-list,.decision-list,.follow-up-list { display:grid; gap:12px; margin-top:16px; }
         .violation-detail,.decision-item,.follow-up-item { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px; }
         .violation-detail { align-items:start; display:grid; gap:12px; grid-template-columns:1fr auto; }
-        .decision-grid { display:grid; gap:16px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+        .decision-grid { display:grid; gap:16px; grid-template-columns:minmax(0,1fr); }
         .decision-form { border-top:1px solid var(--line); margin-top:12px; padding-top:12px; }
+        .bk-violation-list { border:1px solid var(--line); border-radius:8px; display:grid; margin-top:8px; max-height:360px; overflow-y:auto; }
+        .bk-violation-group-title { background:#f4f7fa; color:var(--primary-dark); font-size:12px; font-weight:800; margin:0; padding:9px 11px; text-transform:uppercase; }
+        .bk-violation-option { align-items:start; border-top:1px solid var(--line); cursor:pointer; display:grid; gap:9px; grid-template-columns:18px minmax(0,1fr) auto; padding:10px 11px; }
+        .bk-violation-option input { margin-top:3px; }
+        .bk-violation-option small { color:var(--muted); display:block; margin-bottom:2px; }
+        .bk-point-total { color:var(--primary-dark); font-size:16px; font-weight:800; margin:10px 0 0; }
         .follow-up-body { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:12px; }
         .fact-list { display:grid; gap:10px; margin-top:14px; }
         .fact-item { align-items:start; border:1px solid var(--line); border-radius:8px; display:grid; gap:12px; grid-template-columns:minmax(0,1fr) auto; padding:13px; }
@@ -44,7 +45,7 @@
 
     <div class="page-header">
         <div><p class="eyebrow">Kesiswaan & BK</p><h1 class="page-title">Detail {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1><p class="page-subtitle">{{ $laporanPembinaanSiswa->nomor_laporan }}</p></div>
-        <div class="actions"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Kembali</a>@izin('poin_siswa.lihat','poin_siswa.verifikasi_bk','poin_siswa.menyetujui','poin_siswa.putus_konflik')<a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pusat Verifikasi</a>@endizin @if($bolehEdit)<a href="{{ route('laporan-pembinaan-siswa.edit',$laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>@endif @izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>@endif @endizin</div>
+        <div class="actions"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Kembali</a>@izin('poin_siswa.lihat','poin_siswa.verifikasi_bk')<a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pusat Verifikasi</a>@endizin @if($bolehEdit)<a href="{{ route('laporan-pembinaan-siswa.edit',$laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>@endif @izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>@endif @endizin</div>
     </div>
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
     @if(session('gagal'))<div class="alert alert-danger">{{ session('gagal') }}</div>@endif
@@ -56,10 +57,10 @@
         <div class="alert alert-danger"><strong>Periksa kemungkinan laporan ganda.</strong> Ada {{ $laporanMirip->count() }} laporan lain untuk siswa ini pada tanggal yang sama: @foreach($laporanMirip as $mirip)<a href="{{ route('laporan-pembinaan-siswa.show',$mirip) }}">{{ $mirip->nomor_laporan }}</a>{{ !$loop->last?', ':'.' }}@endforeach</div>
     @endif
 
-    @if($laporanPembinaanSiswa->jenis_laporan==='pelanggaran')
+    @if($melaluiPemeriksaanBk)
         <section class="panel panel-pad point-summary" style="margin-bottom:20px;">
-            <div><p class="eyebrow" style="color:#d9e8f7">Status penetapan</p><h2 style="margin:4px 0 8px">{{ $laporanPembinaanSiswa->labelStatusVerifikasi() }}</h2><span class="{{ $badgeVerifikasi($laporanPembinaanSiswa->status_verifikasi) }}">{{ $laporanPembinaanSiswa->labelTingkat() }}</span>@if(!$statusFinal && $laporanPembinaanSiswa->batas_proses_pada)<p style="margin:12px 0 0;color:#d9e8f7">Batas {{ $labelTahapBatas }}: <strong style="color:#fff;font-size:inherit">{{ $laporanPembinaanSiswa->batas_proses_pada->format('d/m/Y H:i') }}</strong></p>@endif</div>
-            <div><p style="margin:0">Total laporan</p><strong>{{ $laporanPembinaanSiswa->total_poin }}</strong><span> poin</span></div>
+            <div><p class="eyebrow" style="color:#d9e8f7">Status keputusan BK</p><h2 style="margin:4px 0 8px">{{ $laporanPembinaanSiswa->labelStatusVerifikasi() }}</h2>@if($laporanPembinaanSiswa->jenis_laporan==='kejadian' && !$statusFinal)<span class="badge badge-muted">Belum diklasifikasikan</span>@else<span class="{{ $badgeVerifikasi($laporanPembinaanSiswa->status_verifikasi) }}">{{ $laporanPembinaanSiswa->labelTingkat() }}</span>@endif @if(!$statusFinal && $laporanPembinaanSiswa->batas_proses_pada)<p style="margin:12px 0 0;color:#d9e8f7">Batas {{ $labelTahapBatas }}: <strong style="color:#fff;font-size:inherit">{{ $laporanPembinaanSiswa->batas_proses_pada->format('d/m/Y H:i') }}</strong></p>@endif</div>
+            <div><p style="margin:0">Hasil poin</p>@if($laporanPembinaanSiswa->status_verifikasi==='disahkan')<strong>{{ $laporanPembinaanSiswa->total_poin }}</strong><span> poin</span>@elseif($statusFinal)<strong style="font-size:24px">Tanpa poin</strong>@else<strong style="font-size:22px">Belum ditentukan</strong>@endif</div>
         </section>
     @endif
 
@@ -73,29 +74,39 @@
         <div class="section-stack">
             <section class="panel panel-pad"><h2 class="panel-title">Informasi Kejadian</h2><dl class="detail-grid"><div class="detail-item"><dt>Jenis laporan</dt><dd>{{ $laporanPembinaanSiswa->labelJenisLaporan() }}</dd></div><div class="detail-item"><dt>Sumber</dt><dd>{{ $laporanPembinaanSiswa->berasalDariAbsensi() ? 'Rekap absensi otomatis' : 'Laporan manual' }}</dd></div><div class="detail-item"><dt>Tanggal dan waktu</dt><dd>{{ $laporanPembinaanSiswa->tanggal_kejadian?->format('d/m/Y') }} {{ $laporanPembinaanSiswa->waktuKejadianRingkas()?'pukul '.$laporanPembinaanSiswa->waktuKejadianRingkas():'' }}</dd></div><div class="detail-item"><dt>Tempat</dt><dd>{{ $teks($laporanPembinaanSiswa->tempat_kejadian) }}</dd></div><div class="detail-item"><dt>Kategori</dt><dd>{{ $laporanPembinaanSiswa->kategoriPembinaanSiswa?->nama ?: '-' }}</dd></div><div class="detail-item"><dt>Pelapor</dt><dd>{{ $laporanPembinaanSiswa->pelaporPegawai?->nama_lengkap ?: ($laporanPembinaanSiswa->berasalDariAbsensi() ? 'Sistem NUSA' : '-') }}</dd></div><div class="detail-item"><dt>Dibuat pada</dt><dd>{{ $laporanPembinaanSiswa->created_at?->format('d/m/Y H:i') }}</dd></div></dl></section>
 
-            @if($laporanPembinaanSiswa->jenis_laporan==='pelanggaran')
+            @if($laporanPembinaanSiswa->jenis_laporan==='pelanggaran' && $laporanPembinaanSiswa->butirPelanggaranLaporan->isNotEmpty())
                 <section class="panel panel-pad"><h2 class="panel-title">Butir Pelanggaran</h2><div class="violation-detail-list">@foreach($laporanPembinaanSiswa->butirPelanggaranLaporan as $butir)<article class="violation-detail"><div><p class="person-meta">{{ $butir->kode_pelanggaran }} · {{ str($butir->tingkat)->headline() }}</p><p class="person-name">{{ $butir->nama_pelanggaran }}</p></div><span class="violation-points"><strong>{{ $butir->poin }}</strong> poin</span></article>@endforeach</div></section>
+            @endif
 
-                @if(!$laporanPembinaanSiswa->wali_kelas_pegawai_id || !$laporanPembinaanSiswa->guru_wali_pegawai_id)
-                    <div class="alert alert-danger">Persetujuan belum dapat lengkap karena {{ !$laporanPembinaanSiswa->wali_kelas_pegawai_id?'wali kelas':'' }}{{ !$laporanPembinaanSiswa->wali_kelas_pegawai_id && !$laporanPembinaanSiswa->guru_wali_pegawai_id?' dan ':'' }}{{ !$laporanPembinaanSiswa->guru_wali_pegawai_id?'guru wali':'' }} belum ditentukan.</div>
-                @endif
-
-                <section class="panel panel-pad"><h2 class="panel-title">Pemeriksaan dan Persetujuan</h2><p class="help-text">BK memastikan fakta. Poin berlaku setelah disetujui oleh dua pegawai berbeda.</p>
+            @if($melaluiPemeriksaanBk)
+                <section class="panel panel-pad"><h2 class="panel-title">Pemeriksaan dan Keputusan BK</h2><p class="help-text">BK memeriksa fakta lalu menetapkan pembinaan tanpa poin atau sanksi poin. Tidak diperlukan persetujuan pihak lain.</p>
                     <div class="decision-grid" style="margin-top:16px">
-                        <article class="decision-item"><p class="person-meta">Pemeriksa Fakta</p><h3>BK</h3>@if($laporanPembinaanSiswa->verifikasiBkPelanggaran->isNotEmpty())@foreach($laporanPembinaanSiswa->verifikasiBkPelanggaran as $verifikasi)<div style="margin-top:10px"><span class="badge {{ $verifikasi->hasil==='terbukti'?'badge-active':($verifikasi->hasil==='tidak_terbukti'?'badge-inactive':'badge-warning') }}">{{ $verifikasi->labelHasil() }}</span><p class="person-meta">{{ $verifikasi->bkPegawai?->nama_lengkap ?: $verifikasi->pengguna?->nama }} · {{ $verifikasi->diverifikasi_pada?->format('d/m/Y H:i') }}</p><p>{{ $teks($verifikasi->catatan) }}</p></div>@endforeach @else<p class="help-text">Belum diperiksa.</p>@endif
-                            @if($bolehVerifikasiBk && !$statusFinal)<form method="POST" action="{{ route('verifikasi-pelanggaran.bk',$laporanPembinaanSiswa) }}" class="decision-form">@csrf<div class="field"><label>Hasil pemeriksaan</label><select name="hasil" class="select">@foreach(\App\Models\VerifikasiBkPelanggaran::DAFTAR_HASIL as $kode=>$label)<option value="{{ $kode }}">{{ $label }}</option>@endforeach</select></div><div class="field" style="margin-top:8px"><label>Catatan</label><textarea name="catatan" class="textarea"></textarea></div><button class="button button-primary button-full" style="margin-top:10px">Simpan pemeriksaan</button></form>@endif
+                        <article class="decision-item"><p class="person-meta">Pemeriksa dan Pemberi Keputusan</p><h3>Guru BK</h3>@if($laporanPembinaanSiswa->verifikasiBkPelanggaran->isNotEmpty())@foreach($laporanPembinaanSiswa->verifikasiBkPelanggaran as $verifikasi)<div style="margin-top:10px"><span class="badge {{ in_array($verifikasi->hasil,['sanksi_poin','pembinaan','terbukti'],true)?'badge-active':($verifikasi->hasil==='tidak_terbukti'?'badge-inactive':'badge-warning') }}">{{ $verifikasi->labelHasil() }}</span><p class="person-meta">{{ $verifikasi->bkPegawai?->nama_lengkap ?: $verifikasi->pengguna?->nama }} &middot; {{ $verifikasi->diverifikasi_pada?->format('d/m/Y H:i') }}</p><p>{{ $teks($verifikasi->catatan) }}</p></div>@endforeach @else<p class="help-text">Belum diperiksa.</p>@endif
+                            @if($bolehVerifikasiBk && !$statusFinal)
+                                <form method="POST" action="{{ route('verifikasi-pelanggaran.bk',$laporanPembinaanSiswa) }}" class="decision-form" data-bk-decision-form>
+                                    @csrf
+                                    <div class="field"><label for="hasil_keputusan_bk">Keputusan penanganan</label><select id="hasil_keputusan_bk" name="hasil" class="select" data-bk-decision required><option value="">Pilih keputusan</option>@foreach(\App\Models\VerifikasiBkPelanggaran::DAFTAR_HASIL as $kode=>$label)<option value="{{ $kode }}" @selected(old('hasil')===$kode)>{{ $label }}</option>@endforeach</select><p class="help-text">BK menentukan klasifikasi setelah memeriksa kronologi, bukti, saksi, dan klarifikasi.</p></div>
+                                    <div class="field" style="margin-top:12px" data-bk-point-options>
+                                        <label>Butir pelanggaran dan poin</label>
+                                        <input type="search" class="input" placeholder="Cari kode atau nama pelanggaran" data-bk-violation-search>
+                                        <div class="bk-violation-list">
+                                            @foreach(['ringan'=>'Ringan','sedang'=>'Sedang','berat'=>'Berat'] as $tingkatKode=>$tingkatLabel)
+                                                <div data-bk-violation-group>
+                                                    <p class="bk-violation-group-title">Pelanggaran {{ $tingkatLabel }}</p>
+                                                    @foreach($daftarJenisPelanggaranKeputusan->where('tingkat',$tingkatKode) as $jenis)
+                                                        <label class="bk-violation-option" data-bk-violation-option data-search="{{ str($jenis->kode.' '.$jenis->nama)->lower() }}"><input type="checkbox" name="jenis_pelanggaran_ids[]" value="{{ $jenis->id }}" data-bk-points="{{ $jenis->poin }}" @checked(in_array($jenis->id,$butirKeputusan,true))><span><small>{{ $jenis->kode }}</small><strong>{{ $jenis->nama }}</strong></span><span class="violation-points">{{ $jenis->poin }} poin</span></label>
+                                                    @endforeach
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                        <p class="bk-point-total">Total: <span data-bk-point-total>0</span> poin</p>
+                                    </div>
+                                    <div class="field" style="margin-top:12px"><label for="catatan_keputusan_bk">Catatan keputusan</label><textarea id="catatan_keputusan_bk" name="catatan" class="textarea" placeholder="Tuliskan pertimbangan atau arahan tindak lanjut.">{{ old('catatan') }}</textarea></div>
+                                    <button class="button button-primary button-full" style="margin-top:10px">Simpan keputusan BK</button>
+                                </form>
+                            @endif
                         </article>
-                        @foreach(['wali_kelas'=>'Wali Kelas','guru_wali'=>'Guru Wali'] as $jenis=>$label)
-                            @php $putusan=$persetujuan->get($jenis);$sudahSetujuSebagaiPihakLain=$persetujuan->where('jenis_persetujuan','<>',$jenis)->where('pegawai_id',$pegawaiId)->where('keputusan','setuju')->isNotEmpty();$boleh=(($jenis==='wali_kelas'&&$adalahWaliKelas)||($jenis==='guru_wali'&&$adalahGuruWali))&&!$sudahSetujuSebagaiPihakLain; @endphp
-                            <article class="decision-item"><p class="person-meta">Pemberi Persetujuan</p><h3>{{ $label }}</h3><p class="person-name">{{ $jenis==='wali_kelas'?($laporanPembinaanSiswa->waliKelasPegawai?->nama_lengkap?:'Belum ditentukan'):($laporanPembinaanSiswa->guruWaliPegawai?->nama_lengkap?:'Belum ditugaskan') }}</p>@if($putusan)<span class="badge {{ $putusan->keputusan==='setuju'?'badge-active':'badge-danger' }}">{{ \App\Models\PersetujuanPelanggaran::DAFTAR_KEPUTUSAN[$putusan->keputusan] }}</span><p>{{ $teks($putusan->catatan) }}</p>@else<p class="help-text">Belum memberi keputusan.</p>@endif
-                                @if($boleh && $sudahDiperiksaTerbukti && !$statusFinal)<form method="POST" action="{{ route('verifikasi-pelanggaran.persetujuan',$laporanPembinaanSiswa) }}" class="decision-form">@csrf<input type="hidden" name="jenis_persetujuan" value="{{ $jenis }}"><div class="field"><label>Keputusan</label><select name="keputusan" class="select"><option value="setuju">Setuju</option><option value="tidak_setuju">Tidak setuju</option></select></div><div class="field" style="margin-top:8px"><label>Pertimbangan</label><textarea name="catatan" class="textarea" required></textarea></div><button class="button button-primary button-full" style="margin-top:10px">Kirim keputusan</button></form>@endif
-                            </article>
-                        @endforeach
                     </div>
-                    @if($bolehPutusKonflik && $sudahDiperiksaTerbukti && !$statusFinal && ($laporanPembinaanSiswa->status_verifikasi==='perlu_musyawarah' || $perluPenyetujuPengganti))
-                        @php $putusanWakil=$persetujuan->get('wakil_kesiswaan'); @endphp
-                        <article class="decision-item" style="margin-top:16px"><p class="person-meta">Musyawarah/Pengganti</p><h3>Wakil Kesiswaan</h3>@if($putusanWakil)<span class="badge {{ $putusanWakil->keputusan==='setuju'?'badge-active':'badge-danger' }}">{{ \App\Models\PersetujuanPelanggaran::DAFTAR_KEPUTUSAN[$putusanWakil->keputusan] }}</span><p>{{ $teks($putusanWakil->catatan) }}</p>@endif<form method="POST" action="{{ route('verifikasi-pelanggaran.persetujuan',$laporanPembinaanSiswa) }}" class="decision-form">@csrf<input type="hidden" name="jenis_persetujuan" value="wakil_kesiswaan"><div class="form-grid"><div class="field"><label>Keputusan pengganti</label><select name="keputusan" class="select"><option value="setuju">Setuju</option><option value="tidak_setuju">Tidak setuju</option></select></div><div class="field"><label>Catatan musyawarah</label><textarea name="catatan" class="textarea" required></textarea></div></div><button class="button button-dark" style="margin-top:10px">Simpan keputusan musyawarah</button></form></article>
-                    @endif
                 </section>
             @endif
 
@@ -147,6 +158,12 @@
         </div>
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded',()=>{const type=document.querySelector('[data-witness-type]');if(!type)return;const student=document.querySelector('[data-witness-student]');const employee=document.querySelector('[data-witness-employee]');const other=document.querySelector('[data-witness-other]');const update=()=>{student.hidden=type.value!=='siswa';employee.hidden=type.value!=='pegawai';other.hidden=type.value!=='lainnya';student.querySelector('select').required=type.value==='siswa';employee.querySelector('select').required=type.value==='pegawai';other.querySelector('input').required=type.value==='lainnya'};type.addEventListener('change',update);update()});
+        document.addEventListener('DOMContentLoaded',()=>{
+            const type=document.querySelector('[data-witness-type]');
+            if(type){const student=document.querySelector('[data-witness-student]');const employee=document.querySelector('[data-witness-employee]');const other=document.querySelector('[data-witness-other]');const update=()=>{student.hidden=type.value!=='siswa';employee.hidden=type.value!=='pegawai';other.hidden=type.value!=='lainnya';student.querySelector('select').required=type.value==='siswa';employee.querySelector('select').required=type.value==='pegawai';other.querySelector('input').required=type.value==='lainnya'};type.addEventListener('change',update);update()}
+
+            const decision=document.querySelector('[data-bk-decision]');const options=document.querySelector('[data-bk-point-options]');const checks=[...document.querySelectorAll('[data-bk-points]')];const total=document.querySelector('[data-bk-point-total]');
+            if(decision&&options){const updateDecision=()=>{const pointDecision=decision.value==='sanksi_poin';options.hidden=!pointDecision;checks.forEach(check=>check.required=false);if(total)total.textContent=checks.filter(check=>check.checked).reduce((sum,check)=>sum+Number(check.dataset.bkPoints||0),0)};decision.addEventListener('change',updateDecision);checks.forEach(check=>check.addEventListener('change',updateDecision));updateDecision();const search=document.querySelector('[data-bk-violation-search]');const rows=[...document.querySelectorAll('[data-bk-violation-option]')];const groups=[...document.querySelectorAll('[data-bk-violation-group]')];search?.addEventListener('input',()=>{const keyword=search.value.toLowerCase().trim();rows.forEach(row=>row.hidden=keyword!==''&&!row.dataset.search.includes(keyword));groups.forEach(group=>group.hidden=!group.querySelector('[data-bk-violation-option]:not([hidden])'))})}
+        });
     </script>
 @endsection

@@ -8,12 +8,10 @@ use App\Models\LaporanPembinaanSiswa;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\PenguranganPoinSiswa;
-use App\Models\PersetujuanPelanggaran;
 use App\Models\Peran;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Models\TransaksiPoinSiswa;
-use App\Models\VerifikasiBkPelanggaran;
 use App\Services\Pembinaan\ProsesPoinSiswaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -29,28 +27,20 @@ class SistemPoinSiswaTest extends TestCase
         $this->assertDatabaseCount('aturan_sanksi_poin', 7);
         $this->assertDatabaseHas('peran', ['kode' => 'guru_wali', 'aktif' => true]);
         $this->assertDatabaseHas('izin', ['kode' => 'poin_siswa.verifikasi_bk']);
-        $this->assertDatabaseHas('izin', ['kode' => 'poin_siswa.menyetujui']);
+        $this->assertDatabaseMissing('izin', ['kode' => 'poin_siswa.menyetujui']);
         $this->assertDatabaseHas('izin', ['kode' => 'guru_wali.kelola']);
     }
 
-    public function test_poin_baru_resmi_setelah_disetujui_dua_pegawai_berbeda(): void
+    public function test_poin_langsung_resmi_setelah_bk_menetapkan_sanksi_poin(): void
     {
-        [$laporan, $waliKelas, $guruWali] = $this->buatLaporanPelanggaran(25);
-        $layanan = app(ProsesPoinSiswaService::class);
-
-        PersetujuanPelanggaran::create($this->dataPersetujuan($laporan, 'wali_kelas', $waliKelas));
-        PersetujuanPelanggaran::create($this->dataPersetujuan($laporan, 'guru_wali', $waliKelas));
-
-        $this->assertFalse($layanan->perbaruiStatusPersetujuan($laporan));
-        $this->assertSame('disetujui_sebagian', $laporan->fresh()->status_verifikasi);
+        [$laporan] = $this->buatLaporanPelanggaran(25);
         $this->assertDatabaseMissing('transaksi_poin_siswa', ['kunci_sumber' => 'pelanggaran:' . $laporan->id]);
 
-        PersetujuanPelanggaran::query()
-            ->where('laporan_pembinaan_siswa_id', $laporan->id)
-            ->where('jenis_persetujuan', 'guru_wali')
-            ->update(['pegawai_id' => $guruWali->id]);
+        $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
+            'hasil' => 'sanksi_poin',
+            'catatan' => 'BK menetapkan sanksi poin berdasarkan bukti.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
 
-        $this->assertTrue($layanan->perbaruiStatusPersetujuan($laporan->fresh()));
         $this->assertSame('disahkan', $laporan->fresh()->status_verifikasi);
         $this->assertDatabaseHas('transaksi_poin_siswa', [
             'kunci_sumber' => 'pelanggaran:' . $laporan->id,
@@ -62,18 +52,105 @@ class SistemPoinSiswaTest extends TestCase
             'status' => 'menunggu',
         ]);
 
-        $layanan->perbaruiStatusPersetujuan($laporan->fresh());
         $this->assertSame(1, TransaksiPoinSiswa::where('kunci_sumber', 'pelanggaran:' . $laporan->id)->count());
+    }
+
+    public function test_guru_hanya_melaporkan_kejadian_dan_bk_yang_menentukan_pelanggaran(): void
+    {
+        $tahunPelajaran = TahunPelajaran::create([
+            'nama' => '2026/2027',
+            'tanggal_mulai' => '2026-07-01',
+            'tanggal_selesai' => '2027-06-30',
+            'aktif' => true,
+        ]);
+        $siswa = Siswa::create([
+            'nama_lengkap' => 'Siswa Laporan Kejadian',
+            'nisn' => '0099000099',
+            'aktif' => true,
+        ]);
+        $guru = Pegawai::create([
+            'nama_lengkap' => 'Guru Pelapor Kejadian',
+            'nip' => '198505052011051005',
+            'aktif' => true,
+        ]);
+        $akunGuru = Pengguna::create([
+            'pegawai_id' => $guru->id,
+            'nama' => $guru->nama_lengkap,
+            'username' => $guru->nip,
+            'kata_sandi' => 'KataSandi-Uji-2026',
+            'peran' => 'pegawai',
+            'aktif' => true,
+        ]);
+        $akunGuru->daftarPeran()->attach(Peran::where('kode', 'guru_mapel')->firstOrFail());
+
+        $this->actingAs($akunGuru)->get(route('laporan-pembinaan-siswa.create'))
+            ->assertOk()
+            ->assertSee('Laporan Kejadian')
+            ->assertDontSee('Dugaan Butir Pelanggaran');
+
+        $this->post(route('laporan-pembinaan-siswa.store'), [
+            'jenis_laporan' => 'pelanggaran',
+            'tanggal_kejadian' => now()->toDateString(),
+            'siswa_id' => $siswa->id,
+            'tahun_pelajaran_id' => $tahunPelajaran->id,
+            'kronologi' => 'Guru melaporkan fakta kejadian tanpa menentukan jenis dan poin.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $laporan = LaporanPembinaanSiswa::where('siswa_id', $siswa->id)->firstOrFail();
+        $this->assertSame('kejadian', $laporan->jenis_laporan);
+        $this->assertSame('diajukan', $laporan->status_verifikasi);
+        $this->assertSame(0, $laporan->total_poin);
+        $this->assertDatabaseMissing('butir_pelanggaran_laporan', [
+            'laporan_pembinaan_siswa_id' => $laporan->id,
+        ]);
+
+        $jenisPelanggaran = JenisPelanggaranSiswa::where('aktif', true)->where('poin', '>', 0)->firstOrFail();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->actingAs($administrator)->get(route('laporan-pembinaan-siswa.show', $laporan))
+            ->assertOk()
+            ->assertSee('Butir pelanggaran dan poin')
+            ->assertSee('Pilih keputusan');
+
+        $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
+            'hasil' => 'sanksi_poin',
+            'jenis_pelanggaran_ids' => [$jenisPelanggaran->id],
+            'catatan' => 'BK menetapkan butir setelah pemeriksaan.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $laporan->refresh();
+        $this->assertSame('pelanggaran', $laporan->jenis_laporan);
+        $this->assertSame('disahkan', $laporan->status_verifikasi);
+        $this->assertSame($jenisPelanggaran->poin, $laporan->total_poin);
+        $this->assertDatabaseHas('butir_pelanggaran_laporan', [
+            'laporan_pembinaan_siswa_id' => $laporan->id,
+            'jenis_pelanggaran_siswa_id' => $jenisPelanggaran->id,
+        ]);
+    }
+
+    public function test_bk_dapat_menetapkan_pembinaan_tanpa_menambah_poin(): void
+    {
+        [$laporan] = $this->buatLaporanPelanggaran(15);
+
+        $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
+            'hasil' => 'pembinaan',
+            'catatan' => 'Siswa cukup diberikan pembinaan dan pendampingan.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('ditetapkan_pembinaan', $laporan->fresh()->status_verifikasi);
+        $this->assertSame('pembinaan', $laporan->fresh()->jenis_laporan);
+        $this->assertSame(0, $laporan->fresh()->total_poin);
+        $this->assertDatabaseMissing('transaksi_poin_siswa', ['laporan_pembinaan_siswa_id' => $laporan->id]);
     }
 
     public function test_reward_tidak_membuat_saldo_poin_menjadi_negatif(): void
     {
-        [$laporan, $waliKelas, $guruWali] = $this->buatLaporanPelanggaran(25);
+        [$laporan, , $guruWali] = $this->buatLaporanPelanggaran(25);
         $layanan = app(ProsesPoinSiswaService::class);
 
-        PersetujuanPelanggaran::create($this->dataPersetujuan($laporan, 'wali_kelas', $waliKelas));
-        PersetujuanPelanggaran::create($this->dataPersetujuan($laporan, 'guru_wali', $guruWali));
-        $layanan->perbaruiStatusPersetujuan($laporan);
+        $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
+            'hasil' => 'sanksi_poin',
+            'catatan' => 'BK menetapkan sanksi poin.',
+        ])->assertSessionHasNoErrors();
 
         $pengurangan = PenguranganPoinSiswa::create([
             'siswa_id' => $laporan->siswa_id,
@@ -209,7 +286,7 @@ class SistemPoinSiswaTest extends TestCase
             'guru_wali_pegawai_id' => $guruWali->id,
             'tingkat' => 'ringan',
             'status' => 'baru',
-            'status_verifikasi' => 'menunggu_persetujuan',
+            'status_verifikasi' => 'diajukan',
             'total_poin' => $totalPoin,
             'kronologi' => 'Kronologi pengujian sistem poin.',
             'dibuat_oleh_pengguna_id' => $administrator->id,
@@ -226,28 +303,6 @@ class SistemPoinSiswaTest extends TestCase
             ]);
         }
 
-        VerifikasiBkPelanggaran::create([
-            'laporan_pembinaan_siswa_id' => $laporan->id,
-            'bk_pegawai_id' => $waliKelas->id,
-            'pengguna_id' => $administrator->id,
-            'hasil' => 'terbukti',
-            'catatan' => 'Fakta telah diperiksa.',
-            'diverifikasi_pada' => now(),
-        ]);
-
         return [$laporan, $waliKelas, $guruWali];
-    }
-
-    private function dataPersetujuan(LaporanPembinaanSiswa $laporan, string $jenis, Pegawai $pegawai): array
-    {
-        return [
-            'laporan_pembinaan_siswa_id' => $laporan->id,
-            'jenis_persetujuan' => $jenis,
-            'pegawai_id' => $pegawai->id,
-            'pengguna_id' => auth()->id(),
-            'keputusan' => 'setuju',
-            'catatan' => 'Disetujui dalam pengujian.',
-            'diputuskan_pada' => now(),
-        ];
     }
 }

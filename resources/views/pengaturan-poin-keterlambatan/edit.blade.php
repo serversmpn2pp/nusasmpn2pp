@@ -52,7 +52,7 @@
             <div class="late-settings-head">
                 <div>
                     <h2 class="panel-title">Otomatisasi laporan</h2>
-                    <p class="help-text">Poin tetap menunggu pemeriksaan BK serta persetujuan Wali Kelas dan Guru Wali.</p>
+                    <p class="help-text">Laporan keterlambatan tetap menunggu keputusan BK sebelum poin ditetapkan.</p>
                 </div>
                 <label class="late-toggle">
                     <input type="checkbox" name="aktif" value="1" @checked(old('aktif', $pengaturan->aktif))>

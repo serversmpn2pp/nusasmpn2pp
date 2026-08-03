@@ -688,8 +688,8 @@
                                 <span>Menunggu verifikasi BK</span>
                             </div>
                             <div class="mini-card">
-                                <strong>{{ $formatAngka($ringkasanPembinaan['menunggu_persetujuan']) }}</strong>
-                                <span>Menunggu persetujuan</span>
+                                <strong>{{ $formatAngka($ringkasanPembinaan['pembinaan_ditetapkan']) }}</strong>
+                                <span>Ditetapkan pembinaan</span>
                             </div>
                             <div class="mini-card">
                                 <strong>{{ $formatAngka($ringkasanPembinaan['poin_aktif']) }}</strong>
@@ -995,7 +995,7 @@
                                 @foreach ([
                                     ['label' => 'Total laporan', 'value' => $ringkasanPembinaanWali['total_laporan']],
                                     ['label' => 'Siswa terlapor', 'value' => $ringkasanPembinaanWali['siswa_terlapor']],
-                                    ['label' => 'Menunggu persetujuan', 'value' => $ringkasanPembinaanWali['menunggu_persetujuan']],
+                                    ['label' => 'Menunggu keputusan BK', 'value' => $ringkasanPembinaanWali['menunggu_bk']],
                                     ['label' => 'Poin aktif', 'value' => $ringkasanPembinaanWali['poin_aktif']],
                                 ] as $item)
                                     <div class="mini-card">

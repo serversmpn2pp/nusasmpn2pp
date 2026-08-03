@@ -522,14 +522,14 @@ Route::middleware('auth')->group(function () {
             ->only(['index', 'show'])
             ->middleware('izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat');
         Route::get('pusat-verifikasi-pelanggaran', [PusatVerifikasiPelanggaranController::class, 'index'])
-            ->middleware('izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.menyetujui,poin_siswa.putus_konflik')
+            ->middleware('izin:poin_siswa.lihat,poin_siswa.verifikasi_bk')
             ->name('pusat-verifikasi-pelanggaran.index');
 
         Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/bukti', [BuktiLaporanPembinaanController::class, 'store'])
             ->middleware('izin:bk.kelola,poin_siswa.lapor,poin_siswa.verifikasi_bk')
             ->name('bukti-laporan-pembinaan.store');
         Route::get('bukti-laporan-pembinaan/{buktiLaporanPembinaanSiswa}/unduh', [BuktiLaporanPembinaanController::class, 'download'])
-            ->middleware('izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat,poin_siswa.menyetujui,poin_siswa.verifikasi_bk')
+            ->middleware('izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat,poin_siswa.verifikasi_bk')
             ->name('bukti-laporan-pembinaan.download');
         Route::delete('bukti-laporan-pembinaan/{buktiLaporanPembinaanSiswa}', [BuktiLaporanPembinaanController::class, 'destroy'])
             ->middleware('izin:bk.kelola,poin_siswa.lapor,poin_siswa.verifikasi_bk')
@@ -547,10 +547,6 @@ Route::middleware('auth')->group(function () {
         Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/verifikasi-bk', [VerifikasiPelanggaranSiswaController::class, 'verifikasiBk'])
             ->middleware('izin:poin_siswa.verifikasi_bk')
             ->name('verifikasi-pelanggaran.bk');
-        Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/persetujuan', [VerifikasiPelanggaranSiswaController::class, 'persetujuan'])
-            ->middleware('izin:poin_siswa.menyetujui,poin_siswa.putus_konflik')
-            ->name('verifikasi-pelanggaran.persetujuan');
-
         Route::get('pengaturan-poin-keterlambatan', [PengaturanPoinKeterlambatanController::class, 'index'])
             ->middleware('izin:poin_siswa.pengaturan')
             ->name('pengaturan-poin-keterlambatan.index');

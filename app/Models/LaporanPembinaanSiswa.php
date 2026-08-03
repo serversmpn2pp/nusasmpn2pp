@@ -25,6 +25,7 @@ class LaporanPembinaanSiswa extends Model
     ];
 
     public const DAFTAR_JENIS_LAPORAN = [
+        'kejadian' => 'Laporan Kejadian',
         'pembinaan' => 'Pembinaan/Konseling',
         'pelanggaran' => 'Pelanggaran Berpoin',
     ];
@@ -37,6 +38,7 @@ class LaporanPembinaanSiswa extends Model
         'menunggu_persetujuan' => 'Menunggu Persetujuan',
         'disetujui_sebagian' => 'Disetujui Sebagian',
         'perlu_musyawarah' => 'Perlu Musyawarah',
+        'ditetapkan_pembinaan' => 'Ditetapkan Pembinaan',
         'disahkan' => 'Disahkan',
         'tidak_terbukti' => 'Tidak Terbukti',
         'dibatalkan' => 'Dibatalkan',

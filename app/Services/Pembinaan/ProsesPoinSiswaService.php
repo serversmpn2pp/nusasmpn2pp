@@ -3,6 +3,7 @@
 namespace App\Services\Pembinaan;
 
 use App\Models\AturanSanksiPoin;
+use App\Models\JenisPelanggaranSiswa;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\PenguranganPoinSiswa;
 use App\Models\SanksiPoinSiswa;
@@ -15,7 +16,6 @@ class ProsesPoinSiswaService
 {
     public function __construct(
         private CatatRiwayatPembinaanService $riwayatPembinaan,
-        private PengaturanBatasProsesPelanggaranService $pengaturanBatasProses,
         private CatatRiwayatSanksiPoinService $riwayatSanksi,
         private NotifikasiPenggunaService $notifikasi,
     ) {}
@@ -26,49 +26,6 @@ class ProsesPoinSiswaService
             ->where('siswa_id', $siswaId)
             ->where('tahun_pelajaran_id', $tahunPelajaranId)
             ->sum('poin'));
-    }
-
-    public function perbaruiStatusPersetujuan(LaporanPembinaanSiswa $laporan): bool
-    {
-        if ($laporan->jenis_laporan !== 'pelanggaran') {
-            return false;
-        }
-
-        $verifikasiTerakhir = $laporan->verifikasiBkPelanggaran()
-            ->latest('diverifikasi_pada')
-            ->first();
-
-        if (! $verifikasiTerakhir || $verifikasiTerakhir->hasil !== 'terbukti') {
-            return false;
-        }
-
-        $persetujuan = $laporan->persetujuanPelanggaran()->get();
-        $jumlahOrangSetuju = $persetujuan
-            ->where('keputusan', 'setuju')
-            ->pluck('pegawai_id')
-            ->filter()
-            ->unique()
-            ->count();
-
-        if ($jumlahOrangSetuju >= 2) {
-            $this->sahkanLaporan($laporan);
-
-            return true;
-        }
-
-        $status = match (true) {
-            $persetujuan->contains('keputusan', 'tidak_setuju') => 'perlu_musyawarah',
-            $jumlahOrangSetuju === 1 => 'disetujui_sebagian',
-            default => 'menunggu_persetujuan',
-        };
-
-        $laporan->update(['status_verifikasi' => $status]);
-        [$tahapBaru] = $this->pengaturanBatasProses->tahapDanJumlahHari($status, $laporan->tahun_pelajaran_id);
-        if ($tahapBaru && $laporan->tahap_batas_proses !== $tahapBaru) {
-            $this->pengaturanBatasProses->tetapkanBatas($laporan, $status);
-        }
-
-        return false;
     }
 
     public function sahkanLaporan(LaporanPembinaanSiswa $laporan): void
@@ -94,6 +51,8 @@ class ProsesPoinSiswaService
                 $laporan->update([
                     'status_verifikasi' => 'disahkan',
                     'total_poin' => $totalButir,
+                    'tahap_batas_proses' => null,
+                    'batas_proses_pada' => null,
                 ]);
 
                 return;
@@ -120,13 +79,15 @@ class ProsesPoinSiswaService
                 'status' => $laporan->status === 'baru' ? 'diproses' : $laporan->status,
                 'total_poin' => $totalButir,
                 'poin_ditetapkan_pada' => now(),
+                'tahap_batas_proses' => null,
+                'batas_proses_pada' => null,
             ]);
 
             $this->riwayatPembinaan->catat(
                 $laporan,
                 'poin_disahkan',
                 'Poin pelanggaran disahkan',
-                $totalButir.' poin resmi ditetapkan setelah dua persetujuan.',
+                $totalButir.' poin resmi ditetapkan berdasarkan keputusan BK.',
                 $statusSebelum,
                 'disahkan',
                 auth()->id(),
@@ -134,6 +95,84 @@ class ProsesPoinSiswaService
             );
 
             $this->buatSanksiYangTerpicu($laporan->siswa_id, $laporan->tahun_pelajaran_id, $poinSebelum, $poinSesudah);
+        });
+    }
+
+    public function siapkanSanksiPoin(LaporanPembinaanSiswa $laporan, array $jenisPelanggaranIds): void
+    {
+        $jenisPelanggaranIds = collect($jenisPelanggaranIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+        $jenisPelanggaran = JenisPelanggaranSiswa::query()
+            ->whereIn('id', $jenisPelanggaranIds)
+            ->where('aktif', true)
+            ->orderBy('urutan')
+            ->get();
+
+        if ($jenisPelanggaran->isEmpty() || $jenisPelanggaran->count() !== $jenisPelanggaranIds->count()) {
+            throw ValidationException::withMessages([
+                'jenis_pelanggaran_ids' => 'Pilih minimal satu butir pelanggaran aktif untuk menetapkan sanksi poin.',
+            ]);
+        }
+
+        DB::transaction(function () use ($laporan, $jenisPelanggaran) {
+            $laporan = LaporanPembinaanSiswa::query()->lockForUpdate()->findOrFail($laporan->id);
+            $urutanTingkat = ['ringan' => 1, 'sedang' => 2, 'berat' => 3];
+            $tingkatTertinggi = $jenisPelanggaran
+                ->sortByDesc(fn ($item) => $urutanTingkat[$item->tingkat] ?? 0)
+                ->first()?->tingkat ?? 'ringan';
+
+            $laporan->butirPelanggaranLaporan()->delete();
+            foreach ($jenisPelanggaran as $jenis) {
+                $laporan->butirPelanggaranLaporan()->create([
+                    'jenis_pelanggaran_siswa_id' => $jenis->id,
+                    'kode_pelanggaran' => $jenis->kode,
+                    'nama_pelanggaran' => $jenis->nama,
+                    'tingkat' => $jenis->tingkat,
+                    'poin' => $jenis->poin,
+                ]);
+            }
+
+            $laporan->update([
+                'jenis_laporan' => 'pelanggaran',
+                'kategori_pembinaan_siswa_id' => $jenisPelanggaran->first()?->kategori_pembinaan_siswa_id,
+                'tingkat' => $tingkatTertinggi,
+                'total_poin' => (int) $jenisPelanggaran->sum('poin'),
+            ]);
+        });
+    }
+
+    public function tetapkanPembinaan(LaporanPembinaanSiswa $laporan): void
+    {
+        DB::transaction(function () use ($laporan) {
+            $laporan = LaporanPembinaanSiswa::query()->lockForUpdate()->findOrFail($laporan->id);
+            $statusSebelum = $laporan->status_verifikasi;
+
+            $laporan->butirPelanggaranLaporan()->delete();
+
+            $laporan->update([
+                'jenis_laporan' => 'pembinaan',
+                'kategori_pembinaan_siswa_id' => null,
+                'tingkat' => 'ringan',
+                'status_verifikasi' => 'ditetapkan_pembinaan',
+                'status' => $laporan->status === 'baru' ? 'diproses' : $laporan->status,
+                'total_poin' => 0,
+                'poin_ditetapkan_pada' => null,
+                'tahap_batas_proses' => null,
+                'batas_proses_pada' => null,
+            ]);
+
+            $this->riwayatPembinaan->catat(
+                $laporan,
+                'pembinaan_ditetapkan',
+                'Pembinaan tanpa poin ditetapkan',
+                'BK menetapkan kejadian ditangani melalui pembinaan tanpa penambahan poin.',
+                $statusSebelum,
+                'ditetapkan_pembinaan',
+                auth()->id(),
+            );
         });
     }
 

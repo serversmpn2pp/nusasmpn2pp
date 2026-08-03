@@ -10,9 +10,10 @@ class VerifikasiBkPelanggaran extends Model
     protected $table = 'verifikasi_bk_pelanggaran';
 
     public const DAFTAR_HASIL = [
-        'terbukti' => 'Terbukti',
-        'tidak_terbukti' => 'Tidak Terbukti',
+        'sanksi_poin' => 'Tetapkan Sanksi Poin',
+        'pembinaan' => 'Tetapkan Pembinaan Tanpa Poin',
         'perlu_klarifikasi' => 'Perlu Klarifikasi',
+        'tidak_terbukti' => 'Tidak Terbukti',
     ];
 
     protected $fillable = [

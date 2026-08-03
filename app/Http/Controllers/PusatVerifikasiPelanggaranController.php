@@ -20,8 +20,6 @@ class PusatVerifikasiPelanggaranController extends Controller
         $daftarAntrean = [
             'semua' => 'Semua tugas aktif',
             'bk' => 'Pemeriksaan BK',
-            'persetujuan' => 'Persetujuan guru',
-            'musyawarah' => 'Musyawarah/pengganti',
             'terlambat' => 'Terlambat diproses',
             'selesai' => 'Riwayat selesai',
         ];
@@ -33,10 +31,9 @@ class PusatVerifikasiPelanggaranController extends Controller
         $query = $this->antreanService->queryUntuk($pengguna)
             ->with([
                 'siswa:id,nama_lengkap,nisn', 'kelas:id,nama',
-                'pelaporPegawai:id,nama_lengkap', 'waliKelasPegawai:id,nama_lengkap', 'guruWaliPegawai:id,nama_lengkap',
+                'pelaporPegawai:id,nama_lengkap',
                 'butirPelanggaranLaporan' => fn ($query) => $query->orderByDesc('poin'),
                 'verifikasiBkPelanggaran' => fn ($query) => $query->with('bkPegawai:id,nama_lengkap')->latest('diverifikasi_pada'),
-                'persetujuanPelanggaran' => fn ($query) => $query->with('pegawai:id,nama_lengkap')->latest('diputuskan_pada'),
             ])
             ->withCount([
                 'butirPelanggaranLaporan', 'buktiLaporanPembinaanSiswa',
@@ -54,7 +51,7 @@ class PusatVerifikasiPelanggaranController extends Controller
 
         $this->antreanService->terapkanJenisAntrean($query, $antrean);
         $laporan = $query
-            ->orderByRaw("case when status_verifikasi = 'perlu_musyawarah' then 0 when status_verifikasi = 'perlu_klarifikasi' then 1 else 2 end")
+            ->orderByRaw("case when status_verifikasi = 'perlu_klarifikasi' then 0 else 1 end")
             ->orderBy('updated_at')
             ->paginate(10)
             ->withQueryString();
@@ -65,8 +62,6 @@ class PusatVerifikasiPelanggaranController extends Controller
         $ringkasan = $this->antreanService->ringkasan($pengguna);
         $hakAksi = [
             'bk' => $pengguna->memilikiIzin('poin_siswa.verifikasi_bk'),
-            'persetujuan' => $pengguna->memilikiIzin('poin_siswa.menyetujui'),
-            'musyawarah' => $pengguna->memilikiIzin('poin_siswa.putus_konflik'),
             'monitor_semua' => $this->antreanService->dapatMemantauSemua($pengguna),
         ];
 

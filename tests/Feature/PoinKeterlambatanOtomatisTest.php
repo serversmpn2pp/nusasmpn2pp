@@ -85,7 +85,7 @@ class PoinKeterlambatanOtomatisTest extends TestCase
         ]);
     }
 
-    public function test_poin_baru_sah_setelah_bk_wali_kelas_dan_guru_wali_memprosesnya(): void
+    public function test_poin_baru_sah_setelah_bk_menetapkan_sanksi_poin(): void
     {
         $data = $this->dataAbsensi(20);
         $this->actingAs($data['administrator']);
@@ -97,30 +97,11 @@ class PoinKeterlambatanOtomatisTest extends TestCase
         $laporan = LaporanPembinaanSiswa::where('absensi_siswa_id', $data['absensi']->id)->firstOrFail();
 
         $akunBk = $this->buatAkunPegawai('BK Otomatis', '198101012010011001', 'bk');
-        $akunWali = $this->buatAkunUntukPegawai($data['wali'], 'wali_kelas');
-        $akunGuruWali = $this->buatAkunUntukPegawai($data['guru_wali'], 'guru_wali');
 
         $this->actingAs($akunBk)
             ->post(route('verifikasi-pelanggaran.bk', $laporan), [
-                'hasil' => 'terbukti',
+                'hasil' => 'sanksi_poin',
                 'catatan' => 'Waktu scan sesuai dengan data mesin.',
-            ])->assertSessionHasNoErrors();
-
-        $this->actingAs($akunWali)
-            ->post(route('verifikasi-pelanggaran.persetujuan', $laporan), [
-                'jenis_persetujuan' => 'wali_kelas',
-                'keputusan' => 'setuju',
-                'catatan' => 'Data keterlambatan telah dikonfirmasi.',
-            ])->assertSessionHasNoErrors();
-
-        $this->assertSame('disetujui_sebagian', $laporan->fresh()->status_verifikasi);
-        $this->assertDatabaseMissing('transaksi_poin_siswa', ['laporan_pembinaan_siswa_id' => $laporan->id]);
-
-        $this->actingAs($akunGuruWali)
-            ->post(route('verifikasi-pelanggaran.persetujuan', $laporan), [
-                'jenis_persetujuan' => 'guru_wali',
-                'keputusan' => 'setuju',
-                'catatan' => 'Disetujui setelah pemeriksaan catatan kehadiran.',
             ])->assertSessionHasNoErrors();
 
         $this->assertSame('disahkan', $laporan->fresh()->status_verifikasi);
@@ -149,7 +130,7 @@ class PoinKeterlambatanOtomatisTest extends TestCase
         ]);
     }
 
-    public function test_koreksi_absensi_membatalkan_poin_lama_dan_memulai_persetujuan_baru(): void
+    public function test_koreksi_absensi_membatalkan_poin_lama_dan_memulai_keputusan_bk_baru(): void
     {
         $data = $this->dataAbsensi(20);
         $this->actingAs($data['administrator']);
@@ -161,11 +142,7 @@ class PoinKeterlambatanOtomatisTest extends TestCase
         $laporanAwal = LaporanPembinaanSiswa::where('absensi_siswa_id', $data['absensi']->id)->firstOrFail();
 
         $akunBk = $this->buatAkunPegawai('BK Koreksi', '198202022010012002', 'bk');
-        $akunWali = $this->buatAkunUntukPegawai($data['wali'], 'wali_kelas');
-        $akunGuruWali = $this->buatAkunUntukPegawai($data['guru_wali'], 'guru_wali');
-        $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporanAwal), ['hasil' => 'terbukti', 'catatan' => 'Terbukti.']);
-        $this->actingAs($akunWali)->post(route('verifikasi-pelanggaran.persetujuan', $laporanAwal), ['jenis_persetujuan' => 'wali_kelas', 'keputusan' => 'setuju', 'catatan' => 'Setuju.']);
-        $this->actingAs($akunGuruWali)->post(route('verifikasi-pelanggaran.persetujuan', $laporanAwal), ['jenis_persetujuan' => 'guru_wali', 'keputusan' => 'setuju', 'catatan' => 'Setuju.']);
+        $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporanAwal), ['hasil' => 'sanksi_poin', 'catatan' => 'Sanksi poin ditetapkan.']);
         $this->assertSame('disahkan', $laporanAwal->fresh()->status_verifikasi);
 
         $this->actingAs($data['administrator'])

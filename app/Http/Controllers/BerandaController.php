@@ -145,8 +145,8 @@ class BerandaController extends Controller
             'menunggu_bk' => LaporanPembinaanSiswa::query()
                 ->whereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi'])
                 ->count(),
-            'menunggu_persetujuan' => LaporanPembinaanSiswa::query()
-                ->whereIn('status_verifikasi', ['menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah'])
+            'pembinaan_ditetapkan' => LaporanPembinaanSiswa::query()
+                ->where('status_verifikasi', 'ditetapkan_pembinaan')
                 ->count(),
             'poin_aktif' => (int) TransaksiPoinSiswa::query()
                 ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))
@@ -217,7 +217,7 @@ class BerandaController extends Controller
                 $query->whereIn('status', ['baru', 'perlu_tindak_lanjut'])
                     ->orWhereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah']);
             })
-            ->orderByRaw("case when status_verifikasi = 'perlu_musyawarah' then 0 when status = 'perlu_tindak_lanjut' then 1 else 2 end")
+            ->orderByRaw("case when status_verifikasi = 'perlu_klarifikasi' then 0 when status = 'perlu_tindak_lanjut' then 1 else 2 end")
             ->orderByDesc('tanggal_kejadian')
             ->limit(5)
             ->get();
@@ -523,8 +523,8 @@ class BerandaController extends Controller
             'diproses' => (int) ($jumlahStatusPembinaanWaliBulan['diproses'] ?? 0),
             'perlu_tindak_lanjut' => (int) ($jumlahStatusPembinaanWaliBulan['perlu_tindak_lanjut'] ?? 0),
             'selesai' => (int) ($jumlahStatusPembinaanWaliBulan['selesai'] ?? 0),
-            'menunggu_persetujuan' => (clone $laporanPembinaanWaliBulan)
-                ->whereIn('status_verifikasi', ['menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah'])
+            'menunggu_bk' => (clone $laporanPembinaanWaliBulan)
+                ->whereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah'])
                 ->count(),
             'poin_aktif' => (int) TransaksiPoinSiswa::query()
                 ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))

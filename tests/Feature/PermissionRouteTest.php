@@ -48,7 +48,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('laporan-pembinaan-siswa.index', 'izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat');
         $this->assertRouteMemakaiMiddleware('laporan-pembinaan-siswa.create', 'izin:bk.kelola,poin_siswa.lapor');
         $this->assertRouteMemakaiMiddleware('verifikasi-pelanggaran.bk', 'izin:poin_siswa.verifikasi_bk');
-        $this->assertRouteMemakaiMiddleware('verifikasi-pelanggaran.persetujuan', 'izin:poin_siswa.menyetujui,poin_siswa.putus_konflik');
+        $this->assertNull(Route::getRoutes()->getByName('verifikasi-pelanggaran.persetujuan'));
         $this->assertRouteMemakaiMiddleware('rekap-poin-siswa.index', 'izin:poin_siswa.lihat');
         $this->assertRouteMemakaiMiddleware('penugasan-guru-wali.index', 'izin:guru_wali.kelola');
         $this->assertRouteMemakaiMiddleware('siswa-wali-saya.index', 'izin:guru_wali.lihat');

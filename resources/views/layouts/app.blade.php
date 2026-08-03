@@ -1876,8 +1876,8 @@
                     'id' => 'kesiswaan-bk',
                     'title' => 'Kesiswaan & BK',
                     'items' => [
-                        ['label' => 'Pusat Verifikasi', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'PV', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.menyetujui', 'poin_siswa.putus_konflik'], 'subgroup' => 'Operasional'],
-                        ['label' => 'Pembinaan & Poin Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PP', 'izin' => ['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.menyetujui'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Pusat Verifikasi', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'PV', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Pembinaan & Poin Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PP', 'izin' => ['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'subgroup' => 'Operasional'],
                         ['label' => 'Tindak Lanjut Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'TL', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Operasional'],
                         ['label' => 'Pelaksanaan Sanksi', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola'], 'subgroup' => 'Operasional'],
                         ['label' => 'Peringatan Dini Siswa', 'route' => 'peringatan-dini-siswa.index', 'active' => ['peringatan-dini-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Monitoring'],
@@ -1933,7 +1933,7 @@
                     'id' => 'verifikasi-poin',
                     'title' => 'Tugas Pembinaan',
                     'items' => [
-                        ['label' => 'Pusat Verifikasi Poin', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'PV', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.menyetujui', 'poin_siswa.putus_konflik']],
+                        ['label' => 'Pusat Verifikasi Poin', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'PV', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'peran' => ['bk', 'pimpinan', 'wakil_pimpinan_kesiswaan']],
                         ['label' => 'Pelaksanaan Sanksi', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola']],
                         ['label' => 'Peringatan Dini Siswa', 'route' => 'peringatan-dini-siswa.index', 'active' => ['peringatan-dini-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
                         ['label' => 'Tindak Lanjut Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'TL', 'izin' => 'poin_siswa.lihat'],
@@ -1971,7 +1971,7 @@
                         ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'peran' => 'guru_mapel'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'peran' => 'guru_mapel'],
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.upload', 'peran' => 'guru_mapel'],
-                        ['label' => 'Laporkan Pelanggaran', 'route' => 'laporan-pembinaan-siswa.create', 'active' => ['laporan-pembinaan-siswa.create'], 'initial' => 'LP', 'izin' => 'poin_siswa.lapor', 'peran' => 'guru_mapel'],
+                        ['label' => 'Laporkan Kejadian', 'route' => 'laporan-pembinaan-siswa.create', 'active' => ['laporan-pembinaan-siswa.create'], 'initial' => 'LK', 'izin' => 'poin_siswa.lapor', 'peran' => 'guru_mapel'],
                     ],
                 ],
                 [

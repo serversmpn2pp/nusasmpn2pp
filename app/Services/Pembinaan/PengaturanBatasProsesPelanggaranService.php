@@ -11,10 +11,6 @@ class PengaturanBatasProsesPelanggaranService
 {
     public const TAHAP_PEMERIKSAAN_BK = 'pemeriksaan_bk';
 
-    public const TAHAP_PERSETUJUAN = 'persetujuan';
-
-    public const TAHAP_MUSYAWARAH = 'musyawarah';
-
     public function nilaiUntukTahun(?int $tahunPelajaranId): PengaturanBatasProsesPelanggaran
     {
         $pengaturan = $tahunPelajaranId
@@ -65,8 +61,6 @@ class PengaturanBatasProsesPelanggaranService
 
         return match (true) {
             in_array($status, AntreanVerifikasiPelanggaranService::STATUS_BK, true) => [self::TAHAP_PEMERIKSAAN_BK, max(1, $pengaturan->batas_hari_pemeriksaan_bk)],
-            in_array($status, AntreanVerifikasiPelanggaranService::STATUS_PERSETUJUAN, true) => [self::TAHAP_PERSETUJUAN, max(1, $pengaturan->batas_hari_persetujuan)],
-            $status === 'perlu_musyawarah' => [self::TAHAP_MUSYAWARAH, max(1, $pengaturan->batas_hari_musyawarah)],
             default => [null, 0],
         };
     }

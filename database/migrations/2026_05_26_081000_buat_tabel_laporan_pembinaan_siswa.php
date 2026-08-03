@@ -17,7 +17,7 @@ return new class extends Migration
             $table->date('tanggal_kejadian');
             $table->time('waktu_kejadian')->nullable();
             $table->foreignId('siswa_id')->constrained('siswa')->cascadeOnUpdate()->restrictOnDelete();
-            $table->foreignId('kategori_pembinaan_siswa_id')->constrained('kategori_pembinaan_siswa')->cascadeOnUpdate()->restrictOnDelete();
+            $table->foreignId('kategori_pembinaan_siswa_id')->nullable()->constrained('kategori_pembinaan_siswa')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('tahun_pelajaran_id')->nullable()->constrained('tahun_pelajaran')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('kelas_id')->nullable()->constrained('kelas')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('anggota_kelas_id')->nullable()->constrained('anggota_kelas')->cascadeOnUpdate()->nullOnDelete();

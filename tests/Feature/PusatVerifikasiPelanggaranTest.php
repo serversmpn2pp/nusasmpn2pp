@@ -10,22 +10,22 @@ use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
-use App\Models\VerifikasiBkPelanggaran;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class PusatVerifikasiPelanggaranTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_bk_hanya_melihat_antrean_pemeriksaan_fakta(): void
+    public function test_bk_melihat_seluruh_laporan_yang_menunggu_keputusan(): void
     {
         [$tahun, $siswa, $jenis] = $this->dataDasar();
-        [$pegawaiBk, $akunBk] = $this->buatAkunPegawai('BK Penguji', '198001012010011001', 'bk');
-        $menungguBk = $this->buatLaporan('PB-BK-001', 'diajukan', $tahun, $siswa, $jenis);
-        $menungguPersetujuan = $this->buatLaporan('PB-SETUJU-001', 'menunggu_persetujuan', $tahun, $siswa, $jenis);
-        DB::table('laporan_pembinaan_siswa')->where('id', $menungguBk->id)->update([
+        [, $akunBk] = $this->buatAkunPegawai('BK Penguji', '198001012010011001', 'bk');
+        $laporanBaru = $this->buatLaporan('PB-BK-001', 'diajukan', $tahun, $siswa, $jenis);
+        $laporanLama = $this->buatLaporan('PB-LAMA-001', 'menunggu_persetujuan', $tahun, $siswa, $jenis);
+        DB::table('laporan_pembinaan_siswa')->where('id', $laporanBaru->id)->update([
             'created_at' => now()->subDays(3),
             'updated_at' => now()->subDays(3),
         ]);
@@ -33,91 +33,65 @@ class PusatVerifikasiPelanggaranTest extends TestCase
         $this->actingAs($akunBk)
             ->get(route('pusat-verifikasi-pelanggaran.index'))
             ->assertOk()
-            ->assertSee($menungguBk->nomor_laporan)
-            ->assertDontSee($menungguPersetujuan->nomor_laporan);
+            ->assertSee($laporanBaru->nomor_laporan)
+            ->assertSee($laporanLama->nomor_laporan)
+            ->assertSee('BK memeriksa laporan kejadian lalu menentukan pembinaan atau sanksi poin.');
 
         $this->get(route('pusat-verifikasi-pelanggaran.index', ['antrean' => 'terlambat']))
             ->assertOk()
-            ->assertSee($menungguBk->nomor_laporan)
+            ->assertSee($laporanBaru->nomor_laporan)
             ->assertSee('3 hari diproses');
     }
 
-    public function test_wali_kelas_hanya_melihat_persetujuan_kelasnya(): void
+    public function test_wali_kelas_tidak_mendapat_antrean_keputusan(): void
     {
         [$tahun, $siswa, $jenis] = $this->dataDasar();
-        [$wali, $akunWali] = $this->buatAkunPegawai('Wali Kelas Penguji', '198101012011011002', 'wali_kelas');
-        [$waliLain] = $this->buatAkunPegawai('Wali Kelas Lain', '198201012012011003', 'wali_kelas');
-        $milikWali = $this->buatLaporan('PB-WALI-001', 'menunggu_persetujuan', $tahun, $siswa, $jenis, $wali);
-        $milikOrangLain = $this->buatLaporan('PB-WALI-002', 'menunggu_persetujuan', $tahun, $siswa, $jenis, $waliLain);
+        [, $akunWali] = $this->buatAkunPegawai('Wali Kelas Penguji', '198101012011011002', 'wali_kelas');
+        $laporan = $this->buatLaporan('PB-WALI-001', 'diajukan', $tahun, $siswa, $jenis);
 
         $this->actingAs($akunWali)
             ->get(route('pusat-verifikasi-pelanggaran.index'))
             ->assertOk()
-            ->assertSee($milikWali->nomor_laporan)
-            ->assertDontSee($milikOrangLain->nomor_laporan);
+            ->assertDontSee($laporan->nomor_laporan)
+            ->assertSee('Tidak ada laporan dalam antrean ini.');
     }
 
-    public function test_wakil_kesiswaan_melihat_konflik_dan_kebutuhan_pengganti(): void
+    public function test_pimpinan_dapat_memantau_hasil_tanpa_memberi_keputusan(): void
     {
         [$tahun, $siswa, $jenis] = $this->dataDasar();
-        [$wali] = $this->buatAkunPegawai('Wali Rangkap', '198301012013011004', 'wali_kelas');
-        [, $akunWakil] = $this->buatAkunPegawai('Wakil Kesiswaan', '198401012014011005', 'wakil_pimpinan_kesiswaan');
-        $konflik = $this->buatLaporan('PB-MUSY-001', 'perlu_musyawarah', $tahun, $siswa, $jenis, $wali);
-        $pengganti = $this->buatLaporan('PB-GANTI-001', 'disetujui_sebagian', $tahun, $siswa, $jenis, $wali, $wali);
+        [, $akunPimpinan] = $this->buatAkunPegawai('Pimpinan Penguji', '198201012012011003', 'pimpinan');
+        $laporan = $this->buatLaporan('PB-PIMPINAN-001', 'diajukan', $tahun, $siswa, $jenis);
 
-        $this->actingAs($akunWakil)
-            ->get(route('pusat-verifikasi-pelanggaran.index', ['antrean' => 'musyawarah']))
+        $this->actingAs($akunPimpinan)
+            ->get(route('pusat-verifikasi-pelanggaran.index'))
             ->assertOk()
-            ->assertSee($konflik->nomor_laporan)
-            ->assertSee($pengganti->nomor_laporan);
+            ->assertSee($laporan->nomor_laporan)
+            ->assertDontSee('Simpan keputusan BK');
     }
 
-    public function test_urutan_verifikasi_dan_dua_pegawai_berbeda_ditegakkan(): void
+    public function test_keputusan_bk_langsung_menetapkan_poin_dan_route_persetujuan_dihapus(): void
     {
         [$tahun, $siswa, $jenis] = $this->dataDasar();
-        [$pegawaiRangkap, $akunRangkap] = $this->buatAkunPegawai('Wali Rangkap Uji', '198501012015011006', 'wali_kelas');
-        [$pegawaiWakil, $akunWakil] = $this->buatAkunPegawai('Wakil Pengganti Uji', '198601012016011007', 'wakil_pimpinan_kesiswaan');
-        $laporan = $this->buatLaporan('PB-URUT-001', 'menunggu_persetujuan', $tahun, $siswa, $jenis, $pegawaiRangkap, $pegawaiRangkap);
-        VerifikasiBkPelanggaran::create([
-            'laporan_pembinaan_siswa_id' => $laporan->id,
-            'pengguna_id' => Pengguna::where('username', 'administrator')->value('id'),
-            'hasil' => 'terbukti',
-            'catatan' => 'Fakta lengkap.',
-            'diverifikasi_pada' => now(),
-        ]);
+        [, $akunBk] = $this->buatAkunPegawai('BK Pemutus', '198301012013011004', 'bk');
+        $laporan = $this->buatLaporan('PB-PUTUS-001', 'diajukan', $tahun, $siswa, $jenis);
 
-        $this->actingAs($akunRangkap)->post(route('verifikasi-pelanggaran.persetujuan', $laporan), [
-            'jenis_persetujuan' => 'wali_kelas',
-            'keputusan' => 'setuju',
-            'catatan' => 'Setuju sebagai wali kelas.',
-        ])->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertSame('disetujui_sebagian', $laporan->fresh()->status_verifikasi);
+        $this->assertFalse(Route::has('verifikasi-pelanggaran.persetujuan'));
 
-        $this->post(route('verifikasi-pelanggaran.persetujuan', $laporan), [
-            'jenis_persetujuan' => 'guru_wali',
-            'keputusan' => 'setuju',
-            'catatan' => 'Mencoba menyetujui untuk kedua kali.',
-        ])->assertSessionHasErrors('keputusan');
-        $this->assertSame(1, $laporan->persetujuanPelanggaran()->count());
-
-        $this->actingAs($akunWakil)->post(route('verifikasi-pelanggaran.persetujuan', $laporan), [
-            'jenis_persetujuan' => 'wakil_kesiswaan',
-            'keputusan' => 'setuju',
-            'catatan' => 'Menyetujui sebagai pegawai pengganti.',
+        $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporan), [
+            'hasil' => 'sanksi_poin',
+            'catatan' => 'Fakta lengkap dan sanksi poin ditetapkan.',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $this->assertSame('disahkan', $laporan->fresh()->status_verifikasi);
-        $this->assertDatabaseHas('transaksi_poin_siswa', ['kunci_sumber' => 'pelanggaran:' . $laporan->id]);
-        $this->assertDatabaseHas('notifikasi_pengguna', [
-            'pengguna_id' => $akunWakil->id,
-            'judul' => 'Penyetuju pengganti diperlukan',
+        $this->assertDatabaseHas('transaksi_poin_siswa', [
+            'kunci_sumber' => 'pelanggaran:'.$laporan->id,
+            'poin' => $jenis->poin,
         ]);
 
-        $this->actingAs(Pengguna::where('username', 'administrator')->firstOrFail())
-            ->post(route('verifikasi-pelanggaran.bk', $laporan), [
-                'hasil' => 'terbukti',
-                'catatan' => 'Pemeriksaan terlambat.',
-            ])->assertStatus(422);
+        $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
+            'hasil' => 'pembinaan',
+            'catatan' => 'Mencoba mengubah keputusan final.',
+        ])->assertStatus(422);
     }
 
     private function dataDasar(): array
@@ -156,8 +130,6 @@ class PusatVerifikasiPelanggaranTest extends TestCase
         TahunPelajaran $tahun,
         Siswa $siswa,
         JenisPelanggaranSiswa $jenis,
-        ?Pegawai $waliKelas = null,
-        ?Pegawai $guruWali = null,
     ): LaporanPembinaanSiswa {
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
         $laporan = LaporanPembinaanSiswa::create([
@@ -167,8 +139,6 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             'siswa_id' => $siswa->id,
             'kategori_pembinaan_siswa_id' => $jenis->kategori_pembinaan_siswa_id,
             'tahun_pelajaran_id' => $tahun->id,
-            'wali_kelas_pegawai_id' => $waliKelas?->id,
-            'guru_wali_pegawai_id' => $guruWali?->id,
             'tingkat' => $jenis->tingkat,
             'status' => 'baru',
             'status_verifikasi' => $status,

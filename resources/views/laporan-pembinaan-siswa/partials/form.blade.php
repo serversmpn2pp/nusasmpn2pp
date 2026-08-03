@@ -3,33 +3,18 @@
     $nilai = fn (string $field, mixed $default = '') => old($field, $laporanPembinaanSiswa?->{$field} ?? $default);
     $tanggalValue = old('tanggal_kejadian', $laporanPembinaanSiswa?->tanggal_kejadian?->format('Y-m-d') ?? now()->toDateString());
     $waktuValue = old('waktu_kejadian', $laporanPembinaanSiswa?->waktuKejadianRingkas());
-    $jenisTerpilih = old('jenis_laporan', $laporanPembinaanSiswa?->jenis_laporan ?? 'pelanggaran');
-    $butirTerpilih = collect(old('jenis_pelanggaran_ids', $laporanPembinaanSiswa?->butirPelanggaranLaporan?->pluck('jenis_pelanggaran_siswa_id')->all() ?? []))->map(fn ($id) => (int) $id)->all();
+    $jenisTerpilih = old('jenis_laporan', $laporanPembinaanSiswa?->jenis_laporan ?? 'kejadian');
 @endphp
 
 <style>
     .pembinaan-create-header > div { min-width:0; }
     .pembinaan-page-title { max-width:100%; overflow-wrap:anywhere; }
-    .report-type-options { display:grid; gap:10px; grid-template-columns:minmax(0,1fr); }
-    .report-type-option { align-items:start; border:1px solid var(--line); border-radius:8px; cursor:pointer; display:grid; gap:10px; grid-template-columns:18px minmax(0,1fr); min-width:0; padding:14px; }
-    .report-type-option:has(input:checked) { background:#eaf3fb; border-color:var(--primary); box-shadow:inset 4px 0 0 var(--secondary); }
-    .report-type-option input { margin:3px 0 0; }
-    .report-type-option strong { min-width:0; overflow-wrap:anywhere; }
-    .violation-toolbar { align-items:end; display:grid; gap:12px; grid-template-columns:minmax(0,1fr) 150px; }
-    .violation-list { display:grid; gap:14px; margin-top:14px; max-height:480px; overflow-y:auto; padding-right:4px; }
-    .violation-group { border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-    .violation-group-title { background:#f6f8fb; color:var(--primary-dark); font-size:13px; font-weight:800; margin:0; padding:10px 12px; text-transform:uppercase; }
-    .violation-choice { align-items:flex-start; border-top:1px solid var(--line); cursor:pointer; display:grid; gap:10px; grid-template-columns:20px 1fr auto; padding:11px 12px; }
-    .violation-choice strong, .violation-choice span { display:block; }
-    .violation-choice .code { color:var(--muted); font-size:12px; margin-bottom:2px; }
-    .violation-points { background:#fff7cc; border-radius:6px; color:#6f5900; font-size:13px; font-weight:800; padding:5px 8px; white-space:nowrap; }
     .student-picker-help { align-items:center; display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; }
     .student-picker-count { color:var(--primary-dark); font-weight:800; }
     .section-stack { min-width:0; }
     .initial-witness-list { display:grid; gap:12px; margin-top:14px; min-width:0; }
     .initial-witness-row { background:#f7f9fc; border:1px solid var(--line); border-radius:8px; display:grid; gap:12px; grid-template-columns:120px minmax(0,.8fr) minmax(0,1.4fr) auto; min-width:0; padding:12px; }
     .initial-witness-remove { align-self:end; }
-    @media(max-width:760px){.violation-toolbar{grid-template-columns:1fr}.violation-choice{grid-template-columns:20px 1fr}.violation-points{grid-column:2}}
     @media(max-width:900px){.initial-witness-row{grid-template-columns:1fr}.initial-witness-remove{justify-self:start}}
 </style>
 
@@ -39,16 +24,12 @@
 
 <div class="form-shell">
     <aside class="panel panel-pad">
-        <h2 class="panel-title">Jenis laporan</h2>
-        <p class="help-text">Pelanggaran menghasilkan poin setelah pemeriksaan BK dan disetujui dua guru berbeda.</p>
-        <div class="report-type-options" style="margin-top:16px;">
-            @foreach ($daftarJenisLaporan as $kode => $label)
-                <label class="report-type-option"><input type="radio" name="jenis_laporan" value="{{ $kode }}" @checked($jenisTerpilih === $kode)><strong>{{ $label }}</strong></label>
-            @endforeach
-        </div>
+        <input type="hidden" name="jenis_laporan" value="{{ $jenisTerpilih }}">
+        <h2 class="panel-title">{{ $jenisTerpilih === 'pembinaan' ? 'Catatan Pembinaan' : 'Laporan Kejadian' }}</h2>
+        <p class="help-text">{{ $jenisTerpilih === 'pembinaan' ? 'Catat kegiatan pembinaan yang dilakukan langsung oleh BK.' : 'Tuliskan fakta kejadian. BK yang akan menentukan pembinaan atau sanksi poin setelah pemeriksaan.' }}</p>
         <div class="panel" style="background:#f7f9fc;margin-top:16px;padding:14px;">
-            <p class="person-meta">Alur pelanggaran</p>
-            <p style="font-size:14px;margin:6px 0 0;">Laporan &rarr; Pemeriksaan BK &rarr; Wali Kelas + Guru Wali &rarr; Poin disahkan</p>
+            <p class="person-meta">Alur laporan</p>
+            <p style="font-size:14px;margin:6px 0 0;">Guru melapor &rarr; BK memeriksa &rarr; BK menentukan penanganan</p>
         </div>
     </aside>
 
@@ -71,30 +52,15 @@
             </div>
         </section>
 
-        <section class="panel panel-pad" data-pelanggaran-section>
-            <div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Butir Pelanggaran</h2><p class="help-text">Pilih satu atau beberapa pelanggaran dalam kejadian yang sama.</p></div><div><p class="person-meta">Total sementara</p><strong style="font-size:24px;color:var(--primary-dark)"><span data-total-points>0</span> poin</strong></div></div>
-            <div class="violation-toolbar">
-                <div class="field"><label for="cari_pelanggaran">Cari jenis pelanggaran</label><input id="cari_pelanggaran" type="search" class="input" placeholder="Kode atau uraian pelanggaran"></div>
-                <div class="field"><label for="filter_tingkat_pelanggaran">Tingkat</label><select id="filter_tingkat_pelanggaran" class="select"><option value="">Semua</option><option value="ringan">Ringan</option><option value="sedang">Sedang</option><option value="berat">Berat</option></select></div>
-            </div>
-            <div class="violation-list">
-                @foreach(['ringan'=>'Ringan','sedang'=>'Sedang','berat'=>'Berat'] as $tingkatKode=>$tingkatLabel)
-                    <div class="violation-group" data-violation-group="{{ $tingkatKode }}"><p class="violation-group-title">Pelanggaran {{ $tingkatLabel }}</p>
-                        @foreach($daftarJenisPelanggaran->where('tingkat',$tingkatKode) as $jenis)
-                            <label class="violation-choice" data-violation-choice data-level="{{ $tingkatKode }}" data-search="{{ str($jenis->kode.' '.$jenis->nama)->lower() }}"><input type="checkbox" name="jenis_pelanggaran_ids[]" value="{{ $jenis->id }}" data-points="{{ $jenis->poin }}" @checked(in_array($jenis->id,$butirTerpilih,true))><span><span class="code">{{ $jenis->kode }}</span><strong>{{ $jenis->nama }}</strong></span><span class="violation-points">{{ $jenis->poin }} poin</span></label>
-                        @endforeach
-                    </div>
-                @endforeach
-            </div>
-        </section>
-
-        <section class="panel panel-pad" data-pembinaan-section>
-            <h2 class="panel-title">Klasifikasi Pembinaan</h2>
-            <div class="form-grid">
-                <div class="field"><label for="kategori_pembinaan_siswa_id">Kategori</label><select id="kategori_pembinaan_siswa_id" name="kategori_pembinaan_siswa_id" class="select"><option value="">Pilih kategori</option>@foreach($daftarKategoriPembinaan as $kategori)<option value="{{ $kategori->id }}" @selected((string)$nilai('kategori_pembinaan_siswa_id')===(string)$kategori->id)>{{ $kategori->nama }}</option>@endforeach</select></div>
-                <div class="field"><label for="tingkat">Tingkat perhatian</label><select id="tingkat" name="tingkat" class="select">@foreach($daftarTingkat as $kode=>$label)<option value="{{ $kode }}" @selected($nilai('tingkat','ringan')===$kode)>{{ $label }}</option>@endforeach</select></div>
-            </div>
-        </section>
+        @if($jenisTerpilih === 'pembinaan')
+            <section class="panel panel-pad">
+                <h2 class="panel-title">Klasifikasi Pembinaan</h2>
+                <div class="form-grid">
+                    <div class="field"><label for="kategori_pembinaan_siswa_id">Kategori</label><select id="kategori_pembinaan_siswa_id" name="kategori_pembinaan_siswa_id" class="select" required><option value="">Pilih kategori</option>@foreach($daftarKategoriPembinaan as $kategori)<option value="{{ $kategori->id }}" @selected((string)$nilai('kategori_pembinaan_siswa_id')===(string)$kategori->id)>{{ $kategori->nama }}</option>@endforeach</select></div>
+                    <div class="field"><label for="tingkat">Tingkat perhatian</label><select id="tingkat" name="tingkat" class="select" required>@foreach($daftarTingkat as $kode=>$label)<option value="{{ $kode }}" @selected($nilai('tingkat','ringan')===$kode)>{{ $label }}</option>@endforeach</select></div>
+                </div>
+            </section>
+        @endif
 
         <section class="panel panel-pad"><h2 class="panel-title">Kronologi dan tindakan</h2><div class="form-grid"><div class="field span-2"><label for="kronologi">Kronologi faktual</label><textarea id="kronologi" name="kronologi" class="textarea" required placeholder="Tuliskan siapa, apa yang terjadi, dan informasi saksi atau bukti yang tersedia.">{{ $nilai('kronologi') }}</textarea></div><div class="field span-2"><label for="tindakan_awal">Tindakan awal</label><textarea id="tindakan_awal" name="tindakan_awal" class="textarea" placeholder="Tindakan yang sudah dilakukan saat kejadian.">{{ $nilai('tindakan_awal') }}</textarea></div>@izin('bk.kelola')<div class="field span-2"><label for="catatan_rahasia">Catatan rahasia BK</label><textarea id="catatan_rahasia" name="catatan_rahasia" class="textarea">{{ $nilai('catatan_rahasia') }}</textarea></div>@endizin</div></section>
 
@@ -143,10 +109,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
-    const typeRadios=[...document.querySelectorAll('input[name="jenis_laporan"]')];const violationSection=document.querySelector('[data-pelanggaran-section]');const coachingSection=document.querySelector('[data-pembinaan-section]');const category=document.getElementById('kategori_pembinaan_siswa_id');const level=document.getElementById('tingkat');
-    const updateType=()=>{const type=typeRadios.find(r=>r.checked)?.value||'pelanggaran';violationSection.hidden=type!=='pelanggaran';coachingSection.hidden=type!=='pembinaan';category.required=type==='pembinaan';level.required=type==='pembinaan';};typeRadios.forEach(r=>r.addEventListener('change',updateType));updateType();
-    const checks=[...document.querySelectorAll('[data-violation-choice] input[type="checkbox"]')];const total=document.querySelector('[data-total-points]');const updateTotal=()=>total.textContent=checks.filter(c=>c.checked).reduce((sum,c)=>sum+Number(c.dataset.points||0),0);checks.forEach(c=>c.addEventListener('change',updateTotal));updateTotal();
-    const violationSearch=document.getElementById('cari_pelanggaran');const violationLevel=document.getElementById('filter_tingkat_pelanggaran');const choices=[...document.querySelectorAll('[data-violation-choice]')];const groups=[...document.querySelectorAll('[data-violation-group]')];const filterViolations=()=>{const keyword=(violationSearch.value||'').toLowerCase().trim();const levelValue=violationLevel.value;choices.forEach(choice=>choice.hidden=(keyword&&!choice.dataset.search.includes(keyword))||(levelValue&&choice.dataset.level!==levelValue));groups.forEach(group=>group.hidden=!group.querySelector('[data-violation-choice]:not([hidden])'));};violationSearch.addEventListener('input',filterViolations);violationLevel.addEventListener('change',filterViolations);
     const year=document.getElementById('tahun_pelajaran_id');const classroom=document.getElementById('kelas_id');const studentSearch=document.getElementById('cari_siswa_pembinaan');const student=document.getElementById('siswa_id');const count=document.getElementById('jumlah_siswa_terlihat');const empty=document.getElementById('pesan_siswa_kosong');const classOptions=[...classroom.options].filter(o=>o.value);const studentOptions=[...student.options].filter(o=>o.value);const hasId=(csv,id)=>!id||(csv||'').split(',').filter(Boolean).includes(id);const normalize=v=>(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const updateClass=()=>{classOptions.forEach(o=>{const show=!year.value||o.dataset.tahunId===year.value;o.hidden=!show;o.disabled=!show});if(classroom.selectedOptions[0]?.disabled)classroom.value='';};const updateStudent=()=>{let visible=0;studentOptions.forEach(o=>{const show=hasId(o.dataset.tahunIds,year.value)&&hasId(o.dataset.kelasIds,classroom.value)&&(!studentSearch.value||normalize(o.dataset.pencarian).includes(normalize(studentSearch.value.trim())));o.hidden=!show;o.disabled=!show;if(show)visible++});if(student.selectedOptions[0]?.disabled)student.value='';count.textContent=visible;empty.hidden=visible!==0;};year.addEventListener('change',()=>{updateClass();updateStudent()});classroom.addEventListener('change',updateStudent);studentSearch.addEventListener('input',updateStudent);updateClass();updateStudent();
     const witnessList=document.querySelector('[data-initial-witness-list]');const witnessTemplate=document.querySelector('[data-initial-witness-template]');const witnessEmpty=document.querySelector('[data-initial-witness-empty]');let witnessIndex=witnessList?.querySelectorAll('[data-initial-witness-row]').length||0;const updateWitnessEmpty=()=>{if(witnessEmpty)witnessEmpty.hidden=(witnessList?.children.length||0)>0};document.querySelector('[data-add-initial-witness]')?.addEventListener('click',()=>{if(!witnessList||!witnessTemplate)return;const fragment=witnessTemplate.content.cloneNode(true);fragment.querySelectorAll('[data-name]').forEach(field=>field.name=`daftar_saksi[${witnessIndex}][${field.dataset.name}]`);witnessIndex++;witnessList.appendChild(fragment);updateWitnessEmpty()});witnessList?.addEventListener('click',event=>{const button=event.target.closest('[data-remove-initial-witness]');if(!button)return;button.closest('[data-initial-witness-row]')?.remove();updateWitnessEmpty()});updateWitnessEmpty();

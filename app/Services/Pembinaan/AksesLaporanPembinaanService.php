@@ -7,7 +7,7 @@ use App\Models\Pengguna;
 
 class AksesLaporanPembinaanService
 {
-    public const STATUS_FINAL = ['disahkan', 'tidak_terbukti', 'dibatalkan'];
+    public const STATUS_FINAL = ['disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'];
 
     public function bolehLihat(?Pengguna $pengguna, LaporanPembinaanSiswa $laporan): bool
     {

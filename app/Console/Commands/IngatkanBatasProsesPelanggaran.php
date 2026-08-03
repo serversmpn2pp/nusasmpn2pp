@@ -18,21 +18,19 @@ class IngatkanBatasProsesPelanggaran extends Command
     public function handle(
         NotifikasiPenggunaService $notifikasi,
         PengaturanBatasProsesPelanggaranService $pengaturanService,
-        AntreanVerifikasiPelanggaranService $antreanService,
     ): int {
         $jumlahDiproses = 0;
         $sekarang = now();
 
         LaporanPembinaanSiswa::query()
             ->with(['siswa:id,nama_lengkap', 'kelas:id,nama'])
-            ->where('jenis_laporan', 'pelanggaran')
+            ->where('status_verifikasi', '!=', 'tidak_perlu')
             ->whereNotIn('status_verifikasi', AntreanVerifikasiPelanggaranService::STATUS_FINAL)
             ->whereNotNull('batas_proses_pada')
             ->orderBy('id')
             ->chunkById(100, function ($laporan) use (
                 $notifikasi,
                 $pengaturanService,
-                $antreanService,
                 $sekarang,
                 &$jumlahDiproses,
             ) {
@@ -58,7 +56,7 @@ class IngatkanBatasProsesPelanggaran extends Command
                         continue;
                     }
 
-                    $penerima = $this->penerimaTahap($item, $notifikasi, $antreanService);
+                    $penerima = $this->penerimaTahap($notifikasi);
                     if ($penerima->isEmpty()) {
                         continue;
                     }
@@ -101,38 +99,16 @@ class IngatkanBatasProsesPelanggaran extends Command
         return self::SUCCESS;
     }
 
-    private function penerimaTahap(
-        LaporanPembinaanSiswa $laporan,
-        NotifikasiPenggunaService $notifikasi,
-        AntreanVerifikasiPelanggaranService $antreanService,
-    ): Collection {
-        if ($laporan->tahap_batas_proses === PengaturanBatasProsesPelanggaranService::TAHAP_PEMERIKSAAN_BK) {
-            return $notifikasi->penggunaDenganIzin('poin_siswa.verifikasi_bk')->unique('id')->values();
-        }
-
-        if ($laporan->tahap_batas_proses === PengaturanBatasProsesPelanggaranService::TAHAP_MUSYAWARAH) {
-            return $notifikasi->penggunaDenganIzin('poin_siswa.putus_konflik')->unique('id')->values();
-        }
-
-        $penerima = collect();
-        foreach (array_filter([$laporan->wali_kelas_pegawai_id, $laporan->guru_wali_pegawai_id]) as $pegawaiId) {
-            $penerima = $penerima->merge($notifikasi->penggunaUntukPegawai((int) $pegawaiId));
-        }
-
-        if ($antreanService->memerlukanPengganti($laporan)) {
-            $penerima = $penerima->merge($notifikasi->penggunaDenganIzin('poin_siswa.putus_konflik'));
-        }
-
-        return $penerima->unique('id')->values();
+    private function penerimaTahap(NotifikasiPenggunaService $notifikasi): Collection
+    {
+        return $notifikasi->penggunaDenganIzin('poin_siswa.verifikasi_bk')->unique('id')->values();
     }
 
     private function labelTahap(?string $tahap): string
     {
         return match ($tahap) {
-            PengaturanBatasProsesPelanggaranService::TAHAP_PEMERIKSAAN_BK => 'pemeriksaan BK',
-            PengaturanBatasProsesPelanggaranService::TAHAP_PERSETUJUAN => 'persetujuan Wali Kelas dan Guru Wali',
-            PengaturanBatasProsesPelanggaranService::TAHAP_MUSYAWARAH => 'musyawarah/penyetuju pengganti',
-            default => 'verifikasi',
+            PengaturanBatasProsesPelanggaranService::TAHAP_PEMERIKSAAN_BK => 'keputusan BK',
+            default => 'pemeriksaan BK',
         };
     }
 }

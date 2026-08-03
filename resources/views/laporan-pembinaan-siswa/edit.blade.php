@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Pembinaan atau Pelanggaran - NUSA')
+@section('title', 'Edit '.$laporanPembinaanSiswa->labelJenisLaporan().' - NUSA')
 
 @section('content')
     <div class="page-header pembinaan-create-header">
         <div>
             <p class="eyebrow">Kesiswaan & BK</p>
-            <h1 class="page-title pembinaan-page-title">Edit pembinaan atau pelanggaran</h1>
+            <h1 class="page-title pembinaan-page-title">Edit {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1>
         </div>
 
         <div class="actions">

@@ -39,19 +39,12 @@ class PengaturanBatasProsesPelanggaranController extends Controller
     {
         $data = $request->validate([
             'batas_hari_pemeriksaan_bk' => ['required', 'integer', 'min:1', 'max:30'],
-            'batas_hari_persetujuan' => ['required', 'integer', 'min:1', 'max:30'],
-            'batas_hari_musyawarah' => ['required', 'integer', 'min:1', 'max:30'],
             'pengingat_hari_sebelum_batas' => ['required', 'integer', 'min:0', 'max:29'],
             'notifikasi_pengingat_aktif' => ['nullable', 'boolean'],
             'notifikasi_terlambat_aktif' => ['nullable', 'boolean'],
         ]);
 
-        $batasTerkecil = min(
-            (int) $data['batas_hari_pemeriksaan_bk'],
-            (int) $data['batas_hari_persetujuan'],
-            (int) $data['batas_hari_musyawarah'],
-        );
-        if ((int) $data['pengingat_hari_sebelum_batas'] >= $batasTerkecil) {
+        if ((int) $data['pengingat_hari_sebelum_batas'] >= (int) $data['batas_hari_pemeriksaan_bk']) {
             throw ValidationException::withMessages([
                 'pengingat_hari_sebelum_batas' => 'Pengingat harus lebih kecil daripada batas hari terpendek.',
             ]);
@@ -61,8 +54,6 @@ class PengaturanBatasProsesPelanggaranController extends Controller
             ['tahun_pelajaran_id' => $tahunPelajaran->id],
             [
                 'batas_hari_pemeriksaan_bk' => $data['batas_hari_pemeriksaan_bk'],
-                'batas_hari_persetujuan' => $data['batas_hari_persetujuan'],
-                'batas_hari_musyawarah' => $data['batas_hari_musyawarah'],
                 'pengingat_hari_sebelum_batas' => $data['pengingat_hari_sebelum_batas'],
                 'notifikasi_pengingat_aktif' => $request->boolean('notifikasi_pengingat_aktif'),
                 'notifikasi_terlambat_aktif' => $request->boolean('notifikasi_terlambat_aktif'),

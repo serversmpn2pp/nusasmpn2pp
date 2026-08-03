@@ -28,20 +28,18 @@ class PengaturanBatasProsesPelanggaranTest extends TestCase
         [$administrator, $tahun, $siswa, $jenis] = $this->dataDasar();
 
         $this->actingAs($administrator)
-            ->put(route('pengaturan-batas-proses-pelanggaran.update', $tahun), $this->dataPengaturan(4, 5, 6))
+            ->put(route('pengaturan-batas-proses-pelanggaran.update', $tahun), $this->dataPengaturan(4))
             ->assertRedirect(route('pengaturan-batas-proses-pelanggaran.index'))
             ->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('pengaturan_batas_proses_pelanggaran', [
             'tahun_pelajaran_id' => $tahun->id,
             'batas_hari_pemeriksaan_bk' => 4,
-            'batas_hari_persetujuan' => 5,
-            'batas_hari_musyawarah' => 6,
         ]);
         $this->get(route('pengaturan-batas-proses-pelanggaran.index'))
             ->assertOk()
             ->assertSee('2026/2027')
-            ->assertSee('BK 4 hari');
+            ->assertSee('Keputusan BK 4 hari');
         $this->get(route('pengaturan-batas-proses-pelanggaran.edit', $tahun))
             ->assertOk()
             ->assertSee('Tahun pelajaran 2026/2027');
@@ -54,32 +52,33 @@ class PengaturanBatasProsesPelanggaranTest extends TestCase
         $this->assertSame('pemeriksaan_bk', $laporan->tahap_batas_proses);
         $this->assertSame('2026-07-26 08:00:00', $laporan->batas_proses_pada->format('Y-m-d H:i:s'));
 
-        $this->put(route('pengaturan-batas-proses-pelanggaran.update', $tahun), $this->dataPengaturan(7, 8, 9))
+        $this->put(route('pengaturan-batas-proses-pelanggaran.update', $tahun), $this->dataPengaturan(7))
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
         $this->assertSame('2026-07-26 08:00:00', $laporan->fresh()->batas_proses_pada->format('Y-m-d H:i:s'));
     }
 
-    public function test_pemeriksaan_bk_memulai_batas_persetujuan_baru(): void
+    public function test_keputusan_bk_menyelesaikan_tenggat_proses(): void
     {
         CarbonImmutable::setTestNow('2026-07-22 08:00:00');
         [$administrator, $tahun, $siswa, $jenis] = $this->dataDasar();
         $this->actingAs($administrator)
-            ->put(route('pengaturan-batas-proses-pelanggaran.update', $tahun), $this->dataPengaturan(2, 5, 6));
+            ->put(route('pengaturan-batas-proses-pelanggaran.update', $tahun), $this->dataPengaturan(2));
         $this->post(route('laporan-pembinaan-siswa.store'), $this->dataLaporan($tahun, $siswa, $jenis));
         $laporan = $siswa->laporanPembinaanSiswa()->latest('id')->firstOrFail();
 
         CarbonImmutable::setTestNow('2026-07-23 10:30:00');
         $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
-            'hasil' => 'terbukti',
+            'hasil' => 'sanksi_poin',
+            'jenis_pelanggaran_ids' => [$jenis->id],
             'catatan' => 'Fakta dan klarifikasi telah lengkap.',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $laporan->refresh();
-        $this->assertSame('menunggu_persetujuan', $laporan->status_verifikasi);
-        $this->assertSame('persetujuan', $laporan->tahap_batas_proses);
-        $this->assertSame('2026-07-28 10:30:00', $laporan->batas_proses_pada->format('Y-m-d H:i:s'));
+        $this->assertSame('disahkan', $laporan->status_verifikasi);
+        $this->assertNull($laporan->tahap_batas_proses);
+        $this->assertNull($laporan->batas_proses_pada);
     }
 
     public function test_pengguna_tanpa_izin_tidak_dapat_membuka_pengaturan(): void
@@ -105,7 +104,7 @@ class PengaturanBatasProsesPelanggaranTest extends TestCase
         CarbonImmutable::setTestNow('2026-07-22 06:00:00');
         [$administrator, $tahun, $siswa, $jenis] = $this->dataDasar();
         $this->actingAs($administrator)
-            ->put(route('pengaturan-batas-proses-pelanggaran.update', $tahun), $this->dataPengaturan(2, 2, 3));
+            ->put(route('pengaturan-batas-proses-pelanggaran.update', $tahun), $this->dataPengaturan(2));
         $this->post(route('laporan-pembinaan-siswa.store'), $this->dataLaporan($tahun, $siswa, $jenis));
         $laporan = $siswa->laporanPembinaanSiswa()->latest('id')->firstOrFail();
         $laporan->update(['batas_proses_pada' => now()->addDay()]);
@@ -146,12 +145,10 @@ class PengaturanBatasProsesPelanggaranTest extends TestCase
         return [$administrator, $tahun, $siswa, $jenis];
     }
 
-    private function dataPengaturan(int $bk, int $persetujuan, int $musyawarah): array
+    private function dataPengaturan(int $bk): array
     {
         return [
             'batas_hari_pemeriksaan_bk' => $bk,
-            'batas_hari_persetujuan' => $persetujuan,
-            'batas_hari_musyawarah' => $musyawarah,
             'pengingat_hari_sebelum_batas' => 1,
             'notifikasi_pengingat_aktif' => '1',
             'notifikasi_terlambat_aktif' => '1',

@@ -34,9 +34,9 @@
             if ($laporan) {
                 return match ($laporan->status_verifikasi) {
                     'diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi' => ['Menunggu BK', 'badge badge-warning'],
-                    'menunggu_persetujuan', 'disetujui_sebagian' => ['Menunggu persetujuan', 'badge badge-warning'],
-                    'perlu_musyawarah' => ['Perlu musyawarah', 'badge badge-danger'],
+                    'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah' => ['Menunggu keputusan BK', 'badge badge-warning'],
                     'disahkan' => ['Poin disahkan', 'badge badge-active'],
+                    'ditetapkan_pembinaan' => ['Pembinaan tanpa poin', 'badge badge-active'],
                     'tidak_terbukti' => ['Tidak terbukti', 'badge badge-muted'],
                     'dibatalkan' => ['Dibatalkan', 'badge badge-muted'],
                     default => [$laporan->labelStatusVerifikasi(), 'badge badge-muted'],

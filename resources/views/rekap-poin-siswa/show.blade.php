@@ -484,7 +484,7 @@
                 </div>
                 <div class="attention-item">
                     <strong>{{ $laporanMenunggu->count() }} laporan menunggu verifikasi</strong>
-                    <p>{{ $poinDalamProses }} potensi poin belum memengaruhi saldo sampai pemeriksaan BK dan dua persetujuan selesai.</p>
+                    <p>{{ $poinDalamProses }} potensi poin belum memengaruhi saldo sampai BK menetapkan keputusan.</p>
                 </div>
                 <div class="attention-item">
                     <strong>{{ $jumlahSanksiAktif }} sanksi aktif</strong>
