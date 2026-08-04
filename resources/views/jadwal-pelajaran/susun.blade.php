@@ -218,7 +218,7 @@
 
         <div class="actions">
             <a href="{{ route('jadwal-pelajaran.index', ['tahun_pelajaran_id' => $tahunPelajaranId, 'kelas_id' => $kelasId]) }}" class="button button-muted">Kembali</a>
-            <a href="{{ route('jam-pelajaran.index') }}" class="button button-muted">Jam pelajaran</a>
+            @if(auth()->user()?->administrator())<a href="{{ route('jam-pelajaran.index') }}" class="button button-muted">Jam pelajaran</a>@endif
         </div>
     </div>
 

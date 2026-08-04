@@ -3,6 +3,10 @@
 @section('title', 'Profil Disiplin ' . $siswa->nama_lengkap . ' - NUSA')
 
 @section('content')
+    @php
+        $ruteKembali = $konteksGuruWali ? 'rekap-poin-siswa-wali.index' : 'rekap-poin-siswa.index';
+        $ruteLaporan = $konteksGuruWali ? 'pembinaan-siswa-wali.show' : 'laporan-pembinaan-siswa.show';
+    @endphp
     <style>
         .discipline-hero {
             align-items: center;
@@ -335,7 +339,7 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Kesiswaan & BK</p>
+            <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p>
             <h1 class="page-title">Profil Disiplin Siswa</h1>
             <p class="page-subtitle">Poin resmi dan riwayat penanganan ditampilkan terpisah dari proses yang belum disahkan.</p>
         </div>
@@ -344,7 +348,7 @@
                 class="button button-primary" target="_blank" rel="noopener">Cetak Laporan</a>
             <a href="{{ route('dokumen-poin-siswa.surat', ['siswa' => $siswa, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}"
                 class="button button-dark">Buat Surat</a>
-            <a href="{{ route('rekap-poin-siswa.index', ['tahun_pelajaran_id' => $tahunPelajaranId]) }}"
+            <a href="{{ route($ruteKembali, ['tahun_pelajaran_id' => $tahunPelajaranId]) }}"
                 class="button button-muted">Kembali</a>
         </div>
     </div>
@@ -637,7 +641,7 @@
                             <td class="text-right">
                                 @if ($transaksi->laporanPembinaanSiswa)
                                     <a class="button button-muted button-sm"
-                                        href="{{ route('laporan-pembinaan-siswa.show', $transaksi->laporanPembinaanSiswa) }}">
+                                        href="{{ route($ruteLaporan, $transaksi->laporanPembinaanSiswa) }}">
                                         {{ $transaksi->laporanPembinaanSiswa->nomor_laporan }}
                                     </a>
                                 @elseif ($transaksi->penguranganPoinSiswa)
@@ -702,7 +706,7 @@
                             <td>{{ $laporan->total_poin }}</td>
                             <td class="text-right">
                                 <a class="button button-muted button-sm"
-                                    href="{{ route('laporan-pembinaan-siswa.show', $laporan) }}">Lihat</a>
+                                    href="{{ route($ruteLaporan, $laporan) }}">Lihat</a>
                             </td>
                         </tr>
                     @empty

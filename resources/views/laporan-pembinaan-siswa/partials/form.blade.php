@@ -29,7 +29,7 @@
         <p class="help-text">{{ $jenisTerpilih === 'pembinaan' ? 'Catat kegiatan pembinaan yang dilakukan langsung oleh BK.' : 'Tuliskan fakta kejadian. BK yang akan menentukan pembinaan atau sanksi poin setelah pemeriksaan.' }}</p>
         <div class="panel" style="background:#f7f9fc;margin-top:16px;padding:14px;">
             <p class="person-meta">Alur laporan</p>
-            <p style="font-size:14px;margin:6px 0 0;">Guru melapor &rarr; BK memeriksa &rarr; BK menentukan penanganan</p>
+            <p style="font-size:14px;margin:6px 0 0;">Pegawai melapor &rarr; BK memeriksa &rarr; BK menentukan penanganan</p>
         </div>
     </aside>
 

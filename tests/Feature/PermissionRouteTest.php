@@ -50,8 +50,12 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('verifikasi-pelanggaran.bk', 'izin:poin_siswa.verifikasi_bk');
         $this->assertNull(Route::getRoutes()->getByName('verifikasi-pelanggaran.persetujuan'));
         $this->assertRouteMemakaiMiddleware('rekap-poin-siswa.index', 'izin:poin_siswa.lihat');
+        $this->assertRouteMemakaiMiddleware('pembinaan-siswa-wali.index', 'izin:guru_wali.lihat,poin_siswa.lihat');
+        $this->assertRouteMemakaiMiddleware('pendampingan-siswa-wali.index', 'izin:guru_wali.lihat,poin_siswa.lihat');
+        $this->assertRouteMemakaiMiddleware('rekap-poin-siswa-wali.index', 'izin:guru_wali.lihat,poin_siswa.lihat');
         $this->assertRouteMemakaiMiddleware('penugasan-guru-wali.index', 'izin:guru_wali.kelola');
         $this->assertRouteMemakaiMiddleware('siswa-wali-saya.index', 'izin:guru_wali.lihat');
+        $this->assertRouteMemakaiMiddleware('siswa-wali-saya.show', 'izin:guru_wali.lihat');
     }
 
     public function test_route_penempatan_siswa_memakai_permission_kelas(): void
@@ -67,8 +71,8 @@ class PermissionRouteTest extends TestCase
     {
         $this->assertRouteMemakaiMiddleware('guru-mata-pelajaran.ganti-guru', 'izin:guru_mapel.kelola');
         $this->assertRouteMemakaiMiddleware('guru-mata-pelajaran.simpan-pergantian', 'izin:guru_mapel.kelola');
-        $this->assertRouteMemakaiMiddleware('jam-pelajaran.index', 'izin:jadwal.lihat,jadwal.kelola');
-        $this->assertRouteMemakaiMiddleware('jam-pelajaran.create', 'izin:jadwal.kelola');
+        $this->assertRouteMemakaiMiddleware('jam-pelajaran.index', 'admin');
+        $this->assertRouteMemakaiMiddleware('jam-pelajaran.create', 'admin');
         $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.index', 'izin:jadwal.lihat,jadwal.kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.create', 'izin:jadwal.kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.susun', 'izin:jadwal.kelola');

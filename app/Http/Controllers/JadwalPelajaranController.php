@@ -30,10 +30,13 @@ class JadwalPelajaranController extends Controller
             ->orderByDesc('tanggal_mulai')
             ->get();
         $tahunPelajaranId = $this->ambilTahunPelajaranId($data['tahun_pelajaran_id'] ?? null, $tahunPelajaran);
+        $cakupanWaliKelas = $request->user()?->membatasiCakupanWaliKelas() ?? false;
+        $kelasWaliIds = $cakupanWaliKelas ? $request->user()->kelasWaliIds() : [];
         $kelas = $tahunPelajaranId
             ? Kelas::query()
                 ->where('tahun_pelajaran_id', $tahunPelajaranId)
                 ->where('aktif', true)
+                ->when($cakupanWaliKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
                 ->orderBy('tingkat')
                 ->orderBy('nama')
                 ->get()
@@ -46,7 +49,10 @@ class JadwalPelajaranController extends Controller
             $kelasId = null;
         }
 
-        $jadwalPelajaran = JadwalPelajaran::query()
+        $queryCakupan = JadwalPelajaran::query()
+            ->when($cakupanWaliKelas, fn ($query) => $query->whereIn('kelas_id', $kelasWaliIds));
+
+        $jadwalPelajaran = (clone $queryCakupan)
             ->with([
                 'tahunPelajaran',
                 'kelas',
@@ -77,10 +83,11 @@ class JadwalPelajaranController extends Controller
             'kelasId' => $kelasId,
             'hari' => $hari,
             'status' => $status,
+            'cakupanWaliKelas' => $cakupanWaliKelas,
             'daftarHari' => JamPelajaran::DAFTAR_HARI,
-            'jumlahJadwal' => JadwalPelajaran::count(),
-            'jumlahAktif' => JadwalPelajaran::where('aktif', true)->count(),
-            'jumlahNonaktif' => JadwalPelajaran::where('aktif', false)->count(),
+            'jumlahJadwal' => (clone $queryCakupan)->count(),
+            'jumlahAktif' => (clone $queryCakupan)->where('aktif', true)->count(),
+            'jumlahNonaktif' => (clone $queryCakupan)->where('aktif', false)->count(),
         ]);
     }
 
@@ -340,8 +347,9 @@ class JadwalPelajaranController extends Controller
             ->with('berhasil', 'Jadwal pelajaran berhasil ditambahkan.');
     }
 
-    public function show(JadwalPelajaran $jadwalPelajaran)
+    public function show(Request $request, JadwalPelajaran $jadwalPelajaran)
     {
+        $this->pastikanBolehMelihatJadwal($request, $jadwalPelajaran);
         $jadwalPelajaran->load([
             'tahunPelajaran',
             'kelas',
@@ -385,6 +393,18 @@ class JadwalPelajaranController extends Controller
         return redirect()
             ->route('jadwal-pelajaran.index')
             ->with('berhasil', 'Jadwal pelajaran berhasil dinonaktifkan.');
+    }
+
+    private function pastikanBolehMelihatJadwal(Request $request, JadwalPelajaran $jadwalPelajaran): void
+    {
+        if (! ($request->user()?->membatasiCakupanWaliKelas() ?? false)) {
+            return;
+        }
+
+        abort_unless(
+            in_array((int) $jadwalPelajaran->kelas_id, $request->user()->kelasWaliIds(), true),
+            403,
+        );
     }
 
     private function dataForm(array $tambahan = []): array

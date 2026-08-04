@@ -6,6 +6,7 @@ use App\Models\ButirPelanggaranLaporan;
 use App\Models\JenisPelanggaranSiswa;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\Pegawai;
+use App\Models\PenugasanGuruWaliSiswa;
 use App\Models\Pengguna;
 use App\Models\PenguranganPoinSiswa;
 use App\Models\Peran;
@@ -199,6 +200,93 @@ class SistemPoinSiswaTest extends TestCase
             'aktif' => true,
         ]);
         $this->assertTrue($akunGuru->fresh()->memilikiPeran('guru_wali'));
+    }
+
+    public function test_penugasan_ulang_ke_guru_wali_yang_sama_tidak_membuat_riwayat_ganda(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruWali = Pegawai::create([
+            'nama_lengkap' => 'Guru Wali Tetap',
+            'nip' => '198606062012061006',
+            'aktif' => true,
+        ]);
+        $siswa = Siswa::create([
+            'nama_lengkap' => 'Siswa Tetap Dalam Perwalian',
+            'nisn' => '0099000061',
+            'aktif' => true,
+        ]);
+        $penugasan = PenugasanGuruWaliSiswa::create([
+            'siswa_id' => $siswa->id,
+            'guru_wali_pegawai_id' => $guruWali->id,
+            'tanggal_mulai' => '2026-07-01',
+            'aktif' => true,
+            'dibuat_oleh_pengguna_id' => $administrator->id,
+        ]);
+
+        $this->actingAs($administrator)->post(route('penugasan-guru-wali.store'), [
+            'guru_wali_pegawai_id' => $guruWali->id,
+            'siswa_ids' => [$siswa->id],
+            'tanggal_mulai' => '2026-08-01',
+        ])->assertRedirect(route('penugasan-guru-wali.index'))
+            ->assertSessionHas('berhasil');
+
+        $this->assertSame(1, PenugasanGuruWaliSiswa::where('siswa_id', $siswa->id)->count());
+        $this->assertTrue($penugasan->fresh()->aktif);
+        $this->assertNull($penugasan->fresh()->tanggal_selesai);
+    }
+
+    public function test_memindahkan_guru_wali_menutup_penugasan_lama_dan_menyimpan_riwayatnya(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruLama = Pegawai::create([
+            'nama_lengkap' => 'Guru Wali Lama',
+            'nip' => '198707072013071007',
+            'aktif' => true,
+        ]);
+        $guruBaru = Pegawai::create([
+            'nama_lengkap' => 'Guru Wali Baru',
+            'nip' => '198808082014081008',
+            'aktif' => true,
+        ]);
+        $akunGuruBaru = Pengguna::create([
+            'pegawai_id' => $guruBaru->id,
+            'nama' => $guruBaru->nama_lengkap,
+            'username' => $guruBaru->nip,
+            'kata_sandi' => 'KataSandi-Uji-2026',
+            'peran' => 'pegawai',
+            'aktif' => true,
+        ]);
+        $siswa = Siswa::create([
+            'nama_lengkap' => 'Siswa Pindah Guru Wali',
+            'nisn' => '0099000062',
+            'aktif' => true,
+        ]);
+        $penugasanLama = PenugasanGuruWaliSiswa::create([
+            'siswa_id' => $siswa->id,
+            'guru_wali_pegawai_id' => $guruLama->id,
+            'tanggal_mulai' => '2026-07-01',
+            'aktif' => true,
+            'dibuat_oleh_pengguna_id' => $administrator->id,
+        ]);
+
+        $this->actingAs($administrator)->post(route('penugasan-guru-wali.store'), [
+            'guru_wali_pegawai_id' => $guruBaru->id,
+            'siswa_ids' => [$siswa->id],
+            'tanggal_mulai' => '2026-08-01',
+            'nomor_sk' => 'SK/GW/2026/002',
+        ])->assertRedirect(route('penugasan-guru-wali.index'))
+            ->assertSessionHas('berhasil');
+
+        $this->assertFalse($penugasanLama->fresh()->aktif);
+        $this->assertSame('2026-08-01', $penugasanLama->fresh()->tanggal_selesai->toDateString());
+        $this->assertDatabaseHas('penugasan_guru_wali_siswa', [
+            'siswa_id' => $siswa->id,
+            'guru_wali_pegawai_id' => $guruBaru->id,
+            'nomor_sk' => 'SK/GW/2026/002',
+            'aktif' => true,
+        ]);
+        $this->assertSame(2, PenugasanGuruWaliSiswa::where('siswa_id', $siswa->id)->count());
+        $this->assertTrue($akunGuruBaru->fresh()->memilikiPeran('guru_wali'));
     }
 
     public function test_guru_wali_hanya_melihat_siswa_yang_ditugaskan_kepadanya(): void

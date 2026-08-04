@@ -25,11 +25,12 @@
         <div>
             <p class="eyebrow">Akademik</p>
             <h1 class="page-title">Jadwal pelajaran</h1>
+            @if($cakupanWaliKelas)<p class="page-subtitle">Hanya menampilkan jadwal kelas yang Anda wali.</p>@endif
         </div>
 
         <div class="actions">
             @izin('jadwal.kelola')
-                <a href="{{ route('jam-pelajaran.index') }}" class="button button-muted">Jam pelajaran</a>
+                @if(auth()->user()?->administrator())<a href="{{ route('jam-pelajaran.index') }}" class="button button-muted">Jam pelajaran</a>@endif
                 <a href="{{ route('jadwal-pelajaran.create', ['tahun_pelajaran_id' => $tahunPelajaranId, 'kelas_id' => $kelasId]) }}" class="button button-muted">Tambah satu</a>
                 <a href="{{ route('jadwal-pelajaran.susun', ['tahun_pelajaran_id' => $tahunPelajaranId, 'kelas_id' => $kelasId]) }}" class="button button-primary">Susun jadwal</a>
             @endizin

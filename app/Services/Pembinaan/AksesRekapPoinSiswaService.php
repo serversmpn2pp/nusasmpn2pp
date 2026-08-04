@@ -8,8 +8,21 @@ use Illuminate\Database\Eloquent\Builder;
 
 class AksesRekapPoinSiswaService
 {
-    public function terapkanCakupan(Builder $query, Pengguna $pengguna, ?int $tahunPelajaranId = null): Builder
+    public function terapkanCakupan(
+        Builder $query,
+        Pengguna $pengguna,
+        ?int $tahunPelajaranId = null,
+        ?string $cakupan = null,
+    ): Builder
     {
+        if ($cakupan === 'guru_wali') {
+            $siswaWaliIds = $pengguna->siswaWaliIds();
+
+            return $siswaWaliIds === []
+                ? $query->whereRaw('1 = 0')
+                : $query->whereIn('id', $siswaWaliIds);
+        }
+
         if ($this->aksesLuas($pengguna)) {
             return $query;
         }
@@ -36,10 +49,19 @@ class AksesRekapPoinSiswaService
         });
     }
 
-    public function bolehLihat(?Pengguna $pengguna, Siswa $siswa, ?int $tahunPelajaranId = null): bool
+    public function bolehLihat(
+        ?Pengguna $pengguna,
+        Siswa $siswa,
+        ?int $tahunPelajaranId = null,
+        ?string $cakupan = null,
+    ): bool
     {
         if (! $pengguna) {
             return false;
+        }
+
+        if ($cakupan === 'guru_wali') {
+            return in_array((int) $siswa->id, $pengguna->siswaWaliIds(), true);
         }
 
         if ($this->aksesLuas($pengguna)) {

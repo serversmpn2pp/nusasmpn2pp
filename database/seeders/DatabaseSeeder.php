@@ -114,7 +114,7 @@ class DatabaseSeeder extends Seeder
             [
                 'nama' => 'Pegawai',
                 'kode' => 'pegawai',
-                'deskripsi' => 'Akses dasar untuk pegawai: beranda, profil, dan ganti kata sandi.',
+                'deskripsi' => 'Akses dasar untuk pegawai: beranda, profil, absensi pribadi, dan pelaporan kejadian siswa.',
             ],
             [
                 'nama' => 'Siswa',
@@ -283,7 +283,7 @@ class DatabaseSeeder extends Seeder
             'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.pribadi', 'nilai.lihat', 'nilai.komponen_kelola', 'nilai.input', 'nilai.rekap', 'omr.lihat', 'omr.kelola', 'cbt.lihat', 'cbt.soal_kelola', 'perangkat_ajar.upload'],
             'wali_kelas' => ['beranda.akses', 'siswa.lihat', 'kelas.lihat', 'jadwal.lihat', 'nilai.lihat', 'nilai.rekap', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat', 'akun_siswa.lihat', 'akun_siswa.cetak'],
             'bk' => ['beranda.akses', 'siswa.lihat', 'absensi.lihat', 'bk.lihat', 'bk.kelola', 'laporan.export'],
-            'pegawai' => ['beranda.akses', 'pegawai.profil', 'absensi_pegawai.pribadi'],
+            'pegawai' => ['beranda.akses', 'pegawai.profil', 'absensi_pegawai.pribadi', 'poin_siswa.lapor'],
             'siswa' => ['beranda.akses'],
             'satpam' => ['beranda.akses', 'absensi.scan', 'absensi.lihat', 'keamanan.lihat', 'keamanan.kelola'],
             'petugas_kebersihan' => ['beranda.akses', 'sarpras.lihat', 'kebersihan.lihat', 'kebersihan.kelola'],

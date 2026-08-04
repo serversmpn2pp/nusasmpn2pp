@@ -243,11 +243,7 @@ Route::middleware('auth')->group(function () {
             ->only(['index', 'show'])
             ->middleware('izin:guru_mapel.lihat,guru_mapel.kelola');
         Route::resource('jam-pelajaran', JamPelajaranController::class)
-            ->only(['create', 'store', 'edit', 'update', 'destroy'])
-            ->middleware('izin:jadwal.kelola');
-        Route::resource('jam-pelajaran', JamPelajaranController::class)
-            ->only(['index', 'show'])
-            ->middleware('izin:jadwal.lihat,jadwal.kelola');
+            ->middleware('admin');
         Route::get('jadwal-pelajaran/susun', [JadwalPelajaranController::class, 'susun'])
             ->middleware('izin:jadwal.kelola')
             ->name('jadwal-pelajaran.susun');
@@ -521,6 +517,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('laporan-pembinaan-siswa', LaporanPembinaanSiswaController::class)
             ->only(['index', 'show'])
             ->middleware('izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat');
+        Route::get('pembinaan-siswa-wali', [LaporanPembinaanSiswaController::class, 'index'])
+            ->middleware('izin:guru_wali.lihat,poin_siswa.lihat')
+            ->name('pembinaan-siswa-wali.index');
+        Route::get('pembinaan-siswa-wali/{laporanPembinaanSiswa}', [LaporanPembinaanSiswaController::class, 'show'])
+            ->middleware('izin:guru_wali.lihat,poin_siswa.lihat')
+            ->name('pembinaan-siswa-wali.show');
         Route::get('pusat-verifikasi-pelanggaran', [PusatVerifikasiPelanggaranController::class, 'index'])
             ->middleware('izin:poin_siswa.lihat,poin_siswa.verifikasi_bk')
             ->name('pusat-verifikasi-pelanggaran.index');
@@ -577,6 +579,15 @@ Route::middleware('auth')->group(function () {
         Route::get('tindak-lanjut-siswa', [PendampinganSiswaController::class, 'index'])
             ->middleware('izin:poin_siswa.lihat')
             ->name('pendampingan-siswa.index');
+        Route::get('tindak-lanjut-siswa-wali', [PendampinganSiswaController::class, 'index'])
+            ->middleware('izin:guru_wali.lihat,poin_siswa.lihat')
+            ->name('pendampingan-siswa-wali.index');
+        Route::get('tindak-lanjut-siswa-wali/{pendampinganSiswa}/edit', [PendampinganSiswaController::class, 'edit'])
+            ->middleware('izin:guru_wali.lihat,poin_siswa.lihat,poin_siswa.pendampingan_kelola')
+            ->name('pendampingan-siswa-wali.edit');
+        Route::put('tindak-lanjut-siswa-wali/{pendampinganSiswa}', [PendampinganSiswaController::class, 'update'])
+            ->middleware('izin:guru_wali.lihat,poin_siswa.lihat,poin_siswa.pendampingan_kelola')
+            ->name('pendampingan-siswa-wali.update');
         Route::middleware('izin:poin_siswa.pendampingan_kelola')->group(function () {
             Route::get('tindak-lanjut-siswa/tambah', [PendampinganSiswaController::class, 'create'])
                 ->name('pendampingan-siswa.create');
@@ -591,6 +602,12 @@ Route::middleware('auth')->group(function () {
         Route::get('rekap-poin-siswa', [RekapPoinSiswaController::class, 'index'])
             ->middleware('izin:poin_siswa.lihat')
             ->name('rekap-poin-siswa.index');
+        Route::get('rekap-poin-siswa-wali', [RekapPoinSiswaController::class, 'index'])
+            ->middleware('izin:guru_wali.lihat,poin_siswa.lihat')
+            ->name('rekap-poin-siswa-wali.index');
+        Route::get('rekap-poin-siswa-wali/{siswa}', [RekapPoinSiswaController::class, 'show'])
+            ->middleware('izin:guru_wali.lihat,poin_siswa.lihat')
+            ->name('rekap-poin-siswa-wali.show');
         Route::get('rekap-poin-siswa/{siswa}', [RekapPoinSiswaController::class, 'show'])
             ->middleware('izin:poin_siswa.lihat')
             ->name('rekap-poin-siswa.show');
@@ -657,6 +674,9 @@ Route::middleware('auth')->group(function () {
         Route::get('siswa-wali-saya', [SiswaWaliSayaController::class, 'index'])
             ->middleware('izin:guru_wali.lihat')
             ->name('siswa-wali-saya.index');
+        Route::get('siswa-wali-saya/{siswa}', [SiswaWaliSayaController::class, 'show'])
+            ->middleware('izin:guru_wali.lihat')
+            ->name('siswa-wali-saya.show');
         Route::middleware('izin:bk.kelola')->group(function () {
             Route::get('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/tindak-lanjut/create', [TindakLanjutPembinaanSiswaController::class, 'create'])->name('tindak-lanjut-pembinaan-siswa.create');
             Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/tindak-lanjut', [TindakLanjutPembinaanSiswaController::class, 'store'])->name('tindak-lanjut-pembinaan-siswa.store');

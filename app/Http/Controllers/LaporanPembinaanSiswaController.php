@@ -38,6 +38,7 @@ class LaporanPembinaanSiswaController extends Controller
 
     public function index(Request $request)
     {
+        $konteksGuruWali = $request->routeIs('pembinaan-siswa-wali.*');
         $kataKunci = trim((string) $request->input('kata_kunci', ''));
         $status = (string) $request->input('status', 'semua');
         $tingkat = (string) $request->input('tingkat', 'semua');
@@ -109,6 +110,7 @@ class LaporanPembinaanSiswaController extends Controller
             'tahunPelajaranDipilih',
             'kelasDipilih',
             'ringkasan',
+            'konteksGuruWali',
         ), $this->pilihanFilter($request)));
     }
 
@@ -192,6 +194,14 @@ class LaporanPembinaanSiswaController extends Controller
 
     public function show(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
+        $konteksGuruWali = $request->routeIs('pembinaan-siswa-wali.*');
+        if ($konteksGuruWali) {
+            abort_unless(in_array(
+                (int) $laporanPembinaanSiswa->siswa_id,
+                $request->user()?->siswaWaliIds() ?? [],
+                true,
+            ), 403);
+        }
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
 
         $laporanPembinaanSiswa->load([
@@ -229,6 +239,7 @@ class LaporanPembinaanSiswaController extends Controller
         return view('laporan-pembinaan-siswa.show', compact(
             'laporanPembinaanSiswa', 'bolehKelolaFakta', 'bolehMencatatKlarifikasi',
             'daftarSiswaSaksi', 'daftarPegawaiSaksi', 'daftarJenisPelanggaranKeputusan', 'laporanMirip',
+            'konteksGuruWali',
         ));
     }
 
@@ -460,7 +471,22 @@ class LaporanPembinaanSiswaController extends Controller
     private function pilihanFilter(Request $request): array
     {
         $kelasWaliIds = $request->user()?->kelasWaliIds() ?? [];
+        $siswaWaliIds = $request->user()?->siswaWaliIds() ?? [];
+        $konteksGuruWali = $request->routeIs('pembinaan-siswa-wali.*');
         $batasiKelas = ! $this->aksesPembinaanLuas($request) && $request->user()?->memilikiPeran('wali_kelas');
+        $queryKelas = Kelas::with('tahunPelajaran:id,nama,aktif');
+
+        if ($konteksGuruWali) {
+            $queryKelas->when(
+                $siswaWaliIds === [],
+                fn ($query) => $query->whereRaw('1 = 0'),
+                fn ($query) => $query->whereHas('anggotaKelas', fn ($query) => $query
+                    ->whereIn('siswa_id', $siswaWaliIds)
+                    ->where('status_keanggotaan', 'aktif')),
+            );
+        } elseif ($batasiKelas) {
+            $queryKelas->whereIn('id', $kelasWaliIds);
+        }
 
         return [
             'daftarKategoriPembinaan' => KategoriPembinaanSiswa::orderByDesc('aktif')->orderBy('nama')->get(),
@@ -469,9 +495,7 @@ class LaporanPembinaanSiswaController extends Controller
             'daftarJenisLaporan' => LaporanPembinaanSiswa::DAFTAR_JENIS_LAPORAN,
             'daftarStatusVerifikasi' => LaporanPembinaanSiswa::DAFTAR_STATUS_VERIFIKASI,
             'daftarTahunPelajaran' => TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get(),
-            'daftarKelas' => Kelas::with('tahunPelajaran:id,nama,aktif')
-                ->when($batasiKelas, fn ($query) => $query->whereIn('id', $kelasWaliIds))
-                ->orderBy('tingkat')->orderBy('nama')->get(),
+            'daftarKelas' => $queryKelas->orderBy('tingkat')->orderBy('nama')->get(),
         ];
     }
 
@@ -494,6 +518,14 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $query = LaporanPembinaanSiswa::query();
         $pengguna = $request->user();
+
+        if ($request->routeIs('pembinaan-siswa-wali.*')) {
+            $siswaWaliIds = $pengguna?->siswaWaliIds() ?? [];
+
+            return $siswaWaliIds === []
+                ? $query->whereRaw('1 = 0')
+                : $query->whereIn('siswa_id', $siswaWaliIds);
+        }
 
         if ($this->aksesPembinaanLuas($request)) {
             return $query;

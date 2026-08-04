@@ -2,6 +2,7 @@
     $nilai = fn (string $field, $bawaan = '') => old($field, data_get($pendampinganSiswa, $field, $bawaan));
     $inputClass = fn (string $field, string $kelas) => $kelas.($errors->has($field) ? ' is-invalid' : '');
     $sedangEdit = $pendampinganSiswa->exists;
+    $dalamKonteksGuruWali = $konteksGuruWali ?? false;
 @endphp
 
 <style>
@@ -34,7 +35,7 @@
     </div>
 @endif
 
-<form method="POST" action="{{ $sedangEdit ? route('pendampingan-siswa.update', $pendampinganSiswa) : route('pendampingan-siswa.store') }}" class="panel panel-pad">
+<form method="POST" action="{{ $sedangEdit ? route($dalamKonteksGuruWali ? 'pendampingan-siswa-wali.update' : 'pendampingan-siswa.update', $pendampinganSiswa) : route('pendampingan-siswa.store') }}" class="panel panel-pad">
     @csrf
     @if($sedangEdit)
         @method('PUT')
@@ -107,7 +108,7 @@
     </div>
 
     <div class="actions" style="justify-content:flex-end;margin-top:20px">
-        <a class="button button-muted" href="{{ route('pendampingan-siswa.index', ['tahun_pelajaran_id' => $tahunPelajaran->id]) }}">Kembali</a>
+        <a class="button button-muted" href="{{ route($dalamKonteksGuruWali ? 'pendampingan-siswa-wali.index' : 'pendampingan-siswa.index', ['tahun_pelajaran_id' => $tahunPelajaran->id]) }}">Kembali</a>
         <button class="button button-primary">{{ $sedangEdit ? 'Simpan Perubahan' : 'Mulai Tindak Lanjut' }}</button>
     </div>
 </form>

@@ -21,6 +21,7 @@ class PendampinganSiswaController extends Controller
 
     public function index(Request $request)
     {
+        $konteksGuruWali = $request->routeIs('pendampingan-siswa-wali.*');
         $tahunPelajaranId = $this->inputId($request, 'tahun_pelajaran_id')
             ?? TahunPelajaran::where('aktif', true)->latest('tanggal_mulai')->value('id');
         $kelasId = $this->inputId($request, 'kelas_id');
@@ -37,7 +38,12 @@ class PendampinganSiswaController extends Controller
                     ->orWhere('nisn', 'ilike', '%'.$kataKunci.'%')
                     ->orWhere('nis', 'ilike', '%'.$kataKunci.'%');
             }));
-        $this->akses->terapkanCakupan($cakupanSiswa, $request->user(), $tahunPelajaranId);
+        $this->akses->terapkanCakupan(
+            $cakupanSiswa,
+            $request->user(),
+            $tahunPelajaranId,
+            $konteksGuruWali ? 'guru_wali' : null,
+        );
         $siswaIds = $cakupanSiswa->pluck('siswa.id');
 
         $cakupanPendampingan = PendampinganSiswa::query()
@@ -68,7 +74,7 @@ class PendampinganSiswaController extends Controller
             ->withQueryString();
 
         $daftarTahunPelajaran = TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get();
-        $daftarKelas = $this->daftarKelas($request, $tahunPelajaranId);
+        $daftarKelas = $this->daftarKelas($request, $tahunPelajaranId, $konteksGuruWali);
 
         return view('pendampingan-siswa.index', compact(
             'daftarPendampingan',
@@ -79,6 +85,7 @@ class PendampinganSiswaController extends Controller
             'kelasId',
             'status',
             'kataKunci',
+            'konteksGuruWali',
         ));
     }
 
@@ -147,11 +154,13 @@ class PendampinganSiswaController extends Controller
 
     public function edit(Request $request, PendampinganSiswa $pendampinganSiswa)
     {
+        $konteksGuruWali = $request->routeIs('pendampingan-siswa-wali.*');
         $pendampinganSiswa->load('siswa', 'tahunPelajaran', 'peringatanDiniSiswa');
         abort_unless($this->akses->bolehLihat(
             $request->user(),
             $pendampinganSiswa->siswa,
             $pendampinganSiswa->tahun_pelajaran_id,
+            $konteksGuruWali ? 'guru_wali' : null,
         ), 403);
 
         $siswa = $pendampinganSiswa->siswa;
@@ -159,18 +168,20 @@ class PendampinganSiswaController extends Controller
         $peringatan = $pendampinganSiswa->peringatanDiniSiswa;
 
         return view('pendampingan-siswa.edit', array_merge(
-            compact('pendampinganSiswa', 'siswa', 'tahunPelajaran', 'peringatan'),
+            compact('pendampinganSiswa', 'siswa', 'tahunPelajaran', 'peringatan', 'konteksGuruWali'),
             $this->pilihanForm($siswa, $tahunPelajaran),
         ));
     }
 
     public function update(Request $request, PendampinganSiswa $pendampinganSiswa)
     {
+        $konteksGuruWali = $request->routeIs('pendampingan-siswa-wali.*');
         $pendampinganSiswa->loadMissing('siswa');
         abort_unless($this->akses->bolehLihat(
             $request->user(),
             $pendampinganSiswa->siswa,
             $pendampinganSiswa->tahun_pelajaran_id,
+            $konteksGuruWali ? 'guru_wali' : null,
         ), 403);
 
         $data = $this->rapikanData($request->validate($this->aturanValidasi(true)));
@@ -202,7 +213,10 @@ class PendampinganSiswaController extends Controller
             ]));
         });
 
-        return redirect()->route('pendampingan-siswa.edit', $pendampinganSiswa)
+        return redirect()->route(
+            $konteksGuruWali ? 'pendampingan-siswa-wali.edit' : 'pendampingan-siswa.edit',
+            $pendampinganSiswa,
+        )
             ->with('berhasil', $menjadiAktif
                 ? 'Tindak lanjut siswa berhasil diperbarui.'
                 : 'Tindak lanjut siswa telah ditandai selesai.');
@@ -281,10 +295,26 @@ class PendampinganSiswaController extends Controller
         ];
     }
 
-    private function daftarKelas(Request $request, ?int $tahunPelajaranId)
+    private function daftarKelas(Request $request, ?int $tahunPelajaranId, bool $konteksGuruWali = false)
     {
         $query = Kelas::query()
             ->when($tahunPelajaranId, fn (Builder $query) => $query->where('tahun_pelajaran_id', $tahunPelajaranId));
+
+        if ($konteksGuruWali) {
+            $siswaWaliIds = $request->user()->siswaWaliIds();
+
+            return $query
+                ->when(
+                    $siswaWaliIds === [],
+                    fn (Builder $query) => $query->whereRaw('1 = 0'),
+                    fn (Builder $query) => $query->whereHas('anggotaKelas', fn (Builder $query) => $query
+                        ->whereIn('siswa_id', $siswaWaliIds)
+                        ->where('status_keanggotaan', 'aktif')),
+                )
+                ->orderBy('tingkat')
+                ->orderBy('nama')
+                ->get();
+        }
 
         if (! $this->akses->aksesLuas($request->user())) {
             $kelasWaliIds = $request->user()->kelasWaliIds();

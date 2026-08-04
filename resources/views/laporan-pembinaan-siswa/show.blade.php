@@ -13,6 +13,8 @@
         $butirKeputusan = collect(old('jenis_pelanggaran_ids', $laporanPembinaanSiswa->butirPelanggaranLaporan->pluck('jenis_pelanggaran_siswa_id')->all()))->map(fn($id)=>(int)$id)->all();
         $badgeVerifikasi = fn(string $status) => match($status){'disahkan','ditetapkan_pembinaan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_klarifikasi'=>'badge badge-danger',default=>'badge badge-warning'};
         $labelTahapBatas = 'Keputusan BK';
+        $ruteKembali = $konteksGuruWali ? 'pembinaan-siswa-wali.index' : 'laporan-pembinaan-siswa.index';
+        $ruteShow = $konteksGuruWali ? 'pembinaan-siswa-wali.show' : 'laporan-pembinaan-siswa.show';
     @endphp
 
     <style>
@@ -44,8 +46,23 @@
     </style>
 
     <div class="page-header">
-        <div><p class="eyebrow">Kesiswaan & BK</p><h1 class="page-title">Detail {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1><p class="page-subtitle">{{ $laporanPembinaanSiswa->nomor_laporan }}</p></div>
-        <div class="actions"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Kembali</a>@izin('poin_siswa.lihat','poin_siswa.verifikasi_bk')<a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pusat Verifikasi</a>@endizin @if($bolehEdit)<a href="{{ route('laporan-pembinaan-siswa.edit',$laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>@endif @izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>@endif @endizin</div>
+        <div><p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p><h1 class="page-title">Detail {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1><p class="page-subtitle">{{ $laporanPembinaanSiswa->nomor_laporan }}</p></div>
+        <div class="actions">
+            <a href="{{ route($ruteKembali) }}" class="button button-muted">Kembali</a>
+            @unless($konteksGuruWali)
+                @izin('poin_siswa.lihat','poin_siswa.verifikasi_bk')
+                    <a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pusat Verifikasi</a>
+                @endizin
+                @if($bolehEdit)
+                    <a href="{{ route('laporan-pembinaan-siswa.edit',$laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>
+                @endif
+                @izin('bk.kelola')
+                    @if($laporanPembinaanSiswa->status!=='dibatalkan')
+                        <a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>
+                    @endif
+                @endizin
+            @endunless
+        </div>
     </div>
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
     @if(session('gagal'))<div class="alert alert-danger">{{ session('gagal') }}</div>@endif
@@ -54,7 +71,7 @@
         <div class="alert"><strong>Laporan otomatis dari absensi.</strong> Tercatat terlambat {{ $laporanPembinaanSiswa->menit_terlambat_tercatat }} menit. Perubahan waktu dilakukan melalui koreksi rekap absensi.</div>
     @endif
     @if($laporanMirip->isNotEmpty())
-        <div class="alert alert-danger"><strong>Periksa kemungkinan laporan ganda.</strong> Ada {{ $laporanMirip->count() }} laporan lain untuk siswa ini pada tanggal yang sama: @foreach($laporanMirip as $mirip)<a href="{{ route('laporan-pembinaan-siswa.show',$mirip) }}">{{ $mirip->nomor_laporan }}</a>{{ !$loop->last?', ':'.' }}@endforeach</div>
+        <div class="alert alert-danger"><strong>Periksa kemungkinan laporan ganda.</strong> Ada {{ $laporanMirip->count() }} laporan lain untuk siswa ini pada tanggal yang sama: @foreach($laporanMirip as $mirip)<a href="{{ route($ruteShow,$mirip) }}">{{ $mirip->nomor_laporan }}</a>{{ !$loop->last?', ':'.' }}@endforeach</div>
     @endif
 
     @if($melaluiPemeriksaanBk)

@@ -20,7 +20,7 @@ class PenugasanGuruWaliController extends Controller
 
         $penugasan = PenugasanGuruWaliSiswa::query()
             ->with([
-                'siswa.anggotaKelas' => fn ($query) => $query->where('status_keanggotaan', 'aktif')->with('kelas:id,nama'),
+                'siswa.anggotaKelas' => fn ($query) => $query->where('status_keanggotaan', 'aktif')->with('kelas:id,nama,tingkat'),
                 'guruWali:id,nama_lengkap,nip',
             ])
             ->where('aktif', true)
@@ -39,7 +39,11 @@ class PenugasanGuruWaliController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $daftarPegawai = Pegawai::where('aktif', true)
+        $daftarPegawai = Pegawai::query()
+            ->withCount([
+                'penugasanGuruWaliSiswa as jumlah_siswa_wali_aktif' => fn ($query) => $query->where('aktif', true),
+            ])
+            ->where('aktif', true)
             ->orderBy('nama_lengkap')
             ->get(['id', 'nama_lengkap', 'nip', 'jabatan_utama']);
 
@@ -47,20 +51,55 @@ class PenugasanGuruWaliController extends Controller
             ->with([
                 'anggotaKelas' => fn ($query) => $query
                     ->where('status_keanggotaan', 'aktif')
-                    ->with('kelas:id,nama')
+                    ->with('kelas:id,nama,tingkat')
                     ->latest('tanggal_masuk'),
                 'penugasanGuruWaliSiswa' => fn ($query) => $query
                     ->where('aktif', true)
-                    ->with('guruWali:id,nama_lengkap'),
+                    ->with('guruWali:id,nama_lengkap,nip'),
             ])
             ->where('aktif', true)
             ->orderBy('nama_lengkap')
-            ->get(['id', 'nama_lengkap', 'nisn', 'nis']);
+            ->get(['id', 'nama_lengkap', 'nisn', 'nis'])
+            ->sortBy(function (Siswa $siswa) {
+                $kelas = $siswa->anggotaKelas->first()?->kelas;
+
+                return sprintf(
+                    '%02d|%s|%s',
+                    $kelas?->tingkat ?? 99,
+                    mb_strtolower($kelas?->nama ?? 'zzzz'),
+                    mb_strtolower($siswa->nama_lengkap),
+                );
+            })
+            ->values();
+
+        $daftarKelas = $daftarSiswa
+            ->map(fn (Siswa $siswa) => $siswa->anggotaKelas->first()?->kelas)
+            ->filter()
+            ->unique('id')
+            ->sortBy(fn ($kelas) => sprintf('%02d|%s', $kelas->tingkat, mb_strtolower($kelas->nama)))
+            ->values();
+
+        $jumlahPenugasanAktif = PenugasanGuruWaliSiswa::query()
+            ->where('aktif', true)
+            ->whereHas('siswa', fn ($query) => $query->where('aktif', true))
+            ->count();
+
+        $ringkasan = [
+            'jumlah_siswa_aktif' => $daftarSiswa->count(),
+            'jumlah_ditugaskan' => $jumlahPenugasanAktif,
+            'jumlah_belum_ditugaskan' => max(0, $daftarSiswa->count() - $jumlahPenugasanAktif),
+            'jumlah_guru_wali' => PenugasanGuruWaliSiswa::query()
+                ->where('aktif', true)
+                ->distinct('guru_wali_pegawai_id')
+                ->count('guru_wali_pegawai_id'),
+        ];
 
         return view('penugasan-guru-wali.index', compact(
             'penugasan',
             'daftarPegawai',
             'daftarSiswa',
+            'daftarKelas',
+            'ringkasan',
             'kataKunci',
             'guruWaliDipilih',
         ));
@@ -77,15 +116,35 @@ class PenugasanGuruWaliController extends Controller
             'catatan' => ['nullable', 'string'],
         ]);
 
-        DB::transaction(function () use ($data) {
+        $hasil = DB::transaction(function () use ($data) {
+            $hasil = [
+                'baru' => 0,
+                'dipindahkan' => 0,
+                'tetap' => 0,
+            ];
+
             foreach ($data['siswa_ids'] as $siswaId) {
-                PenugasanGuruWaliSiswa::query()
+                $penugasanAktif = PenugasanGuruWaliSiswa::query()
                     ->where('siswa_id', $siswaId)
                     ->where('aktif', true)
-                    ->update([
+                    ->lockForUpdate()
+                    ->first();
+
+                if ((int) $penugasanAktif?->guru_wali_pegawai_id === (int) $data['guru_wali_pegawai_id']) {
+                    $hasil['tetap']++;
+
+                    continue;
+                }
+
+                if ($penugasanAktif) {
+                    $penugasanAktif->update([
                         'aktif' => false,
                         'tanggal_selesai' => $data['tanggal_mulai'],
                     ]);
+                    $hasil['dipindahkan']++;
+                } else {
+                    $hasil['baru']++;
+                }
 
                 PenugasanGuruWaliSiswa::create([
                     'siswa_id' => $siswaId,
@@ -99,11 +158,28 @@ class PenugasanGuruWaliController extends Controller
             }
 
             $this->pasangPeranGuruWali((int) $data['guru_wali_pegawai_id']);
+
+            return $hasil;
         });
+
+        $jumlahBerubah = $hasil['baru'] + $hasil['dipindahkan'];
+        $bagianPesan = [];
+
+        if ($jumlahBerubah > 0) {
+            $bagianPesan[] = $jumlahBerubah . ' siswa berhasil ditugaskan';
+        }
+
+        if ($hasil['dipindahkan'] > 0) {
+            $bagianPesan[] = $hasil['dipindahkan'] . ' di antaranya dipindahkan dari Guru Wali sebelumnya';
+        }
+
+        if ($hasil['tetap'] > 0) {
+            $bagianPesan[] = $hasil['tetap'] . ' siswa sudah berada pada Guru Wali yang dipilih sehingga tidak diubah';
+        }
 
         return redirect()
             ->route('penugasan-guru-wali.index')
-            ->with('berhasil', count($data['siswa_ids']) . ' siswa berhasil ditugaskan kepada guru wali.');
+            ->with('berhasil', implode('. ', $bagianPesan) . '.');
     }
 
     public function destroy(PenugasanGuruWaliSiswa $penugasanGuruWali)

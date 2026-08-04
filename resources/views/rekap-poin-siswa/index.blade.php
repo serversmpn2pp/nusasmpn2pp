@@ -1,8 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Monitoring Poin Siswa - NUSA')
+@section('title', ($konteksGuruWali ? 'Rekap Poin Siswa Wali' : 'Monitoring Poin Siswa').' - NUSA')
 
 @section('content')
+    @php
+        $ruteIndex = $konteksGuruWali ? 'rekap-poin-siswa-wali.index' : 'rekap-poin-siswa.index';
+        $ruteShow = $konteksGuruWali ? 'rekap-poin-siswa-wali.show' : 'rekap-poin-siswa.show';
+    @endphp
     <style>
         .monitor-grid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:20px}
         .monitor-stat{background:#fff;border:1px solid var(--border);border-radius:8px;color:inherit;display:block;min-width:0;padding:18px;text-decoration:none;transition:.2s ease}
@@ -35,16 +39,18 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Kesiswaan & BK</p>
-            <h1 class="page-title">Monitoring Poin Siswa</h1>
-            <p class="page-subtitle">Poin resmi, proses verifikasi, dan pelaksanaan sanksi dalam satu pemantauan.</p>
+            <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p>
+            <h1 class="page-title">{{ $konteksGuruWali ? 'Rekap Poin Siswa Wali' : 'Monitoring Poin Siswa' }}</h1>
+            <p class="page-subtitle">{{ $konteksGuruWali ? 'Pantau poin resmi dan status penanganan khusus siswa yang menjadi tanggung jawab Anda.' : 'Poin resmi, proses verifikasi, dan pelaksanaan sanksi dalam satu pemantauan.' }}</p>
         </div>
-        <div class="actions">
-            <a href="{{ route('sanksi-poin-siswa.index') }}" class="button button-muted">Pelaksanaan Sanksi</a>
-            @izin('poin_siswa.reward_kelola')
-                <a href="{{ route('pengurangan-poin-siswa.index') }}" class="button button-primary">Pengurangan Poin</a>
-            @endizin
-        </div>
+        @unless($konteksGuruWali)
+            <div class="actions">
+                <a href="{{ route('sanksi-poin-siswa.index') }}" class="button button-muted">Pelaksanaan Sanksi</a>
+                @izin('poin_siswa.reward_kelola')
+                    <a href="{{ route('pengurangan-poin-siswa.index') }}" class="button button-primary">Pengurangan Poin</a>
+                @endizin
+            </div>
+        @endunless
     </div>
 
     @if(session('berhasil'))
@@ -52,7 +58,7 @@
     @endif
 
     @php
-        $tautanRingkasan = fn (string $status) => route('rekap-poin-siswa.index', array_filter([
+        $tautanRingkasan = fn (string $status) => route($ruteIndex, array_filter([
             'tahun_pelajaran_id' => $tahunPelajaranId,
             'kelas_id' => $kelasId,
             'status_perhatian' => $status,
@@ -120,7 +126,7 @@
             </div>
         </div>
         <div class="actions" style="justify-content:flex-end;margin-top:12px">
-            <a href="{{ route('rekap-poin-siswa.index') }}" class="button button-muted">Reset</a>
+            <a href="{{ route($ruteIndex) }}" class="button button-muted">Reset</a>
             <button class="button button-dark">Terapkan</button>
         </div>
     </form>
@@ -182,7 +188,7 @@
                             </td>
                             <td class="text-right">
                                 <a class="button button-primary button-sm"
-                                    href="{{ route('rekap-poin-siswa.show', ['siswa' => $siswa, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}">
+                                    href="{{ route($ruteShow, ['siswa' => $siswa, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}">
                                     Lihat Profil
                                 </a>
                             </td>
@@ -216,7 +222,7 @@
                             </div>
                         </div>
                         <a class="button button-primary button-sm"
-                            href="{{ route('rekap-poin-siswa.show', ['siswa' => $siswa, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}">
+                            href="{{ route($ruteShow, ['siswa' => $siswa, 'tahun_pelajaran_id' => $tahunPelajaranId]) }}">
                             Lihat Profil
                         </a>
                     </div>

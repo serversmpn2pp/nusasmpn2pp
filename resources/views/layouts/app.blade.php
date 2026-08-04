@@ -1813,6 +1813,7 @@
                     'title' => 'Utama',
                     'items' => [
                         ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                        ['label' => 'Laporkan Kejadian', 'route' => 'laporan-pembinaan-siswa.create', 'active' => ['laporan-pembinaan-siswa.create'], 'initial' => 'LK', 'izin' => 'poin_siswa.lapor', 'pegawai_only' => true],
                     ],
                 ],
                 [
@@ -1836,7 +1837,7 @@
                         ['label' => 'Mata Pelajaran', 'route' => 'mata-pelajaran.index', 'active' => ['mata-pelajaran.*'], 'initial' => 'MP', 'izin' => ['mata_pelajaran.lihat', 'mata_pelajaran.kelola'], 'subgroup' => 'Pembelajaran'],
                         ['label' => 'Guru Mata Pelajaran', 'route' => 'guru-mata-pelajaran.index', 'active' => ['guru-mata-pelajaran.*'], 'initial' => 'GM', 'izin' => ['guru_mapel.lihat', 'guru_mapel.kelola'], 'subgroup' => 'Pembelajaran'],
                         ['label' => 'Jadwal Mengajar Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JS', 'izin' => 'jadwal.pribadi', 'pegawai_only' => true, 'subgroup' => 'Pembelajaran'],
-                        ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'subgroup' => 'Pembelajaran'],
+                        ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'administrator_only' => true, 'subgroup' => 'Pembelajaran'],
                         ['label' => 'Jadwal Pelajaran', 'route' => 'jadwal-pelajaran.index', 'active' => ['jadwal-pelajaran.*'], 'initial' => 'JP', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'subgroup' => 'Pembelajaran'],
                         ['label' => 'Skema Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN', 'izin' => 'nilai.skema_kelola', 'subgroup' => 'Penilaian'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'subgroup' => 'Penilaian'],
@@ -1927,6 +1928,7 @@
                     'title' => 'Utama',
                     'items' => [
                         ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                        ['label' => 'Laporkan Kejadian', 'route' => 'laporan-pembinaan-siswa.create', 'active' => ['laporan-pembinaan-siswa.create'], 'initial' => 'LK', 'izin' => 'poin_siswa.lapor', 'pegawai_only' => true],
                     ],
                 ],
                 [
@@ -1945,6 +1947,7 @@
                     'title' => 'Wali Kelas',
                     'items' => [
                         ['label' => 'Kelas Wali Saya', 'route' => 'kelas-wali.index', 'active' => ['kelas-wali.*', 'siswa.show'], 'initial' => 'KL', 'izin' => 'kelas.lihat', 'peran' => 'wali_kelas'],
+                        ['label' => 'Jadwal Kelas Saya', 'route' => 'jadwal-pelajaran.index', 'active' => ['jadwal-pelajaran.index', 'jadwal-pelajaran.show'], 'initial' => 'JP', 'izin' => 'jadwal.lihat', 'peran' => 'wali_kelas'],
                         ['label' => 'Akun Siswa Kelas', 'route' => 'akun-siswa.index', 'active' => ['akun-siswa.*'], 'initial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.cetak'], 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Absensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi'], 'peran' => 'wali_kelas'],
                         ['label' => 'Laporan Absensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan', 'peran' => 'wali_kelas'],
@@ -1958,9 +1961,9 @@
                     'title' => 'Guru Wali',
                     'items' => [
                         ['label' => 'Siswa Wali Saya', 'route' => 'siswa-wali-saya.index', 'active' => ['siswa-wali-saya.*', 'siswa.show'], 'initial' => 'SW', 'izin' => 'guru_wali.lihat', 'peran' => 'guru_wali'],
-                        ['label' => 'Pembinaan Siswa Wali', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PB', 'izin' => ['poin_siswa.lihat', 'poin_siswa.lapor'], 'peran' => 'guru_wali'],
-                        ['label' => 'Tindak Lanjut Siswa Wali', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'TL', 'izin' => 'poin_siswa.lihat', 'peran' => 'guru_wali'],
-                        ['label' => 'Rekap Poin Siswa Wali', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'peran' => 'guru_wali'],
+                        ['label' => 'Pembinaan Siswa Wali', 'route' => 'pembinaan-siswa-wali.index', 'active' => ['pembinaan-siswa-wali.*'], 'initial' => 'PB', 'izin' => ['guru_wali.lihat', 'poin_siswa.lihat'], 'peran' => 'guru_wali'],
+                        ['label' => 'Tindak Lanjut Siswa Wali', 'route' => 'pendampingan-siswa-wali.index', 'active' => ['pendampingan-siswa-wali.*'], 'initial' => 'TL', 'izin' => ['guru_wali.lihat', 'poin_siswa.lihat'], 'peran' => 'guru_wali'],
+                        ['label' => 'Rekap Poin Siswa Wali', 'route' => 'rekap-poin-siswa-wali.index', 'active' => ['rekap-poin-siswa-wali.*'], 'initial' => 'RP', 'izin' => ['guru_wali.lihat', 'poin_siswa.lihat'], 'peran' => 'guru_wali'],
                     ],
                 ],
                 [
@@ -1968,10 +1971,8 @@
                     'title' => 'Pembelajaran',
                     'items' => [
                         ['label' => 'Jadwal Mengajar Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JP', 'izin' => 'jadwal.pribadi', 'peran' => 'guru_mapel'],
-                        ['label' => 'Jam Pelajaran', 'route' => 'jam-pelajaran.index', 'active' => ['jam-pelajaran.*'], 'initial' => 'JM', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'peran' => 'guru_mapel'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'peran' => 'guru_mapel'],
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.upload', 'peran' => 'guru_mapel'],
-                        ['label' => 'Laporkan Kejadian', 'route' => 'laporan-pembinaan-siswa.create', 'active' => ['laporan-pembinaan-siswa.create'], 'initial' => 'LK', 'izin' => 'poin_siswa.lapor', 'peran' => 'guru_mapel'],
                     ],
                 ],
                 [
@@ -2019,6 +2020,10 @@
                     $section['items'] = collect($section['items'])
                         ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif) {
                             if (($item['pegawai_only'] ?? false) && ! $penggunaAktif?->pegawai_id) {
+                                return false;
+                            }
+
+                            if (($item['administrator_only'] ?? false) && ! $penggunaAktif?->administrator()) {
                                 return false;
                             }
 

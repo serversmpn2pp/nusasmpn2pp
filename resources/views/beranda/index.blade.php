@@ -803,6 +803,14 @@
         </section>
 
         <section class="dashboard-actions employee-actions" aria-label="Aksi cepat pegawai">
+            @if ($pegawaiLogin)
+                @izin('poin_siswa.lapor')
+                    <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="dashboard-action">
+                        <span>Laporkan Kejadian</span>
+                        <span class="dashboard-action-mark">LK</span>
+                    </a>
+                @endizin
+            @endif
             <a href="{{ route('kata-sandi.edit') }}" class="dashboard-action">
                 <span>Ganti Password</span>
                 <span class="dashboard-action-mark">PW</span>

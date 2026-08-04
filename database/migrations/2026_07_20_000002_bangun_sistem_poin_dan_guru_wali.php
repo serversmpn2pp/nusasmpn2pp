@@ -277,6 +277,7 @@ return new class extends Migration
 
         $peta = [
             'administrator' => array_column($this->daftarIzin(), 'kode'),
+            'pegawai' => ['poin_siswa.lapor'],
             'pimpinan' => ['poin_siswa.lihat'],
             'wakil_pimpinan_kesiswaan' => array_column($this->daftarIzin(), 'kode'),
             'guru_mapel' => ['poin_siswa.lapor'],
@@ -312,7 +313,7 @@ return new class extends Migration
     private function daftarIzin(): array
     {
         return [
-            ['kelompok' => 'Pembinaan dan Poin', 'nama' => 'Laporkan pelanggaran siswa', 'kode' => 'poin_siswa.lapor', 'deskripsi' => 'Membuat laporan pembinaan atau pelanggaran siswa.'],
+            ['kelompok' => 'Pembinaan dan Poin', 'nama' => 'Laporkan kejadian siswa', 'kode' => 'poin_siswa.lapor', 'deskripsi' => 'Membuat laporan kejadian siswa untuk diperiksa BK.'],
             ['kelompok' => 'Pembinaan dan Poin', 'nama' => 'Lihat poin siswa', 'kode' => 'poin_siswa.lihat', 'deskripsi' => 'Melihat laporan dan rekap poin sesuai cakupan tugas.'],
             ['kelompok' => 'Pembinaan dan Poin', 'nama' => 'Verifikasi fakta oleh BK', 'kode' => 'poin_siswa.verifikasi_bk', 'deskripsi' => 'Memeriksa fakta laporan pelanggaran sebagai BK.'],
             ['kelompok' => 'Pembinaan dan Poin', 'nama' => 'Setujui pelanggaran', 'kode' => 'poin_siswa.menyetujui', 'deskripsi' => 'Memberi persetujuan sebagai wali kelas atau guru wali.'],

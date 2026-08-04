@@ -1,8 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Tindak Lanjut Siswa - NUSA')
+@section('title', ($konteksGuruWali ? 'Tindak Lanjut Siswa Wali' : 'Tindak Lanjut Siswa').' - NUSA')
 
 @section('content')
+    @php
+        $ruteIndex = $konteksGuruWali ? 'pendampingan-siswa-wali.index' : 'pendampingan-siswa.index';
+        $ruteEdit = $konteksGuruWali ? 'pendampingan-siswa-wali.edit' : 'pendampingan-siswa.edit';
+        $ruteProfil = $konteksGuruWali ? 'rekap-poin-siswa-wali.show' : 'rekap-poin-siswa.show';
+    @endphp
     <style>
         .follow-summary{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:20px;max-width:720px}
         .follow-stat{background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px}
@@ -16,13 +21,15 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Kesiswaan & BK</p>
-            <h1 class="page-title">Tindak Lanjut Siswa</h1>
-            <p class="page-subtitle">Pantau pendampingan siswa yang masih berjalan dan yang telah diselesaikan.</p>
+            <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p>
+            <h1 class="page-title">{{ $konteksGuruWali ? 'Tindak Lanjut Siswa Wali' : 'Tindak Lanjut Siswa' }}</h1>
+            <p class="page-subtitle">{{ $konteksGuruWali ? 'Pantau tindak lanjut khusus siswa yang menjadi tanggung jawab pendampingan Anda.' : 'Pantau pendampingan siswa yang masih berjalan dan yang telah diselesaikan.' }}</p>
         </div>
-        <a class="button button-muted" href="{{ route('peringatan-dini-siswa.index', ['tahun_pelajaran_id' => $tahunPelajaranId]) }}">
-            Buka Peringatan Dini
-        </a>
+        @unless($konteksGuruWali)
+            <a class="button button-muted" href="{{ route('peringatan-dini-siswa.index', ['tahun_pelajaran_id' => $tahunPelajaranId]) }}">
+                Buka Peringatan Dini
+            </a>
+        @endunless
     </div>
 
     @if(session('berhasil'))
@@ -33,7 +40,7 @@
     @endif
 
     @php
-        $tautanStatus = fn (string $nilai) => route('pendampingan-siswa.index', array_filter([
+        $tautanStatus = fn (string $nilai) => route($ruteIndex, array_filter([
             'tahun_pelajaran_id' => $tahunPelajaranId,
             'kelas_id' => $kelasId,
             'status' => $nilai,
@@ -89,7 +96,7 @@
             </div>
         </div>
         <div class="actions" style="justify-content:flex-end;margin-top:12px">
-            <a href="{{ route('pendampingan-siswa.index') }}" class="button button-muted">Reset</a>
+            <a href="{{ route($ruteIndex) }}" class="button button-muted">Reset</a>
             <button class="button button-dark">Terapkan</button>
         </div>
     </form>
@@ -133,9 +140,9 @@
                             </td>
                             <td class="text-right">
                                 <div class="actions" style="justify-content:flex-end">
-                                    <a class="button button-muted button-sm" href="{{ route('rekap-poin-siswa.show', ['siswa' => $item->siswa_id, 'tahun_pelajaran_id' => $item->tahun_pelajaran_id]) }}">Profil</a>
+                                    <a class="button button-muted button-sm" href="{{ route($ruteProfil, ['siswa' => $item->siswa_id, 'tahun_pelajaran_id' => $item->tahun_pelajaran_id]) }}">Profil</a>
                                     @izin('poin_siswa.pendampingan_kelola')
-                                        <a class="button button-primary button-sm" href="{{ route('pendampingan-siswa.edit', $item) }}">
+                                        <a class="button button-primary button-sm" href="{{ route($ruteEdit, $item) }}">
                                             {{ $item->status === 'selesai' ? 'Lihat/Edit' : 'Lanjutkan' }}
                                         </a>
                                     @endizin
@@ -164,9 +171,9 @@
                     <p class="help-text" style="margin-top:5px">{{ str($item->hasil ?: $item->catatan)->limit(140) }}</p>
                     <p class="person-meta" style="margin-top:8px">Petugas: {{ $item->petugasPegawai?->nama_lengkap ?: 'Belum ditentukan' }}</p>
                     <div class="actions" style="margin-top:12px">
-                        <a class="button button-muted button-sm" href="{{ route('rekap-poin-siswa.show', ['siswa' => $item->siswa_id, 'tahun_pelajaran_id' => $item->tahun_pelajaran_id]) }}">Profil</a>
+                        <a class="button button-muted button-sm" href="{{ route($ruteProfil, ['siswa' => $item->siswa_id, 'tahun_pelajaran_id' => $item->tahun_pelajaran_id]) }}">Profil</a>
                         @izin('poin_siswa.pendampingan_kelola')
-                            <a class="button button-primary button-sm" href="{{ route('pendampingan-siswa.edit', $item) }}">
+                            <a class="button button-primary button-sm" href="{{ route($ruteEdit, $item) }}">
                                 {{ $item->status === 'selesai' ? 'Lihat/Edit' : 'Lanjutkan' }}
                             </a>
                         @endizin

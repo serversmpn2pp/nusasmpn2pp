@@ -23,6 +23,7 @@ class RekapPoinSiswaController extends Controller
 
     public function index(Request $request)
     {
+        $konteksGuruWali = $request->routeIs('rekap-poin-siswa-wali.*');
         $tahunPelajaranId = $this->inputId($request, 'tahun_pelajaran_id')
             ?? TahunPelajaran::where('aktif', true)->latest('tanggal_mulai')->value('id');
         $kelasId = $this->inputId($request, 'kelas_id');
@@ -46,7 +47,12 @@ class RekapPoinSiswaController extends Controller
                     ->orWhere('nis', 'ilike', '%'.$kataKunci.'%');
             }));
 
-        $this->akses->terapkanCakupan($cakupanSiswa, $pengguna, $tahunPelajaranId);
+        $this->akses->terapkanCakupan(
+            $cakupanSiswa,
+            $pengguna,
+            $tahunPelajaranId,
+            $konteksGuruWali ? 'guru_wali' : null,
+        );
         $siswaCakupanIds = (clone $cakupanSiswa)->pluck('siswa.id');
         $ringkasan = $this->monitoring->ringkasan($siswaCakupanIds, $tahunPelajaranId, $aturanSanksi);
         $ringkasanKelas = $this->monitoring->ringkasanKelas($siswaCakupanIds, $tahunPelajaranId);
@@ -90,7 +96,7 @@ class RekapPoinSiswaController extends Controller
         });
 
         $daftarTahunPelajaran = TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get();
-        $daftarKelas = $this->daftarKelas($pengguna, $tahunPelajaranId);
+        $daftarKelas = $this->daftarKelas($pengguna, $tahunPelajaranId, $konteksGuruWali);
 
         return view('rekap-poin-siswa.index', compact(
             'daftarSiswa',
@@ -102,15 +108,22 @@ class RekapPoinSiswaController extends Controller
             'kelasId',
             'kataKunci',
             'statusPerhatian',
+            'konteksGuruWali',
         ));
     }
 
     public function show(Request $request, Siswa $siswa)
     {
+        $konteksGuruWali = $request->routeIs('rekap-poin-siswa-wali.*');
         $tahunPelajaranId = $this->inputId($request, 'tahun_pelajaran_id')
             ?? TahunPelajaran::where('aktif', true)->latest('tanggal_mulai')->value('id');
         $tahunPelajaran = $tahunPelajaranId ? TahunPelajaran::find($tahunPelajaranId) : null;
-        abort_unless($this->akses->bolehLihat($request->user(), $siswa, $tahunPelajaranId), 403);
+        abort_unless($this->akses->bolehLihat(
+            $request->user(),
+            $siswa,
+            $tahunPelajaranId,
+            $konteksGuruWali ? 'guru_wali' : null,
+        ), 403);
 
         $aturanSanksi = $this->monitoring->aturanAktif();
         $anggotaKelas = $siswa->anggotaKelas()
@@ -227,13 +240,30 @@ class RekapPoinSiswaController extends Controller
             'indikator',
             'perkembanganBulanan',
             'maksSaldoBulanan',
+            'konteksGuruWali',
         ));
     }
 
-    private function daftarKelas($pengguna, ?int $tahunPelajaranId)
+    private function daftarKelas($pengguna, ?int $tahunPelajaranId, bool $konteksGuruWali = false)
     {
         $query = Kelas::query()
             ->when($tahunPelajaranId, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranId));
+
+        if ($konteksGuruWali) {
+            $siswaWaliIds = $pengguna->siswaWaliIds();
+
+            return $query
+                ->when(
+                    $siswaWaliIds === [],
+                    fn ($query) => $query->whereRaw('1 = 0'),
+                    fn ($query) => $query->whereHas('anggotaKelas', fn ($query) => $query
+                        ->whereIn('siswa_id', $siswaWaliIds)
+                        ->where('status_keanggotaan', 'aktif')),
+                )
+                ->orderBy('tingkat')
+                ->orderBy('nama')
+                ->get();
+        }
 
         if (! $this->akses->aksesLuas($pengguna)) {
             $kelasWaliIds = $pengguna->kelasWaliIds();
