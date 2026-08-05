@@ -477,9 +477,22 @@
 
             .schedule-time strong {
                 display: block;
-                margin-top: 2px;
+                margin-top: 4px;
                 color: var(--primary-dark);
-                font-size: .92rem;
+                font-size: 1.35rem;
+                font-weight: 950;
+                line-height: 1.05;
+            }
+
+            .schedule-time .schedule-window {
+                margin-top: 8px;
+                color: #475569;
+                font-size: .78rem;
+                line-height: 1.35;
+            }
+
+            .schedule-time .schedule-window b {
+                color: var(--primary-dark);
                 font-weight: 950;
             }
 
@@ -693,14 +706,14 @@
                                             </div>
                                             <div class="schedule-time-grid">
                                                 <div class="schedule-time">
-                                                    <span>Masuk</span>
-                                                    <strong>{{ $jadwal->formatJam($jadwal->jam_scan_masuk_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_masuk_selesai) }}</strong>
-                                                    <span>Resmi {{ $jadwal->formatJam($jadwal->jam_masuk) }}</span>
+                                                    <span>Batas Tepat Waktu</span>
+                                                    <strong>{{ $jadwal->formatJam($jadwal->jam_masuk) }}</strong>
+                                                    <span class="schedule-window"><b>Waktu scan masuk:</b> {{ $jadwal->formatJam($jadwal->jam_scan_masuk_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_masuk_selesai) }}</span>
                                                 </div>
                                                 <div class="schedule-time">
-                                                    <span>Pulang</span>
-                                                    <strong>{{ $jadwal->formatJam($jadwal->jam_scan_pulang_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_pulang_selesai) }}</strong>
-                                                    <span>Resmi {{ $jadwal->formatJam($jadwal->jam_pulang) }}</span>
+                                                    <span>Jam Pulang Resmi</span>
+                                                    <strong>{{ $jadwal->formatJam($jadwal->jam_pulang) }}</strong>
+                                                    <span class="schedule-window"><b>Waktu scan pulang:</b> {{ $jadwal->formatJam($jadwal->jam_scan_pulang_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_pulang_selesai) }}</span>
                                                 </div>
                                             </div>
                                         </article>

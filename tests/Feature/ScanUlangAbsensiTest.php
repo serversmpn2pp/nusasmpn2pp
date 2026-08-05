@@ -113,19 +113,66 @@ class ScanUlangAbsensiTest extends TestCase
 
     public function test_halaman_scan_memiliki_status_visual_yang_tidak_menyebut_scan_ulang_sebagai_gagal(): void
     {
+        Carbon::setTestNow('2026-08-06 06:30:00');
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        PengaturanAbsensi::create([
+            'hari' => 'kamis',
+            'urutan_hari' => 4,
+            'jam_scan_masuk_mulai' => '06:00',
+            'jam_masuk' => '07:00',
+            'jam_scan_masuk_selesai' => '07:30',
+            'jam_scan_pulang_mulai' => '14:00',
+            'jam_pulang' => '14:10',
+            'jam_scan_pulang_selesai' => '15:00',
+            'aktif' => true,
+        ]);
+        PengaturanAbsensiPegawai::create([
+            'nama_jadwal' => 'Jadwal Pegawai Kamis',
+            'cakupan' => 'semua',
+            'hari' => 'kamis',
+            'urutan_hari' => 4,
+            'jam_scan_masuk_mulai' => '03:00',
+            'jam_masuk' => '06:25',
+            'jam_scan_masuk_selesai' => '07:30',
+            'jam_scan_pulang_mulai' => '13:00',
+            'jam_pulang' => '13:00',
+            'jam_scan_pulang_selesai' => '16:00',
+            'aktif' => true,
+        ]);
 
         $this->actingAs($administrator)
             ->get(route('scan-absensi.index'))
             ->assertOk()
             ->assertSee('Absensi sudah tercatat')
             ->assertSee('Belum waktunya scan')
-            ->assertSee('Scan gagal');
+            ->assertSee('Scan gagal')
+            ->assertSeeInOrder([
+                'Batas Tepat Waktu',
+                '07:00',
+                'Waktu scan masuk:',
+                '06:00 - 07:30',
+                'Jam Pulang Resmi',
+                '14:10',
+                'Waktu scan pulang:',
+                '14:00 - 15:00',
+            ]);
 
         $this->get(route('scan-absensi-pegawai.index'))
             ->assertOk()
             ->assertSee('Absensi sudah tercatat')
             ->assertSee('Belum waktunya scan')
-            ->assertSee('Scan gagal');
+            ->assertSee('Scan gagal')
+            ->assertSeeInOrder([
+                'Batas Tepat Waktu',
+                '06:25',
+                'Waktu scan masuk:',
+                '03:00 - 07:30',
+                'Jam Pulang Resmi',
+                '13:00',
+                'Waktu scan pulang:',
+                '13:00 - 16:00',
+            ]);
+
+        Carbon::setTestNow();
     }
 }

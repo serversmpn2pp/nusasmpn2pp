@@ -230,16 +230,22 @@
 
             .schedule-time {
                 margin: 0;
-                font-size: clamp(1.15rem, 2.3vw, 1.5rem);
+                color: #fff;
+                font-size: clamp(1.65rem, 3.3vw, 2.25rem);
                 font-weight: 950;
                 line-height: 1.1;
             }
 
             .schedule-note {
-                margin: 8px 0 0;
+                margin: 10px 0 0;
                 color: var(--muted);
                 font-size: .9rem;
                 font-weight: 750;
+            }
+
+            .schedule-note strong {
+                color: #fff;
+                font-weight: 900;
             }
 
             .scanner-panel {
@@ -572,15 +578,15 @@
                         @if ($jadwal)
                             <div class="schedule-grid">
                                 <div class="schedule-item" id="jadwalMasuk">
-                                    <p class="schedule-label">Masuk</p>
-                                    <p class="schedule-time">{{ $jadwal['jam_scan_masuk_mulai'] }} - {{ $jadwal['jam_scan_masuk_selesai'] }}</p>
-                                    <p class="schedule-note">Jam masuk {{ $jadwal['jam_masuk'] }}</p>
+                                    <p class="schedule-label">Batas Tepat Waktu</p>
+                                    <p class="schedule-time">{{ $jadwal['jam_masuk'] }}</p>
+                                    <p class="schedule-note"><strong>Waktu scan masuk:</strong> {{ $jadwal['jam_scan_masuk_mulai'] }} - {{ $jadwal['jam_scan_masuk_selesai'] }}</p>
                                 </div>
 
                                 <div class="schedule-item" id="jadwalPulang">
-                                    <p class="schedule-label">Pulang</p>
-                                    <p class="schedule-time">{{ $jadwal['jam_scan_pulang_mulai'] }} - {{ $jadwal['jam_scan_pulang_selesai'] }}</p>
-                                    <p class="schedule-note">Jam pulang {{ $jadwal['jam_pulang'] }}</p>
+                                    <p class="schedule-label">Jam Pulang Resmi</p>
+                                    <p class="schedule-time">{{ $jadwal['jam_pulang'] }}</p>
+                                    <p class="schedule-note"><strong>Waktu scan pulang:</strong> {{ $jadwal['jam_scan_pulang_mulai'] }} - {{ $jadwal['jam_scan_pulang_selesai'] }}</p>
                                 </div>
                             </div>
                         @else
