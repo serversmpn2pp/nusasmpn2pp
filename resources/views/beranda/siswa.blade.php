@@ -493,6 +493,10 @@
         };
     @endphp
 
+    @if (session('berhasil'))
+        <div class="alert">{{ session('berhasil') }}</div>
+    @endif
+
     <div class="student-dashboard">
         @if (! $siswaLogin)
             <section class="panel panel-pad">

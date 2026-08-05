@@ -81,6 +81,8 @@ class AutentikasiController extends Controller
             'wajib_ganti_kata_sandi' => false,
         ])->save();
 
-        return back()->with('berhasil', 'Kata sandi berhasil diganti.');
+        return redirect()
+            ->route('beranda')
+            ->with('berhasil', 'Kata sandi berhasil diganti. Anda sekarang dapat menggunakan NUSA.');
     }
 }

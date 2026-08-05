@@ -133,7 +133,13 @@ class AkunSiswaTest extends TestCase
             'kata_sandi_lama' => $passwordAwal,
             'kata_sandi_baru' => 'KataSandiBaru123',
             'kata_sandi_baru_confirmation' => 'KataSandiBaru123',
-        ])->assertRedirect();
+        ])
+            ->assertRedirect(route('beranda'))
+            ->assertSessionHas('berhasil', 'Kata sandi berhasil diganti. Anda sekarang dapat menggunakan NUSA.');
+
+        $this->get(route('beranda'))
+            ->assertOk()
+            ->assertSee('Kata sandi berhasil diganti. Anda sekarang dapat menggunakan NUSA.');
 
         $akun->refresh();
 
