@@ -7,9 +7,11 @@ use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Services\FotoProfilService;
+use App\Services\SinkronisasiUsernameAkunService;
 use App\Support\PembacaExcelSiswa;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Throwable;
 
@@ -120,8 +122,12 @@ class SiswaController extends Controller
         return view('siswa.edit', compact('siswa'));
     }
 
-    public function update(Request $request, Siswa $siswa, FotoProfilService $fotoProfilService)
-    {
+    public function update(
+        Request $request,
+        Siswa $siswa,
+        FotoProfilService $fotoProfilService,
+        SinkronisasiUsernameAkunService $sinkronisasiUsername,
+    ) {
         $this->pastikanBolehAksesSiswa($request, $siswa);
 
         $data = $request->validate(
@@ -129,6 +135,14 @@ class SiswaController extends Controller
             $fotoProfilService->pesanValidasi(),
         );
         $data['aktif'] = $request->boolean('aktif');
+        $siswa->loadMissing('pengguna');
+        $usernameBaru = $sinkronisasiUsername->siapkanUsername(
+            $siswa->pengguna,
+            $data['nisn'] ?? null,
+            'nisn',
+            'NISN',
+        );
+        $usernameBerubah = $siswa->pengguna && $usernameBaru !== $siswa->pengguna->username;
         $fotoLama = $siswa->foto;
         $fotoBaru = null;
 
@@ -140,7 +154,10 @@ class SiswaController extends Controller
         }
 
         try {
-            $siswa->update($data);
+            DB::transaction(function () use ($siswa, $data, $sinkronisasiUsername, $usernameBaru) {
+                $siswa->update($data);
+                $sinkronisasiUsername->sinkronkan($siswa->pengguna, $usernameBaru);
+            });
         } catch (Throwable $exception) {
             $fotoProfilService->hapus($fotoBaru);
 
@@ -153,7 +170,10 @@ class SiswaController extends Controller
 
         return redirect()
             ->route('siswa.index')
-            ->with('berhasil', 'Data siswa berhasil diperbarui.');
+            ->with(
+                'berhasil',
+                'Data siswa berhasil diperbarui.'.($usernameBerubah ? " Username login ikut berubah menjadi {$usernameBaru}." : ''),
+            );
     }
 
     public function updateFoto(Request $request, Siswa $siswa, FotoProfilService $fotoProfilService)

@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Pegawai;
 use App\Services\FotoProfilService;
+use App\Services\SinkronisasiUsernameAkunService;
 use App\Support\PembacaExcelPegawai;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class PegawaiController extends Controller
@@ -129,8 +131,12 @@ class PegawaiController extends Controller
         return view('pegawai.edit', compact('pegawai'));
     }
 
-    public function update(Request $request, Pegawai $pegawai, FotoProfilService $fotoProfilService)
-    {
+    public function update(
+        Request $request,
+        Pegawai $pegawai,
+        FotoProfilService $fotoProfilService,
+        SinkronisasiUsernameAkunService $sinkronisasiUsername,
+    ) {
         $data = $request->validate([
             'nama_lengkap' => 'required|string|max:255',
             'nip' => 'nullable|string|max:50|unique:pegawai,nip,'.$pegawai->id,
@@ -158,6 +164,14 @@ class PegawaiController extends Controller
         ], $fotoProfilService->pesanValidasi());
 
         $data['aktif'] = $request->boolean('aktif');
+        $pegawai->loadMissing('pengguna');
+        $usernameBaru = $sinkronisasiUsername->siapkanUsername(
+            $pegawai->pengguna,
+            $data['nip'] ?? null,
+            'nip',
+            'NIP',
+        );
+        $usernameBerubah = $pegawai->pengguna && $usernameBaru !== $pegawai->pengguna->username;
         $fotoLama = $pegawai->foto;
         $fotoBaru = null;
 
@@ -169,7 +183,10 @@ class PegawaiController extends Controller
         }
 
         try {
-            $pegawai->update($data);
+            DB::transaction(function () use ($pegawai, $data, $sinkronisasiUsername, $usernameBaru) {
+                $pegawai->update($data);
+                $sinkronisasiUsername->sinkronkan($pegawai->pengguna, $usernameBaru);
+            });
         } catch (Throwable $exception) {
             $fotoProfilService->hapus($fotoBaru);
 
@@ -182,7 +199,10 @@ class PegawaiController extends Controller
 
         return redirect()
             ->route('pegawai.index')
-            ->with('berhasil', 'Data pegawai berhasil diperbarui.');
+            ->with(
+                'berhasil',
+                'Data pegawai berhasil diperbarui.'.($usernameBerubah ? " Username login ikut berubah menjadi {$usernameBaru}." : ''),
+            );
     }
 
     public function updateFoto(Request $request, Pegawai $pegawai, FotoProfilService $fotoProfilService)
