@@ -323,6 +323,16 @@
                 background: #f0fdf4;
             }
 
+            .result-card.is-recorded {
+                border-color: rgba(21, 71, 122, .42);
+                background: #eff6ff;
+            }
+
+            .result-card.is-warning {
+                border-color: rgba(180, 123, 0, .4);
+                background: #fffbeb;
+            }
+
             .result-card.is-error {
                 border-color: rgba(185, 28, 28, .3);
                 background: #fef2f2;
@@ -364,6 +374,16 @@
             .result-card.is-success .result-status {
                 background: var(--success-soft);
                 color: var(--success);
+            }
+
+            .result-card.is-recorded .result-status {
+                background: #dbeafe;
+                color: var(--primary);
+            }
+
+            .result-card.is-warning .result-status {
+                background: #fef3c7;
+                color: #8a5b00;
             }
 
             .result-card.is-error .result-status {
@@ -616,6 +636,7 @@
             const clientAwal = Date.now();
             const scanQueue = [];
             const riwayat = [];
+            const statusSudahTercatat = new Set(['duplikat_cepat', 'sudah_scan_masuk', 'sudah_scan_pulang']);
             let sedangMemproses = false;
             const formatterWaktu = new Intl.DateTimeFormat('id-ID', {
                 timeZone: 'Asia/Jakarta',
@@ -786,10 +807,60 @@
                 prosesAntrean();
             }
 
+            function kategoriHasil(payload) {
+                if (payload.berhasil) {
+                    return 'success';
+                }
+
+                if (statusSudahTercatat.has(payload.status)) {
+                    return 'recorded';
+                }
+
+                if (payload.status === 'jadwal_absensi_tidak_ada' || payload.status?.startsWith('di_luar_jadwal')) {
+                    return 'warning';
+                }
+
+                return 'error';
+            }
+
+            function labelHasil(payload, kategori) {
+                if (kategori === 'success') {
+                    return 'Absensi berhasil';
+                }
+
+                if (kategori === 'recorded') {
+                    return 'Absensi sudah tercatat';
+                }
+
+                if (kategori === 'warning') {
+                    return payload.status?.startsWith('di_luar_jadwal')
+                        ? 'Belum waktunya scan'
+                        : 'Jadwal belum aktif';
+                }
+
+                return 'Scan gagal';
+            }
+
+            function waktuAbsensiTercatat(payload) {
+                if (payload.jenis_scan === 'masuk') {
+                    return payload.absensi?.jam_masuk;
+                }
+
+                if (payload.jenis_scan === 'pulang') {
+                    return payload.absensi?.jam_pulang;
+                }
+
+                return null;
+            }
+
             function tampilkanHasil(payload) {
-                elements.resultCard.classList.toggle('is-success', Boolean(payload.berhasil));
-                elements.resultCard.classList.toggle('is-error', ! payload.berhasil);
-                elements.resultStatus.textContent = payload.berhasil ? 'Scan berhasil' : 'Scan belum diterima';
+                const kategori = kategoriHasil(payload);
+
+                elements.resultCard.classList.toggle('is-success', kategori === 'success');
+                elements.resultCard.classList.toggle('is-recorded', kategori === 'recorded');
+                elements.resultCard.classList.toggle('is-warning', kategori === 'warning');
+                elements.resultCard.classList.toggle('is-error', kategori === 'error');
+                elements.resultStatus.textContent = labelHasil(payload, kategori);
                 elements.resultName.textContent = payload.siswa?.nama_lengkap || 'Data siswa belum ditemukan';
                 elements.resultNisn.textContent = payload.siswa?.nisn
                     ? `NISN ${payload.siswa.nisn}`
@@ -815,13 +886,18 @@
 
             function tampilkanMeta(payload) {
                 const meta = [];
+                const kategori = kategoriHasil(payload);
 
                 if (payload.jenis_scan) {
                     meta.push(`Jenis: ${kapital(payload.jenis_scan)}`);
                 }
 
-                if (payload.waktu_server) {
-                    meta.push(`Waktu: ${payload.waktu_server}`);
+                const waktuDitampilkan = kategori === 'recorded'
+                    ? waktuAbsensiTercatat(payload)
+                    : payload.waktu_server;
+
+                if (waktuDitampilkan) {
+                    meta.push(`${kategori === 'recorded' ? 'Tercatat' : 'Waktu'}: ${waktuDitampilkan}`);
                 }
 
                 if (payload.scanner_id) {
@@ -847,10 +923,14 @@
             }
 
             function tambahRiwayat(payload) {
+                const kategori = kategoriHasil(payload);
+
                 riwayat.unshift({
                     waktu: payload.waktu_server || jamDariTanggal(waktuServer()),
-                    nama: payload.siswa?.nama_lengkap || payload.pesan || 'Scan tidak diterima',
-                    jenis: payload.jenis_scan ? kapital(payload.jenis_scan) : (payload.berhasil ? 'Scan' : 'Gagal'),
+                    nama: payload.siswa?.nama_lengkap || payload.pesan || 'Scan gagal diproses',
+                    jenis: kategori === 'recorded'
+                        ? 'Sudah tercatat'
+                        : (payload.jenis_scan ? kapital(payload.jenis_scan) : (kategori === 'warning' ? 'Periksa jadwal' : (payload.berhasil ? 'Scan' : 'Gagal'))),
                     berhasil: Boolean(payload.berhasil),
                 });
 

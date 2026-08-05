@@ -106,7 +106,7 @@ class ScanAbsensiController extends Controller
 
     private function formatJam(?string $jam): ?string
     {
-        return $jam ? substr($jam, 0, 5) : null;
+        return $jam ? substr($jam, 0, 8) : null;
     }
 
     private function inisial(string $nama): string

@@ -89,16 +89,25 @@ class ProsesScanAbsensi
             );
         }
 
-        if ($this->scanDuplikatCepat($parsed['nisn'], $waktuScan)) {
+        $scanBerhasilTerbaru = $this->scanBerhasilTerbaru($parsed['nisn'], $waktuScan);
+
+        if ($scanBerhasilTerbaru) {
+            $absensi = $scanBerhasilTerbaru->absensiSiswa;
+            $jenisScan = $jenisScanDiminta ?: $scanBerhasilTerbaru->jenis_scan;
+
             return $this->gagal(
                 isiScan: $isiScan,
                 waktuScan: $waktuScan,
                 statusScan: 'duplikat_cepat',
-                pesan: 'Scan sudah diterima beberapa detik lalu.',
+                pesan: $this->pesanSudahTercatat(
+                    $jenisScan,
+                    $jenisScan === 'pulang' ? $absensi?->jam_pulang : $absensi?->jam_masuk,
+                ),
                 scannerId: $parsed['scanner_id'],
                 nisn: $parsed['nisn'],
-                jenisScan: $jenisScanDiminta,
+                jenisScan: $jenisScan,
                 siswa: $siswa,
+                absensi: $absensi,
                 ipAddress: $ipAddress,
                 userAgent: $userAgent,
             );
@@ -221,7 +230,7 @@ class ProsesScanAbsensi
                     isiScan: $isiScan,
                     waktuScan: $waktuScan,
                     statusScan: 'sudah_scan_masuk',
-                    pesan: 'Siswa sudah melakukan scan masuk.',
+                    pesan: $this->pesanSudahTercatat('masuk', $absensi->jam_masuk),
                     scannerId: $parsed['scanner_id'],
                     nisn: $parsed['nisn'],
                     jenisScan: 'masuk',
@@ -295,7 +304,7 @@ class ProsesScanAbsensi
                     isiScan: $isiScan,
                     waktuScan: $waktuScan,
                     statusScan: 'sudah_scan_pulang',
-                    pesan: 'Siswa sudah melakukan scan pulang.',
+                    pesan: $this->pesanSudahTercatat('pulang', $absensi->jam_pulang),
                     scannerId: $parsed['scanner_id'],
                     nisn: $parsed['nisn'],
                     jenisScan: 'pulang',
@@ -520,16 +529,26 @@ class ProsesScanAbsensi
             && $menitScan <= $this->menitDariJam($pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_selesai));
     }
 
-    private function scanDuplikatCepat(string $nisn, CarbonInterface $waktuScan): bool
+    private function scanBerhasilTerbaru(string $nisn, CarbonInterface $waktuScan): ?LogScanAbsensi
     {
         $batasAwal = Carbon::parse($waktuScan->toDateTimeString())
             ->subSeconds(self::JEDA_DUPLIKAT_DETIK);
 
         return LogScanAbsensi::query()
+            ->with('absensiSiswa')
             ->where('nisn', $nisn)
             ->where('berhasil', true)
             ->where('waktu_scan', '>=', $batasAwal)
-            ->exists();
+            ->latest('waktu_scan')
+            ->first();
+    }
+
+    private function pesanSudahTercatat(?string $jenisScan, ?string $jam): string
+    {
+        $jenis = $jenisScan ? ' ' . $jenisScan : '';
+        $waktu = $jam ? ' pukul ' . substr($jam, 0, 5) : '';
+
+        return 'Absensi' . $jenis . ' sudah tercatat' . $waktu . '. Tidak perlu scan ulang.';
     }
 
     private function hariDariTanggal(CarbonInterface $tanggal): string
