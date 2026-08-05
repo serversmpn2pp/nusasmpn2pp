@@ -23,13 +23,18 @@
         </div>
     @endif
 
-    <form action="{{ route('perangkat-ajar-saya.store') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('perangkat-ajar-saya.store') }}" method="POST" enctype="multipart/form-data" data-perangkat-ajar-form>
         @csrf
 
         <div class="form-shell">
             <aside class="panel panel-pad">
                 <h2 class="panel-title">Ketentuan file</h2>
                 <p class="help-text">Unggah dokumen dalam format PDF dengan ukuran maksimal 10 MB. File disimpan privat dan hanya dapat dibuka melalui akun NUSA yang berwenang.</p>
+                @if ($batasUnggahPdf['dibatasi_server'])
+                    <div class="alert alert-danger" style="margin-top: 14px; margin-bottom: 0;">
+                        Konfigurasi PHP server saat ini hanya dapat menerima PDF sampai {{ $batasUnggahPdf['label'] }}. Hubungi administrator untuk menaikkan batas unggah server.
+                    </div>
+                @endif
 
                 <dl class="quick-facts" style="margin-top: 18px;">
                     <div>
@@ -90,8 +95,9 @@
 
                         <div class="field span-2">
                             <label for="file_pdf">File PDF</label>
-                            <input id="file_pdf" name="file_pdf" type="file" accept="application/pdf" class="file-input @error('file_pdf') is-invalid @enderror" required>
-                            <p class="help-text">PDF maksimal 10 MB.</p>
+                            <input id="file_pdf" name="file_pdf" type="file" accept="application/pdf,.pdf" class="file-input @error('file_pdf') is-invalid @enderror" required data-pdf-input data-max-bytes="{{ $batasUnggahPdf['byte'] }}" data-max-label="{{ $batasUnggahPdf['label'] }}" aria-describedby="file_pdf_help file_pdf_client_error">
+                            <p id="file_pdf_help" class="help-text">PDF maksimal {{ $batasUnggahPdf['label'] }}.</p>
+                            <p id="file_pdf_client_error" class="error-text" data-pdf-client-error role="alert" hidden></p>
                             @error('file_pdf')
                                 <p class="error-text">{{ $message }}</p>
                             @enderror
@@ -109,9 +115,12 @@
 
                 <div class="form-actions">
                     <a href="{{ route('perangkat-ajar-saya.index', ['tahun_pelajaran_id' => $tahunPelajaranId, 'semester' => $semester]) }}" class="button button-muted">Batal</a>
-                    <button type="submit" class="button button-primary">Unggah PDF</button>
+                    <button type="submit" class="button button-primary" data-pdf-submit>Unggah PDF</button>
                 </div>
+                <p class="help-text" data-pdf-upload-status role="status" hidden></p>
             </div>
         </div>
     </form>
+
+    @include('perangkat-ajar-saya.partials.validasi-file-pdf')
 @endsection

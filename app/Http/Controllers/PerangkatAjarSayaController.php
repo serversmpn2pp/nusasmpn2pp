@@ -17,9 +17,11 @@ use Illuminate\Validation\ValidationException;
 
 class PerangkatAjarSayaController extends Controller
 {
-    public function __construct(private NotifikasiPenggunaService $notifikasiPenggunaService)
-    {
-    }
+    private const BATAS_PDF_KILOBYTE = 10240;
+
+    private const BATAS_PDF_BYTE = 10 * 1024 * 1024;
+
+    public function __construct(private NotifikasiPenggunaService $notifikasiPenggunaService) {}
 
     public function index(Request $request)
     {
@@ -99,13 +101,14 @@ class PerangkatAjarSayaController extends Controller
                 ->orderBy('nama')
                 ->get(),
             'jenisPerangkatAjarId' => $request->integer('jenis_perangkat_ajar_id') ?: null,
+            'batasUnggahPdf' => $this->informasiBatasUnggahPdf(),
         ]);
     }
 
     public function store(Request $request)
     {
         $pegawai = $this->pegawaiAktif($request);
-        $data = $request->validate($this->aturanValidasiUnggah());
+        $data = $request->validate($this->aturanValidasiUnggah(), $this->pesanValidasiPdf());
         unset($data['file_pdf']);
         $this->pastikanPenugasanGuru($pegawai->id, (int) $data['tahun_pelajaran_id'], (int) $data['mata_pelajaran_id']);
         $this->pastikanJenisAktif((int) $data['jenis_perangkat_ajar_id']);
@@ -177,17 +180,23 @@ class PerangkatAjarSayaController extends Controller
         $this->pastikanPemilik($request, $perangkatAjar);
         $perangkatAjar->load(['tahunPelajaran', 'mataPelajaran', 'jenisPerangkatAjar']);
 
-        return view('perangkat-ajar-saya.edit', compact('perangkatAjar'));
+        return view('perangkat-ajar-saya.edit', [
+            'perangkatAjar' => $perangkatAjar,
+            'batasUnggahPdf' => $this->informasiBatasUnggahPdf(),
+        ]);
     }
 
     public function update(Request $request, PerangkatAjar $perangkatAjar)
     {
         $this->pastikanPemilik($request, $perangkatAjar);
-        $data = $request->validate([
-            'judul' => ['required', 'string', 'max:180'],
-            'catatan_guru' => ['nullable', 'string'],
-            'file_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
-        ]);
+        $data = $request->validate(
+            [
+                'judul' => ['required', 'string', 'max:180'],
+                'catatan_guru' => ['nullable', 'string'],
+                'file_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:'.self::BATAS_PDF_KILOBYTE],
+            ],
+            $this->pesanValidasiPdf(),
+        );
         $file = $request->file('file_pdf');
         unset($data['file_pdf']);
 
@@ -267,8 +276,67 @@ class PerangkatAjarSayaController extends Controller
             'jenis_perangkat_ajar_id' => ['required', 'exists:jenis_perangkat_ajar,id'],
             'judul' => ['required', 'string', 'max:180'],
             'catatan_guru' => ['nullable', 'string'],
-            'file_pdf' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+            'file_pdf' => ['required', 'file', 'mimes:pdf', 'max:'.self::BATAS_PDF_KILOBYTE],
         ];
+    }
+
+    private function pesanValidasiPdf(): array
+    {
+        return [
+            'file_pdf.required' => 'File PDF wajib dipilih.',
+            'file_pdf.file' => 'Berkas yang dipilih tidak dapat dibaca sebagai file.',
+            'file_pdf.mimes' => 'Perangkat ajar harus berupa file PDF.',
+            'file_pdf.max' => 'Ukuran PDF melebihi batas 10 MB. Pilih file PDF yang lebih kecil.',
+            'file_pdf.uploaded' => 'PDF gagal diunggah. Pastikan ukurannya tidak melebihi batas yang ditampilkan dan kapasitas unggah PHP server sudah mencukupi.',
+        ];
+    }
+
+    private function informasiBatasUnggahPdf(): array
+    {
+        $batasUploadPhp = $this->ukuranKonfigurasiKeByte(ini_get('upload_max_filesize'));
+        $batasPostPhp = $this->ukuranKonfigurasiKeByte(ini_get('post_max_size'));
+        $batasPostFile = $batasPostPhp
+            ? max(1, $batasPostPhp - (512 * 1024))
+            : null;
+        $daftarBatas = array_filter(
+            [self::BATAS_PDF_BYTE, $batasUploadPhp, $batasPostFile],
+            fn ($batas) => is_int($batas) && $batas > 0,
+        );
+        $batasEfektif = min($daftarBatas);
+
+        return [
+            'byte' => $batasEfektif,
+            'label' => $this->formatMegabyte($batasEfektif).' MB',
+            'dibatasi_server' => $batasEfektif < self::BATAS_PDF_BYTE,
+        ];
+    }
+
+    private function ukuranKonfigurasiKeByte(string|false $nilai): ?int
+    {
+        if ($nilai === false || trim($nilai) === '') {
+            return null;
+        }
+
+        $nilai = strtolower(trim($nilai));
+        $angka = (float) $nilai;
+
+        if ($angka <= 0) {
+            return null;
+        }
+
+        return match (substr($nilai, -1)) {
+            'g' => (int) round($angka * 1024 * 1024 * 1024),
+            'm' => (int) round($angka * 1024 * 1024),
+            'k' => (int) round($angka * 1024),
+            default => (int) round($angka),
+        };
+    }
+
+    private function formatMegabyte(int $byte): string
+    {
+        $nilai = number_format($byte / 1024 / 1024, 1, ',', '.');
+
+        return rtrim(rtrim($nilai, '0'), ',');
     }
 
     private function kirimNotifikasiMenungguPemeriksaan(Request $request, PerangkatAjar $perangkatAjar): void
@@ -415,6 +483,6 @@ class PerangkatAjarSayaController extends Controller
 
     private function kunciPerangkat(int $mataPelajaranId, int $jenisPerangkatAjarId): string
     {
-        return $mataPelajaranId . '-' . $jenisPerangkatAjarId;
+        return $mataPelajaranId.'-'.$jenisPerangkatAjarId;
     }
 }

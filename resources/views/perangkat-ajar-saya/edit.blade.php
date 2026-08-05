@@ -23,7 +23,7 @@
         </div>
     @endif
 
-    <form action="{{ route('perangkat-ajar-saya.update', $perangkatAjar) }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('perangkat-ajar-saya.update', $perangkatAjar) }}" method="POST" enctype="multipart/form-data" data-perangkat-ajar-form>
         @csrf
         @method('PUT')
 
@@ -70,8 +70,12 @@
 
                         <div class="field span-2">
                             <label for="file_pdf">Unggah revisi PDF</label>
-                            <input id="file_pdf" name="file_pdf" type="file" accept="application/pdf" class="file-input @error('file_pdf') is-invalid @enderror">
-                            <p class="help-text">Kosongkan jika hanya memperbarui judul atau catatan. Jika PDF baru diunggah, status kembali menjadi Menunggu pemeriksaan.</p>
+                            <input id="file_pdf" name="file_pdf" type="file" accept="application/pdf,.pdf" class="file-input @error('file_pdf') is-invalid @enderror" data-pdf-input data-max-bytes="{{ $batasUnggahPdf['byte'] }}" data-max-label="{{ $batasUnggahPdf['label'] }}" aria-describedby="file_pdf_help file_pdf_client_error">
+                            <p id="file_pdf_help" class="help-text">Kosongkan jika hanya memperbarui judul atau catatan. PDF baru maksimal {{ $batasUnggahPdf['label'] }} dan akan mengembalikan status menjadi Menunggu pemeriksaan.</p>
+                            @if ($batasUnggahPdf['dibatasi_server'])
+                                <p class="error-text">Konfigurasi PHP server saat ini membatasi unggahan sampai {{ $batasUnggahPdf['label'] }}.</p>
+                            @endif
+                            <p id="file_pdf_client_error" class="error-text" data-pdf-client-error role="alert" hidden></p>
                             @error('file_pdf')
                                 <p class="error-text">{{ $message }}</p>
                             @enderror
@@ -89,9 +93,12 @@
 
                 <div class="form-actions">
                     <a href="{{ route('perangkat-ajar-saya.show', $perangkatAjar) }}" class="button button-muted">Batal</a>
-                    <button type="submit" class="button button-primary">Simpan perubahan</button>
+                    <button type="submit" class="button button-primary" data-pdf-submit>Simpan perubahan</button>
                 </div>
+                <p class="help-text" data-pdf-upload-status role="status" hidden></p>
             </div>
         </div>
     </form>
+
+    @include('perangkat-ajar-saya.partials.validasi-file-pdf')
 @endsection
