@@ -8,6 +8,7 @@ use App\Models\KategoriPembinaanSiswa;
 use App\Models\Kelas;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\Pegawai;
+use App\Models\Pengguna;
 use App\Models\PenugasanGuruWaliSiswa;
 use App\Models\SaksiLaporanPembinaanSiswa;
 use App\Models\Siswa;
@@ -592,13 +593,32 @@ class LaporanPembinaanSiswaController extends Controller
 
     private function kirimNotifikasiLaporanBaru(Request $request, LaporanPembinaanSiswa $laporan): void
     {
-        $laporan->loadMissing(['siswa', 'kelas', 'kategoriPembinaanSiswa']);
+        $laporan->loadMissing(['siswa', 'kelas', 'kategoriPembinaanSiswa', 'pelaporPegawai']);
         $menungguBk = in_array($laporan->jenis_laporan, ['kejadian', 'pelanggaran'], true);
         $kodePeran = $menungguBk
             ? ['administrator', 'bk', 'wakil_pimpinan_kesiswaan']
             : ['administrator', 'bk'];
 
         $penerima = $this->notifikasiPenggunaService->penggunaDenganPeran($kodePeran, $request->user()?->id);
+
+        $penerimaWaliKelas = collect();
+        $perluNotifikasiWaliKelas = $menungguBk
+            && $laporan->anggota_kelas_id
+            && $laporan->wali_kelas_pegawai_id
+            && (int) $laporan->wali_kelas_pegawai_id !== (int) $laporan->pelapor_pegawai_id;
+
+        if ($perluNotifikasiWaliKelas) {
+            $penerimaWaliKelas = $this->notifikasiPenggunaService
+                ->penggunaUntukPegawai((int) $laporan->wali_kelas_pegawai_id)
+                ->filter(fn (Pengguna $pengguna) => (int) $pengguna->id !== (int) $request->user()?->id)
+                ->values();
+
+            $penggunaWaliKelasIds = $penerimaWaliKelas->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $penerima = $penerima
+                ->reject(fn (Pengguna $pengguna) => in_array((int) $pengguna->id, $penggunaWaliKelasIds, true))
+                ->values();
+        }
+
         $this->notifikasiPenggunaService->kirimKeBanyak(
             $penerima,
             $laporan->tingkat === 'berat' ? 'penting' : 'peringatan',
@@ -607,6 +627,27 @@ class LaporanPembinaanSiswaController extends Controller
             route('laporan-pembinaan-siswa.show', $laporan, false),
             "laporan-pembinaan-baru:{$laporan->id}",
         );
+
+        if ($penerimaWaliKelas->isNotEmpty()) {
+            $this->notifikasiPenggunaService->kirimKeBanyak(
+                $penerimaWaliKelas,
+                $laporan->tingkat === 'berat' ? 'penting' : 'peringatan',
+                'Siswa kelas Anda dilaporkan',
+                sprintf(
+                    '%s dari %s dilaporkan oleh %s dan menunggu pemeriksaan BK.',
+                    $laporan->siswa?->nama_lengkap ?? 'Siswa',
+                    $laporan->kelas?->nama ?? 'kelas Anda',
+                    $laporan->pelaporPegawai?->nama_lengkap ?? 'pegawai sekolah',
+                ),
+                route('laporan-pembinaan-siswa.show', $laporan, false),
+                "laporan-pembinaan-wali-kelas:{$laporan->id}",
+                [
+                    'laporan_pembinaan_siswa_id' => $laporan->id,
+                    'siswa_id' => $laporan->siswa_id,
+                    'kelas_id' => $laporan->kelas_id,
+                ],
+            );
+        }
     }
 
     private function inputId(Request $request, string $field): ?int

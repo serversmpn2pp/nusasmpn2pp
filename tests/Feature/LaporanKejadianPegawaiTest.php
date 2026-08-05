@@ -110,6 +110,52 @@ class LaporanKejadianPegawaiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_wali_kelas_mendapat_notifikasi_jika_siswanya_dilaporkan_pegawai_lain(): void
+    {
+        $data = $this->dataDasar();
+        $waliKelas = $this->buatAkunPegawai('Wali Kelas Penerima Notifikasi', '198303032013031003');
+        $data['kelas']->update(['wali_kelas_id' => $waliKelas['pegawai']->id]);
+
+        $this->actingAs($data['akun_pegawai'])
+            ->post(route('laporan-pembinaan-siswa.store'), [
+                'tanggal_kejadian' => now()->toDateString(),
+                'tempat_kejadian' => 'Halaman sekolah',
+                'siswa_id' => $data['siswa']->id,
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'kelas_id' => $data['kelas']->id,
+                'kronologi' => 'Pegawai lain melaporkan kejadian siswa kepada sekolah.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $laporanPegawaiLain = LaporanPembinaanSiswa::latest('id')->firstOrFail();
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $waliKelas['akun']->id,
+            'jenis' => 'peringatan',
+            'judul' => 'Siswa kelas Anda dilaporkan',
+            'tautan' => route('laporan-pembinaan-siswa.show', $laporanPegawaiLain, false),
+            'kunci_unik' => "laporan-pembinaan-wali-kelas:{$laporanPegawaiLain->id}",
+        ]);
+
+        $this->actingAs($waliKelas['akun'])
+            ->post(route('laporan-pembinaan-siswa.store'), [
+                'tanggal_kejadian' => now()->toDateString(),
+                'tempat_kejadian' => 'Dalam kelas',
+                'siswa_id' => $data['siswa']->id,
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'kelas_id' => $data['kelas']->id,
+                'kronologi' => 'Wali kelas membuat laporan untuk siswanya sendiri.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $laporanWaliKelas = LaporanPembinaanSiswa::latest('id')->firstOrFail();
+        $this->assertDatabaseMissing('notifikasi_pengguna', [
+            'pengguna_id' => $waliKelas['akun']->id,
+            'kunci_unik' => "laporan-pembinaan-wali-kelas:{$laporanWaliKelas->id}",
+        ]);
+    }
+
     private function dataDasar(): array
     {
         $tahun = TahunPelajaran::create([
