@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Cloudflare Tunnel meneruskan HTTPS ke origin lokal melalui proxy.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'admin' => PastikanAdministrator::class,
             'izin' => PastikanIzin::class,

@@ -169,6 +169,28 @@ class FotoProfilTest extends TestCase
             ->assertSee('Foto disimpan bersama data utama.');
     }
 
+    public function test_url_unggah_foto_aman_saat_diakses_melalui_cloudflare_https(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Pegawai Foto Cloudflare',
+            'nip' => '198001012010014444',
+            'foto' => 'pegawai/foto/cloudflare.jpg',
+            'aktif' => true,
+        ]);
+
+        $this->actingAs($administrator)
+            ->withHeaders([
+                'X-Forwarded-Host' => 'nusa.smpn2padangpanjang.sch.id',
+                'X-Forwarded-Port' => '443',
+                'X-Forwarded-Proto' => 'https',
+            ])
+            ->get('/pegawai/'.$pegawai->id.'/edit')
+            ->assertOk()
+            ->assertSee('data-upload-url="/pegawai/'.$pegawai->id.'/foto"', false)
+            ->assertSee('https://nusa.smpn2padangpanjang.sch.id/storage/pegawai/foto/cloudflare.jpg', false);
+    }
+
     private function buatFotoPng(string $nama, int $tambahanKilobyte = 0): UploadedFile
     {
         $lokasi = tempnam(sys_get_temp_dir(), 'nusa-foto-');

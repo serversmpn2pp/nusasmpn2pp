@@ -13,12 +13,16 @@
     $punyaFoto = filled($fotoUrl);
     $unggahOtomatis = filled($uploadUrl);
     $statusId = $id . '-status';
+    $bagianUploadUrl = $unggahOtomatis ? parse_url($uploadUrl) : [];
+    $uploadUrlSatuOrigin = $unggahOtomatis
+        ? ($bagianUploadUrl['path'] ?? '/') . (isset($bagianUploadUrl['query']) ? '?' . $bagianUploadUrl['query'] : '')
+        : '';
 @endphp
 
 <div
     class="avatar-upload foto-uploader {{ $variant === 'profile' ? 'foto-uploader-profile' : '' }}"
     data-photo-uploader
-    data-upload-url="{{ $uploadUrl }}"
+    data-upload-url="{{ $uploadUrlSatuOrigin }}"
     data-existing-url="{{ $fotoUrl }}"
     data-csrf="{{ csrf_token() }}"
     data-max-source-bytes="{{ 20 * 1024 * 1024 }}"
@@ -328,22 +332,34 @@
                             if (uploadUrl) {
                                 const data = new FormData();
                                 data.append('foto', fotoDiproses);
-                                const respons = await fetch(uploadUrl, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Accept': 'application/json',
-                                        'X-CSRF-TOKEN': csrf,
-                                        'X-Requested-With': 'XMLHttpRequest',
-                                    },
-                                    body: data,
-                                });
+                                let respons;
+
+                                try {
+                                    respons = await fetch(uploadUrl, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': csrf,
+                                            'X-Requested-With': 'XMLHttpRequest',
+                                        },
+                                        body: data,
+                                    });
+                                } catch {
+                                    throw new Error('Tidak dapat menghubungi server unggahan. Muat ulang halaman lalu coba kembali.');
+                                }
 
                                 if (! respons.ok) {
                                     throw new Error(await pesanRespons(respons));
                                 }
 
                                 const payload = await respons.json();
-                                urlTersimpan = `${payload.url}?versi=${Date.now()}`;
+                                const lokasiFoto = new URL(payload.url, window.location.origin);
+                                const urlFotoSatuOrigin = new URL(
+                                    `${lokasiFoto.pathname}${lokasiFoto.search}`,
+                                    window.location.origin,
+                                );
+                                urlFotoSatuOrigin.searchParams.set('versi', Date.now());
+                                urlTersimpan = urlFotoSatuOrigin.toString();
                                 preview.src = urlTersimpan;
                                 input.value = '';
                                 tampilkanStatus(
