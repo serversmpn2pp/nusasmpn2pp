@@ -5,9 +5,10 @@
 @section('content')
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
-        $tanggal = fn (mixed $value) => $value ? $value->format('d-m-Y') : '-';
         $oldSiswaIds = collect(old('siswa_ids', []))->map(fn ($id) => (int) $id)->all();
         $kelasPenuh = $kelasDipilih && $kelasDipilih->kapasitas && $jumlahAnggotaKelas >= $kelasDipilih->kapasitas;
+        $bolehKelolaKelas = auth()->user()?->memilikiIzin('kelas.kelola') ?? false;
+        $bolehLihatSiswa = auth()->user()?->memilikiIzin(['siswa.lihat', 'siswa.kelola']) ?? false;
     @endphp
 
     <style>
@@ -79,8 +80,26 @@
         .placement-member-actions {
             display: flex;
             flex-wrap: wrap;
-            justify-content: flex-end;
+            justify-content: flex-start;
             gap: 8px;
+        }
+
+        .placement-table.compact-member-table {
+            min-width: 0;
+        }
+
+        .compact-member-table th:first-child,
+        .compact-member-table td:first-child {
+            width: 120px;
+        }
+
+        .member-name-link {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .member-name-link:hover {
+            text-decoration: underline;
         }
 
         .placement-note {
@@ -331,16 +350,11 @@
                 </div>
 
                 <div class="desktop-only table-wrap">
-                    <table class="employee-table placement-table" style="min-width: 1040px;">
+                    <table class="employee-table placement-table compact-member-table">
                         <thead>
                             <tr>
                                 <th>No.</th>
-                                <th>Siswa</th>
-                                <th>Tanggal masuk</th>
-                                <th>Keterangan</th>
-                                @izin('kelas.kelola')
-                                    <th class="text-right">Aksi</th>
-                                @endizin
+                                <th>Nama</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -358,41 +372,29 @@
                                             {{ $item->nomor_absen ?: '-' }}
                                         @endizin
                                     </td>
-                                    <td data-label="Siswa">
-                                        <p class="person-name">{{ $item->siswa?->nama_lengkap ?: '-' }}</p>
-                                        <p class="person-meta">NIS {{ $item->siswa?->nis ?: '-' }} - NISN {{ $item->siswa?->nisn ?: '-' }}</p>
-                                    </td>
-                                    <td data-label="Tanggal masuk" style="width: 170px;">
-                                        @izin('kelas.kelola')
-                                            <input form="ubah-anggota-desktop-{{ $item->id }}" name="tanggal_masuk" type="date" value="{{ $item->tanggal_masuk ? $item->tanggal_masuk->format('Y-m-d') : '' }}" class="input input-sm">
+                                    <td data-label="Nama">
+                                        @if ($bolehLihatSiswa && $item->siswa)
+                                            <a href="{{ route('siswa.show', $item->siswa) }}" class="person-name member-name-link">{{ $item->siswa->nama_lengkap }}</a>
                                         @else
-                                            {{ $tanggal($item->tanggal_masuk) }}
-                                        @endizin
-                                    </td>
-                                    <td data-label="Keterangan">
-                                        @izin('kelas.kelola')
-                                            <input form="ubah-anggota-desktop-{{ $item->id }}" name="keterangan" type="text" value="{{ $item->keterangan }}" class="input input-sm">
-                                        @else
-                                            {{ $item->keterangan ?: '-' }}
-                                        @endizin
-                                    </td>
-                                    @izin('kelas.kelola')
-                                        <td data-label="Aksi">
-                                            <div class="placement-member-actions">
-                                                <button form="ubah-anggota-desktop-{{ $item->id }}" type="submit" class="button button-dark">Simpan</button>
+                                            <p class="person-name">{{ $item->siswa?->nama_lengkap ?: '-' }}</p>
+                                        @endif
+
+                                        @if ($bolehKelolaKelas)
+                                            <div class="placement-member-actions" style="margin-top: 9px;">
+                                                <button form="ubah-anggota-desktop-{{ $item->id }}" type="submit" class="button button-dark button-sm">Simpan nomor</button>
                                                 <form action="{{ route('anggota-kelas.destroy', $item) }}" method="POST" onsubmit="return confirm('Keluarkan siswa ini dari kelas? Data siswa tidak akan dihapus.')">
                                                     @csrf
                                                     @method('DELETE')
                                                     <input type="hidden" name="kembali" value="penempatan">
-                                                    <button type="submit" class="button button-danger">Keluarkan</button>
+                                                    <button type="submit" class="button button-danger button-sm">Keluarkan</button>
                                                 </form>
                                             </div>
-                                        </td>
-                                    @endizin
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ auth()->user()?->memilikiIzin('kelas.kelola') ? 5 : 4 }}" class="empty-state">Belum ada siswa di kelas ini.</td>
+                                    <td colspan="2" class="empty-state">Belum ada siswa di kelas ini.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -404,13 +406,16 @@
                         <article class="mobile-card">
                             <div class="mobile-card-head">
                                 <div>
-                                    <p class="person-name">{{ $item->siswa?->nama_lengkap ?: '-' }}</p>
-                                    <p class="person-meta">NISN {{ $item->siswa?->nisn ?: '-' }}</p>
+                                    @if ($bolehLihatSiswa && $item->siswa)
+                                        <a href="{{ route('siswa.show', $item->siswa) }}" class="person-name member-name-link">{{ $item->siswa->nama_lengkap }}</a>
+                                    @else
+                                        <p class="person-name">{{ $item->siswa?->nama_lengkap ?: '-' }}</p>
+                                    @endif
                                 </div>
                                 <span class="badge badge-active">No. {{ $item->nomor_absen ?: '-' }}</span>
                             </div>
 
-                            @izin('kelas.kelola')
+                            @if ($bolehKelolaKelas)
                                 <form id="ubah-anggota-mobile-{{ $item->id }}" action="{{ route('anggota-kelas.update', $item) }}" method="POST" style="margin-top: 14px;">
                                     @csrf
                                     @method('PATCH')
@@ -421,19 +426,13 @@
                                             <label for="nomor_absen_mobile_{{ $item->id }}">Nomor absen</label>
                                             <input id="nomor_absen_mobile_{{ $item->id }}" name="nomor_absen" type="number" min="1" max="500" value="{{ $item->nomor_absen }}" class="input input-sm">
                                         </div>
-                                        <div class="field">
-                                            <label for="tanggal_masuk_mobile_{{ $item->id }}">Tanggal masuk</label>
-                                            <input id="tanggal_masuk_mobile_{{ $item->id }}" name="tanggal_masuk" type="date" value="{{ $item->tanggal_masuk ? $item->tanggal_masuk->format('Y-m-d') : '' }}" class="input input-sm">
-                                        </div>
-                                        <div class="field span-2">
-                                            <label for="keterangan_mobile_{{ $item->id }}">Keterangan</label>
-                                            <input id="keterangan_mobile_{{ $item->id }}" name="keterangan" type="text" value="{{ $item->keterangan }}" class="input input-sm">
-                                        </div>
                                     </div>
                                 </form>
+                            @endif
 
+                            @if ($bolehKelolaKelas)
                                 <div class="placement-member-actions" style="margin-top: 14px; justify-content: flex-start;">
-                                    <button form="ubah-anggota-mobile-{{ $item->id }}" type="submit" class="button button-dark">Simpan</button>
+                                    <button form="ubah-anggota-mobile-{{ $item->id }}" type="submit" class="button button-dark">Simpan nomor</button>
                                     <form action="{{ route('anggota-kelas.destroy', $item) }}" method="POST" onsubmit="return confirm('Keluarkan siswa ini dari kelas? Data siswa tidak akan dihapus.')">
                                         @csrf
                                         @method('DELETE')
@@ -441,18 +440,7 @@
                                         <button type="submit" class="button button-danger">Keluarkan</button>
                                     </form>
                                 </div>
-                            @else
-                                <dl class="quick-facts">
-                                    <div>
-                                        <dt>Tanggal masuk</dt>
-                                        <dd>{{ $tanggal($item->tanggal_masuk) }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Keterangan</dt>
-                                        <dd>{{ $item->keterangan ?: '-' }}</dd>
-                                    </div>
-                                </dl>
-                            @endizin
+                            @endif
                         </article>
                     @empty
                         <div class="empty-state">Belum ada siswa di kelas ini.</div>

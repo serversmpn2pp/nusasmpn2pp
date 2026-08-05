@@ -6,8 +6,8 @@ use App\Models\AbsensiPegawai;
 use App\Models\Pegawai;
 use App\Models\PengaturanAbsensiPegawai;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -15,39 +15,58 @@ class RekapAbsensiPegawaiHarianController extends Controller
 {
     public function index(Request $request)
     {
+        return $this->tampilkanRekap($request);
+    }
+
+    public function pribadi(Request $request)
+    {
+        return $this->tampilkanRekap($request, true);
+    }
+
+    private function tampilkanRekap(Request $request, bool $paksaPribadi = false)
+    {
         $pengguna = $request->user();
-        $cakupanAbsensiPegawaiPribadi = $pengguna?->membatasiCakupanAbsensiPegawai() ?? false;
+        $cakupanAbsensiPegawaiPribadi = $paksaPribadi || ($pengguna?->membatasiCakupanAbsensiPegawai() ?? false);
         $pegawaiIdsTerjangkau = $cakupanAbsensiPegawaiPribadi ? $this->pegawaiIdsPribadi($request) : null;
 
-        $data = $request->validate([
+        $aturan = [
             'tanggal' => ['nullable', 'date'],
-            'kata_kunci' => ['nullable', 'string', 'max:100'],
-            'jenis_pegawai' => ['nullable', 'string', 'max:100'],
-            'pegawai_id' => ['nullable', 'integer', 'exists:pegawai,id'],
-            'status_pegawai' => ['nullable', Rule::in(['semua', 'aktif', 'nonaktif'])],
-            'status_kehadiran' => ['nullable', Rule::in(['semua', ...array_keys(AbsensiPegawai::DAFTAR_STATUS_KEHADIRAN)])],
-        ]);
+        ];
+
+        if (! $cakupanAbsensiPegawaiPribadi) {
+            $aturan += [
+                'kata_kunci' => ['nullable', 'string', 'max:100'],
+                'jenis_pegawai' => ['nullable', 'string', 'max:100'],
+                'pegawai_id' => ['nullable', 'integer', 'exists:pegawai,id'],
+                'status_pegawai' => ['nullable', Rule::in(['semua', 'aktif', 'nonaktif'])],
+                'status_kehadiran' => ['nullable', Rule::in(['semua', ...array_keys(AbsensiPegawai::DAFTAR_STATUS_KEHADIRAN)])],
+            ];
+        }
+
+        $data = $request->validate($aturan);
 
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->toDateString();
         $kataKunci = $cakupanAbsensiPegawaiPribadi ? '' : trim((string) ($data['kata_kunci'] ?? ''));
         $jenisPegawai = $cakupanAbsensiPegawaiPribadi ? '' : ($data['jenis_pegawai'] ?? '');
         $pegawaiId = $cakupanAbsensiPegawaiPribadi ? $request->user()?->pegawai_id : ($data['pegawai_id'] ?? null);
         $statusPegawai = $cakupanAbsensiPegawaiPribadi ? 'semua' : ($data['status_pegawai'] ?? 'aktif');
-        $statusKehadiran = $data['status_kehadiran'] ?? 'semua';
-        $daftarJenisPegawai = Pegawai::query()
-            ->when(is_array($pegawaiIdsTerjangkau), fn ($query) => $query->whereIn('id', $pegawaiIdsTerjangkau))
-            ->whereNotNull('jenis_pegawai')
-            ->where('jenis_pegawai', '!=', '')
-            ->select('jenis_pegawai')
-            ->distinct()
-            ->orderBy('jenis_pegawai')
-            ->pluck('jenis_pegawai');
-        $daftarPegawai = Pegawai::query()
-            ->when(is_array($pegawaiIdsTerjangkau), fn ($query) => $query->whereIn('id', $pegawaiIdsTerjangkau))
-            ->when($statusPegawai === 'aktif', fn ($query) => $query->where('aktif', true))
-            ->when($statusPegawai === 'nonaktif', fn ($query) => $query->where('aktif', false))
-            ->orderBy('nama_lengkap')
-            ->get(['id', 'nama_lengkap', 'nip']);
+        $statusKehadiran = $cakupanAbsensiPegawaiPribadi ? 'semua' : ($data['status_kehadiran'] ?? 'semua');
+        $daftarJenisPegawai = $cakupanAbsensiPegawaiPribadi
+            ? collect()
+            : Pegawai::query()
+                ->whereNotNull('jenis_pegawai')
+                ->where('jenis_pegawai', '!=', '')
+                ->select('jenis_pegawai')
+                ->distinct()
+                ->orderBy('jenis_pegawai')
+                ->pluck('jenis_pegawai');
+        $daftarPegawai = $cakupanAbsensiPegawaiPribadi
+            ? collect()
+            : Pegawai::query()
+                ->when($statusPegawai === 'aktif', fn ($query) => $query->where('aktif', true))
+                ->when($statusPegawai === 'nonaktif', fn ($query) => $query->where('aktif', false))
+                ->orderBy('nama_lengkap')
+                ->get(['id', 'nama_lengkap', 'nip']);
 
         $pegawai = $this->ambilPegawai(
             kataKunci: $kataKunci,
@@ -75,7 +94,7 @@ class RekapAbsensiPegawaiHarianController extends Controller
             'rekapAbsensi',
             'ringkasan',
             'cakupanAbsensiPegawaiPribadi',
-        ));
+        ))->with('halamanPribadi', $cakupanAbsensiPegawaiPribadi);
     }
 
     public function editKoreksi(Request $request, Pegawai $pegawai)
@@ -181,10 +200,10 @@ class RekapAbsensiPegawaiHarianController extends Controller
             ->when($pegawaiId, fn ($query) => $query->whereKey($pegawaiId))
             ->when($kataKunci !== '', function ($query) use ($kataKunci) {
                 $query->where(function ($query) use ($kataKunci) {
-                    $query->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('nip', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('jabatan_utama', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('jenis_pegawai', 'ilike', '%' . $kataKunci . '%');
+                    $query->where('nama_lengkap', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('nip', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('jabatan_utama', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('jenis_pegawai', 'ilike', '%'.$kataKunci.'%');
                 });
             })
             ->orderBy('nama_lengkap')

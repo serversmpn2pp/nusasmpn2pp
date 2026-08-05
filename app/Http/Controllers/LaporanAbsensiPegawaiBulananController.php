@@ -18,9 +18,19 @@ class LaporanAbsensiPegawaiBulananController extends Controller
         return view('laporan-absensi-pegawai-bulanan.index', $this->bangunDataLaporan($request));
     }
 
+    public function pribadi(Request $request)
+    {
+        return view('laporan-absensi-pegawai-bulanan.index', $this->bangunDataLaporan($request, paksaPribadi: true));
+    }
+
     public function cetak(Request $request)
     {
         return view('laporan-absensi-pegawai-bulanan.cetak', $this->bangunDataLaporan($request));
+    }
+
+    public function cetakPribadi(Request $request)
+    {
+        return view('laporan-absensi-pegawai-bulanan.cetak', $this->bangunDataLaporan($request, paksaPribadi: true));
     }
 
     public function cetakPegawai(Request $request, Pegawai $pegawai)
@@ -28,17 +38,17 @@ class LaporanAbsensiPegawaiBulananController extends Controller
         return view('laporan-absensi-pegawai-bulanan.cetak', $this->bangunDataLaporan($request, $pegawai));
     }
 
-    private function bangunDataLaporan(Request $request, ?Pegawai $pegawaiCetak = null): array
+    private function bangunDataLaporan(Request $request, ?Pegawai $pegawaiCetak = null, bool $paksaPribadi = false): array
     {
         $pengguna = $request->user();
-        $cakupanAbsensiPegawaiPribadi = $pengguna?->membatasiCakupanAbsensiPegawai() ?? false;
+        $cakupanAbsensiPegawaiPribadi = $paksaPribadi || ($pengguna?->membatasiCakupanAbsensiPegawai() ?? false);
         $pegawaiIdsTerjangkau = $cakupanAbsensiPegawaiPribadi ? $this->pegawaiIdsPribadi($request) : null;
 
         if ($pegawaiCetak) {
             $this->pastikanBolehAksesPegawai($request, $pegawaiCetak);
         }
 
-        $data = $request->validate($this->aturanFilter());
+        $data = $request->validate($this->aturanFilter($cakupanAbsensiPegawaiPribadi));
         $bulan = $data['bulan'] ?? now()->format('Y-m');
         $bulanCarbon = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
         $tanggalMulai = $bulanCarbon->copy()->startOfMonth();
@@ -49,21 +59,23 @@ class LaporanAbsensiPegawaiBulananController extends Controller
         $statusPegawai = $cakupanAbsensiPegawaiPribadi ? 'semua' : ($data['status_pegawai'] ?? 'aktif');
         $tanggalPeriode = $this->tanggalPeriode($tanggalMulai, $tanggalSelesai);
 
-        $daftarJenisPegawai = Pegawai::query()
-            ->when(is_array($pegawaiIdsTerjangkau), fn ($query) => $query->whereIn('id', $pegawaiIdsTerjangkau))
-            ->whereNotNull('jenis_pegawai')
-            ->where('jenis_pegawai', '!=', '')
-            ->select('jenis_pegawai')
-            ->distinct()
-            ->orderBy('jenis_pegawai')
-            ->pluck('jenis_pegawai');
+        $daftarJenisPegawai = $cakupanAbsensiPegawaiPribadi
+            ? collect()
+            : Pegawai::query()
+                ->whereNotNull('jenis_pegawai')
+                ->where('jenis_pegawai', '!=', '')
+                ->select('jenis_pegawai')
+                ->distinct()
+                ->orderBy('jenis_pegawai')
+                ->pluck('jenis_pegawai');
 
-        $daftarPegawai = Pegawai::query()
-            ->when(is_array($pegawaiIdsTerjangkau), fn ($query) => $query->whereIn('id', $pegawaiIdsTerjangkau))
-            ->when($statusPegawai === 'aktif', fn ($query) => $query->where('aktif', true))
-            ->when($statusPegawai === 'nonaktif', fn ($query) => $query->where('aktif', false))
-            ->orderBy('nama_lengkap')
-            ->get(['id', 'nama_lengkap', 'nip']);
+        $daftarPegawai = $cakupanAbsensiPegawaiPribadi
+            ? collect()
+            : Pegawai::query()
+                ->when($statusPegawai === 'aktif', fn ($query) => $query->where('aktif', true))
+                ->when($statusPegawai === 'nonaktif', fn ($query) => $query->where('aktif', false))
+                ->orderBy('nama_lengkap')
+                ->get(['id', 'nama_lengkap', 'nip']);
 
         $pegawai = $pegawaiCetak
             ? collect([$pegawaiCetak])
@@ -101,20 +113,28 @@ class LaporanAbsensiPegawaiBulananController extends Controller
             'ringkasan',
             'cakupanAbsensiPegawaiPribadi',
         ) + [
+            'halamanPribadi' => $cakupanAbsensiPegawaiPribadi,
             'tanggalCetak' => now()->copy()->locale('id')->translatedFormat('d F Y'),
             'jumlahLembar' => $laporanAbsensiPegawai->count(),
         ];
     }
 
-    private function aturanFilter(): array
+    private function aturanFilter(bool $pribadi = false): array
     {
-        return [
+        $aturan = [
             'bulan' => ['nullable', 'date_format:Y-m'],
-            'kata_kunci' => ['nullable', 'string', 'max:100'],
-            'jenis_pegawai' => ['nullable', 'string', 'max:100'],
-            'pegawai_id' => ['nullable', 'integer', 'exists:pegawai,id'],
-            'status_pegawai' => ['nullable', Rule::in(['semua', 'aktif', 'nonaktif'])],
         ];
+
+        if (! $pribadi) {
+            $aturan += [
+                'kata_kunci' => ['nullable', 'string', 'max:100'],
+                'jenis_pegawai' => ['nullable', 'string', 'max:100'],
+                'pegawai_id' => ['nullable', 'integer', 'exists:pegawai,id'],
+                'status_pegawai' => ['nullable', Rule::in(['semua', 'aktif', 'nonaktif'])],
+            ];
+        }
+
+        return $aturan;
     }
 
     private function ambilPegawai(
@@ -142,10 +162,10 @@ class LaporanAbsensiPegawaiBulananController extends Controller
             ->when($pegawaiId, fn ($query) => $query->whereKey($pegawaiId))
             ->when($kataKunci !== '', function ($query) use ($kataKunci) {
                 $query->where(function ($query) use ($kataKunci) {
-                    $query->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('nip', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('jabatan_utama', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('jenis_pegawai', 'ilike', '%' . $kataKunci . '%');
+                    $query->where('nama_lengkap', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('nip', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('jabatan_utama', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('jenis_pegawai', 'ilike', '%'.$kataKunci.'%');
                 });
             })
             ->orderBy('nama_lengkap')
@@ -290,7 +310,7 @@ class LaporanAbsensiPegawaiBulananController extends Controller
             'hari' => PengaturanAbsensiPegawai::DAFTAR_HARI[$this->hariDariTanggal($tanggalCarbon->isoWeekday())]['label'] ?? '-',
             'jadwal' => $jadwal,
             'jam_jadwal' => $jadwal
-                ? $jadwal->formatJam($jadwal->jam_masuk) . ' - ' . $jadwal->formatJam($jadwal->jam_pulang)
+                ? $jadwal->formatJam($jadwal->jam_masuk).' - '.$jadwal->formatJam($jadwal->jam_pulang)
                 : '-',
             'absensi' => $absensi,
             'status_kehadiran' => $status,

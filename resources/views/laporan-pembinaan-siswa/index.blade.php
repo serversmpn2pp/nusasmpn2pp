@@ -13,9 +13,93 @@
         $ruteIndex=$konteksGuruWali?'pembinaan-siswa-wali.index':'laporan-pembinaan-siswa.index';
         $ruteShow=$konteksGuruWali?'pembinaan-siswa-wali.show':'laporan-pembinaan-siswa.show';
     @endphp
-    <style>.report-filter{align-items:end;display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}.report-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}@media(max-width:1050px){.report-filter{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.report-filter{grid-template-columns:1fr}}</style>
+    <style>
+        .report-page-header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) max-content;
+        }
 
-    <div class="page-header"><div><p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p><h1 class="page-title">{{ $konteksGuruWali ? 'Pembinaan Siswa Wali' : 'Pembinaan & Poin Siswa' }}</h1><p class="page-subtitle">{{ $konteksGuruWali ? 'Riwayat pembinaan dan pelanggaran khusus siswa yang menjadi tanggung jawab pendampingan Anda.' : 'Pegawai melaporkan kejadian; BK memeriksa dan menentukan pembinaan atau sanksi poin.' }}</p></div>@if($bolehLapor || $bolehPusatVerifikasi)<div class="actions">@if($bolehPusatVerifikasi)<a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-dark">Pusat Verifikasi</a>@endif @if($bolehCatatPembinaan)<a href="{{ route('laporan-pembinaan-siswa.create',['jenis'=>'pembinaan']) }}" class="button button-muted">Catat pembinaan</a>@endif @if($bolehLapor)<a href="{{ route('laporan-pembinaan-siswa.create',['jenis'=>'kejadian']) }}" class="button button-primary">Laporkan kejadian</a>@endif</div>@endif</div>
+        .report-page-header-copy {
+            min-width: 0;
+        }
+
+        .report-header-actions {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 10px;
+            justify-content: end;
+        }
+
+        .report-header-actions .button {
+            min-height: 40px;
+            padding: 9px 12px;
+            font-size: .86rem;
+        }
+
+        .report-filter {
+            align-items: end;
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .report-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        @media (max-width: 1050px) {
+            .report-page-header {
+                grid-template-columns: 1fr;
+            }
+
+            .report-header-actions {
+                justify-content: start;
+            }
+
+            .report-filter {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 700px) {
+            .report-filter {
+                grid-template-columns: 1fr;
+            }
+
+            .report-header-actions {
+                flex-direction: column;
+            }
+
+            .report-header-actions .button {
+                width: 100%;
+            }
+        }
+    </style>
+
+    <div class="page-header report-page-header">
+        <div class="report-page-header-copy">
+            <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p>
+            <h1 class="page-title">{{ $konteksGuruWali ? 'Pembinaan Siswa Wali' : 'Pembinaan & Poin Siswa' }}</h1>
+            <p class="page-subtitle">{{ $konteksGuruWali ? 'Riwayat pembinaan dan pelanggaran khusus siswa yang menjadi tanggung jawab pendampingan Anda.' : 'Pegawai melaporkan kejadian; BK memeriksa dan menentukan pembinaan atau sanksi poin.' }}</p>
+        </div>
+
+        @if ($bolehLapor || $bolehPusatVerifikasi)
+            <div class="report-header-actions">
+                @if ($bolehPusatVerifikasi)
+                    <a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-dark">Pusat Verifikasi</a>
+                @endif
+                @if ($bolehCatatPembinaan)
+                    <a href="{{ route('laporan-pembinaan-siswa.create', ['jenis' => 'pembinaan']) }}" class="button button-muted">Catat pembinaan</a>
+                @endif
+                @if ($bolehLapor)
+                    <a href="{{ route('laporan-pembinaan-siswa.create', ['jenis' => 'kejadian']) }}" class="button button-primary">Laporkan kejadian</a>
+                @endif
+            </div>
+        @endif
+    </div>
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 
     <div class="stats-grid"><div class="panel stat"><p class="stat-label">Semua laporan</p><p class="stat-value">{{ $ringkasan['total'] }}</p></div><div class="panel stat active"><p class="stat-label">Laporan kejadian</p><p class="stat-value">{{ $ringkasan['kejadian'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Pelanggaran berpoin</p><p class="stat-value">{{ $ringkasan['pelanggaran'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Menunggu BK</p><p class="stat-value">{{ $ringkasan['menunggu'] }}</p></div><div class="panel stat active"><p class="stat-label">Disahkan</p><p class="stat-value">{{ $ringkasan['disahkan'] }}</p></div></div>

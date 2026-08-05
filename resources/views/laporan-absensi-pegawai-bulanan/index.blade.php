@@ -1,18 +1,23 @@
 @extends('layouts.app')
 
-@section('title', 'Laporan Absensi Pegawai Bulanan - NUSA')
+@section('title', ($halamanPribadi ?? false) ? 'Laporan Absensi Saya - NUSA' : 'Laporan Absensi Pegawai Bulanan - NUSA')
 
 @section('content')
     @php
         $formatPersen = fn (mixed $nilai) => rtrim(rtrim(number_format((float) $nilai, 1, ',', '.'), '0'), ',') . '%';
         $formatMenit = fn (int $menit) => $menit > 0 ? $menit . ' menit' : '-';
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
+        $halamanPribadi = $halamanPribadi ?? false;
+        $routeLaporan = $halamanPribadi ? 'absensi-pegawai-saya.laporan' : 'laporan-absensi-pegawai-bulanan.index';
+        $routeRekap = $halamanPribadi ? 'absensi-pegawai-saya.rekap' : 'rekap-absensi-pegawai-harian.index';
+        $routeCetak = $halamanPribadi ? 'absensi-pegawai-saya.cetak' : 'laporan-absensi-pegawai-bulanan.cetak';
+        $bolehCetakPerPegawai = ! $halamanPribadi && (auth()->user()?->memilikiIzin(['laporan.export', 'absensi_pegawai.pribadi']) ?? false);
         $parameterCetak = array_filter([
             'bulan' => $bulan,
-            'kata_kunci' => $kataKunci,
-            'jenis_pegawai' => $jenisPegawai,
-            'pegawai_id' => $pegawaiId,
-            'status_pegawai' => $statusPegawai,
+            'kata_kunci' => $halamanPribadi ? null : $kataKunci,
+            'jenis_pegawai' => $halamanPribadi ? null : $jenisPegawai,
+            'pegawai_id' => $halamanPribadi ? null : $pegawaiId,
+            'status_pegawai' => $halamanPribadi ? null : $statusPegawai,
         ], fn ($nilai) => filled($nilai));
     @endphp
 
@@ -54,6 +59,20 @@
         .report-actions {
             grid-column: span 9;
             justify-content: flex-end;
+        }
+
+        .employee-report-filter.personal-filter {
+            grid-template-columns: minmax(200px, 280px) auto;
+            justify-content: start;
+        }
+
+        .personal-filter .report-month,
+        .personal-filter .report-actions {
+            grid-column: auto;
+        }
+
+        .personal-filter .report-actions {
+            justify-content: flex-start;
         }
 
         .employee-report-stats {
@@ -100,33 +119,34 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">Absensi Pegawai</p>
-            <h1 class="page-title">Laporan absensi pegawai bulanan</h1>
+            <h1 class="page-title">{{ $halamanPribadi ? 'Laporan absensi saya' : 'Laporan absensi pegawai bulanan' }}</h1>
         </div>
 
         <div class="actions">
-            <a href="{{ route('rekap-absensi-pegawai-harian.index') }}" class="button button-muted">Rekap harian</a>
-            @izin('laporan.export', 'absensi_pegawai.pribadi')
-                <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak', $parameterCetak) }}" target="_blank" rel="noopener" class="button button-primary">Cetak semua</a>
-            @endizin
-            @izin('absensi.scan')
-                <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="button button-dark">Scan pegawai</a>
-            @endizin
+            <a href="{{ route($routeRekap) }}" class="button button-muted">Rekap harian</a>
+            <a href="{{ route($routeCetak, $parameterCetak) }}" target="_blank" rel="noopener" class="button button-primary">{{ $halamanPribadi ? 'Cetak laporan saya' : 'Cetak semua' }}</a>
+            @if (! $halamanPribadi)
+                @izin('absensi.scan')
+                    <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="button button-dark">Scan pegawai</a>
+                @endizin
+            @endif
         </div>
     </div>
 
-    <form action="{{ route('laporan-absensi-pegawai-bulanan.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
-        <div class="employee-report-filter">
+    <form action="{{ route($routeLaporan) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+        <div class="employee-report-filter {{ $halamanPribadi ? 'personal-filter' : '' }}">
             <div class="field report-month">
                 <label for="bulan">Bulan</label>
                 <input id="bulan" type="month" name="bulan" value="{{ $bulan }}" class="input">
             </div>
 
-            <div class="field report-search">
+            @if (! $halamanPribadi)
+                <div class="field report-search">
                 <label for="kata_kunci">Cari pegawai</label>
                 <input id="kata_kunci" type="search" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nama, NIP, jabatan">
-            </div>
+                </div>
 
-            <div class="field report-kind">
+                <div class="field report-kind">
                 <label for="jenis_pegawai">Jenis pegawai</label>
                 <select id="jenis_pegawai" name="jenis_pegawai" class="select">
                     <option value="">Semua jenis</option>
@@ -134,39 +154,36 @@
                         <option value="{{ $item }}" @selected($jenisPegawai === $item)>{{ $item }}</option>
                     @endforeach
                 </select>
-            </div>
+                </div>
 
-            <div class="field report-person">
+                <div class="field report-person">
                 <label for="pegawai_id">Pegawai</label>
                 <select id="pegawai_id" name="pegawai_id" class="select">
-                    <option value="">{{ ($cakupanAbsensiPegawaiPribadi ?? false) ? 'Data saya' : 'Semua pegawai' }}</option>
+                    <option value="">Semua pegawai</option>
                     @foreach ($daftarPegawai as $pegawai)
                         <option value="{{ $pegawai->id }}" @selected((string) $pegawaiId === (string) $pegawai->id)>
                             {{ $pegawai->nama_lengkap }} - {{ $pegawai->nip ?: 'NIP kosong' }}
                         </option>
                     @endforeach
                 </select>
-            </div>
+                </div>
 
-            <div class="field report-status">
+                <div class="field report-status">
                 <label for="status_pegawai">Status pegawai</label>
                 <select id="status_pegawai" name="status_pegawai" class="select">
                     <option value="aktif" @selected($statusPegawai === 'aktif')>Aktif</option>
                     <option value="nonaktif" @selected($statusPegawai === 'nonaktif')>Nonaktif</option>
                     <option value="semua" @selected($statusPegawai === 'semua')>Semua</option>
                 </select>
-            </div>
+                </div>
+            @endif
 
             <div class="actions report-actions">
                 <button type="submit" class="button button-dark">Tampilkan</button>
-                <a href="{{ route('laporan-absensi-pegawai-bulanan.index') }}" class="button button-muted">Reset</a>
+                <a href="{{ route($routeLaporan) }}" class="button button-muted">{{ $halamanPribadi ? 'Bulan ini' : 'Reset' }}</a>
             </div>
         </div>
     </form>
-
-    @if ($cakupanAbsensiPegawaiPribadi ?? false)
-        <div class="alert">Laporan absensi pegawai dibatasi pada data absensi Anda sendiri.</div>
-    @endif
 
     <div class="employee-report-stats">
         <div class="panel stat">
@@ -234,9 +251,9 @@
                         <th>Terlambat</th>
                         <th>Pulang cepat</th>
                         <th>% Hadir</th>
-                        @izin('laporan.export', 'absensi_pegawai.pribadi')
+                        @if ($bolehCetakPerPegawai)
                             <th class="text-right">Aksi</th>
-                        @endizin
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -293,17 +310,17 @@
                                     {{ $formatPersen($item['persentase_hadir']) }}
                                 </span>
                             </td>
-                            @izin('laporan.export', 'absensi_pegawai.pribadi')
+                            @if ($bolehCetakPerPegawai)
                                 <td data-label="Aksi">
                                     <div class="actions" style="justify-content: flex-end;">
                                         <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak-pegawai', ['pegawai' => $pegawai, ...$parameterCetak]) }}" target="_blank" rel="noopener" class="button button-dark button-sm">Cetak</a>
                                     </div>
                                 </td>
-                            @endizin
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->user()?->memilikiIzin(['laporan.export', 'absensi_pegawai.pribadi']) ? 12 : 11 }}" class="empty-state">Belum ada pegawai pada pilihan ini.</td>
+                            <td colspan="{{ $bolehCetakPerPegawai ? 12 : 11 }}" class="empty-state">{{ $halamanPribadi ? 'Belum ada laporan absensi pada bulan ini.' : 'Belum ada pegawai pada pilihan ini.' }}</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -372,16 +389,16 @@
                                 </div>
                             </dl>
 
-                            @izin('laporan.export', 'absensi_pegawai.pribadi')
+                            @if ($bolehCetakPerPegawai)
                                 <div class="actions" style="margin-top: 14px;">
                                     <a href="{{ route('laporan-absensi-pegawai-bulanan.cetak-pegawai', ['pegawai' => $pegawai, ...$parameterCetak]) }}" target="_blank" rel="noopener" class="button button-dark">Cetak</a>
                                 </div>
-                            @endizin
+                            @endif
                         </div>
                     </div>
                 </article>
             @empty
-                <div class="empty-state">Belum ada pegawai pada pilihan ini.</div>
+                <div class="empty-state">{{ $halamanPribadi ? 'Belum ada laporan absensi pada bulan ini.' : 'Belum ada pegawai pada pilihan ini.' }}</div>
             @endforelse
         </div>
     </section>

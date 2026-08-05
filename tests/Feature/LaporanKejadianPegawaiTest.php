@@ -61,7 +61,8 @@ class LaporanKejadianPegawaiTest extends TestCase
         $this->get(route('laporan-pembinaan-siswa.index'))
             ->assertOk()
             ->assertSee($data['siswa']->nama_lengkap)
-            ->assertSee('Laporkan kejadian');
+            ->assertSee('Laporkan kejadian')
+            ->assertSee('class="report-header-actions"', false);
 
         $this->get(route('laporan-pembinaan-siswa.show', $laporan))
             ->assertOk();

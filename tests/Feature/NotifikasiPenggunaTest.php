@@ -106,4 +106,71 @@ class NotifikasiPenggunaTest extends TestCase
 
         $this->assertSame(0, NotifikasiPengguna::belumDibaca()->count());
     }
+
+    public function test_ringkasan_notifikasi_diperbarui_dengan_enam_data_terbaru_milik_pengguna(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $penggunaLain = Pengguna::create([
+            'nama' => 'Pengguna Notifikasi Lain',
+            'username' => 'pengguna.notifikasi.lain',
+            'kata_sandi' => 'rahasia-sekolah',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+
+        foreach (range(1, 7) as $urutan) {
+            NotifikasiPengguna::create([
+                'pengguna_id' => $administrator->id,
+                'jenis' => 'informasi',
+                'judul' => "Notifikasi {$urutan}",
+                'pesan' => "Isi notifikasi {$urutan}.",
+                'dibaca_pada' => $urutan === 1 ? now() : null,
+            ]);
+        }
+
+        NotifikasiPengguna::create([
+            'pengguna_id' => $penggunaLain->id,
+            'jenis' => 'penting',
+            'judul' => 'Notifikasi pengguna lain',
+            'pesan' => 'Tidak boleh muncul pada ringkasan administrator.',
+        ]);
+
+        $respons = $this->actingAs($administrator)
+            ->getJson(route('notifikasi.ringkasan'))
+            ->assertOk()
+            ->assertJsonPath('jumlah_belum_dibaca', 6)
+            ->assertJsonCount(6, 'notifikasi')
+            ->assertJsonPath('notifikasi.0.judul', 'Notifikasi 7')
+            ->assertJsonPath('notifikasi.5.judul', 'Notifikasi 2')
+            ->assertJsonMissing(['judul' => 'Notifikasi pengguna lain']);
+
+        $this->assertStringContainsString('no-store', (string) $respons->headers->get('Cache-Control'));
+
+        $respons->assertJsonStructure([
+            'notifikasi' => [[
+                'id',
+                'jenis',
+                'judul',
+                'pesan',
+                'belum_dibaca',
+                'dibuat_pada',
+                'waktu_relatif',
+                'url_buka',
+            ]],
+        ]);
+    }
+
+    public function test_layout_memeriksa_notifikasi_setiap_tiga_puluh_detik_tanpa_refresh(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $this->actingAs($administrator)
+            ->get(route('beranda'))
+            ->assertOk()
+            ->assertSee('data-notification-list', false)
+            ->assertSee('data-notification-read-all', false)
+            ->assertSee('window.setInterval(perbaruiNotifikasi, 30000)', false)
+            ->assertSee("document.visibilityState !== 'visible'", false);
+    }
 }

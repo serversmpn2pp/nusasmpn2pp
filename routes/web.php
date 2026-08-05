@@ -479,6 +479,9 @@ Route::middleware('auth')->group(function () {
         Route::get('rekap-absensi-pegawai-harian', [RekapAbsensiPegawaiHarianController::class, 'index'])
             ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.laporan,absensi_pegawai.pribadi')
             ->name('rekap-absensi-pegawai-harian.index');
+        Route::get('absensi-pegawai-saya/rekap', [RekapAbsensiPegawaiHarianController::class, 'pribadi'])
+            ->middleware('izin:absensi_pegawai.pribadi')
+            ->name('absensi-pegawai-saya.rekap');
         Route::middleware('izin:absensi.koreksi')->group(function () {
             Route::get('rekap-absensi-pegawai-harian/{pegawai}/koreksi', [RekapAbsensiPegawaiHarianController::class, 'editKoreksi'])->name('rekap-absensi-pegawai-harian.koreksi.edit');
             Route::put('rekap-absensi-pegawai-harian/{pegawai}/koreksi', [RekapAbsensiPegawaiHarianController::class, 'updateKoreksi'])->name('rekap-absensi-pegawai-harian.koreksi.update');
@@ -495,6 +498,12 @@ Route::middleware('auth')->group(function () {
         Route::get('laporan-absensi-pegawai-bulanan', [LaporanAbsensiPegawaiBulananController::class, 'index'])
             ->middleware('izin:absensi.laporan,absensi_pegawai.pribadi')
             ->name('laporan-absensi-pegawai-bulanan.index');
+        Route::get('absensi-pegawai-saya/laporan', [LaporanAbsensiPegawaiBulananController::class, 'pribadi'])
+            ->middleware('izin:absensi_pegawai.pribadi')
+            ->name('absensi-pegawai-saya.laporan');
+        Route::get('absensi-pegawai-saya/laporan/cetak', [LaporanAbsensiPegawaiBulananController::class, 'cetakPribadi'])
+            ->middleware('izin:absensi_pegawai.pribadi')
+            ->name('absensi-pegawai-saya.cetak');
         Route::middleware('izin:laporan.export,absensi_pegawai.pribadi')->group(function () {
             Route::get('laporan-absensi-pegawai-bulanan/cetak', [LaporanAbsensiPegawaiBulananController::class, 'cetak'])->name('laporan-absensi-pegawai-bulanan.cetak');
             Route::get('laporan-absensi-pegawai-bulanan/{pegawai}/cetak', [LaporanAbsensiPegawaiBulananController::class, 'cetakPegawai'])->name('laporan-absensi-pegawai-bulanan.cetak-pegawai');

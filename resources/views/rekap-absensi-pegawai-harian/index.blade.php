@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Rekap Absensi Pegawai Harian - NUSA')
+@section('title', ($halamanPribadi ?? false) ? 'Rekap Absensi Saya - NUSA' : 'Rekap Absensi Pegawai Harian - NUSA')
 
 @section('content')
     @php
@@ -25,6 +25,9 @@
             'pulang_cepat' => 'Pulang cepat',
             'manual' => 'Manual',
         ];
+        $halamanPribadi = $halamanPribadi ?? false;
+        $routeRekap = $halamanPribadi ? 'absensi-pegawai-saya.rekap' : 'rekap-absensi-pegawai-harian.index';
+        $bolehKoreksi = ! $halamanPribadi && (auth()->user()?->memilikiIzin('absensi.koreksi') ?? false);
     @endphp
 
     <style>
@@ -66,6 +69,20 @@
         .filter-actions {
             grid-column: span 6;
             justify-content: flex-end;
+        }
+
+        .employee-attendance-filter.personal-filter {
+            grid-template-columns: minmax(200px, 280px) auto;
+            justify-content: start;
+        }
+
+        .personal-filter .filter-date,
+        .personal-filter .filter-actions {
+            grid-column: auto;
+        }
+
+        .personal-filter .filter-actions {
+            justify-content: flex-start;
         }
 
         .employee-attendance-stats {
@@ -113,82 +130,82 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">Absensi Pegawai</p>
-            <h1 class="page-title">Rekap absensi pegawai harian</h1>
+            <h1 class="page-title">{{ $halamanPribadi ? 'Rekap absensi saya' : 'Rekap absensi pegawai harian' }}</h1>
         </div>
 
-        <div class="actions">
-            @izin('absensi.scan')
-                <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan pegawai</a>
-            @endizin
-            @izin('absensi.pengaturan_kelola')
-                <a href="{{ route('pengaturan-absensi-pegawai.index') }}" class="button button-muted">Jam pegawai</a>
-            @endizin
-        </div>
+        @if (! $halamanPribadi)
+            <div class="actions">
+                @izin('absensi.scan')
+                    <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan pegawai</a>
+                @endizin
+                @izin('absensi.pengaturan_kelola')
+                    <a href="{{ route('pengaturan-absensi-pegawai.index') }}" class="button button-muted">Jam pegawai</a>
+                @endizin
+            </div>
+        @endif
     </div>
 
-    <form action="{{ route('rekap-absensi-pegawai-harian.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
-        <div class="employee-attendance-filter">
+    <form action="{{ route($routeRekap) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+        <div class="employee-attendance-filter {{ $halamanPribadi ? 'personal-filter' : '' }}">
             <div class="field filter-date">
                 <label for="tanggal">Tanggal</label>
                 <input id="tanggal" type="date" name="tanggal" value="{{ $tanggal }}" class="input">
             </div>
 
-            <div class="field filter-search">
-                <label for="kata_kunci">Cari pegawai</label>
-                <input id="kata_kunci" type="search" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nama, NIP, jabatan">
-            </div>
+            @if (! $halamanPribadi)
+                <div class="field filter-search">
+                    <label for="kata_kunci">Cari pegawai</label>
+                    <input id="kata_kunci" type="search" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nama, NIP, jabatan">
+                </div>
 
-            <div class="field filter-kind">
-                <label for="jenis_pegawai">Jenis pegawai</label>
-                <select id="jenis_pegawai" name="jenis_pegawai" class="select">
-                    <option value="">Semua jenis</option>
-                    @foreach ($daftarJenisPegawai as $item)
-                        <option value="{{ $item }}" @selected($jenisPegawai === $item)>{{ $item }}</option>
-                    @endforeach
-                </select>
-            </div>
+                <div class="field filter-kind">
+                    <label for="jenis_pegawai">Jenis pegawai</label>
+                    <select id="jenis_pegawai" name="jenis_pegawai" class="select">
+                        <option value="">Semua jenis</option>
+                        @foreach ($daftarJenisPegawai as $item)
+                            <option value="{{ $item }}" @selected($jenisPegawai === $item)>{{ $item }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-            <div class="field filter-person">
-                <label for="pegawai_id">Pegawai</label>
-                <select id="pegawai_id" name="pegawai_id" class="select">
-                    <option value="">{{ ($cakupanAbsensiPegawaiPribadi ?? false) ? 'Data saya' : 'Semua pegawai' }}</option>
-                    @foreach ($daftarPegawai as $pegawai)
-                        <option value="{{ $pegawai->id }}" @selected((string) $pegawaiId === (string) $pegawai->id)>
-                            {{ $pegawai->nama_lengkap }} - {{ $pegawai->nip ?: 'NIP kosong' }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+                <div class="field filter-person">
+                    <label for="pegawai_id">Pegawai</label>
+                    <select id="pegawai_id" name="pegawai_id" class="select">
+                        <option value="">Semua pegawai</option>
+                        @foreach ($daftarPegawai as $pegawai)
+                            <option value="{{ $pegawai->id }}" @selected((string) $pegawaiId === (string) $pegawai->id)>
+                                {{ $pegawai->nama_lengkap }} - {{ $pegawai->nip ?: 'NIP kosong' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
-            <div class="field filter-status">
-                <label for="status_pegawai">Status pegawai</label>
-                <select id="status_pegawai" name="status_pegawai" class="select">
-                    <option value="aktif" @selected($statusPegawai === 'aktif')>Aktif</option>
-                    <option value="nonaktif" @selected($statusPegawai === 'nonaktif')>Nonaktif</option>
-                    <option value="semua" @selected($statusPegawai === 'semua')>Semua</option>
-                </select>
-            </div>
+                <div class="field filter-status">
+                    <label for="status_pegawai">Status pegawai</label>
+                    <select id="status_pegawai" name="status_pegawai" class="select">
+                        <option value="aktif" @selected($statusPegawai === 'aktif')>Aktif</option>
+                        <option value="nonaktif" @selected($statusPegawai === 'nonaktif')>Nonaktif</option>
+                        <option value="semua" @selected($statusPegawai === 'semua')>Semua</option>
+                    </select>
+                </div>
 
-            <div class="field filter-attendance">
-                <label for="status_kehadiran">Kehadiran</label>
-                <select id="status_kehadiran" name="status_kehadiran" class="select">
-                    <option value="semua" @selected($statusKehadiran === 'semua')>Semua</option>
-                    @foreach ($labelStatus as $key => $label)
-                        <option value="{{ $key }}" @selected($statusKehadiran === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
+                <div class="field filter-attendance">
+                    <label for="status_kehadiran">Kehadiran</label>
+                    <select id="status_kehadiran" name="status_kehadiran" class="select">
+                        <option value="semua" @selected($statusKehadiran === 'semua')>Semua</option>
+                        @foreach ($labelStatus as $key => $label)
+                            <option value="{{ $key }}" @selected($statusKehadiran === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
 
             <div class="actions filter-actions">
                 <button type="submit" class="button button-dark">Tampilkan</button>
-                <a href="{{ route('rekap-absensi-pegawai-harian.index') }}" class="button button-muted">Reset</a>
+                <a href="{{ route($routeRekap) }}" class="button button-muted">{{ $halamanPribadi ? 'Hari ini' : 'Reset' }}</a>
             </div>
         </div>
     </form>
-
-    @if ($cakupanAbsensiPegawaiPribadi ?? false)
-        <div class="alert">Rekap absensi pegawai dibatasi pada data absensi Anda sendiri.</div>
-    @endif
 
     @if (session('berhasil'))
         <div class="alert">{{ session('berhasil') }}</div>
@@ -196,7 +213,7 @@
 
     <div class="employee-attendance-stats">
         <div class="panel stat">
-            <p class="stat-label">Total pegawai</p>
+            <p class="stat-label">{{ $halamanPribadi ? 'Data hari ini' : 'Total pegawai' }}</p>
             <p class="stat-value">{{ $ringkasan['total'] }}</p>
         </div>
         <div class="panel stat active">
@@ -241,7 +258,7 @@
         <div class="panel-pad" style="border-bottom: 1px solid var(--line);">
             <h2 class="panel-title">{{ $tanggalLabel }}</h2>
             <p class="help-text" style="margin-top: 6px;">
-                {{ ($cakupanAbsensiPegawaiPribadi ?? false) ? 'Data absensi pribadi' : ($jenisPegawai ? 'Jenis pegawai: ' . $jenisPegawai : 'Semua jenis pegawai') }}
+                {{ $halamanPribadi ? 'Data absensi pribadi' : ($jenisPegawai ? 'Jenis pegawai: ' . $jenisPegawai : 'Semua jenis pegawai') }}
             </p>
         </div>
 
@@ -257,9 +274,9 @@
                         <th>Keterlambatan</th>
                         <th>Jadwal</th>
                         <th>Catatan</th>
-                        @izin('absensi.koreksi')
+                        @if ($bolehKoreksi)
                             <th class="text-right">Aksi</th>
-                        @endizin
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -325,17 +342,17 @@
                                 <p class="person-meta">{{ $jadwal?->labelSasaran() ?: '-' }}</p>
                             </td>
                             <td data-label="Catatan">{{ $absensi?->catatan ?: '-' }}</td>
-                            @izin('absensi.koreksi')
+                            @if ($bolehKoreksi)
                                 <td data-label="Aksi">
                                     <div class="actions" style="justify-content: flex-end;">
                                         <a href="{{ route('rekap-absensi-pegawai-harian.koreksi.edit', ['pegawai' => $pegawai, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
                                     </div>
                                 </td>
-                            @endizin
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->user()?->memilikiIzin('absensi.koreksi') ? 9 : 8 }}" class="empty-state">Belum ada pegawai pada pilihan ini.</td>
+                            <td colspan="{{ $bolehKoreksi ? 9 : 8 }}" class="empty-state">{{ $halamanPribadi ? 'Belum ada data absensi pada tanggal ini.' : 'Belum ada pegawai pada pilihan ini.' }}</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -392,16 +409,16 @@
                                 <p class="help-text" style="margin-top: 12px;">{{ $absensi->catatan }}</p>
                             @endif
 
-                            @izin('absensi.koreksi')
+                            @if ($bolehKoreksi)
                                 <div class="actions" style="margin-top: 14px;">
                                     <a href="{{ route('rekap-absensi-pegawai-harian.koreksi.edit', ['pegawai' => $pegawai, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
                                 </div>
-                            @endizin
+                            @endif
                         </div>
                     </div>
                 </article>
             @empty
-                <div class="empty-state">Belum ada pegawai pada pilihan ini.</div>
+                <div class="empty-state">{{ $halamanPribadi ? 'Belum ada data absensi pada tanggal ini.' : 'Belum ada pegawai pada pilihan ini.' }}</div>
             @endforelse
         </div>
     </section>

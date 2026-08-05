@@ -1772,7 +1772,7 @@
             $penggunaAktif = auth()->user();
             $penggunaAktif?->loadMissing(['pegawai', 'siswa', 'daftarPeran.izin']);
             $notifikasiTerbaru = $penggunaAktif
-                ? $penggunaAktif->notifikasiPengguna()->latest()->limit(6)->get()
+                ? $penggunaAktif->notifikasiPengguna()->orderByDesc('created_at')->orderByDesc('id')->limit(6)->get()
                 : collect();
             $jumlahNotifikasiBelumDibaca = $penggunaAktif
                 ? $penggunaAktif->notifikasiPengguna()->belumDibaca()->count()
@@ -1992,8 +1992,8 @@
                     'id' => 'kehadiran-saya',
                     'title' => 'Kehadiran Saya',
                     'items' => [
-                        ['label' => 'Rekap Absensi Saya', 'route' => 'rekap-absensi-pegawai-harian.index', 'active' => ['rekap-absensi-pegawai-harian.*'], 'initial' => 'RS', 'izin' => 'absensi_pegawai.pribadi', 'pegawai_only' => true],
-                        ['label' => 'Laporan Absensi Saya', 'route' => 'laporan-absensi-pegawai-bulanan.index', 'active' => ['laporan-absensi-pegawai-bulanan.*'], 'initial' => 'LS', 'izin' => 'absensi_pegawai.pribadi', 'pegawai_only' => true],
+                        ['label' => 'Rekap Absensi Saya', 'route' => 'absensi-pegawai-saya.rekap', 'active' => ['absensi-pegawai-saya.rekap'], 'initial' => 'RS', 'izin' => 'absensi_pegawai.pribadi', 'pegawai_only' => true],
+                        ['label' => 'Laporan Absensi Saya', 'route' => 'absensi-pegawai-saya.laporan', 'active' => ['absensi-pegawai-saya.laporan', 'absensi-pegawai-saya.cetak'], 'initial' => 'LS', 'izin' => 'absensi_pegawai.pribadi', 'pegawai_only' => true],
                     ],
                 ],
                 [
@@ -2187,7 +2187,7 @@
 
                     @auth
                         <div class="topbar-actions">
-                            <details class="topbar-menu notification-menu">
+                            <details class="topbar-menu notification-menu" data-notification-menu>
                                 <summary class="topbar-icon-button" title="Notifikasi" aria-label="Notifikasi, {{ $jumlahNotifikasiBelumDibaca }} belum dibaca">
                                     <svg aria-hidden="true" viewBox="0 0 24 24">
                                         <path d="M10.27 21a2 2 0 0 0 3.46 0"></path>
@@ -2203,16 +2203,19 @@
                                 <div class="topbar-popover notification-popover">
                                     <header class="notification-popover-head">
                                         <strong>Notifikasi</strong>
-                                        @if ($jumlahNotifikasiBelumDibaca > 0)
-                                            <form action="{{ route('notifikasi.baca-semua') }}" method="POST">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="notification-text-button">Tandai semua dibaca</button>
-                                            </form>
-                                        @endif
+                                        <form
+                                            action="{{ route('notifikasi.baca-semua') }}"
+                                            method="POST"
+                                            data-notification-read-all
+                                            @if ($jumlahNotifikasiBelumDibaca === 0) hidden @endif
+                                        >
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="notification-text-button">Tandai semua dibaca</button>
+                                        </form>
                                     </header>
 
-                                    <div class="notification-popover-list">
+                                    <div class="notification-popover-list" data-notification-list>
                                         @forelse ($notifikasiTerbaru as $item)
                                             <form action="{{ route('notifikasi.buka', $item) }}" method="POST" class="notification-popover-form">
                                                 @csrf
@@ -2453,10 +2456,79 @@
                         });
                     });
 
-                    const perbaruiJumlahNotifikasi = async () => {
+                    const menuNotifikasi = document.querySelector('[data-notification-menu]');
+                    const daftarNotifikasi = document.querySelector('[data-notification-list]');
+                    const tombolBacaSemua = document.querySelector('[data-notification-read-all]');
+                    const tokenCsrf = @js(csrf_token());
+                    let sedangMemuatNotifikasi = false;
+
+                    const buatElemenNotifikasi = (item) => {
+                        const form = document.createElement('form');
+                        form.action = item.url_buka;
+                        form.method = 'POST';
+                        form.className = 'notification-popover-form';
+
+                        const csrf = document.createElement('input');
+                        csrf.type = 'hidden';
+                        csrf.name = '_token';
+                        csrf.value = tokenCsrf;
+
+                        const tombol = document.createElement('button');
+                        tombol.type = 'submit';
+                        tombol.className = `notification-popover-item${item.belum_dibaca ? ' unread' : ''}`;
+
+                        const titik = document.createElement('span');
+                        titik.className = 'notification-dot';
+                        titik.setAttribute('aria-hidden', 'true');
+
+                        const salinan = document.createElement('span');
+                        salinan.className = 'notification-popover-copy';
+
+                        const judul = document.createElement('span');
+                        judul.className = 'notification-popover-title';
+                        judul.textContent = item.judul;
+
+                        const pesan = document.createElement('span');
+                        pesan.className = 'notification-popover-message';
+                        pesan.textContent = item.pesan;
+
+                        const waktu = document.createElement('time');
+                        waktu.className = 'notification-popover-time';
+                        waktu.dateTime = item.dibuat_pada;
+                        waktu.textContent = item.waktu_relatif;
+
+                        salinan.append(judul, pesan, waktu);
+                        tombol.append(titik, salinan);
+                        form.append(csrf, tombol);
+
+                        return form;
+                    };
+
+                    const perbaruiDaftarNotifikasi = (notifikasi) => {
+                        if (!daftarNotifikasi) return;
+
+                        daftarNotifikasi.replaceChildren();
+
+                        if (!Array.isArray(notifikasi) || notifikasi.length === 0) {
+                            const kosong = document.createElement('div');
+                            kosong.className = 'notification-popover-empty';
+                            kosong.textContent = 'Belum ada notifikasi untuk akun ini.';
+                            daftarNotifikasi.append(kosong);
+                            return;
+                        }
+
+                        daftarNotifikasi.append(...notifikasi.map(buatElemenNotifikasi));
+                    };
+
+                    const perbaruiNotifikasi = async () => {
+                        if (sedangMemuatNotifikasi || document.visibilityState !== 'visible') return;
+
+                        sedangMemuatNotifikasi = true;
+
                         try {
                             const respons = await fetch(@js(route('notifikasi.ringkasan')), {
                                 headers: { 'Accept': 'application/json' },
+                                cache: 'no-store',
                             });
 
                             if (!respons.ok) return;
@@ -2471,12 +2543,25 @@
                             badge.textContent = jumlah > 99 ? '99+' : String(jumlah);
                             badge.hidden = jumlah === 0;
                             tombol.setAttribute('aria-label', `Notifikasi, ${jumlah} belum dibaca`);
+                            if (tombolBacaSemua) tombolBacaSemua.hidden = jumlah === 0;
+                            perbaruiDaftarNotifikasi(data.notifikasi);
                         } catch (error) {
-                            // Kegagalan pembaruan badge tidak mengganggu penggunaan halaman.
+                            // Kegagalan pembaruan notifikasi tidak mengganggu penggunaan halaman.
+                        } finally {
+                            sedangMemuatNotifikasi = false;
                         }
                     };
 
-                    window.setInterval(perbaruiJumlahNotifikasi, 60000);
+                    menuNotifikasi?.addEventListener('toggle', () => {
+                        if (menuNotifikasi.open) perbaruiNotifikasi();
+                    });
+
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.visibilityState === 'visible') perbaruiNotifikasi();
+                    });
+
+                    perbaruiNotifikasi();
+                    window.setInterval(perbaruiNotifikasi, 30000);
                 })();
             </script>
         @endauth

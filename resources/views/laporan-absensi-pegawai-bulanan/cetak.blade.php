@@ -370,21 +370,25 @@
     </style>
 </head>
 <body>
+    @php
+        $routeKembali = ($halamanPribadi ?? false) ? 'absensi-pegawai-saya.laporan' : 'laporan-absensi-pegawai-bulanan.index';
+        $parameterKembali = array_filter([
+            'bulan' => $bulan,
+            'kata_kunci' => ($halamanPribadi ?? false) ? null : $kataKunci,
+            'jenis_pegawai' => ($halamanPribadi ?? false) ? null : $jenisPegawai,
+            'pegawai_id' => ($halamanPribadi ?? false) ? null : $pegawaiId,
+            'status_pegawai' => ($halamanPribadi ?? false) ? null : $statusPegawai,
+        ], fn ($nilai) => filled($nilai));
+    @endphp
     <header class="print-toolbar">
         <div>
-            <strong>Laporan absensi pegawai {{ $labelPeriode }}</strong>
+            <strong>{{ ($halamanPribadi ?? false) ? 'Laporan absensi saya' : 'Laporan absensi pegawai' }} {{ $labelPeriode }}</strong>
             <p>{{ $jumlahLembar }} lembar. Setiap pegawai dipisahkan menjadi satu halaman A4.</p>
         </div>
 
         <div class="toolbar-actions">
             <button type="button" class="button" onclick="window.print()">Cetak / Simpan PDF</button>
-            <a href="{{ route('laporan-absensi-pegawai-bulanan.index', array_filter([
-                'bulan' => $bulan,
-                'kata_kunci' => $kataKunci,
-                'jenis_pegawai' => $jenisPegawai,
-                'pegawai_id' => $pegawaiId,
-                'status_pegawai' => $statusPegawai,
-            ], fn ($nilai) => filled($nilai))) }}" class="button button-muted">Kembali</a>
+            <a href="{{ route($routeKembali, $parameterKembali) }}" class="button button-muted">Kembali</a>
         </div>
     </header>
 

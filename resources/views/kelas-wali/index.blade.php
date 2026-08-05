@@ -4,19 +4,28 @@
 
 @section('content')
     @php
-        $teks = fn (mixed $value) => filled($value) ? $value : '-';
-        $tanggal = fn (mixed $value) => $value ? $value->format('d-m-Y') : '-';
-        $tempatTanggalLahir = function ($siswa) use ($teks, $tanggal) {
-            $tempat = $teks($siswa?->tempat_lahir);
-            $lahir = $tanggal($siswa?->tanggal_lahir);
-
-            if ($tempat === '-' && $lahir === '-') {
-                return '-';
-            }
-
-            return trim($tempat . ', ' . $lahir, ' ,-');
-        };
+        $bolehLihatSiswa = auth()->user()?->memilikiIzin(['siswa.lihat', 'siswa.kelola']) ?? false;
     @endphp
+
+    <style>
+        .compact-member-table {
+            min-width: 0;
+        }
+
+        .compact-member-table th:first-child,
+        .compact-member-table td:first-child {
+            width: 84px;
+        }
+
+        .member-name-link {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .member-name-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 
     <div class="page-header">
         <div>
@@ -60,16 +69,11 @@
             </div>
 
             <div class="desktop-only table-wrap">
-                <table class="employee-table">
+                <table class="employee-table compact-member-table">
                     <thead>
                         <tr>
                             <th>No</th>
-                            <th>Siswa</th>
-                            <th>NIS / NISN</th>
-                            <th>JK</th>
-                            <th>Tempat, tanggal lahir</th>
-                            <th>Orang tua</th>
-                            <th class="text-right">Aksi</th>
+                            <th>Nama</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -87,34 +91,18 @@
                                             @endif
                                         </div>
                                         <div>
-                                            <p class="person-name">{{ $siswa?->nama_lengkap ?: '-' }}</p>
-                                            <p class="person-meta">{{ $siswa?->aktif ? 'Aktif' : 'Nonaktif' }}</p>
+                                            @if ($bolehLihatSiswa && $siswa)
+                                                <a href="{{ route('siswa.show', $siswa) }}" class="person-name member-name-link">{{ $siswa->nama_lengkap }}</a>
+                                            @else
+                                                <p class="person-name">{{ $siswa?->nama_lengkap ?: '-' }}</p>
+                                            @endif
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>{{ $teks($siswa?->nis) }}</div>
-                                    <div class="muted">{{ $teks($siswa?->nisn) }}</div>
-                                </td>
-                                <td>{{ $siswa?->jenis_kelamin === 'L' ? 'L' : ($siswa?->jenis_kelamin === 'P' ? 'P' : '-') }}</td>
-                                <td>{{ $tempatTanggalLahir($siswa) }}</td>
-                                <td>
-                                    <div>{{ $teks($siswa?->nama_ayah) }}</div>
-                                    <div class="muted">{{ $teks($siswa?->nama_ibu) }}</div>
-                                </td>
-                                <td>
-                                    <div class="actions" style="justify-content: flex-end;">
-                                        @if ($siswa)
-                                            <a href="{{ route('siswa.show', $siswa) }}" class="button button-muted">Lihat</a>
-                                        @else
-                                            <span class="button button-muted" aria-disabled="true">Lihat</span>
-                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="empty-state">Belum ada siswa aktif di kelas ini.</td>
+                                <td colspan="2" class="empty-state">Belum ada siswa aktif di kelas ini.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -134,36 +122,14 @@
                                 @endif
                             </div>
                             <div style="min-width: 0;">
-                                <p class="person-name">{{ $anggota->nomor_absen ? $anggota->nomor_absen . '. ' : '' }}{{ $siswa?->nama_lengkap ?: '-' }}</p>
-                                <p class="person-meta">NISN {{ $teks($siswa?->nisn) }}</p>
+                                @if ($bolehLihatSiswa && $siswa)
+                                    <a href="{{ route('siswa.show', $siswa) }}" class="person-name member-name-link">
+                                        {{ $anggota->nomor_absen ? $anggota->nomor_absen . '. ' : '' }}{{ $siswa->nama_lengkap }}
+                                    </a>
+                                @else
+                                    <p class="person-name">{{ $anggota->nomor_absen ? $anggota->nomor_absen . '. ' : '' }}{{ $siswa?->nama_lengkap ?: '-' }}</p>
+                                @endif
                             </div>
-                        </div>
-
-                        <dl class="quick-facts">
-                            <div>
-                                <dt>NIS</dt>
-                                <dd>{{ $teks($siswa?->nis) }}</dd>
-                            </div>
-                            <div>
-                                <dt>JK</dt>
-                                <dd>{{ $siswa?->jenis_kelamin === 'L' ? 'Laki-laki' : ($siswa?->jenis_kelamin === 'P' ? 'Perempuan' : '-') }}</dd>
-                            </div>
-                            <div>
-                                <dt>Lahir</dt>
-                                <dd>{{ $tempatTanggalLahir($siswa) }}</dd>
-                            </div>
-                            <div>
-                                <dt>Orang tua</dt>
-                                <dd>{{ $teks($siswa?->nama_ayah ?: $siswa?->nama_ibu) }}</dd>
-                            </div>
-                        </dl>
-
-                        <div class="actions" style="margin-top: 14px;">
-                            @if ($siswa)
-                                <a href="{{ route('siswa.show', $siswa) }}" class="button button-muted">Lihat</a>
-                            @else
-                                <span class="button button-muted" aria-disabled="true">Lihat</span>
-                            @endif
                         </div>
                     </article>
                 @empty
