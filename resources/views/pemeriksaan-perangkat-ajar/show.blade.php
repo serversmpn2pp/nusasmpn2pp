@@ -164,6 +164,7 @@
                             <div class="actions">
                                 <a href="{{ route('perangkat-ajar-saya.download', $dokumen) }}" class="button button-muted button-sm">Unduh PDF</a>
                                 <a href="{{ route('perangkat-ajar-saya.show', $dokumen) }}" class="button button-muted button-sm">Riwayat</a>
+                                <a href="{{ route('pemeriksaan-perangkat-ajar.preview', $dokumen) }}" target="_blank" rel="noopener" class="button button-muted button-sm">Pratinjau</a>
                                 @izin('perangkat_ajar.periksa')
                                     <a href="{{ route('pemeriksaan-perangkat-ajar.edit', $dokumen) }}" class="button button-dark button-sm">Periksa</a>
                                 @endizin

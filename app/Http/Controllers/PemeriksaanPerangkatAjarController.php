@@ -11,14 +11,13 @@ use App\Services\Notifikasi\NotifikasiPenggunaService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class PemeriksaanPerangkatAjarController extends Controller
 {
-    public function __construct(private NotifikasiPenggunaService $notifikasiPenggunaService)
-    {
-    }
+    public function __construct(private NotifikasiPenggunaService $notifikasiPenggunaService) {}
 
     public function index(Request $request)
     {
@@ -133,6 +132,22 @@ class PemeriksaanPerangkatAjarController extends Controller
         return view('pemeriksaan-perangkat-ajar.edit', compact('perangkatAjar'));
     }
 
+    public function preview(PerangkatAjar $perangkatAjar)
+    {
+        abort_unless(Storage::disk('local')->exists($perangkatAjar->lokasi_file), 404);
+
+        return Storage::disk('local')->response(
+            $perangkatAjar->lokasi_file,
+            $perangkatAjar->nama_file_asli,
+            [
+                'Content-Type' => 'application/pdf',
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'X-Content-Type-Options' => 'nosniff',
+            ],
+            'inline',
+        );
+    }
+
     public function update(Request $request, PerangkatAjar $perangkatAjar)
     {
         $data = $request->validate([
@@ -156,7 +171,7 @@ class PemeriksaanPerangkatAjarController extends Controller
                 '%s untuk mata pelajaran %s telah diperiksa.%s',
                 $perangkatAjar->jenisPerangkatAjar?->nama ?? 'Perangkat ajar',
                 $perangkatAjar->mataPelajaran?->nama ?? '-',
-                $perangkatAjar->catatan_pemeriksa ? ' Catatan: ' . $perangkatAjar->catatan_pemeriksa : '',
+                $perangkatAjar->catatan_pemeriksa ? ' Catatan: '.$perangkatAjar->catatan_pemeriksa : '',
             ),
             route('perangkat-ajar-saya.show', $perangkatAjar, false),
             "perangkat-ajar-diperiksa:{$perangkatAjar->id}:{$perangkatAjar->status}:{$perangkatAjar->diperiksa_pada->format('Uv')}",
@@ -290,6 +305,6 @@ class PemeriksaanPerangkatAjarController extends Controller
 
     private function kunciPerangkat(int $mataPelajaranId, int $jenisPerangkatAjarId): string
     {
-        return $mataPelajaranId . '-' . $jenisPerangkatAjarId;
+        return $mataPelajaranId.'-'.$jenisPerangkatAjarId;
     }
 }

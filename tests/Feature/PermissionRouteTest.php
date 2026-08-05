@@ -169,6 +169,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('perangkat-ajar-saya.download', 'izin:perangkat_ajar.upload,perangkat_ajar.lihat,perangkat_ajar.periksa');
         $this->assertRouteMemakaiMiddleware('pemeriksaan-perangkat-ajar.index', 'izin:perangkat_ajar.lihat,perangkat_ajar.periksa');
         $this->assertRouteMemakaiMiddleware('pemeriksaan-perangkat-ajar.show', 'izin:perangkat_ajar.lihat,perangkat_ajar.periksa');
+        $this->assertRouteMemakaiMiddleware('pemeriksaan-perangkat-ajar.preview', 'izin:perangkat_ajar.lihat,perangkat_ajar.periksa');
         $this->assertRouteMemakaiMiddleware('pemeriksaan-perangkat-ajar.update', 'izin:perangkat_ajar.periksa');
     }
 

@@ -345,6 +345,7 @@ Route::middleware('auth')->group(function () {
         Route::middleware('izin:perangkat_ajar.lihat,perangkat_ajar.periksa')->group(function () {
             Route::get('pemeriksaan-perangkat-ajar', [PemeriksaanPerangkatAjarController::class, 'index'])->name('pemeriksaan-perangkat-ajar.index');
             Route::get('pemeriksaan-perangkat-ajar/guru/{pegawai}', [PemeriksaanPerangkatAjarController::class, 'show'])->name('pemeriksaan-perangkat-ajar.show');
+            Route::get('pemeriksaan-perangkat-ajar/dokumen/{perangkatAjar}/pratinjau', [PemeriksaanPerangkatAjarController::class, 'preview'])->name('pemeriksaan-perangkat-ajar.preview');
         });
         Route::middleware('izin:perangkat_ajar.periksa')->group(function () {
             Route::get('pemeriksaan-perangkat-ajar/dokumen/{perangkatAjar}/edit', [PemeriksaanPerangkatAjarController::class, 'edit'])->name('pemeriksaan-perangkat-ajar.edit');
