@@ -286,7 +286,7 @@ class DatabaseSeeder extends Seeder
             'pegawai' => ['beranda.akses', 'pegawai.profil', 'absensi_pegawai.pribadi', 'poin_siswa.lapor'],
             'siswa' => ['beranda.akses'],
             'satpam' => ['beranda.akses', 'absensi.scan', 'absensi.lihat', 'keamanan.lihat', 'keamanan.kelola'],
-            'petugas_kebersihan' => ['beranda.akses', 'sarpras.lihat', 'kebersihan.lihat', 'kebersihan.kelola'],
+            'petugas_kebersihan' => ['beranda.akses', 'absensi.scan', 'sarpras.lihat', 'kebersihan.lihat', 'kebersihan.kelola'],
             'petugas_inventaris' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
         ];
     }

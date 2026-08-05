@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenPoinSiswaController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\InputNilaiController;
+use App\Http\Controllers\JadwalKelasSayaController;
 use App\Http\Controllers\JadwalPelajaranController;
 use App\Http\Controllers\JadwalSayaController;
 use App\Http\Controllers\JadwalUjianCbtController;
@@ -60,9 +61,9 @@ use App\Http\Controllers\PengaturanPoinKeterlambatanController;
 use App\Http\Controllers\PengembalianBarangController;
 use App\Http\Controllers\PenguranganPoinSiswaController;
 use App\Http\Controllers\PenugasanGuruWaliController;
-use App\Http\Controllers\PergantianGuruMataPelajaranController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PerangkatAjarSayaController;
+use App\Http\Controllers\PergantianGuruMataPelajaranController;
 use App\Http\Controllers\PeringatanDiniSiswaController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\ProfilPegawaiController;
@@ -259,6 +260,9 @@ Route::middleware('auth')->group(function () {
         Route::get('jadwal-saya', [JadwalSayaController::class, 'index'])
             ->middleware('izin:jadwal.pribadi')
             ->name('jadwal-saya.index');
+        Route::get('jadwal-kelas-saya', [JadwalKelasSayaController::class, 'index'])
+            ->middleware('izin:jadwal.lihat')
+            ->name('jadwal-kelas-saya.index');
         Route::get('kelas-wali', [KelasWaliController::class, 'index'])
             ->middleware('izin:kelas.lihat')
             ->name('kelas-wali.index');

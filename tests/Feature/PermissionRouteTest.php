@@ -81,6 +81,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.susun', 'izin:jadwal.kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-pelajaran.simpan-massal', 'izin:jadwal.kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-saya.index', 'izin:jadwal.pribadi');
+        $this->assertRouteMemakaiMiddleware('jadwal-kelas-saya.index', 'izin:jadwal.lihat');
     }
 
     public function test_route_ujian_omr_memakai_permission_penilaian_omr(): void

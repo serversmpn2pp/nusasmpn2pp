@@ -1960,7 +1960,7 @@
                     'title' => 'Wali Kelas',
                     'items' => [
                         ['label' => 'Kelas Wali Saya', 'route' => 'kelas-wali.index', 'active' => ['kelas-wali.*', 'siswa.show'], 'initial' => 'KL', 'izin' => 'kelas.lihat', 'peran' => 'wali_kelas'],
-                        ['label' => 'Jadwal Kelas Saya', 'route' => 'jadwal-pelajaran.index', 'active' => ['jadwal-pelajaran.index', 'jadwal-pelajaran.show'], 'initial' => 'JP', 'izin' => 'jadwal.lihat', 'peran' => 'wali_kelas'],
+                        ['label' => 'Jadwal Kelas Saya', 'route' => 'jadwal-kelas-saya.index', 'active' => ['jadwal-kelas-saya.*'], 'initial' => 'JK', 'izin' => 'jadwal.lihat', 'peran' => 'wali_kelas'],
                         ['label' => 'Akun Siswa Kelas', 'route' => 'akun-siswa.index', 'active' => ['akun-siswa.*'], 'initial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.cetak'], 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Absensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi'], 'peran' => 'wali_kelas'],
                         ['label' => 'Laporan Absensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan', 'peran' => 'wali_kelas'],

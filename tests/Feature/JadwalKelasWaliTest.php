@@ -22,14 +22,20 @@ class JadwalKelasWaliTest extends TestCase
         $data = $this->dataDasar();
 
         $this->actingAs($data['wali'])
-            ->get(route('jadwal-pelajaran.index'))
+            ->get(route('jadwal-kelas-saya.index', [
+                'kelas_id' => $data['kelas_lain']->id,
+            ]))
             ->assertOk()
             ->assertSee('Jadwal Kelas Saya')
-            ->assertSee('Hanya menampilkan jadwal kelas yang Anda wali.')
+            ->assertSee('Jadwal mingguan '.$data['kelas_wali']->nama)
+            ->assertSee('Senin')
+            ->assertSee('Jam 1')
+            ->assertSee('Guru belum ditentukan')
             ->assertSee($data['kelas_wali']->nama)
             ->assertSee($data['mapel_wali']->nama)
             ->assertDontSee($data['kelas_lain']->nama)
             ->assertDontSee($data['mapel_lain']->nama)
+            ->assertSee('href="'.route('jadwal-kelas-saya.index').'"', false)
             ->assertDontSee('href="'.route('jam-pelajaran.index').'"', false);
     }
 
