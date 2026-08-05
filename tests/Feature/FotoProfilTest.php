@@ -135,6 +135,35 @@ class FotoProfilTest extends TestCase
         Storage::disk('public')->assertExists($pegawai->fresh()->foto);
     }
 
+    public function test_header_menampilkan_foto_dari_data_pegawai_pengguna(): void
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Antonius Pitra',
+            'nip' => '198001012010015555',
+            'foto' => 'pegawai/foto/antonius-pitra.jpg',
+            'aktif' => true,
+        ]);
+        $akun = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => Hash::make('rahasia'),
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+        $akun->daftarPeran()->sync([
+            Peran::where('kode', 'pegawai')->value('id'),
+        ]);
+
+        $this->actingAs($akun)
+            ->get(route('beranda'))
+            ->assertOk()
+            ->assertSee('class="account-avatar"', false)
+            ->assertSee('AP')
+            ->assertSee('/storage/pegawai/foto/antonius-pitra.jpg', false);
+    }
+
     public function test_form_foto_menjelaskan_pemrosesan_dan_penyimpanan_otomatis(): void
     {
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();

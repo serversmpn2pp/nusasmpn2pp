@@ -1517,6 +1517,8 @@
 
             .account-avatar {
                 display: grid;
+                overflow: hidden;
+                position: relative;
                 width: 32px;
                 height: 32px;
                 flex: 0 0 auto;
@@ -1526,6 +1528,14 @@
                 color: #fff;
                 font-size: .76rem;
                 font-weight: 900;
+            }
+
+            .account-avatar img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
             }
 
             .account-identity {
@@ -1778,6 +1788,9 @@
                 ->take(2)
                 ->map(fn ($kata) => mb_strtoupper(mb_substr($kata, 0, 1)))
                 ->implode('');
+            $fotoPenggunaUrl = $penggunaAktif?->pegawai?->foto
+                ? asset('storage/'.$penggunaAktif->pegawai->foto)
+                : null;
 
             $bolehMelihatMenu = function (string|array|null $izin) use ($penggunaAktif): bool {
                 if (! $penggunaAktif) {
@@ -2225,7 +2238,12 @@
 
                             <details class="topbar-menu account-menu-dropdown">
                                 <summary class="account-trigger" title="Menu akun" aria-label="Buka menu akun">
-                                    <span class="account-avatar" aria-hidden="true">{{ $inisialPengguna ?: 'N' }}</span>
+                                    <span class="account-avatar" aria-hidden="true">
+                                        <span>{{ $inisialPengguna ?: 'N' }}</span>
+                                        @if ($fotoPenggunaUrl)
+                                            <img src="{{ $fotoPenggunaUrl }}" alt="" onerror="this.remove()">
+                                        @endif
+                                    </span>
                                     <span class="account-identity">
                                         <strong>{{ $penggunaAktif->nama }}</strong>
                                         <small>{{ $labelPeranAktif }}</small>
