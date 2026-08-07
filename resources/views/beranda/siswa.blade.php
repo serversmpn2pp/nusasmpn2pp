@@ -635,8 +635,24 @@
 
                     <article class="student-panel">
                         <header class="student-panel-head">
+                            <h2>Nilai Saya</h2>
+                            <a href="{{ route('nilai-saya.index') }}" class="student-action">Lihat Nilai</a>
+                        </header>
+                        <div class="student-panel-body">
+                            <div class="point-total">
+                                <div>
+                                    <strong>{{ $jumlahNilaiDipublikasikan }}</strong>
+                                    <span>Mata pelajaran telah dipublikasikan</span>
+                                </div>
+                                <span class="badge badge-active">Data resmi</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="student-panel">
+                        <header class="student-panel-head">
                             <h2>Poin Saya</h2>
-                            <span>Data resmi</span>
+                            <a href="{{ route('progress-kasus-siswa.index') }}" class="student-action">Lihat Progress</a>
                         </header>
                         <div class="student-panel-body">
                             <div class="point-total">

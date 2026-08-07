@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\SkemaBobotNilai;
 use App\Models\TahunPelajaran;
+use App\Services\Nilai\PublikasiNilaiService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class SkemaBobotNilaiController extends Controller
 {
+    public function __construct(private PublikasiNilaiService $publikasiNilai) {}
+
     public function index(Request $request)
     {
         $status = $request->input('status', 'semua');
@@ -98,6 +101,11 @@ class SkemaBobotNilaiController extends Controller
         $this->pastikanScopeBelumAda($data);
 
         $skemaBobotNilai = SkemaBobotNilai::create($data);
+        $this->publikasiNilai->tandaiDrafUntukSkema(
+            (int) $skemaBobotNilai->tahun_pelajaran_id,
+            $skemaBobotNilai->semester,
+            $skemaBobotNilai->tingkat,
+        );
 
         return redirect()
             ->route('skema-bobot-nilai.show', $skemaBobotNilai)
@@ -127,7 +135,22 @@ class SkemaBobotNilaiController extends Controller
         $this->pastikanTotalBobot100($data);
         $this->pastikanScopeBelumAda($data, $skemaBobotNilai);
 
+        $cakupanLama = [
+            'tahun_pelajaran_id' => (int) $skemaBobotNilai->tahun_pelajaran_id,
+            'semester' => $skemaBobotNilai->semester,
+            'tingkat' => $skemaBobotNilai->tingkat,
+        ];
         $skemaBobotNilai->update($data);
+        $this->publikasiNilai->tandaiDrafUntukSkema(
+            $cakupanLama['tahun_pelajaran_id'],
+            $cakupanLama['semester'],
+            $cakupanLama['tingkat'],
+        );
+        $this->publikasiNilai->tandaiDrafUntukSkema(
+            (int) $skemaBobotNilai->tahun_pelajaran_id,
+            $skemaBobotNilai->semester,
+            $skemaBobotNilai->tingkat,
+        );
 
         return redirect()
             ->route('skema-bobot-nilai.show', $skemaBobotNilai)
@@ -137,6 +160,11 @@ class SkemaBobotNilaiController extends Controller
     public function destroy(SkemaBobotNilai $skemaBobotNilai)
     {
         $skemaBobotNilai->update(['aktif' => false]);
+        $this->publikasiNilai->tandaiDrafUntukSkema(
+            (int) $skemaBobotNilai->tahun_pelajaran_id,
+            $skemaBobotNilai->semester,
+            $skemaBobotNilai->tingkat,
+        );
 
         return redirect()
             ->route('skema-bobot-nilai.index')
@@ -178,7 +206,7 @@ class SkemaBobotNilaiController extends Controller
 
         if ($total !== 100) {
             throw ValidationException::withMessages([
-                'bobot_formatif' => 'Total bobot harus tepat 100%. Saat ini totalnya ' . $total . '%.',
+                'bobot_formatif' => 'Total bobot harus tepat 100%. Saat ini totalnya '.$total.'%.',
             ]);
         }
     }

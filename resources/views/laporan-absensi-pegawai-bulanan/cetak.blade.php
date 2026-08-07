@@ -374,7 +374,6 @@
         $routeKembali = ($halamanPribadi ?? false) ? 'absensi-pegawai-saya.laporan' : 'laporan-absensi-pegawai-bulanan.index';
         $parameterKembali = array_filter([
             'bulan' => $bulan,
-            'kata_kunci' => ($halamanPribadi ?? false) ? null : $kataKunci,
             'jenis_pegawai' => ($halamanPribadi ?? false) ? null : $jenisPegawai,
             'pegawai_id' => ($halamanPribadi ?? false) ? null : $pegawaiId,
             'status_pegawai' => ($halamanPribadi ?? false) ? null : $statusPegawai,

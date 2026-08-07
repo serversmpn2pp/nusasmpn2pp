@@ -12,13 +12,11 @@ class KartuPegawaiController extends Controller
     public function index(Request $request)
     {
         $data = $request->validate([
-            'kata_kunci' => ['nullable', 'string', 'max:100'],
             'jenis_pegawai' => ['nullable', 'string', 'max:100'],
             'pegawai_id' => ['nullable', 'integer', 'exists:pegawai,id'],
             'status' => ['nullable', 'in:semua,aktif,nonaktif'],
         ]);
 
-        $kataKunci = trim((string) ($data['kata_kunci'] ?? ''));
         $jenisPegawai = $data['jenis_pegawai'] ?? '';
         $pegawaiId = $data['pegawai_id'] ?? null;
         $status = $data['status'] ?? 'aktif';
@@ -40,15 +38,6 @@ class KartuPegawaiController extends Controller
             ->when($status === 'nonaktif', fn ($query) => $query->where('aktif', false))
             ->when($jenisPegawai, fn ($query) => $query->where('jenis_pegawai', $jenisPegawai))
             ->when($pegawaiId, fn ($query) => $query->whereKey($pegawaiId))
-            ->when($kataKunci !== '', function ($query) use ($kataKunci) {
-                $query->where(function ($query) use ($kataKunci) {
-                    $query->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('nip', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('nuptk', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('jabatan_utama', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('jenis_pegawai', 'ilike', '%' . $kataKunci . '%');
-                });
-            })
             ->orderBy('nama_lengkap')
             ->get()
             ->map(fn (Pegawai $pegawai) => $this->buatDataKartu($pegawai));
@@ -57,7 +46,6 @@ class KartuPegawaiController extends Controller
             'kartuPegawai',
             'daftarJenisPegawai',
             'daftarPegawai',
-            'kataKunci',
             'jenisPegawai',
             'pegawaiId',
             'status',

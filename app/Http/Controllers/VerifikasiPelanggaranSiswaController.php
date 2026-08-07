@@ -221,6 +221,8 @@ class VerifikasiPelanggaranSiswaController extends Controller
                 "pengesahan-wakil-menunggu:{$laporan->id}:{$laporan->updated_at?->timestamp}",
             );
         }
+
+        $this->notifikasiPerkembanganKasusUntukSiswa($laporan);
     }
 
     private function notifikasiPengesahanWakil(
@@ -245,6 +247,50 @@ class VerifikasiPelanggaranSiswaController extends Controller
                 : sprintf('Laporan %s perlu diperiksa kembali sesuai catatan Wakil Kesiswaan.', $laporan->nomor_laporan),
             route('laporan-pembinaan-siswa.show', $laporan, false),
             "keputusan-wakil:{$laporan->id}:{$keputusan}:{$laporan->updated_at?->timestamp}",
+        );
+
+        if ($disahkan) {
+            $this->notifikasiPerkembanganKasusUntukSiswa($laporan);
+        }
+    }
+
+    private function notifikasiPerkembanganKasusUntukSiswa(LaporanPembinaanSiswa $laporan): void
+    {
+        $laporan->loadMissing('siswa:id,nama_lengkap');
+        $konfigurasi = match ($laporan->status_verifikasi) {
+            'ditetapkan_pembinaan' => [
+                'informasi',
+                'Pembinaan telah ditetapkan',
+                sprintf('BK telah menetapkan laporan %s sebagai pembinaan tanpa poin.', $laporan->nomor_laporan),
+            ],
+            'tidak_terbukti' => [
+                'berhasil',
+                'Pemeriksaan laporan selesai',
+                sprintf('Pemeriksaan laporan %s telah selesai dan dinyatakan tidak terbukti.', $laporan->nomor_laporan),
+            ],
+            'disahkan' => [
+                'peringatan',
+                'Pelanggaran berpoin telah disahkan',
+                sprintf('%d poin pada laporan %s telah disahkan oleh Wakil Kesiswaan.', $laporan->total_poin, $laporan->nomor_laporan),
+            ],
+            default => null,
+        };
+
+        if (! $konfigurasi) {
+            return;
+        }
+
+        $this->notifikasiPenggunaService->kirimKeBanyak(
+            $this->notifikasiPenggunaService->penggunaUntukSiswa((int) $laporan->siswa_id),
+            $konfigurasi[0],
+            $konfigurasi[1],
+            $konfigurasi[2],
+            route('progress-kasus-siswa.show', $laporan, false),
+            "perkembangan-kasus-siswa:{$laporan->id}:{$laporan->status_verifikasi}",
+            [
+                'laporan_pembinaan_siswa_id' => $laporan->id,
+                'status_verifikasi' => $laporan->status_verifikasi,
+            ],
         );
     }
 

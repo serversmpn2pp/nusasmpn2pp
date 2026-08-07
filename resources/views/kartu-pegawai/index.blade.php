@@ -294,7 +294,7 @@
 
         .employee-filter-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 190px 230px 150px auto;
+            grid-template-columns: 200px minmax(260px, 1fr) 150px auto;
             gap: 12px;
             align-items: end;
         }
@@ -382,11 +382,6 @@
 
     <form action="{{ route('kartu-pegawai.index') }}" method="GET" class="panel panel-pad kartu-filter" style="margin-bottom: 24px;">
         <div class="employee-filter-grid">
-            <div class="field">
-                <label for="kata_kunci">Cari pegawai</label>
-                <input id="kata_kunci" name="kata_kunci" type="search" value="{{ $kataKunci }}" placeholder="Nama, NIP, jabatan" class="input">
-            </div>
-
             <div class="field">
                 <label for="jenis_pegawai">Jenis pegawai</label>
                 <select id="jenis_pegawai" name="jenis_pegawai" class="select">

@@ -66,25 +66,50 @@ class AbsensiPegawaiPribadiUiTest extends TestCase
             ->assertDontSee($pegawaiLain->nama_lengkap);
     }
 
-    public function test_halaman_operasional_tetap_memiliki_filter_pegawai_lengkap(): void
+    public function test_halaman_operasional_memakai_pilihan_pegawai_tanpa_pencarian_duplikat(): void
     {
-        [$akun] = $this->siapkanAkunAdministratorSebagaiPegawai();
+        [$akun, $pegawaiSendiri, $pegawaiLain] = $this->siapkanAkunAdministratorSebagaiPegawai();
 
         $this->actingAs($akun)
-            ->get(route('rekap-absensi-pegawai-harian.index'))
+            ->get(route('rekap-absensi-pegawai-harian.index', [
+                'kata_kunci' => 'parameter-lama-yang-tidak-dipakai',
+            ]))
             ->assertOk()
-            ->assertSee('name="kata_kunci"', false)
+            ->assertDontSee('name="kata_kunci"', false)
             ->assertSee('name="jenis_pegawai"', false)
             ->assertSee('name="pegawai_id"', false)
-            ->assertSee('name="status_pegawai"', false);
+            ->assertSee('name="status_pegawai"', false)
+            ->assertSee($pegawaiSendiri->nama_lengkap)
+            ->assertSee($pegawaiLain->nama_lengkap);
 
         $this->actingAs($akun)
-            ->get(route('laporan-absensi-pegawai-bulanan.index'))
+            ->get(route('laporan-absensi-pegawai-bulanan.index', [
+                'kata_kunci' => 'parameter-lama-yang-tidak-dipakai',
+            ]))
             ->assertOk()
-            ->assertSee('name="kata_kunci"', false)
+            ->assertDontSee('name="kata_kunci"', false)
             ->assertSee('name="jenis_pegawai"', false)
             ->assertSee('name="pegawai_id"', false)
-            ->assertSee('name="status_pegawai"', false);
+            ->assertSee('name="status_pegawai"', false)
+            ->assertSee($pegawaiSendiri->nama_lengkap)
+            ->assertSee($pegawaiLain->nama_lengkap);
+    }
+
+    public function test_kartu_pegawai_memakai_pilihan_pegawai_tanpa_pencarian_duplikat(): void
+    {
+        [$akun, $pegawaiSendiri, $pegawaiLain] = $this->siapkanAkunAdministratorSebagaiPegawai();
+
+        $this->actingAs($akun)
+            ->get(route('kartu-pegawai.index', [
+                'kata_kunci' => 'parameter-lama-yang-tidak-dipakai',
+            ]))
+            ->assertOk()
+            ->assertDontSee('name="kata_kunci"', false)
+            ->assertSee('name="jenis_pegawai"', false)
+            ->assertSee('name="pegawai_id"', false)
+            ->assertSee('name="status"', false)
+            ->assertSee($pegawaiSendiri->nama_lengkap)
+            ->assertSee($pegawaiLain->nama_lengkap);
     }
 
     private function siapkanAkunAdministratorSebagaiPegawai(): array

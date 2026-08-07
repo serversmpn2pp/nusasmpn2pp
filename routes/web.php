@@ -13,6 +13,7 @@ use App\Http\Controllers\BuktiPelaksanaanSanksiController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenPoinSiswaController;
 use App\Http\Controllers\GuruMataPelajaranController;
+use App\Http\Controllers\HasilSurveiSayaController;
 use App\Http\Controllers\InputNilaiController;
 use App\Http\Controllers\JadwalKelasSayaController;
 use App\Http\Controllers\JadwalPelajaranController;
@@ -44,8 +45,10 @@ use App\Http\Controllers\LaporanPembinaanSiswaController;
 use App\Http\Controllers\LembarJawabUjianOmrController;
 use App\Http\Controllers\LokasiBarangController;
 use App\Http\Controllers\MataPelajaranController;
+use App\Http\Controllers\MonitoringSurveiController;
 use App\Http\Controllers\MonitoringUjianCbtController;
 use App\Http\Controllers\MutasiStokBarangController;
+use App\Http\Controllers\NilaiSayaController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
 use App\Http\Controllers\NotifikasiPenggunaController;
 use App\Http\Controllers\PegawaiController;
@@ -65,8 +68,11 @@ use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PerangkatAjarSayaController;
 use App\Http\Controllers\PergantianGuruMataPelajaranController;
 use App\Http\Controllers\PeringatanDiniSiswaController;
+use App\Http\Controllers\PertanyaanSurveiPembelajaranController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\ProfilPegawaiController;
+use App\Http\Controllers\ProgressKasusSiswaController;
+use App\Http\Controllers\PublikasiNilaiController;
 use App\Http\Controllers\PusatVerifikasiPelanggaranController;
 use App\Http\Controllers\RekapAbsensiHarianController;
 use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
@@ -89,6 +95,7 @@ use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SoalCbtController;
 use App\Http\Controllers\SoalUjianCbtController;
 use App\Http\Controllers\StatusKelengkapanPanitiaCbtController;
+use App\Http\Controllers\SurveiPembelajaranController;
 use App\Http\Controllers\TahunPelajaranController;
 use App\Http\Controllers\TerapkanNilaiCbtController;
 use App\Http\Controllers\TerapkanNilaiOmrController;
@@ -138,6 +145,23 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('beranda', [BerandaController::class, 'index'])
             ->middleware('izin:beranda.akses')
             ->name('beranda');
+
+        Route::get('progress-kasus-saya', [ProgressKasusSiswaController::class, 'index'])
+            ->name('progress-kasus-siswa.index');
+        Route::get('progress-kasus-saya/{laporanPembinaanSiswa}', [ProgressKasusSiswaController::class, 'show'])
+            ->name('progress-kasus-siswa.show');
+        Route::get('nilai-saya', [NilaiSayaController::class, 'index'])
+            ->name('nilai-saya.index');
+        Route::get('survei-pembelajaran/{guruMataPelajaran}/{semester}', [SurveiPembelajaranController::class, 'create'])
+            ->name('survei-pembelajaran.create');
+        Route::post('survei-pembelajaran/{guruMataPelajaran}/{semester}', [SurveiPembelajaranController::class, 'store'])
+            ->name('survei-pembelajaran.store');
+        Route::get('hasil-survei-saya', [HasilSurveiSayaController::class, 'index'])
+            ->middleware('izin:survei.hasil_pribadi')
+            ->name('hasil-survei-saya.index');
+        Route::get('monitoring-survei', [MonitoringSurveiController::class, 'index'])
+            ->middleware('izin:survei.monitor')
+            ->name('monitoring-survei.index');
 
         Route::middleware('izin:akun.lihat,akun.kelola')->group(function () {
             Route::get('akun-pegawai', [AkunPegawaiController::class, 'index'])->name('akun-pegawai.index');
@@ -268,6 +292,15 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             ->name('kelas-wali.index');
         Route::resource('jenis-perangkat-ajar', JenisPerangkatAjarController::class)
             ->middleware('izin:perangkat_ajar.jenis_kelola');
+        Route::resource('pertanyaan-survei-pembelajaran', PertanyaanSurveiPembelajaranController::class)
+            ->only(['index', 'create', 'store', 'edit', 'update'])
+            ->middleware('izin:survei.pertanyaan_kelola');
+        Route::patch(
+            'pertanyaan-survei-pembelajaran/{pertanyaanSurveiPembelajaran}/status',
+            [PertanyaanSurveiPembelajaranController::class, 'ubahStatus'],
+        )
+            ->middleware('izin:survei.pertanyaan_kelola')
+            ->name('pertanyaan-survei-pembelajaran.status');
         Route::resource('jenis-ujian-cbt', JenisUjianCbtController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:cbt.kelola');
@@ -432,6 +465,10 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::middleware('izin:nilai.input')->group(function () {
             Route::get('input-nilai', [InputNilaiController::class, 'index'])->name('input-nilai.index');
             Route::post('input-nilai', [InputNilaiController::class, 'store'])->name('input-nilai.store');
+            Route::patch('publikasi-nilai/{guruMataPelajaran}/{semester}/publikasikan', [PublikasiNilaiController::class, 'publikasikan'])
+                ->name('publikasi-nilai.publikasikan');
+            Route::patch('publikasi-nilai/{guruMataPelajaran}/{semester}/jadikan-draf', [PublikasiNilaiController::class, 'jadikanDraf'])
+                ->name('publikasi-nilai.jadikan-draf');
         });
         Route::get('rekap-nilai-rapor', [RekapNilaiRaporController::class, 'index'])
             ->middleware('izin:nilai.rekap')

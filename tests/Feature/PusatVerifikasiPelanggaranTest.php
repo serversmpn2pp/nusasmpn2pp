@@ -107,6 +107,63 @@ class PusatVerifikasiPelanggaranTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_siswa_mendapat_notifikasi_hanya_pada_keputusan_kasus_yang_resmi(): void
+    {
+        [$tahun, $siswa, $jenis] = $this->dataDasar();
+        $akunSiswa = $this->buatAkunSiswa($siswa);
+        [, $akunBk] = $this->buatAkunPegawai('BK Notifikasi Siswa', '198701012017011008', 'bk');
+        [, $akunWakil] = $this->buatAkunPegawai('Wakil Notifikasi Siswa', '198801012018011009', 'wakil_pimpinan_kesiswaan');
+        $laporanPembinaan = $this->buatLaporan('PB-NOTIF-001', 'diajukan', $tahun, $siswa, $jenis);
+        $laporanTidakTerbukti = $this->buatLaporan('PB-NOTIF-002', 'diajukan', $tahun, $siswa, $jenis);
+        $laporanPoin = $this->buatLaporan('PB-NOTIF-003', 'diajukan', $tahun, $siswa, $jenis);
+
+        $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporanPembinaan), [
+            'hasil' => 'pembinaan',
+            'catatan' => 'Cukup ditangani melalui pembinaan.',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunSiswa->id,
+            'judul' => 'Pembinaan telah ditetapkan',
+            'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanPembinaan->id.':ditetapkan_pembinaan',
+            'tautan' => route('progress-kasus-siswa.show', $laporanPembinaan, false),
+        ]);
+
+        $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporanTidakTerbukti), [
+            'hasil' => 'tidak_terbukti',
+            'catatan' => 'Laporan tidak didukung fakta yang cukup.',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunSiswa->id,
+            'judul' => 'Pemeriksaan laporan selesai',
+            'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanTidakTerbukti->id.':tidak_terbukti',
+        ]);
+
+        $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporanPoin), [
+            'hasil' => 'sanksi_poin',
+            'catatan' => 'Direkomendasikan sebagai pelanggaran berpoin.',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('notifikasi_pengguna', [
+            'pengguna_id' => $akunSiswa->id,
+            'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanPoin->id.':menunggu_pengesahan_wakil',
+        ]);
+
+        $this->actingAs($akunWakil)->post(route('verifikasi-pelanggaran.wakil', $laporanPoin), [
+            'keputusan' => 'sahkan',
+            'catatan' => 'Rekomendasi BK disahkan.',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunSiswa->id,
+            'judul' => 'Pelanggaran berpoin telah disahkan',
+            'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanPoin->id.':disahkan',
+            'tautan' => route('progress-kasus-siswa.show', $laporanPoin, false),
+        ]);
+        $this->assertSame(3, $akunSiswa->notifikasiPengguna()->count());
+    }
+
     public function test_wakil_dapat_mengembalikan_rekomendasi_kepada_bk_tanpa_mencatat_poin(): void
     {
         [$tahun, $siswa, $jenis] = $this->dataDasar();
@@ -171,6 +228,21 @@ class PusatVerifikasiPelanggaranTest extends TestCase
         $pengguna->daftarPeran()->attach(Peran::where('kode', $kodePeran)->firstOrFail());
 
         return [$pegawai, $pengguna];
+    }
+
+    private function buatAkunSiswa(Siswa $siswa): Pengguna
+    {
+        $pengguna = Pengguna::create([
+            'siswa_id' => $siswa->id,
+            'nama' => $siswa->nama_lengkap,
+            'username' => $siswa->nisn,
+            'kata_sandi' => 'KataSandi-Siswa-2026',
+            'peran' => 'siswa',
+            'aktif' => true,
+        ]);
+        $pengguna->daftarPeran()->attach(Peran::where('kode', 'siswa')->firstOrFail());
+
+        return $pengguna;
     }
 
     private function buatLaporan(

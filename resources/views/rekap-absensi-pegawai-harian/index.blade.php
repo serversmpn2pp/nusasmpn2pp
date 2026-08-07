@@ -52,22 +52,18 @@
             grid-column: span 2;
         }
 
-        .filter-search {
+        .filter-kind,
+        .filter-status,
+        .filter-attendance {
+            grid-column: span 2;
+        }
+
+        .filter-person {
             grid-column: span 4;
         }
 
-        .filter-kind,
-        .filter-person {
-            grid-column: span 3;
-        }
-
-        .filter-status,
-        .filter-attendance {
-            grid-column: span 3;
-        }
-
         .filter-actions {
-            grid-column: span 6;
+            grid-column: 1 / -1;
             justify-content: flex-end;
         }
 
@@ -98,7 +94,6 @@
             }
 
             .filter-date,
-            .filter-search,
             .filter-kind,
             .filter-person,
             .filter-status,
@@ -153,11 +148,6 @@
             </div>
 
             @if (! $halamanPribadi)
-                <div class="field filter-search">
-                    <label for="kata_kunci">Cari pegawai</label>
-                    <input id="kata_kunci" type="search" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nama, NIP, jabatan">
-                </div>
-
                 <div class="field filter-kind">
                     <label for="jenis_pegawai">Jenis pegawai</label>
                     <select id="jenis_pegawai" name="jenis_pegawai" class="select">

@@ -53,7 +53,6 @@ class LaporanAbsensiPegawaiBulananController extends Controller
         $bulanCarbon = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
         $tanggalMulai = $bulanCarbon->copy()->startOfMonth();
         $tanggalSelesai = $bulanCarbon->copy()->endOfMonth();
-        $kataKunci = $cakupanAbsensiPegawaiPribadi ? '' : trim((string) ($data['kata_kunci'] ?? ''));
         $jenisPegawai = $cakupanAbsensiPegawaiPribadi ? '' : ($data['jenis_pegawai'] ?? '');
         $pegawaiId = $cakupanAbsensiPegawaiPribadi ? $request->user()?->pegawai_id : ($data['pegawai_id'] ?? null);
         $statusPegawai = $cakupanAbsensiPegawaiPribadi ? 'semua' : ($data['status_pegawai'] ?? 'aktif');
@@ -80,7 +79,6 @@ class LaporanAbsensiPegawaiBulananController extends Controller
         $pegawai = $pegawaiCetak
             ? collect([$pegawaiCetak])
             : $this->ambilPegawai(
-                kataKunci: $kataKunci,
                 jenisPegawai: $jenisPegawai,
                 pegawaiId: $pegawaiId,
                 statusPegawai: $statusPegawai,
@@ -103,7 +101,6 @@ class LaporanAbsensiPegawaiBulananController extends Controller
         return compact(
             'bulan',
             'labelPeriode',
-            'kataKunci',
             'jenisPegawai',
             'pegawaiId',
             'statusPegawai',
@@ -127,7 +124,6 @@ class LaporanAbsensiPegawaiBulananController extends Controller
 
         if (! $pribadi) {
             $aturan += [
-                'kata_kunci' => ['nullable', 'string', 'max:100'],
                 'jenis_pegawai' => ['nullable', 'string', 'max:100'],
                 'pegawai_id' => ['nullable', 'integer', 'exists:pegawai,id'],
                 'status_pegawai' => ['nullable', Rule::in(['semua', 'aktif', 'nonaktif'])],
@@ -138,7 +134,6 @@ class LaporanAbsensiPegawaiBulananController extends Controller
     }
 
     private function ambilPegawai(
-        string $kataKunci,
         string $jenisPegawai,
         ?int $pegawaiId,
         string $statusPegawai,
@@ -160,14 +155,6 @@ class LaporanAbsensiPegawaiBulananController extends Controller
             ->when($statusPegawai === 'nonaktif', fn ($query) => $query->where('aktif', false))
             ->when($jenisPegawai !== '', fn ($query) => $query->where('jenis_pegawai', $jenisPegawai))
             ->when($pegawaiId, fn ($query) => $query->whereKey($pegawaiId))
-            ->when($kataKunci !== '', function ($query) use ($kataKunci) {
-                $query->where(function ($query) use ($kataKunci) {
-                    $query->where('nama_lengkap', 'ilike', '%'.$kataKunci.'%')
-                        ->orWhere('nip', 'ilike', '%'.$kataKunci.'%')
-                        ->orWhere('jabatan_utama', 'ilike', '%'.$kataKunci.'%')
-                        ->orWhere('jenis_pegawai', 'ilike', '%'.$kataKunci.'%');
-                });
-            })
             ->orderBy('nama_lengkap')
             ->get();
     }

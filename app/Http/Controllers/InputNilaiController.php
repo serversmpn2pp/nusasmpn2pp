@@ -6,6 +6,8 @@ use App\Models\AnggotaKelas;
 use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
+use App\Models\PublikasiNilaiSiswa;
+use App\Services\Nilai\PublikasiNilaiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -13,17 +15,23 @@ use Illuminate\Validation\ValidationException;
 
 class InputNilaiController extends Controller
 {
+    public function __construct(private PublikasiNilaiService $publikasiNilai) {}
+
     public function index(Request $request)
     {
         $komponenNilaiId = old('komponen_nilai_id', $request->input('komponen_nilai_id'));
-        $daftarKomponenNilai = $this->ambilDaftarKomponenNilai();
+        $daftarKomponenNilai = $this->ambilDaftarKomponenNilai($request);
         $komponenDipilih = null;
         $anggotaKelas = collect();
         $nilaiTersimpan = collect();
         $penilaianPredikat = false;
+        $publikasiNilai = null;
+        $jumlahKomponenPublikasi = 0;
+        $jumlahNilaiPublikasi = 0;
+        $targetNilaiPublikasi = 0;
 
         if ($komponenNilaiId) {
-            $komponenDipilih = $this->ambilKomponenDipilih($komponenNilaiId);
+            $komponenDipilih = $this->ambilKomponenDipilih($request, $komponenNilaiId);
             $penilaianPredikat = $komponenDipilih
                 ->guruMataPelajaran?->mataPelajaran?->menggunakanPredikat() ?? false;
             $kelasId = $komponenDipilih->guruMataPelajaran?->kelas_id;
@@ -37,6 +45,27 @@ class InputNilaiController extends Controller
                     ->get()
                     ->keyBy('siswa_id');
             }
+
+            $guruMataPelajaranId = $komponenDipilih->guru_mata_pelajaran_id;
+            $semester = $komponenDipilih->semester;
+            $publikasiNilai = PublikasiNilaiSiswa::query()
+                ->where('guru_mata_pelajaran_id', $guruMataPelajaranId)
+                ->where('semester', $semester)
+                ->first();
+            $komponenSemesterIds = KomponenNilai::query()
+                ->where('guru_mata_pelajaran_id', $guruMataPelajaranId)
+                ->where('semester', $semester)
+                ->where('aktif', true)
+                ->pluck('id');
+            $jumlahKomponenPublikasi = $komponenSemesterIds->count();
+            $jumlahNilaiPublikasi = NilaiSiswa::query()
+                ->whereIn('komponen_nilai_id', $komponenSemesterIds)
+                ->whereIn('siswa_id', $anggotaKelas->pluck('siswa_id'))
+                ->where(function ($query) {
+                    $query->whereNotNull('nilai')->orWhereNotNull('predikat');
+                })
+                ->count();
+            $targetNilaiPublikasi = $jumlahKomponenPublikasi * $anggotaKelas->count();
         }
 
         $jumlahSiswa = $anggotaKelas->count();
@@ -61,6 +90,10 @@ class InputNilaiController extends Controller
             'jumlahTerisi',
             'rataRata',
             'penilaianPredikat',
+            'publikasiNilai',
+            'jumlahKomponenPublikasi',
+            'jumlahNilaiPublikasi',
+            'targetNilaiPublikasi',
         ));
     }
 
@@ -70,7 +103,7 @@ class InputNilaiController extends Controller
             'komponen_nilai_id' => ['required', 'exists:komponen_nilai,id'],
         ]);
 
-        $komponenDipilih = $this->ambilKomponenDipilih($request->input('komponen_nilai_id'));
+        $komponenDipilih = $this->ambilKomponenDipilih($request, $request->input('komponen_nilai_id'));
         $penilaianPredikat = $komponenDipilih
             ->guruMataPelajaran?->mataPelajaran?->menggunakanPredikat() ?? false;
         $aturan = [
@@ -145,14 +178,24 @@ class InputNilaiController extends Controller
             }
         });
 
+        $publikasiDibatalkan = $this->publikasiNilai->tandaiDraf(
+            (int) $komponenDipilih->guru_mata_pelajaran_id,
+            $komponenDipilih->semester,
+        );
+
         return redirect()
             ->route('input-nilai.index', ['komponen_nilai_id' => $komponenDipilih->id])
-            ->with('berhasil', 'Nilai siswa berhasil disimpan.');
+            ->with(
+                'berhasil',
+                $publikasiDibatalkan
+                    ? 'Nilai siswa berhasil disimpan. Karena ada perubahan, nilai kembali menjadi draf dan perlu dipublikasikan ulang.'
+                    : 'Nilai siswa berhasil disimpan sebagai draf.',
+            );
     }
 
-    private function ambilDaftarKomponenNilai()
+    private function ambilDaftarKomponenNilai(Request $request)
     {
-        return KomponenNilai::query()
+        return $this->queryKomponenDalamCakupan($request)
             ->with([
                 'guruMataPelajaran.tahunPelajaran',
                 'guruMataPelajaran.kelas',
@@ -170,9 +213,9 @@ class InputNilaiController extends Controller
             ->get();
     }
 
-    private function ambilKomponenDipilih(int|string $komponenNilaiId): KomponenNilai
+    private function ambilKomponenDipilih(Request $request, int|string $komponenNilaiId): KomponenNilai
     {
-        return KomponenNilai::query()
+        return $this->queryKomponenDalamCakupan($request)
             ->with([
                 'guruMataPelajaran.tahunPelajaran',
                 'guruMataPelajaran.kelas',
@@ -182,6 +225,25 @@ class InputNilaiController extends Controller
             ->where('aktif', true)
             ->whereKey($komponenNilaiId)
             ->firstOrFail();
+    }
+
+    private function queryKomponenDalamCakupan(Request $request)
+    {
+        $query = KomponenNilai::query();
+        $pengguna = $request->user();
+
+        if (
+            $pengguna
+            && ! $pengguna->administrator()
+            && $pengguna->memilikiPeran('guru_mapel')
+            && ! $pengguna->memilikiPeran(['pimpinan', 'wakil_pimpinan_kurikulum'])
+        ) {
+            $query->whereHas('guruMataPelajaran', function ($query) use ($pengguna) {
+                $query->where('pegawai_id', $pengguna->pegawai_id ?: 0);
+            });
+        }
+
+        return $query;
     }
 
     private function ambilAnggotaKelas(int $kelasId)

@@ -49,6 +49,16 @@ class GuruMataPelajaran extends Model
         return $this->hasMany(KomponenNilai::class);
     }
 
+    public function publikasiNilaiSiswa(): HasMany
+    {
+        return $this->hasMany(PublikasiNilaiSiswa::class);
+    }
+
+    public function surveiPembelajaran(): HasMany
+    {
+        return $this->hasMany(SurveiPembelajaran::class);
+    }
+
     public function jadwalPelajaran(): HasMany
     {
         return $this->hasMany(JadwalPelajaran::class);

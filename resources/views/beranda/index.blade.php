@@ -66,34 +66,73 @@
             margin-bottom: 18px;
         }
 
+        .dashboard-actions-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 10px;
+            color: var(--primary-dark);
+            font-size: 1rem;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .dashboard-actions-title::after {
+            height: 1px;
+            flex: 1;
+            background: var(--line);
+            content: '';
+        }
+
         .dashboard-actions.employee-actions {
             grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
         }
 
         .dashboard-action {
-            display: flex;
-            min-height: 68px;
+            display: grid;
+            min-height: 74px;
+            grid-template-columns: 36px minmax(0, 1fr) 26px;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            border: 1px solid var(--line);
+            gap: 10px;
+            border: 1px solid #b9cde2;
+            border-bottom: 3px solid var(--primary);
             border-radius: 8px;
             background: #fff;
-            padding: 13px 14px;
+            padding: 12px;
             color: var(--primary-dark);
             font-weight: 900;
-            box-shadow: 0 1px 2px rgba(21, 71, 122, .05);
+            box-shadow: 0 2px 5px rgba(21, 71, 122, .09);
+            cursor: pointer;
+            transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
         }
 
         .dashboard-action:hover {
-            border-color: #b9cde2;
+            border-color: var(--primary);
             background: var(--primary-soft);
+            color: var(--primary-dark);
+            box-shadow: 0 5px 12px rgba(21, 71, 122, .16);
+            transform: translateY(-2px);
+        }
+
+        .dashboard-action:active {
+            box-shadow: 0 1px 3px rgba(21, 71, 122, .12);
+            transform: translateY(1px);
+        }
+
+        .dashboard-action:focus-visible {
+            outline: 3px solid rgba(241, 196, 15, .65);
+            outline-offset: 3px;
+        }
+
+        .dashboard-action-label {
+            min-width: 0;
+            line-height: 1.25;
         }
 
         .dashboard-action-mark {
             display: grid;
-            width: 34px;
-            height: 34px;
+            width: 36px;
+            height: 36px;
             flex: 0 0 auto;
             place-items: center;
             border-radius: 8px;
@@ -101,6 +140,42 @@
             color: var(--accent-text);
             font-size: .78rem;
             font-weight: 900;
+        }
+
+        .dashboard-action-arrow {
+            display: grid;
+            width: 26px;
+            height: 26px;
+            place-items: center;
+            border-radius: 50%;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 1.05rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .dashboard-action--highlight {
+            border-color: #d4aa00;
+            border-bottom-color: #9f7d00;
+            background: var(--accent);
+            color: #17324d;
+        }
+
+        .dashboard-action--highlight:hover {
+            border-color: #9f7d00;
+            background: #e4b90d;
+            color: #17324d;
+        }
+
+        .dashboard-action--highlight .dashboard-action-mark {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .dashboard-action--highlight .dashboard-action-arrow {
+            background: rgba(21, 71, 122, .12);
+            color: var(--primary-dark);
         }
 
         .dashboard-stat-grid {
@@ -355,11 +430,14 @@
             font-weight: 700;
         }
 
-        @media (max-width: 1180px) {
-            .dashboard-actions {
+        @media (max-width: 1450px) {
+            .dashboard-actions,
+            .dashboard-actions.employee-actions {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
             }
+        }
 
+        @media (max-width: 1180px) {
             .dashboard-stat-grid,
             .mini-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -382,6 +460,7 @@
 
         @media (max-width: 620px) {
             .dashboard-actions,
+            .dashboard-actions.employee-actions,
             .dashboard-stat-grid,
             .mini-grid,
             .mini-grid.cols-3 {
@@ -429,39 +508,46 @@
             </div>
         </section>
 
-        <section class="dashboard-actions" aria-label="Aksi cepat">
+        <h2 class="dashboard-actions-title">Akses Cepat</h2>
+        <section class="dashboard-actions" aria-label="Akses cepat administrator">
             @izin('siswa.kelola')
                 <a href="{{ route('siswa.create') }}" class="dashboard-action">
-                    <span>Tambah Siswa</span>
-                    <span class="dashboard-action-mark">SW</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">SW</span>
+                    <span class="dashboard-action-label">Tambah Siswa</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endizin
             @izin('pegawai.kelola')
                 <a href="{{ route('pegawai.create') }}" class="dashboard-action">
-                    <span>Tambah Pegawai</span>
-                    <span class="dashboard-action-mark">PG</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">PG</span>
+                    <span class="dashboard-action-label">Tambah Pegawai</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endizin
             @izin('absensi.scan')
                 <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="dashboard-action">
-                    <span>Scan Siswa</span>
-                    <span class="dashboard-action-mark">SA</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">SA</span>
+                    <span class="dashboard-action-label">Scan Siswa</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
                 <a href="{{ route('scan-absensi-pegawai.index') }}" target="_blank" rel="noopener" class="dashboard-action">
-                    <span>Scan Pegawai</span>
-                    <span class="dashboard-action-mark">SP</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">SP</span>
+                    <span class="dashboard-action-label">Scan Pegawai</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endizin
             @izin('nilai.input')
                 <a href="{{ route('input-nilai.index') }}" class="dashboard-action">
-                    <span>Input Nilai</span>
-                    <span class="dashboard-action-mark">IN</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">IN</span>
+                    <span class="dashboard-action-label">Input Nilai</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endizin
             @izin('bk.kelola')
                 <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="dashboard-action">
-                    <span>Laporan BK</span>
-                    <span class="dashboard-action-mark">BK</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">BK</span>
+                    <span class="dashboard-action-label">Laporan BK</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endizin
         </section>
@@ -808,50 +894,58 @@
             </div>
         </section>
 
-        <section class="dashboard-actions employee-actions" aria-label="Aksi cepat pegawai">
+        <h2 class="dashboard-actions-title">Akses Cepat</h2>
+        <section class="dashboard-actions employee-actions" aria-label="Akses cepat pegawai">
             @if ($pegawaiLogin)
                 @izin('poin_siswa.lapor')
-                    <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="dashboard-action">
-                        <span>Laporkan Kejadian</span>
-                        <span class="dashboard-action-mark">LK</span>
+                    <a href="{{ route('laporan-pembinaan-siswa.create') }}" class="dashboard-action dashboard-action--highlight">
+                        <span class="dashboard-action-mark" aria-hidden="true">LK</span>
+                        <span class="dashboard-action-label">Laporkan Kejadian</span>
+                        <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                     </a>
                 @endizin
             @endif
             <a href="{{ route('kata-sandi.edit') }}" class="dashboard-action">
-                <span>Ganti Password</span>
-                <span class="dashboard-action-mark">PW</span>
+                <span class="dashboard-action-mark" aria-hidden="true">PW</span>
+                <span class="dashboard-action-label">Ganti Password</span>
+                <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
             </a>
             @if ($pegawaiLogin)
                 <a href="{{ route('profil-pegawai.edit') }}" class="dashboard-action">
-                    <span>Profil Saya</span>
-                    <span class="dashboard-action-mark">PR</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">PR</span>
+                    <span class="dashboard-action-label">Profil Saya</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endif
             @izin('absensi_pegawai.pribadi', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan')
                 <a href="{{ route('rekap-absensi-pegawai-harian.index') }}" class="dashboard-action">
-                    <span>Rekap Saya</span>
-                    <span class="dashboard-action-mark">RS</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">RS</span>
+                    <span class="dashboard-action-label">Rekap Saya</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endizin
             @izin('absensi_pegawai.pribadi', 'absensi.laporan')
                 <a href="{{ route('laporan-absensi-pegawai-bulanan.index') }}" class="dashboard-action">
-                    <span>Laporan Saya</span>
-                    <span class="dashboard-action-mark">LS</span>
+                    <span class="dashboard-action-mark" aria-hidden="true">LS</span>
+                    <span class="dashboard-action-label">Laporan Saya</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endizin
             @if ($kelasWali->isNotEmpty())
                 @izin('absensi.lihat', 'absensi.koreksi')
                     <a href="{{ route('rekap-absensi-harian.index') }}" class="dashboard-action">
-                        <span>Rekap Kelas</span>
-                        <span class="dashboard-action-mark">RK</span>
+                        <span class="dashboard-action-mark" aria-hidden="true">RK</span>
+                        <span class="dashboard-action-label">Rekap Kelas</span>
+                        <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                     </a>
                 @endizin
             @endif
             @if ($memilikiPerwalian)
                 @izin('poin_siswa.lihat', 'poin_siswa.lapor')
                     <a href="{{ route('laporan-pembinaan-siswa.index') }}" class="dashboard-action">
-                        <span>Pembinaan & Poin</span>
-                        <span class="dashboard-action-mark">BK</span>
+                        <span class="dashboard-action-mark" aria-hidden="true">BK</span>
+                        <span class="dashboard-action-label">Pembinaan & Poin</span>
+                        <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                     </a>
                 @endizin
             @endif

@@ -6,12 +6,15 @@ use App\Models\BatchScanUjianOmr;
 use App\Models\HasilScanLjkUjianOmr;
 use App\Models\NilaiSiswa;
 use App\Models\UjianOmr;
+use App\Services\Nilai\PublikasiNilaiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class TerapkanNilaiOmrController extends Controller
 {
+    public function __construct(private PublikasiNilaiService $publikasiNilai) {}
+
     public function store(Request $request, UjianOmr $ujianOmr, BatchScanUjianOmr $batchScan)
     {
         $this->pastikanBatchMilikUjian($ujianOmr, $batchScan);
@@ -40,6 +43,7 @@ class TerapkanNilaiOmrController extends Controller
         $jumlahDiterapkan = 0;
         $jumlahTujuanTidakValid = 0;
         $jumlahSudahDiterapkan = 0;
+        $cakupanNilaiBerubah = collect();
 
         DB::transaction(function () use (
             $request,
@@ -48,6 +52,7 @@ class TerapkanNilaiOmrController extends Controller
             &$jumlahDiterapkan,
             &$jumlahTujuanTidakValid,
             &$jumlahSudahDiterapkan,
+            $cakupanNilaiBerubah,
         ) {
             foreach ($hasilBersih as $hasil) {
                 if ($lembarSudahDiterapkan->contains((int) $hasil->lembar_jawab_ujian_omr_id)) {
@@ -84,9 +89,20 @@ class TerapkanNilaiOmrController extends Controller
                     'diterapkan_pada' => now(),
                     'diterapkan_oleh_pengguna_id' => $request->user()?->id,
                 ]);
+                $cakupanNilaiBerubah->push([
+                    'guru_mata_pelajaran_id' => (int) $komponenNilai->guru_mata_pelajaran_id,
+                    'semester' => $komponenNilai->semester,
+                ]);
                 $jumlahDiterapkan++;
             }
         });
+
+        $cakupanNilaiBerubah
+            ->unique(fn (array $item) => $item['guru_mata_pelajaran_id'].'|'.$item['semester'])
+            ->each(fn (array $item) => $this->publikasiNilai->tandaiDraf(
+                $item['guru_mata_pelajaran_id'],
+                $item['semester'],
+            ));
 
         $pesan = "{$jumlahDiterapkan} nilai hasil OMR berhasil diterapkan ke nilai siswa.";
 

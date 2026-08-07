@@ -1859,6 +1859,9 @@
                         ['label' => 'Skema Bobot Nilai', 'route' => 'skema-bobot-nilai.index', 'active' => ['skema-bobot-nilai.*'], 'initial' => 'BN', 'izin' => 'nilai.skema_kelola', 'subgroup' => 'Penilaian'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'subgroup' => 'Penilaian'],
                         ['label' => 'Rekap Nilai Rapor', 'route' => 'rekap-nilai-rapor.index', 'active' => ['rekap-nilai-rapor.*'], 'initial' => 'RR', 'izin' => 'nilai.rekap', 'subgroup' => 'Penilaian'],
+                        ['label' => 'Pernyataan Survei', 'route' => 'pertanyaan-survei-pembelajaran.index', 'active' => ['pertanyaan-survei-pembelajaran.*'], 'initial' => 'SV', 'izin' => 'survei.pertanyaan_kelola', 'subgroup' => 'Penilaian'],
+                        ['label' => 'Hasil Survei Saya', 'route' => 'hasil-survei-saya.index', 'active' => ['hasil-survei-saya.*'], 'initial' => 'HS', 'izin' => 'survei.hasil_pribadi', 'pegawai_only' => true, 'subgroup' => 'Penilaian'],
+                        ['label' => 'Monitoring Survei', 'route' => 'monitoring-survei.index', 'active' => ['monitoring-survei.*'], 'initial' => 'MS', 'izin' => 'survei.monitor', 'subgroup' => 'Penilaian'],
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PS', 'izin' => 'perangkat_ajar.upload', 'pegawai_only' => true, 'subgroup' => 'Perangkat Ajar'],
                         ['label' => 'Pemeriksaan Perangkat Ajar', 'route' => 'pemeriksaan-perangkat-ajar.index', 'active' => ['pemeriksaan-perangkat-ajar.*'], 'initial' => 'PP', 'izin' => ['perangkat_ajar.lihat', 'perangkat_ajar.periksa'], 'subgroup' => 'Perangkat Ajar'],
                         ['label' => 'Jenis Perangkat Ajar', 'route' => 'jenis-perangkat-ajar.index', 'active' => ['jenis-perangkat-ajar.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.jenis_kelola', 'subgroup' => 'Perangkat Ajar'],
@@ -1989,6 +1992,7 @@
                     'items' => [
                         ['label' => 'Jadwal Mengajar Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JP', 'izin' => 'jadwal.pribadi', 'peran' => 'guru_mapel'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'peran' => 'guru_mapel'],
+                        ['label' => 'Hasil Survei Saya', 'route' => 'hasil-survei-saya.index', 'active' => ['hasil-survei-saya.*'], 'initial' => 'HS', 'izin' => 'survei.hasil_pribadi', 'peran' => 'guru_mapel'],
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.upload', 'peran' => 'guru_mapel'],
                     ],
                 ],
@@ -2015,6 +2019,14 @@
                     'title' => 'Utama',
                     'items' => [
                         ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                    ],
+                ],
+                [
+                    'id' => 'informasi-saya',
+                    'title' => 'Informasi Saya',
+                    'items' => [
+                        ['label' => 'Nilai Saya', 'route' => 'nilai-saya.index', 'active' => ['nilai-saya.*'], 'initial' => 'NS', 'izin' => null],
+                        ['label' => 'Progress Kasus Saya', 'route' => 'progress-kasus-siswa.index', 'active' => ['progress-kasus-siswa.*'], 'initial' => 'PK', 'izin' => null],
                     ],
                 ],
                 [

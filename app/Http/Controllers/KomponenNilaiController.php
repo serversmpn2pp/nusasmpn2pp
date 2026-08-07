@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\GuruMataPelajaran;
 use App\Models\KomponenNilai;
 use App\Models\TahunPelajaran;
+use App\Services\Nilai\PublikasiNilaiService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class KomponenNilaiController extends Controller
 {
+    public function __construct(private PublikasiNilaiService $publikasiNilai) {}
+
     public function index(Request $request)
     {
         $kata_kunci = $request->kata_kunci;
@@ -116,6 +119,10 @@ class KomponenNilaiController extends Controller
         $this->pastikanStsDanSasTunggal($data);
 
         $komponenNilai = KomponenNilai::create($data);
+        $this->publikasiNilai->tandaiDraf(
+            (int) $komponenNilai->guru_mata_pelajaran_id,
+            $komponenNilai->semester,
+        );
 
         return redirect()
             ->route('komponen-nilai.show', $komponenNilai)
@@ -154,7 +161,19 @@ class KomponenNilaiController extends Controller
         $this->pastikanBolehAksesGuruMataPelajaran($request, (int) $data['guru_mata_pelajaran_id']);
         $this->pastikanStsDanSasTunggal($data, $komponenNilai);
 
+        $cakupanLama = [
+            'guru_mata_pelajaran_id' => (int) $komponenNilai->guru_mata_pelajaran_id,
+            'semester' => $komponenNilai->semester,
+        ];
         $komponenNilai->update($data);
+        $this->publikasiNilai->tandaiDraf(
+            $cakupanLama['guru_mata_pelajaran_id'],
+            $cakupanLama['semester'],
+        );
+        $this->publikasiNilai->tandaiDraf(
+            (int) $komponenNilai->guru_mata_pelajaran_id,
+            $komponenNilai->semester,
+        );
 
         return redirect()
             ->route('komponen-nilai.show', $komponenNilai)
@@ -166,6 +185,10 @@ class KomponenNilaiController extends Controller
         $this->pastikanBolehAksesKomponen($request, $komponenNilai);
 
         $komponenNilai->update(['aktif' => false]);
+        $this->publikasiNilai->tandaiDraf(
+            (int) $komponenNilai->guru_mata_pelajaran_id,
+            $komponenNilai->semester,
+        );
 
         return redirect()
             ->route('komponen-nilai.index')

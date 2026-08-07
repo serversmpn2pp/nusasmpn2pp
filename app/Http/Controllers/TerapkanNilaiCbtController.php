@@ -4,16 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\JawabanPesertaUjianCbt;
 use App\Models\NilaiSiswa;
-use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
+use App\Services\Nilai\PublikasiNilaiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class TerapkanNilaiCbtController extends Controller
 {
+    public function __construct(private PublikasiNilaiService $publikasiNilai) {}
+
     public function store(Request $request, UjianCbt $ujianCbt, KoreksiOtomatisCbtService $koreksiOtomatisCbtService)
     {
         $soalUjian = $this->ambilSoalUjian($ujianCbt);
@@ -52,6 +54,7 @@ class TerapkanNilaiCbtController extends Controller
             'perlu_koreksi_manual' => 0,
             'tujuan_tidak_valid' => 0,
         ];
+        $cakupanNilaiBerubah = collect();
 
         DB::transaction(function () use (
             $request,
@@ -62,6 +65,7 @@ class TerapkanNilaiCbtController extends Controller
             $soalUjianIds,
             $bobotTotal,
             &$ringkasan,
+            $cakupanNilaiBerubah,
         ) {
             foreach ($pesertaUjian as $peserta) {
                 $komponenNilai = $peserta->kelasUjianCbt?->komponenNilai;
@@ -125,9 +129,20 @@ class TerapkanNilaiCbtController extends Controller
                     'nilai_diterapkan_pada' => now(),
                     'nilai_diterapkan_oleh_pengguna_id' => $request->user()?->id,
                 ]);
+                $cakupanNilaiBerubah->push([
+                    'guru_mata_pelajaran_id' => (int) $komponenNilai->guru_mata_pelajaran_id,
+                    'semester' => $komponenNilai->semester,
+                ]);
                 $ringkasan['diterapkan']++;
             }
         });
+
+        $cakupanNilaiBerubah
+            ->unique(fn (array $item) => $item['guru_mata_pelajaran_id'].'|'.$item['semester'])
+            ->each(fn (array $item) => $this->publikasiNilai->tandaiDraf(
+                $item['guru_mata_pelajaran_id'],
+                $item['semester'],
+            ));
 
         $pesan = "{$ringkasan['diterapkan']} nilai CBT berhasil diterapkan ke nilai siswa.";
 

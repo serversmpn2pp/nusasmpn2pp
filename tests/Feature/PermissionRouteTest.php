@@ -177,6 +177,12 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('pemeriksaan-perangkat-ajar.show', 'izin:perangkat_ajar.lihat,perangkat_ajar.periksa');
         $this->assertRouteMemakaiMiddleware('pemeriksaan-perangkat-ajar.preview', 'izin:perangkat_ajar.lihat,perangkat_ajar.periksa');
         $this->assertRouteMemakaiMiddleware('pemeriksaan-perangkat-ajar.update', 'izin:perangkat_ajar.periksa');
+        $this->assertRouteMemakaiMiddleware('pertanyaan-survei-pembelajaran.index', 'izin:survei.pertanyaan_kelola');
+        $this->assertRouteMemakaiMiddleware('pertanyaan-survei-pembelajaran.create', 'izin:survei.pertanyaan_kelola');
+        $this->assertRouteMemakaiMiddleware('pertanyaan-survei-pembelajaran.update', 'izin:survei.pertanyaan_kelola');
+        $this->assertRouteMemakaiMiddleware('pertanyaan-survei-pembelajaran.status', 'izin:survei.pertanyaan_kelola');
+        $this->assertRouteMemakaiMiddleware('hasil-survei-saya.index', 'izin:survei.hasil_pribadi');
+        $this->assertRouteMemakaiMiddleware('monitoring-survei.index', 'izin:survei.monitor');
     }
 
     public function test_route_master_inventaris_memakai_permission_barang(): void

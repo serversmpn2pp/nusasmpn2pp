@@ -14,7 +14,6 @@
         $bolehCetakPerPegawai = ! $halamanPribadi && (auth()->user()?->memilikiIzin(['laporan.export', 'absensi_pegawai.pribadi']) ?? false);
         $parameterCetak = array_filter([
             'bulan' => $bulan,
-            'kata_kunci' => $halamanPribadi ? null : $kataKunci,
             'jenis_pegawai' => $halamanPribadi ? null : $jenisPegawai,
             'pegawai_id' => $halamanPribadi ? null : $pegawaiId,
             'status_pegawai' => $halamanPribadi ? null : $statusPegawai,
@@ -43,21 +42,17 @@
             grid-column: span 2;
         }
 
-        .report-search {
-            grid-column: span 4;
-        }
-
         .report-kind,
-        .report-person {
-            grid-column: span 3;
-        }
-
         .report-status {
             grid-column: span 3;
         }
 
+        .report-person {
+            grid-column: span 4;
+        }
+
         .report-actions {
-            grid-column: span 9;
+            grid-column: 1 / -1;
             justify-content: flex-end;
         }
 
@@ -88,7 +83,6 @@
             }
 
             .report-month,
-            .report-search,
             .report-kind,
             .report-person,
             .report-status {
@@ -141,11 +135,6 @@
             </div>
 
             @if (! $halamanPribadi)
-                <div class="field report-search">
-                <label for="kata_kunci">Cari pegawai</label>
-                <input id="kata_kunci" type="search" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nama, NIP, jabatan">
-                </div>
-
                 <div class="field report-kind">
                 <label for="jenis_pegawai">Jenis pegawai</label>
                 <select id="jenis_pegawai" name="jenis_pegawai" class="select">

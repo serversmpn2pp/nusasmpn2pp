@@ -13,6 +13,46 @@
             justify-content: flex-end;
         }
 
+        .publication-box {
+            margin-top: 18px;
+            padding: 14px;
+            border: 1px solid #d8e2eb;
+            border-left: 4px solid #f1c40f;
+            border-radius: 7px;
+            background: #f8fafc;
+        }
+
+        .publication-box.is-published {
+            border-left-color: #16a34a;
+            background: #f1faf4;
+        }
+
+        .publication-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .publication-head strong {
+            color: #17324c;
+        }
+
+        .publication-box p {
+            margin: 8px 0 0;
+            color: #64748b;
+            font-size: .78rem;
+            line-height: 1.5;
+        }
+
+        .publication-box form {
+            margin-top: 12px;
+        }
+
+        .publication-box .button {
+            width: 100%;
+        }
+
         @media (max-width: 900px) {
             .input-nilai-filter {
                 grid-template-columns: 1fr;
@@ -177,6 +217,47 @@
                         <dd>{{ $komponenDipilih->guruMataPelajaran?->mataPelajaran?->labelJenisPenilaian() }}</dd>
                     </div>
                 </dl>
+
+                @php
+                    $sudahDipublikasikan = $publikasiNilai?->dipublikasikan === true;
+                @endphp
+                <div class="publication-box {{ $sudahDipublikasikan ? 'is-published' : '' }}">
+                    <div class="publication-head">
+                        <strong>Publikasi nilai</strong>
+                        <span class="badge {{ $sudahDipublikasikan ? 'badge-active' : 'badge-warning' }}">
+                            {{ $sudahDipublikasikan ? 'Dipublikasikan' : 'Draf' }}
+                        </span>
+                    </div>
+                    <p>
+                        {{ $jumlahNilaiPublikasi }} dari {{ $targetNilaiPublikasi }} entri terisi
+                        pada {{ $jumlahKomponenPublikasi }} komponen semester ini.
+                    </p>
+                    @if ($sudahDipublikasikan)
+                        <p>Dirilis {{ $publikasiNilai->dipublikasikan_pada?->locale('id')->translatedFormat('d F Y, H:i') }}.</p>
+                        <form
+                            method="POST"
+                            action="{{ route('publikasi-nilai.jadikan-draf', [$komponenDipilih->guruMataPelajaran, $komponenDipilih->semester]) }}"
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="komponen_nilai_id" value="{{ $komponenDipilih->id }}">
+                            <button type="submit" class="button button-muted">Jadikan draf</button>
+                        </form>
+                    @else
+                        <p>Nilai belum dapat dilihat siswa. Simpan perubahan terlebih dahulu sebelum mempublikasikan.</p>
+                        <form
+                            method="POST"
+                            action="{{ route('publikasi-nilai.publikasikan', [$komponenDipilih->guruMataPelajaran, $komponenDipilih->semester]) }}"
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="komponen_nilai_id" value="{{ $komponenDipilih->id }}">
+                            <button type="submit" class="button button-primary" @disabled($jumlahNilaiPublikasi === 0)>
+                                Publikasikan nilai
+                            </button>
+                        </form>
+                    @endif
+                </div>
             </aside>
 
             <section class="panel">
@@ -272,7 +353,7 @@
                         </div>
 
                         <div class="form-actions" style="border-top: 1px solid var(--line); padding: 16px;">
-                            <button type="submit" class="button button-primary">Simpan nilai</button>
+                            <button type="submit" class="button button-primary">Simpan sebagai draf</button>
                         </div>
                     </form>
                 @endif

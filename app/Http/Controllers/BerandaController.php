@@ -18,6 +18,7 @@ use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\PenugasanGuruWaliSiswa;
+use App\Models\PublikasiNilaiSiswa;
 use App\Models\SanksiPoinSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
@@ -362,6 +363,12 @@ class BerandaController extends Controller
         $urlFotoSiswa = $siswa?->foto
             ? asset('storage/'.$siswa->foto)
             : asset('images/kartu-pelajar/default-user.png');
+        $jumlahNilaiDipublikasikan = PublikasiNilaiSiswa::query()
+            ->where('dipublikasikan', true)
+            ->whereHas('guruMataPelajaran', fn ($query) => $query
+                ->where('kelas_id', $kelas?->id ?: 0)
+                ->when($tahunDashboard, fn ($query) => $query->where('tahun_pelajaran_id', $tahunDashboard->id)))
+            ->count();
 
         return [
             'hariIni' => $hariIni,
@@ -380,6 +387,7 @@ class BerandaController extends Controller
             'riwayatPoinTerbaru' => $riwayatPoinTerbaru,
             'notifikasiDashboard' => $notifikasiDashboard,
             'urlFotoSiswa' => $urlFotoSiswa,
+            'jumlahNilaiDipublikasikan' => $jumlahNilaiDipublikasikan,
         ];
     }
 

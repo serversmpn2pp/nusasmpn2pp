@@ -60,6 +60,11 @@ class Siswa extends Model
         return $this->hasMany(NilaiSiswa::class);
     }
 
+    public function surveiPembelajaran(): HasMany
+    {
+        return $this->hasMany(SurveiPembelajaran::class);
+    }
+
     public function absensiSiswa(): HasMany
     {
         return $this->hasMany(AbsensiSiswa::class);
