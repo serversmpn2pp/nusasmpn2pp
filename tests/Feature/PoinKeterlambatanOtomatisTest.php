@@ -85,7 +85,7 @@ class PoinKeterlambatanOtomatisTest extends TestCase
         ]);
     }
 
-    public function test_poin_baru_sah_setelah_bk_menetapkan_sanksi_poin(): void
+    public function test_poin_baru_sah_setelah_rekomendasi_bk_disahkan_wakil_kesiswaan(): void
     {
         $data = $this->dataAbsensi(20);
         $this->actingAs($data['administrator']);
@@ -102,6 +102,18 @@ class PoinKeterlambatanOtomatisTest extends TestCase
             ->post(route('verifikasi-pelanggaran.bk', $laporan), [
                 'hasil' => 'sanksi_poin',
                 'catatan' => 'Waktu scan sesuai dengan data mesin.',
+            ])->assertSessionHasNoErrors();
+
+        $this->assertSame('menunggu_pengesahan_wakil', $laporan->fresh()->status_verifikasi);
+        $this->assertDatabaseMissing('transaksi_poin_siswa', [
+            'laporan_pembinaan_siswa_id' => $laporan->id,
+        ]);
+
+        $akunWakil = $this->buatAkunPegawai('Wakil Kesiswaan Otomatis', '198111112010011011', 'wakil_pimpinan_kesiswaan');
+        $this->actingAs($akunWakil)
+            ->post(route('verifikasi-pelanggaran.wakil', $laporan), [
+                'keputusan' => 'sahkan',
+                'catatan' => 'Data keterlambatan sesuai hasil pemeriksaan BK.',
             ])->assertSessionHasNoErrors();
 
         $this->assertSame('disahkan', $laporan->fresh()->status_verifikasi);
@@ -143,6 +155,13 @@ class PoinKeterlambatanOtomatisTest extends TestCase
 
         $akunBk = $this->buatAkunPegawai('BK Koreksi', '198202022010012002', 'bk');
         $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporanAwal), ['hasil' => 'sanksi_poin', 'catatan' => 'Sanksi poin ditetapkan.']);
+
+        $akunWakil = $this->buatAkunPegawai('Wakil Kesiswaan Koreksi', '198303032011013003', 'wakil_pimpinan_kesiswaan');
+        $this->actingAs($akunWakil)->post(route('verifikasi-pelanggaran.wakil', $laporanAwal), [
+            'keputusan' => 'sahkan',
+            'catatan' => 'Poin disahkan sebelum koreksi absensi.',
+        ])->assertSessionHasNoErrors();
+
         $this->assertSame('disahkan', $laporanAwal->fresh()->status_verifikasi);
 
         $this->actingAs($data['administrator'])

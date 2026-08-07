@@ -685,7 +685,11 @@
                             </div>
                             <div class="mini-card">
                                 <strong>{{ $formatAngka($ringkasanPembinaan['menunggu_bk']) }}</strong>
-                                <span>Menunggu verifikasi BK</span>
+                                <span>Menunggu pemeriksaan BK</span>
+                            </div>
+                            <div class="mini-card">
+                                <strong>{{ $formatAngka($ringkasanPembinaan['menunggu_wakil']) }}</strong>
+                                <span>Menunggu pengesahan Wakil</span>
                             </div>
                             <div class="mini-card">
                                 <strong>{{ $formatAngka($ringkasanPembinaan['pembinaan_ditetapkan']) }}</strong>
@@ -786,7 +790,9 @@
         <section class="dashboard-hero employee-hero">
             <div class="dashboard-hero-main">
                 <p class="eyebrow">Dashboard Pegawai</p>
-                <h1 class="dashboard-title">Selamat datang, {{ auth()->user()->nama }}</h1>
+                <h1 class="dashboard-title">
+                    Selamat datang, {{ isset($pegawaiLogin) ? ($pegawaiLogin?->nama_lengkap ?? auth()->user()->nama) : auth()->user()->nama }}
+                </h1>
                 <p class="dashboard-subtitle">
                     Rekap pribadi bulan {{ $labelBulan }} tersaji ringkas untuk membantu memantau kehadiran.
                 </p>
@@ -1004,6 +1010,7 @@
                                     ['label' => 'Total laporan', 'value' => $ringkasanPembinaanWali['total_laporan']],
                                     ['label' => 'Siswa terlapor', 'value' => $ringkasanPembinaanWali['siswa_terlapor']],
                                     ['label' => 'Menunggu keputusan BK', 'value' => $ringkasanPembinaanWali['menunggu_bk']],
+                                    ['label' => 'Menunggu pengesahan Wakil', 'value' => $ringkasanPembinaanWali['menunggu_wakil']],
                                     ['label' => 'Poin aktif', 'value' => $ringkasanPembinaanWali['poin_aktif']],
                                 ] as $item)
                                     <div class="mini-card">

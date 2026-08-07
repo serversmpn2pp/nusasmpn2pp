@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Pengurangan Poin Siswa - NUSA')
+@section('title', 'Penghargaan & Pengurangan Poin - NUSA')
 
 @section('content')
     <style>
@@ -41,8 +41,8 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">Kesiswaan & BK</p>
-            <h1 class="page-title">Pengurangan Poin/Reward</h1>
-            <p class="page-subtitle">Pengurangan diterapkan setelah disetujui dan tidak pernah membuat saldo poin menjadi negatif.</p>
+            <h1 class="page-title">Penghargaan & Pengurangan Poin</h1>
+            <p class="page-subtitle">Berikan penghargaan atas perilaku atau prestasi positif dalam bentuk pengurangan saldo poin.</p>
             <div class="reward-context">
                 <span class="badge {{ $tahunPelajaranAktif ? 'badge-active' : 'badge-warning' }}">
                     {{ $tahunPelajaranAktif ? 'Tahun aktif '.$tahunPelajaranAktif->nama : 'Tahun pelajaran aktif belum tersedia' }}
@@ -55,12 +55,19 @@
         <a href="{{ route('rekap-poin-siswa.index') }}" class="button button-muted">Rekap Poin</a>
     </div>
 
+    <x-alur-penanganan-siswa
+        tahap="penghargaan"
+        judul="Pengurangan poin diberikan atas kegiatan positif"
+        deskripsi="Ajukan kegiatan atau prestasi siswa beserta buktinya. Poin baru dikurangi setelah pengajuan disetujui oleh pihak yang berwenang, dan saldo poin tidak akan menjadi kurang dari nol."
+        catatan="Pengurangan poin tidak menghapus riwayat pelanggaran atau sanksi yang sudah tercatat."
+    />
+
     @if(session('berhasil'))
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
     @unless($tahunPelajaranAktif)
-        <div class="alert alert-warning">Aktifkan tahun pelajaran terlebih dahulu sebelum membuat pengajuan reward.</div>
+        <div class="alert alert-warning">Aktifkan tahun pelajaran terlebih dahulu sebelum mengajukan penghargaan.</div>
     @endunless
 
     <form method="GET" class="panel panel-pad" style="margin-bottom:20px">
@@ -93,7 +100,7 @@
     <div class="reward-layout">
         <form method="POST" action="{{ route('pengurangan-poin-siswa.store') }}" enctype="multipart/form-data" class="panel panel-pad">
             @csrf
-            <h2 class="panel-title">Ajukan reward</h2>
+            <h2 class="panel-title">Ajukan penghargaan</h2>
             <p class="help-text">Pilihan hanya menampilkan siswa yang masih memiliki saldo poin pada tahun pelajaran aktif.</p>
 
             <div class="field" style="margin-top:14px">

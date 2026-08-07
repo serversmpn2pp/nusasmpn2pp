@@ -20,6 +20,7 @@ class PusatVerifikasiPelanggaranController extends Controller
         $daftarAntrean = [
             'semua' => 'Semua tugas aktif',
             'bk' => 'Pemeriksaan BK',
+            'wakil' => 'Pengesahan Wakil Kesiswaan',
             'terlambat' => 'Terlambat diproses',
             'selesai' => 'Riwayat selesai',
         ];
@@ -34,6 +35,10 @@ class PusatVerifikasiPelanggaranController extends Controller
                 'pelaporPegawai:id,nama_lengkap',
                 'butirPelanggaranLaporan' => fn ($query) => $query->orderByDesc('poin'),
                 'verifikasiBkPelanggaran' => fn ($query) => $query->with('bkPegawai:id,nama_lengkap')->latest('diverifikasi_pada'),
+                'persetujuanPelanggaran' => fn ($query) => $query
+                    ->with('pegawai:id,nama_lengkap')
+                    ->where('jenis_persetujuan', 'wakil_kesiswaan')
+                    ->latest('diputuskan_pada'),
             ])
             ->withCount([
                 'butirPelanggaranLaporan', 'buktiLaporanPembinaanSiswa',
@@ -62,6 +67,7 @@ class PusatVerifikasiPelanggaranController extends Controller
         $ringkasan = $this->antreanService->ringkasan($pengguna);
         $hakAksi = [
             'bk' => $pengguna->memilikiIzin('poin_siswa.verifikasi_bk'),
+            'wakil' => $pengguna->memilikiIzin('poin_siswa.sahkan_wakil'),
             'monitor_semua' => $this->antreanService->dapatMemantauSemua($pengguna),
         ];
 

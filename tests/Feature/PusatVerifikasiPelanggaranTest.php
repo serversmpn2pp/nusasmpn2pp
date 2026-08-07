@@ -35,7 +35,7 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             ->assertOk()
             ->assertSee($laporanBaru->nomor_laporan)
             ->assertSee($laporanLama->nomor_laporan)
-            ->assertSee('BK memeriksa laporan kejadian lalu menentukan pembinaan atau sanksi poin.');
+            ->assertSee('BK memeriksa laporan; Wakil Kesiswaan mengesahkan rekomendasi pelanggaran berpoin.');
 
         $this->get(route('pusat-verifikasi-pelanggaran.index', ['antrean' => 'terlambat']))
             ->assertOk()
@@ -69,10 +69,11 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             ->assertDontSee('Simpan keputusan BK');
     }
 
-    public function test_keputusan_bk_langsung_menetapkan_poin_dan_route_persetujuan_dihapus(): void
+    public function test_rekomendasi_bk_baru_menetapkan_poin_setelah_disahkan_wakil(): void
     {
         [$tahun, $siswa, $jenis] = $this->dataDasar();
         [, $akunBk] = $this->buatAkunPegawai('BK Pemutus', '198301012013011004', 'bk');
+        [, $akunWakil] = $this->buatAkunPegawai('Wakil Kesiswaan', '198401012014011005', 'wakil_pimpinan_kesiswaan');
         $laporan = $this->buatLaporan('PB-PUTUS-001', 'diajukan', $tahun, $siswa, $jenis);
 
         $this->assertFalse(Route::has('verifikasi-pelanggaran.persetujuan'));
@@ -82,7 +83,19 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             'catatan' => 'Fakta lengkap dan sanksi poin ditetapkan.',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
+        $this->assertSame('menunggu_pengesahan_wakil', $laporan->fresh()->status_verifikasi);
+        $this->assertDatabaseMissing('transaksi_poin_siswa', [
+            'kunci_sumber' => 'pelanggaran:'.$laporan->id,
+        ]);
+
+        $this->actingAs($akunWakil)->post(route('verifikasi-pelanggaran.wakil', $laporan), [
+            'keputusan' => 'sahkan',
+            'catatan' => 'Rekomendasi BK sesuai bukti.',
+            'total_poin' => 999,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
         $this->assertSame('disahkan', $laporan->fresh()->status_verifikasi);
+        $this->assertSame($jenis->poin, $laporan->fresh()->total_poin);
         $this->assertDatabaseHas('transaksi_poin_siswa', [
             'kunci_sumber' => 'pelanggaran:'.$laporan->id,
             'poin' => $jenis->poin,
@@ -92,6 +105,42 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             'hasil' => 'pembinaan',
             'catatan' => 'Mencoba mengubah keputusan final.',
         ])->assertStatus(422);
+    }
+
+    public function test_wakil_dapat_mengembalikan_rekomendasi_kepada_bk_tanpa_mencatat_poin(): void
+    {
+        [$tahun, $siswa, $jenis] = $this->dataDasar();
+        [, $akunBk] = $this->buatAkunPegawai('BK Pemeriksa', '198501012015011006', 'bk');
+        [, $akunWakil] = $this->buatAkunPegawai('Wakil Kesiswaan Penguji', '198601012016011007', 'wakil_pimpinan_kesiswaan');
+        $laporan = $this->buatLaporan('PB-KEMBALI-001', 'diajukan', $tahun, $siswa, $jenis);
+
+        $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporan), [
+            'hasil' => 'sanksi_poin',
+            'catatan' => 'Rekomendasi awal BK.',
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($akunWakil)->post(route('verifikasi-pelanggaran.wakil', $laporan), [
+            'keputusan' => 'kembalikan',
+            'catatan' => 'Bukti kejadian perlu diperjelas oleh BK.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('dikembalikan_bk', $laporan->fresh()->status_verifikasi);
+        $this->assertDatabaseMissing('transaksi_poin_siswa', [
+            'kunci_sumber' => 'pelanggaran:'.$laporan->id,
+        ]);
+        $this->assertDatabaseHas('persetujuan_pelanggaran', [
+            'laporan_pembinaan_siswa_id' => $laporan->id,
+            'jenis_persetujuan' => 'wakil_kesiswaan',
+            'keputusan' => 'tidak_setuju',
+            'catatan' => 'Bukti kejadian perlu diperjelas oleh BK.',
+        ]);
+
+        $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporan), [
+            'hasil' => 'pembinaan',
+            'catatan' => 'Setelah diperiksa ulang, cukup dilakukan pembinaan.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('ditetapkan_pembinaan', $laporan->fresh()->status_verifikasi);
     }
 
     private function dataDasar(): array

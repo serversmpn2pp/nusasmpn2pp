@@ -143,7 +143,10 @@ class BerandaController extends Controller
                 ->whereBetween('updated_at', [$awalBulan, $akhirBulan])
                 ->count(),
             'menunggu_bk' => LaporanPembinaanSiswa::query()
-                ->whereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi'])
+                ->whereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'dikembalikan_bk'])
+                ->count(),
+            'menunggu_wakil' => LaporanPembinaanSiswa::query()
+                ->where('status_verifikasi', 'menunggu_pengesahan_wakil')
                 ->count(),
             'pembinaan_ditetapkan' => LaporanPembinaanSiswa::query()
                 ->where('status_verifikasi', 'ditetapkan_pembinaan')
@@ -215,7 +218,7 @@ class BerandaController extends Controller
             ->with(['siswa:id,nama_lengkap,nisn', 'kategoriPembinaanSiswa:id,nama'])
             ->where(function ($query) {
                 $query->whereIn('status', ['baru', 'perlu_tindak_lanjut'])
-                    ->orWhereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah']);
+                    ->orWhereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'dikembalikan_bk', 'menunggu_pengesahan_wakil', 'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah']);
             })
             ->orderByRaw("case when status_verifikasi = 'perlu_klarifikasi' then 0 when status = 'perlu_tindak_lanjut' then 1 else 2 end")
             ->orderByDesc('tanggal_kejadian')
@@ -524,7 +527,10 @@ class BerandaController extends Controller
             'perlu_tindak_lanjut' => (int) ($jumlahStatusPembinaanWaliBulan['perlu_tindak_lanjut'] ?? 0),
             'selesai' => (int) ($jumlahStatusPembinaanWaliBulan['selesai'] ?? 0),
             'menunggu_bk' => (clone $laporanPembinaanWaliBulan)
-                ->whereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah'])
+                ->whereIn('status_verifikasi', ['diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'dikembalikan_bk', 'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah'])
+                ->count(),
+            'menunggu_wakil' => (clone $laporanPembinaanWaliBulan)
+                ->where('status_verifikasi', 'menunggu_pengesahan_wakil')
                 ->count(),
             'poin_aktif' => (int) TransaksiPoinSiswa::query()
                 ->when($tahunPelajaranAktif, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id))

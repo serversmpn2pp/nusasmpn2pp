@@ -33,14 +33,14 @@ class AksesLaporanPembinaanService
     public function bolehKelolaFakta(?Pengguna $pengguna, LaporanPembinaanSiswa $laporan): bool
     {
         return $this->bolehLihat($pengguna, $laporan)
-            && ! $this->statusFinal($laporan)
+            && in_array($laporan->status_verifikasi, AntreanVerifikasiPelanggaranService::STATUS_BK, true)
             && ($pengguna?->memilikiIzin(['bk.kelola', 'poin_siswa.lapor', 'poin_siswa.verifikasi_bk']) ?? false);
     }
 
     public function bolehMencatatKlarifikasi(?Pengguna $pengguna, LaporanPembinaanSiswa $laporan): bool
     {
         return $this->bolehLihat($pengguna, $laporan)
-            && ! $this->statusFinal($laporan)
+            && in_array($laporan->status_verifikasi, AntreanVerifikasiPelanggaranService::STATUS_BK, true)
             && ($pengguna?->memilikiIzin('poin_siswa.verifikasi_bk') ?? false);
     }
 
@@ -60,6 +60,6 @@ class AksesLaporanPembinaanService
     {
         return (bool) ($pengguna?->administrator()
             || $pengguna?->memilikiPeran(['pimpinan', 'wakil_pimpinan_kesiswaan', 'bk'])
-            || $pengguna?->memilikiIzin('poin_siswa.verifikasi_bk'));
+            || $pengguna?->memilikiIzin(['poin_siswa.verifikasi_bk', 'poin_siswa.sahkan_wakil']));
     }
 }

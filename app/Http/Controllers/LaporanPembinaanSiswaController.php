@@ -22,6 +22,7 @@ use App\Services\Pembinaan\ProsesPoinSiswaService;
 use App\Services\Pembinaan\SimpanBuktiLaporanService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -97,6 +98,7 @@ class LaporanPembinaanSiswaController extends Controller
             'pembinaan' => (clone $cakupan)->where('jenis_laporan', 'pembinaan')->count(),
             'pelanggaran' => (clone $cakupan)->where('jenis_laporan', 'pelanggaran')->count(),
             'menunggu' => (clone $cakupan)->whereIn('status_verifikasi', AntreanVerifikasiPelanggaranService::STATUS_BK)->count(),
+            'menunggu_wakil' => (clone $cakupan)->whereIn('status_verifikasi', AntreanVerifikasiPelanggaranService::STATUS_WAKIL)->count(),
             'disahkan' => (clone $cakupan)->where('status_verifikasi', 'disahkan')->count(),
         ];
 
@@ -144,53 +146,75 @@ class LaporanPembinaanSiswaController extends Controller
                 ? 'pembinaan'
                 : 'kejadian',
         ]);
-        $data = $request->validate($this->aturanValidasi());
+        if (! $request->filled('siswa_ids') && $request->filled('siswa_id')) {
+            $request->merge(['siswa_ids' => [$request->input('siswa_id')]]);
+        }
+        $data = $request->validate($this->aturanValidasi(true));
 
         $laporan = DB::transaction(function () use ($request, $data) {
             $daftarSaksi = $data['daftar_saksi'] ?? [];
             $keteranganBukti = $data['keterangan_bukti'] ?? null;
-            unset($data['daftar_saksi'], $data['bukti_laporan'], $data['keterangan_bukti']);
+            $siswaIds = collect($data['siswa_ids'])->map(fn ($id) => (int) $id)->unique()->values();
+            unset($data['siswa_ids'], $data['siswa_id'], $data['daftar_saksi'], $data['bukti_laporan'], $data['keterangan_bukti']);
 
-            $data = $this->rapikanData($data, $request);
-            $jenisIds = array_map('intval', $data['jenis_pelanggaran_ids'] ?? []);
-            unset($data['jenis_pelanggaran_ids']);
+            $daftarLaporan = collect();
+            foreach ($siswaIds as $siswaId) {
+                $dataLaporan = $data;
+                $dataLaporan['siswa_id'] = $siswaId;
+                $dataLaporan = $this->rapikanData($dataLaporan, $request);
+                $jenisIds = array_map('intval', $dataLaporan['jenis_pelanggaran_ids'] ?? []);
+                unset($dataLaporan['jenis_pelanggaran_ids']);
 
-            $data['nomor_laporan'] = $this->buatNomorLaporan($data['tanggal_kejadian']);
-            $data['dibuat_oleh_pengguna_id'] = auth()->id();
-            $data['status'] = 'baru';
+                $dataLaporan['nomor_laporan'] = $this->buatNomorLaporan($dataLaporan['tanggal_kejadian']);
+                $dataLaporan['dibuat_oleh_pengguna_id'] = auth()->id();
+                $dataLaporan['status'] = 'baru';
 
-            $laporan = LaporanPembinaanSiswa::create($data);
-            $this->sinkronkanButirPelanggaran($laporan, $jenisIds);
-            if (in_array($laporan->jenis_laporan, ['kejadian', 'pelanggaran'], true)) {
-                $this->pengaturanBatasProses->tetapkanBatas($laporan);
+                $item = LaporanPembinaanSiswa::create($dataLaporan);
+                $this->sinkronkanButirPelanggaran($item, $jenisIds);
+                if (in_array($item->jenis_laporan, ['kejadian', 'pelanggaran'], true)) {
+                    $this->pengaturanBatasProses->tetapkanBatas($item);
+                }
+                $this->riwayatPembinaan->catat(
+                    $item,
+                    'laporan_dibuat',
+                    'Laporan dibuat',
+                    $siswaIds->count() > 1
+                        ? 'Laporan dibuat bersama laporan siswa lain dalam satu kejadian kolektif.'
+                        : 'Laporan awal dicatat dan siap ditindaklanjuti.',
+                    null,
+                    $item->status_verifikasi,
+                    $request->user()?->id,
+                    ['jumlah_siswa_dilaporkan' => $siswaIds->count()],
+                );
+                $this->simpanSaksiAwal($item, $daftarSaksi, $request->user()?->id);
+                $daftarLaporan->push($item);
             }
-            $this->riwayatPembinaan->catat(
-                $laporan,
-                'laporan_dibuat',
-                'Laporan dibuat',
-                'Laporan awal dicatat dan siap ditindaklanjuti.',
-                null,
-                $laporan->status_verifikasi,
-                $request->user()?->id,
-            );
-            $this->simpanSaksiAwal($laporan, $daftarSaksi, $request->user()?->id);
-            $this->penyimpananBukti->simpanBanyak(
-                $laporan,
+
+            $this->penyimpananBukti->simpanBanyakUntukLaporan(
+                $daftarLaporan,
                 $request->file('bukti_laporan', []),
                 $keteranganBukti,
                 $request->user()?->id,
             );
 
-            return $laporan;
+            return $daftarLaporan;
         });
 
-        $this->kirimNotifikasiLaporanBaru($request, $laporan);
+        if ($laporan->count() === 1) {
+            $this->kirimNotifikasiLaporanBaru($request, $laporan->first());
 
-        return redirect()
-            ->route('laporan-pembinaan-siswa.show', $laporan)
-            ->with('berhasil', $laporan->jenis_laporan === 'kejadian'
-                ? 'Laporan kejadian berhasil dikirim ke BK untuk diperiksa.'
-                : 'Catatan pembinaan siswa berhasil ditambahkan.');
+            return redirect()
+                ->route('laporan-pembinaan-siswa.show', $laporan->first())
+                ->with('berhasil', $laporan->first()->jenis_laporan === 'kejadian'
+                    ? 'Laporan kejadian berhasil dikirim ke BK untuk diperiksa.'
+                    : 'Catatan pembinaan siswa berhasil ditambahkan.');
+        }
+
+        $this->kirimNotifikasiLaporanKolektif($request, $laporan);
+        $laporan->each(fn (LaporanPembinaanSiswa $item) => $this->kirimNotifikasiWaliKelas($request, $item));
+
+        return redirect()->route('laporan-pembinaan-siswa.index')
+            ->with('berhasil', $laporan->count().' laporan siswa berhasil dibuat dari satu kejadian dan dikirim untuk diperiksa.');
     }
 
     public function show(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
@@ -211,6 +235,10 @@ class LaporanPembinaanSiswaController extends Controller
             'pelaporPegawai', 'waliKelasPegawai', 'guruWaliPegawai', 'dibuatOlehPengguna',
             'butirPelanggaranLaporan',
             'verifikasiBkPelanggaran' => fn ($query) => $query->with(['bkPegawai', 'pengguna'])->latest('diverifikasi_pada'),
+            'persetujuanPelanggaran' => fn ($query) => $query
+                ->with(['pegawai', 'pengguna'])
+                ->where('jenis_persetujuan', 'wakil_kesiswaan')
+                ->latest('diputuskan_pada'),
             'tindakLanjutPembinaanSiswa' => fn ($query) => $query->with(['petugasPegawai', 'dibuatOlehPengguna'])
                 ->orderByDesc('tanggal_tindak_lanjut')->orderByDesc('waktu_tindak_lanjut')->orderByDesc('id'),
             'buktiLaporanPembinaanSiswa' => fn ($query) => $query->with('diunggahOlehPengguna')->latest('diunggah_pada'),
@@ -248,7 +276,7 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
         abort_if($laporanPembinaanSiswa->berasalDariAbsensi(), 422, 'Laporan otomatis diperbarui melalui koreksi rekap absensi.');
-        abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diputuskan tidak dapat diedit.');
+        abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['menunggu_pengesahan_wakil', 'disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diajukan untuk pengesahan atau telah diputuskan tidak dapat diedit.');
 
         $laporanPembinaanSiswa->load('butirPelanggaranLaporan');
 
@@ -262,7 +290,7 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
         abort_if($laporanPembinaanSiswa->berasalDariAbsensi(), 422, 'Laporan otomatis diperbarui melalui koreksi rekap absensi.');
-        abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diputuskan tidak dapat diedit.');
+        abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['menunggu_pengesahan_wakil', 'disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diajukan untuk pengesahan atau telah diputuskan tidak dapat diedit.');
 
         $request->merge(['jenis_laporan' => $laporanPembinaanSiswa->jenis_laporan]);
         $data = $request->validate($this->aturanValidasi());
@@ -311,19 +339,23 @@ class LaporanPembinaanSiswaController extends Controller
     public function destroy(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+        abort_if(
+            $laporanPembinaanSiswa->status_verifikasi === 'menunggu_pengesahan_wakil',
+            422,
+            'Laporan sedang menunggu pengesahan Wakil Kesiswaan. Kembalikan terlebih dahulu kepada BK jika perlu diperbaiki.'
+        );
         $this->prosesPoinSiswaService->batalkanPoinLaporan($laporanPembinaanSiswa);
 
         return redirect()->route('laporan-pembinaan-siswa.index')->with('berhasil', 'Laporan dibatalkan dan poin dikoreksi jika sebelumnya sudah ditetapkan.');
     }
 
-    private function aturanValidasi(): array
+    private function aturanValidasi(bool $kolektif = false): array
     {
-        return [
+        $aturan = [
             'jenis_laporan' => ['required', Rule::in(array_keys(LaporanPembinaanSiswa::DAFTAR_JENIS_LAPORAN))],
             'tanggal_kejadian' => ['required', 'date'],
             'waktu_kejadian' => ['nullable', 'date_format:H:i'],
             'tempat_kejadian' => ['nullable', 'string', 'max:150'],
-            'siswa_id' => ['required', 'integer', Rule::exists('siswa', 'id')],
             'kategori_pembinaan_siswa_id' => ['nullable', 'integer', Rule::exists('kategori_pembinaan_siswa', 'id'), 'required_if:jenis_laporan,pembinaan'],
             'jenis_pelanggaran_ids' => ['nullable', 'array', 'min:1'],
             'jenis_pelanggaran_ids.*' => ['integer', 'distinct', Rule::exists('jenis_pelanggaran_siswa', 'id')->where('aktif', true)],
@@ -342,6 +374,16 @@ class LaporanPembinaanSiswaController extends Controller
             'daftar_saksi.*.nama_saksi' => ['nullable', 'string', 'max:160'],
             'daftar_saksi.*.pernyataan' => ['nullable', 'string', 'max:5000'],
         ];
+
+        if ($kolektif) {
+            $aturan['siswa_ids'] = ['required', 'array', 'min:1', 'max:100'];
+            $aturan['siswa_ids.*'] = ['required', 'integer', 'distinct', Rule::exists('siswa', 'id')->where('aktif', true)];
+            $aturan['siswa_id'] = ['nullable', 'integer', Rule::exists('siswa', 'id')];
+        } else {
+            $aturan['siswa_id'] = ['required', 'integer', Rule::exists('siswa', 'id')];
+        }
+
+        return $aturan;
     }
 
     private function rapikanData(array $data, Request $request, ?LaporanPembinaanSiswa $laporan = null): array
@@ -428,17 +470,30 @@ class LaporanPembinaanSiswaController extends Controller
         $data['anggota_kelas_id'] = null;
 
         if (filled($data['siswa_id'] ?? null) && $data['tahun_pelajaran_id']) {
-            $anggotaKelas = AnggotaKelas::query()
+            $queryAnggotaKelas = AnggotaKelas::query()
                 ->where('siswa_id', $data['siswa_id'])
                 ->where('tahun_pelajaran_id', $data['tahun_pelajaran_id'])
-                ->where('status_keanggotaan', 'aktif')
+                ->where('status_keanggotaan', 'aktif');
+            $anggotaKelas = (clone $queryAnggotaKelas)
                 ->when(filled($data['kelas_id'] ?? null), fn ($query) => $query->where('kelas_id', $data['kelas_id']))
                 ->first();
+            if (! $anggotaKelas && filled($data['kelas_id'] ?? null)) {
+                $anggotaKelas = $queryAnggotaKelas->first();
+            }
+            if (! $anggotaKelas) {
+                $anggotaKelas = AnggotaKelas::query()
+                    ->where('siswa_id', $data['siswa_id'])
+                    ->where('status_keanggotaan', 'aktif')
+                    ->latest('tahun_pelajaran_id')
+                    ->first();
+            }
 
             if ($anggotaKelas) {
                 $data['anggota_kelas_id'] = $anggotaKelas->id;
                 $data['kelas_id'] = $anggotaKelas->kelas_id;
                 $data['tahun_pelajaran_id'] = $anggotaKelas->tahun_pelajaran_id;
+            } else {
+                $data['kelas_id'] = null;
             }
         }
 
@@ -505,7 +560,10 @@ class LaporanPembinaanSiswaController extends Controller
         return [
             'daftarKategoriPembinaan' => KategoriPembinaanSiswa::where('aktif', true)->orderBy('nama')->get(),
             'daftarJenisPelanggaran' => JenisPelanggaranSiswa::where('aktif', true)->orderBy('urutan')->get(),
-            'daftarSiswa' => Siswa::with(['anggotaKelas' => fn ($query) => $query->where('status_keanggotaan', 'aktif')])
+            'daftarSiswa' => Siswa::with([
+                'anggotaKelas' => fn ($query) => $query->where('status_keanggotaan', 'aktif'),
+                'anggotaKelas.kelas:id,nama',
+            ])
                 ->where('aktif', true)->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nis', 'nisn']),
             'daftarTahunPelajaran' => TahunPelajaran::orderByDesc('aktif')->orderByDesc('tanggal_mulai')->get(),
             'daftarKelas' => Kelas::with('tahunPelajaran:id,nama,aktif')->where('aktif', true)->orderBy('tingkat')->orderBy('nama')->get(),
@@ -595,29 +653,8 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $laporan->loadMissing(['siswa', 'kelas', 'kategoriPembinaanSiswa', 'pelaporPegawai']);
         $menungguBk = in_array($laporan->jenis_laporan, ['kejadian', 'pelanggaran'], true);
-        $kodePeran = $menungguBk
-            ? ['administrator', 'bk', 'wakil_pimpinan_kesiswaan']
-            : ['administrator', 'bk'];
-
-        $penerima = $this->notifikasiPenggunaService->penggunaDenganPeran($kodePeran, $request->user()?->id);
-
-        $penerimaWaliKelas = collect();
-        $perluNotifikasiWaliKelas = $menungguBk
-            && $laporan->anggota_kelas_id
-            && $laporan->wali_kelas_pegawai_id
-            && (int) $laporan->wali_kelas_pegawai_id !== (int) $laporan->pelapor_pegawai_id;
-
-        if ($perluNotifikasiWaliKelas) {
-            $penerimaWaliKelas = $this->notifikasiPenggunaService
-                ->penggunaUntukPegawai((int) $laporan->wali_kelas_pegawai_id)
-                ->filter(fn (Pengguna $pengguna) => (int) $pengguna->id !== (int) $request->user()?->id)
-                ->values();
-
-            $penggunaWaliKelasIds = $penerimaWaliKelas->pluck('id')->map(fn ($id) => (int) $id)->all();
-            $penerima = $penerima
-                ->reject(fn (Pengguna $pengguna) => in_array((int) $pengguna->id, $penggunaWaliKelasIds, true))
-                ->values();
-        }
+        $penerima = $this->notifikasiPenggunaService
+            ->penggunaDenganPeran(['administrator', 'bk'], $request->user()?->id);
 
         $this->notifikasiPenggunaService->kirimKeBanyak(
             $penerima,
@@ -628,26 +665,59 @@ class LaporanPembinaanSiswaController extends Controller
             "laporan-pembinaan-baru:{$laporan->id}",
         );
 
-        if ($penerimaWaliKelas->isNotEmpty()) {
-            $this->notifikasiPenggunaService->kirimKeBanyak(
-                $penerimaWaliKelas,
-                $laporan->tingkat === 'berat' ? 'penting' : 'peringatan',
-                'Siswa kelas Anda dilaporkan',
-                sprintf(
-                    '%s dari %s dilaporkan oleh %s dan menunggu pemeriksaan BK.',
-                    $laporan->siswa?->nama_lengkap ?? 'Siswa',
-                    $laporan->kelas?->nama ?? 'kelas Anda',
-                    $laporan->pelaporPegawai?->nama_lengkap ?? 'pegawai sekolah',
-                ),
-                route('laporan-pembinaan-siswa.show', $laporan, false),
-                "laporan-pembinaan-wali-kelas:{$laporan->id}",
-                [
-                    'laporan_pembinaan_siswa_id' => $laporan->id,
-                    'siswa_id' => $laporan->siswa_id,
-                    'kelas_id' => $laporan->kelas_id,
-                ],
-            );
+        $this->kirimNotifikasiWaliKelas($request, $laporan);
+    }
+
+    private function kirimNotifikasiLaporanKolektif(Request $request, Collection $daftarLaporan): void
+    {
+        $laporanPertama = $daftarLaporan->first();
+        $menungguBk = in_array($laporanPertama?->jenis_laporan, ['kejadian', 'pelanggaran'], true);
+        $this->notifikasiPenggunaService->kirimKeBanyak(
+            $this->notifikasiPenggunaService->penggunaDenganPeran(['administrator', 'bk'], $request->user()?->id),
+            'peringatan',
+            $menungguBk ? 'Laporan kolektif menunggu pemeriksaan BK' : 'Catatan pembinaan kolektif baru',
+            sprintf('%d siswa dilaporkan dalam kejadian yang sama.', $daftarLaporan->count()),
+            route('laporan-pembinaan-siswa.index', [], false),
+            "laporan-kolektif-baru:{$laporanPertama?->id}:{$daftarLaporan->last()?->id}",
+            ['jumlah_siswa' => $daftarLaporan->count()],
+        );
+    }
+
+    private function kirimNotifikasiWaliKelas(Request $request, LaporanPembinaanSiswa $laporan): void
+    {
+        $laporan->loadMissing(['siswa', 'kelas', 'pelaporPegawai']);
+        $perluNotifikasi = in_array($laporan->jenis_laporan, ['kejadian', 'pelanggaran'], true)
+            && $laporan->anggota_kelas_id
+            && $laporan->wali_kelas_pegawai_id
+            && (int) $laporan->wali_kelas_pegawai_id !== (int) $laporan->pelapor_pegawai_id;
+
+        if (! $perluNotifikasi) {
+            return;
         }
+
+        $penerima = $this->notifikasiPenggunaService
+            ->penggunaUntukPegawai((int) $laporan->wali_kelas_pegawai_id)
+            ->filter(fn (Pengguna $pengguna) => (int) $pengguna->id !== (int) $request->user()?->id)
+            ->values();
+
+        $this->notifikasiPenggunaService->kirimKeBanyak(
+            $penerima,
+            $laporan->tingkat === 'berat' ? 'penting' : 'peringatan',
+            'Siswa kelas Anda dilaporkan',
+            sprintf(
+                '%s dari %s dilaporkan oleh %s dan menunggu pemeriksaan BK.',
+                $laporan->siswa?->nama_lengkap ?? 'Siswa',
+                $laporan->kelas?->nama ?? 'kelas Anda',
+                $laporan->pelaporPegawai?->nama_lengkap ?? 'pegawai sekolah',
+            ),
+            route('laporan-pembinaan-siswa.show', $laporan, false),
+            "laporan-pembinaan-wali-kelas:{$laporan->id}",
+            [
+                'laporan_pembinaan_siswa_id' => $laporan->id,
+                'siswa_id' => $laporan->siswa_id,
+                'kelas_id' => $laporan->kelas_id,
+            ],
+        );
     }
 
     private function inputId(Request $request, string $field): ?int

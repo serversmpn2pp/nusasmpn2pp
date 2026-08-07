@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', ($konteksGuruWali ? 'Tindak Lanjut Siswa Wali' : 'Tindak Lanjut Siswa').' - NUSA')
+@section('title', ($konteksGuruWali ? 'Pendampingan Siswa Wali' : 'Pendampingan Siswa').' - NUSA')
 
 @section('content')
     @php
@@ -22,8 +22,8 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p>
-            <h1 class="page-title">{{ $konteksGuruWali ? 'Tindak Lanjut Siswa Wali' : 'Tindak Lanjut Siswa' }}</h1>
-            <p class="page-subtitle">{{ $konteksGuruWali ? 'Pantau tindak lanjut khusus siswa yang menjadi tanggung jawab pendampingan Anda.' : 'Pantau pendampingan siswa yang masih berjalan dan yang telah diselesaikan.' }}</p>
+            <h1 class="page-title">{{ $konteksGuruWali ? 'Pendampingan Siswa Wali' : 'Pendampingan Siswa' }}</h1>
+            <p class="page-subtitle">{{ $konteksGuruWali ? 'Pantau pendampingan khusus siswa yang menjadi tanggung jawab Anda sebagai guru wali.' : 'Pantau bantuan dan pembinaan berkelanjutan yang masih berjalan atau telah selesai.' }}</p>
         </div>
         @unless($konteksGuruWali)
             <a class="button button-muted" href="{{ route('peringatan-dini-siswa.index', ['tahun_pelajaran_id' => $tahunPelajaranId]) }}">
@@ -31,6 +31,13 @@
             </a>
         @endunless
     </div>
+
+    <x-alur-penanganan-siswa
+        tahap="penanganan"
+        judul="Pendampingan membantu perubahan perilaku siswa"
+        deskripsi="Gunakan halaman ini untuk mencatat konseling, pembinaan oleh wali, pemanggilan orang tua, mediasi, atau bantuan lain yang dilakukan secara berkelanjutan. Pendampingan dapat dimulai dari peringatan dini maupun kebutuhan siswa secara langsung."
+        catatan="Pendampingan tidak otomatis menambah poin."
+    />
 
     @if(session('berhasil'))
         <div class="alert">{{ session('berhasil') }}</div>
@@ -47,7 +54,7 @@
             'kata_kunci' => $kataKunci,
         ]));
     @endphp
-    <section class="follow-summary" aria-label="Ringkasan tindak lanjut">
+    <section class="follow-summary" aria-label="Ringkasan pendampingan">
         <a class="follow-stat is-process" href="{{ $tautanStatus('dalam_proses') }}">
             <span>Masih dalam proses</span>
             <strong>{{ number_format($ringkasan['dalam_proses'], 0, ',', '.') }}</strong>
@@ -107,7 +114,7 @@
                 <thead>
                     <tr>
                         <th>Siswa</th>
-                        <th>Tindakan</th>
+                        <th>Jenis Pendampingan</th>
                         <th>Petugas</th>
                         <th>Catatan/Hasil</th>
                         <th>Status</th>
@@ -143,14 +150,14 @@
                                     <a class="button button-muted button-sm" href="{{ route($ruteProfil, ['siswa' => $item->siswa_id, 'tahun_pelajaran_id' => $item->tahun_pelajaran_id]) }}">Profil</a>
                                     @izin('poin_siswa.pendampingan_kelola')
                                         <a class="button button-primary button-sm" href="{{ route($ruteEdit, $item) }}">
-                                            {{ $item->status === 'selesai' ? 'Lihat/Edit' : 'Lanjutkan' }}
+                                            {{ $item->status === 'selesai' ? 'Lihat/Edit' : 'Lanjutkan pendampingan' }}
                                         </a>
                                     @endizin
                                 </div>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="empty-state">Belum ada tindak lanjut yang sesuai dengan filter ini.</td></tr>
+                        <tr><td colspan="6" class="empty-state">Belum ada pendampingan yang sesuai dengan filter ini.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -174,13 +181,13 @@
                         <a class="button button-muted button-sm" href="{{ route($ruteProfil, ['siswa' => $item->siswa_id, 'tahun_pelajaran_id' => $item->tahun_pelajaran_id]) }}">Profil</a>
                         @izin('poin_siswa.pendampingan_kelola')
                             <a class="button button-primary button-sm" href="{{ route($ruteEdit, $item) }}">
-                                {{ $item->status === 'selesai' ? 'Lihat/Edit' : 'Lanjutkan' }}
+                                {{ $item->status === 'selesai' ? 'Lihat/Edit' : 'Lanjutkan pendampingan' }}
                             </a>
                         @endizin
                     </div>
                 </article>
             @empty
-                <div class="empty-state">Belum ada tindak lanjut yang sesuai dengan filter ini.</div>
+                <div class="empty-state">Belum ada pendampingan yang sesuai dengan filter ini.</div>
             @endforelse
         </div>
     </section>

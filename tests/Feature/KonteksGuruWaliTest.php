@@ -26,7 +26,7 @@ class KonteksGuruWaliTest extends TestCase
         $this->actingAs($data['akun'])
             ->get(route('pembinaan-siswa-wali.index'))
             ->assertOk()
-            ->assertSee('Pembinaan Siswa Wali')
+            ->assertSee('Laporan Siswa Wali')
             ->assertSee($data['siswa_wali']->nama_lengkap)
             ->assertDontSee($data['siswa_kelas']->nama_lengkap);
 
@@ -45,7 +45,7 @@ class KonteksGuruWaliTest extends TestCase
         $this->actingAs($data['akun'])
             ->get(route('pendampingan-siswa-wali.index'))
             ->assertOk()
-            ->assertSee('Tindak Lanjut Siswa Wali')
+            ->assertSee('Pendampingan Siswa Wali')
             ->assertSee($data['siswa_wali']->nama_lengkap)
             ->assertDontSee($data['siswa_kelas']->nama_lengkap);
 

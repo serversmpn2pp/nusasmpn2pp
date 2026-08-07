@@ -48,9 +48,11 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('absensi-pegawai-saya.laporan', 'izin:absensi_pegawai.pribadi');
         $this->assertRouteMemakaiMiddleware('absensi-pegawai-saya.cetak', 'izin:absensi_pegawai.pribadi');
         $this->assertRouteMemakaiMiddleware('laporan-absensi-pegawai-bulanan.cetak-pegawai', 'izin:laporan.export,absensi_pegawai.pribadi');
-        $this->assertRouteMemakaiMiddleware('laporan-pembinaan-siswa.index', 'izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat');
+        $this->assertRouteMemakaiMiddleware('laporan-pembinaan-siswa.index', 'izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat,poin_siswa.sahkan_wakil');
+        $this->assertRouteMemakaiMiddleware('laporan-pembinaan-siswa.show', 'izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat,poin_siswa.sahkan_wakil');
         $this->assertRouteMemakaiMiddleware('laporan-pembinaan-siswa.create', 'izin:bk.kelola,poin_siswa.lapor');
         $this->assertRouteMemakaiMiddleware('verifikasi-pelanggaran.bk', 'izin:poin_siswa.verifikasi_bk');
+        $this->assertRouteMemakaiMiddleware('verifikasi-pelanggaran.wakil', 'izin:poin_siswa.sahkan_wakil');
         $this->assertNull(Route::getRoutes()->getByName('verifikasi-pelanggaran.persetujuan'));
         $this->assertRouteMemakaiMiddleware('rekap-poin-siswa.index', 'izin:poin_siswa.lihat');
         $this->assertRouteMemakaiMiddleware('pembinaan-siswa-wali.index', 'izin:guru_wali.lihat,poin_siswa.lihat');

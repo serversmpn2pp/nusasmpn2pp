@@ -1,18 +1,22 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Pembinaan & Poin - NUSA')
+@section('title', 'Detail Laporan Siswa - NUSA')
 
 @section('content')
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
         $pengguna = auth()->user();
         $statusFinal = in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan','ditetapkan_pembinaan','tidak_terbukti','dibatalkan'], true);
-        $bolehEdit = !$statusFinal && !$laporanPembinaanSiswa->berasalDariAbsensi() && ($pengguna?->memilikiIzin(['bk.kelola','poin_siswa.lapor']) ?? false);
-        $bolehVerifikasiBk = $pengguna?->memilikiIzin('poin_siswa.verifikasi_bk') ?? false;
+        $menungguPengesahanWakil = in_array($laporanPembinaanSiswa->status_verifikasi, \App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_WAKIL, true);
+        $dalamAntreanBk = in_array($laporanPembinaanSiswa->status_verifikasi, \App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_BK, true);
+        $bolehEdit = !$statusFinal && !$menungguPengesahanWakil && !$laporanPembinaanSiswa->berasalDariAbsensi() && ($pengguna?->memilikiIzin(['bk.kelola','poin_siswa.lapor']) ?? false);
+        $bolehVerifikasiBk = $dalamAntreanBk && ($pengguna?->memilikiIzin('poin_siswa.verifikasi_bk') ?? false);
+        $bolehSahkanWakil = $menungguPengesahanWakil && ($pengguna?->memilikiIzin('poin_siswa.sahkan_wakil') ?? false);
         $melaluiPemeriksaanBk = $laporanPembinaanSiswa->status_verifikasi !== 'tidak_perlu';
+        $keputusanWakil = $laporanPembinaanSiswa->persetujuanPelanggaran->first();
         $butirKeputusan = collect(old('jenis_pelanggaran_ids', $laporanPembinaanSiswa->butirPelanggaranLaporan->pluck('jenis_pelanggaran_siswa_id')->all()))->map(fn($id)=>(int)$id)->all();
-        $badgeVerifikasi = fn(string $status) => match($status){'disahkan','ditetapkan_pembinaan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_klarifikasi'=>'badge badge-danger',default=>'badge badge-warning'};
-        $labelTahapBatas = 'Keputusan BK';
+        $badgeVerifikasi = fn(string $status) => match($status){'disahkan','ditetapkan_pembinaan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_klarifikasi','dikembalikan_bk'=>'badge badge-danger',default=>'badge badge-warning'};
+        $labelTahapBatas = $menungguPengesahanWakil ? 'Pengesahan Wakil Kesiswaan' : 'Keputusan BK';
         $ruteKembali = $konteksGuruWali ? 'pembinaan-siswa-wali.index' : 'laporan-pembinaan-siswa.index';
         $ruteShow = $konteksGuruWali ? 'pembinaan-siswa-wali.show' : 'laporan-pembinaan-siswa.show';
     @endphp
@@ -50,8 +54,8 @@
         <div class="actions">
             <a href="{{ route($ruteKembali) }}" class="button button-muted">Kembali</a>
             @unless($konteksGuruWali)
-                @izin('poin_siswa.lihat','poin_siswa.verifikasi_bk')
-                    <a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pusat Verifikasi</a>
+                @izin('poin_siswa.lihat','poin_siswa.verifikasi_bk','poin_siswa.sahkan_wakil')
+                    <a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pemeriksaan & Pengesahan</a>
                 @endizin
                 @if($bolehEdit)
                     <a href="{{ route('laporan-pembinaan-siswa.edit',$laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>
@@ -76,8 +80,8 @@
 
     @if($melaluiPemeriksaanBk)
         <section class="panel panel-pad point-summary" style="margin-bottom:20px;">
-            <div><p class="eyebrow" style="color:#d9e8f7">Status keputusan BK</p><h2 style="margin:4px 0 8px">{{ $laporanPembinaanSiswa->labelStatusVerifikasi() }}</h2>@if($laporanPembinaanSiswa->jenis_laporan==='kejadian' && !$statusFinal)<span class="badge badge-muted">Belum diklasifikasikan</span>@else<span class="{{ $badgeVerifikasi($laporanPembinaanSiswa->status_verifikasi) }}">{{ $laporanPembinaanSiswa->labelTingkat() }}</span>@endif @if(!$statusFinal && $laporanPembinaanSiswa->batas_proses_pada)<p style="margin:12px 0 0;color:#d9e8f7">Batas {{ $labelTahapBatas }}: <strong style="color:#fff;font-size:inherit">{{ $laporanPembinaanSiswa->batas_proses_pada->format('d/m/Y H:i') }}</strong></p>@endif</div>
-            <div><p style="margin:0">Hasil poin</p>@if($laporanPembinaanSiswa->status_verifikasi==='disahkan')<strong>{{ $laporanPembinaanSiswa->total_poin }}</strong><span> poin</span>@elseif($statusFinal)<strong style="font-size:24px">Tanpa poin</strong>@else<strong style="font-size:22px">Belum ditentukan</strong>@endif</div>
+            <div><p class="eyebrow" style="color:#d9e8f7">Status penanganan laporan</p><h2 style="margin:4px 0 8px">{{ $laporanPembinaanSiswa->labelStatusVerifikasi() }}</h2>@if($laporanPembinaanSiswa->jenis_laporan==='kejadian' && !$statusFinal)<span class="badge badge-muted">Belum diklasifikasikan</span>@else<span class="{{ $badgeVerifikasi($laporanPembinaanSiswa->status_verifikasi) }}">{{ $laporanPembinaanSiswa->labelTingkat() }}</span>@endif @if(!$statusFinal && $laporanPembinaanSiswa->batas_proses_pada)<p style="margin:12px 0 0;color:#d9e8f7">Batas {{ $labelTahapBatas }}: <strong style="color:#fff;font-size:inherit">{{ $laporanPembinaanSiswa->batas_proses_pada->format('d/m/Y H:i') }}</strong></p>@endif</div>
+            <div><p style="margin:0">{{ $menungguPengesahanWakil ? 'Rekomendasi poin' : 'Hasil poin' }}</p>@if($laporanPembinaanSiswa->status_verifikasi==='disahkan')<strong>{{ $laporanPembinaanSiswa->total_poin }}</strong><span> poin resmi</span>@elseif($menungguPengesahanWakil || ($laporanPembinaanSiswa->status_verifikasi==='dikembalikan_bk' && $laporanPembinaanSiswa->total_poin>0))<strong>{{ $laporanPembinaanSiswa->total_poin }}</strong><span> poin belum resmi</span>@elseif($statusFinal)<strong style="font-size:24px">Tanpa poin</strong>@else<strong style="font-size:22px">Belum ditentukan</strong>@endif</div>
         </section>
     @endif
 
@@ -85,7 +89,7 @@
         <aside class="panel panel-pad">
             <div class="detail-profile"><div class="avatar avatar-lg">{{ str($laporanPembinaanSiswa->siswa?->nama_lengkap)->substr(0,2)->upper() }}</div><h2>{{ $laporanPembinaanSiswa->siswa?->nama_lengkap }}</h2><p>NISN {{ $laporanPembinaanSiswa->siswa?->nisn ?: '-' }}</p></div>
             <dl class="quick-facts" style="margin-top:20px"><div><dt>Kelas</dt><dd>{{ $laporanPembinaanSiswa->kelas?->nama ?: '-' }}</dd></div><div><dt>Tahun</dt><dd>{{ $laporanPembinaanSiswa->tahunPelajaran?->nama ?: '-' }}</dd></div><div><dt>Wali kelas</dt><dd>{{ $laporanPembinaanSiswa->waliKelasPegawai?->nama_lengkap ?: 'Belum ditentukan' }}</dd></div><div><dt>Guru wali</dt><dd>{{ $laporanPembinaanSiswa->guruWaliPegawai?->nama_lengkap ?: 'Belum ditugaskan' }}</dd></div></dl>
-            @izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan')<form action="{{ route('laporan-pembinaan-siswa.destroy',$laporanPembinaanSiswa) }}" method="POST" style="margin-top:20px" onsubmit="return confirm('Batalkan laporan dan koreksi poinnya?')">@csrf @method('DELETE')<button class="button button-danger button-full">Batalkan laporan</button></form>@endif @endizin
+            @izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan' && !$menungguPengesahanWakil)<form action="{{ route('laporan-pembinaan-siswa.destroy',$laporanPembinaanSiswa) }}" method="POST" style="margin-top:20px" onsubmit="return confirm('Batalkan laporan dan koreksi poinnya?')">@csrf @method('DELETE')<button class="button button-danger button-full">Batalkan laporan</button></form>@endif @endizin
         </aside>
 
         <div class="section-stack">
@@ -96,13 +100,13 @@
             @endif
 
             @if($melaluiPemeriksaanBk)
-                <section class="panel panel-pad"><h2 class="panel-title">Pemeriksaan dan Keputusan BK</h2><p class="help-text">BK memeriksa fakta lalu menetapkan pembinaan tanpa poin atau sanksi poin. Tidak diperlukan persetujuan pihak lain.</p>
+                <section class="panel panel-pad"><h2 class="panel-title">Pemeriksaan BK & Pengesahan Wakil Kesiswaan</h2><p class="help-text">BK memeriksa fakta. Pembinaan tanpa poin dan tidak terbukti selesai di BK; rekomendasi pelanggaran berpoin harus disahkan Wakil Kesiswaan.</p>
                     <div class="decision-grid" style="margin-top:16px">
                         <article class="decision-item"><p class="person-meta">Pemeriksa dan Pemberi Keputusan</p><h3>Guru BK</h3>@if($laporanPembinaanSiswa->verifikasiBkPelanggaran->isNotEmpty())@foreach($laporanPembinaanSiswa->verifikasiBkPelanggaran as $verifikasi)<div style="margin-top:10px"><span class="badge {{ in_array($verifikasi->hasil,['sanksi_poin','pembinaan','terbukti'],true)?'badge-active':($verifikasi->hasil==='tidak_terbukti'?'badge-inactive':'badge-warning') }}">{{ $verifikasi->labelHasil() }}</span><p class="person-meta">{{ $verifikasi->bkPegawai?->nama_lengkap ?: $verifikasi->pengguna?->nama }} &middot; {{ $verifikasi->diverifikasi_pada?->format('d/m/Y H:i') }}</p><p>{{ $teks($verifikasi->catatan) }}</p></div>@endforeach @else<p class="help-text">Belum diperiksa.</p>@endif
-                            @if($bolehVerifikasiBk && !$statusFinal)
+                            @if($bolehVerifikasiBk)
                                 <form method="POST" action="{{ route('verifikasi-pelanggaran.bk',$laporanPembinaanSiswa) }}" class="decision-form" data-bk-decision-form>
                                     @csrf
-                                    <div class="field"><label for="hasil_keputusan_bk">Keputusan penanganan</label><select id="hasil_keputusan_bk" name="hasil" class="select" data-bk-decision required><option value="">Pilih keputusan</option>@foreach(\App\Models\VerifikasiBkPelanggaran::DAFTAR_HASIL as $kode=>$label)<option value="{{ $kode }}" @selected(old('hasil')===$kode)>{{ $label }}</option>@endforeach</select><p class="help-text">BK menentukan klasifikasi setelah memeriksa kronologi, bukti, saksi, dan klarifikasi.</p></div>
+                                    <div class="field"><label for="hasil_keputusan_bk">Hasil pemeriksaan BK</label><select id="hasil_keputusan_bk" name="hasil" class="select" data-bk-decision required><option value="">Pilih hasil</option>@foreach(\App\Models\VerifikasiBkPelanggaran::DAFTAR_HASIL as $kode=>$label)<option value="{{ $kode }}" @selected(old('hasil')===$kode)>{{ $label }}</option>@endforeach</select><p class="help-text">Jika memilih pelanggaran berpoin, hasil ini menjadi rekomendasi yang menunggu pengesahan Wakil Kesiswaan.</p></div>
                                     <div class="field" style="margin-top:12px" data-bk-point-options>
                                         <label>Butir pelanggaran dan poin</label>
                                         <input type="search" class="input" placeholder="Cari kode atau nama pelanggaran" data-bk-violation-search>
@@ -119,10 +123,49 @@
                                         <p class="bk-point-total">Total: <span data-bk-point-total>0</span> poin</p>
                                     </div>
                                     <div class="field" style="margin-top:12px"><label for="catatan_keputusan_bk">Catatan keputusan</label><textarea id="catatan_keputusan_bk" name="catatan" class="textarea" placeholder="Tuliskan pertimbangan atau arahan tindak lanjut.">{{ old('catatan') }}</textarea></div>
-                                    <button class="button button-primary button-full" style="margin-top:10px">Simpan keputusan BK</button>
+                                    <button class="button button-primary button-full" style="margin-top:10px">Simpan hasil pemeriksaan BK</button>
                                 </form>
                             @endif
                         </article>
+
+                        @if($laporanPembinaanSiswa->jenis_laporan === 'pelanggaran' || $keputusanWakil)
+                            <article class="decision-item">
+                                <p class="person-meta">Pengesah pelanggaran berpoin</p>
+                                <h3>Wakil Kesiswaan</h3>
+
+                                @if($keputusanWakil)
+                                    <div style="margin-top:10px">
+                                        <span class="badge {{ $keputusanWakil->keputusan === 'setuju' ? 'badge-active' : 'badge-danger' }}">{{ $keputusanWakil->labelKeputusan() }}</span>
+                                        <p class="person-meta">{{ $keputusanWakil->pegawai?->nama_lengkap ?: $keputusanWakil->pengguna?->nama ?: 'Wakil Kesiswaan' }} &middot; {{ $keputusanWakil->diputuskan_pada?->format('d/m/Y H:i') }}</p>
+                                        <p>{{ $teks($keputusanWakil->catatan) }}</p>
+                                    </div>
+                                @elseif($menungguPengesahanWakil)
+                                    <p class="help-text">Belum diperiksa oleh Wakil Kesiswaan.</p>
+                                @else
+                                    <p class="help-text">Pengesahan hanya diperlukan jika BK merekomendasikan pelanggaran berpoin.</p>
+                                @endif
+
+                                @if($bolehSahkanWakil)
+                                    <form method="POST" action="{{ route('verifikasi-pelanggaran.wakil', $laporanPembinaanSiswa) }}" class="decision-form">
+                                        @csrf
+                                        <div class="field">
+                                            <label for="keputusan_wakil">Keputusan Wakil Kesiswaan</label>
+                                            <select id="keputusan_wakil" name="keputusan" class="select" required>
+                                                <option value="">Pilih keputusan</option>
+                                                <option value="sahkan" @selected(old('keputusan') === 'sahkan')>Sahkan rekomendasi poin</option>
+                                                <option value="kembalikan" @selected(old('keputusan') === 'kembalikan')>Kembalikan kepada BK</option>
+                                            </select>
+                                            <p class="help-text">Wakil Kesiswaan tidak mengubah butir atau jumlah poin. Jika kurang tepat, kembalikan kepada BK.</p>
+                                        </div>
+                                        <div class="field" style="margin-top:12px">
+                                            <label for="catatan_wakil">Catatan keputusan</label>
+                                            <textarea id="catatan_wakil" name="catatan" class="textarea" placeholder="Wajib diisi jika dikembalikan kepada BK.">{{ old('catatan') }}</textarea>
+                                        </div>
+                                        <button class="button button-primary button-full" style="margin-top:10px">Simpan keputusan Wakil Kesiswaan</button>
+                                    </form>
+                                @endif
+                            </article>
+                        @endif
                     </div>
                 </section>
             @endif

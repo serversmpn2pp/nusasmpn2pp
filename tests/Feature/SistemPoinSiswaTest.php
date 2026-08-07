@@ -28,11 +28,12 @@ class SistemPoinSiswaTest extends TestCase
         $this->assertDatabaseCount('aturan_sanksi_poin', 7);
         $this->assertDatabaseHas('peran', ['kode' => 'guru_wali', 'aktif' => true]);
         $this->assertDatabaseHas('izin', ['kode' => 'poin_siswa.verifikasi_bk']);
+        $this->assertDatabaseHas('izin', ['kode' => 'poin_siswa.sahkan_wakil']);
         $this->assertDatabaseMissing('izin', ['kode' => 'poin_siswa.menyetujui']);
         $this->assertDatabaseHas('izin', ['kode' => 'guru_wali.kelola']);
     }
 
-    public function test_poin_langsung_resmi_setelah_bk_menetapkan_sanksi_poin(): void
+    public function test_poin_baru_resmi_setelah_disahkan_wakil_kesiswaan(): void
     {
         [$laporan] = $this->buatLaporanPelanggaran(25);
         $this->assertDatabaseMissing('transaksi_poin_siswa', ['kunci_sumber' => 'pelanggaran:' . $laporan->id]);
@@ -40,6 +41,19 @@ class SistemPoinSiswaTest extends TestCase
         $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
             'hasil' => 'sanksi_poin',
             'catatan' => 'BK menetapkan sanksi poin berdasarkan bukti.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('menunggu_pengesahan_wakil', $laporan->fresh()->status_verifikasi);
+        $this->assertDatabaseMissing('transaksi_poin_siswa', [
+            'kunci_sumber' => 'pelanggaran:' . $laporan->id,
+        ]);
+        $this->assertDatabaseMissing('sanksi_poin_siswa', [
+            'siswa_id' => $laporan->siswa_id,
+        ]);
+
+        $this->post(route('verifikasi-pelanggaran.wakil', $laporan), [
+            'keputusan' => 'sahkan',
+            'catatan' => 'Rekomendasi BK sesuai bukti pemeriksaan.',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $this->assertSame('disahkan', $laporan->fresh()->status_verifikasi);
@@ -110,7 +124,7 @@ class SistemPoinSiswaTest extends TestCase
         $this->actingAs($administrator)->get(route('laporan-pembinaan-siswa.show', $laporan))
             ->assertOk()
             ->assertSee('Butir pelanggaran dan poin')
-            ->assertSee('Pilih keputusan');
+            ->assertSee('Pilih hasil');
 
         $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
             'hasil' => 'sanksi_poin',
@@ -120,8 +134,11 @@ class SistemPoinSiswaTest extends TestCase
 
         $laporan->refresh();
         $this->assertSame('pelanggaran', $laporan->jenis_laporan);
-        $this->assertSame('disahkan', $laporan->status_verifikasi);
+        $this->assertSame('menunggu_pengesahan_wakil', $laporan->status_verifikasi);
         $this->assertSame($jenisPelanggaran->poin, $laporan->total_poin);
+        $this->assertDatabaseMissing('transaksi_poin_siswa', [
+            'kunci_sumber' => 'pelanggaran:' . $laporan->id,
+        ]);
         $this->assertDatabaseHas('butir_pelanggaran_laporan', [
             'laporan_pembinaan_siswa_id' => $laporan->id,
             'jenis_pelanggaran_siswa_id' => $jenisPelanggaran->id,
@@ -151,6 +168,11 @@ class SistemPoinSiswaTest extends TestCase
         $this->post(route('verifikasi-pelanggaran.bk', $laporan), [
             'hasil' => 'sanksi_poin',
             'catatan' => 'BK menetapkan sanksi poin.',
+        ])->assertSessionHasNoErrors();
+
+        $this->post(route('verifikasi-pelanggaran.wakil', $laporan), [
+            'keputusan' => 'sahkan',
+            'catatan' => 'Poin disahkan untuk pengujian reward.',
         ])->assertSessionHasNoErrors();
 
         $pengurangan = PenguranganPoinSiswa::create([

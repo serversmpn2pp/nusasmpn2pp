@@ -35,6 +35,8 @@ class LaporanPembinaanSiswa extends Model
         'diajukan' => 'Diajukan',
         'pemeriksaan_bk' => 'Pemeriksaan BK',
         'perlu_klarifikasi' => 'Perlu Klarifikasi',
+        'dikembalikan_bk' => 'Dikembalikan ke BK',
+        'menunggu_pengesahan_wakil' => 'Menunggu Pengesahan Wakil Kesiswaan',
         'menunggu_persetujuan' => 'Menunggu Persetujuan',
         'disetujui_sebagian' => 'Disetujui Sebagian',
         'perlu_musyawarah' => 'Perlu Musyawarah',

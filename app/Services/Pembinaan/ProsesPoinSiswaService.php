@@ -87,7 +87,7 @@ class ProsesPoinSiswaService
                 $laporan,
                 'poin_disahkan',
                 'Poin pelanggaran disahkan',
-                $totalButir.' poin resmi ditetapkan berdasarkan keputusan BK.',
+                $totalButir.' poin resmi ditetapkan berdasarkan rekomendasi BK dan pengesahan Wakil Kesiswaan.',
                 $statusSebelum,
                 'disahkan',
                 auth()->id(),
@@ -113,7 +113,7 @@ class ProsesPoinSiswaService
 
         if ($jenisPelanggaran->isEmpty() || $jenisPelanggaran->count() !== $jenisPelanggaranIds->count()) {
             throw ValidationException::withMessages([
-                'jenis_pelanggaran_ids' => 'Pilih minimal satu butir pelanggaran aktif untuk menetapkan sanksi poin.',
+                'jenis_pelanggaran_ids' => 'Pilih minimal satu butir pelanggaran aktif untuk membuat rekomendasi poin.',
             ]);
         }
 

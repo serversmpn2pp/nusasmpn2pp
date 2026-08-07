@@ -3,6 +3,8 @@
 @section('title', 'Ganti Kata Sandi - NUSA')
 
 @section('content')
+    @include('auth.partials.password-toggle-assets')
+
     <div class="page-header">
         <div>
             <p class="eyebrow">Akun</p>
@@ -38,26 +40,32 @@
         <h2 class="panel-title">Keamanan akun</h2>
 
         <div class="form-grid">
-            <div class="field span-2">
-                <label for="kata_sandi_lama">Kata sandi lama</label>
-                <input id="kata_sandi_lama" name="kata_sandi_lama" type="password" class="input @error('kata_sandi_lama') is-invalid @enderror" autocomplete="current-password" required>
-                @error('kata_sandi_lama')
-                    <p class="error-text">{{ $message }}</p>
-                @enderror
-            </div>
+            <x-password-field
+                id="kata_sandi_lama"
+                name="kata_sandi_lama"
+                label="Kata sandi lama"
+                autocomplete="current-password"
+                container-class="span-2"
+                required
+            />
 
-            <div class="field span-2">
-                <label for="kata_sandi_baru">Kata sandi baru</label>
-                <input id="kata_sandi_baru" name="kata_sandi_baru" type="password" class="input @error('kata_sandi_baru') is-invalid @enderror" autocomplete="new-password" required>
-                @error('kata_sandi_baru')
-                    <p class="error-text">{{ $message }}</p>
-                @enderror
-            </div>
+            <x-password-field
+                id="kata_sandi_baru"
+                name="kata_sandi_baru"
+                label="Kata sandi baru"
+                autocomplete="new-password"
+                container-class="span-2"
+                required
+            />
 
-            <div class="field span-2">
-                <label for="kata_sandi_baru_confirmation">Konfirmasi kata sandi baru</label>
-                <input id="kata_sandi_baru_confirmation" name="kata_sandi_baru_confirmation" type="password" class="input" autocomplete="new-password" required>
-            </div>
+            <x-password-field
+                id="kata_sandi_baru_confirmation"
+                name="kata_sandi_baru_confirmation"
+                label="Konfirmasi kata sandi baru"
+                autocomplete="new-password"
+                container-class="span-2"
+                required
+            />
         </div>
 
         <div class="form-actions" style="margin-top: 20px;">

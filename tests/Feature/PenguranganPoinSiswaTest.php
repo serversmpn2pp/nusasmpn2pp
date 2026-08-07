@@ -117,7 +117,7 @@ class PenguranganPoinSiswaTest extends TestCase
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $akunWakil->id,
             'jenis' => 'peringatan',
-            'judul' => 'Pengajuan reward menunggu persetujuan',
+            'judul' => 'Pengajuan penghargaan menunggu persetujuan',
             'tautan' => route('pengurangan-poin-siswa.index', ['status' => 'diajukan'], false),
             'kunci_unik' => "pengurangan-poin-diajukan:{$penguranganId}",
         ]);

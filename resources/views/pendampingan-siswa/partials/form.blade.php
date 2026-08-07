@@ -47,7 +47,7 @@
 
     <div class="follow-form-grid">
         <div class="field">
-            <label for="jenis_tindakan">Jenis tindakan</label>
+            <label for="jenis_tindakan">Jenis pendampingan</label>
             <select id="jenis_tindakan" name="jenis_tindakan" class="{{ $inputClass('jenis_tindakan', 'select') }}">
                 @foreach($daftarJenisTindakan as $kode => $label)
                     <option value="{{ $kode }}" @selected($nilai('jenis_tindakan') === $kode)>{{ $label }}</option>
@@ -57,7 +57,7 @@
         </div>
 
         <div class="field">
-            <label for="tanggal_tindak_lanjut">Tanggal tindak lanjut</label>
+            <label for="tanggal_tindak_lanjut">Tanggal pendampingan</label>
             <input id="tanggal_tindak_lanjut" type="date" name="tanggal_tindak_lanjut"
                 value="{{ old('tanggal_tindak_lanjut', $pendampinganSiswa->tanggal_tindak_lanjut?->format('Y-m-d')) }}"
                 class="{{ $inputClass('tanggal_tindak_lanjut', 'input') }}">
@@ -109,6 +109,6 @@
 
     <div class="actions" style="justify-content:flex-end;margin-top:20px">
         <a class="button button-muted" href="{{ route($dalamKonteksGuruWali ? 'pendampingan-siswa-wali.index' : 'pendampingan-siswa.index', ['tahun_pelajaran_id' => $tahunPelajaran->id]) }}">Kembali</a>
-        <button class="button button-primary">{{ $sedangEdit ? 'Simpan Perubahan' : 'Mulai Tindak Lanjut' }}</button>
+        <button class="button button-primary">{{ $sedangEdit ? 'Simpan Perubahan' : 'Mulai Pendampingan' }}</button>
     </div>
 </form>

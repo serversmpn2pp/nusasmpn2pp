@@ -115,7 +115,7 @@ class PenguranganPoinSiswaController extends Controller
 
         if (! $tahunPelajaranAktif) {
             throw ValidationException::withMessages([
-                'siswa_id' => 'Pengajuan reward belum dapat dibuat karena tidak ada tahun pelajaran aktif.',
+                'siswa_id' => 'Pengajuan penghargaan belum dapat dibuat karena tidak ada tahun pelajaran aktif.',
             ]);
         }
 
@@ -134,7 +134,7 @@ class PenguranganPoinSiswaController extends Controller
         );
         if ($saldoPoin <= 0) {
             throw ValidationException::withMessages([
-                'siswa_id' => 'Reward hanya dapat diajukan untuk siswa yang masih memiliki saldo poin.',
+                'siswa_id' => 'Penghargaan hanya dapat diajukan untuk siswa yang masih memiliki saldo poin.',
             ]);
         }
 
@@ -155,7 +155,7 @@ class PenguranganPoinSiswaController extends Controller
                 $request->user()?->id,
             ),
             'peringatan',
-            'Pengajuan reward menunggu persetujuan',
+            'Pengajuan penghargaan menunggu persetujuan',
             sprintf(
                 'Pengurangan %d poin untuk %s diajukan melalui kegiatan %s.',
                 $pengurangan->poin_pengurangan,

@@ -30,13 +30,20 @@
         <div>
             <p class="eyebrow">Kesiswaan & BK</p>
             <h1 class="page-title">Pelaksanaan Sanksi Siswa</h1>
-            <p class="page-subtitle">Pantau sanksi yang terpicu dari akumulasi poin hingga pelaksanaannya selesai.</p>
+            <p class="page-subtitle">Pantau sanksi yang terbentuk saat akumulasi poin siswa mencapai batas yang telah ditetapkan.</p>
         </div>
         <div class="actions">
             <a href="{{ route('rekap-poin-siswa.index') }}" class="button button-muted">Rekap Poin</a>
-            @izin('poin_siswa.reward_kelola')<a href="{{ route('pengurangan-poin-siswa.index') }}" class="button button-primary">Pengurangan Poin</a>@endizin
+            @izin('poin_siswa.reward_kelola')<a href="{{ route('pengurangan-poin-siswa.index') }}" class="button button-primary">Penghargaan & Pengurangan Poin</a>@endizin
         </div>
     </div>
+
+    <x-alur-penanganan-siswa
+        tahap="penanganan"
+        judul="Sanksi dijalankan setelah batas poin tercapai"
+        deskripsi="Sanksi muncul otomatis berdasarkan akumulasi poin dan aturan sanksi yang aktif. Tetapkan petugas penanggung jawab, batas pelaksanaan, hasil, dan bukti sampai sanksi dinyatakan selesai."
+        catatan="Sanksi tidak dibuat langsung dari satu laporan kecuali batas poin siswa telah tercapai."
+    />
 
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 

@@ -33,7 +33,8 @@
         $statusPoinKeterlambatan = function ($absensi, $laporan): array {
             if ($laporan) {
                 return match ($laporan->status_verifikasi) {
-                    'diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi' => ['Menunggu BK', 'badge badge-warning'],
+                    'diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'dikembalikan_bk' => ['Menunggu BK', 'badge badge-warning'],
+                    'menunggu_pengesahan_wakil' => ['Menunggu Wakil Kesiswaan', 'badge badge-warning'],
                     'menunggu_persetujuan', 'disetujui_sebagian', 'perlu_musyawarah' => ['Menunggu keputusan BK', 'badge badge-warning'],
                     'disahkan' => ['Poin disahkan', 'badge badge-active'],
                     'ditetapkan_pembinaan' => ['Pembinaan tanpa poin', 'badge badge-active'],
@@ -70,8 +71,10 @@
         }
 
         .wa-summary-dialog {
+            display: grid;
             width: min(100%, 760px);
             max-height: min(86vh, 780px);
+            grid-template-rows: auto minmax(0, 1fr) auto;
             overflow: hidden;
             border: 1px solid rgba(21, 71, 122, .16);
             border-radius: 8px;
@@ -100,6 +103,8 @@
         }
 
         .wa-summary-body {
+            min-height: 0;
+            overflow-y: auto;
             padding: 18px;
         }
 
@@ -124,22 +129,48 @@
         }
 
         @media (max-width: 620px) {
-            .wa-summary-head,
+            .wa-summary-modal {
+                align-items: center;
+                padding: 10px;
+            }
+
+            .wa-summary-dialog {
+                max-height: calc(100svh - 20px);
+            }
+
             .wa-summary-foot {
                 align-items: stretch;
                 flex-direction: column;
+                padding: 12px;
+            }
+
+            .wa-summary-head {
+                align-items: center;
+                padding: 12px;
+            }
+
+            .wa-summary-head .button {
+                width: auto;
+                flex: 0 0 auto;
+            }
+
+            .wa-summary-body {
+                padding: 12px;
             }
 
             .wa-summary-foot .actions {
+                display: grid;
                 width: 100%;
+                grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
             }
 
             .wa-summary-foot .button {
-                flex: 1;
+                min-width: 0;
             }
 
             .wa-summary-textarea {
-                min-height: 360px;
+                height: min(42svh, 320px);
+                min-height: 220px;
             }
         }
     </style>
@@ -265,7 +296,7 @@
     </div>
 
     <div id="wa-summary-modal" class="wa-summary-modal" hidden>
-        <div class="wa-summary-dialog" role="dialog" aria-modal="true" aria-labelledby="wa-summary-title">
+        <div class="wa-summary-dialog" role="dialog" aria-modal="true" aria-labelledby="wa-summary-title" tabindex="-1">
             <div class="wa-summary-head">
                 <div>
                     <h2 id="wa-summary-title" class="panel-title">Pesan WA Grup Orang Tua</h2>
@@ -467,6 +498,7 @@
     <script>
         (() => {
             const modal = document.getElementById('wa-summary-modal');
+            const dialog = modal.querySelector('.wa-summary-dialog');
             const textArea = document.getElementById('wa-summary-text');
             const statusText = document.getElementById('wa-copy-status');
             const openButtons = document.querySelectorAll('[data-wa-summary-open]');
@@ -476,7 +508,14 @@
             const bukaModal = () => {
                 modal.hidden = false;
                 statusText.textContent = '';
-                window.setTimeout(() => textArea.focus(), 50);
+                window.setTimeout(() => {
+                    if (window.matchMedia('(max-width: 620px)').matches) {
+                        dialog.focus({ preventScroll: true });
+                        return;
+                    }
+
+                    textArea.focus({ preventScroll: true });
+                }, 50);
             };
 
             const tutupModal = () => {
@@ -484,19 +523,18 @@
             };
 
             const salinPesan = async () => {
-                textArea.focus();
-                textArea.select();
-
                 try {
                     if (navigator.clipboard && window.isSecureContext) {
                         await navigator.clipboard.writeText(textArea.value);
                     } else {
+                        textArea.focus();
+                        textArea.select();
                         document.execCommand('copy');
                     }
 
                     statusText.textContent = 'Pesan berhasil disalin.';
                 } catch (error) {
-                    statusText.textContent = 'Belum bisa menyalin otomatis. Pilih teks lalu tekan Ctrl+C.';
+                    statusText.textContent = 'Belum bisa menyalin otomatis. Tekan lama pada teks lalu pilih Salin.';
                 }
             };
 

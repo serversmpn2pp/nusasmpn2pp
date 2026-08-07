@@ -14,6 +14,6 @@
 
     <form action="{{ route('laporan-pembinaan-siswa.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
-        @include('laporan-pembinaan-siswa.partials.form', ['tombol' => 'Simpan laporan'])
+        @include('laporan-pembinaan-siswa.partials.form', ['tombol' => 'Kirim laporan'])
     </form>
 @endsection

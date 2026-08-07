@@ -251,6 +251,7 @@ class DatabaseSeeder extends Seeder
             ['kelompok' => 'Laporan', 'nama' => 'Export laporan', 'kode' => 'laporan.export', 'deskripsi' => 'Export laporan ke Excel atau format lain.'],
             ['kelompok' => 'BK', 'nama' => 'Lihat data BK', 'kode' => 'bk.lihat', 'deskripsi' => 'Melihat catatan dan pembinaan siswa.'],
             ['kelompok' => 'BK', 'nama' => 'Kelola data BK', 'kode' => 'bk.kelola', 'deskripsi' => 'Mengelola catatan pembinaan dan konseling siswa.'],
+            ['kelompok' => 'Pembinaan dan Poin', 'nama' => 'Sahkan pelanggaran berpoin', 'kode' => 'poin_siswa.sahkan_wakil', 'deskripsi' => 'Mengesahkan atau mengembalikan rekomendasi pelanggaran berpoin dari BK sebagai Wakil Kesiswaan.'],
             ['kelompok' => 'Sarpras', 'nama' => 'Lihat sarpras', 'kode' => 'sarpras.lihat', 'deskripsi' => 'Melihat data sarana dan prasarana.'],
             ['kelompok' => 'Sarpras', 'nama' => 'Kelola sarpras', 'kode' => 'sarpras.kelola', 'deskripsi' => 'Mengelola sarana dan prasarana.'],
             ['kelompok' => 'Sarpras', 'nama' => 'Lihat barang', 'kode' => 'barang.lihat', 'deskripsi' => 'Melihat data barang/inventaris.'],
@@ -277,7 +278,7 @@ class DatabaseSeeder extends Seeder
         return [
             'administrator' => $semuaKodeIzin,
             'pimpinan' => $izinLihat,
-            'wakil_pimpinan_kesiswaan' => ['beranda.akses', 'siswa.lihat', 'kartu_pelajar.lihat', 'kartu_pelajar.cetak', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat', 'bk.kelola', 'laporan.export'],
+            'wakil_pimpinan_kesiswaan' => ['beranda.akses', 'siswa.lihat', 'kartu_pelajar.lihat', 'kartu_pelajar.cetak', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat', 'bk.kelola', 'poin_siswa.sahkan_wakil', 'laporan.export'],
             'wakil_pimpinan_sarana_prasarana' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
             'wakil_pimpinan_kurikulum' => ['beranda.akses', 'tahun_pelajaran.lihat', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'guru_mapel.kelola', 'jadwal.lihat', 'jadwal.kelola', 'nilai.lihat', 'nilai.rekap', 'omr.lihat', 'cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'perangkat_ajar.lihat', 'perangkat_ajar.periksa', 'perangkat_ajar.jenis_kelola', 'laporan.export'],
             'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.pribadi', 'nilai.lihat', 'nilai.komponen_kelola', 'nilai.input', 'nilai.rekap', 'omr.lihat', 'omr.kelola', 'cbt.lihat', 'cbt.soal_kelola', 'perangkat_ajar.upload'],

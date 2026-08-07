@@ -4,7 +4,7 @@
 
 @section('content')
     <style>
-        .deadline-form-grid { display:grid; gap:16px; grid-template-columns:minmax(0,420px); }
+        .deadline-form-grid { display:grid; gap:16px; grid-template-columns:repeat(2,minmax(0,420px)); }
         .deadline-toggle-list { display:grid; gap:10px; margin-top:16px; }
         .deadline-toggle { align-items:start; border:1px solid var(--line); border-radius:8px; display:grid; gap:10px; grid-template-columns:20px minmax(0,1fr); padding:13px; }
         .deadline-toggle input { margin-top:3px; }
@@ -17,9 +17,10 @@
 
     <form method="POST" action="{{ route('pengaturan-batas-proses-pelanggaran.update',$tahunPelajaran) }}">@csrf @method('PUT')
         <section class="panel panel-pad">
-            <h2 class="panel-title">Tenggat keputusan BK</h2><p class="help-text">Gunakan hari kalender. Nilai yang diperbolehkan 1 sampai 30 hari.</p>
+            <h2 class="panel-title">Tenggat pemeriksaan dan pengesahan</h2><p class="help-text">Gunakan hari kalender. Setiap tahap memiliki batas 1 sampai 30 hari.</p>
             <div class="deadline-form-grid" style="margin-top:16px">
-                <div class="field"><label for="batas_hari_pemeriksaan_bk">Pemeriksaan BK</label><input id="batas_hari_pemeriksaan_bk" name="batas_hari_pemeriksaan_bk" type="number" min="1" max="30" class="input" value="{{ old('batas_hari_pemeriksaan_bk',$pengaturan->batas_hari_pemeriksaan_bk) }}" required><p class="help-text">Sejak laporan dibuat atau diklarifikasi.</p></div>
+                <div class="field"><label for="batas_hari_pemeriksaan_bk">Pemeriksaan BK</label><input id="batas_hari_pemeriksaan_bk" name="batas_hari_pemeriksaan_bk" type="number" min="1" max="30" class="input" value="{{ old('batas_hari_pemeriksaan_bk',$pengaturan->batas_hari_pemeriksaan_bk) }}" required><p class="help-text">Sejak laporan dibuat atau dikembalikan untuk diperiksa ulang.</p></div>
+                <div class="field"><label for="batas_hari_persetujuan">Pengesahan Wakil Kesiswaan</label><input id="batas_hari_persetujuan" name="batas_hari_persetujuan" type="number" min="1" max="30" class="input" value="{{ old('batas_hari_persetujuan',$pengaturan->batas_hari_persetujuan) }}" required><p class="help-text">Sejak rekomendasi pelanggaran berpoin dikirim oleh BK.</p></div>
             </div>
         </section>
 

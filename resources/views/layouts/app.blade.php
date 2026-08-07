@@ -1771,6 +1771,10 @@
         @php
             $penggunaAktif = auth()->user();
             $penggunaAktif?->loadMissing(['pegawai', 'siswa', 'daftarPeran.izin']);
+            $namaPenggunaAktif = $penggunaAktif?->pegawai?->nama_lengkap
+                ?: $penggunaAktif?->siswa?->nama_lengkap
+                ?: $penggunaAktif?->nama
+                ?: 'Pengguna NUSA';
             $notifikasiTerbaru = $penggunaAktif
                 ? $penggunaAktif->notifikasiPengguna()->orderByDesc('created_at')->orderByDesc('id')->limit(6)->get()
                 : collect();
@@ -1783,7 +1787,7 @@
                 ->take(2)
                 ->implode(', ');
             $labelPeranAktif = $labelPeranAktif ?: str((string) ($penggunaAktif?->peran ?? 'pengguna'))->headline();
-            $inisialPengguna = collect(preg_split('/\s+/', trim((string) ($penggunaAktif?->nama ?? 'NUSA'))))
+            $inisialPengguna = collect(preg_split('/\s+/', trim($namaPenggunaAktif)))
                 ->filter()
                 ->take(2)
                 ->map(fn ($kata) => mb_strtoupper(mb_substr($kata, 0, 1)))
@@ -1890,13 +1894,13 @@
                     'id' => 'kesiswaan-bk',
                     'title' => 'Kesiswaan & BK',
                     'items' => [
-                        ['label' => 'Pusat Verifikasi', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'PV', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'subgroup' => 'Operasional'],
-                        ['label' => 'Pembinaan & Poin Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PP', 'izin' => ['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'subgroup' => 'Operasional'],
-                        ['label' => 'Tindak Lanjut Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'TL', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Operasional'],
-                        ['label' => 'Pelaksanaan Sanksi', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Pemeriksaan & Pengesahan', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'VP', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.sahkan_wakil'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Daftar Laporan Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'LS', 'izin' => ['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Pendampingan Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Operasional'],
+                        ['label' => 'Pelaksanaan Sanksi Siswa', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola'], 'subgroup' => 'Operasional'],
                         ['label' => 'Peringatan Dini Siswa', 'route' => 'peringatan-dini-siswa.index', 'active' => ['peringatan-dini-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Monitoring'],
                         ['label' => 'Rekap Poin Siswa', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Monitoring'],
-                        ['label' => 'Reward & Pengurangan Poin', 'route' => 'pengurangan-poin-siswa.index', 'active' => ['pengurangan-poin-siswa.*'], 'initial' => 'RW', 'izin' => ['poin_siswa.reward_kelola', 'poin_siswa.putus_konflik'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Penghargaan & Pengurangan Poin', 'route' => 'pengurangan-poin-siswa.index', 'active' => ['pengurangan-poin-siswa.*'], 'initial' => 'PH', 'izin' => ['poin_siswa.reward_kelola', 'poin_siswa.putus_konflik'], 'subgroup' => 'Operasional'],
                         ['label' => 'Penugasan Guru Wali', 'route' => 'penugasan-guru-wali.index', 'active' => ['penugasan-guru-wali.*'], 'initial' => 'GW', 'izin' => 'guru_wali.kelola', 'subgroup' => 'Guru Wali'],
                         ['label' => 'Jenis Pelanggaran & Poin', 'route' => 'jenis-pelanggaran-siswa.index', 'active' => ['jenis-pelanggaran-siswa.*'], 'initial' => 'JP', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
                         ['label' => 'Aturan Sanksi Poin', 'route' => 'aturan-sanksi-poin.index', 'active' => ['aturan-sanksi-poin.*'], 'initial' => 'AS', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
@@ -1948,10 +1952,10 @@
                     'id' => 'verifikasi-poin',
                     'title' => 'Tugas Pembinaan',
                     'items' => [
-                        ['label' => 'Pusat Verifikasi Poin', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'PV', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'peran' => ['bk', 'pimpinan', 'wakil_pimpinan_kesiswaan']],
-                        ['label' => 'Pelaksanaan Sanksi', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola']],
+                        ['label' => 'Pemeriksaan & Pengesahan', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'VP', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.sahkan_wakil'], 'peran' => ['bk', 'pimpinan', 'wakil_pimpinan_kesiswaan']],
+                        ['label' => 'Pelaksanaan Sanksi Siswa', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola']],
                         ['label' => 'Peringatan Dini Siswa', 'route' => 'peringatan-dini-siswa.index', 'active' => ['peringatan-dini-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
-                        ['label' => 'Tindak Lanjut Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'TL', 'izin' => 'poin_siswa.lihat'],
+                        ['label' => 'Pendampingan Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
                         ['label' => 'Batas Proses Pelanggaran', 'route' => 'pengaturan-batas-proses-pelanggaran.index', 'active' => ['pengaturan-batas-proses-pelanggaran.*'], 'initial' => 'BP', 'izin' => 'poin_siswa.pengaturan'],
                     ],
                 ],
@@ -1964,8 +1968,8 @@
                         ['label' => 'Akun Siswa Kelas', 'route' => 'akun-siswa.index', 'active' => ['akun-siswa.*'], 'initial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.cetak'], 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Absensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi'], 'peran' => 'wali_kelas'],
                         ['label' => 'Laporan Absensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan', 'peran' => 'wali_kelas'],
-                        ['label' => 'Pembinaan & Poin Kelas', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'PB', 'izin' => ['poin_siswa.lihat', 'poin_siswa.lapor'], 'peran' => 'wali_kelas'],
-                        ['label' => 'Tindak Lanjut Kelas', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'TL', 'izin' => 'poin_siswa.lihat', 'peran' => 'wali_kelas'],
+                        ['label' => 'Laporan Siswa Kelas', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'LS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.lapor'], 'peran' => 'wali_kelas'],
+                        ['label' => 'Pendampingan Siswa Kelas', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat', 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Poin Kelas', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'peran' => 'wali_kelas'],
                     ],
                 ],
@@ -1974,8 +1978,8 @@
                     'title' => 'Guru Wali',
                     'items' => [
                         ['label' => 'Siswa Wali Saya', 'route' => 'siswa-wali-saya.index', 'active' => ['siswa-wali-saya.*', 'siswa.show'], 'initial' => 'SW', 'izin' => 'guru_wali.lihat', 'peran' => 'guru_wali'],
-                        ['label' => 'Pembinaan Siswa Wali', 'route' => 'pembinaan-siswa-wali.index', 'active' => ['pembinaan-siswa-wali.*'], 'initial' => 'PB', 'izin' => ['guru_wali.lihat', 'poin_siswa.lihat'], 'peran' => 'guru_wali'],
-                        ['label' => 'Tindak Lanjut Siswa Wali', 'route' => 'pendampingan-siswa-wali.index', 'active' => ['pendampingan-siswa-wali.*'], 'initial' => 'TL', 'izin' => ['guru_wali.lihat', 'poin_siswa.lihat'], 'peran' => 'guru_wali'],
+                        ['label' => 'Laporan Siswa Wali', 'route' => 'pembinaan-siswa-wali.index', 'active' => ['pembinaan-siswa-wali.*'], 'initial' => 'LS', 'izin' => ['guru_wali.lihat', 'poin_siswa.lihat'], 'peran' => 'guru_wali'],
+                        ['label' => 'Pendampingan Siswa Wali', 'route' => 'pendampingan-siswa-wali.index', 'active' => ['pendampingan-siswa-wali.*'], 'initial' => 'PD', 'izin' => ['guru_wali.lihat', 'poin_siswa.lihat'], 'peran' => 'guru_wali'],
                         ['label' => 'Rekap Poin Siswa Wali', 'route' => 'rekap-poin-siswa-wali.index', 'active' => ['rekap-poin-siswa-wali.*'], 'initial' => 'RP', 'izin' => ['guru_wali.lihat', 'poin_siswa.lihat'], 'peran' => 'guru_wali'],
                     ],
                 ],
@@ -2248,7 +2252,7 @@
                                         @endif
                                     </span>
                                     <span class="account-identity">
-                                        <strong>{{ $penggunaAktif->nama }}</strong>
+                                        <strong>{{ $namaPenggunaAktif }}</strong>
                                         <small>{{ $labelPeranAktif }}</small>
                                     </span>
                                     <svg class="account-chevron" aria-hidden="true" viewBox="0 0 24 24">
@@ -2258,8 +2262,9 @@
 
                                 <div class="topbar-popover account-popover">
                                     <div class="account-popover-head">
-                                        <strong>{{ $penggunaAktif->nama }}</strong>
+                                        <strong>{{ $namaPenggunaAktif }}</strong>
                                         <span>{{ $labelPeranAktif }}</span>
+                                        <span>Username: {{ $penggunaAktif->username }}</span>
                                     </div>
 
                                     @if ($penggunaAktif->pegawai_id && $penggunaAktif->memilikiIzin('pegawai.profil'))

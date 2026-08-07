@@ -1,19 +1,19 @@
 @extends('layouts.app')
 
-@section('title', 'Pusat Verifikasi Pelanggaran - NUSA')
+@section('title', 'Pemeriksaan & Pengesahan Laporan - NUSA')
 
 @section('content')
     @php
         $badgeStatus = fn (string $status) => match ($status) {
             'disahkan', 'ditetapkan_pembinaan' => 'badge badge-active',
             'tidak_terbukti', 'dibatalkan' => 'badge badge-inactive',
-            'perlu_klarifikasi' => 'badge badge-danger',
+            'perlu_klarifikasi', 'dikembalikan_bk' => 'badge badge-danger',
             default => 'badge badge-warning',
         };
     @endphp
 
     <style>
-        .verification-stats { display:grid; gap:14px; grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:20px; }
+        .verification-stats { display:grid; gap:14px; grid-template-columns:repeat(5,minmax(0,1fr)); margin-bottom:20px; }
         .verification-stat { color:inherit; min-width:0; padding:16px; text-decoration:none; }
         .verification-stat.active { border-color:var(--primary); box-shadow:inset 0 3px 0 var(--secondary); }
         .verification-stat-label { color:var(--muted); font-size:12px; font-weight:800; margin:0; text-transform:uppercase; }
@@ -43,19 +43,27 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">Kesiswaan & BK</p>
-            <h1 class="page-title">Pusat Pemeriksaan BK</h1>
-            <p class="page-subtitle">BK memeriksa laporan kejadian lalu menentukan pembinaan atau sanksi poin.</p>
+            <h1 class="page-title">Pemeriksaan & Pengesahan Laporan</h1>
+            <p class="page-subtitle">BK memeriksa laporan; Wakil Kesiswaan mengesahkan rekomendasi pelanggaran berpoin.</p>
         </div>
-        <div class="actions"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Semua laporan</a></div>
+        <div class="actions"><a href="{{ route('laporan-pembinaan-siswa.index') }}" class="button button-muted">Daftar semua laporan</a></div>
     </div>
+
+    <x-alur-penanganan-siswa
+        :tahap="$hakAksi['wakil'] && !$hakAksi['bk'] ? 'pengesahan' : 'pemeriksaan'"
+        judul="BK memeriksa, Wakil Kesiswaan mengesahkan poin"
+        deskripsi="BK memeriksa fakta dan memilih pembinaan, rekomendasi poin, atau tidak terbukti. Pembinaan dan tidak terbukti selesai di BK. Khusus rekomendasi poin, Wakil Kesiswaan mengesahkan atau mengembalikannya kepada BK dengan catatan."
+        catatan="Poin belum resmi sebelum disahkan Wakil Kesiswaan."
+    />
 
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 
     <div class="verification-stats">
-        <a class="panel verification-stat {{ $antrean==='semua'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index') }}"><p class="verification-stat-label">Tugas aktif</p><p class="verification-stat-value">{{ $ringkasan['aktif'] }}</p></a>
-        <a class="panel verification-stat {{ $antrean==='bk'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index',['antrean'=>'bk']) }}"><p class="verification-stat-label">Menunggu BK</p><p class="verification-stat-value">{{ $ringkasan['bk'] }}</p></a>
-        <a class="panel verification-stat {{ $antrean==='terlambat'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index',['antrean'=>'terlambat']) }}"><p class="verification-stat-label">Terlambat</p><p class="verification-stat-value">{{ $ringkasan['terlambat'] }}</p></a>
-        <a class="panel verification-stat {{ $antrean==='selesai'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index',['antrean'=>'selesai']) }}"><p class="verification-stat-label">Selesai</p><p class="verification-stat-value">{{ $ringkasan['selesai'] }}</p></a>
+        <a class="panel verification-stat {{ $antrean==='semua'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index') }}"><p class="verification-stat-label">Perlu diperiksa</p><p class="verification-stat-value">{{ $ringkasan['aktif'] }}</p></a>
+        <a class="panel verification-stat {{ $antrean==='bk'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index',['antrean'=>'bk']) }}"><p class="verification-stat-label">Menunggu keputusan BK</p><p class="verification-stat-value">{{ $ringkasan['bk'] }}</p></a>
+        <a class="panel verification-stat {{ $antrean==='wakil'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index',['antrean'=>'wakil']) }}"><p class="verification-stat-label">Menunggu pengesahan Wakil</p><p class="verification-stat-value">{{ $ringkasan['wakil'] }}</p></a>
+        <a class="panel verification-stat {{ $antrean==='terlambat'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index',['antrean'=>'terlambat']) }}"><p class="verification-stat-label">Terlambat diproses</p><p class="verification-stat-value">{{ $ringkasan['terlambat'] }}</p></a>
+        <a class="panel verification-stat {{ $antrean==='selesai'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index',['antrean'=>'selesai']) }}"><p class="verification-stat-label">Selesai diperiksa</p><p class="verification-stat-value">{{ $ringkasan['selesai'] }}</p></a>
     </div>
 
     <form method="GET" class="panel panel-pad" style="margin-bottom:20px">
@@ -84,14 +92,14 @@
                     </div>
 
                     <div>
-                        <div class="mobile-card-head"><div><p class="person-meta">Klasifikasi BK</p><p class="person-name">{{ $item->butirPelanggaranLaporan->first()?->nama_pelanggaran ?: ($item->status_verifikasi==='ditetapkan_pembinaan'?'Pembinaan tanpa poin':'Belum diklasifikasikan') }}</p></div><strong>{{ $item->status_verifikasi==='disahkan'?$item->total_poin.' poin':'-' }}</strong></div>
+                        <div class="mobile-card-head"><div><p class="person-meta">Klasifikasi BK</p><p class="person-name">{{ $item->butirPelanggaranLaporan->first()?->nama_pelanggaran ?: ($item->status_verifikasi==='ditetapkan_pembinaan'?'Pembinaan tanpa poin':'Belum diklasifikasikan') }}</p></div><strong>{{ in_array($item->status_verifikasi,['menunggu_pengesahan_wakil','disahkan'],true)?$item->total_poin.' poin':'-' }}</strong></div>
                         <div class="fact-chips">
                             <span class="fact-chip {{ $fakta['lokasi']?'':'missing' }}">Lokasi {{ $fakta['lokasi']?'ada':'belum' }}</span>
                             <span class="fact-chip {{ $fakta['bukti']?'':'missing' }}">{{ $item->bukti_laporan_pembinaan_siswa_count }} bukti</span>
                             <span class="fact-chip {{ $fakta['saksi']?'':'missing' }}">{{ $item->saksi_laporan_pembinaan_siswa_count }} saksi</span>
                             <span class="fact-chip {{ $fakta['klarifikasi']?'':'missing' }}">{{ $item->klarifikasi_siswa_pembinaan_count }} klarifikasi</span>
                         </div>
-                        <div class="verification-flow"><span class="verification-step {{ $tahap>1?'done':($tahap===1?'current':'') }}">1. Pemeriksaan BK</span><span class="verification-step {{ $tahap===2?'done':'' }}">2. Keputusan penanganan</span></div>
+                        <div class="verification-flow"><span class="verification-step {{ $tahap>1?'done':($tahap===1?'current':'') }}">1. Pemeriksaan BK</span><span class="verification-step {{ $tahap>2?'done':($tahap===2?'current':'') }}">2. Pengesahan Wakil</span></div>
                     </div>
 
                     <div>
@@ -113,7 +121,7 @@
                         @endif
                     </div>
 
-                    <div class="verification-actions"><a href="{{ route('laporan-pembinaan-siswa.show',$item) }}" class="button button-primary">{{ in_array($item->status_verifikasi,\App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_FINAL,true)?'Lihat hasil':'Buka pemeriksaan' }}</a></div>
+                    <div class="verification-actions"><a href="{{ route('laporan-pembinaan-siswa.show',$item) }}" class="button button-primary">{{ in_array($item->status_verifikasi,\App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_FINAL,true)?'Lihat hasil':(in_array($item->status_verifikasi,\App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_WAKIL,true)?'Buka pengesahan':'Buka pemeriksaan') }}</a></div>
                 </article>
             @empty
                 <div class="empty-state">Tidak ada laporan dalam antrean ini.</div>

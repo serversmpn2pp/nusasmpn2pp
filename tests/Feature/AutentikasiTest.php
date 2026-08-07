@@ -12,6 +12,9 @@ class AutentikasiTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Masuk ke aplikasi');
+        $response->assertSee('aria-controls="password"', false);
+        $response->assertSee('aria-label="Tampilkan kata sandi"', false);
+        $response->assertSee('Caps Lock aktif.');
     }
 
     public function test_halaman_pegawai_dikunci_sebelum_login(): void

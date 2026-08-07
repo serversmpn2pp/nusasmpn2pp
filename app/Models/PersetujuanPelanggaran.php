@@ -12,7 +12,7 @@ class PersetujuanPelanggaran extends Model
     public const DAFTAR_JENIS = [
         'wali_kelas' => 'Wali Kelas',
         'guru_wali' => 'Guru Wali',
-        'wakil_kesiswaan' => 'Wakil Kesiswaan/Pengganti',
+        'wakil_kesiswaan' => 'Wakil Kesiswaan',
     ];
 
     public const DAFTAR_KEPUTUSAN = [
@@ -50,5 +50,14 @@ class PersetujuanPelanggaran extends Model
     public function labelJenis(): string
     {
         return self::DAFTAR_JENIS[$this->jenis_persetujuan] ?? str($this->jenis_persetujuan)->headline()->toString();
+    }
+
+    public function labelKeputusan(): string
+    {
+        if ($this->jenis_persetujuan === 'wakil_kesiswaan') {
+            return $this->keputusan === 'setuju' ? 'Disahkan' : 'Dikembalikan ke BK';
+        }
+
+        return self::DAFTAR_KEPUTUSAN[$this->keputusan] ?? str($this->keputusan)->headline()->toString();
     }
 }

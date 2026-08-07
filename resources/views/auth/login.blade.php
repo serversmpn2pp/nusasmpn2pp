@@ -335,6 +335,7 @@
                 }
             }
         </style>
+        @include('auth.partials.password-toggle-assets')
     </head>
     <body>
         <main class="login-page">
@@ -363,6 +364,10 @@
                         <div class="alert">{{ $errors->first() }}</div>
                     @endif
 
+                    @if (session('gagal'))
+                        <div class="alert">{{ session('gagal') }}</div>
+                    @endif
+
                     <form action="{{ route('login.store') }}" method="POST">
                         @csrf
 
@@ -371,10 +376,13 @@
                             <input id="username" name="username" type="text" value="{{ old('username') }}" class="input" autocomplete="username" autofocus required>
                         </div>
 
-                        <div class="field">
-                            <label for="password">Kata sandi</label>
-                            <input id="password" name="password" type="password" class="input" autocomplete="current-password" required>
-                        </div>
+                        <x-password-field
+                            id="password"
+                            name="password"
+                            label="Kata sandi"
+                            autocomplete="current-password"
+                            required
+                        />
 
                         <div class="option-row">
                             <label class="remember">

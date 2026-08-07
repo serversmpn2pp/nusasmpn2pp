@@ -41,7 +41,7 @@ class PendampinganSiswaTest extends TestCase
         $this->actingAs($administrator)
             ->get(route('pendampingan-siswa.create', ['peringatan_id' => $peringatan->id]))
             ->assertOk()
-            ->assertSee('Mulai tindak lanjut')
+            ->assertSee('Mulai pendampingan siswa')
             ->assertSee($siswa->nama_lengkap)
             ->assertSee('Pembinaan Wali Kelas/Guru Wali');
 

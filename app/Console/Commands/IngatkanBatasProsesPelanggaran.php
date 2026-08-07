@@ -56,7 +56,7 @@ class IngatkanBatasProsesPelanggaran extends Command
                         continue;
                     }
 
-                    $penerima = $this->penerimaTahap($notifikasi);
+                    $penerima = $this->penerimaTahap($notifikasi, $item->tahap_batas_proses);
                     if ($penerima->isEmpty()) {
                         continue;
                     }
@@ -99,15 +99,20 @@ class IngatkanBatasProsesPelanggaran extends Command
         return self::SUCCESS;
     }
 
-    private function penerimaTahap(NotifikasiPenggunaService $notifikasi): Collection
+    private function penerimaTahap(NotifikasiPenggunaService $notifikasi, ?string $tahap): Collection
     {
-        return $notifikasi->penggunaDenganIzin('poin_siswa.verifikasi_bk')->unique('id')->values();
+        $izin = $tahap === PengaturanBatasProsesPelanggaranService::TAHAP_PENGESAHAN_WAKIL
+            ? 'poin_siswa.sahkan_wakil'
+            : 'poin_siswa.verifikasi_bk';
+
+        return $notifikasi->penggunaDenganIzin($izin)->unique('id')->values();
     }
 
     private function labelTahap(?string $tahap): string
     {
         return match ($tahap) {
             PengaturanBatasProsesPelanggaranService::TAHAP_PEMERIKSAAN_BK => 'keputusan BK',
+            PengaturanBatasProsesPelanggaranService::TAHAP_PENGESAHAN_WAKIL => 'pengesahan Wakil Kesiswaan',
             default => 'pemeriksaan BK',
         };
     }

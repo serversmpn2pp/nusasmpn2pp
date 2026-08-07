@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\Pengguna;
+use App\Models\PersetujuanPelanggaran;
 use App\Models\VerifikasiBkPelanggaran;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
 use App\Services\Pembinaan\AntreanVerifikasiPelanggaranService;
@@ -60,7 +61,7 @@ class VerifikasiPelanggaranSiswaController extends Controller
             ]);
 
             match ($data['hasil']) {
-                'sanksi_poin' => $this->tetapkanSanksiPoin($laporanPembinaanSiswa, $data['jenis_pelanggaran_ids'] ?? []),
+                'sanksi_poin' => $this->rekomendasikanSanksiPoin($laporanPembinaanSiswa, $data['jenis_pelanggaran_ids'] ?? []),
                 'pembinaan' => $this->prosesPoinSiswaService->tetapkanPembinaan($laporanPembinaanSiswa),
                 'tidak_terbukti' => $this->tutupTanpaPoin($laporanPembinaanSiswa),
                 default => $laporanPembinaanSiswa->update(['status_verifikasi' => 'perlu_klarifikasi']),
@@ -87,17 +88,86 @@ class VerifikasiPelanggaranSiswaController extends Controller
         $this->notifikasiHasilPemeriksaan($request, $laporanPembinaanSiswa, $data['hasil']);
 
         return back()->with('berhasil', match ($data['hasil']) {
-            'sanksi_poin' => 'Keputusan BK disimpan. Poin siswa resmi ditetapkan.',
+            'sanksi_poin' => 'Rekomendasi poin dari BK disimpan dan dikirim kepada Wakil Kesiswaan untuk disahkan.',
             'pembinaan' => 'Keputusan BK disimpan sebagai pembinaan tanpa poin.',
             'tidak_terbukti' => 'Laporan dinyatakan tidak terbukti dan tidak menambah poin.',
             default => 'Laporan dikembalikan untuk melengkapi klarifikasi.',
         });
     }
 
-    private function tetapkanSanksiPoin(LaporanPembinaanSiswa $laporan, array $jenisPelanggaranIds): void
+    public function pengesahanWakil(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
+    {
+        abort_unless($request->user()?->memilikiIzin('poin_siswa.sahkan_wakil'), 403);
+        abort_unless(
+            in_array($laporanPembinaanSiswa->status_verifikasi, AntreanVerifikasiPelanggaranService::STATUS_WAKIL, true),
+            422,
+            'Laporan ini tidak sedang menunggu pengesahan Wakil Kesiswaan.',
+        );
+
+        $data = $request->validate([
+            'keputusan' => ['required', Rule::in(['sahkan', 'kembalikan'])],
+            'catatan' => ['nullable', 'string', 'required_if:keputusan,kembalikan'],
+        ]);
+        $statusSebelum = $laporanPembinaanSiswa->status_verifikasi;
+
+        DB::transaction(function () use ($request, $laporanPembinaanSiswa, $data, $statusSebelum) {
+            PersetujuanPelanggaran::updateOrCreate(
+                [
+                    'laporan_pembinaan_siswa_id' => $laporanPembinaanSiswa->id,
+                    'jenis_persetujuan' => 'wakil_kesiswaan',
+                ],
+                [
+                    'pegawai_id' => $request->user()?->pegawai_id,
+                    'pengguna_id' => $request->user()?->id,
+                    'keputusan' => $data['keputusan'] === 'sahkan' ? 'setuju' : 'tidak_setuju',
+                    'catatan' => filled($data['catatan'] ?? null) ? trim($data['catatan']) : null,
+                    'diputuskan_pada' => now(),
+                ],
+            );
+
+            if ($data['keputusan'] === 'sahkan') {
+                $this->prosesPoinSiswaService->sahkanLaporan($laporanPembinaanSiswa);
+            } else {
+                $laporanPembinaanSiswa->update([
+                    'status_verifikasi' => 'dikembalikan_bk',
+                    'poin_ditetapkan_pada' => null,
+                ]);
+                $this->pengaturanBatasProses->tetapkanBatas($laporanPembinaanSiswa, 'dikembalikan_bk');
+            }
+
+            $statusSesudah = $laporanPembinaanSiswa->fresh()->status_verifikasi;
+            $this->riwayatPembinaan->catat(
+                $laporanPembinaanSiswa,
+                $data['keputusan'] === 'sahkan' ? 'poin_disahkan_wakil' : 'dikembalikan_wakil',
+                $data['keputusan'] === 'sahkan'
+                    ? 'Pelanggaran berpoin disahkan Wakil Kesiswaan'
+                    : 'Rekomendasi dikembalikan kepada BK',
+                filled($data['catatan'] ?? null)
+                    ? trim($data['catatan'])
+                    : 'Rekomendasi BK telah diperiksa oleh Wakil Kesiswaan.',
+                $statusSebelum,
+                $statusSesudah,
+                $request->user()?->id,
+                ['keputusan' => $data['keputusan']],
+            );
+        });
+
+        $laporanPembinaanSiswa->refresh();
+        $this->notifikasiPengesahanWakil($request, $laporanPembinaanSiswa, $data['keputusan']);
+
+        return back()->with('berhasil', $data['keputusan'] === 'sahkan'
+            ? 'Pelanggaran berpoin berhasil disahkan. Poin siswa sekarang resmi tercatat.'
+            : 'Rekomendasi dikembalikan kepada BK untuk diperiksa kembali.');
+    }
+
+    private function rekomendasikanSanksiPoin(LaporanPembinaanSiswa $laporan, array $jenisPelanggaranIds): void
     {
         $this->prosesPoinSiswaService->siapkanSanksiPoin($laporan, $jenisPelanggaranIds);
-        $this->prosesPoinSiswaService->sahkanLaporan($laporan->fresh());
+        $laporan->refresh()->update([
+            'status_verifikasi' => 'menunggu_pengesahan_wakil',
+            'poin_ditetapkan_pada' => null,
+        ]);
+        $this->pengaturanBatasProses->tetapkanBatas($laporan, 'menunggu_pengesahan_wakil');
     }
 
     private function tutupTanpaPoin(LaporanPembinaanSiswa $laporan): void
@@ -118,7 +188,7 @@ class VerifikasiPelanggaranSiswaController extends Controller
     {
         $laporan->loadMissing(['siswa', 'kelas']);
         $konfigurasi = match ($hasil) {
-            'sanksi_poin' => ['berhasil', 'Sanksi poin ditetapkan oleh BK', sprintf('%d poin ditetapkan untuk %s.', $laporan->total_poin, $laporan->siswa?->nama_lengkap ?? 'siswa')],
+            'sanksi_poin' => ['informasi', 'Rekomendasi poin dibuat oleh BK', sprintf('%d poin direkomendasikan untuk %s dan menunggu pengesahan Wakil Kesiswaan.', $laporan->total_poin, $laporan->siswa?->nama_lengkap ?? 'siswa')],
             'pembinaan' => ['informasi', 'Pembinaan ditetapkan oleh BK', sprintf('%s akan ditangani melalui pembinaan tanpa poin.', $laporan->siswa?->nama_lengkap ?? 'Siswa')],
             'perlu_klarifikasi' => ['peringatan', 'Laporan memerlukan klarifikasi', sprintf('Laporan %s perlu dilengkapi sebelum BK memberikan keputusan.', $laporan->nomor_laporan)],
             default => ['informasi', 'Laporan dinyatakan tidak terbukti', sprintf('Laporan %s ditutup tanpa penambahan poin.', $laporan->nomor_laporan)],
@@ -131,6 +201,50 @@ class VerifikasiPelanggaranSiswaController extends Controller
             $konfigurasi[2],
             route('laporan-pembinaan-siswa.show', $laporan, false),
             "keputusan-bk:{$laporan->id}:{$hasil}",
+        );
+
+        if ($hasil === 'sanksi_poin') {
+            $this->notifikasiPenggunaService->kirimKeBanyak(
+                $this->notifikasiPenggunaService->penggunaDenganIzin(
+                    'poin_siswa.sahkan_wakil',
+                    $request->user()?->id,
+                ),
+                'peringatan',
+                'Pelanggaran berpoin menunggu pengesahan',
+                sprintf(
+                    '%s merekomendasikan %d poin untuk %s. Periksa dan sahkan atau kembalikan kepada BK.',
+                    $laporan->nomor_laporan,
+                    $laporan->total_poin,
+                    $laporan->siswa?->nama_lengkap ?? 'siswa',
+                ),
+                route('laporan-pembinaan-siswa.show', $laporan, false),
+                "pengesahan-wakil-menunggu:{$laporan->id}:{$laporan->updated_at?->timestamp}",
+            );
+        }
+    }
+
+    private function notifikasiPengesahanWakil(
+        Request $request,
+        LaporanPembinaanSiswa $laporan,
+        string $keputusan,
+    ): void {
+        $laporan->loadMissing('siswa:id,nama_lengkap');
+        $penerima = $this->notifikasiPenggunaService
+            ->penggunaDenganIzin('poin_siswa.verifikasi_bk', $request->user()?->id)
+            ->merge($this->penerimaAsalLaporan($laporan, $request->user()?->id))
+            ->unique('id')
+            ->values();
+
+        $disahkan = $keputusan === 'sahkan';
+        $this->notifikasiPenggunaService->kirimKeBanyak(
+            $penerima,
+            $disahkan ? 'berhasil' : 'peringatan',
+            $disahkan ? 'Pelanggaran berpoin telah disahkan' : 'Rekomendasi poin dikembalikan kepada BK',
+            $disahkan
+                ? sprintf('%d poin untuk %s telah disahkan oleh Wakil Kesiswaan.', $laporan->total_poin, $laporan->siswa?->nama_lengkap ?? 'siswa')
+                : sprintf('Laporan %s perlu diperiksa kembali sesuai catatan Wakil Kesiswaan.', $laporan->nomor_laporan),
+            route('laporan-pembinaan-siswa.show', $laporan, false),
+            "keputusan-wakil:{$laporan->id}:{$keputusan}:{$laporan->updated_at?->timestamp}",
         );
     }
 

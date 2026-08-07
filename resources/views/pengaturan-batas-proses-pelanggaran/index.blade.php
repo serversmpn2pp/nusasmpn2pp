@@ -10,8 +10,8 @@
     </style>
 
     <div class="page-header">
-        <div><p class="eyebrow">Kesiswaan & BK</p><h1 class="page-title">Batas Proses Pelanggaran</h1><p class="page-subtitle">Tenggat keputusan BK ditetapkan untuk setiap tahun pelajaran.</p></div>
-        <a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pusat Verifikasi</a>
+        <div><p class="eyebrow">Kesiswaan & BK</p><h1 class="page-title">Batas Proses Pelanggaran</h1><p class="page-subtitle">Tenggat pemeriksaan BK dan pengesahan Wakil Kesiswaan ditetapkan untuk setiap tahun pelajaran.</p></div>
+        <a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pemeriksaan & Pengesahan</a>
     </div>
 
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
@@ -25,14 +25,14 @@
         <div class="desktop-only table-wrap"><table class="employee-table"><thead><tr><th>Tahun pelajaran</th><th>Batas proses</th><th>Pengingat</th><th>Terakhir diperbarui</th><th class="text-right">Aksi</th></tr></thead><tbody>
             @forelse($daftarTahunPelajaran as $tahun)
                 @php $pengaturan=$tahun->pengaturanBatasProsesPelanggaran; @endphp
-                <tr><td><p class="person-name">{{ $tahun->nama }}</p><span class="badge {{ $tahun->aktif?'badge-active':'badge-muted' }}">{{ $tahun->aktif?'Aktif':'Tidak aktif' }}</span></td><td><div class="deadline-values"><span class="deadline-value">Keputusan BK {{ $pengaturan->batas_hari_pemeriksaan_bk }} hari</span></div></td><td><p class="person-name">{{ $pengaturan->notifikasi_pengingat_aktif?$pengaturan->pengingat_hari_sebelum_batas.' hari sebelumnya':'Nonaktif' }}</p><p class="person-meta">Terlambat: {{ $pengaturan->notifikasi_terlambat_aktif?'aktif':'nonaktif' }}</p></td><td><p>{{ $pengaturan->exists?($pengaturan->updated_at?->format('d/m/Y H:i')??'-'):'Menggunakan nilai bawaan' }}</p><p class="person-meta">{{ $pengaturan->diperbaruiOlehPengguna?->nama }}</p></td><td><div class="actions" style="justify-content:flex-end"><a href="{{ route('pengaturan-batas-proses-pelanggaran.edit',$tahun) }}" class="button button-dark button-sm">Atur</a></div></td></tr>
+                <tr><td><p class="person-name">{{ $tahun->nama }}</p><span class="badge {{ $tahun->aktif?'badge-active':'badge-muted' }}">{{ $tahun->aktif?'Aktif':'Tidak aktif' }}</span></td><td><div class="deadline-values"><span class="deadline-value">Pemeriksaan BK {{ $pengaturan->batas_hari_pemeriksaan_bk }} hari</span><span class="deadline-value">Pengesahan Wakil {{ $pengaturan->batas_hari_persetujuan }} hari</span></div></td><td><p class="person-name">{{ $pengaturan->notifikasi_pengingat_aktif?$pengaturan->pengingat_hari_sebelum_batas.' hari sebelumnya':'Nonaktif' }}</p><p class="person-meta">Terlambat: {{ $pengaturan->notifikasi_terlambat_aktif?'aktif':'nonaktif' }}</p></td><td><p>{{ $pengaturan->exists?($pengaturan->updated_at?->format('d/m/Y H:i')??'-'):'Menggunakan nilai bawaan' }}</p><p class="person-meta">{{ $pengaturan->diperbaruiOlehPengguna?->nama }}</p></td><td><div class="actions" style="justify-content:flex-end"><a href="{{ route('pengaturan-batas-proses-pelanggaran.edit',$tahun) }}" class="button button-dark button-sm">Atur</a></div></td></tr>
             @empty<tr><td colspan="5" class="empty-state">Belum ada tahun pelajaran. Tambahkan tahun pelajaran terlebih dahulu.</td></tr>@endforelse
         </tbody></table></div>
 
         <div class="mobile-only mobile-list deadline-mobile-list">
             @forelse($daftarTahunPelajaran as $tahun)
                 @php $pengaturan=$tahun->pengaturanBatasProsesPelanggaran; @endphp
-                <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $tahun->nama }}</p><p class="person-meta">{{ $tahun->aktif?'Tahun pelajaran aktif':'Tidak aktif' }}</p></div><span class="badge {{ $tahun->aktif?'badge-active':'badge-muted' }}">{{ $tahun->aktif?'Aktif':'Arsip' }}</span></div><div class="deadline-values" style="margin-top:13px"><span class="deadline-value">Keputusan BK {{ $pengaturan->batas_hari_pemeriksaan_bk }} hari</span></div><p class="person-meta" style="margin-top:12px">Pengingat {{ $pengaturan->notifikasi_pengingat_aktif?$pengaturan->pengingat_hari_sebelum_batas.' hari sebelum batas':'nonaktif' }}</p><a href="{{ route('pengaturan-batas-proses-pelanggaran.edit',$tahun) }}" class="button button-dark button-full" style="margin-top:12px">Atur batas</a></article>
+                <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $tahun->nama }}</p><p class="person-meta">{{ $tahun->aktif?'Tahun pelajaran aktif':'Tidak aktif' }}</p></div><span class="badge {{ $tahun->aktif?'badge-active':'badge-muted' }}">{{ $tahun->aktif?'Aktif':'Arsip' }}</span></div><div class="deadline-values" style="margin-top:13px"><span class="deadline-value">Pemeriksaan BK {{ $pengaturan->batas_hari_pemeriksaan_bk }} hari</span><span class="deadline-value">Pengesahan Wakil {{ $pengaturan->batas_hari_persetujuan }} hari</span></div><p class="person-meta" style="margin-top:12px">Pengingat {{ $pengaturan->notifikasi_pengingat_aktif?$pengaturan->pengingat_hari_sebelum_batas.' hari sebelum batas':'nonaktif' }}</p><a href="{{ route('pengaturan-batas-proses-pelanggaran.edit',$tahun) }}" class="button button-dark button-full" style="margin-top:12px">Atur batas</a></article>
             @empty<div class="empty-state">Belum ada tahun pelajaran.</div>@endforelse
         </div>
     </section>

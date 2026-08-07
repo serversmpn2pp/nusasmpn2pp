@@ -39,7 +39,8 @@ class PengaturanBatasProsesPelanggaranTest extends TestCase
         $this->get(route('pengaturan-batas-proses-pelanggaran.index'))
             ->assertOk()
             ->assertSee('2026/2027')
-            ->assertSee('Keputusan BK 4 hari');
+            ->assertSee('Pemeriksaan BK 4 hari')
+            ->assertSee('Pengesahan Wakil 2 hari');
         $this->get(route('pengaturan-batas-proses-pelanggaran.edit', $tahun))
             ->assertOk()
             ->assertSee('Tahun pelajaran 2026/2027');
@@ -59,7 +60,7 @@ class PengaturanBatasProsesPelanggaranTest extends TestCase
         $this->assertSame('2026-07-26 08:00:00', $laporan->fresh()->batas_proses_pada->format('Y-m-d H:i:s'));
     }
 
-    public function test_keputusan_bk_menyelesaikan_tenggat_proses(): void
+    public function test_rekomendasi_bk_memulai_tenggat_pengesahan_wakil(): void
     {
         CarbonImmutable::setTestNow('2026-07-22 08:00:00');
         [$administrator, $tahun, $siswa, $jenis] = $this->dataDasar();
@@ -76,9 +77,9 @@ class PengaturanBatasProsesPelanggaranTest extends TestCase
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $laporan->refresh();
-        $this->assertSame('disahkan', $laporan->status_verifikasi);
-        $this->assertNull($laporan->tahap_batas_proses);
-        $this->assertNull($laporan->batas_proses_pada);
+        $this->assertSame('menunggu_pengesahan_wakil', $laporan->status_verifikasi);
+        $this->assertSame('pengesahan_wakil', $laporan->tahap_batas_proses);
+        $this->assertSame('2026-07-25 10:30:00', $laporan->batas_proses_pada->format('Y-m-d H:i:s'));
     }
 
     public function test_pengguna_tanpa_izin_tidak_dapat_membuka_pengaturan(): void
@@ -149,6 +150,7 @@ class PengaturanBatasProsesPelanggaranTest extends TestCase
     {
         return [
             'batas_hari_pemeriksaan_bk' => $bk,
+            'batas_hari_persetujuan' => 2,
             'pengingat_hari_sebelum_batas' => 1,
             'notifikasi_pengingat_aktif' => '1',
             'notifikasi_terlambat_aktif' => '1',

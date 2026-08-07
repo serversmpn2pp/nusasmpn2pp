@@ -156,6 +156,63 @@ class LaporanKejadianPegawaiTest extends TestCase
         ]);
     }
 
+    public function test_pegawai_dapat_melaporkan_beberapa_siswa_dalam_satu_kejadian(): void
+    {
+        $data = $this->dataDasar();
+        $siswaKedua = Siswa::create([
+            'nama_lengkap' => 'Siswa Kedua Laporan Kolektif',
+            'nisn' => '0099000012',
+            'aktif' => true,
+        ]);
+        AnggotaKelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas']->id,
+            'siswa_id' => $siswaKedua->id,
+            'status_keanggotaan' => 'aktif',
+        ]);
+
+        $this->actingAs($data['akun_pegawai'])
+            ->get(route('laporan-pembinaan-siswa.create'))
+            ->assertOk()
+            ->assertSee('Siswa terlapor')
+            ->assertSee('Pilih yang tampil')
+            ->assertSee('Setiap siswa tetap memperoleh laporan tersendiri.');
+
+        $this->post(route('laporan-pembinaan-siswa.store'), [
+            'tanggal_kejadian' => now()->toDateString(),
+            'tempat_kejadian' => 'Lapangan sekolah',
+            'siswa_ids' => [$data['siswa']->id, $siswaKedua->id],
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas']->id,
+            'kronologi' => 'Dua siswa terlibat dalam kejadian yang sama pada waktu dan tempat yang sama.',
+        ])->assertRedirect(route('laporan-pembinaan-siswa.index'))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('berhasil', '2 laporan siswa berhasil dibuat dari satu kejadian dan dikirim untuk diperiksa.');
+
+        $daftarLaporan = LaporanPembinaanSiswa::where('dibuat_oleh_pengguna_id', $data['akun_pegawai']->id)
+            ->orderBy('id')
+            ->get();
+        $this->assertCount(2, $daftarLaporan);
+        $this->assertSame([$data['siswa']->id, $siswaKedua->id], $daftarLaporan->pluck('siswa_id')->all());
+        $this->assertSame(2, $daftarLaporan->pluck('nomor_laporan')->unique()->count());
+        $this->assertTrue($daftarLaporan->every(fn ($laporan) => $laporan->status_verifikasi === 'diajukan'));
+        $this->assertTrue($daftarLaporan->every(fn ($laporan) => (int) $laporan->kelas_id === (int) $data['kelas']->id));
+
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->actingAs($administrator)->post(route('verifikasi-pelanggaran.bk', $daftarLaporan->first()), [
+            'hasil' => 'pembinaan',
+            'catatan' => 'Siswa pertama ditetapkan mendapat pembinaan.',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('ditetapkan_pembinaan', $daftarLaporan->first()->fresh()->status_verifikasi);
+        $this->assertSame('diajukan', $daftarLaporan->last()->fresh()->status_verifikasi);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $administrator->id,
+            'judul' => 'Laporan kolektif menunggu pemeriksaan BK',
+            'kunci_unik' => "laporan-kolektif-baru:{$daftarLaporan->first()->id}:{$daftarLaporan->last()->id}",
+        ]);
+    }
+
     private function dataDasar(): array
     {
         $tahun = TahunPelajaran::create([

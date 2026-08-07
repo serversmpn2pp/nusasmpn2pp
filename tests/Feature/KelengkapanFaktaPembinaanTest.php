@@ -87,6 +87,41 @@ class KelengkapanFaktaPembinaanTest extends TestCase
         $this->assertDatabaseHas('riwayat_proses_pembinaan_siswa', ['laporan_pembinaan_siswa_id' => $laporan->id, 'kode_kegiatan' => 'klarifikasi_siswa']);
     }
 
+    public function test_bukti_laporan_kolektif_disimpan_satu_kali_dan_aman_dipakai_bersama(): void
+    {
+        Storage::fake('local');
+        [$administrator, $tahun, $siswa] = $this->dataDasar();
+        $siswaKedua = Siswa::create([
+            'nama_lengkap' => 'Siswa Kedua Bukti Kolektif',
+            'nisn' => '0099887702',
+            'aktif' => true,
+        ]);
+
+        $this->actingAs($administrator)->post(route('laporan-pembinaan-siswa.store'), [
+            'tanggal_kejadian' => '2026-07-22',
+            'tempat_kejadian' => 'Koridor kelas',
+            'siswa_ids' => [$siswa->id, $siswaKedua->id],
+            'tahun_pelajaran_id' => $tahun->id,
+            'kronologi' => 'Kedua siswa tercatat dalam satu kejadian dengan bukti yang sama.',
+            'bukti_laporan' => [UploadedFile::fake()->create('bukti-kolektif.jpg', 120, 'image/jpeg')],
+        ])->assertRedirect(route('laporan-pembinaan-siswa.index'))->assertSessionHasNoErrors();
+
+        $daftarBukti = BuktiLaporanPembinaanSiswa::orderBy('id')->get();
+        $this->assertCount(2, $daftarBukti);
+        $this->assertSame($daftarBukti->first()->lokasi_file, $daftarBukti->last()->lokasi_file);
+        Storage::disk('local')->assertExists($daftarBukti->first()->lokasi_file);
+
+        $this->delete(route('bukti-laporan-pembinaan.destroy', $daftarBukti->first()))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        Storage::disk('local')->assertExists($daftarBukti->last()->lokasi_file);
+
+        $this->delete(route('bukti-laporan-pembinaan.destroy', $daftarBukti->last()))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        Storage::disk('local')->assertMissing($daftarBukti->last()->lokasi_file);
+    }
+
     public function test_bukti_privat_tidak_dapat_diakses_pengguna_di_luar_cakupan(): void
     {
         Storage::fake('local');

@@ -103,7 +103,7 @@ class PendampinganSiswaController extends Controller
 
         if ($aktif = $this->pendampinganAktif($siswa->id, $tahunPelajaran->id)) {
             return redirect()->route('pendampingan-siswa.edit', $aktif)
-                ->with('berhasil', 'Siswa ini sudah memiliki tindak lanjut aktif. Silakan lanjutkan catatan yang sama.');
+                ->with('berhasil', 'Siswa ini sudah memiliki pendampingan aktif. Silakan lanjutkan catatan yang sama.');
         }
 
         $pendampinganSiswa = new PendampinganSiswa([
@@ -136,7 +136,7 @@ class PendampinganSiswaController extends Controller
         $pendampinganSiswa = DB::transaction(function () use ($data, $request) {
             if ($this->pendampinganAktif((int) $data['siswa_id'], (int) $data['tahun_pelajaran_id'], true)) {
                 throw ValidationException::withMessages([
-                    'siswa_id' => 'Siswa ini sudah memiliki tindak lanjut yang masih dalam proses.',
+                    'siswa_id' => 'Siswa ini sudah memiliki pendampingan yang masih dalam proses.',
                 ]);
             }
 
@@ -149,7 +149,7 @@ class PendampinganSiswaController extends Controller
         });
 
         return redirect()->route('pendampingan-siswa.edit', $pendampinganSiswa)
-            ->with('berhasil', 'Tindak lanjut siswa berhasil dibuat.');
+            ->with('berhasil', 'Pendampingan siswa berhasil dibuat.');
     }
 
     public function edit(Request $request, PendampinganSiswa $pendampinganSiswa)
@@ -199,7 +199,7 @@ class PendampinganSiswaController extends Controller
 
                 if ($aktifLain) {
                     throw ValidationException::withMessages([
-                        'status' => 'Masih ada tindak lanjut lain yang sedang diproses untuk siswa ini.',
+                        'status' => 'Masih ada pendampingan lain yang sedang diproses untuk siswa ini.',
                     ]);
                 }
             }

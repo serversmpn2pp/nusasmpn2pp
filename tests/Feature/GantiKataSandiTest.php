@@ -33,6 +33,14 @@ class GantiKataSandiTest extends TestCase
         $akun->daftarPeran()->attach(Peran::where('kode', 'pegawai')->firstOrFail());
 
         $this->actingAs($akun)
+            ->get(route('kata-sandi.edit'))
+            ->assertOk()
+            ->assertSee('aria-controls="kata_sandi_lama"', false)
+            ->assertSee('aria-controls="kata_sandi_baru"', false)
+            ->assertSee('aria-controls="kata_sandi_baru_confirmation"', false)
+            ->assertSee('Caps Lock aktif.');
+
+        $this->actingAs($akun)
             ->get(route('beranda'))
             ->assertRedirect(route('kata-sandi.edit'));
 
