@@ -324,6 +324,13 @@
             @izin('kartu_pelajar.cetak')
                 <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
             @endizin
+            @izin('siswa.kelola')
+                <a href="{{ route('foto-identitas.index', array_filter([
+                    'tab' => 'siswa',
+                    'tahun_pelajaran_id' => $tahunPelajaranId,
+                    'kelas_id' => $kelasId,
+                ])) }}" class="button button-dark">Kelola foto</a>
+            @endizin
             @izin('siswa.lihat', 'siswa.kelola')
                 <a href="{{ route('siswa.index') }}" class="button button-muted">Data siswa</a>
             @endizin

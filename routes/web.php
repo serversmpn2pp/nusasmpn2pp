@@ -12,6 +12,7 @@ use App\Http\Controllers\BuktiLaporanPembinaanController;
 use App\Http\Controllers\BuktiPelaksanaanSanksiController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenPoinSiswaController;
+use App\Http\Controllers\FotoIdentitasController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\HasilSurveiSayaController;
 use App\Http\Controllers\InputNilaiController;
@@ -209,6 +210,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::post('pegawai/{pegawai}/foto', [PegawaiController::class, 'updateFoto'])
             ->middleware('izin:pegawai.kelola')
             ->name('pegawai.foto.update');
+        Route::get('foto-identitas', [FotoIdentitasController::class, 'index'])
+            ->middleware('izin:siswa.kelola,pegawai.kelola')
+            ->name('foto-identitas.index');
         Route::resource('pegawai', PegawaiController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:pegawai.kelola');

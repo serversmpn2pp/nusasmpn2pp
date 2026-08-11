@@ -32,6 +32,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('profil-pegawai.update', 'izin:pegawai.profil');
         $this->assertRouteMemakaiMiddleware('profil-pegawai.foto.update', 'izin:pegawai.profil');
         $this->assertRouteMemakaiMiddleware('pegawai.foto.update', 'izin:pegawai.kelola');
+        $this->assertRouteMemakaiMiddleware('foto-identitas.index', 'izin:siswa.kelola,pegawai.kelola');
     }
 
     public function test_route_absensi_dan_bk_memakai_permission_modul(): void

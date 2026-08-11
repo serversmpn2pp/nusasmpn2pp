@@ -1839,12 +1839,13 @@
                     'items' => [
                         ['label' => 'Tahun Pelajaran', 'route' => 'tahun-pelajaran.index', 'active' => ['tahun-pelajaran.*'], 'initial' => 'TP', 'izin' => ['tahun_pelajaran.lihat', 'tahun_pelajaran.kelola'], 'subgroup' => 'Periode Akademik'],
                         ['label' => 'Pegawai', 'route' => 'pegawai.index', 'active' => ['pegawai.*'], 'initial' => 'PG', 'izin' => ['pegawai.lihat', 'pegawai.kelola'], 'subgroup' => 'Pegawai'],
-                        ['label' => 'Kartu Pegawai', 'route' => 'kartu-pegawai.index', 'active' => ['kartu-pegawai.*'], 'initial' => 'KG', 'izin' => 'pegawai.lihat', 'subgroup' => 'Pegawai'],
                         ['label' => 'Siswa', 'route' => 'siswa.index', 'active' => ['siswa.*'], 'initial' => 'SW', 'izin' => ['siswa.lihat', 'siswa.kelola'], 'subgroup' => 'Siswa dan Kelas'],
-                        ['label' => 'Kartu Pelajar', 'route' => 'kartu-pelajar.index', 'active' => ['kartu-pelajar.*'], 'initial' => 'KP', 'izin' => ['kartu_pelajar.lihat', 'kartu_pelajar.cetak'], 'subgroup' => 'Siswa dan Kelas'],
                         ['label' => 'Kelas', 'route' => 'kelas.index', 'active' => ['kelas.*', 'anggota-kelas.*'], 'initial' => 'KL', 'izin' => ['kelas.lihat', 'kelas.kelola'], 'subgroup' => 'Siswa dan Kelas'],
                         ['label' => 'Penempatan Siswa', 'route' => 'penempatan-siswa.index', 'active' => ['penempatan-siswa.*'], 'initial' => 'PS', 'izin' => ['kelas.lihat', 'kelas.kelola'], 'subgroup' => 'Siswa dan Kelas'],
                         ['label' => 'Kenaikan Kelas', 'route' => 'kenaikan-kelas.index', 'active' => ['kenaikan-kelas.*'], 'initial' => 'KK', 'izin' => 'kenaikan_kelas.kelola', 'subgroup' => 'Siswa dan Kelas'],
+                        ['label' => 'Foto Identitas', 'route' => 'foto-identitas.index', 'active' => ['foto-identitas.*'], 'initial' => 'FI', 'izin' => ['siswa.kelola', 'pegawai.kelola'], 'subgroup' => 'Identitas dan Kartu'],
+                        ['label' => 'Kartu Pegawai', 'route' => 'kartu-pegawai.index', 'active' => ['kartu-pegawai.*'], 'initial' => 'KG', 'izin' => 'pegawai.lihat', 'subgroup' => 'Identitas dan Kartu'],
+                        ['label' => 'Kartu Pelajar', 'route' => 'kartu-pelajar.index', 'active' => ['kartu-pelajar.*'], 'initial' => 'KP', 'izin' => ['kartu_pelajar.lihat', 'kartu_pelajar.cetak'], 'subgroup' => 'Identitas dan Kartu'],
                     ],
                 ],
                 [

@@ -374,6 +374,9 @@
 
         <div class="actions">
             <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
+            @izin('pegawai.kelola')
+                <a href="{{ route('foto-identitas.index', ['tab' => 'pegawai']) }}" class="button button-dark">Kelola foto</a>
+            @endizin
             @izin('pegawai.lihat', 'pegawai.kelola')
                 <a href="{{ route('pegawai.index') }}" class="button button-muted">Data pegawai</a>
             @endizin

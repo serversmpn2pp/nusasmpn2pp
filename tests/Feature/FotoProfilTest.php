@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\AnggotaKelas;
+use App\Models\Kelas;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\Siswa;
+use App\Models\TahunPelajaran;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -218,6 +221,132 @@ class FotoProfilTest extends TestCase
             ->assertOk()
             ->assertSee('data-upload-url="/pegawai/'.$pegawai->id.'/foto"', false)
             ->assertSee('https://nusa.smpn2padangpanjang.sch.id/storage/pegawai/foto/cloudflare.jpg', false);
+    }
+
+    public function test_administrator_dapat_mengelola_foto_seluruh_siswa_dalam_satu_kelas(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $tahun = TahunPelajaran::create([
+            'nama' => '2026/2027',
+            'tanggal_mulai' => '2026-07-01',
+            'tanggal_selesai' => '2027-06-30',
+            'aktif' => true,
+        ]);
+        $kelasA = Kelas::create([
+            'tahun_pelajaran_id' => $tahun->id,
+            'nama' => 'VII.A',
+            'tingkat' => 7,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $kelasB = Kelas::create([
+            'tahun_pelajaran_id' => $tahun->id,
+            'nama' => 'VII.B',
+            'tingkat' => 7,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $siswaNomorDua = $this->buatSiswaFoto('Budi Nomor Dua', '2601002', '0000001002');
+        $siswaNomorSatu = $this->buatSiswaFoto('Andi Nomor Satu', '2601001', '0000001001');
+        $siswaKelasLain = $this->buatSiswaFoto('Citra Kelas Lain', '2602001', '0000002001');
+
+        foreach ([
+            [$kelasA, $siswaNomorDua, 2],
+            [$kelasA, $siswaNomorSatu, 1],
+            [$kelasB, $siswaKelasLain, 1],
+        ] as [$kelas, $siswa, $nomorAbsen]) {
+            AnggotaKelas::create([
+                'tahun_pelajaran_id' => $tahun->id,
+                'kelas_id' => $kelas->id,
+                'siswa_id' => $siswa->id,
+                'nomor_absen' => $nomorAbsen,
+                'status_keanggotaan' => 'aktif',
+            ]);
+        }
+
+        $this->actingAs($administrator)
+            ->get(route('foto-identitas.index', [
+                'tab' => 'siswa',
+                'tahun_pelajaran_id' => $tahun->id,
+                'kelas_id' => $kelasA->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Foto Identitas')
+            ->assertSee('Penyimpanan otomatis aktif')
+            ->assertSeeInOrder(['Andi Nomor Satu', 'Budi Nomor Dua'])
+            ->assertDontSee('Citra Kelas Lain')
+            ->assertSee('data-upload-url="/siswa/'.$siswaNomorSatu->id.'/foto"', false)
+            ->assertSee('data-upload-url="/siswa/'.$siswaNomorDua->id.'/foto"', false);
+    }
+
+    public function test_halaman_foto_identitas_dapat_menyaring_status_foto_dan_mengelola_pegawai(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $tahun = TahunPelajaran::create([
+            'nama' => '2027/2028',
+            'tanggal_mulai' => '2027-07-01',
+            'tanggal_selesai' => '2028-06-30',
+            'aktif' => true,
+        ]);
+        $kelas = Kelas::create([
+            'tahun_pelajaran_id' => $tahun->id,
+            'nama' => 'VIII.A',
+            'tingkat' => 8,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $siswaSudahFoto = $this->buatSiswaFoto('Siswa Sudah Foto', '2701001', '0000010001', 'siswa/foto/sudah.jpg');
+        $siswaBelumFoto = $this->buatSiswaFoto('Siswa Belum Foto', '2701002', '0000010002');
+
+        foreach ([[$siswaSudahFoto, 1], [$siswaBelumFoto, 2]] as [$siswa, $nomorAbsen]) {
+            AnggotaKelas::create([
+                'tahun_pelajaran_id' => $tahun->id,
+                'kelas_id' => $kelas->id,
+                'siswa_id' => $siswa->id,
+                'nomor_absen' => $nomorAbsen,
+                'status_keanggotaan' => 'aktif',
+            ]);
+        }
+
+        $this->actingAs($administrator)
+            ->get(route('foto-identitas.index', [
+                'tab' => 'siswa',
+                'tahun_pelajaran_id' => $tahun->id,
+                'kelas_id' => $kelas->id,
+                'status_foto' => 'belum',
+            ]))
+            ->assertOk()
+            ->assertSee('Siswa Belum Foto')
+            ->assertDontSee('Siswa Sudah Foto');
+
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Pegawai Untuk Foto Identitas',
+            'nip' => '198001012010019999',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('foto-identitas.index', ['tab' => 'pegawai']))
+            ->assertOk()
+            ->assertSee('Pegawai Untuk Foto Identitas')
+            ->assertSee('data-upload-url="/pegawai/'.$pegawai->id.'/foto"', false);
+    }
+
+    private function buatSiswaFoto(
+        string $nama,
+        string $nis,
+        string $nisn,
+        ?string $foto = null,
+    ): Siswa {
+        return Siswa::create([
+            'nama_lengkap' => $nama,
+            'nis' => $nis,
+            'nisn' => $nisn,
+            'jenis_kelamin' => 'L',
+            'foto' => $foto,
+            'aktif' => true,
+        ]);
     }
 
     private function buatFotoPng(string $nama, int $tambahanKilobyte = 0): UploadedFile

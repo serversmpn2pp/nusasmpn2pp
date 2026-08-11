@@ -20,7 +20,7 @@
 @endphp
 
 <div
-    class="avatar-upload foto-uploader {{ $variant === 'profile' ? 'foto-uploader-profile' : '' }}"
+    class="avatar-upload foto-uploader foto-uploader-{{ $variant }}"
     data-photo-uploader
     data-upload-url="{{ $uploadUrlSatuOrigin }}"
     data-existing-url="{{ $fotoUrl }}"
@@ -119,6 +119,68 @@
         .foto-uploader-profile .foto-uploader-controls {
             width: 100%;
             text-align: left;
+        }
+
+        .foto-uploader-compact {
+            grid-template-columns: 70px minmax(0, 1fr);
+            align-items: center;
+            gap: 12px;
+            width: min(100%, 330px);
+        }
+
+        .foto-uploader-compact .avatar-lg {
+            width: 70px;
+            height: 84px;
+            margin: 0;
+            border-radius: 6px;
+            font-size: 1.25rem;
+        }
+
+        .foto-uploader-compact .foto-uploader-controls {
+            min-width: 0;
+        }
+
+        .foto-uploader-compact .form-label {
+            margin-bottom: 5px;
+            font-size: .76rem;
+        }
+
+        .foto-uploader-compact .file-input {
+            min-width: 0;
+            font-size: .76rem;
+        }
+
+        .foto-uploader-compact .file-input::file-selector-button {
+            margin-right: 8px;
+            border: 1px solid #15477a;
+            border-radius: 6px;
+            background: #15477a;
+            padding: 7px 9px;
+            color: #fff;
+            font: inherit;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .foto-uploader-compact .help-text {
+            display: none;
+        }
+
+        .foto-uploader-compact .foto-upload-status {
+            margin-top: 6px;
+            padding: 6px 8px;
+            font-size: .7rem;
+        }
+
+        @media (max-width: 520px) {
+            .foto-uploader-compact {
+                grid-template-columns: 64px minmax(0, 1fr);
+            }
+
+            .foto-uploader-compact .avatar-lg {
+                width: 64px;
+                height: 78px;
+            }
         }
     </style>
 @endonce
@@ -366,6 +428,10 @@
                                     `Foto berhasil diperbarui dan tersimpan otomatis (${ukuranTeks(fotoDiproses.size)}).`,
                                     'success',
                                 );
+                                uploader.dispatchEvent(new CustomEvent('nusa:foto-tersimpan', {
+                                    bubbles: true,
+                                    detail: { url: urlTersimpan },
+                                }));
                             } else {
                                 if (typeof DataTransfer === 'undefined') {
                                     throw new Error('Browser ini belum mendukung penyiapan foto otomatis.');
