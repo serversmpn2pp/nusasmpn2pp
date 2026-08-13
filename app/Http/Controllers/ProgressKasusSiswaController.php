@@ -278,7 +278,7 @@ class ProgressKasusSiswaController extends Controller
             ],
             'sinkronisasi_koreksi_absensi' => [
                 'judul' => 'Data keterlambatan diperbarui',
-                'deskripsi' => 'Laporan disesuaikan dengan koreksi data absensi.',
+                'deskripsi' => 'Laporan disesuaikan dengan koreksi data presensi.',
             ],
             'laporan_dibatalkan', 'laporan_otomatis_dibatalkan' => [
                 'judul' => 'Laporan ditutup',

@@ -69,7 +69,7 @@ class ScanUlangAbsensiTest extends TestCase
         $this->assertSame($hasilPertama['absensi']->id, $hasilUlang['absensi']->id);
         $this->assertSame('06:25:15', $hasilUlang['absensi']->jam_masuk);
         $this->assertSame(
-            'Absensi masuk sudah tercatat pukul 06:25. Tidak perlu scan ulang.',
+            'Presensi masuk sudah tercatat pukul 06:25. Tidak perlu scan ulang.',
             $hasilUlang['pesan'],
         );
     }
@@ -106,7 +106,7 @@ class ScanUlangAbsensiTest extends TestCase
         $this->assertSame($hasilPertama['absensi']->id, $hasilUlang['absensi']->id);
         $this->assertSame('06:30:10', $hasilUlang['absensi']->jam_masuk);
         $this->assertSame(
-            'Absensi masuk sudah tercatat pukul 06:30. Tidak perlu scan ulang.',
+            'Presensi masuk sudah tercatat pukul 06:30. Tidak perlu scan ulang.',
             $hasilUlang['pesan'],
         );
     }
@@ -143,7 +143,7 @@ class ScanUlangAbsensiTest extends TestCase
         $this->actingAs($administrator)
             ->get(route('scan-absensi.index'))
             ->assertOk()
-            ->assertSee('Absensi sudah tercatat')
+            ->assertSee('Presensi sudah tercatat')
             ->assertSee('Belum waktunya scan')
             ->assertSee('Scan gagal')
             ->assertSeeInOrder([
@@ -159,7 +159,7 @@ class ScanUlangAbsensiTest extends TestCase
 
         $this->get(route('scan-absensi-pegawai.index'))
             ->assertOk()
-            ->assertSee('Absensi sudah tercatat')
+            ->assertSee('Presensi sudah tercatat')
             ->assertSee('Belum waktunya scan')
             ->assertSee('Scan gagal')
             ->assertSeeInOrder([

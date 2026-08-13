@@ -179,7 +179,7 @@ class PeranController extends Controller
             'Siswa',
             'Akademik',
             'Nilai',
-            'Absensi',
+            'Presensi',
             'Laporan',
             'BK',
             'Kurikulum',

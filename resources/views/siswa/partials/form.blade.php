@@ -233,7 +233,7 @@
                 </div>
 
                 <div class="field">
-                    <label for="kontak_absensi_utama">Tujuan notifikasi absensi</label>
+                    <label for="kontak_absensi_utama">Tujuan notifikasi presensi</label>
                     <select id="kontak_absensi_utama" name="kontak_absensi_utama" class="select @error('kontak_absensi_utama') is-invalid @enderror">
                         <option value="">Otomatis dari nomor yang tersedia</option>
                         <option value="ayah" @selected($nilai('kontak_absensi_utama') === 'ayah')>Ayah</option>

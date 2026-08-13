@@ -57,15 +57,20 @@ class PenulisExcelLaporanAbsensiTest extends TestCase
 
         try {
             $this->assertFileExists($lokasiBerkas);
+            $this->assertStringStartsWith('laporan-presensi-', basename($lokasiBerkas));
 
             $zip = new ZipArchive();
             $this->assertTrue($zip->open($lokasiBerkas));
 
             $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+            $workbook = $zip->getFromName('xl/workbook.xml');
+            $metadata = $zip->getFromName('docProps/core.xml');
             $zip->close();
 
             $this->assertIsString($sheet);
-            $this->assertStringContainsString('LAPORAN ABSENSI', $sheet);
+            $this->assertStringContainsString('LAPORAN PRESENSI', $sheet);
+            $this->assertStringContainsString('Laporan Presensi', $workbook);
+            $this->assertStringContainsString('Laporan Presensi NUSA', $metadata);
             $this->assertStringContainsString('Siswa Contoh', $sheet);
             $this->assertStringContainsString('9876543210', $sheet);
             $this->assertStringContainsString('<v>2</v>', $sheet);

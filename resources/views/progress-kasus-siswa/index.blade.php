@@ -51,7 +51,7 @@
                                 <span class="case-status {{ $status['warna'] }}">{{ $status['label'] }}</span>
                             </div>
                             <h2>
-                                {{ $item->berasalDariAbsensi() ? 'Catatan keterlambatan dari absensi' : 'Laporan kejadian siswa' }}
+                                {{ $item->berasalDariAbsensi() ? 'Catatan keterlambatan dari presensi' : 'Laporan kejadian siswa' }}
                             </h2>
                             <p>{{ $status['deskripsi'] }}</p>
                             <div class="case-facts">

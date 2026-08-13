@@ -22,7 +22,7 @@ class AbsensiPegawaiPribadiUiTest extends TestCase
                 'kata_kunci' => $pegawaiLain->nama_lengkap,
             ]))
             ->assertOk()
-            ->assertSee('Rekap absensi saya')
+            ->assertSee('Rekap presensi saya')
             ->assertSee($pegawaiSendiri->nama_lengkap)
             ->assertDontSee($pegawaiLain->nama_lengkap)
             ->assertSee('name="tanggal"', false)
@@ -45,7 +45,7 @@ class AbsensiPegawaiPribadiUiTest extends TestCase
                 'kata_kunci' => $pegawaiLain->nama_lengkap,
             ]))
             ->assertOk()
-            ->assertSee('Laporan absensi saya')
+            ->assertSee('Laporan presensi saya')
             ->assertSee('Cetak laporan saya')
             ->assertSee($pegawaiSendiri->nama_lengkap)
             ->assertDontSee($pegawaiLain->nama_lengkap)
@@ -62,6 +62,9 @@ class AbsensiPegawaiPribadiUiTest extends TestCase
                 'pegawai_id' => $pegawaiLain->id,
             ]))
             ->assertOk()
+            ->assertSee('Laporan Presensi Pegawai Bulanan')
+            ->assertSee('data presensi ini telah saya periksa')
+            ->assertDontSee('Laporan Absensi Pegawai Bulanan')
             ->assertSee($pegawaiSendiri->nama_lengkap)
             ->assertDontSee($pegawaiLain->nama_lengkap);
     }
@@ -109,7 +112,13 @@ class AbsensiPegawaiPribadiUiTest extends TestCase
             ->assertSee('name="pegawai_id"', false)
             ->assertSee('name="status"', false)
             ->assertSee($pegawaiSendiri->nama_lengkap)
-            ->assertSee($pegawaiLain->nama_lengkap);
+            ->assertSee($pegawaiLain->nama_lengkap)
+            ->assertSee('SMP Negeri 2 Padang Panjang')
+            ->assertSee('Presensi Pegawai NUSA')
+            ->assertSee('layanan presensi pegawai')
+            ->assertDontSee('NUSA - Absensi Pegawai')
+            ->assertDontSee('Absensi Pegawai NUSA')
+            ->assertDontSee('layanan absensi pegawai');
     }
 
     private function siapkanAkunAdministratorSebagaiPegawai(): array

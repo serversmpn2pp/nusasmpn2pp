@@ -36,7 +36,9 @@ class TabelAnggotaKelasRingkasTest extends TestCase
             ->assertDontSee('<th>Keterangan</th>', false)
             ->assertSee($siswa->nama_lengkap)
             ->assertSee(route('siswa.show', $siswa))
-            ->assertSee('>Simpan nomor</button>', false)
+            ->assertSee('Nomor absen otomatis mengikuti urutan nama A-Z')
+            ->assertDontSee('>Simpan nomor</button>', false)
+            ->assertDontSee('name="nomor_absen"', false)
             ->assertSee('>Keluarkan</button>', false);
     }
 

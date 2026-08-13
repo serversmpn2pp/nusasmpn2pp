@@ -133,7 +133,7 @@
                     <div class="detail-item"><dt>Nama wali lain</dt><dd>{{ $teks($siswa->nama_wali) }}</dd></div>
                     <div class="detail-item"><dt>Hubungan wali</dt><dd>{{ $teks($siswa->hubungan_wali) }}</dd></div>
                     <div class="detail-item"><dt>Nomor WA wali lain</dt><dd>{{ $teks($siswa->nomor_wa_wali) }}</dd></div>
-                    <div class="detail-item"><dt>Kontak absensi utama</dt><dd>{{ $teks($siswa->kontak_absensi_utama ? str($siswa->kontak_absensi_utama)->headline()->toString() : null) }}</dd></div>
+                    <div class="detail-item"><dt>Kontak presensi utama</dt><dd>{{ $teks($siswa->kontak_absensi_utama ? str($siswa->kontak_absensi_utama)->headline()->toString() : null) }}</dd></div>
                 </dl>
             </section>
 

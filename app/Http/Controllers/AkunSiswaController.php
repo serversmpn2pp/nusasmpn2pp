@@ -10,6 +10,7 @@ use App\Models\TahunPelajaran;
 use App\Services\AkunSiswaService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class AkunSiswaController extends Controller
@@ -19,30 +20,38 @@ class AkunSiswaController extends Controller
     public function index(Request $request)
     {
         $pengguna = $request->user();
-        $tahunPelajaranId = $request->integer('tahun_pelajaran_id')
-            ?: TahunPelajaran::where('aktif', true)->value('id');
-        $daftarTahunPelajaran = TahunPelajaran::query()
-            ->orderByDesc('aktif')
+        $dapatMengaksesSemuaKelas = $pengguna?->administrator()
+            || $pengguna?->memilikiIzin('akun_siswa.kelola');
+        $kelasWaliIds = $pengguna?->kelasWaliIds() ?? [];
+        $tahunPelajaranAktif = TahunPelajaran::query()
+            ->where('aktif', true)
+            ->when(! $dapatMengaksesSemuaKelas, fn ($query) => $query
+                ->whereHas('kelas', fn ($query) => $query->whereIn('id', $kelasWaliIds)))
             ->orderByDesc('tanggal_mulai')
-            ->get();
+            ->orderByDesc('id')
+            ->first();
         $daftarKelas = $this->queryKelasYangDapatDiakses($pengguna)
-            ->with('tahunPelajaran')
             ->withCount([
                 'anggotaKelas as jumlah_siswa_aktif' => fn ($query) => $query
                     ->where('status_keanggotaan', 'aktif')
                     ->whereHas('siswa', fn ($query) => $query->where('aktif', true)),
             ])
-            ->when($tahunPelajaranId, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranId))
+            ->when(
+                $tahunPelajaranAktif,
+                fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id),
+                fn ($query) => $query->whereRaw('1 = 0'),
+            )
+            ->where('aktif', true)
             ->orderBy('tingkat')
             ->orderBy('nama')
             ->get();
         $kelasId = $request->integer('kelas_id');
 
-        if (! $kelasId || ! $daftarKelas->contains('id', $kelasId)) {
-            $kelasId = (int) ($daftarKelas->first()?->id ?? 0);
+        if ($kelasId && ! $daftarKelas->contains('id', $kelasId)) {
+            $kelasId = 0;
         }
 
-        $kelasDipilih = $daftarKelas->firstWhere('id', $kelasId);
+        $kelasDipilih = $kelasId ? $daftarKelas->firstWhere('id', $kelasId) : null;
         $statusAkun = $request->input('status_akun', 'semua');
         $kataKunci = trim((string) $request->input('kata_kunci'));
 
@@ -50,17 +59,19 @@ class AkunSiswaController extends Controller
             $statusAkun = 'semua';
         }
 
+        $kelasYangDapatDiakses = $daftarKelas->pluck('id')->map(fn ($id) => (int) $id);
         $anggotaKelas = AnggotaKelas::query()
             ->with(['siswa.pengguna.daftarPeran', 'kelas.tahunPelajaran'])
-            ->where('kelas_id', $kelasId ?: 0)
+            ->whereIn('kelas_id', $kelasYangDapatDiakses)
+            ->when($kelasId, fn ($query) => $query->where('kelas_id', $kelasId))
             ->where('status_keanggotaan', 'aktif')
             ->whereHas('siswa', function ($query) use ($statusAkun, $kataKunci) {
                 $query->where('aktif', true)
                     ->when($kataKunci, function ($query) use ($kataKunci) {
                         $query->where(function ($query) use ($kataKunci) {
-                            $query->where('nama_lengkap', 'ilike', '%'.$kataKunci.'%')
-                                ->orWhere('nis', 'ilike', '%'.$kataKunci.'%')
-                                ->orWhere('nisn', 'ilike', '%'.$kataKunci.'%');
+                            $query->whereLike('nama_lengkap', '%'.$kataKunci.'%')
+                                ->orWhereLike('nis', '%'.$kataKunci.'%')
+                                ->orWhereLike('nisn', '%'.$kataKunci.'%');
                         });
                     })
                     ->when($statusAkun === 'sudah', fn ($query) => $query->whereHas('pengguna'))
@@ -73,18 +84,25 @@ class AkunSiswaController extends Controller
                             $query->whereNull('nisn')->orWhere('nisn', '');
                         }));
             })
+            ->orderBy(Kelas::query()
+                ->select('tingkat')
+                ->whereColumn('kelas.id', 'anggota_kelas.kelas_id')
+                ->limit(1))
+            ->orderBy(Kelas::query()
+                ->select('nama')
+                ->whereColumn('kelas.id', 'anggota_kelas.kelas_id')
+                ->limit(1))
             ->orderByRaw('nomor_absen IS NULL')
             ->orderBy('nomor_absen')
             ->orderBy('id')
             ->paginate(20)
             ->withQueryString();
 
-        $ringkasan = $this->ringkasanKelas($kelasId);
+        $ringkasan = $this->ringkasanKelas($kelasYangDapatDiakses, $kelasId);
 
         return view('akun-siswa.index', compact(
-            'daftarTahunPelajaran',
+            'tahunPelajaranAktif',
             'daftarKelas',
-            'tahunPelajaranId',
             'kelasDipilih',
             'kelasId',
             'statusAkun',
@@ -204,12 +222,13 @@ class AkunSiswaController extends Controller
         );
     }
 
-    private function ringkasanKelas(int $kelasId): array
+    private function ringkasanKelas(Collection $kelasYangDapatDiakses, int $kelasId): array
     {
+        $kelasUntukRingkasan = $kelasId ? collect([$kelasId]) : $kelasYangDapatDiakses;
         $query = Siswa::query()
             ->where('aktif', true)
             ->whereHas('anggotaKelas', fn ($query) => $query
-                ->where('kelas_id', $kelasId ?: 0)
+                ->whereIn('kelas_id', $kelasUntukRingkasan)
                 ->where('status_keanggotaan', 'aktif'));
 
         return [

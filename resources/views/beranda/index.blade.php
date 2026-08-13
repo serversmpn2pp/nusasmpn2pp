@@ -495,7 +495,7 @@
             <div class="dashboard-hero-main">
                 <p class="eyebrow">Dashboard Administrator</p>
                 <h1 class="dashboard-title">NUSA SMP Negeri 2 Padang Panjang</h1>
-                <p class="dashboard-subtitle">Pantau data sekolah, absensi, akademik, dan pembinaan dari satu layar kerja.</p>
+                <p class="dashboard-subtitle">Pantau data sekolah, presensi, akademik, dan pembinaan dari satu layar kerja.</p>
             </div>
 
             <div class="dashboard-hero-side">
@@ -579,7 +579,7 @@
             <div class="dashboard-stack">
                 <article class="dashboard-panel">
                     <div class="dashboard-panel-head">
-                        <h2>Absensi Siswa Hari Ini</h2>
+                        <h2>Presensi Siswa Hari Ini</h2>
                         <a href="{{ route('rekap-absensi-harian.index') }}" class="button button-muted button-sm">Lihat</a>
                     </div>
                     <div class="dashboard-panel-body">
@@ -605,7 +605,7 @@
 
                 <article class="dashboard-panel">
                     <div class="dashboard-panel-head">
-                        <h2>Absensi Pegawai Hari Ini</h2>
+                        <h2>Presensi Pegawai Hari Ini</h2>
                         <a href="{{ route('rekap-absensi-pegawai-harian.index') }}" class="button button-muted button-sm">Lihat</a>
                     </div>
                     <div class="dashboard-panel-body">
@@ -671,7 +671,7 @@
                                         <div class="dashboard-list-item">
                                             <div>
                                                 <p>{{ $anggota->siswa?->nama_lengkap ?? 'Siswa tidak ditemukan' }}</p>
-                                                <small>{{ $anggota->kelas?->nama ?? '-' }} - belum ada catatan absensi</small>
+                                                <small>{{ $anggota->kelas?->nama ?? '-' }} - belum ada catatan presensi</small>
                                             </div>
                                         </div>
                                     @empty
@@ -697,7 +697,7 @@
                                         <div class="dashboard-list-item">
                                             <div>
                                                 <p>{{ $pegawai->nama_lengkap }}</p>
-                                                <small>{{ $pegawai->nip ?: 'NIP belum diisi' }} - belum ada catatan absensi</small>
+                                                <small>{{ $pegawai->nip ?: 'NIP belum diisi' }} - belum ada catatan presensi</small>
                                             </div>
                                         </div>
                                     @empty
@@ -917,6 +917,13 @@
                     <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
                 </a>
             @endif
+            @izin('piket_guru.lihat_pribadi')
+                <a href="{{ $jadwalPiketHariIni ? route('piket-kehadiran-siswa.index') : route('jadwal-piket-saya.index') }}" class="dashboard-action {{ $jadwalPiketHariIni ? 'dashboard-action--highlight' : '' }}">
+                    <span class="dashboard-action-mark" aria-hidden="true">GP</span>
+                    <span class="dashboard-action-label">{{ $jadwalPiketHariIni ? 'Piket Hari Ini' : 'Jadwal Piket Saya' }}</span>
+                    <span class="dashboard-action-arrow" aria-hidden="true">&rarr;</span>
+                </a>
+            @endizin
             @izin('absensi_pegawai.pribadi', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan')
                 <a href="{{ route('rekap-absensi-pegawai-harian.index') }}" class="dashboard-action">
                     <span class="dashboard-action-mark" aria-hidden="true">RS</span>
@@ -955,7 +962,7 @@
             <section class="panel panel-pad">
                 <p class="eyebrow">Data pegawai</p>
                 <h2 class="panel-title">Akun belum terhubung ke data pegawai</h2>
-                <p class="help-text" style="margin-top: 8px;">Hubungkan akun ini dengan data pegawai agar rekap absensi pribadi dapat tampil.</p>
+                <p class="help-text" style="margin-top: 8px;">Hubungkan akun ini dengan data pegawai agar rekap presensi pribadi dapat tampil.</p>
             </section>
         @endif
 
@@ -963,7 +970,7 @@
             <div class="dashboard-stack">
                 <article class="dashboard-panel">
                     <div class="dashboard-panel-head">
-                        <h2>Absensi Saya Bulan Ini</h2>
+                        <h2>Presensi Saya Bulan Ini</h2>
                         <span class="badge badge-muted">{{ $labelBulan }}</span>
                     </div>
                     <div class="dashboard-panel-body">
@@ -1002,6 +1009,38 @@
                     </div>
                 </article>
 
+                @izin('piket_guru.lihat_pribadi')
+                    <article class="dashboard-panel">
+                        <div class="dashboard-panel-head">
+                            <h2>Jadwal Piket Saya</h2>
+                            @if ($jadwalPiketHariIni)
+                                <a href="{{ route('piket-kehadiran-siswa.index') }}" class="button button-primary button-sm">Buka tugas</a>
+                            @else
+                                <a href="{{ route('jadwal-piket-saya.index') }}" class="button button-muted button-sm">Lihat</a>
+                            @endif
+                        </div>
+                        <div class="dashboard-panel-body">
+                            <div class="dashboard-list">
+                                @forelse ($jadwalPiketSaya as $jadwalPiket)
+                                    <div class="dashboard-list-item">
+                                        <div>
+                                            <p>{{ $jadwalPiket->labelHari() }}</p>
+                                            <small>{{ $jadwalPiket->keterangan ?: 'Memeriksa kehadiran siswa' }}</small>
+                                        </div>
+                                        @if ($jadwalPiketHariIni?->id === $jadwalPiket->id)
+                                            <span class="badge badge-warning">Hari ini</span>
+                                        @else
+                                            <span class="badge badge-muted">Terjadwal</span>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <p class="empty-state">Belum ada jadwal piket pada tahun pelajaran aktif.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    </article>
+                @endizin
+
                 @if ($kelasWali->isNotEmpty())
                     <article class="dashboard-panel">
                         <div class="dashboard-panel-head">
@@ -1018,7 +1057,7 @@
                                     ['label' => 'Alfa', 'value' => $ringkasanAbsensiSiswaWali['alfa']],
                                     ['label' => 'Terlambat', 'value' => $ringkasanAbsensiSiswaWali['terlambat']],
                                     ['label' => 'Pulang cepat', 'value' => $ringkasanAbsensiSiswaWali['pulang_cepat']],
-                                    ['label' => 'Catatan absensi', 'value' => $ringkasanAbsensiSiswaWali['total_catatan']],
+                                    ['label' => 'Catatan presensi', 'value' => $ringkasanAbsensiSiswaWali['total_catatan']],
                                 ] as $item)
                                     <div class="mini-card">
                                         <strong>{{ $formatAngka($item['value']) }}</strong>

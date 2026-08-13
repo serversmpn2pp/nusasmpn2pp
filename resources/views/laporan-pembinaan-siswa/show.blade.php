@@ -17,8 +17,8 @@
         $butirKeputusan = collect(old('jenis_pelanggaran_ids', $laporanPembinaanSiswa->butirPelanggaranLaporan->pluck('jenis_pelanggaran_siswa_id')->all()))->map(fn($id)=>(int)$id)->all();
         $badgeVerifikasi = fn(string $status) => match($status){'disahkan','ditetapkan_pembinaan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_klarifikasi','dikembalikan_bk'=>'badge badge-danger',default=>'badge badge-warning'};
         $labelTahapBatas = $menungguPengesahanWakil ? 'Pengesahan Wakil Kesiswaan' : 'Keputusan BK';
-        $ruteKembali = $konteksGuruWali ? 'pembinaan-siswa-wali.index' : 'laporan-pembinaan-siswa.index';
-        $ruteShow = $konteksGuruWali ? 'pembinaan-siswa-wali.show' : 'laporan-pembinaan-siswa.show';
+        $ruteKembali = $konteksGuruWali ? 'pembinaan-siswa-wali.index' : ($konteksLaporanSaya ? 'laporan-saya.index' : 'laporan-pembinaan-siswa.index');
+        $ruteShow = $konteksGuruWali ? 'pembinaan-siswa-wali.show' : ($konteksLaporanSaya ? 'laporan-saya.show' : 'laporan-pembinaan-siswa.show');
     @endphp
 
     <style>
@@ -31,9 +31,14 @@
         .decision-form { border-top:1px solid var(--line); margin-top:12px; padding-top:12px; }
         .bk-violation-list { border:1px solid var(--line); border-radius:8px; display:grid; margin-top:8px; max-height:360px; overflow-y:auto; }
         .bk-violation-group-title { background:#f4f7fa; color:var(--primary-dark); font-size:12px; font-weight:800; margin:0; padding:9px 11px; text-transform:uppercase; }
-        .bk-violation-option { align-items:start; border-top:1px solid var(--line); cursor:pointer; display:grid; gap:9px; grid-template-columns:18px minmax(0,1fr) auto; padding:10px 11px; }
-        .bk-violation-option input { margin-top:3px; }
+        .bk-violation-option { align-items:center; border-top:1px solid var(--line); cursor:pointer; display:grid; gap:12px; grid-template-columns:18px minmax(0,1fr) auto; padding:12px 11px; transition:background-color .16s ease, box-shadow .16s ease; }
+        .bk-violation-option:hover { background:#f8fbfe; }
+        .bk-violation-option:has(input:checked) { background:#eef5fc; box-shadow:inset 3px 0 0 var(--primary); }
+        .bk-violation-option input { margin:0; }
         .bk-violation-option small { color:var(--muted); display:block; margin-bottom:2px; }
+        .bk-violation-option strong { display:block; line-height:1.4; overflow-wrap:anywhere; }
+        .violation-points { align-items:center; align-self:center; background:var(--accent-soft); border:1px solid #e1b900; border-radius:999px; color:#5f4c00; display:inline-flex; font-size:12px; font-weight:850; justify-content:center; line-height:1; min-height:30px; min-width:72px; padding:7px 10px; white-space:nowrap; }
+        .violation-detail .violation-points { justify-self:end; }
         .bk-point-total { color:var(--primary-dark); font-size:16px; font-weight:800; margin:10px 0 0; }
         .follow-up-body { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:12px; }
         .fact-list { display:grid; gap:10px; margin-top:14px; }
@@ -46,11 +51,11 @@
         .timeline-item:last-child { padding-bottom:0; }
         .timeline-status { color:var(--muted); font-size:12px; font-weight:700; }
         @media(max-width:900px){.decision-grid,.follow-up-body{grid-template-columns:1fr}.point-summary{grid-template-columns:1fr}.violation-detail{grid-template-columns:1fr}}
-        @media(max-width:640px){.fact-item{grid-template-columns:1fr}.fact-item .actions{justify-content:flex-start}}
+        @media(max-width:640px){.fact-item{grid-template-columns:1fr}.fact-item .actions{justify-content:flex-start}.bk-violation-option{align-items:start;grid-template-columns:18px minmax(0,1fr)}.bk-violation-option .violation-points{grid-column:2;justify-self:start}.violation-detail .violation-points{justify-self:start}}
     </style>
 
     <div class="page-header">
-        <div><p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p><h1 class="page-title">Detail {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1><p class="page-subtitle">{{ $laporanPembinaanSiswa->nomor_laporan }}</p></div>
+        <div><p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : ($konteksLaporanSaya ? 'Laporan Saya' : 'Kesiswaan & BK') }}</p><h1 class="page-title">Detail {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1><p class="page-subtitle">{{ $laporanPembinaanSiswa->nomor_laporan }}</p></div>
         <div class="actions">
             <a href="{{ route($ruteKembali) }}" class="button button-muted">Kembali</a>
             @unless($konteksGuruWali)
@@ -72,7 +77,7 @@
     @if(session('gagal'))<div class="alert alert-danger">{{ session('gagal') }}</div>@endif
     @if($errors->any())<div class="alert alert-danger"><strong>Ada data yang perlu diperbaiki.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
     @if($laporanPembinaanSiswa->berasalDariAbsensi())
-        <div class="alert"><strong>Laporan otomatis dari absensi.</strong> Tercatat terlambat {{ $laporanPembinaanSiswa->menit_terlambat_tercatat }} menit. Perubahan waktu dilakukan melalui koreksi rekap absensi.</div>
+        <div class="alert"><strong>Laporan otomatis dari presensi.</strong> Tercatat terlambat {{ $laporanPembinaanSiswa->menit_terlambat_tercatat }} menit. Perubahan waktu dilakukan melalui koreksi rekap presensi.</div>
     @endif
     @if($laporanMirip->isNotEmpty())
         <div class="alert alert-danger"><strong>Periksa kemungkinan laporan ganda.</strong> Ada {{ $laporanMirip->count() }} laporan lain untuk siswa ini pada tanggal yang sama: @foreach($laporanMirip as $mirip)<a href="{{ route($ruteShow,$mirip) }}">{{ $mirip->nomor_laporan }}</a>{{ !$loop->last?', ':'.' }}@endforeach</div>
@@ -93,7 +98,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad"><h2 class="panel-title">Informasi Kejadian</h2><dl class="detail-grid"><div class="detail-item"><dt>Jenis laporan</dt><dd>{{ $laporanPembinaanSiswa->labelJenisLaporan() }}</dd></div><div class="detail-item"><dt>Sumber</dt><dd>{{ $laporanPembinaanSiswa->berasalDariAbsensi() ? 'Rekap absensi otomatis' : 'Laporan manual' }}</dd></div><div class="detail-item"><dt>Tanggal dan waktu</dt><dd>{{ $laporanPembinaanSiswa->tanggal_kejadian?->format('d/m/Y') }} {{ $laporanPembinaanSiswa->waktuKejadianRingkas()?'pukul '.$laporanPembinaanSiswa->waktuKejadianRingkas():'' }}</dd></div><div class="detail-item"><dt>Tempat</dt><dd>{{ $teks($laporanPembinaanSiswa->tempat_kejadian) }}</dd></div><div class="detail-item"><dt>Kategori</dt><dd>{{ $laporanPembinaanSiswa->kategoriPembinaanSiswa?->nama ?: '-' }}</dd></div><div class="detail-item"><dt>Pelapor</dt><dd>{{ $laporanPembinaanSiswa->pelaporPegawai?->nama_lengkap ?: ($laporanPembinaanSiswa->berasalDariAbsensi() ? 'Sistem NUSA' : '-') }}</dd></div><div class="detail-item"><dt>Dibuat pada</dt><dd>{{ $laporanPembinaanSiswa->created_at?->format('d/m/Y H:i') }}</dd></div></dl></section>
+            <section class="panel panel-pad"><h2 class="panel-title">Informasi Kejadian</h2><dl class="detail-grid"><div class="detail-item"><dt>Jenis laporan</dt><dd>{{ $laporanPembinaanSiswa->labelJenisLaporan() }}</dd></div><div class="detail-item"><dt>Sumber</dt><dd>{{ $laporanPembinaanSiswa->berasalDariAbsensi() ? 'Rekap presensi otomatis' : 'Laporan manual' }}</dd></div><div class="detail-item"><dt>Tanggal dan waktu</dt><dd>{{ $laporanPembinaanSiswa->tanggal_kejadian?->format('d/m/Y') }} {{ $laporanPembinaanSiswa->waktuKejadianRingkas()?'pukul '.$laporanPembinaanSiswa->waktuKejadianRingkas():'' }}</dd></div><div class="detail-item"><dt>Tempat</dt><dd>{{ $teks($laporanPembinaanSiswa->tempat_kejadian) }}</dd></div><div class="detail-item"><dt>Kategori</dt><dd>{{ $laporanPembinaanSiswa->kategoriPembinaanSiswa?->nama ?: '-' }}</dd></div><div class="detail-item"><dt>Pelapor</dt><dd>{{ $laporanPembinaanSiswa->pelaporPegawai?->nama_lengkap ?: ($laporanPembinaanSiswa->berasalDariAbsensi() ? 'Sistem NUSA' : '-') }}</dd></div><div class="detail-item"><dt>Dibuat pada</dt><dd>{{ $laporanPembinaanSiswa->created_at?->format('d/m/Y H:i') }}</dd></div></dl></section>
 
             @if($laporanPembinaanSiswa->jenis_laporan==='pelanggaran' && $laporanPembinaanSiswa->butirPelanggaranLaporan->isNotEmpty())
                 <section class="panel panel-pad"><h2 class="panel-title">Butir Pelanggaran</h2><div class="violation-detail-list">@foreach($laporanPembinaanSiswa->butirPelanggaranLaporan as $butir)<article class="violation-detail"><div><p class="person-meta">{{ $butir->kode_pelanggaran }} · {{ str($butir->tingkat)->headline() }}</p><p class="person-name">{{ $butir->nama_pelanggaran }}</p></div><span class="violation-points"><strong>{{ $butir->poin }}</strong> poin</span></article>@endforeach</div></section>

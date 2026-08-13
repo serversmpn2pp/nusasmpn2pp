@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>Scan Absensi - NUSA</title>
+        <title>Scan Presensi - NUSA</title>
 
         @fonts
         <link rel="icon" href="{{ asset('images/logo-nusa.png') }}" type="image/png">
@@ -568,7 +568,7 @@
                 </header>
 
                 <main class="scan-main">
-                    <section class="time-panel" aria-label="Waktu dan jadwal absensi">
+                    <section class="time-panel" aria-label="Waktu dan jadwal presensi">
                         <div>
                             <p class="time-label">Waktu server</p>
                             <div class="clock" id="clockText">--:--:--</div>
@@ -591,14 +591,14 @@
                             </div>
                         @else
                             <div class="offline-note">
-                                Pengaturan absensi hari ini belum aktif.
+                                Pengaturan presensi hari ini belum aktif.
                             </div>
                         @endif
                     </section>
 
-                    <section class="scanner-panel" aria-label="Scanner absensi">
+                    <section class="scanner-panel" aria-label="Scanner presensi">
                         <div class="scanner-top">
-                            <h1 class="scanner-title">Scan Absensi</h1>
+                            <h1 class="scanner-title">Scan Presensi</h1>
                             <span class="queue-badge">Antrean: <span id="queueCount">0</span></span>
                         </div>
 
@@ -831,11 +831,11 @@
 
             function labelHasil(payload, kategori) {
                 if (kategori === 'success') {
-                    return 'Absensi berhasil';
+                    return 'Presensi berhasil';
                 }
 
                 if (kategori === 'recorded') {
-                    return 'Absensi sudah tercatat';
+                    return 'Presensi sudah tercatat';
                 }
 
                 if (kategori === 'warning') {

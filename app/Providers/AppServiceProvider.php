@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\AnggotaKelas;
+use App\Models\Siswa;
+use App\Observers\AnggotaKelasObserver;
+use App\Observers\SiswaObserver;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,6 +24,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        AnggotaKelas::observe(AnggotaKelasObserver::class);
+        Siswa::observe(SiswaObserver::class);
+
         Blade::if('izin', function (string|array ...$kode): bool {
             $kode = count($kode) === 1 ? $kode[0] : $kode;
 

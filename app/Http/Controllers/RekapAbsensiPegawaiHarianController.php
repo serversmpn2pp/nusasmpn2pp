@@ -167,7 +167,7 @@ class RekapAbsensiPegawaiHarianController extends Controller
                 'pegawai_id' => $pegawai->id,
                 'status_pegawai' => $pegawai->aktif ? 'aktif' : 'semua',
             ])
-            ->with('berhasil', 'Koreksi absensi pegawai berhasil disimpan.');
+            ->with('berhasil', 'Koreksi presensi pegawai berhasil disimpan.');
     }
 
     private function ambilPegawai(

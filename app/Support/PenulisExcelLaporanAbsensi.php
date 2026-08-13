@@ -19,7 +19,7 @@ class PenulisExcelLaporanAbsensi
             throw new RuntimeException('Direktori export Excel tidak bisa dibuat.');
         }
 
-        $lokasiBerkas = $direktori . DIRECTORY_SEPARATOR . 'laporan-absensi-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.xlsx';
+        $lokasiBerkas = $direktori . DIRECTORY_SEPARATOR . 'laporan-presensi-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.xlsx';
         $zip = new ZipArchive();
 
         if ($zip->open($lokasiBerkas, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
@@ -85,7 +85,7 @@ class PenulisExcelLaporanAbsensi
         $kelas = $laporan['kelasDipilih']?->nama ?? 'Semua kelas';
         $ringkasan = $laporan['ringkasan'];
         $baris = [
-            [$this->sel('LAPORAN ABSENSI', 1)],
+            [$this->sel('LAPORAN PRESENSI', 1)],
             [$this->sel('SMP Negeri 2 Padang Panjang', 2)],
             [],
             [$this->sel('Tahun Pelajaran', 3), $this->sel($tahunPelajaran)],
@@ -247,7 +247,7 @@ class PenulisExcelLaporanAbsensi
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
             . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-            . '<sheets><sheet name="Laporan Absensi" sheetId="1" r:id="rId1"/></sheets>'
+            . '<sheets><sheet name="Laporan Presensi" sheetId="1" r:id="rId1"/></sheets>'
             . '</workbook>';
     }
 
@@ -279,7 +279,7 @@ class PenulisExcelLaporanAbsensi
             . 'xmlns:dcterms="http://purl.org/dc/terms/" '
             . 'xmlns:dcmitype="http://purl.org/dc/dcmitype/" '
             . 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
-            . '<dc:title>Laporan Absensi NUSA</dc:title>'
+            . '<dc:title>Laporan Presensi NUSA</dc:title>'
             . '<dc:creator>NUSA</dc:creator>'
             . '<cp:lastModifiedBy>NUSA</cp:lastModifiedBy>'
             . '<dcterms:created xsi:type="dcterms:W3CDTF">' . $waktu . '</dcterms:created>'

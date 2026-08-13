@@ -73,6 +73,11 @@ class Pegawai extends Model
         return $this->hasMany(LogScanAbsensiPegawai::class);
     }
 
+    public function jadwalPiketGuru(): HasMany
+    {
+        return $this->hasMany(JadwalPiketGuru::class);
+    }
+
     public function laporanPembinaanSiswaSebagaiPelapor(): HasMany
     {
         return $this->hasMany(LaporanPembinaanSiswa::class, 'pelapor_pegawai_id');

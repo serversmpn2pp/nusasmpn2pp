@@ -41,6 +41,7 @@ class LaporanPembinaanSiswaController extends Controller
     public function index(Request $request)
     {
         $konteksGuruWali = $request->routeIs('pembinaan-siswa-wali.*');
+        $konteksLaporanSaya = $request->routeIs('laporan-saya.*');
         $kataKunci = trim((string) $request->input('kata_kunci', ''));
         $status = (string) $request->input('status', 'semua');
         $tingkat = (string) $request->input('tingkat', 'semua');
@@ -49,6 +50,15 @@ class LaporanPembinaanSiswaController extends Controller
         $kategoriDipilih = $this->inputId($request, 'kategori_pembinaan_siswa_id');
         $tahunPelajaranDipilih = $this->inputId($request, 'tahun_pelajaran_id');
         $kelasDipilih = $this->inputId($request, 'kelas_id');
+
+        if ($konteksLaporanSaya) {
+            $status = 'semua';
+            $tingkat = 'semua';
+            $jenisLaporan = 'semua';
+            $statusVerifikasi = 'semua';
+            $kategoriDipilih = null;
+            $tahunPelajaranDipilih = null;
+        }
 
         if (! array_key_exists($status, LaporanPembinaanSiswa::DAFTAR_STATUS) && $status !== 'semua') {
             $status = 'semua';
@@ -114,6 +124,7 @@ class LaporanPembinaanSiswaController extends Controller
             'kelasDipilih',
             'ringkasan',
             'konteksGuruWali',
+            'konteksLaporanSaya',
         ), $this->pilihanFilter($request)));
     }
 
@@ -220,12 +231,23 @@ class LaporanPembinaanSiswaController extends Controller
     public function show(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $konteksGuruWali = $request->routeIs('pembinaan-siswa-wali.*');
+        $konteksLaporanSaya = $request->routeIs('laporan-saya.*');
         if ($konteksGuruWali) {
             abort_unless(in_array(
                 (int) $laporanPembinaanSiswa->siswa_id,
                 $request->user()?->siswaWaliIds() ?? [],
                 true,
             ), 403);
+        }
+        if ($konteksLaporanSaya) {
+            abort_unless(
+                (int) $laporanPembinaanSiswa->dibuat_oleh_pengguna_id === (int) $request->user()?->id
+                || (
+                    filled($request->user()?->pegawai_id)
+                    && (int) $laporanPembinaanSiswa->pelapor_pegawai_id === (int) $request->user()->pegawai_id
+                ),
+                403,
+            );
         }
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
 
@@ -268,14 +290,14 @@ class LaporanPembinaanSiswaController extends Controller
         return view('laporan-pembinaan-siswa.show', compact(
             'laporanPembinaanSiswa', 'bolehKelolaFakta', 'bolehMencatatKlarifikasi',
             'daftarSiswaSaksi', 'daftarPegawaiSaksi', 'daftarJenisPelanggaranKeputusan', 'laporanMirip',
-            'konteksGuruWali',
+            'konteksGuruWali', 'konteksLaporanSaya',
         ));
     }
 
     public function edit(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
-        abort_if($laporanPembinaanSiswa->berasalDariAbsensi(), 422, 'Laporan otomatis diperbarui melalui koreksi rekap absensi.');
+        abort_if($laporanPembinaanSiswa->berasalDariAbsensi(), 422, 'Laporan otomatis diperbarui melalui koreksi rekap presensi.');
         abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['menunggu_pengesahan_wakil', 'disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diajukan untuk pengesahan atau telah diputuskan tidak dapat diedit.');
 
         $laporanPembinaanSiswa->load('butirPelanggaranLaporan');
@@ -289,7 +311,7 @@ class LaporanPembinaanSiswaController extends Controller
     public function update(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
-        abort_if($laporanPembinaanSiswa->berasalDariAbsensi(), 422, 'Laporan otomatis diperbarui melalui koreksi rekap absensi.');
+        abort_if($laporanPembinaanSiswa->berasalDariAbsensi(), 422, 'Laporan otomatis diperbarui melalui koreksi rekap presensi.');
         abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['menunggu_pengesahan_wakil', 'disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diajukan untuk pengesahan atau telah diputuskan tidak dapat diedit.');
 
         $request->merge(['jenis_laporan' => $laporanPembinaanSiswa->jenis_laporan]);
@@ -577,6 +599,14 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $query = LaporanPembinaanSiswa::query();
         $pengguna = $request->user();
+
+        if ($request->routeIs('laporan-saya.*')) {
+            return $query->where(function ($query) use ($pengguna) {
+                $query->where('dibuat_oleh_pengguna_id', $pengguna?->id)
+                    ->when($pengguna?->pegawai_id, fn ($query) => $query
+                        ->orWhere('pelapor_pegawai_id', $pengguna->pegawai_id));
+            });
+        }
 
         if ($request->routeIs('pembinaan-siswa-wali.*')) {
             $siswaWaliIds = $pengguna?->siswaWaliIds() ?? [];

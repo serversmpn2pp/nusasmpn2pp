@@ -440,7 +440,7 @@
                                     <div class="back-logo-card">
                                         <img src="{{ asset('images/kartu-pelajar/logo-nusa.png') }}" alt="Logo NUSA">
                                     </div>
-                                    <p class="back-title-card">Absensi Digital NUSA</p>
+                                    <p class="back-title-card">Presensi Digital NUSA</p>
                                 </div>
 
                                 <div class="qr-shell-card">
@@ -452,7 +452,7 @@
                                 </div>
 
                                 <p class="back-note-card">
-                                    Scan QR ini untuk layanan absensi siswa SMP Negeri 2 Padang Panjang.
+                                    Scan QR ini untuk layanan presensi siswa SMP Negeri 2 Padang Panjang.
                                 </p>
                             </div>
                         </div>

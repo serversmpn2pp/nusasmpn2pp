@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', ($konteksGuruWali ? 'Laporan Siswa Wali' : 'Daftar Laporan Siswa').' - NUSA')
+@section('title', ($konteksGuruWali ? 'Laporan Siswa Wali' : ($konteksLaporanSaya ? 'Laporan Saya' : 'Daftar Laporan Siswa')).' - NUSA')
 
 @section('content')
     @php
@@ -10,8 +10,14 @@
         $bolehPusatVerifikasi=(auth()->user()?->administrator()??false)
             || (auth()->user()?->memilikiPeran(['bk','pimpinan','wakil_pimpinan_kesiswaan'])??false)
             || (auth()->user()?->memilikiIzin('poin_siswa.verifikasi_bk')??false);
-        $ruteIndex=$konteksGuruWali?'pembinaan-siswa-wali.index':'laporan-pembinaan-siswa.index';
-        $ruteShow=$konteksGuruWali?'pembinaan-siswa-wali.show':'laporan-pembinaan-siswa.show';
+        $ruteIndex=$konteksGuruWali?'pembinaan-siswa-wali.index':($konteksLaporanSaya?'laporan-saya.index':'laporan-pembinaan-siswa.index');
+        $ruteShow=$konteksGuruWali?'pembinaan-siswa-wali.show':($konteksLaporanSaya?'laporan-saya.show':'laporan-pembinaan-siswa.show');
+        $judulHalaman=$konteksGuruWali?'Laporan Siswa Wali':($konteksLaporanSaya?'Laporan Saya':'Daftar Laporan Siswa');
+        $deskripsiHalaman=$konteksGuruWali
+            ? 'Riwayat laporan dan keputusan BK untuk siswa yang menjadi tanggung jawab pendampingan Anda.'
+            : ($konteksLaporanSaya
+                ? 'Pantau pemeriksaan BK, keputusan, poin, dan tindak lanjut dari laporan yang Anda kirim.'
+                : 'Arsip seluruh laporan kejadian, pembinaan, keputusan BK, dan poin siswa.');
     @endphp
     <style>
         .report-page-header {
@@ -43,6 +49,10 @@
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
+        .report-filter.is-personal {
+            grid-template-columns: minmax(260px, 1fr) minmax(200px, .65fr);
+        }
+
         .report-meta {
             display: flex;
             flex-wrap: wrap;
@@ -59,13 +69,15 @@
                 justify-content: start;
             }
 
-            .report-filter {
+            .report-filter,
+            .report-filter.is-personal {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
         @media (max-width: 700px) {
-            .report-filter {
+            .report-filter,
+            .report-filter.is-personal {
                 grid-template-columns: 1fr;
             }
 
@@ -81,9 +93,9 @@
 
     <div class="page-header report-page-header">
         <div class="report-page-header-copy">
-            <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : 'Kesiswaan & BK' }}</p>
-            <h1 class="page-title">{{ $konteksGuruWali ? 'Laporan Siswa Wali' : 'Daftar Laporan Siswa' }}</h1>
-            <p class="page-subtitle">{{ $konteksGuruWali ? 'Riwayat laporan dan keputusan BK untuk siswa yang menjadi tanggung jawab pendampingan Anda.' : 'Arsip seluruh laporan kejadian, pembinaan, keputusan BK, dan poin siswa.' }}</p>
+            <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : ($konteksLaporanSaya ? 'Pelaporan Saya' : 'Kesiswaan & BK') }}</p>
+            <h1 class="page-title">{{ $judulHalaman }}</h1>
+            <p class="page-subtitle">{{ $deskripsiHalaman }}</p>
         </div>
 
         @if ($bolehLapor || $bolehPusatVerifikasi)
@@ -103,26 +115,28 @@
 
     <x-alur-penanganan-siswa
         tahap="semua"
-        judul="Arsip lengkap penanganan laporan siswa"
-        deskripsi="Halaman ini menampilkan semua laporan sejak kejadian dicatat sampai keputusan dan penanganannya selesai. Gunakan Pemeriksaan & Pengesahan untuk memproses laporan baru, lalu buka detail laporan untuk melihat bukti dan riwayatnya."
+        judul="{{ $konteksLaporanSaya ? 'Progres laporan yang Anda kirim' : 'Arsip lengkap penanganan laporan siswa' }}"
+        deskripsi="{{ $konteksLaporanSaya ? 'Buka detail laporan untuk melihat pemeriksaan BK, keputusan, pengesahan poin, dan tindak lanjutnya.' : 'Halaman ini menampilkan semua laporan sejak kejadian dicatat sampai keputusan dan penanganannya selesai. Gunakan Pemeriksaan & Pengesahan untuk memproses laporan baru, lalu buka detail laporan untuk melihat bukti dan riwayatnya.' }}"
         catatan="Catatan pembinaan langsung tidak menambah poin."
     />
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 
     <div class="stats-grid"><div class="panel stat"><p class="stat-label">Semua laporan</p><p class="stat-value">{{ $ringkasan['total'] }}</p></div><div class="panel stat active"><p class="stat-label">Laporan kejadian</p><p class="stat-value">{{ $ringkasan['kejadian'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Pelanggaran berpoin</p><p class="stat-value">{{ $ringkasan['pelanggaran'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Menunggu BK</p><p class="stat-value">{{ $ringkasan['menunggu'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Menunggu Wakil Kesiswaan</p><p class="stat-value">{{ $ringkasan['menunggu_wakil'] }}</p></div><div class="panel stat active"><p class="stat-label">Disahkan</p><p class="stat-value">{{ $ringkasan['disahkan'] }}</p></div></div>
 
-    <form method="GET" class="panel panel-pad" style="margin-bottom:20px"><div class="report-filter">
+    <form method="GET" class="panel panel-pad" style="margin-bottom:20px"><div class="report-filter {{ $konteksLaporanSaya ? 'is-personal' : '' }}">
         <div class="field"><label for="kata_kunci">Cari laporan</label><input id="kata_kunci" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nomor, siswa, NISN, pelanggaran"></div>
-        <div class="field"><label for="jenis_laporan">Jenis laporan</label><select id="jenis_laporan" name="jenis_laporan" class="select"><option value="semua">Semua</option>@foreach($daftarJenisLaporan as $kode=>$label)<option value="{{ $kode }}" @selected($jenisLaporan===$kode)>{{ $label }}</option>@endforeach</select></div>
-        <div class="field"><label for="status_verifikasi">Keputusan BK</label><select id="status_verifikasi" name="status_verifikasi" class="select"><option value="semua">Semua</option>@foreach($daftarStatusVerifikasi as $kode=>$label)<option value="{{ $kode }}" @selected($statusVerifikasi===$kode)>{{ $label }}</option>@endforeach</select></div>
-        <div class="field"><label for="tingkat">Tingkat</label><select id="tingkat" name="tingkat" class="select"><option value="semua">Semua</option>@foreach($daftarTingkat as $kode=>$label)<option value="{{ $kode }}" @selected($tingkat===$kode)>{{ $label }}</option>@endforeach</select></div>
-        <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select"><option value="">Semua</option>@foreach($daftarTahunPelajaran as $tahun)<option value="{{ $tahun->id }}" @selected((string)$tahunPelajaranDipilih===(string)$tahun->id)>{{ $tahun->nama }}</option>@endforeach</select></div>
+        @unless($konteksLaporanSaya)
+            <div class="field"><label for="jenis_laporan">Jenis laporan</label><select id="jenis_laporan" name="jenis_laporan" class="select"><option value="semua">Semua</option>@foreach($daftarJenisLaporan as $kode=>$label)<option value="{{ $kode }}" @selected($jenisLaporan===$kode)>{{ $label }}</option>@endforeach</select></div>
+            <div class="field"><label for="status_verifikasi">Keputusan BK</label><select id="status_verifikasi" name="status_verifikasi" class="select"><option value="semua">Semua</option>@foreach($daftarStatusVerifikasi as $kode=>$label)<option value="{{ $kode }}" @selected($statusVerifikasi===$kode)>{{ $label }}</option>@endforeach</select></div>
+            <div class="field"><label for="tingkat">Tingkat</label><select id="tingkat" name="tingkat" class="select"><option value="semua">Semua</option>@foreach($daftarTingkat as $kode=>$label)<option value="{{ $kode }}" @selected($tingkat===$kode)>{{ $label }}</option>@endforeach</select></div>
+            <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select"><option value="">Semua</option>@foreach($daftarTahunPelajaran as $tahun)<option value="{{ $tahun->id }}" @selected((string)$tahunPelajaranDipilih===(string)$tahun->id)>{{ $tahun->nama }}</option>@endforeach</select></div>
+        @endunless
         <div class="field"><label for="kelas_id">Kelas</label><select id="kelas_id" name="kelas_id" class="select"><option value="">Semua</option>@foreach($daftarKelas as $kelas)<option value="{{ $kelas->id }}" @selected((string)$kelasDipilih===(string)$kelas->id)>{{ $kelas->nama }}</option>@endforeach</select></div>
     </div><div class="actions" style="justify-content:flex-end;margin-top:14px"><a href="{{ route($ruteIndex) }}" class="button button-muted">Reset</a><button class="button button-dark">Terapkan</button></div></form>
 
     <section class="panel">
         <div class="desktop-only table-wrap"><table class="employee-table" style="min-width:1080px"><thead><tr><th>Laporan</th><th>Siswa</th><th>Jenis/Butir</th><th>Status</th><th>Poin</th><th>Pelapor</th><th class="text-right">Aksi</th></tr></thead><tbody>
-            @forelse($laporanPembinaanSiswa as $laporan)@php $melaluiBk=$laporan->status_verifikasi!=='tidak_perlu';$ringkasJenis=match($laporan->jenis_laporan){'kejadian'=>'Menunggu pemeriksaan BK','pelanggaran'=>$laporan->butirPelanggaranLaporan->first()?->nama_pelanggaran?:'Pelanggaran ditetapkan BK',default=>$laporan->kategoriPembinaanSiswa?->nama?:'Pembinaan tanpa poin'}; @endphp<tr><td><p class="person-name">{{ $laporan->nomor_laporan }}</p><p class="person-meta">{{ $laporan->tanggal_kejadian?->format('d/m/Y') }}{{ $laporan->tempat_kejadian?' - '.$laporan->tempat_kejadian:'' }}</p></td><td><p class="person-name">{{ $laporan->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $laporan->kelas?->nama?:'-' }} - NISN {{ $laporan->siswa?->nisn?:'-' }}</p></td><td><p class="person-name">{{ $laporan->labelJenisLaporan() }}</p><p class="person-meta">{{ $ringkasJenis }}</p>@if($laporan->berasalDariAbsensi())<span class="badge badge-muted" style="margin-top:6px">Otomatis absensi</span>@endif</td><td>@if($melaluiBk)<span class="{{ $badgeVerifikasi($laporan->status_verifikasi) }}">{{ $laporan->labelStatusVerifikasi() }}</span>@else<span class="badge badge-muted">{{ $laporan->labelStatus() }}</span>@endif</td><td><strong>{{ $laporan->status_verifikasi==='disahkan'?$laporan->total_poin:'-' }}</strong></td><td>{{ $laporan->pelaporPegawai?->nama_lengkap?:($laporan->berasalDariAbsensi()?'Sistem NUSA':'-') }}</td><td><a href="{{ route($ruteShow,$laporan) }}" class="button button-muted button-sm">Lihat</a></td></tr>
+            @forelse($laporanPembinaanSiswa as $laporan)@php $melaluiBk=$laporan->status_verifikasi!=='tidak_perlu';$ringkasJenis=match($laporan->jenis_laporan){'kejadian'=>'Menunggu pemeriksaan BK','pelanggaran'=>$laporan->butirPelanggaranLaporan->first()?->nama_pelanggaran?:'Pelanggaran ditetapkan BK',default=>$laporan->kategoriPembinaanSiswa?->nama?:'Pembinaan tanpa poin'}; @endphp<tr><td><p class="person-name">{{ $laporan->nomor_laporan }}</p><p class="person-meta">{{ $laporan->tanggal_kejadian?->format('d/m/Y') }}{{ $laporan->tempat_kejadian?' - '.$laporan->tempat_kejadian:'' }}</p></td><td><p class="person-name">{{ $laporan->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $laporan->kelas?->nama?:'-' }} - NISN {{ $laporan->siswa?->nisn?:'-' }}</p></td><td><p class="person-name">{{ $laporan->labelJenisLaporan() }}</p><p class="person-meta">{{ $ringkasJenis }}</p>@if($laporan->berasalDariAbsensi())<span class="badge badge-muted" style="margin-top:6px">Otomatis presensi</span>@endif</td><td>@if($melaluiBk)<span class="{{ $badgeVerifikasi($laporan->status_verifikasi) }}">{{ $laporan->labelStatusVerifikasi() }}</span>@else<span class="badge badge-muted">{{ $laporan->labelStatus() }}</span>@endif</td><td><strong>{{ $laporan->status_verifikasi==='disahkan'?$laporan->total_poin:'-' }}</strong></td><td>{{ $laporan->pelaporPegawai?->nama_lengkap?:($laporan->berasalDariAbsensi()?'Sistem NUSA':'-') }}</td><td><a href="{{ route($ruteShow,$laporan) }}" class="button button-muted button-sm">Lihat</a></td></tr>
             @empty<tr><td colspan="7" class="empty-state">Belum ada laporan pembinaan atau pelanggaran.</td></tr>@endforelse
         </tbody></table></div>
         <div class="mobile-only mobile-list">@forelse($laporanPembinaanSiswa as $laporan)@php $ringkasJenis=match($laporan->jenis_laporan){'kejadian'=>'Menunggu pemeriksaan BK','pelanggaran'=>$laporan->butirPelanggaranLaporan->first()?->nama_pelanggaran?:'Pelanggaran ditetapkan BK',default=>$laporan->kategoriPembinaanSiswa?->nama?:'Pembinaan tanpa poin'}; @endphp<article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $laporan->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $laporan->nomor_laporan }} - {{ $laporan->kelas?->nama?:'-' }}</p></div>@if($laporan->status_verifikasi==='disahkan')<span class="{{ $badgeVerifikasi($laporan->status_verifikasi) }}">{{ $laporan->total_poin }} poin</span>@elseif($laporan->status_verifikasi!=='tidak_perlu')<span class="{{ $badgeVerifikasi($laporan->status_verifikasi) }}">{{ $laporan->labelStatusVerifikasi() }}</span>@else<span class="badge badge-muted">Pembinaan</span>@endif</div><p style="margin:12px 0">{{ $ringkasJenis }}</p><a href="{{ route($ruteShow,$laporan) }}" class="button button-muted button-sm">Lihat</a></article>@empty<div class="empty-state">Belum ada laporan.</div>@endforelse</div>

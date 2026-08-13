@@ -153,7 +153,7 @@
                         <dd>{{ $teks($siswa->nomor_wa_wali) }}</dd>
                     </div>
                     <div class="detail-item">
-                        <dt>Tujuan notifikasi absensi</dt>
+                        <dt>Tujuan notifikasi presensi</dt>
                         <dd>{{ $teks($siswa->kontak_absensi_utama ? str($siswa->kontak_absensi_utama)->headline()->toString() : null) }}</dd>
                     </div>
                 </dl>

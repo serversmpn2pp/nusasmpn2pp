@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Laporan Absensi Pegawai {{ $labelPeriode }} - NUSA</title>
+    <title>Cetak Laporan Presensi Pegawai {{ $labelPeriode }} - NUSA</title>
     <style>
         :root {
             --primary: #15477a;
@@ -381,7 +381,7 @@
     @endphp
     <header class="print-toolbar">
         <div>
-            <strong>{{ ($halamanPribadi ?? false) ? 'Laporan absensi saya' : 'Laporan absensi pegawai' }} {{ $labelPeriode }}</strong>
+            <strong>{{ ($halamanPribadi ?? false) ? 'Laporan presensi saya' : 'Laporan presensi pegawai' }} {{ $labelPeriode }}</strong>
             <p>{{ $jumlahLembar }} lembar. Setiap pegawai dipisahkan menjadi satu halaman A4.</p>
         </div>
 
@@ -414,7 +414,7 @@
                 </header>
 
                 <div class="report-title">
-                    <h1>Laporan Absensi Pegawai Bulanan</h1>
+                    <h1>Laporan Presensi Pegawai Bulanan</h1>
                     <p>Periode {{ $labelPeriode }}</p>
                 </div>
 
@@ -437,7 +437,7 @@
                     </div>
                 </section>
 
-                <table class="attendance-table" aria-label="Rincian absensi {{ $pegawai->nama_lengkap }}">
+                <table class="attendance-table" aria-label="Rincian presensi {{ $pegawai->nama_lengkap }}">
                     <colgroup>
                         <col style="width: 5%;">
                         <col style="width: 10%;">
@@ -482,7 +482,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="center">Belum ada hari jadwal atau catatan absensi pada periode ini.</td>
+                                <td colspan="9" class="center">Belum ada hari jadwal atau catatan presensi pada periode ini.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -508,7 +508,7 @@
                     </div>
 
                     <div class="signature">
-                        <p class="statement">Saya menyatakan data absensi ini telah saya periksa dan sesuai dengan catatan kehadiran saya.</p>
+                        <p class="statement">Saya menyatakan data presensi ini telah saya periksa dan sesuai dengan catatan kehadiran saya.</p>
                         <p>Padang Panjang, {{ $tanggalCetak }}</p>
                         <p>Pegawai yang bersangkutan,</p>
                         <div class="signature-space"></div>

@@ -115,6 +115,74 @@ class AkunSiswaTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_daftar_akun_default_semua_kelas_tahun_aktif_dan_dapat_dicari_tanpa_memilih_kelas(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $tahunAktif = TahunPelajaran::create([
+            'nama' => '2030/2031',
+            'tanggal_mulai' => '2030-07-01',
+            'tanggal_selesai' => '2031-06-30',
+            'aktif' => true,
+        ]);
+        $kelasA = Kelas::create([
+            'tahun_pelajaran_id' => $tahunAktif->id,
+            'nama' => 'VII.A',
+            'tingkat' => 7,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $kelasB = Kelas::create([
+            'tahun_pelajaran_id' => $tahunAktif->id,
+            'nama' => 'VII.B',
+            'tingkat' => 7,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $siswaA = $this->tambahkanSiswaKeKelas($kelasA, 'Andi Kelas Aktif', '0088888881', 1);
+        $siswaB = $this->tambahkanSiswaKeKelas($kelasB, 'Budi Kelas Aktif', '0088888882', 1);
+        $tahunLama = TahunPelajaran::create([
+            'nama' => '2029/2030',
+            'tanggal_mulai' => '2029-07-01',
+            'tanggal_selesai' => '2030-06-30',
+            'aktif' => false,
+        ]);
+        $kelasLama = Kelas::create([
+            'tahun_pelajaran_id' => $tahunLama->id,
+            'nama' => 'VII.LAMA',
+            'tingkat' => 7,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $this->tambahkanSiswaKeKelas($kelasLama, 'Siswa Tahun Lama', '0088888883', 1);
+
+        $this->actingAs($administrator)
+            ->get(route('akun-siswa.index'))
+            ->assertOk()
+            ->assertSee('<option value="">Semua kelas</option>', false)
+            ->assertSee('data-auto-filter', false)
+            ->assertSee('data-auto-submit', false)
+            ->assertSee('data-auto-search', false)
+            ->assertDontSee('name="tahun_pelajaran_id"', false)
+            ->assertDontSee('>Tampilkan</button>', false)
+            ->assertSee($siswaA->nama_lengkap)
+            ->assertSee($siswaB->nama_lengkap)
+            ->assertDontSee('Siswa Tahun Lama');
+
+        $this->actingAs($administrator)
+            ->get(route('akun-siswa.index', ['kata_kunci' => 'Budi Kelas']))
+            ->assertOk()
+            ->assertSee($siswaB->nama_lengkap)
+            ->assertDontSee($siswaA->nama_lengkap);
+
+        $this->actingAs($administrator)
+            ->get(route('akun-siswa.index', ['kelas_id' => $kelasA->id]))
+            ->assertOk()
+            ->assertSee($siswaA->nama_lengkap)
+            ->assertDontSee($siswaB->nama_lengkap)
+            ->assertSee('Buat akun kelas')
+            ->assertSee('Cetak daftar akun');
+    }
+
     public function test_siswa_wajib_mengganti_password_awal_dan_password_awal_dihapus_setelah_diganti(): void
     {
         [$siswa] = $this->buatSiswaDalamKelas('Siswa Login', '0077777777');

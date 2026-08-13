@@ -20,14 +20,6 @@ class AnggotaKelasController extends Controller
                 Rule::unique('anggota_kelas', 'siswa_id')
                     ->where('tahun_pelajaran_id', $kelas->tahun_pelajaran_id),
             ],
-            'nomor_absen' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:500',
-                Rule::unique('anggota_kelas', 'nomor_absen')
-                    ->where('kelas_id', $kelas->id),
-            ],
             'tanggal_masuk' => 'nullable|date',
             'keterangan' => 'nullable|string',
         ]);
@@ -42,7 +34,7 @@ class AnggotaKelasController extends Controller
             'tahun_pelajaran_id' => $kelas->tahun_pelajaran_id,
             'kelas_id' => $kelas->id,
             'siswa_id' => $data['siswa_id'],
-            'nomor_absen' => $data['nomor_absen'] ?? null,
+            'nomor_absen' => null,
             'status_keanggotaan' => 'aktif',
             'tanggal_masuk' => $data['tanggal_masuk'] ?? $kelas->tahunPelajaran?->tanggal_mulai,
             'keterangan' => $data['keterangan'] ?? null,
@@ -58,15 +50,6 @@ class AnggotaKelasController extends Controller
         abort_unless($request->user()?->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id) ?? false, 403);
 
         $data = $request->validate([
-            'nomor_absen' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:500',
-                Rule::unique('anggota_kelas', 'nomor_absen')
-                    ->where('kelas_id', $anggotaKelas->kelas_id)
-                    ->ignore($anggotaKelas),
-            ],
             'tanggal_masuk' => 'nullable|date',
             'keterangan' => 'nullable|string',
         ]);

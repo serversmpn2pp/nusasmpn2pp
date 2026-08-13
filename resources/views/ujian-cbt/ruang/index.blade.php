@@ -622,10 +622,10 @@
         <input type="hidden" name="filter_ruang_ujian_cbt_id" value="{{ $ruangUjianCbtId }}">
         <div class="panel-pad" style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
             <div>
-                <h2 class="panel-title">Peserta, nomor meja, dan absensi</h2>
-                <p class="help-text">Atur ruang, nomor meja, status hadir, dan catatan absensi ujian siswa.</p>
+                <h2 class="panel-title">Peserta, nomor meja, dan presensi</h2>
+                <p class="help-text">Atur ruang, nomor meja, status hadir, dan catatan presensi ujian siswa.</p>
             </div>
-            <button type="submit" class="button button-primary">Simpan absensi peserta</button>
+            <button type="submit" class="button button-primary">Simpan presensi peserta</button>
         </div>
 
         <div class="table-wrap">
@@ -636,7 +636,7 @@
                         <th>Kelas/Sesi</th>
                         <th>Ruang</th>
                         <th>No. Meja</th>
-                        <th>Absensi</th>
+                        <th>Presensi</th>
                         <th>Catatan</th>
                     </tr>
                 </thead>
@@ -696,7 +696,7 @@
         @if ($pesertaUjianCbt->isNotEmpty())
             <div class="panel-pad" style="border-top: 1px solid var(--line);">
                 <div class="actions" style="justify-content: flex-end;">
-                    <button type="submit" class="button button-primary">Simpan absensi peserta</button>
+                    <button type="submit" class="button button-primary">Simpan presensi peserta</button>
                 </div>
             </div>
         @endif

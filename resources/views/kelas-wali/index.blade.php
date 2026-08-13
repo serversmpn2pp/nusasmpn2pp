@@ -62,8 +62,8 @@
                 </div>
 
                 <div class="actions">
-                    <a href="{{ route('rekap-absensi-harian.index', ['tahun_pelajaran_id' => $kelas->tahun_pelajaran_id, 'kelas_id' => $kelas->id]) }}" class="button button-muted">Rekap absensi</a>
-                    <a href="{{ route('laporan-absensi.index', ['tahun_pelajaran_id' => $kelas->tahun_pelajaran_id, 'kelas_id' => $kelas->id]) }}" class="button button-muted">Laporan absensi</a>
+                    <a href="{{ route('rekap-absensi-harian.index', ['tahun_pelajaran_id' => $kelas->tahun_pelajaran_id, 'kelas_id' => $kelas->id]) }}" class="button button-muted">Rekap presensi</a>
+                    <a href="{{ route('laporan-absensi.index', ['tahun_pelajaran_id' => $kelas->tahun_pelajaran_id, 'kelas_id' => $kelas->id]) }}" class="button button-muted">Laporan presensi</a>
                     <a href="{{ route('laporan-pembinaan-siswa.index', ['tahun_pelajaran_id' => $kelas->tahun_pelajaran_id, 'kelas_id' => $kelas->id]) }}" class="button button-primary">Pembinaan</a>
                 </div>
             </div>

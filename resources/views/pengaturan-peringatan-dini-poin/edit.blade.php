@@ -72,7 +72,7 @@
 
         <section class="setting-section">
             <h2>Keterlambatan berulang</h2>
-            <p>Penghitungan berasal langsung dari rekap absensi siswa.</p>
+            <p>Penghitungan berasal langsung dari rekap presensi siswa.</p>
             <div class="form-grid">
                 <div class="field">
                     <label for="jumlah_keterlambatan_berulang">Jumlah keterlambatan minimum</label>

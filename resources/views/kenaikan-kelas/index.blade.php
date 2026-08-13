@@ -130,7 +130,7 @@
 
             <div class="panel-pad">
                 <h2 class="panel-title">{{ $kelasAsal->nama }} ke {{ $tahunTujuan->nama }}</h2>
-                <p class="help-text">NUSA memberi saran awal berdasarkan tingkat dan rombel. Bapak/Ibu tetap bisa mengubah kelas tujuan per siswa sebelum menekan proses.</p>
+                <p class="help-text">NUSA memberi saran awal berdasarkan tingkat dan rombel. Bapak/Ibu tetap bisa mengubah kelas tujuan; nomor absen akan disusun otomatis berdasarkan nama A-Z.</p>
             </div>
 
             <div class="table-wrap">
@@ -141,7 +141,6 @@
                             <th>Siswa</th>
                             <th>Status saat ini</th>
                             <th>Kelas tujuan</th>
-                            <th>No. absen tujuan</th>
                             <th>Keterangan</th>
                         </tr>
                     </thead>
@@ -174,16 +173,13 @@
                                         @endforeach
                                     </select>
                                 </td>
-                                <td data-label="No. absen tujuan">
-                                    <input name="nomor_absen[{{ $anggota->id }}]" type="number" min="1" max="500" value="{{ old('nomor_absen.' . $anggota->id, $tujuanSaatIni?->nomor_absen ?? $anggota->nomor_absen) }}" class="input input-sm">
-                                </td>
                                 <td data-label="Keterangan">
                                     <input name="keterangan[{{ $anggota->id }}]" type="text" value="{{ old('keterangan.' . $anggota->id, 'Penempatan massal') }}" class="input input-sm">
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="empty-state">Belum ada siswa di kelas asal ini.</td>
+                                <td colspan="5" class="empty-state">Belum ada siswa di kelas asal ini.</td>
                             </tr>
                         @endforelse
                     </tbody>

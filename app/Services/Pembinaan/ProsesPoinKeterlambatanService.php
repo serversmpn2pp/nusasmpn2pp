@@ -95,7 +95,7 @@ class ProsesPoinKeterlambatanService
                 && $menit > 0;
 
             if (! $hadirDanTerlambat) {
-                $dibatalkan = $this->batalkanLaporanAktif($laporanAktif, $penggunaId, 'Data absensi tidak lagi berstatus terlambat.');
+                $dibatalkan = $this->batalkanLaporanAktif($laporanAktif, $penggunaId, 'Data presensi tidak lagi berstatus terlambat.');
                 $this->tandaiAbsensi($absensi, 'tidak_terlambat', 0);
 
                 return ['hasil' => $dibatalkan ? 'dibatalkan' : 'diabaikan', 'laporan_id' => $laporanAktif?->id];
@@ -140,7 +140,7 @@ class ProsesPoinKeterlambatanService
                 $this->batalkanLaporanAktif(
                     $laporanAktif,
                     $penggunaId,
-                    'Koreksi absensi mengubah rentang poin. Laporan pengganti harus diperiksa dan disetujui kembali.',
+                    'Koreksi presensi mengubah rentang poin. Laporan pengganti harus diperiksa dan disetujui kembali.',
                 );
                 $laporanAktif = null;
             }
@@ -201,7 +201,7 @@ class ProsesPoinKeterlambatanService
             'status_verifikasi' => 'diajukan',
             'total_poin' => $rentang->poin,
             'kronologi' => $this->buatKronologi($absensi, $rentang),
-            'tindakan_awal' => 'Diajukan otomatis dari rekap absensi harian.',
+            'tindakan_awal' => 'Diajukan otomatis dari rekap presensi harian.',
             'dibuat_oleh_pengguna_id' => $penggunaId,
         ]);
 
@@ -217,7 +217,7 @@ class ProsesPoinKeterlambatanService
         $this->riwayatPembinaan->catat(
             $laporan,
             'laporan_otomatis_absensi',
-            'Laporan dibuat dari absensi',
+            'Laporan dibuat dari presensi',
             sprintf('Terlambat %d menit dan diajukan %d poin untuk pemeriksaan BK.', $absensi->menit_terlambat, $rentang->poin),
             null,
             'diajukan',
@@ -262,10 +262,10 @@ class ProsesPoinKeterlambatanService
         $this->riwayatPembinaan->catat(
             $laporan,
             'sinkronisasi_koreksi_absensi',
-            'Laporan disinkronkan dengan koreksi absensi',
+            'Laporan disinkronkan dengan koreksi presensi',
             $statusFinalDenganPoinTetap
                 ? 'Menit keterlambatan diperbarui tanpa mengubah poin yang telah disahkan.'
-                : 'Data dan proses verifikasi dimulai kembali karena koreksi absensi.',
+                : 'Data dan proses verifikasi dimulai kembali karena koreksi presensi.',
             $statusSebelum,
             $laporan->fresh()->status_verifikasi,
             $penggunaId,
@@ -341,7 +341,7 @@ class ProsesPoinKeterlambatanService
     private function buatKronologi(AbsensiSiswa $absensi, RentangPoinKeterlambatan $rentang): string
     {
         return sprintf(
-            'Rekap absensi mencatat siswa scan masuk pukul %s dan terlambat %d menit. Sistem mengajukan %d poin sesuai rentang %s untuk pemeriksaan BK.',
+            'Rekap presensi mencatat siswa scan masuk pukul %s dan terlambat %d menit. Sistem mengajukan %d poin sesuai rentang %s untuk pemeriksaan BK.',
             substr((string) $absensi->jam_masuk, 0, 5),
             $absensi->menit_terlambat,
             $rentang->poin,
@@ -357,7 +357,7 @@ class ProsesPoinKeterlambatanService
             $this->notifikasi->penggunaDenganIzin('poin_siswa.verifikasi_bk', $penggunaId),
             'peringatan',
             'Laporan keterlambatan menunggu pemeriksaan',
-            sprintf('%d laporan keterlambatan tanggal %s dibuat dari rekap absensi.', $jumlah, $tanggal->locale('id')->translatedFormat('d F Y')),
+            sprintf('%d laporan keterlambatan tanggal %s dibuat dari rekap presensi.', $jumlah, $tanggal->locale('id')->translatedFormat('d F Y')),
             route('pusat-verifikasi-pelanggaran.index', ['antrean' => 'pemeriksaan_bk'], false),
             'laporan-keterlambatan:'.$tanggal->format('Ymd').':'.max($laporanIds),
             ['jumlah' => $jumlah, 'laporan_ids' => $laporanIds],

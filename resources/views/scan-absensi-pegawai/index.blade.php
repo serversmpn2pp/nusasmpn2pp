@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>Scan Absensi Pegawai - NUSA</title>
+        <title>Scan Presensi Pegawai - NUSA</title>
 
         @fonts
         <link rel="icon" href="{{ asset('images/logo-nusa.png') }}" type="image/png">
@@ -642,12 +642,12 @@
 
                 <main class="office-main">
                     <div class="top-strip">
-                        <h1 class="page-title">Scan Absensi Pegawai</h1>
+                        <h1 class="page-title">Scan Presensi Pegawai</h1>
                         <span class="queue-badge">Antrean: <span id="queueCount">0</span></span>
                     </div>
 
                     <div class="work-grid">
-                        <section class="scanner-panel" aria-label="Scanner absensi pegawai">
+                        <section class="scanner-panel" aria-label="Scanner presensi pegawai">
                             <div>
                                 <label class="scan-label" for="scanInput">Area scan aktif</label>
                                 <input
@@ -677,7 +677,7 @@
                             </div>
                         </section>
 
-                        <section class="schedule-panel" aria-label="Jadwal absensi pegawai hari ini">
+                        <section class="schedule-panel" aria-label="Jadwal presensi pegawai hari ini">
                             <div class="panel-head">
                                 <h2 class="panel-title">Jadwal Hari Ini</h2>
                                 <span class="queue-badge">{{ $jadwalHariIni->count() }} aktif</span>
@@ -685,7 +685,7 @@
 
                             @if ($jadwalHariIni->isEmpty())
                                 <div class="warning-note">
-                                    Belum ada jadwal absensi pegawai aktif untuk hari ini.
+                                    Belum ada jadwal presensi pegawai aktif untuk hari ini.
                                 </div>
                             @else
                                 <div class="schedule-list" id="scheduleList">
@@ -935,11 +935,11 @@
 
             function labelHasil(payload, kategori) {
                 if (kategori === 'success') {
-                    return 'Absensi berhasil';
+                    return 'Presensi berhasil';
                 }
 
                 if (kategori === 'recorded') {
-                    return 'Absensi sudah tercatat';
+                    return 'Presensi sudah tercatat';
                 }
 
                 if (kategori === 'warning') {

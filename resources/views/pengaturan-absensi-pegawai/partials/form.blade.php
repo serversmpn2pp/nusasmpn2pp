@@ -27,7 +27,7 @@
 <div class="form-shell">
     <aside class="panel panel-pad">
         <h2 class="panel-title">Status jadwal</h2>
-        <p class="help-text">Jadwal aktif akan dipakai saat modul scan absensi pegawai dibuat.</p>
+        <p class="help-text">Jadwal aktif akan dipakai saat modul scan presensi pegawai dibuat.</p>
 
         <label class="status-toggle">
             <span>
@@ -70,7 +70,7 @@
                 </div>
 
                 <div class="field">
-                    <label for="hari">Hari absensi</label>
+                    <label for="hari">Hari presensi</label>
                     <select id="hari" name="hari" class="{{ $selectClass('hari') }}" required>
                         <option value="">Pilih hari</option>
                         @foreach (\App\Models\PengaturanAbsensiPegawai::DAFTAR_HARI as $key => $item)

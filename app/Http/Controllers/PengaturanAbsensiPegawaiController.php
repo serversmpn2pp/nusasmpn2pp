@@ -96,7 +96,7 @@ class PengaturanAbsensiPegawaiController extends Controller
 
         return redirect()
             ->route('pengaturan-absensi-pegawai.show', $pengaturanAbsensiPegawai)
-            ->with('berhasil', 'Pengaturan absensi pegawai berhasil ditambahkan.');
+            ->with('berhasil', 'Pengaturan presensi pegawai berhasil ditambahkan.');
     }
 
     public function show(PengaturanAbsensiPegawai $pengaturanAbsensiPegawai)
@@ -126,7 +126,7 @@ class PengaturanAbsensiPegawaiController extends Controller
 
         return redirect()
             ->route('pengaturan-absensi-pegawai.show', $pengaturanAbsensiPegawai)
-            ->with('berhasil', 'Pengaturan absensi pegawai berhasil diperbarui.');
+            ->with('berhasil', 'Pengaturan presensi pegawai berhasil diperbarui.');
     }
 
     public function destroy(PengaturanAbsensiPegawai $pengaturanAbsensiPegawai)
@@ -135,7 +135,7 @@ class PengaturanAbsensiPegawaiController extends Controller
 
         return redirect()
             ->route('pengaturan-absensi-pegawai.index')
-            ->with('berhasil', 'Pengaturan absensi pegawai berhasil dinonaktifkan.');
+            ->with('berhasil', 'Pengaturan presensi pegawai berhasil dinonaktifkan.');
     }
 
     private function aturanValidasi(): array

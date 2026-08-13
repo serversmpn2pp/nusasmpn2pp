@@ -64,7 +64,19 @@
             font-size: .86rem;
         }
 
+        .account-filter-grid {
+            grid-template-columns: minmax(260px, 1fr) 230px 190px auto;
+        }
+
+        .account-filter-grid .actions {
+            flex-wrap: nowrap;
+        }
+
         @media (max-width: 720px) {
+            .account-filter-grid {
+                grid-template-columns: 1fr;
+            }
+
             .class-summary {
                 align-items: stretch;
                 flex-direction: column;
@@ -108,6 +120,10 @@
         <div class="alert alert-danger">{{ session('gagal') }}</div>
     @endif
 
+    @if (! $tahunPelajaranAktif)
+        <div class="alert alert-danger">Belum ada tahun pelajaran aktif yang dapat diakses. Aktifkan tahun pelajaran terlebih dahulu.</div>
+    @endif
+
     @if ($errors->has('akun'))
         <div class="alert alert-danger">{{ $errors->first('akun') }}</div>
     @endif
@@ -129,7 +145,7 @@
 
     <div class="stats-grid">
         <div class="panel stat">
-            <p class="stat-label">Siswa di kelas</p>
+            <p class="stat-label">{{ $kelasDipilih ? 'Siswa di kelas' : 'Siswa tahun aktif' }}</p>
             <p class="stat-value">{{ $ringkasan['jumlah_siswa'] }}</p>
         </div>
         <div class="panel stat active">
@@ -146,44 +162,8 @@
         </div>
     </div>
 
-    <form action="{{ route('akun-siswa.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 22px;">
-        <div class="filter-grid">
-            <div class="field">
-                <label for="tahun_pelajaran_id">Tahun pelajaran</label>
-                <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select">
-                    @forelse ($daftarTahunPelajaran as $tahun)
-                        <option value="{{ $tahun->id }}" @selected((int) $tahunPelajaranId === (int) $tahun->id)>
-                            {{ $tahun->nama }}{{ $tahun->aktif ? ' (Aktif)' : '' }}
-                        </option>
-                    @empty
-                        <option value="">Belum ada tahun pelajaran</option>
-                    @endforelse
-                </select>
-            </div>
-
-            <div class="field">
-                <label for="kelas_id">Kelas</label>
-                <select id="kelas_id" name="kelas_id" class="select">
-                    @forelse ($daftarKelas as $kelas)
-                        <option value="{{ $kelas->id }}" @selected((int) $kelasId === (int) $kelas->id)>
-                            {{ $kelas->nama }} ({{ $kelas->jumlah_siswa_aktif }} siswa)
-                        </option>
-                    @empty
-                        <option value="">Belum ada kelas yang dapat diakses</option>
-                    @endforelse
-                </select>
-            </div>
-
-            <div class="field">
-                <label for="status_akun">Status akun</label>
-                <select id="status_akun" name="status_akun" class="select">
-                    <option value="semua" @selected($statusAkun === 'semua')>Semua status</option>
-                    <option value="sudah" @selected($statusAkun === 'sudah')>Sudah punya akun</option>
-                    <option value="belum" @selected($statusAkun === 'belum')>Belum punya akun</option>
-                    <option value="tanpa_nisn" @selected($statusAkun === 'tanpa_nisn')>NISN belum diisi</option>
-                </select>
-            </div>
-
+    <form action="{{ route('akun-siswa.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 22px;" data-auto-filter>
+        <div class="filter-grid account-filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari siswa</label>
                 <input
@@ -193,30 +173,57 @@
                     value="{{ $kataKunci }}"
                     class="input"
                     placeholder="Nama, NIS, atau NISN"
+                    autocomplete="off"
+                    data-auto-search
                 >
             </div>
 
+            <div class="field">
+                <label for="kelas_id">Kelas</label>
+                <select id="kelas_id" name="kelas_id" class="select" data-auto-submit>
+                    <option value="">Semua kelas</option>
+                    @forelse ($daftarKelas as $kelas)
+                        <option value="{{ $kelas->id }}" @selected((int) $kelasId === (int) $kelas->id)>
+                            {{ $kelas->nama }} ({{ $kelas->jumlah_siswa_aktif }} siswa)
+                        </option>
+                    @empty
+                        <option value="" disabled>Belum ada kelas yang dapat diakses</option>
+                    @endforelse
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="status_akun">Status akun</label>
+                <select id="status_akun" name="status_akun" class="select" data-auto-submit>
+                    <option value="semua" @selected($statusAkun === 'semua')>Semua status</option>
+                    <option value="sudah" @selected($statusAkun === 'sudah')>Sudah punya akun</option>
+                    <option value="belum" @selected($statusAkun === 'belum')>Belum punya akun</option>
+                    <option value="tanpa_nisn" @selected($statusAkun === 'tanpa_nisn')>NISN belum diisi</option>
+                </select>
+            </div>
+
             <div class="actions">
-                <button type="submit" class="button button-dark">Tampilkan</button>
                 <a href="{{ route('akun-siswa.index') }}" class="button button-muted">Reset</a>
             </div>
         </div>
     </form>
 
-    @if ($kelasDipilih)
+    @if ($tahunPelajaranAktif)
         <div class="class-summary">
             <div>
-                <strong>{{ $kelasDipilih->nama }}</strong>
+                <strong>{{ $kelasDipilih?->nama ?: 'Semua kelas' }}</strong>
                 <p>
-                    {{ $kelasDipilih->tahunPelajaran?->nama ?: '-' }}.
+                    {{ $tahunPelajaranAktif->nama }}.
                     Username menggunakan NISN dan password awal terdiri dari 8 angka acak.
                 </p>
             </div>
-            @izin('akun_siswa.cetak', 'akun_siswa.kelola')
-                <a href="{{ route('akun-siswa.cetak', $kelasDipilih) }}" class="button button-muted" target="_blank" rel="noopener">
-                    Pratinjau cetak
-                </a>
-            @endizin
+            @if ($kelasDipilih)
+                @izin('akun_siswa.cetak', 'akun_siswa.kelola')
+                    <a href="{{ route('akun-siswa.cetak', $kelasDipilih) }}" class="button button-muted" target="_blank" rel="noopener">
+                        Pratinjau cetak
+                    </a>
+                @endizin
+            @endif
         </div>
     @endif
 
@@ -241,7 +248,7 @@
                             <td>{{ $anggota->nomor_absen ?: $anggotaKelas->firstItem() + $loop->index }}</td>
                             <td>
                                 <p class="person-name">{{ $siswa?->nama_lengkap ?: '-' }}</p>
-                                <p class="person-meta">NIS {{ $siswa?->nis ?: '-' }}</p>
+                                <p class="person-meta">{{ $anggota->kelas?->nama ?: '-' }} &middot; NIS {{ $siswa?->nis ?: '-' }}</p>
                             </td>
                             <td>{{ $akun?->username ?: ($siswa?->nisn ?: '-') }}</td>
                             <td>
@@ -297,7 +304,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="empty-state">
-                                {{ $kelasDipilih ? 'Belum ada siswa yang sesuai filter.' : 'Pilih tahun pelajaran dan kelas terlebih dahulu.' }}
+                                Belum ada siswa yang sesuai filter.
                             </td>
                         </tr>
                     @endforelse
@@ -313,7 +320,7 @@
                     <div class="mobile-card-head">
                         <div>
                             <p class="person-name">{{ $siswa?->nama_lengkap ?: '-' }}</p>
-                            <p class="person-meta">No. {{ $anggota->nomor_absen ?: '-' }} · NIS {{ $siswa?->nis ?: '-' }}</p>
+                            <p class="person-meta">{{ $anggota->kelas?->nama ?: '-' }} &middot; No. {{ $anggota->nomor_absen ?: '-' }} &middot; NIS {{ $siswa?->nis ?: '-' }}</p>
                         </div>
                         @if ($akun)
                             <span class="badge {{ $akun->aktif ? 'badge-active' : 'badge-inactive' }}">
@@ -373,7 +380,7 @@
                 </article>
             @empty
                 <div class="empty-state">
-                    {{ $kelasDipilih ? 'Belum ada siswa yang sesuai filter.' : 'Pilih tahun pelajaran dan kelas terlebih dahulu.' }}
+                    Belum ada siswa yang sesuai filter.
                 </div>
             @endforelse
         </div>
@@ -396,4 +403,5 @@
             </div>
         </nav>
     @endif
+
 @endsection

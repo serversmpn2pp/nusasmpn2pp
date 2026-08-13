@@ -35,7 +35,7 @@ class SidebarNavigasiTest extends TestCase
                 'Jadwal Pelajaran',
             ])
             ->assertSee('Penempatan Siswa')
-            ->assertSee('Pengaturan Absensi Siswa')
+            ->assertSee('Pengaturan Presensi Siswa')
             ->assertSee('Peminjaman &amp; Pengembalian', false)
             ->assertSee('Akun Siswa')
             ->assertSee('Role &amp; Hak Akses', false)

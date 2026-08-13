@@ -7,6 +7,7 @@ use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
+use App\Models\RiwayatPerubahanAbsensiSiswa;
 use App\Models\TahunPelajaran;
 use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
 use Carbon\Carbon;
@@ -114,7 +115,7 @@ class RekapAbsensiHarianController extends Controller
         $this->pastikanBolehAksesAnggotaKelas($request, $anggotaKelas);
         $this->pastikanDataKoreksiValid($data);
 
-        $absensi = DB::transaction(function () use ($data, $tanggal, $anggotaKelas) {
+        $absensi = DB::transaction(function () use ($data, $tanggal, $anggotaKelas, $request) {
             $pengaturanAbsensi = $this->ambilPengaturanAbsensi($tanggal);
             $statusKehadiran = $data['status_kehadiran'];
             $jamMasuk = $statusKehadiran === 'hadir' ? ($data['jam_masuk'] ?? null) : null;
@@ -136,6 +137,7 @@ class RekapAbsensiHarianController extends Controller
                     'tanggal' => $tanggal,
                     'siswa_id' => $anggotaKelas->siswa_id,
                 ]);
+            $statusSebelum = $absensi->exists ? $absensi->status_kehadiran : null;
 
             $absensi->fill([
                 'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
@@ -152,6 +154,17 @@ class RekapAbsensiHarianController extends Controller
                 'catatan' => $data['catatan'] ?? null,
             ])->save();
 
+            RiwayatPerubahanAbsensiSiswa::create([
+                'absensi_siswa_id' => $absensi->id,
+                'siswa_id' => $anggotaKelas->siswa_id,
+                'tanggal' => $tanggal,
+                'status_sebelum' => $statusSebelum,
+                'status_sesudah' => $statusKehadiran,
+                'sumber' => 'koreksi_manual',
+                'catatan' => $data['catatan'] ?? null,
+                'dibuat_oleh_pengguna_id' => $request->user()?->id,
+            ]);
+
             return $absensi;
         });
 
@@ -163,7 +176,7 @@ class RekapAbsensiHarianController extends Controller
                 'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
                 'kelas_id' => $anggotaKelas->kelas_id,
             ])
-            ->with('berhasil', 'Koreksi absensi berhasil disimpan.');
+            ->with('berhasil', 'Koreksi presensi berhasil disimpan.');
     }
 
     public function prosesPoinKeterlambatan(Request $request)

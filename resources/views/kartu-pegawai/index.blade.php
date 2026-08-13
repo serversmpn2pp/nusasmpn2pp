@@ -469,7 +469,7 @@
                                     <p class="employee-role-card">{{ $teks($kartu['jabatan']) }}</p>
                                 </div>
 
-                                <div class="employee-footer-card">NUSA - Absensi Pegawai</div>
+                                <div class="employee-footer-card">SMP Negeri 2 Padang Panjang</div>
                             </div>
                         </div>
                         <p class="side-label">Depan</p>
@@ -482,7 +482,7 @@
                                     <div class="employee-back-logo">
                                         <img src="{{ asset('images/kartu-pelajar/logo-nusa.png') }}" alt="Logo NUSA">
                                     </div>
-                                    <p class="employee-back-title">Absensi Pegawai NUSA</p>
+                                    <p class="employee-back-title">Presensi Pegawai NUSA</p>
                                 </div>
 
                                 <div class="employee-qr-shell">
@@ -496,7 +496,7 @@
                                 </div>
 
                                 <p class="employee-back-note">
-                                    Scan QR ini untuk layanan absensi pegawai SMP Negeri 2 Padang Panjang.
+                                    Scan QR ini untuk layanan presensi pegawai SMP Negeri 2 Padang Panjang.
                                 </p>
                             </div>
                         </div>

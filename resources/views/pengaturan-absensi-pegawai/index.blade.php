@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Jam Absensi Pegawai - NUSA')
+@section('title', 'Jam Presensi Pegawai - NUSA')
 
 @section('content')
     <style>
@@ -20,8 +20,8 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi Pegawai</p>
-            <h1 class="page-title">Jam absensi pegawai</h1>
+            <p class="eyebrow">Presensi Pegawai</p>
+            <h1 class="page-title">Jam presensi pegawai</h1>
         </div>
 
         @izin('absensi.pengaturan_kelola')
@@ -112,7 +112,7 @@
                         <tr>
                             <td>
                                 <p class="person-name">{{ $item->nama_jadwal }}</p>
-                                <p class="person-meta">{{ $item->keterangan ?: 'Pengaturan jam absensi pegawai' }}</p>
+                                <p class="person-meta">{{ $item->keterangan ?: 'Pengaturan jam presensi pegawai' }}</p>
                             </td>
                             <td>
                                 <div>{{ $item->labelCakupan() }}</div>
@@ -141,7 +141,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="empty-state">Belum ada pengaturan absensi pegawai.</td>
+                            <td colspan="9" class="empty-state">Belum ada pengaturan presensi pegawai.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -191,7 +191,7 @@
                     </div>
                 </article>
             @empty
-                <div class="empty-state">Belum ada pengaturan absensi pegawai.</div>
+                <div class="empty-state">Belum ada pengaturan presensi pegawai.</div>
             @endforelse
         </div>
     </section>

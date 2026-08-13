@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Pengaturan Absensi - NUSA')
+@section('title', 'Detail Pengaturan Presensi - NUSA')
 
 @section('content')
     @php
@@ -9,8 +9,8 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi</p>
-            <h1 class="page-title">Detail pengaturan absensi</h1>
+            <p class="eyebrow">Presensi</p>
+            <h1 class="page-title">Detail pengaturan presensi</h1>
         </div>
 
         <div class="actions">
@@ -43,7 +43,7 @@
 
             @izin('absensi.pengaturan_kelola')
                 @if ($pengaturanAbsensi->aktif)
-                    <form action="{{ route('pengaturan-absensi.destroy', $pengaturanAbsensi) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan pengaturan absensi ini?')">
+                    <form action="{{ route('pengaturan-absensi.destroy', $pengaturanAbsensi) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan pengaturan presensi ini?')">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="button button-danger button-full">Nonaktifkan</button>

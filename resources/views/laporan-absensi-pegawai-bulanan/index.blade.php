@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', ($halamanPribadi ?? false) ? 'Laporan Absensi Saya - NUSA' : 'Laporan Absensi Pegawai Bulanan - NUSA')
+@section('title', ($halamanPribadi ?? false) ? 'Laporan Presensi Saya - NUSA' : 'Laporan Presensi Pegawai Bulanan - NUSA')
 
 @section('content')
     @php
@@ -112,8 +112,8 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi Pegawai</p>
-            <h1 class="page-title">{{ $halamanPribadi ? 'Laporan absensi saya' : 'Laporan absensi pegawai bulanan' }}</h1>
+            <p class="eyebrow">Presensi Pegawai</p>
+            <h1 class="page-title">{{ $halamanPribadi ? 'Laporan presensi saya' : 'Laporan presensi pegawai bulanan' }}</h1>
         </div>
 
         <div class="actions">
@@ -221,7 +221,7 @@
         <div class="panel-pad" style="border-bottom: 1px solid var(--line);">
             <h2 class="panel-title">{{ $labelPeriode }}</h2>
             <p class="help-text" style="margin-top: 6px;">
-                Alfa dihitung dari hari yang memiliki jadwal absensi pegawai tetapi belum memiliki catatan scan atau koreksi manual.
+                Alfa dihitung dari hari yang memiliki jadwal presensi pegawai tetapi belum memiliki catatan scan atau koreksi manual.
             </p>
         </div>
 
@@ -309,7 +309,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $bolehCetakPerPegawai ? 12 : 11 }}" class="empty-state">{{ $halamanPribadi ? 'Belum ada laporan absensi pada bulan ini.' : 'Belum ada pegawai pada pilihan ini.' }}</td>
+                            <td colspan="{{ $bolehCetakPerPegawai ? 12 : 11 }}" class="empty-state">{{ $halamanPribadi ? 'Belum ada laporan presensi pada bulan ini.' : 'Belum ada pegawai pada pilihan ini.' }}</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -387,7 +387,7 @@
                     </div>
                 </article>
             @empty
-                <div class="empty-state">{{ $halamanPribadi ? 'Belum ada laporan absensi pada bulan ini.' : 'Belum ada pegawai pada pilihan ini.' }}</div>
+                <div class="empty-state">{{ $halamanPribadi ? 'Belum ada laporan presensi pada bulan ini.' : 'Belum ada pegawai pada pilihan ini.' }}</div>
             @endforelse
         </div>
     </section>

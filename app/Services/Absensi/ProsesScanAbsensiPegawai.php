@@ -113,7 +113,7 @@ class ProsesScanAbsensiPegawai
                 isiScan: $isiScan,
                 waktuScan: $waktuScan,
                 statusScan: 'jadwal_absensi_tidak_ada',
-                pesan: 'Jadwal absensi pegawai untuk hari ini belum ada atau belum aktif.',
+                pesan: 'Jadwal presensi pegawai untuk hari ini belum ada atau belum aktif.',
                 scannerId: $parsed['scanner_id'],
                 nip: $parsed['nip'],
                 jenisScan: $jenisScanDiminta,
@@ -540,7 +540,7 @@ class ProsesScanAbsensiPegawai
         $jenis = $jenisScan ? ' ' . $jenisScan : '';
         $waktu = $jam ? ' pukul ' . substr($jam, 0, 5) : '';
 
-        return 'Absensi' . $jenis . ' sudah tercatat' . $waktu . '. Tidak perlu scan ulang.';
+        return 'Presensi' . $jenis . ' sudah tercatat' . $waktu . '. Tidak perlu scan ulang.';
     }
 
     private function hariDariTanggal(CarbonInterface $tanggal): string

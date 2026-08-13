@@ -10,12 +10,12 @@ use Illuminate\Console\Command;
 class ProsesPoinKeterlambatan extends Command
 {
     protected $signature = 'pembinaan:proses-poin-keterlambatan
-        {--tanggal= : Tanggal absensi format YYYY-MM-DD}
+        {--tanggal= : Tanggal presensi format YYYY-MM-DD}
         {--tahun= : ID tahun pelajaran}
         {--kelas= : ID kelas}
         {--paksa : Proses meskipun waktu scan masuk belum ditutup}';
 
-    protected $description = 'Membuat laporan pelanggaran keterlambatan dari rekap absensi siswa';
+    protected $description = 'Membuat laporan pelanggaran keterlambatan dari rekap presensi siswa';
 
     public function handle(ProsesPoinKeterlambatanService $proses): int
     {

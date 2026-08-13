@@ -84,8 +84,6 @@ class KenaikanKelasController extends Controller
             'kelas_asal_id' => 'required|exists:kelas,id',
             'tujuan' => 'array',
             'tujuan.*' => 'nullable|exists:kelas,id',
-            'nomor_absen' => 'array',
-            'nomor_absen.*' => 'nullable|integer|min:1|max:500',
             'keterangan' => 'array',
             'keterangan.*' => 'nullable|string',
         ]);
@@ -139,21 +137,11 @@ class KenaikanKelasController extends Controller
                     continue;
                 }
 
-                $nomorAbsen = $data['nomor_absen'][$anggotaKelasId] ?? null;
-                $nomorAbsen = $nomorAbsen !== null && $nomorAbsen !== '' ? (int) $nomorAbsen : null;
-
-                if ($nomorAbsen && $this->nomorAbsenTerpakai($kelasBaru, $nomorAbsen, $anggotaTujuan)) {
-                    $ringkasan['dilewati']++;
-                    $ringkasan['catatan'][] = $anggotaLama->siswa?->nama_lengkap . ': nomor absen ' . $nomorAbsen . ' sudah dipakai di ' . $kelasBaru->nama . '.';
-                    continue;
-                }
-
-                $nomorAbsen ??= $this->ambilNomorAbsenBerikutnya($kelasBaru, $anggotaTujuan);
                 $payload = [
                     'tahun_pelajaran_id' => $tahunTujuan->id,
                     'kelas_id' => $kelasBaru->id,
                     'siswa_id' => $anggotaLama->siswa_id,
-                    'nomor_absen' => $nomorAbsen,
+                    'nomor_absen' => null,
                     'status_keanggotaan' => 'aktif',
                     'tanggal_masuk' => $tahunTujuan->tanggal_mulai,
                     'keterangan' => $data['keterangan'][$anggotaKelasId] ?? 'Penempatan massal',
@@ -210,35 +198,5 @@ class KenaikanKelasController extends Controller
         }
 
         return $kelas->anggotaKelas()->count() >= $kelas->kapasitas;
-    }
-
-    private function nomorAbsenTerpakai(Kelas $kelas, int $nomorAbsen, ?AnggotaKelas $anggotaTujuan): bool
-    {
-        return $kelas->anggotaKelas()
-            ->where('nomor_absen', $nomorAbsen)
-            ->when($anggotaTujuan, function ($query, $anggotaTujuan) {
-                $query->whereKeyNot($anggotaTujuan->id);
-            })
-            ->exists();
-    }
-
-    private function ambilNomorAbsenBerikutnya(Kelas $kelas, ?AnggotaKelas $anggotaTujuan): ?int
-    {
-        $nomorTerpakai = $kelas->anggotaKelas()
-            ->when($anggotaTujuan, function ($query, $anggotaTujuan) {
-                $query->whereKeyNot($anggotaTujuan->id);
-            })
-            ->whereNotNull('nomor_absen')
-            ->pluck('nomor_absen')
-            ->mapWithKeys(fn ($nomor) => [(int) $nomor => true]);
-        $batas = $kelas->kapasitas ?: max(($nomorTerpakai->keys()->max() ?? 0) + 1, 500);
-
-        for ($nomor = 1; $nomor <= $batas; $nomor++) {
-            if (! $nomorTerpakai->has($nomor)) {
-                return $nomor;
-            }
-        }
-
-        return null;
     }
 }

@@ -27,6 +27,8 @@ class LaporanKejadianPegawaiTest extends TestCase
             ->get(route('beranda'))
             ->assertOk()
             ->assertSee('Laporkan Kejadian')
+            ->assertSee('Laporan Saya')
+            ->assertSee('href="'.route('laporan-saya.index').'"', false)
             ->assertSee('href="'.route('laporan-pembinaan-siswa.create').'"', false);
 
         $this->assertGreaterThanOrEqual(
@@ -66,6 +68,31 @@ class LaporanKejadianPegawaiTest extends TestCase
 
         $this->get(route('laporan-pembinaan-siswa.show', $laporan))
             ->assertOk();
+
+        $this->get(route('laporan-saya.index'))
+            ->assertOk()
+            ->assertSee('Laporan Saya')
+            ->assertSee($data['siswa']->nama_lengkap)
+            ->assertSee('name="kata_kunci"', false)
+            ->assertSee('name="kelas_id"', false)
+            ->assertDontSee('name="jenis_laporan"', false)
+            ->assertDontSee('name="status_verifikasi"', false)
+            ->assertDontSee('name="tingkat"', false)
+            ->assertDontSee('name="tahun_pelajaran_id"', false)
+            ->assertSee(route('laporan-saya.show', $laporan), false);
+
+        $this->get(route('laporan-saya.index', [
+            'status_verifikasi' => 'tidak_terbukti',
+            'jenis_laporan' => 'pembinaan',
+            'tingkat' => 'berat',
+        ]))
+            ->assertOk()
+            ->assertSee($laporan->nomor_laporan);
+
+        $this->get(route('laporan-saya.show', $laporan))
+            ->assertOk()
+            ->assertSee('Status penanganan laporan')
+            ->assertSee($laporan->nomor_laporan);
     }
 
     public function test_pegawai_tidak_dapat_melihat_laporan_pegawai_lain_dan_siswa_tidak_dapat_melapor(): void
@@ -91,6 +118,13 @@ class LaporanKejadianPegawaiTest extends TestCase
 
         $this->actingAs($data['akun_pegawai'])
             ->get(route('laporan-pembinaan-siswa.show', $laporanLain))
+            ->assertForbidden();
+
+        $this->get(route('laporan-saya.index'))
+            ->assertOk()
+            ->assertDontSee($laporanLain->nomor_laporan);
+
+        $this->get(route('laporan-saya.show', $laporanLain))
             ->assertForbidden();
 
         $akunSiswa = Pengguna::create([

@@ -42,7 +42,7 @@
             <h2 class="panel-title">Hari</h2>
             <div class="form-grid">
                 <div class="field span-2">
-                    <label for="hari">Hari absensi</label>
+                    <label for="hari">Hari presensi</label>
                     <select id="hari" name="hari" class="{{ $selectClass('hari') }}" required autofocus>
                         <option value="">Pilih hari</option>
                         @foreach (\App\Models\PengaturanAbsensi::DAFTAR_HARI as $key => $item)

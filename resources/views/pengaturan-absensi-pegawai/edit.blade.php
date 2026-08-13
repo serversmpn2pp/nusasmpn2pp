@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Jam Absensi Pegawai - NUSA')
+@section('title', 'Edit Jam Presensi Pegawai - NUSA')
 
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi Pegawai</p>
-            <h1 class="page-title">Edit jam absensi pegawai</h1>
+            <p class="eyebrow">Presensi Pegawai</p>
+            <h1 class="page-title">Edit jam presensi pegawai</h1>
         </div>
 
         <div class="actions">

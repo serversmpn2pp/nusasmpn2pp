@@ -164,7 +164,7 @@ class ProsesScanAbsensi
                 isiScan: $isiScan,
                 waktuScan: $waktuScan,
                 statusScan: 'jadwal_absensi_tidak_ada',
-                pesan: 'Pengaturan absensi untuk hari ini belum ada atau belum aktif.',
+                pesan: 'Pengaturan presensi untuk hari ini belum ada atau belum aktif.',
                 scannerId: $parsed['scanner_id'],
                 nisn: $parsed['nisn'],
                 jenisScan: $jenisScanDiminta,
@@ -224,6 +224,22 @@ class ProsesScanAbsensi
     ): array {
         return DB::transaction(function () use ($isiScan, $parsed, $waktuScan, $siswa, $tahunPelajaran, $anggotaKelas, $pengaturanAbsensi, $ipAddress, $userAgent) {
             $absensi = $this->ambilAtauBuatAbsensi($waktuScan, $siswa, $tahunPelajaran, $anggotaKelas);
+
+            if (in_array($absensi->status_kehadiran, ['sakit', 'izin'], true) && ! $absensi->jam_masuk) {
+                return $this->gagal(
+                    isiScan: $isiScan,
+                    waktuScan: $waktuScan,
+                    statusScan: 'kehadiran_manual_aktif',
+                    pesan: 'Kehadiran sudah dicatat '.ucfirst($absensi->status_kehadiran).' oleh petugas. Hubungi guru piket jika catatan perlu dikoreksi.',
+                    scannerId: $parsed['scanner_id'],
+                    nisn: $parsed['nisn'],
+                    jenisScan: 'masuk',
+                    siswa: $siswa,
+                    absensi: $absensi,
+                    ipAddress: $ipAddress,
+                    userAgent: $userAgent,
+                );
+            }
 
             if ($absensi->jam_masuk) {
                 return $this->gagal(
@@ -299,6 +315,22 @@ class ProsesScanAbsensi
         return DB::transaction(function () use ($isiScan, $parsed, $waktuScan, $siswa, $tahunPelajaran, $anggotaKelas, $pengaturanAbsensi, $ipAddress, $userAgent) {
             $absensi = $this->ambilAtauBuatAbsensi($waktuScan, $siswa, $tahunPelajaran, $anggotaKelas);
 
+            if (in_array($absensi->status_kehadiran, ['sakit', 'izin'], true) && ! $absensi->jam_masuk) {
+                return $this->gagal(
+                    isiScan: $isiScan,
+                    waktuScan: $waktuScan,
+                    statusScan: 'kehadiran_manual_aktif',
+                    pesan: 'Kehadiran sudah dicatat '.ucfirst($absensi->status_kehadiran).' oleh petugas. Hubungi guru piket jika catatan perlu dikoreksi.',
+                    scannerId: $parsed['scanner_id'],
+                    nisn: $parsed['nisn'],
+                    jenisScan: 'pulang',
+                    siswa: $siswa,
+                    absensi: $absensi,
+                    ipAddress: $ipAddress,
+                    userAgent: $userAgent,
+                );
+            }
+
             if ($absensi->jam_pulang) {
                 return $this->gagal(
                     isiScan: $isiScan,
@@ -362,19 +394,24 @@ class ProsesScanAbsensi
         TahunPelajaran $tahunPelajaran,
         AnggotaKelas $anggotaKelas,
     ): AbsensiSiswa {
-        return AbsensiSiswa::firstOrCreate(
-            [
-                'tanggal' => $waktuScan->toDateString(),
-                'siswa_id' => $siswa->id,
-            ],
-            [
-                'tahun_pelajaran_id' => $tahunPelajaran->id,
-                'kelas_id' => $anggotaKelas->kelas_id,
-                'anggota_kelas_id' => $anggotaKelas->id,
-                'status_kehadiran' => 'hadir',
-                'sumber' => 'scan',
-            ]
-        );
+        $absensi = AbsensiSiswa::query()
+            ->whereDate('tanggal', $waktuScan->toDateString())
+            ->where('siswa_id', $siswa->id)
+            ->first();
+
+        if ($absensi) {
+            return $absensi;
+        }
+
+        return AbsensiSiswa::create([
+            'tanggal' => $waktuScan->toDateString(),
+            'siswa_id' => $siswa->id,
+            'tahun_pelajaran_id' => $tahunPelajaran->id,
+            'kelas_id' => $anggotaKelas->kelas_id,
+            'anggota_kelas_id' => $anggotaKelas->id,
+            'status_kehadiran' => 'hadir',
+            'sumber' => 'scan',
+        ]);
     }
 
     private function gagal(
@@ -548,7 +585,7 @@ class ProsesScanAbsensi
         $jenis = $jenisScan ? ' ' . $jenisScan : '';
         $waktu = $jam ? ' pukul ' . substr($jam, 0, 5) : '';
 
-        return 'Absensi' . $jenis . ' sudah tercatat' . $waktu . '. Tidak perlu scan ulang.';
+        return 'Presensi' . $jenis . ' sudah tercatat' . $waktu . '. Tidak perlu scan ulang.';
     }
 
     private function hariDariTanggal(CarbonInterface $tanggal): string

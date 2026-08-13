@@ -251,9 +251,9 @@ class FotoProfilTest extends TestCase
         $siswaKelasLain = $this->buatSiswaFoto('Citra Kelas Lain', '2602001', '0000002001');
 
         foreach ([
-            [$kelasA, $siswaNomorDua, 2],
-            [$kelasA, $siswaNomorSatu, 1],
-            [$kelasB, $siswaKelasLain, 1],
+            [$kelasA, $siswaNomorDua, null],
+            [$kelasA, $siswaNomorSatu, null],
+            [$kelasB, $siswaKelasLain, null],
         ] as [$kelas, $siswa, $nomorAbsen]) {
             AnggotaKelas::create([
                 'tahun_pelajaran_id' => $tahun->id,

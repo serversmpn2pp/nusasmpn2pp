@@ -113,7 +113,7 @@ class LaporanAbsensiController extends Controller
         $kelas = $laporan['kelasDipilih']?->nama ?? 'semua kelas';
         $slugKelas = str($kelas)->slug('-')->toString();
 
-        return 'laporan-absensi-' . $slugKelas . '-' . now()->format('Ymd-His') . '.xlsx';
+        return 'laporan-presensi-' . $slugKelas . '-' . now()->format('Ymd-His') . '.xlsx';
     }
 
     private function ambilTahunPelajaranId(?int $tahunPelajaranId, $daftarTahunPelajaran): ?int

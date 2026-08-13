@@ -56,7 +56,7 @@
                 </div>
                 <label class="late-toggle">
                     <input type="checkbox" name="aktif" value="1" @checked(old('aktif', $pengaturan->aktif))>
-                    <span><strong>Aktif</strong><span class="help-text">Gunakan aturan ini pada rekap absensi.</span></span>
+                    <span><strong>Aktif</strong><span class="help-text">Gunakan aturan ini pada rekap presensi.</span></span>
                 </label>
             </div>
         </section>

@@ -72,4 +72,9 @@ class AbsensiSiswa extends Model
     {
         return $this->hasMany(LaporanPembinaanSiswa::class);
     }
+
+    public function riwayatPerubahan(): HasMany
+    {
+        return $this->hasMany(RiwayatPerubahanAbsensiSiswa::class);
+    }
 }

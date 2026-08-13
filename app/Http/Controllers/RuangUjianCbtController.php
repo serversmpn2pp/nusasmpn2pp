@@ -435,7 +435,7 @@ class RuangUjianCbtController extends Controller
 
         return redirect()
             ->route('ujian-cbt.ruang.index', $this->queryRuang($ujianCbt, $filterSesiId, $filterRuangId, $filterJadwalId))
-            ->with('berhasil', 'Ruang, nomor meja, dan absensi peserta CBT berhasil disimpan.');
+            ->with('berhasil', 'Ruang, nomor meja, dan presensi peserta CBT berhasil disimpan.');
     }
 
     public function update(Request $request, UjianCbt $ujianCbt, RuangUjianCbt $ruangUjianCbt)

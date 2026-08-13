@@ -346,7 +346,7 @@
             <section class="panel">
                 <div class="panel-pad" style="border-bottom: 1px solid var(--line);">
                     <h2 class="panel-title">Anggota {{ $kelasDipilih->nama }}</h2>
-                    <p class="help-text" style="margin-top: 6px;">Nomor absen otomatis diisi berurutan saat siswa dimasukkan secara massal.</p>
+                    <p class="help-text" style="margin-top: 6px;">Nomor absen otomatis mengikuti urutan nama A-Z dan diperbarui setiap kali anggota kelas berubah.</p>
                 </div>
 
                 <div class="desktop-only table-wrap">
@@ -360,18 +360,7 @@
                         <tbody>
                             @forelse ($anggotaKelas as $item)
                                 <tr>
-                                    <td data-label="No." style="width: 120px;">
-                                        @izin('kelas.kelola')
-                                            <form id="ubah-anggota-desktop-{{ $item->id }}" action="{{ route('anggota-kelas.update', $item) }}" method="POST">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="kembali" value="penempatan">
-                                            </form>
-                                            <input form="ubah-anggota-desktop-{{ $item->id }}" name="nomor_absen" type="number" min="1" max="500" value="{{ $item->nomor_absen }}" class="input input-sm">
-                                        @else
-                                            {{ $item->nomor_absen ?: '-' }}
-                                        @endizin
-                                    </td>
+                                    <td data-label="No." style="width: 72px;">{{ $item->nomor_absen ?: '-' }}</td>
                                     <td data-label="Nama">
                                         @if ($bolehLihatSiswa && $item->siswa)
                                             <a href="{{ route('siswa.show', $item->siswa) }}" class="person-name member-name-link">{{ $item->siswa->nama_lengkap }}</a>
@@ -381,7 +370,6 @@
 
                                         @if ($bolehKelolaKelas)
                                             <div class="placement-member-actions" style="margin-top: 9px;">
-                                                <button form="ubah-anggota-desktop-{{ $item->id }}" type="submit" class="button button-dark button-sm">Simpan nomor</button>
                                                 <form action="{{ route('anggota-kelas.destroy', $item) }}" method="POST" onsubmit="return confirm('Keluarkan siswa ini dari kelas? Data siswa tidak akan dihapus.')">
                                                     @csrf
                                                     @method('DELETE')
@@ -416,23 +404,7 @@
                             </div>
 
                             @if ($bolehKelolaKelas)
-                                <form id="ubah-anggota-mobile-{{ $item->id }}" action="{{ route('anggota-kelas.update', $item) }}" method="POST" style="margin-top: 14px;">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="kembali" value="penempatan">
-
-                                    <div class="form-grid">
-                                        <div class="field">
-                                            <label for="nomor_absen_mobile_{{ $item->id }}">Nomor absen</label>
-                                            <input id="nomor_absen_mobile_{{ $item->id }}" name="nomor_absen" type="number" min="1" max="500" value="{{ $item->nomor_absen }}" class="input input-sm">
-                                        </div>
-                                    </div>
-                                </form>
-                            @endif
-
-                            @if ($bolehKelolaKelas)
                                 <div class="placement-member-actions" style="margin-top: 14px; justify-content: flex-start;">
-                                    <button form="ubah-anggota-mobile-{{ $item->id }}" type="submit" class="button button-dark">Simpan nomor</button>
                                     <form action="{{ route('anggota-kelas.destroy', $item) }}" method="POST" onsubmit="return confirm('Keluarkan siswa ini dari kelas? Data siswa tidak akan dihapus.')">
                                         @csrf
                                         @method('DELETE')

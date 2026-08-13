@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Koreksi Absensi - NUSA')
+@section('title', 'Koreksi Presensi - NUSA')
 
 @section('content')
     @php
@@ -16,8 +16,8 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi</p>
-            <h1 class="page-title">Koreksi absensi</h1>
+            <p class="eyebrow">Presensi</p>
+            <h1 class="page-title">Koreksi presensi</h1>
         </div>
 
         <div class="actions">
@@ -78,7 +78,7 @@
                 </div>
             @else
                 <div class="alert alert-danger" style="margin: 20px 0 0;">
-                    Jadwal absensi tanggal ini belum aktif. Jam tetap bisa disimpan, tetapi status terlambat/pulang cepat tidak dihitung.
+                    Jadwal presensi tanggal ini belum aktif. Jam tetap bisa disimpan, tetapi status terlambat/pulang cepat tidak dihitung.
                 </div>
             @endif
         </aside>

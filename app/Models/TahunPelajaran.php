@@ -74,6 +74,21 @@ class TahunPelajaran extends Model
         return $this->hasMany(GuruMataPelajaran::class);
     }
 
+    public function jadwalPiketGuru(): HasMany
+    {
+        return $this->hasMany(JadwalPiketGuru::class);
+    }
+
+    public function jadwalKegiatanIbadah(): HasMany
+    {
+        return $this->hasMany(JadwalKegiatanIbadah::class);
+    }
+
+    public function presensiKegiatanIbadah(): HasMany
+    {
+        return $this->hasMany(PresensiKegiatanIbadah::class);
+    }
+
     public function pengaturanMataPelajaran(): HasMany
     {
         return $this->hasMany(PengaturanMataPelajaran::class);

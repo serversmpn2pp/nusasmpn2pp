@@ -452,7 +452,7 @@ class SiswaController extends Controller
             'tahun_pelajaran_id' => $tahunPelajaranAktif->id,
             'kelas_id' => $kelas->id,
             'siswa_id' => $siswa->id,
-            'nomor_absen' => $this->ambilNomorAbsenBerikutnya($kelas),
+            'nomor_absen' => null,
             'status_keanggotaan' => 'aktif',
             'tanggal_masuk' => $tahunPelajaranAktif->tanggal_mulai,
             'keterangan' => 'Import Excel siswa',
@@ -471,23 +471,6 @@ class SiswaController extends Controller
     {
         return $kelas->kapasitas
             && $kelas->anggotaKelas()->count() >= $kelas->kapasitas;
-    }
-
-    private function ambilNomorAbsenBerikutnya(Kelas $kelas): ?int
-    {
-        $nomorTerpakai = $kelas->anggotaKelas()
-            ->whereNotNull('nomor_absen')
-            ->pluck('nomor_absen')
-            ->mapWithKeys(fn ($nomor) => [(int) $nomor => true]);
-        $batas = $kelas->kapasitas ?: max(($nomorTerpakai->keys()->max() ?? 0) + 1, 500);
-
-        for ($nomor = 1; $nomor <= $batas; $nomor++) {
-            if (! $nomorTerpakai->has($nomor)) {
-                return $nomor;
-            }
-        }
-
-        return null;
     }
 
     private function normalisasiNamaKelas(string $namaKelas): string

@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Pengaturan Absensi - NUSA')
+@section('title', 'Edit Pengaturan Presensi - NUSA')
 
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi</p>
-            <h1 class="page-title">Edit pengaturan absensi</h1>
+            <p class="eyebrow">Presensi</p>
+            <h1 class="page-title">Edit pengaturan presensi</h1>
         </div>
 
         <div class="actions">

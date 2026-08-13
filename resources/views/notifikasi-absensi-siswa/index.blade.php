@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Notifikasi WA Absensi - NUSA')
+@section('title', 'Notifikasi WA Presensi - NUSA')
 
 @section('content')
     <style>
@@ -28,13 +28,13 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi</p>
-            <h1 class="page-title">Notifikasi WA Absensi Siswa</h1>
+            <p class="eyebrow">Presensi</p>
+            <h1 class="page-title">Notifikasi WA Presensi Siswa</h1>
             <p class="help-text">Default sistem saat ini adalah mode simulasi. Pesan dicatat dan belum dikirim sungguhan ke WhatsApp.</p>
         </div>
 
         <div class="actions">
-            <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan absensi</a>
+            <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan presensi</a>
         </div>
     </div>
 
@@ -110,7 +110,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="empty-state">Belum ada notifikasi absensi siswa.</td>
+                            <td colspan="5" class="empty-state">Belum ada notifikasi presensi siswa.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -143,7 +143,7 @@
                     @endif
                 </article>
             @empty
-                <div class="empty-state">Belum ada notifikasi absensi siswa.</div>
+                <div class="empty-state">Belum ada notifikasi presensi siswa.</div>
             @endforelse
         </div>
 

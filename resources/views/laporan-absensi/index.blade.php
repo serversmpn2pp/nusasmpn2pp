@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Laporan Absensi - NUSA')
+@section('title', 'Laporan Presensi - NUSA')
 
 @section('content')
     @php
@@ -31,8 +31,8 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi</p>
-            <h1 class="page-title">Laporan absensi</h1>
+            <p class="eyebrow">Presensi</p>
+            <h1 class="page-title">Laporan presensi</h1>
         </div>
 
         <div class="actions">
@@ -41,7 +41,7 @@
                 <a href="{{ route('laporan-absensi.export', $parameterExport) }}" class="button button-primary">Export Excel</a>
             @endizin
             @izin('absensi.scan')
-                <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-dark">Scan absensi</a>
+                <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-dark">Scan presensi</a>
             @endizin
         </div>
     </div>
@@ -121,12 +121,12 @@
     </form>
 
     @if ($cakupanWaliKelas ?? false)
-        <div class="alert">Laporan absensi dibatasi pada kelas yang Anda wali.</div>
+        <div class="alert">Laporan presensi dibatasi pada kelas yang Anda wali.</div>
     @endif
 
     @if (empty($hariAktif))
         <div class="alert alert-danger">
-            Belum ada pengaturan absensi aktif. Laporan belum dapat menghitung hari efektif.
+            Belum ada pengaturan presensi aktif. Laporan belum dapat menghitung hari efektif.
         </div>
     @endif
 
@@ -170,7 +170,7 @@
             <h2 class="panel-title">{{ $labelPeriode }}</h2>
             <p class="help-text" style="margin-top: 6px;">
                 {{ $kelasDipilih ? 'Kelas ' . $kelasDipilih->nama : (($cakupanWaliKelas ?? false) ? 'Semua kelas wali' : 'Semua kelas') }}.
-                Alfa otomatis dihitung dari hari efektif yang tidak memiliki catatan absensi.
+                Alfa otomatis dihitung dari hari efektif yang tidak memiliki catatan presensi.
             </p>
         </div>
 

@@ -7,6 +7,7 @@ use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalPelajaran;
+use App\Models\JadwalPiketGuru;
 use App\Models\JamPelajaran;
 use App\Models\Kelas;
 use App\Models\KomponenNilai;
@@ -566,6 +567,19 @@ class BerandaController extends Controller
             ->limit(5)
             ->get();
 
+        $kodeHariPiket = array_keys(JadwalPiketGuru::DAFTAR_HARI)[$hariIni->dayOfWeekIso - 1] ?? null;
+        $jadwalPiketSaya = JadwalPiketGuru::query()
+            ->where('pegawai_id', $pengguna->pegawai_id ?: 0)
+            ->when(
+                $tahunPelajaranAktif,
+                fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranAktif->id),
+                fn ($query) => $query->whereRaw('1 = 0'),
+            )
+            ->where('aktif', true)
+            ->orderByRaw("case hari when 'senin' then 1 when 'selasa' then 2 when 'rabu' then 3 when 'kamis' then 4 when 'jumat' then 5 when 'sabtu' then 6 else 7 end")
+            ->get();
+        $jadwalPiketHariIni = $jadwalPiketSaya->firstWhere('hari', $kodeHariPiket);
+
         return [
             'hariIni' => $hariIni,
             'tahunPelajaranAktif' => $tahunPelajaranAktif,
@@ -584,6 +598,8 @@ class BerandaController extends Controller
             'ringkasanPembinaanWali' => $ringkasanPembinaanWali,
             'laporanPembinaanWali' => $laporanPembinaanWali,
             'maksGrafikPembinaanWali' => max((int) $rekapPembinaanWaliBulan->max('jumlah'), 1),
+            'jadwalPiketSaya' => $jadwalPiketSaya,
+            'jadwalPiketHariIni' => $jadwalPiketHariIni,
         ];
     }
 

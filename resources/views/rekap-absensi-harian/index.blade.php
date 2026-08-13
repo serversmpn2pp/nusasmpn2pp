@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Rekap Absensi Harian - NUSA')
+@section('title', 'Rekap Presensi Harian - NUSA')
 
 @section('content')
     @php
@@ -177,13 +177,13 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Absensi</p>
-            <h1 class="page-title">Rekap absensi harian</h1>
+            <p class="eyebrow">Presensi</p>
+            <h1 class="page-title">Rekap presensi harian</h1>
         </div>
 
         <div class="actions">
             @izin('absensi.scan')
-                <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan absensi</a>
+                <a href="{{ route('scan-absensi.index') }}" target="_blank" rel="noopener" class="button button-primary">Scan presensi</a>
             @endizin
             <button
                 type="button"
@@ -195,7 +195,7 @@
                 Pesan WA Grup
             </button>
             @izin('absensi.pengaturan_kelola')
-                <a href="{{ route('pengaturan-absensi.index') }}" class="button button-muted">Jam absensi</a>
+                <a href="{{ route('pengaturan-absensi.index') }}" class="button button-muted">Jam presensi</a>
             @endizin
             @if (auth()->user()?->memilikiIzin(['poin_siswa.pengaturan', 'poin_siswa.verifikasi_bk']))
                 <form method="POST" action="{{ route('rekap-absensi-harian.proses-poin-keterlambatan') }}">
@@ -249,7 +249,7 @@
     </form>
 
     @if ($cakupanWaliKelas ?? false)
-        <div class="alert">Rekap dan koreksi absensi dibatasi pada kelas yang Anda wali.</div>
+        <div class="alert">Rekap dan koreksi presensi dibatasi pada kelas yang Anda wali.</div>
     @endif
 
     @if (! ($cakupanWaliKelas ?? false) && ! $kelasId)
@@ -324,7 +324,7 @@
     @if ($daftarTahunPelajaran->isEmpty())
         <section class="panel panel-pad">
             <h2 class="panel-title">Tahun pelajaran belum tersedia</h2>
-            <p class="help-text" style="margin-top: 8px;">Tambahkan tahun pelajaran dan kelas terlebih dahulu agar rekap absensi dapat ditampilkan.</p>
+            <p class="help-text" style="margin-top: 8px;">Tambahkan tahun pelajaran dan kelas terlebih dahulu agar rekap presensi dapat ditampilkan.</p>
         </section>
     @else
         <section class="panel">
