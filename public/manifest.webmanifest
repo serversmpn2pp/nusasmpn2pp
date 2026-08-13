@@ -1,0 +1,36 @@
+{
+    "id": "/",
+    "name": "NUSA - SMP Negeri 2 Padang Panjang",
+    "short_name": "NUSA",
+    "description": "Sistem data sekolah terpadu SMP Negeri 2 Padang Panjang.",
+    "lang": "id-ID",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#15477A",
+    "theme_color": "#15477A",
+    "categories": [
+        "education",
+        "productivity"
+    ],
+    "icons": [
+        {
+            "src": "/images/pwa/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/pwa/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/pwa/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

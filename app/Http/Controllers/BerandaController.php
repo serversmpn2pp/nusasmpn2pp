@@ -7,6 +7,7 @@ use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalPelajaran;
+use App\Models\JadwalKegiatanIbadah;
 use App\Models\JadwalPiketGuru;
 use App\Models\JamPelajaran;
 use App\Models\Kelas;
@@ -20,10 +21,13 @@ use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\PenugasanGuruWaliSiswa;
 use App\Models\PublikasiNilaiSiswa;
+use App\Models\PresensiKegiatanIbadah;
 use App\Models\SanksiPoinSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Models\TransaksiPoinSiswa;
+use Carbon\CarbonPeriod;
+use Illuminate\Support\Collection;
 
 class BerandaController extends Controller
 {
@@ -327,6 +331,16 @@ class BerandaController extends Controller
             'total_catatan' => (int) $jumlahStatusBulan->sum(),
         ];
 
+        $ringkasanIbadahSaya = $this->ringkasanIbadahSiswa(
+            siswa: $siswa,
+            anggotaKelas: $anggotaKelas,
+            tahunPelajaran: $tahunDashboard,
+            hariIni: $hariIni,
+            awalBulan: $awalBulan,
+            akhirBulan: $akhirBulan,
+            kodeHari: $kodeHari,
+        );
+
         $transaksiPoin = TransaksiPoinSiswa::query()
             ->where('siswa_id', $siswa?->id ?: 0)
             ->when($tahunDashboard, fn ($query) => $query->where('tahun_pelajaran_id', $tahunDashboard->id));
@@ -384,12 +398,115 @@ class BerandaController extends Controller
             'jadwalHariIni' => $jadwalHariIni,
             'absensiHariIni' => $absensiHariIni,
             'ringkasanKehadiran' => $ringkasanKehadiran,
+            'ringkasanIbadahSaya' => $ringkasanIbadahSaya,
             'ringkasanPoin' => $ringkasanPoin,
             'riwayatPoinTerbaru' => $riwayatPoinTerbaru,
             'notifikasiDashboard' => $notifikasiDashboard,
             'urlFotoSiswa' => $urlFotoSiswa,
             'jumlahNilaiDipublikasikan' => $jumlahNilaiDipublikasikan,
         ];
+    }
+
+    private function ringkasanIbadahSiswa(
+        ?Siswa $siswa,
+        ?AnggotaKelas $anggotaKelas,
+        ?TahunPelajaran $tahunPelajaran,
+        $hariIni,
+        $awalBulan,
+        $akhirBulan,
+        string $kodeHari,
+    ): Collection {
+        if (! $siswa || ! $anggotaKelas || ! $tahunPelajaran) {
+            return collect();
+        }
+
+        $jadwal = JadwalKegiatanIbadah::query()
+            ->with('kegiatanIbadah:id,nama,kode,aktif')
+            ->where('tahun_pelajaran_id', $tahunPelajaran->id)
+            ->where('aktif', true)
+            ->whereHas('kegiatanIbadah', fn ($query) => $query->where('aktif', true))
+            ->orderBy('urutan_hari')
+            ->get();
+        $jadwalPerKegiatan = $jadwal->groupBy('kegiatan_ibadah_id');
+
+        if ($jadwalPerKegiatan->isEmpty()) {
+            return collect();
+        }
+
+        $mulai = $awalBulan->copy()
+            ->max($tahunPelajaran->tanggal_mulai->copy()->startOfDay());
+        $selesai = $akhirBulan->copy()
+            ->min($tahunPelajaran->tanggal_selesai->copy()->endOfDay())
+            ->min($hariIni->copy()->endOfDay());
+
+        if ($anggotaKelas->tanggal_masuk) {
+            $mulai = $mulai->max($anggotaKelas->tanggal_masuk->copy()->startOfDay());
+        }
+
+        if ($anggotaKelas->tanggal_keluar) {
+            $selesai = $selesai->min($anggotaKelas->tanggal_keluar->copy()->endOfDay());
+        }
+
+        $periodeTersedia = $mulai->lte($selesai);
+        $presensi = $periodeTersedia
+            ? PresensiKegiatanIbadah::query()
+                ->where('siswa_id', $siswa->id)
+                ->where('tahun_pelajaran_id', $tahunPelajaran->id)
+                ->whereIn('kegiatan_ibadah_id', $jadwalPerKegiatan->keys())
+                ->whereDate('tanggal', '>=', $mulai->toDateString())
+                ->whereDate('tanggal', '<=', $selesai->toDateString())
+                ->orderBy('tanggal')
+                ->get()
+                ->groupBy('kegiatan_ibadah_id')
+            : collect();
+
+        return $jadwalPerKegiatan->map(function ($jadwalKegiatan, $kegiatanId) use ($presensi, $mulai, $selesai, $hariIni, $kodeHari, $periodeTersedia) {
+            $kegiatan = $jadwalKegiatan->first()?->kegiatanIbadah;
+            $hariTerjadwal = $jadwalKegiatan->pluck('hari')->flip();
+            $presensiKegiatan = $presensi->get($kegiatanId, collect());
+            $tanggalTarget = collect();
+
+            if ($periodeTersedia) {
+                foreach (CarbonPeriod::create($mulai, $selesai) as $tanggal) {
+                    $kodeHariTanggal = [
+                        1 => 'senin',
+                        2 => 'selasa',
+                        3 => 'rabu',
+                        4 => 'kamis',
+                        5 => 'jumat',
+                        6 => 'sabtu',
+                        7 => 'minggu',
+                    ][$tanggal->dayOfWeekIso];
+
+                    if ($hariTerjadwal->has($kodeHariTanggal)) {
+                        $tanggalTarget->push($tanggal->toDateString());
+                    }
+                }
+            }
+
+            $presensiKegiatan->each(fn ($item) => $tanggalTarget->push($item->tanggal->toDateString()));
+            $tanggalTarget = $tanggalTarget->unique();
+            $tanggalTercatat = $presensiKegiatan->pluck('tanggal')
+                ->map(fn ($tanggal) => $tanggal->toDateString())
+                ->unique();
+            $target = $tanggalTarget->count();
+            $tercatat = $tanggalTercatat->count();
+            $presensiHariIni = $presensiKegiatan->first(fn ($item) => $item->tanggal->isSameDay($hariIni));
+            $dijadwalkanHariIni = $periodeTersedia && $hariTerjadwal->has($kodeHari);
+
+            return [
+                'kegiatan' => $kegiatan,
+                'dijadwalkan_hari_ini' => $dijadwalkanHariIni,
+                'presensi_hari_ini' => $presensiHariIni,
+                'status_hari_ini' => $presensiHariIni
+                    ? 'Sudah tercatat'
+                    : ($dijadwalkanHariIni ? 'Belum tercatat' : 'Tidak dijadwalkan'),
+                'target' => $target,
+                'tercatat' => $tercatat,
+                'belum' => max($target - $tercatat, 0),
+                'persentase' => $target > 0 ? round(($tercatat / $target) * 100, 1) : 0,
+            ];
+        })->sortBy(fn ($item) => $item['kegiatan']?->nama)->values();
     }
 
     private function dataDashboardPegawai(

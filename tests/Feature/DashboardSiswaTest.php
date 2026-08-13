@@ -5,14 +5,17 @@ namespace Tests\Feature;
 use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
+use App\Models\JadwalKegiatanIbadah;
 use App\Models\JadwalPelajaran;
 use App\Models\JamPelajaran;
 use App\Models\Kelas;
+use App\Models\KegiatanIbadah;
 use App\Models\MataPelajaran;
 use App\Models\NotifikasiPengguna;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
+use App\Models\PresensiKegiatanIbadah;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Models\TransaksiPoinSiswa;
@@ -103,6 +106,42 @@ class DashboardSiswaTest extends TestCase
             'sumber' => 'manual',
         ]);
 
+        $kegiatanIbadah = KegiatanIbadah::where('kode', 'sholat_duhur')->firstOrFail();
+        $jadwalIbadah = JadwalKegiatanIbadah::create([
+            'kegiatan_ibadah_id' => $kegiatanIbadah->id,
+            'tahun_pelajaran_id' => $tahun->id,
+            'hari' => 'senin',
+            'urutan_hari' => 1,
+            'jam_scan_mulai' => '11:30',
+            'jam_pelaksanaan' => '12:00',
+            'jam_scan_selesai' => '13:00',
+            'aktif' => true,
+        ]);
+        PresensiKegiatanIbadah::create([
+            'jadwal_kegiatan_ibadah_id' => $jadwalIbadah->id,
+            'kegiatan_ibadah_id' => $kegiatanIbadah->id,
+            'tahun_pelajaran_id' => $tahun->id,
+            'kelas_id' => $kelasSiswa->id,
+            'anggota_kelas_id' => $anggota->id,
+            'siswa_id' => $siswa->id,
+            'tanggal' => '2026-07-27',
+            'waktu_scan' => '12:05:00',
+            'sumber' => 'kamera',
+        ]);
+        foreach (['2026-07-20', '2026-07-27'] as $tanggalIbadah) {
+            PresensiKegiatanIbadah::create([
+                'jadwal_kegiatan_ibadah_id' => $jadwalIbadah->id,
+                'kegiatan_ibadah_id' => $kegiatanIbadah->id,
+                'tahun_pelajaran_id' => $tahun->id,
+                'kelas_id' => $kelasLain->id,
+                'anggota_kelas_id' => $anggotaLain->id,
+                'siswa_id' => $siswaLain->id,
+                'tanggal' => $tanggalIbadah,
+                'waktu_scan' => '12:06:00',
+                'sumber' => 'kamera',
+            ]);
+        }
+
         TransaksiPoinSiswa::create([
             'siswa_id' => $siswa->id,
             'tahun_pelajaran_id' => $tahun->id,
@@ -157,7 +196,22 @@ class DashboardSiswaTest extends TestCase
             ->assertViewHas('ringkasanPoin', fn (array $nilai) => $nilai['total'] === 10
                 && $nilai['pelanggaran'] === 1
                 && $nilai['pengurangan'] === 5)
+            ->assertViewHas('ringkasanIbadahSaya', function ($ringkasan) use ($kegiatanIbadah) {
+                $ibadah = $ringkasan->first();
+
+                return $ringkasan->count() === 1
+                    && $ibadah['kegiatan']->is($kegiatanIbadah)
+                    && $ibadah['dijadwalkan_hari_ini'] === true
+                    && $ibadah['status_hari_ini'] === 'Sudah tercatat'
+                    && $ibadah['target'] === 4
+                    && $ibadah['tercatat'] === 1
+                    && $ibadah['belum'] === 3
+                    && (float) $ibadah['persentase'] === 25.0;
+            })
             ->assertSee('Matematika Kelas VII')
+            ->assertSee('Ibadah Saya')
+            ->assertSee('Sholat Duhur Berjamaah')
+            ->assertSee('Sudah tercatat')
             ->assertSee('Pelanggaran yang sudah disahkan')
             ->assertSee('Informasi untuk siswa login')
             ->assertSee('Ganti Password')
@@ -188,6 +242,7 @@ class DashboardSiswaTest extends TestCase
             ->get(route('beranda'))
             ->assertOk()
             ->assertViewIs('beranda.siswa')
+            ->assertViewHas('ringkasanIbadahSaya', fn ($ringkasan) => $ringkasan->isEmpty())
             ->assertSee('Akun belum terhubung ke data siswa')
             ->assertDontSee('Dashboard Pegawai')
             ->assertDontSee('Akun Pegawai');

@@ -192,6 +192,116 @@
             color: #b91c1c;
         }
 
+        .worship-list {
+            display: grid;
+        }
+
+        .worship-row {
+            display: grid;
+            gap: 12px;
+            padding: 15px 0;
+            border-bottom: 1px solid #edf1f4;
+        }
+
+        .worship-row:first-child {
+            padding-top: 0;
+        }
+
+        .worship-row:last-child {
+            padding-bottom: 0;
+            border-bottom: 0;
+        }
+
+        .worship-head,
+        .worship-progress-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .worship-head strong {
+            display: block;
+            color: #172536;
+            font-size: .94rem;
+        }
+
+        .worship-head > div {
+            min-width: 0;
+        }
+
+        .worship-head > .badge {
+            max-width: 46%;
+            flex: 0 0 auto;
+            white-space: normal;
+            text-align: center;
+        }
+
+        .worship-head small {
+            display: block;
+            margin-top: 3px;
+            color: #64748b;
+            font-size: .75rem;
+        }
+
+        .worship-progress-label {
+            color: #64748b;
+            font-size: .76rem;
+            font-weight: 800;
+        }
+
+        .worship-progress-label strong {
+            color: #15477a;
+            font-size: .82rem;
+        }
+
+        .worship-progress {
+            height: 8px;
+            overflow: hidden;
+            border-radius: 4px;
+            background: #e8eef4;
+        }
+
+        .worship-progress span {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            background: #15477a;
+        }
+
+        .worship-facts {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1px;
+            overflow: hidden;
+            border: 1px solid #e1e7ed;
+            border-radius: 7px;
+            background: #e1e7ed;
+        }
+
+        .worship-fact {
+            min-width: 0;
+            padding: 10px;
+            background: #f8fafc;
+        }
+
+        .worship-fact strong,
+        .worship-fact span {
+            display: block;
+        }
+
+        .worship-fact strong {
+            color: #172536;
+            font-size: 1rem;
+        }
+
+        .worship-fact span {
+            margin-top: 3px;
+            color: #64748b;
+            font-size: .72rem;
+            font-weight: 800;
+        }
+
         .schedule-list {
             display: grid;
         }
@@ -450,6 +560,10 @@
                 font-size: 1.45rem;
             }
 
+            .worship-head {
+                align-items: flex-start;
+            }
+
             .attendance-summary {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -600,6 +714,64 @@
                                     <strong>{{ $ringkasanKehadiran['total_catatan'] }}</strong>
                                     <span>Hari tercatat</span>
                                 </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="student-panel">
+                        <header class="student-panel-head">
+                            <h2>Ibadah Saya</h2>
+                            <span>{{ $labelBulan }}</span>
+                        </header>
+                        <div class="student-panel-body">
+                            <div class="worship-list">
+                                @forelse ($ringkasanIbadahSaya as $ibadah)
+                                    @php
+                                        $presensiHariIni = $ibadah['presensi_hari_ini'];
+                                        $kelasStatusIbadah = $presensiHariIni
+                                            ? 'badge badge-active'
+                                            : ($ibadah['dijadwalkan_hari_ini'] ? 'badge badge-warning' : 'badge badge-muted');
+                                        $detailHariIni = $presensiHariIni
+                                            ? 'Pukul '.substr((string) $presensiHariIni->waktu_scan, 0, 5).' - '.str($presensiHariIni->sumber)->headline()
+                                            : ($ibadah['dijadwalkan_hari_ini'] ? 'Menunggu presensi hari ini' : 'Tidak ada jadwal hari ini');
+                                    @endphp
+                                    <section class="worship-row">
+                                        <div class="worship-head">
+                                            <div>
+                                                <strong>{{ $ibadah['kegiatan']?->nama ?: 'Kegiatan ibadah' }}</strong>
+                                                <small>{{ $detailHariIni }}</small>
+                                            </div>
+                                            <span class="{{ $kelasStatusIbadah }}">{{ $ibadah['status_hari_ini'] }}</span>
+                                        </div>
+
+                                        <div>
+                                            <div class="worship-progress-label">
+                                                <span>Capaian bulan ini</span>
+                                                <strong>{{ number_format($ibadah['persentase'], 1, ',', '.') }}%</strong>
+                                            </div>
+                                            <div class="worship-progress" role="progressbar" aria-label="Capaian {{ $ibadah['kegiatan']?->nama }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $ibadah['persentase'] }}">
+                                                <span style="width: {{ min($ibadah['persentase'], 100) }}%;"></span>
+                                            </div>
+                                        </div>
+
+                                        <div class="worship-facts">
+                                            <div class="worship-fact">
+                                                <strong>{{ $ibadah['target'] }}</strong>
+                                                <span>Hari kegiatan</span>
+                                            </div>
+                                            <div class="worship-fact">
+                                                <strong>{{ $ibadah['tercatat'] }}</strong>
+                                                <span>Tercatat</span>
+                                            </div>
+                                            <div class="worship-fact">
+                                                <strong>{{ $ibadah['belum'] }}</strong>
+                                                <span>Belum tercatat</span>
+                                            </div>
+                                        </div>
+                                    </section>
+                                @empty
+                                    <p class="student-empty">Belum ada kegiatan ibadah aktif pada tahun pelajaran ini.</p>
+                                @endforelse
                             </div>
                         </div>
                     </article>

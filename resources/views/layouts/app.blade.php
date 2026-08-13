@@ -8,6 +8,7 @@
 
         @fonts
         <link rel="icon" href="{{ asset('images/logo-nusa.png') }}" type="image/png">
+        @include('partials.pwa-head')
 
         <style>
             :root {
@@ -1617,6 +1618,10 @@
                 text-align: left;
             }
 
+            .account-dropdown-link[hidden] {
+                display: none;
+            }
+
             .account-dropdown-link:hover {
                 background: var(--primary-soft);
                 color: var(--primary-dark);
@@ -2345,6 +2350,15 @@
                                         </svg>
                                         <span>Ganti Kata Sandi</span>
                                     </a>
+
+                                    <button type="button" class="account-dropdown-link" data-pwa-install hidden>
+                                        <svg aria-hidden="true" viewBox="0 0 24 24">
+                                            <path d="M12 3v12"></path>
+                                            <path d="m7 10 5 5 5-5"></path>
+                                            <path d="M5 21h14"></path>
+                                        </svg>
+                                        <span>Pasang NUSA</span>
+                                    </button>
 
                                     <form action="{{ route('logout') }}" method="POST" class="logout-form">
                                         @csrf

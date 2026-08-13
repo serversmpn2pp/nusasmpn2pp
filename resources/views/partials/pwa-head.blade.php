@@ -1,0 +1,9 @@
+<meta name="theme-color" content="#15477A">
+<meta name="application-name" content="NUSA">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="NUSA">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/images/pwa/icon-180.png">
+<script src="/js/pwa.js" defer></script>

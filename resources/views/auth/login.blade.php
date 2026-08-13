@@ -8,6 +8,7 @@
 
         @fonts
         <link rel="icon" href="{{ asset('images/logo-nusa.png') }}" type="image/png">
+        @include('partials.pwa-head')
 
         <style>
             :root {
@@ -265,6 +266,34 @@
                 line-height: 1.5;
             }
 
+            .install-action[hidden],
+            .install-status[hidden] {
+                display: none;
+            }
+
+            .install-action {
+                margin-top: 12px;
+            }
+
+            .install-button {
+                border-color: rgba(21, 71, 122, .3);
+                background: #fff;
+                color: var(--primary);
+            }
+
+            .install-button:hover {
+                border-color: var(--accent);
+                background: #fff9d9;
+            }
+
+            .install-status {
+                margin: 10px 0 0;
+                color: var(--primary);
+                font-size: .84rem;
+                font-weight: 750;
+                line-height: 1.45;
+            }
+
             @media (max-width: 900px) {
                 .login-page {
                     background-image:
@@ -393,6 +422,11 @@
 
                         <button type="submit" class="button">Masuk</button>
                     </form>
+
+                    <div class="install-action" data-pwa-install-container hidden>
+                        <button type="button" class="button install-button" data-pwa-install>Pasang NUSA</button>
+                    </div>
+                    <p class="install-status" data-pwa-install-status aria-live="polite" hidden></p>
 
                     <p class="help-text">Gunakan akun yang diberikan oleh administrator sekolah.</p>
                 </section>

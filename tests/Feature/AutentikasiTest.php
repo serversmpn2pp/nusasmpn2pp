@@ -15,6 +15,24 @@ class AutentikasiTest extends TestCase
         $response->assertSee('aria-controls="password"', false);
         $response->assertSee('aria-label="Tampilkan kata sandi"', false);
         $response->assertSee('Caps Lock aktif.');
+        $response->assertSee('rel="manifest" href="/manifest.webmanifest"', false);
+        $response->assertSee('data-pwa-install', false);
+    }
+
+    public function test_berkas_pwa_memiliki_konfigurasi_dan_aset_utama(): void
+    {
+        $manifest = json_decode(file_get_contents(public_path('manifest.webmanifest')), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame('NUSA', $manifest['short_name']);
+        $this->assertSame('/', $manifest['start_url']);
+        $this->assertSame('standalone', $manifest['display']);
+        $this->assertSame('#15477A', $manifest['theme_color']);
+        $this->assertFileExists(public_path('service-worker.js'));
+        $this->assertFileExists(public_path('offline.html'));
+        $this->assertFileExists(public_path('js/pwa.js'));
+        $this->assertFileExists(public_path('images/pwa/icon-192.png'));
+        $this->assertFileExists(public_path('images/pwa/icon-512.png'));
+        $this->assertFileExists(public_path('images/pwa/icon-maskable-512.png'));
     }
 
     public function test_halaman_pegawai_dikunci_sebelum_login(): void
