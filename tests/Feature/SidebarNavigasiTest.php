@@ -36,7 +36,8 @@ class SidebarNavigasiTest extends TestCase
             ])
             ->assertSee('Penempatan Siswa')
             ->assertSee('Pengaturan Presensi Siswa')
-            ->assertSee('Peminjaman &amp; Pengembalian', false)
+            ->assertSee('Peminjaman Barang')
+            ->assertSee('Pengembalian Barang')
             ->assertSee('Akun Siswa')
             ->assertSee('Role &amp; Hak Akses', false)
             ->assertDontSee('Data Master');

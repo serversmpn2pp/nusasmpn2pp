@@ -10,6 +10,11 @@ class Barang extends Model
 {
     protected $table = 'barang';
 
+    public const DAFTAR_JENIS_BARANG = [
+        'habis_pakai' => 'Barang habis pakai',
+        'tidak_habis_pakai' => 'Barang tidak habis pakai',
+    ];
+
     public const DAFTAR_TIPE_PENGELOLAAN = [
         'aset_individual' => 'Aset individual',
         'stok_dikembalikan' => 'Stok yang dikembalikan',
@@ -23,6 +28,7 @@ class Barang extends Model
         'satuan_barang_id',
         'lokasi_penyimpanan_id',
         'tipe_pengelolaan',
+        'jenis_barang',
         'stok_minimum',
         'deskripsi',
         'aktif',
@@ -32,6 +38,17 @@ class Barang extends Model
         'stok_minimum' => 'decimal:2',
         'aktif' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Barang $barang) {
+            if (! filled($barang->jenis_barang)) {
+                $barang->jenis_barang = $barang->tipe_pengelolaan === 'habis_pakai'
+                    ? 'habis_pakai'
+                    : 'tidak_habis_pakai';
+            }
+        });
+    }
 
     public function kategoriBarang(): BelongsTo
     {
@@ -68,9 +85,20 @@ class Barang extends Model
         return $this->hasMany(DetailPeminjamanBarang::class);
     }
 
+    public function detailPenerimaanBarang(): HasMany
+    {
+        return $this->hasMany(DetailPenerimaanBarang::class);
+    }
+
     public function labelTipePengelolaan(): string
     {
         return self::DAFTAR_TIPE_PENGELOLAAN[$this->tipe_pengelolaan]
             ?? str($this->tipe_pengelolaan)->headline()->toString();
+    }
+
+    public function labelJenisBarang(): string
+    {
+        return self::DAFTAR_JENIS_BARANG[$this->jenis_barang]
+            ?? str($this->jenis_barang)->headline()->toString();
     }
 }

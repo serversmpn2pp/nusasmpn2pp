@@ -360,14 +360,16 @@
             <a href="{{ route('barang.index') }}" class="sarpras-action"><span>Inventaris</span><span class="sarpras-action-mark">IB</span></a>
             <a href="{{ route('saldo-stok-barang.index') }}" class="sarpras-action"><span>Saldo stok</span><span class="sarpras-action-mark">SS</span></a>
             <a href="{{ route('unit-barang.index') }}" class="sarpras-action"><span>Unit aset</span><span class="sarpras-action-mark">UA</span></a>
-            <a href="{{ route('label-barcode-inventaris.index') }}" class="sarpras-action"><span>Label barcode</span><span class="sarpras-action-mark">BC</span></a>
+            <a href="{{ route('label-barcode-inventaris.index') }}" class="sarpras-action"><span>Label inventaris</span><span class="sarpras-action-mark">LI</span></a>
             <a href="{{ route('laporan-inventaris-bulanan.index') }}" class="sarpras-action"><span>Laporan bulanan</span><span class="sarpras-action-mark">LI</span></a>
         @endizin
         @izin('barang.kelola')
+            <a href="{{ route('penerimaan-barang.create') }}" class="sarpras-action"><span>Barang datang</span><span class="sarpras-action-mark">BD</span></a>
             <a href="{{ route('mutasi-stok-barang.create') }}" class="sarpras-action"><span>Catat mutasi</span><span class="sarpras-action-mark">MS</span></a>
         @endizin
         @izin('barang.peminjaman_kelola')
             <a href="{{ route('peminjaman-barang.create') }}" class="sarpras-action"><span>Catat peminjaman</span><span class="sarpras-action-mark">PB</span></a>
+            <a href="{{ route('pengembalian-barang.index') }}" class="sarpras-action"><span>Pengembalian barang</span><span class="sarpras-action-mark">KM</span></a>
         @endizin
         @izin('barang.lihat', 'barang.peminjaman_kelola')
             <a href="{{ route('rekap-peminjaman-barang.index') }}" class="sarpras-action"><span>Rekap peminjaman</span><span class="sarpras-action-mark">RP</span></a>

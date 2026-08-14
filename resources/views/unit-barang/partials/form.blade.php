@@ -25,7 +25,7 @@
 <div class="form-shell">
     <aside class="panel panel-pad">
         <h2 class="panel-title">Status unit</h2>
-        <p class="help-text">Kode inventaris dan barcode dibuat otomatis oleh NUSA saat unit disimpan.</p>
+        <p class="help-text">ID internal untuk barcode dan nomor aset resmi dibuat otomatis oleh NUSA saat unit disimpan.</p>
 
         <label class="status-toggle">
             <span>
@@ -37,7 +37,8 @@
         </label>
 
         @if (! $modeTambah)
-            <p class="help-text" style="margin-top: 16px;">Kode: <strong>{{ $unitBarang->kode_inventaris }}</strong></p>
+            <p class="help-text" style="margin-top: 16px;">ID internal: <strong>{{ $unitBarang->kode_inventaris }}</strong></p>
+            <p class="help-text" style="margin-top: 6px;">Nomor aset: <strong>{{ $unitBarang->nomor_aset_resmi ?: '-' }}</strong></p>
         @endif
     </aside>
 
@@ -100,6 +101,22 @@
                 </div>
 
                 <div class="field">
+                    <label for="merek">Merek</label>
+                    <input id="merek" name="merek" type="text" value="{{ $nilai('merek') }}" placeholder="Contoh: Epson" class="{{ $inputClass('merek') }}">
+                    @error('merek')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
+                    <label for="tipe">Tipe/model</label>
+                    <input id="tipe" name="tipe" type="text" value="{{ $nilai('tipe') }}" placeholder="Contoh: L3110" class="{{ $inputClass('tipe') }}">
+                    @error('tipe')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
                     <label for="kondisi">Kondisi</label>
                     <select id="kondisi" name="kondisi" class="{{ $selectClass('kondisi') }}" required>
                         @foreach ($daftarKondisi as $nilaiKondisi => $labelKondisi)
@@ -138,9 +155,24 @@
                 </div>
 
                 <div class="field">
-                    <label for="sumber_perolehan">Sumber perolehan</label>
-                    <input id="sumber_perolehan" name="sumber_perolehan" type="text" value="{{ $nilai('sumber_perolehan') }}" placeholder="Contoh: Dana BOS atau hibah" class="{{ $inputClass('sumber_perolehan') }}">
-                    @error('sumber_perolehan')
+                    <label for="tahun_perolehan">Tahun perolehan</label>
+                    <input id="tahun_perolehan" name="tahun_perolehan" type="number" min="1900" max="2100" value="{{ $nilai('tahun_perolehan', $modeTambah ? now()->format('Y') : '') }}" class="{{ $inputClass('tahun_perolehan') }}" @required($modeTambah)>
+                    @php($tahunPreview = $nilai('tahun_perolehan', $modeTambah ? now()->format('Y') : ''))
+                    <p id="nomor-aset-preview" class="help-text">Nomor aset: {{ filled($tahunPreview) ? $pengaturanInventaris->contohNomorAset((int) $tahunPreview) : ($unitBarang?->nomor_aset_resmi ?: 'pilih tahun perolehan') }}</p>
+                    @error('tahun_perolehan')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
+                    <label for="sumber_perolehan_barang_id">Sumber perolehan</label>
+                    <select id="sumber_perolehan_barang_id" name="sumber_perolehan_barang_id" class="{{ $selectClass('sumber_perolehan_barang_id') }}" @required($modeTambah)>
+                        <option value="">Pilih sumber</option>
+                        @foreach ($daftarSumberPerolehan as $sumber)
+                            <option value="{{ $sumber->id }}" @selected((string) $nilai('sumber_perolehan_barang_id') === (string) $sumber->id)>{{ $sumber->nama }}{{ $sumber->aktif ? '' : ' (nonaktif)' }}</option>
+                        @endforeach
+                    </select>
+                    @error('sumber_perolehan_barang_id')
                         <p class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
@@ -169,3 +201,18 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tahun = document.getElementById('tahun_perolehan');
+            const preview = document.getElementById('nomor-aset-preview');
+            const awalan = @json($pengaturanInventaris->awalan_nomor_aset);
+            const akhiran = @json($pengaturanInventaris->akhiran_nomor_aset);
+
+            tahun.addEventListener('input', () => {
+                preview.textContent = `Nomor aset: ${awalan}.${tahun.value || 'TAHUN'}.${akhiran}`;
+            });
+        });
+    </script>
+@endpush

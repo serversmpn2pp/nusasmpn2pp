@@ -54,6 +54,55 @@
         padding: 14px;
     }
 
+    .loan-scan-guide {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .loan-code-tag,
+    .loan-type-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        background: #f8fafc;
+        padding: 4px 9px;
+        color: #334155;
+        font-size: .75rem;
+        font-weight: 800;
+    }
+
+    .loan-code-tag strong {
+        margin-right: 5px;
+        color: #15477A;
+    }
+
+    .loan-type-badge.returnable {
+        border-color: #93c5fd;
+        background: #eff6ff;
+        color: #15477A;
+    }
+
+    .loan-type-badge.consumable {
+        border-color: #f1c40f;
+        background: #fff8d8;
+        color: #6b5200;
+    }
+
+    .loan-quantity {
+        display: grid;
+        grid-template-columns: minmax(82px, 120px) auto;
+        gap: 7px;
+        align-items: center;
+    }
+
+    .loan-quantity .input {
+        min-width: 0;
+    }
+
     .loan-cart-table input {
         min-width: 88px;
     }
@@ -84,7 +133,7 @@
 
         <div class="form-grid" style="margin-top: 16px;">
             <div class="field">
-                <label for="jenis_peminjam">Jenis peminjam</label>
+                <label for="jenis_peminjam">Jenis peminjam manual</label>
                 <select id="jenis_peminjam" name="jenis_peminjam" class="{{ $selectClass('jenis_peminjam') }}" required>
                     <option value="siswa" @selected($nilai('jenis_peminjam', 'siswa') === 'siswa')>Siswa</option>
                     <option value="pegawai" @selected($nilai('jenis_peminjam', 'siswa') === 'pegawai')>Pegawai</option>
@@ -94,9 +143,10 @@
             <div class="field">
                 <label for="kode_peminjam_scan">Scan kartu peminjam</label>
                 <div class="actions" style="gap: 8px;">
-                    <input id="kode_peminjam_scan" type="text" class="input" placeholder="Scan NISN atau NIP" autocomplete="off">
+                    <input id="kode_peminjam_scan" type="text" class="input" placeholder="Scan kartu siswa atau pegawai" autocomplete="off">
                     <button id="tombol_scan_peminjam" type="button" class="button button-dark">Proses</button>
                 </div>
+                <p class="help-text">NUSA mengenali NISN atau NIP secara otomatis.</p>
             </div>
 
             <div id="bungkus_siswa" class="field">
@@ -136,8 +186,13 @@
             <div class="field">
                 <label for="kode_barang_scan">Scan barcode barang</label>
                 <div class="actions" style="gap: 8px;">
-                    <input id="kode_barang_scan" type="text" class="input" placeholder="Scan barcode unit atau kode barang" autocomplete="off">
+                    <input id="kode_barang_scan" type="text" class="input" placeholder="Scan barcode AST atau BHP" autocomplete="off">
                     <button id="tombol_scan_barang" type="button" class="button button-dark">Proses</button>
+                </div>
+                <div class="loan-scan-guide" aria-label="Jenis barcode yang didukung">
+                    <span class="loan-code-tag"><strong>AST</strong> aset individual</span>
+                    <span class="loan-code-tag"><strong>BHP</strong> barang habis pakai</span>
+                    <span class="loan-code-tag"><strong>Kode lama</strong> tetap didukung</span>
                 </div>
             </div>
 
@@ -156,8 +211,12 @@
                 <label for="barang_manual">Pilih barang manual</label>
                 <select id="barang_manual" class="select">
                     <option value="">Pilih unit aset atau stok barang</option>
-                    @foreach ($daftarItemManual as $item)
-                        <option value="{{ $item['kunci'] }}">{{ $item['label'] }} - {{ $item['keterangan'] }}</option>
+                    @foreach ($daftarItemManual->groupBy('kelompok') as $kelompok => $daftarItem)
+                        <optgroup label="{{ $kelompok }}">
+                            @foreach ($daftarItem as $item)
+                                <option value="{{ $item['kunci'] }}">{{ $item['label'] }} - {{ $item['keterangan'] }}</option>
+                            @endforeach
+                        </optgroup>
                     @endforeach
                 </select>
             </div>
@@ -293,7 +352,7 @@
 
             try {
                 const url = new URL(endpointPeminjam);
-                url.searchParams.set('jenis_peminjam', jenisPeminjam.value);
+                url.searchParams.set('jenis_peminjam', 'otomatis');
                 url.searchParams.set('kode', kode);
                 const respons = await fetch(url, { headers: { Accept: 'application/json' } });
                 const data = await respons.json();
@@ -302,8 +361,12 @@
                     throw new Error(data.pesan || 'Peminjam tidak ditemukan.');
                 }
 
+                jenisPeminjam.value = data.jenis_peminjam;
+                perbaruiJenisPeminjam();
                 const pilihan = data.jenis_peminjam === 'siswa' ? siswa : pegawai;
+                const pilihanLain = data.jenis_peminjam === 'siswa' ? pegawai : siswa;
                 pilihan.value = String(data.id);
+                pilihanLain.value = '';
                 caraInputPeminjam.value = 'scan';
                 ringkasanPeminjam.innerHTML = '';
 
@@ -316,6 +379,7 @@
 
                 ubahStatus(statusPeminjam, 'Kartu peminjam berhasil dibaca.', 'success');
                 kodePeminjamScan.value = '';
+                kodeBarangScan.focus();
             } catch (error) {
                 ubahStatus(statusPeminjam, error.message, 'error');
             }
@@ -328,12 +392,25 @@
         const tambahItem = (itemBaru, caraInput, jumlah = 1) => {
             const item = { ...itemBaru };
             const kunci = buatKunciItem(item);
+            const jumlahDiminta = Number(jumlah || 1);
             item.kunci = kunci;
-            item.jumlah = item.tipe_item === 'unit' ? 1 : Number(jumlah || 1);
+            item.jumlah = item.tipe_item === 'unit' ? 1 : jumlahDiminta;
             item.cara_input_barang = caraInput;
             item.label = item.label || 'Barang';
             item.keterangan = item.keterangan || '';
             item.satuan = item.satuan || (item.tipe_item === 'unit' ? 'unit' : '');
+            item.wajib_dikembalikan = typeof item.wajib_dikembalikan === 'string'
+                ? ['1', 'true'].includes(item.wajib_dikembalikan)
+                : (item.wajib_dikembalikan ?? item.tipe_item === 'unit');
+            item.jenis_tampilan = item.jenis_tampilan || (item.tipe_item === 'unit' ? 'Aset individual' : 'Barang berbasis stok');
+            const saldoTersedia = item.saldo === '' || item.saldo === null || item.saldo === undefined
+                ? null
+                : Number(item.saldo);
+
+            if (item.tipe_item !== 'unit' && (!Number.isFinite(jumlahDiminta) || jumlahDiminta <= 0)) {
+                ubahStatus(statusBarang, 'Jumlah barang harus lebih dari nol.', 'error');
+                return;
+            }
 
             if (daftarItem.has(kunci)) {
                 const tersimpan = daftarItem.get(kunci);
@@ -343,15 +420,28 @@
                     return;
                 }
 
-                tersimpan.jumlah = Number(tersimpan.jumlah) + Number(item.jumlah);
+                const jumlahBaru = Number(tersimpan.jumlah) + Number(item.jumlah);
+
+                if (Number.isFinite(saldoTersedia) && jumlahBaru > saldoTersedia) {
+                    ubahStatus(statusBarang, `Jumlah ${item.label} melebihi stok tersedia.`, 'error');
+                    return;
+                }
+
+                tersimpan.jumlah = jumlahBaru;
                 tersimpan.cara_input_barang = tersimpan.cara_input_barang === caraInput ? caraInput : 'campuran';
                 daftarItem.set(kunci, tersimpan);
             } else {
+                if (item.tipe_item !== 'unit' && Number.isFinite(saldoTersedia) && item.jumlah > saldoTersedia) {
+                    ubahStatus(statusBarang, `Jumlah ${item.label} melebihi stok tersedia.`, 'error');
+                    return;
+                }
+
                 daftarItem.set(kunci, item);
             }
 
             renderKeranjang();
-            ubahStatus(statusBarang, `${item.label} masuk ke keranjang.`, 'success');
+            const petunjukJumlah = item.tipe_item === 'unit' ? '' : ' Atur jumlahnya pada keranjang bila diperlukan.';
+            ubahStatus(statusBarang, `${item.label} masuk ke keranjang.${petunjukJumlah}`, 'success');
         };
 
         const buatInputTersembunyi = (nama, nilai) => {
@@ -392,17 +482,53 @@
                     ['unit_barang_id', item.unit_barang_id],
                     ['barang_id', item.barang_id],
                     ['lokasi_barang_id', item.lokasi_barang_id],
-                    ['jumlah', item.jumlah],
                     ['cara_input_barang', item.cara_input_barang],
                     ['label', item.label],
+                    ['kode', item.kode],
+                    ['keterangan', item.keterangan],
+                    ['jenis_tampilan', item.jenis_tampilan],
+                    ['wajib_dikembalikan', item.wajib_dikembalikan ? 1 : 0],
+                    ['satuan', item.satuan],
+                    ['saldo', item.saldo],
                 ].forEach(([field, nilai]) => kolomBarang.appendChild(buatInputTersembunyi(`items[${index}][${field}]`, nilai)));
 
                 const kolomJenis = document.createElement('td');
-                kolomJenis.textContent = item.tipe_item === 'unit' ? 'Unit aset' : 'Stok barang';
+                const jenis = document.createElement('span');
+                jenis.className = `loan-type-badge ${item.wajib_dikembalikan ? 'returnable' : 'consumable'}`;
+                jenis.textContent = item.jenis_tampilan || (item.tipe_item === 'unit' ? 'Aset individual' : 'Barang berbasis stok');
+                kolomJenis.appendChild(jenis);
                 const kolomJumlah = document.createElement('td');
-                kolomJumlah.textContent = `${Number(item.jumlah).toLocaleString('id-ID', { maximumFractionDigits: 2 })} ${item.satuan}`;
+
+                if (item.tipe_item === 'unit') {
+                    kolomJumlah.textContent = `1 ${item.satuan}`;
+                    kolomJumlah.appendChild(buatInputTersembunyi(`items[${index}][jumlah]`, 1));
+                } else {
+                    const bungkusJumlah = document.createElement('div');
+                    bungkusJumlah.className = 'loan-quantity';
+                    const inputJumlah = document.createElement('input');
+                    inputJumlah.type = 'number';
+                    inputJumlah.name = `items[${index}][jumlah]`;
+                    inputJumlah.className = 'input';
+                    inputJumlah.min = '0.01';
+                    inputJumlah.step = '0.01';
+                    inputJumlah.max = String(item.saldo || '');
+                    inputJumlah.value = String(item.jumlah);
+                    inputJumlah.setAttribute('aria-label', `Jumlah ${item.label}`);
+                    inputJumlah.addEventListener('input', () => {
+                        item.jumlah = Number(inputJumlah.value);
+                        daftarItem.set(item.kunci, item);
+                    });
+                    const satuan = document.createElement('span');
+                    satuan.className = 'person-meta';
+                    satuan.textContent = item.satuan;
+                    bungkusJumlah.append(inputJumlah, satuan);
+                    kolomJumlah.appendChild(bungkusJumlah);
+                }
+
                 const kolomInput = document.createElement('td');
-                kolomInput.textContent = item.cara_input_barang;
+                kolomInput.textContent = item.cara_input_barang === 'scan'
+                    ? 'Scan'
+                    : (item.cara_input_barang === 'campuran' ? 'Campuran' : 'Manual');
                 const kolomAksi = document.createElement('td');
                 kolomAksi.className = 'text-right';
                 const tombolHapus = document.createElement('button');
@@ -508,6 +634,15 @@
             tambahItem(item, 'manual', jumlahBarangManual.value);
             barangManual.value = '';
             jumlahBarangManual.value = '1';
+            jumlahBarangManual.disabled = false;
+            jumlahBarangManual.max = '';
+        });
+        barangManual.addEventListener('change', () => {
+            const item = petaItemManual.get(barangManual.value);
+            const unitAset = item?.tipe_item === 'unit';
+            jumlahBarangManual.disabled = unitAset;
+            jumlahBarangManual.value = '1';
+            jumlahBarangManual.max = item && !unitAset ? String(item.saldo || '') : '';
         });
 
         itemTersimpan.forEach((item) => tambahItem(item, item.cara_input_barang || 'manual', item.jumlah || 1));

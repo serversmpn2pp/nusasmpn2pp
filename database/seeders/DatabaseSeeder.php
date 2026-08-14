@@ -4,8 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Izin;
 use App\Models\JenisUjianCbt;
+use App\Models\PengaturanInventaris;
 use App\Models\Pengguna;
 use App\Models\Peran;
+use App\Models\SumberPerolehanBarang;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -39,6 +41,7 @@ class DatabaseSeeder extends Seeder
         $this->isiPeranBawaan();
         $this->isiIzinBawaan();
         $this->isiJenisUjianCbtBawaan();
+        $this->isiPengaturanInventarisBawaan();
         $this->hubungkanIzinPeranBawaan();
 
         $administrator->daftarPeran()->syncWithoutDetaching([
@@ -196,6 +199,21 @@ class DatabaseSeeder extends Seeder
 
         foreach ($jenisUjian as $item) {
             JenisUjianCbt::updateOrCreate(
+                ['kode' => $item['kode']],
+                $item + ['aktif' => true],
+            );
+        }
+    }
+
+    private function isiPengaturanInventarisBawaan(): void
+    {
+        PengaturanInventaris::utama();
+
+        foreach ([
+            ['kode' => 'BOS', 'nama' => 'BOS', 'deskripsi' => 'Barang yang diperoleh melalui dana Bantuan Operasional Sekolah.'],
+            ['kode' => 'DAK', 'nama' => 'DAK', 'deskripsi' => 'Barang yang diperoleh melalui Dana Alokasi Khusus.'],
+        ] as $item) {
+            SumberPerolehanBarang::updateOrCreate(
                 ['kode' => $item['kode']],
                 $item + ['aktif' => true],
             );

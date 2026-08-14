@@ -60,6 +60,11 @@ class LokasiBarang extends Model
         return $this->hasMany(DetailPeminjamanBarang::class);
     }
 
+    public function detailPenerimaanBarang(): HasMany
+    {
+        return $this->hasMany(DetailPenerimaanBarang::class);
+    }
+
     public function labelJenis(): string
     {
         return self::DAFTAR_JENIS[$this->jenis] ?? str($this->jenis)->headline()->toString();

@@ -62,8 +62,8 @@
                         <dd>{{ $barang->kategoriBarang->nama }}</dd>
                     </div>
                     <div class="detail-item">
-                        <dt>Tipe pengelolaan</dt>
-                        <dd>{{ $barang->labelTipePengelolaan() }}</dd>
+                        <dt>Jenis barang</dt>
+                        <dd>{{ $barang->labelJenisBarang() }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Satuan</dt>

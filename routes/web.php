@@ -15,10 +15,11 @@ use App\Http\Controllers\DokumenPoinSiswaController;
 use App\Http\Controllers\FotoIdentitasController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\HasilSurveiSayaController;
+use App\Http\Controllers\ImportPenerimaanBarangController;
 use App\Http\Controllers\InputNilaiController;
+use App\Http\Controllers\JadwalKegiatanIbadahController;
 use App\Http\Controllers\JadwalKelasSayaController;
 use App\Http\Controllers\JadwalPelajaranController;
-use App\Http\Controllers\JadwalKegiatanIbadahController;
 use App\Http\Controllers\JadwalPiketGuruController;
 use App\Http\Controllers\JadwalPiketSayaController;
 use App\Http\Controllers\JadwalSayaController;
@@ -32,14 +33,14 @@ use App\Http\Controllers\KartuPelajarController;
 use App\Http\Controllers\KartuPesertaUjianCbtController;
 use App\Http\Controllers\KategoriBarangController;
 use App\Http\Controllers\KategoriPembinaanSiswaController;
+use App\Http\Controllers\KegiatanIbadahController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KelasWaliController;
 use App\Http\Controllers\KenaikanKelasController;
-use App\Http\Controllers\KegiatanIbadahController;
 use App\Http\Controllers\KlarifikasiSiswaPembinaanController;
 use App\Http\Controllers\KomponenNilaiController;
-use App\Http\Controllers\KoreksiKegiatanIbadahController;
 use App\Http\Controllers\KoreksiHasilScanLjkOmrController;
+use App\Http\Controllers\KoreksiKegiatanIbadahController;
 use App\Http\Controllers\KoreksiManualUjianCbtController;
 use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
 use App\Http\Controllers\KunciJawabanUjianOmrController;
@@ -62,9 +63,11 @@ use App\Http\Controllers\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\PeminjamanBarangController;
 use App\Http\Controllers\PendampinganSiswaController;
 use App\Http\Controllers\PenempatanSiswaController;
+use App\Http\Controllers\PenerimaanBarangController;
 use App\Http\Controllers\PengaturanAbsensiController;
 use App\Http\Controllers\PengaturanAbsensiPegawaiController;
 use App\Http\Controllers\PengaturanBatasProsesPelanggaranController;
+use App\Http\Controllers\PengaturanInventarisController;
 use App\Http\Controllers\PengaturanPeringatanDiniPoinController;
 use App\Http\Controllers\PengaturanPoinKeterlambatanController;
 use App\Http\Controllers\PengembalianBarangController;
@@ -74,17 +77,17 @@ use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PerangkatAjarSayaController;
 use App\Http\Controllers\PergantianGuruMataPelajaranController;
 use App\Http\Controllers\PeringatanDiniSiswaController;
-use App\Http\Controllers\PiketKehadiranSiswaController;
 use App\Http\Controllers\PertanyaanSurveiPembelajaranController;
 use App\Http\Controllers\PesertaUjianCbtController;
+use App\Http\Controllers\PiketKehadiranSiswaController;
 use App\Http\Controllers\ProfilPegawaiController;
 use App\Http\Controllers\ProgressKasusSiswaController;
 use App\Http\Controllers\PublikasiNilaiController;
 use App\Http\Controllers\PusatVerifikasiPelanggaranController;
 use App\Http\Controllers\RekapAbsensiHarianController;
-use App\Http\Controllers\RekapKegiatanIbadahController;
 use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
 use App\Http\Controllers\RekapHasilUjianCbtController;
+use App\Http\Controllers\RekapKegiatanIbadahController;
 use App\Http\Controllers\RekapNilaiRaporController;
 use App\Http\Controllers\RekapPeminjamanBarangController;
 use App\Http\Controllers\RekapPoinSiswaController;
@@ -105,6 +108,7 @@ use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SoalCbtController;
 use App\Http\Controllers\SoalUjianCbtController;
 use App\Http\Controllers\StatusKelengkapanPanitiaCbtController;
+use App\Http\Controllers\SumberPerolehanBarangController;
 use App\Http\Controllers\SurveiPembelajaranController;
 use App\Http\Controllers\TahunPelajaranController;
 use App\Http\Controllers\TerapkanNilaiCbtController;
@@ -414,6 +418,19 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('laporan-inventaris-bulanan/cetak', [LaporanInventarisBulananController::class, 'cetak'])
             ->middleware('izin:barang.lihat,barang.kelola')
             ->name('laporan-inventaris-bulanan.cetak');
+        Route::middleware('izin:barang.kelola')->group(function () {
+            Route::get('penerimaan-barang/import', [ImportPenerimaanBarangController::class, 'create'])->name('penerimaan-barang.import.create');
+            Route::get('penerimaan-barang/import/template', [ImportPenerimaanBarangController::class, 'template'])->name('penerimaan-barang.import.template');
+            Route::post('penerimaan-barang/import/pratinjau', [ImportPenerimaanBarangController::class, 'unggah'])->name('penerimaan-barang.import.unggah');
+            Route::get('penerimaan-barang/import/pratinjau/{token}', [ImportPenerimaanBarangController::class, 'pratinjau'])->name('penerimaan-barang.import.pratinjau');
+            Route::post('penerimaan-barang/import/konfirmasi', [ImportPenerimaanBarangController::class, 'konfirmasi'])->name('penerimaan-barang.import.konfirmasi');
+        });
+        Route::resource('penerimaan-barang', PenerimaanBarangController::class)
+            ->only(['create', 'store'])
+            ->middleware('izin:barang.kelola');
+        Route::resource('penerimaan-barang', PenerimaanBarangController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:barang.lihat,barang.kelola');
         Route::resource('barang', BarangController::class)
             ->only(['index', 'show'])
             ->middleware('izin:barang.lihat,barang.kelola');
@@ -435,6 +452,18 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::resource('lokasi-barang', LokasiBarangController::class)
             ->only(['index', 'show'])
             ->middleware('izin:barang.lihat,barang.kelola');
+        Route::get('pengaturan-inventaris', [PengaturanInventarisController::class, 'index'])
+            ->middleware('izin:barang.kelola')
+            ->name('pengaturan-inventaris.index');
+        Route::put('pengaturan-inventaris', [PengaturanInventarisController::class, 'update'])
+            ->middleware('izin:barang.kelola')
+            ->name('pengaturan-inventaris.update');
+        Route::resource('sumber-perolehan-barang', SumberPerolehanBarangController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->middleware('izin:barang.kelola');
+        Route::resource('sumber-perolehan-barang', SumberPerolehanBarangController::class)
+            ->only(['index', 'show'])
+            ->middleware('izin:barang.lihat,barang.kelola');
         Route::resource('unit-barang', UnitBarangController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:barang.kelola');
@@ -454,6 +483,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             ->only(['index', 'show'])
             ->middleware('izin:barang.lihat,barang.kelola');
         Route::middleware('izin:barang.peminjaman_kelola')->group(function () {
+            Route::get('pengembalian-barang', [PengembalianBarangController::class, 'index'])->name('pengembalian-barang.index');
+            Route::get('pengembalian-barang/identifikasi', [PengembalianBarangController::class, 'identifikasi'])->name('pengembalian-barang.identifikasi');
             Route::get('peminjaman-barang/create', [PeminjamanBarangController::class, 'create'])->name('peminjaman-barang.create');
             Route::post('peminjaman-barang', [PeminjamanBarangController::class, 'store'])->name('peminjaman-barang.store');
             Route::get('peminjaman-barang/identifikasi-peminjam', [PeminjamanBarangController::class, 'identifikasiPeminjam'])->name('peminjaman-barang.identifikasi-peminjam');

@@ -111,6 +111,11 @@ class Pengguna extends Authenticatable
         return $this->hasMany(PengembalianBarang::class, 'dibuat_oleh_pengguna_id');
     }
 
+    public function penerimaanBarangDibuat(): HasMany
+    {
+        return $this->hasMany(PenerimaanBarang::class, 'dibuat_oleh_pengguna_id');
+    }
+
     public function ujianOmrDibuat(): HasMany
     {
         return $this->hasMany(UjianOmr::class, 'dibuat_oleh_pengguna_id');

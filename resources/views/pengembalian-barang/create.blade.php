@@ -33,6 +33,10 @@
             color: #166534;
         }
 
+        tr.return-row-selected > td {
+            background: #eff6ff;
+        }
+
         @media (max-width: 620px) {
             .return-scan-grid {
                 grid-template-columns: 1fr;
@@ -46,7 +50,10 @@
             <h1 class="page-title">Catat pengembalian barang</h1>
         </div>
 
-        <a href="{{ route('peminjaman-barang.show', $peminjamanBarang) }}" class="button button-muted">Kembali</a>
+        <div class="actions">
+            <a href="{{ route('pengembalian-barang.index') }}" class="button button-muted">Scan aset lain</a>
+            <a href="{{ route('peminjaman-barang.show', $peminjamanBarang) }}" class="button button-muted">Kembali</a>
+        </div>
     </div>
 
     @if ($errors->any())
@@ -73,11 +80,13 @@
             <div class="return-scan-grid">
                 <div class="field">
                     <label for="kode_pengembalian_scan">Scan barcode barang</label>
-                    <input id="kode_pengembalian_scan" type="text" class="input" placeholder="Scan barcode unit atau kode barang" autocomplete="off">
+                    <input id="kode_pengembalian_scan" type="text" class="input" value="{{ $kodeDipindai }}" placeholder="Scan barcode AST atau kode barang lama" autocomplete="off">
                 </div>
                 <button id="tombol_scan_pengembalian" type="button" class="button button-dark">Proses</button>
             </div>
-            <div id="status_pengembalian" class="return-status" style="margin-top: 12px;">Scanner siap menerima barcode barang.</div>
+            <div id="status_pengembalian" class="return-status {{ $kodeDipindai ? 'success' : '' }}" style="margin-top: 12px;">
+                {{ $kodeDipindai ? 'Aset hasil scan telah dipilih. Periksa kondisi barang sebelum menyimpan.' : 'Scanner siap menerima barcode barang.' }}
+            </div>
         </section>
 
         <section class="panel" style="margin-top: 18px;">
@@ -93,14 +102,21 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @php
+                            $daftarItemLama = old('items');
+                        @endphp
                         @foreach ($peminjamanBarang->detailPeminjamanBarang as $detail)
                             @php
                                 $nilaiLama = old('items.' . $detail->id, []);
-                                $terpilih = array_key_exists($detail->id, old('items', []));
                                 $kodeScan = $detail->unitBarang?->kode_inventaris ?: $detail->barang->kode;
+                                $terpilihDariScan = $kodeDipindai !== '' && strcasecmp($kodeScan, $kodeDipindai) === 0;
+                                $terpilih = is_array($daftarItemLama)
+                                    ? array_key_exists($detail->id, $daftarItemLama)
+                                    : $terpilihDariScan;
+                                $caraInput = $nilaiLama['cara_input_barang'] ?? ($terpilihDariScan ? 'scan' : 'manual');
                                 $satuan = $detail->tipe_pengelolaan === 'aset_individual' ? 'unit' : $detail->barang->satuanBarang->nama;
                             @endphp
-                            <tr data-return-row data-kode="{{ $kodeScan }}" data-detail-id="{{ $detail->id }}">
+                            <tr class="{{ $terpilih ? 'return-row-selected' : '' }}" data-return-row data-kode="{{ strtoupper($kodeScan) }}" data-detail-id="{{ $detail->id }}">
                                 <td>
                                     <input type="checkbox" data-return-check @checked($terpilih)>
                                 </td>
@@ -108,7 +124,7 @@
                                     <p class="person-name">{{ $detail->barang->nama }}</p>
                                     <p class="person-meta">{{ $kodeScan }} - {{ $detail->lokasiBarang?->nama ?: 'Tanpa lokasi' }}</p>
                                     <input type="hidden" name="items[{{ $detail->id }}][detail_peminjaman_barang_id]" value="{{ $detail->id }}" data-return-field @disabled(! $terpilih)>
-                                    <input type="hidden" name="items[{{ $detail->id }}][cara_input_barang]" value="{{ $nilaiLama['cara_input_barang'] ?? 'manual' }}" data-return-method data-return-field @disabled(! $terpilih)>
+                                    <input type="hidden" name="items[{{ $detail->id }}][cara_input_barang]" value="{{ $caraInput }}" data-return-method data-return-field @disabled(! $terpilih)>
                                 </td>
                                 <td>{{ number_format($detail->jumlahBelumDikembalikan(), 2, ',', '.') }} {{ $satuan }}</td>
                                 <td>
@@ -177,6 +193,7 @@
             const aktifkanBaris = (baris, caraInput = 'manual') => {
                 const checkbox = baris.querySelector('[data-return-check]');
                 checkbox.checked = true;
+                baris.classList.add('return-row-selected');
                 baris.querySelectorAll('[data-return-field]').forEach((input) => {
                     input.disabled = false;
                 });
@@ -189,6 +206,7 @@
                     baris.querySelectorAll('[data-return-field]').forEach((input) => {
                         input.disabled = !checkbox.checked;
                     });
+                    baris.classList.toggle('return-row-selected', checkbox.checked);
 
                     if (checkbox.checked) {
                         baris.querySelector('[data-return-method]').value = 'manual';
@@ -197,7 +215,8 @@
             });
 
             const prosesScan = async (kode) => {
-                const ditemukan = semuaBaris.filter((baris) => baris.dataset.kode === kode);
+                const kodeNormal = kode.trim().toUpperCase();
+                const ditemukan = semuaBaris.filter((baris) => baris.dataset.kode === kodeNormal);
 
                 if (ditemukan.length === 0) {
                     ubahStatus('Barcode tidak termasuk barang yang masih perlu dikembalikan.', 'error');

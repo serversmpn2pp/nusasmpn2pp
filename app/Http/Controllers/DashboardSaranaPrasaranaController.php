@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Barang;
 use App\Models\MutasiStokBarang;
-use App\Models\PengembalianBarang;
 use App\Models\PeminjamanBarang;
+use App\Models\PenerimaanBarang;
+use App\Models\PengembalianBarang;
 use App\Models\SaldoStokBarang;
 use App\Models\UnitBarang;
 use Illuminate\Database\Eloquent\Builder;
@@ -128,6 +129,22 @@ class DashboardSaranaPrasaranaController extends Controller
 
     private function aktivitasTerbaru(): Collection
     {
+        $penerimaan = PenerimaanBarang::query()
+            ->with('sumberPerolehanBarang:id,nama')
+            ->withCount('detailPenerimaanBarang')
+            ->latest('id')
+            ->limit(8)
+            ->get()
+            ->map(fn (PenerimaanBarang $item) => [
+                'jenis' => 'Barang datang',
+                'judul' => $item->nomor_penerimaan,
+                'keterangan' => $item->sumberPerolehanBarang->nama.' - '.$item->detail_penerimaan_barang_count.' jenis barang',
+                'waktu' => $item->created_at,
+                'route' => route('penerimaan-barang.show', $item),
+                'warna' => 'badge-active',
+                'izin' => ['barang.lihat', 'barang.kelola'],
+            ]);
+
         $mutasi = MutasiStokBarang::query()
             ->with(['barang:id,nama', 'lokasiBarang:id,nama'])
             ->latest('id')
@@ -139,7 +156,7 @@ class DashboardSaranaPrasaranaController extends Controller
                 return [
                     'jenis' => 'Mutasi stok',
                     'judul' => $item->barang->nama,
-                    'keterangan' => ($jumlah > 0 ? '+' : '') . number_format($jumlah, 2, ',', '.') . ' - ' . $item->labelKategori() . ' - ' . $item->lokasiBarang->nama,
+                    'keterangan' => ($jumlah > 0 ? '+' : '').number_format($jumlah, 2, ',', '.').' - '.$item->labelKategori().' - '.$item->lokasiBarang->nama,
                     'waktu' => $item->created_at,
                     'route' => route('mutasi-stok-barang.show', $item),
                     'warna' => $jumlah > 0 ? 'badge-active' : 'badge-inactive',
@@ -155,7 +172,7 @@ class DashboardSaranaPrasaranaController extends Controller
             ->map(fn (PeminjamanBarang $item) => [
                 'jenis' => 'Peminjaman',
                 'judul' => $item->namaPeminjam(),
-                'keterangan' => $item->nomor_peminjaman . ' - ' . $item->labelStatus(),
+                'keterangan' => $item->nomor_peminjaman.' - '.$item->labelStatus(),
                 'waktu' => $item->created_at,
                 'route' => route('peminjaman-barang.show', $item),
                 'warna' => $item->status === 'selesai' ? 'badge-active' : 'badge-warning',
@@ -170,7 +187,7 @@ class DashboardSaranaPrasaranaController extends Controller
             ->map(fn (PengembalianBarang $item) => [
                 'jenis' => 'Pengembalian',
                 'judul' => $item->peminjamanBarang->namaPeminjam(),
-                'keterangan' => $item->nomor_pengembalian . ' - ' . $item->peminjamanBarang->nomor_peminjaman,
+                'keterangan' => $item->nomor_pengembalian.' - '.$item->peminjamanBarang->nomor_peminjaman,
                 'waktu' => $item->created_at,
                 'route' => route('peminjaman-barang.show', $item->peminjamanBarang),
                 'warna' => 'badge-active',
@@ -178,6 +195,7 @@ class DashboardSaranaPrasaranaController extends Controller
             ]);
 
         return collect()
+            ->concat($penerimaan)
             ->concat($mutasi)
             ->concat($peminjaman)
             ->concat($pengembalian)

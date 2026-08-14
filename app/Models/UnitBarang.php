@@ -26,13 +26,19 @@ class UnitBarang extends Model
 
     protected $fillable = [
         'barang_id',
+        'detail_penerimaan_barang_id',
         'nomor_unit',
         'kode_inventaris',
+        'nomor_aset_resmi',
         'lokasi_barang_id',
         'nomor_seri',
+        'merek',
+        'tipe',
         'kondisi',
         'status_unit',
         'tanggal_perolehan',
+        'tahun_perolehan',
+        'sumber_perolehan_barang_id',
         'sumber_perolehan',
         'harga_perolehan',
         'keterangan',
@@ -42,6 +48,7 @@ class UnitBarang extends Model
     protected $casts = [
         'nomor_unit' => 'integer',
         'tanggal_perolehan' => 'date',
+        'tahun_perolehan' => 'integer',
         'harga_perolehan' => 'decimal:2',
         'aktif' => 'boolean',
     ];
@@ -51,9 +58,19 @@ class UnitBarang extends Model
         return $this->belongsTo(Barang::class);
     }
 
+    public function detailPenerimaanBarang(): BelongsTo
+    {
+        return $this->belongsTo(DetailPenerimaanBarang::class);
+    }
+
     public function lokasiBarang(): BelongsTo
     {
         return $this->belongsTo(LokasiBarang::class);
+    }
+
+    public function sumberPerolehanBarang(): BelongsTo
+    {
+        return $this->belongsTo(SumberPerolehanBarang::class);
     }
 
     public function detailPeminjamanBarang(): HasMany

@@ -42,8 +42,8 @@
             <p class="stat-value">{{ $jumlahAktif }}</p>
         </div>
         <div class="panel stat inactive">
-            <p class="stat-label">Aset individual</p>
-            <p class="stat-value">{{ $jumlahAsetIndividual }}</p>
+            <p class="stat-label">Tidak habis pakai</p>
+            <p class="stat-value">{{ $jumlahTidakHabisPakai }}</p>
         </div>
         <div class="panel stat">
             <p class="stat-label">Habis pakai</p>
@@ -73,11 +73,11 @@
             </div>
 
             <div class="field">
-                <label for="tipe_pengelolaan">Tipe pengelolaan</label>
-                <select id="tipe_pengelolaan" name="tipe_pengelolaan" class="select">
-                    <option value="semua">Semua tipe</option>
-                    @foreach ($daftarTipePengelolaan as $nilaiTipe => $labelTipe)
-                        <option value="{{ $nilaiTipe }}" @selected($tipePengelolaan === $nilaiTipe)>{{ $labelTipe }}</option>
+                <label for="jenis_barang">Jenis barang</label>
+                <select id="jenis_barang" name="jenis_barang" class="select">
+                    <option value="semua">Semua jenis</option>
+                    @foreach ($daftarJenisBarang as $nilaiJenis => $labelJenis)
+                        <option value="{{ $nilaiJenis }}" @selected($jenisBarang === $nilaiJenis)>{{ $labelJenis }}</option>
                     @endforeach
                 </select>
             </div>
@@ -105,7 +105,7 @@
                     <tr>
                         <th>Barang</th>
                         <th>Kategori</th>
-                        <th>Tipe pengelolaan</th>
+                        <th>Jenis barang</th>
                         <th>Lokasi awal</th>
                         <th>Saldo stok</th>
                         <th>Stok minimum</th>
@@ -121,7 +121,7 @@
                                 <p class="person-meta">{{ $item->kode }}</p>
                             </td>
                             <td>{{ $item->kategoriBarang->nama }}</td>
-                            <td>{{ $item->labelTipePengelolaan() }}</td>
+                            <td>{{ $item->labelJenisBarang() }}</td>
                             <td>{{ $item->lokasiPenyimpanan?->nama ?: '-' }}</td>
                             <td>
                                 @if ($item->tipe_pengelolaan === 'aset_individual')
@@ -182,8 +182,8 @@
                             <dd>{{ $item->satuanBarang->nama }}</dd>
                         </div>
                         <div>
-                            <dt>Tipe</dt>
-                            <dd>{{ $item->labelTipePengelolaan() }}</dd>
+                            <dt>Jenis</dt>
+                            <dd>{{ $item->labelJenisBarang() }}</dd>
                         </div>
                         <div>
                             <dt>Lokasi awal</dt>

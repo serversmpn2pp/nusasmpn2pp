@@ -215,6 +215,19 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('satuan-barang.update', 'izin:barang.kelola');
         $this->assertRouteMemakaiMiddleware('lokasi-barang.index', 'izin:barang.lihat,barang.kelola');
         $this->assertRouteMemakaiMiddleware('lokasi-barang.destroy', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('pengaturan-inventaris.index', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('pengaturan-inventaris.update', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('sumber-perolehan-barang.index', 'izin:barang.lihat,barang.kelola');
+        $this->assertRouteMemakaiMiddleware('sumber-perolehan-barang.store', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.index', 'izin:barang.lihat,barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.show', 'izin:barang.lihat,barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.create', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.store', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.import.create', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.import.template', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.import.unggah', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.import.pratinjau', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.import.konfirmasi', 'izin:barang.kelola');
         $this->assertRouteMemakaiMiddleware('unit-barang.index', 'izin:barang.lihat,barang.kelola');
         $this->assertRouteMemakaiMiddleware('unit-barang.store', 'izin:barang.kelola');
         $this->assertRouteMemakaiMiddleware('label-barcode-inventaris.index', 'izin:barang.lihat,barang.kelola');
@@ -224,6 +237,8 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('peminjaman-barang.index', 'izin:barang.lihat,barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('peminjaman-barang.show', 'izin:barang.lihat,barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('peminjaman-barang.store', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('pengembalian-barang.index', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('pengembalian-barang.identifikasi', 'izin:barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('pengembalian-barang.store', 'izin:barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('rekap-peminjaman-barang.index', 'izin:barang.lihat,barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('rekap-peminjaman-barang.cetak', 'izin:barang.lihat,barang.peminjaman_kelola');

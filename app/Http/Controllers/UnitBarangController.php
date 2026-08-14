@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Barang;
 use App\Models\LokasiBarang;
+use App\Models\PengaturanInventaris;
+use App\Models\SumberPerolehanBarang;
 use App\Models\UnitBarang;
+use App\Services\Inventaris\GeneratorIdentitasInventaris;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -12,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class UnitBarangController extends Controller
 {
+    public function __construct(private GeneratorIdentitasInventaris $generatorIdentitas) {}
+
     public function index(Request $request)
     {
         $kataKunci = trim((string) $request->input('kata_kunci', ''));
@@ -22,7 +27,7 @@ class UnitBarangController extends Controller
         $lokasiBarangId = $request->input('lokasi_barang_id', 'semua');
 
         $unitBarang = UnitBarang::query()
-            ->with(['barang.kategoriBarang', 'lokasiBarang'])
+            ->with(['barang.kategoriBarang', 'lokasiBarang', 'sumberPerolehanBarang'])
             ->when($status === 'aktif', fn ($query) => $query->where('aktif', true))
             ->when($status === 'nonaktif', fn ($query) => $query->where('aktif', false))
             ->when($kondisi !== 'semua', fn ($query) => $query->where('kondisi', $kondisi))
@@ -31,9 +36,12 @@ class UnitBarangController extends Controller
             ->when($lokasiBarangId !== 'semua', fn ($query) => $query->where('lokasi_barang_id', $lokasiBarangId))
             ->when($kataKunci !== '', function ($query) use ($kataKunci) {
                 $query->where(function ($query) use ($kataKunci) {
-                    $query->where('kode_inventaris', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhere('nomor_seri', 'ilike', '%' . $kataKunci . '%')
-                        ->orWhereHas('barang', fn ($query) => $query->where('nama', 'ilike', '%' . $kataKunci . '%'));
+                    $query->where('kode_inventaris', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('nomor_aset_resmi', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('nomor_seri', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('merek', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhere('tipe', 'ilike', '%'.$kataKunci.'%')
+                        ->orWhereHas('barang', fn ($query) => $query->where('nama', 'ilike', '%'.$kataKunci.'%'));
                 });
             })
             ->orderByDesc('aktif')
@@ -96,7 +104,8 @@ class UnitBarangController extends Controller
                 $nomorUnit = $nomorTerakhir + $urutan;
                 $unit = UnitBarang::create(array_merge($data, [
                     'nomor_unit' => $nomorUnit,
-                    'kode_inventaris' => $this->buatKodeInventaris($barang, $nomorUnit),
+                    'kode_inventaris' => $this->generatorIdentitas->buatKodeUnitAset((int) $data['tahun_perolehan']),
+                    'nomor_aset_resmi' => $this->generatorIdentitas->buatNomorAsetResmi((int) $data['tahun_perolehan']),
                 ]));
                 $unitPertama ??= $unit;
             }
@@ -106,7 +115,7 @@ class UnitBarangController extends Controller
 
         $pesan = $jumlahUnit === 1
             ? 'Unit aset berhasil ditambahkan.'
-            : $jumlahUnit . ' unit aset berhasil ditambahkan.';
+            : $jumlahUnit.' unit aset berhasil ditambahkan.';
 
         return redirect()
             ->route('unit-barang.show', $unitPertama)
@@ -115,16 +124,37 @@ class UnitBarangController extends Controller
 
     public function show(UnitBarang $unitBarang)
     {
-        $unitBarang->load(['barang.kategoriBarang', 'barang.satuanBarang', 'lokasiBarang']);
+        $unitBarang->load([
+            'barang.kategoriBarang',
+            'barang.satuanBarang',
+            'lokasiBarang',
+            'sumberPerolehanBarang',
+            'detailPenerimaanBarang.penerimaanBarang.sumberPerolehanBarang',
+            'detailPenerimaanBarang.penerimaanBarang.dibuatOleh',
+            'detailPenerimaanBarang.lokasiBarang',
+            'detailPeminjamanBarang.peminjamanBarang.siswa',
+            'detailPeminjamanBarang.peminjamanBarang.pegawai',
+            'detailPeminjamanBarang.peminjamanBarang.dibuatOleh',
+            'detailPeminjamanBarang.detailPengembalianBarang.pengembalianBarang.dibuatOleh',
+        ]);
 
-        return view('unit-barang.show', compact('unitBarang'));
+        $detailPeminjamanAktif = $unitBarang->detailPeminjamanBarang
+            ->sortByDesc('id')
+            ->first(fn ($detail) => $detail->peminjamanBarang?->masihAktif()
+                && $detail->jumlahBelumDikembalikan() > 0);
+
+        return view('unit-barang.show', [
+            'unitBarang' => $unitBarang,
+            'detailPeminjamanAktif' => $detailPeminjamanAktif,
+            'riwayatUnit' => $this->susunRiwayatUnit($unitBarang),
+        ]);
     }
 
     public function edit(UnitBarang $unitBarang)
     {
         return view('unit-barang.edit', array_merge(
             compact('unitBarang'),
-            $this->pilihanForm(),
+            $this->pilihanForm($unitBarang),
         ));
     }
 
@@ -135,6 +165,11 @@ class UnitBarangController extends Controller
             $request->boolean('aktif'),
         );
         unset($data['jumlah_unit']);
+
+        if (filled($data['tahun_perolehan'] ?? null)) {
+            $data['nomor_aset_resmi'] = $this->generatorIdentitas->buatNomorAsetResmi((int) $data['tahun_perolehan']);
+        }
+
         $unitBarang->update($data);
 
         return redirect()
@@ -151,11 +186,23 @@ class UnitBarangController extends Controller
             ->with('berhasil', 'Unit aset berhasil dinonaktifkan.');
     }
 
-    private function pilihanForm(): array
+    private function pilihanForm(?UnitBarang $unitBarang = null): array
     {
         return [
             'daftarBarang' => $this->daftarBarang(aktifSaja: true),
             'daftarLokasi' => LokasiBarang::where('aktif', true)->orderBy('nama')->get(),
+            'daftarSumberPerolehan' => SumberPerolehanBarang::query()
+                ->where(function ($query) use ($unitBarang) {
+                    $query->where('aktif', true)
+                        ->when(
+                            $unitBarang?->sumber_perolehan_barang_id,
+                            fn ($query, $sumberId) => $query->orWhereKey($sumberId),
+                        );
+                })
+                ->orderByDesc('aktif')
+                ->orderBy('nama')
+                ->get(),
+            'pengaturanInventaris' => PengaturanInventaris::utama(),
             'daftarKondisi' => UnitBarang::DAFTAR_KONDISI,
             'daftarStatusUnit' => UnitBarang::DAFTAR_STATUS,
         ];
@@ -180,7 +227,10 @@ class UnitBarangController extends Controller
             'kondisi' => ['required', Rule::in(array_keys(UnitBarang::DAFTAR_KONDISI))],
             'status_unit' => ['required', Rule::in(array_keys(UnitBarang::DAFTAR_STATUS))],
             'tanggal_perolehan' => ['nullable', 'date'],
-            'sumber_perolehan' => ['nullable', 'string', 'max:120'],
+            'tahun_perolehan' => [$tambah ? 'required' : 'nullable', 'integer', 'min:1900', 'max:2100'],
+            'sumber_perolehan_barang_id' => [$tambah ? 'required' : 'nullable', 'integer', 'exists:sumber_perolehan_barang,id'],
+            'merek' => ['nullable', 'string', 'max:120'],
+            'tipe' => ['nullable', 'string', 'max:120'],
             'harga_perolehan' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
             'keterangan' => ['nullable', 'string'],
             'aktif' => ['nullable', 'boolean'],
@@ -191,17 +241,30 @@ class UnitBarangController extends Controller
     {
         $data['lokasi_barang_id'] = filled($data['lokasi_barang_id'] ?? null) ? $data['lokasi_barang_id'] : null;
         $data['nomor_seri'] = filled($data['nomor_seri'] ?? null) ? trim($data['nomor_seri']) : null;
-        $data['sumber_perolehan'] = filled($data['sumber_perolehan'] ?? null) ? trim($data['sumber_perolehan']) : null;
+        $data['merek'] = filled($data['merek'] ?? null) ? trim($data['merek']) : null;
+        $data['tipe'] = filled($data['tipe'] ?? null) ? trim($data['tipe']) : null;
         $data['harga_perolehan'] = filled($data['harga_perolehan'] ?? null) ? $data['harga_perolehan'] : null;
         $data['keterangan'] = filled($data['keterangan'] ?? null) ? trim($data['keterangan']) : null;
         $data['aktif'] = $aktif;
 
-        return $data;
-    }
+        if (
+            filled($data['tanggal_perolehan'] ?? null)
+            && filled($data['tahun_perolehan'] ?? null)
+            && (int) substr($data['tanggal_perolehan'], 0, 4) !== (int) $data['tahun_perolehan']
+        ) {
+            throw ValidationException::withMessages([
+                'tahun_perolehan' => 'Tahun perolehan harus sama dengan tahun pada tanggal perolehan.',
+            ]);
+        }
 
-    private function buatKodeInventaris(Barang $barang, int $nomorUnit): string
-    {
-        return 'INV-' . str($barang->kode)->replace('_', '-')->limit(48, '')->toString() . '-' . str_pad((string) $nomorUnit, 6, '0', STR_PAD_LEFT);
+        if (filled($data['sumber_perolehan_barang_id'] ?? null)) {
+            $sumber = SumberPerolehanBarang::findOrFail($data['sumber_perolehan_barang_id']);
+            $data['sumber_perolehan'] = $sumber->nama;
+        } else {
+            unset($data['sumber_perolehan_barang_id'], $data['tahun_perolehan']);
+        }
+
+        return $data;
     }
 
     private function pastikanBarangAsetIndividual(Barang $barang): void
@@ -211,6 +274,113 @@ class UnitBarangController extends Controller
                 'barang_id' => 'Unit inventaris hanya dapat dibuat untuk barang dengan tipe aset individual.',
             ]);
         }
+    }
+
+    private function susunRiwayatUnit(UnitBarang $unitBarang)
+    {
+        $riwayat = collect();
+        $detailPenerimaan = $unitBarang->detailPenerimaanBarang;
+        $penerimaan = $detailPenerimaan?->penerimaanBarang;
+
+        if ($penerimaan) {
+            $riwayat->push([
+                'jenis' => 'penerimaan',
+                'label' => 'Penerimaan',
+                'judul' => 'Aset diterima dan dicatat',
+                'keterangan' => collect([
+                    $penerimaan->nomor_penerimaan,
+                    $penerimaan->asal_barang ? 'Dari '.$penerimaan->asal_barang : null,
+                ])->filter()->join(' - '),
+                'tanggal' => $penerimaan->tanggal_penerimaan,
+                'kunci_urut' => $this->kunciUrutRiwayat($penerimaan->tanggal_penerimaan, $penerimaan->created_at),
+                'meta' => array_filter([
+                    'Sumber' => $penerimaan->sumberPerolehanBarang?->nama,
+                    'Lokasi awal' => $detailPenerimaan->lokasiBarang?->nama,
+                    'Kondisi awal' => UnitBarang::DAFTAR_KONDISI[$detailPenerimaan->kondisi] ?? null,
+                    'Petugas' => $penerimaan->dibuatOleh?->nama,
+                ]),
+                'tautan' => route('penerimaan-barang.show', $penerimaan),
+                'label_tautan' => 'Lihat penerimaan',
+            ]);
+        } else {
+            $tanggalPencatatan = $unitBarang->tanggal_perolehan ?: $unitBarang->created_at;
+            $riwayat->push([
+                'jenis' => 'pencatatan',
+                'label' => 'Pencatatan',
+                'judul' => 'Unit aset dicatat di NUSA',
+                'keterangan' => 'Riwayat penerimaan terperinci belum tersedia untuk unit ini.',
+                'tanggal' => $tanggalPencatatan,
+                'kunci_urut' => $this->kunciUrutRiwayat($tanggalPencatatan, $unitBarang->created_at),
+                'meta' => array_filter([
+                    'Sumber' => $unitBarang->sumberPerolehanBarang?->nama ?: $unitBarang->sumber_perolehan,
+                    'Lokasi awal' => $unitBarang->lokasiBarang?->nama,
+                    'Kondisi awal' => $unitBarang->labelKondisi(),
+                ]),
+                'tautan' => null,
+                'label_tautan' => null,
+            ]);
+        }
+
+        foreach ($unitBarang->detailPeminjamanBarang as $detailPeminjaman) {
+            $peminjaman = $detailPeminjaman->peminjamanBarang;
+
+            if (! $peminjaman) {
+                continue;
+            }
+
+            $riwayat->push([
+                'jenis' => 'peminjaman',
+                'label' => 'Peminjaman',
+                'judul' => 'Dipinjam oleh '.$peminjaman->namaPeminjam(),
+                'keterangan' => $detailPeminjaman->catatan ?: 'Aset diserahkan kepada peminjam.',
+                'tanggal' => $peminjaman->tanggal_peminjaman,
+                'kunci_urut' => $this->kunciUrutRiwayat($peminjaman->tanggal_peminjaman, $peminjaman->created_at),
+                'meta' => array_filter([
+                    'Transaksi' => $peminjaman->nomor_peminjaman,
+                    'Identitas' => $peminjaman->identitasPeminjam(),
+                    'Rencana kembali' => $peminjaman->rencana_kembali?->locale('id')->translatedFormat('d F Y'),
+                    'Petugas' => $peminjaman->dibuatOleh?->nama,
+                ]),
+                'tautan' => route('peminjaman-barang.show', $peminjaman),
+                'label_tautan' => 'Lihat peminjaman',
+            ]);
+
+            foreach ($detailPeminjaman->detailPengembalianBarang as $detailPengembalian) {
+                $pengembalian = $detailPengembalian->pengembalianBarang;
+
+                if (! $pengembalian) {
+                    continue;
+                }
+
+                $riwayat->push([
+                    'jenis' => 'pengembalian',
+                    'label' => 'Pengembalian',
+                    'judul' => 'Aset dikembalikan oleh '.$peminjaman->namaPeminjam(),
+                    'keterangan' => $detailPengembalian->catatan
+                        ?: ($pengembalian->catatan ?: 'Aset diterima kembali dan kondisinya diperbarui.'),
+                    'tanggal' => $pengembalian->tanggal_pengembalian,
+                    'kunci_urut' => $this->kunciUrutRiwayat($pengembalian->tanggal_pengembalian, $pengembalian->created_at),
+                    'meta' => array_filter([
+                        'Transaksi' => $pengembalian->nomor_pengembalian,
+                        'Kondisi kembali' => UnitBarang::DAFTAR_KONDISI[$detailPengembalian->kondisi_pengembalian] ?? null,
+                        'Cara input' => $detailPengembalian->cara_input_barang === 'scan' ? 'Scan barcode' : 'Manual',
+                        'Petugas' => $pengembalian->dibuatOleh?->nama,
+                    ]),
+                    'tautan' => route('peminjaman-barang.show', $peminjaman),
+                    'label_tautan' => 'Lihat transaksi',
+                ]);
+            }
+        }
+
+        return $riwayat->sortByDesc('kunci_urut')->values();
+    }
+
+    private function kunciUrutRiwayat($tanggal, $dibuatPada): string
+    {
+        $bagianTanggal = $tanggal?->format('Y-m-d') ?: ($dibuatPada?->format('Y-m-d') ?: '0000-00-00');
+        $bagianWaktu = $dibuatPada?->format('H:i:s.u') ?: '00:00:00.000000';
+
+        return $bagianTanggal.' '.$bagianWaktu;
     }
 
     private function pilihanValid(mixed $nilai, array $daftar): string

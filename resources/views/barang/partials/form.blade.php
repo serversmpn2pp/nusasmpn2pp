@@ -37,7 +37,7 @@
             <input type="checkbox" name="aktif" value="1" @checked((bool) $nilai('aktif', true))>
         </label>
 
-        <p class="help-text" style="margin-top: 16px;">Kode barang akan dipakai sebagai identitas internal. Pada tahap barcode, aset individual memperoleh kode unik untuk setiap unitnya.</p>
+        <p class="help-text" style="margin-top: 16px;">Barang habis pakai memperoleh kode BHP otomatis. Barang tidak habis pakai menggunakan kode barang baku yang dimasukkan petugas.</p>
     </aside>
 
     <div class="section-stack">
@@ -54,9 +54,21 @@
                 </div>
 
                 <div class="field">
+                    <label for="jenis_barang">Jenis barang</label>
+                    <select id="jenis_barang" name="jenis_barang" class="{{ $selectClass('jenis_barang') }}" required>
+                        @foreach ($daftarJenisBarang as $nilaiJenis => $labelJenis)
+                            <option value="{{ $nilaiJenis }}" @selected($nilai('jenis_barang', 'tidak_habis_pakai') === $nilaiJenis)>{{ $labelJenis }}</option>
+                        @endforeach
+                    </select>
+                    @error('jenis_barang')
+                        <p class="error-text">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="field">
                     <label for="kode">Kode barang</label>
-                    <input id="kode" name="kode" type="text" value="{{ $nilai('kode') }}" placeholder="Contoh: LPT_CHROMEBOOK" class="{{ $inputClass('kode') }}" required>
-                    <p class="help-text">Kode akan dirapikan menjadi huruf besar tanpa spasi.</p>
+                    <input id="kode" name="kode" type="text" value="{{ $nilai('kode') }}" placeholder="Contoh: 02.06.01.05.40.01" class="{{ $inputClass('kode') }}">
+                    <p id="kode-help" class="help-text">Masukkan enam kelompok dua angka yang dipisahkan titik.</p>
                     @error('kode')
                         <p class="error-text">{{ $message }}</p>
                     @enderror
@@ -89,19 +101,6 @@
                 </div>
 
                 <div class="field">
-                    <label for="tipe_pengelolaan">Tipe pengelolaan</label>
-                    <select id="tipe_pengelolaan" name="tipe_pengelolaan" class="{{ $selectClass('tipe_pengelolaan') }}" required>
-                        <option value="">Pilih tipe</option>
-                        @foreach ($daftarTipePengelolaan as $nilaiTipe => $labelTipe)
-                            <option value="{{ $nilaiTipe }}" @selected($nilai('tipe_pengelolaan') === $nilaiTipe)>{{ $labelTipe }}</option>
-                        @endforeach
-                    </select>
-                    @error('tipe_pengelolaan')
-                        <p class="error-text">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="field">
                     <label for="lokasi_penyimpanan_id">Lokasi penyimpanan awal</label>
                     <select id="lokasi_penyimpanan_id" name="lokasi_penyimpanan_id" class="{{ $selectClass('lokasi_penyimpanan_id') }}">
                         <option value="">Belum ditentukan</option>
@@ -114,7 +113,7 @@
                     @enderror
                 </div>
 
-                <div class="field">
+                <div id="stok-minimum-field" class="field">
                     <label for="stok_minimum">Stok minimum</label>
                     <input id="stok_minimum" name="stok_minimum" type="number" min="0" step="0.01" value="{{ $nilai('stok_minimum', 0) }}" placeholder="Contoh: 10" class="{{ $inputClass('stok_minimum') }}">
                     <p class="help-text">Digunakan sebagai pengingat ketika saldo stok mulai menipis.</p>
@@ -139,3 +138,28 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const jenis = document.getElementById('jenis_barang');
+            const kode = document.getElementById('kode');
+            const bantuanKode = document.getElementById('kode-help');
+            const stokMinimum = document.getElementById('stok-minimum-field');
+
+            const sesuaikanForm = () => {
+                const habisPakai = jenis.value === 'habis_pakai';
+                kode.readOnly = habisPakai;
+                kode.required = !habisPakai;
+                kode.placeholder = habisPakai ? 'Dibuat otomatis oleh NUSA' : 'Contoh: 02.06.01.05.40.01';
+                bantuanKode.textContent = habisPakai
+                    ? 'Kode otomatis menggunakan format BHP-000001.'
+                    : 'Masukkan enam kelompok dua angka yang dipisahkan titik.';
+                stokMinimum.hidden = !habisPakai;
+            };
+
+            jenis.addEventListener('change', sesuaikanForm);
+            sesuaikanForm();
+        });
+    </script>
+@endpush

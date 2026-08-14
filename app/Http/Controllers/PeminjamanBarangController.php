@@ -37,14 +37,14 @@ class PeminjamanBarangController extends Controller
             ->when($tanggalSelesai, fn ($query) => $query->whereDate('tanggal_peminjaman', '<=', $tanggalSelesai))
             ->when($kataKunci !== '', function ($query) use ($kataKunci) {
                 $query->where(function ($query) use ($kataKunci) {
-                    $query->where('nomor_peminjaman', 'ilike', '%' . $kataKunci . '%')
+                    $query->where('nomor_peminjaman', 'ilike', '%'.$kataKunci.'%')
                         ->orWhereHas('siswa', function ($query) use ($kataKunci) {
-                            $query->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
-                                ->orWhere('nisn', 'ilike', '%' . $kataKunci . '%');
+                            $query->where('nama_lengkap', 'ilike', '%'.$kataKunci.'%')
+                                ->orWhere('nisn', 'ilike', '%'.$kataKunci.'%');
                         })
                         ->orWhereHas('pegawai', function ($query) use ($kataKunci) {
-                            $query->where('nama_lengkap', 'ilike', '%' . $kataKunci . '%')
-                                ->orWhere('nip', 'ilike', '%' . $kataKunci . '%');
+                            $query->where('nama_lengkap', 'ilike', '%'.$kataKunci.'%')
+                                ->orWhere('nip', 'ilike', '%'.$kataKunci.'%');
                         });
                 });
             })
@@ -127,48 +127,52 @@ class PeminjamanBarangController extends Controller
     public function identifikasiPeminjam(Request $request)
     {
         $data = $request->validate([
-            'jenis_peminjam' => ['required', Rule::in(array_keys(PeminjamanBarang::DAFTAR_JENIS_PEMINJAM))],
+            'jenis_peminjam' => ['nullable', Rule::in(array_merge(['otomatis'], array_keys(PeminjamanBarang::DAFTAR_JENIS_PEMINJAM)))],
             'kode' => ['required', 'string', 'max:100'],
         ]);
-        $kode = trim($data['kode']);
+        $kode = preg_replace('/\s+/', '', trim($data['kode']));
+        $jenisPeminjam = $data['jenis_peminjam'] ?? 'otomatis';
 
-        if ($data['jenis_peminjam'] === 'siswa') {
-            $siswa = Siswa::query()
-                ->where('aktif', true)
-                ->where(function ($query) use ($kode) {
-                    $query->where('nisn', $kode)->orWhere('nis', $kode);
-                })
-                ->first();
+        $siswa = $jenisPeminjam !== 'pegawai'
+            ? $this->cariSiswaDariKode($kode)
+            : null;
+        $pegawai = $jenisPeminjam !== 'siswa'
+            ? Pegawai::query()->where('aktif', true)->where('nip', $kode)->first()
+            : null;
 
-            if (! $siswa) {
-                return response()->json(['pesan' => 'Siswa dengan NISN atau NIS tersebut tidak ditemukan.'], 422);
-            }
+        if ($siswa && $pegawai) {
+            return response()->json([
+                'pesan' => 'Nomor kartu ditemukan pada siswa dan pegawai. Pilih jenis peminjam lalu gunakan pilihan manual.',
+            ], 422);
+        }
 
+        if ($siswa) {
             return response()->json([
                 'jenis_peminjam' => 'siswa',
                 'id' => $siswa->id,
                 'nama' => $siswa->nama_lengkap,
-                'identitas' => 'NISN ' . ($siswa->nisn ?: '-'),
+                'identitas' => 'NISN '.($siswa->nisn ?: '-'),
                 'informasi' => $this->namaKelasAktif($siswa),
             ]);
         }
 
-        $pegawai = Pegawai::query()
-            ->where('aktif', true)
-            ->where('nip', $kode)
-            ->first();
-
-        if (! $pegawai) {
-            return response()->json(['pesan' => 'Pegawai dengan NIP tersebut tidak ditemukan.'], 422);
+        if ($pegawai) {
+            return response()->json([
+                'jenis_peminjam' => 'pegawai',
+                'id' => $pegawai->id,
+                'nama' => $pegawai->nama_lengkap,
+                'identitas' => 'NIP '.($pegawai->nip ?: '-'),
+                'informasi' => $pegawai->jenis_pegawai ?: 'Pegawai',
+            ]);
         }
 
-        return response()->json([
-            'jenis_peminjam' => 'pegawai',
-            'id' => $pegawai->id,
-            'nama' => $pegawai->nama_lengkap,
-            'identitas' => 'NIP ' . ($pegawai->nip ?: '-'),
-            'informasi' => $pegawai->jenis_pegawai ?: 'Pegawai',
-        ]);
+        $pesan = match ($jenisPeminjam) {
+            'siswa' => 'Siswa dengan NISN atau NIS tersebut tidak ditemukan.',
+            'pegawai' => 'Pegawai dengan NIP tersebut tidak ditemukan.',
+            default => 'Kartu tidak ditemukan sebagai siswa maupun pegawai aktif.',
+        };
+
+        return response()->json(['pesan' => $pesan], 422);
     }
 
     public function identifikasiBarang(Request $request)
@@ -177,11 +181,11 @@ class PeminjamanBarangController extends Controller
             'kode' => ['required', 'string', 'max:120'],
             'lokasi_barang_id' => ['nullable', 'integer', 'exists:lokasi_barang,id'],
         ]);
-        $kode = trim($data['kode']);
+        $kode = strtoupper(trim($data['kode']));
 
         $unitBarang = UnitBarang::query()
             ->with(['barang.satuanBarang', 'lokasiBarang'])
-            ->where('kode_inventaris', $kode)
+            ->whereRaw('LOWER(kode_inventaris) = ?', [strtolower($kode)])
             ->first();
 
         if ($unitBarang) {
@@ -196,11 +200,17 @@ class PeminjamanBarangController extends Controller
             ->with('satuanBarang')
             ->where('aktif', true)
             ->whereIn('tipe_pengelolaan', ['stok_dikembalikan', 'habis_pakai'])
-            ->where('kode', $kode)
+            ->whereRaw('LOWER(kode) = ?', [strtolower($kode)])
             ->first();
 
         if (! $barang) {
-            return response()->json(['pesan' => 'Barcode atau kode barang tidak ditemukan.'], 422);
+            $pesan = str_starts_with($kode, 'AST-')
+                ? 'Barcode aset tidak ditemukan. Pastikan label AST sudah terdaftar dan terbaca lengkap.'
+                : (str_starts_with($kode, 'BHP-')
+                    ? 'Barcode barang habis pakai tidak ditemukan.'
+                    : 'Barcode atau kode barang tidak ditemukan.');
+
+            return response()->json(['pesan' => $pesan], 422);
         }
 
         $saldoStok = SaldoStokBarang::query()
@@ -246,7 +256,7 @@ class PeminjamanBarangController extends Controller
             ->get()
             ->map(fn (Siswa $siswa) => [
                 'id' => $siswa->id,
-                'label' => $siswa->nama_lengkap . ' - NISN ' . ($siswa->nisn ?: '-') . ' - ' . ($siswa->anggotaKelas->first()?->kelas?->nama ?: 'Belum ditempatkan'),
+                'label' => $siswa->nama_lengkap.' - NISN '.($siswa->nisn ?: '-').' - '.($siswa->anggotaKelas->first()?->kelas?->nama ?: 'Belum ditempatkan'),
             ]);
     }
 
@@ -258,7 +268,7 @@ class PeminjamanBarangController extends Controller
             ->get()
             ->map(fn (Pegawai $pegawai) => [
                 'id' => $pegawai->id,
-                'label' => $pegawai->nama_lengkap . ' - NIP ' . ($pegawai->nip ?: '-'),
+                'label' => $pegawai->nama_lengkap.' - NIP '.($pegawai->nip ?: '-'),
             ]);
     }
 
@@ -288,13 +298,19 @@ class PeminjamanBarangController extends Controller
     private function formatUnitBarang(UnitBarang $unitBarang): array
     {
         return [
-            'kunci' => 'unit:' . $unitBarang->id,
+            'kunci' => 'unit:'.$unitBarang->id,
             'tipe_item' => 'unit',
             'unit_barang_id' => $unitBarang->id,
             'barang_id' => $unitBarang->barang_id,
             'lokasi_barang_id' => $unitBarang->lokasi_barang_id,
-            'label' => $unitBarang->barang->nama . ' - ' . $unitBarang->kode_inventaris,
-            'keterangan' => 'Unit aset - ' . ($unitBarang->lokasiBarang?->nama ?: 'Tanpa lokasi'),
+            'kode' => $unitBarang->kode_inventaris,
+            'label' => $unitBarang->barang->nama,
+            'keterangan' => $unitBarang->kode_inventaris
+                .($unitBarang->nomor_aset_resmi ? ' - Aset '.$unitBarang->nomor_aset_resmi : '')
+                .' - '.($unitBarang->lokasiBarang?->nama ?: 'Tanpa lokasi'),
+            'jenis_tampilan' => 'Aset individual',
+            'kelompok' => 'Aset individual (wajib kembali)',
+            'wajib_dikembalikan' => true,
             'satuan' => 'unit',
             'saldo' => 1,
         ];
@@ -302,17 +318,34 @@ class PeminjamanBarangController extends Controller
 
     private function formatStokBarang(SaldoStokBarang $saldoStokBarang): array
     {
+        $barang = $saldoStokBarang->barang;
+        $habisPakai = $barang->tipe_pengelolaan === 'habis_pakai';
+
         return [
-            'kunci' => 'stok:' . $saldoStokBarang->barang_id . ':' . $saldoStokBarang->lokasi_barang_id,
+            'kunci' => 'stok:'.$saldoStokBarang->barang_id.':'.$saldoStokBarang->lokasi_barang_id,
             'tipe_item' => 'stok',
             'unit_barang_id' => null,
             'barang_id' => $saldoStokBarang->barang_id,
             'lokasi_barang_id' => $saldoStokBarang->lokasi_barang_id,
-            'label' => $saldoStokBarang->barang->nama . ' - ' . $saldoStokBarang->lokasiBarang->nama,
-            'keterangan' => $saldoStokBarang->barang->labelTipePengelolaan() . ' - stok tersedia ' . number_format((float) $saldoStokBarang->jumlah, 2, ',', '.') . ' ' . $saldoStokBarang->barang->satuanBarang->nama,
-            'satuan' => $saldoStokBarang->barang->satuanBarang->nama,
+            'kode' => $barang->kode,
+            'label' => $barang->nama,
+            'keterangan' => $barang->kode.' - '.$saldoStokBarang->lokasiBarang->nama.' - tersedia '.number_format((float) $saldoStokBarang->jumlah, 2, ',', '.').' '.$barang->satuanBarang->nama,
+            'jenis_tampilan' => $habisPakai ? 'Barang habis pakai' : 'Stok yang dikembalikan',
+            'kelompok' => $habisPakai ? 'Barang habis pakai' : 'Stok yang wajib dikembalikan',
+            'wajib_dikembalikan' => ! $habisPakai,
+            'satuan' => $barang->satuanBarang->nama,
             'saldo' => (float) $saldoStokBarang->jumlah,
         ];
+    }
+
+    private function cariSiswaDariKode(string $kode): ?Siswa
+    {
+        return Siswa::query()
+            ->where('aktif', true)
+            ->where(function ($query) use ($kode) {
+                $query->where('nisn', $kode)->orWhere('nis', $kode);
+            })
+            ->first();
     }
 
     private function namaKelasAktif(Siswa $siswa): string

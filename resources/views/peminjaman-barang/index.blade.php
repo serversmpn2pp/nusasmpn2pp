@@ -30,6 +30,7 @@
         <div class="actions">
             <a href="{{ route('rekap-peminjaman-barang.index') }}" class="button button-muted">Rekap peminjaman</a>
             @izin('barang.peminjaman_kelola')
+                <a href="{{ route('pengembalian-barang.index') }}" class="button button-muted">Pengembalian barcode</a>
                 <a href="{{ route('peminjaman-barang.create') }}" class="button button-primary">Catat peminjaman</a>
             @endizin
         </div>
