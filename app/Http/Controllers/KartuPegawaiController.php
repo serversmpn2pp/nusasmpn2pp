@@ -61,6 +61,7 @@ class KartuPegawaiController extends Controller
             'foto_url' => $this->fotoUrl($pegawai),
             'jabatan' => $pegawai->jabatan_utama ?: $pegawai->jenis_pegawai ?: $pegawai->status_kepegawaian,
             'ukuran_font_nama' => $this->ukuranFontNama($pegawai->nama_lengkap),
+            'ukuran_font_nama_belakang' => $this->ukuranFontNamaBelakang($pegawai->nama_lengkap),
             'qr_svg' => preg_match('/^[0-9]{1,41}$/', $nip) ? QrCodeNisn::svg($nip) : null,
             'qr_bisa_dibuat' => preg_match('/^[0-9]{1,41}$/', $nip) === 1,
         ];
@@ -88,5 +89,10 @@ class KartuPegawaiController extends Controller
             $panjang <= 46 => 5.2,
             default => 4.7,
         };
+    }
+
+    private function ukuranFontNamaBelakang(?string $nama): float
+    {
+        return round(min($this->ukuranFontNama($nama) * 0.72, 6.0), 1);
     }
 }

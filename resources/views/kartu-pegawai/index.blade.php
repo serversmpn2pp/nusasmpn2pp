@@ -209,10 +209,10 @@
 
         .employee-card-back .employee-card-content {
             grid-template-rows: auto 1fr auto;
-            gap: 3mm;
+            gap: 2.2mm;
             align-items: center;
             text-align: center;
-            padding: 5mm 4.4mm;
+            padding: 4.2mm 4.4mm;
         }
 
         .employee-back-header {
@@ -223,8 +223,8 @@
 
         .employee-back-logo {
             display: grid;
-            width: 17mm;
-            height: 17mm;
+            width: 15.5mm;
+            height: 15.5mm;
             place-items: center;
             border-radius: 4mm;
             background: rgba(255, 255, 255, .96);
@@ -245,20 +245,20 @@
         .employee-qr-shell {
             display: grid;
             justify-self: center;
-            width: 36mm;
-            min-height: 41mm;
+            width: 38mm;
+            min-height: 43.5mm;
             align-content: center;
             justify-items: center;
             border-radius: 4mm;
-            background: rgba(255, 255, 255, .96);
-            padding: 2.8mm;
+            background: #fff;
+            padding: 2.2mm;
             color: var(--primary);
             box-shadow: 0 6mm 16mm rgba(4, 18, 35, .24);
         }
 
         .employee-qr-code {
-            width: 29.5mm;
-            height: 29.5mm;
+            width: 29mm;
+            height: 29mm;
         }
 
         .employee-qr-code svg {
@@ -267,11 +267,35 @@
             height: 100%;
         }
 
-        .employee-qr-nip {
-            margin: 1.6mm 0 0;
+        .employee-qr-code svg rect {
+            fill: #fff;
+        }
+
+        .employee-qr-identity {
+            display: grid;
+            width: 100%;
+            min-width: 0;
+            gap: .55mm;
+            margin-top: 1.2mm;
+        }
+
+        .employee-qr-name {
+            margin: 0;
+            max-width: 100%;
+            overflow: hidden;
             color: var(--primary);
-            font-size: 5.8pt;
             font-weight: 950;
+            line-height: 1.05;
+            text-overflow: clip;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .employee-qr-nip {
+            margin: 0;
+            color: #385873;
+            font-size: 5.6pt;
+            font-weight: 900;
             line-height: 1.1;
         }
 
@@ -488,11 +512,14 @@
                                 <div class="employee-qr-shell">
                                     @if ($kartu['qr_svg'])
                                         <div class="employee-qr-code">{!! $kartu['qr_svg'] !!}</div>
-                                        <p class="employee-qr-nip">NIP {{ $teks($pegawai->nip) }}</p>
                                     @else
                                         <p class="employee-qr-nip">QR belum tersedia</p>
                                         <p class="help-text" style="margin-top: 1mm; font-size: 5.2pt;">NIP harus berupa angka.</p>
                                     @endif
+                                    <div class="employee-qr-identity">
+                                        <p class="employee-qr-name" style="font-size: {{ $kartu['ukuran_font_nama_belakang'] }}pt;">{{ $pegawai->nama_lengkap }}</p>
+                                        <p class="employee-qr-nip">NIP {{ $teks($pegawai->nip) }}</p>
+                                    </div>
                                 </div>
 
                                 <p class="employee-back-note">

@@ -193,15 +193,16 @@
 
         .card-back .card-content {
             grid-template-rows: auto 1fr auto;
-            gap: 3mm;
+            gap: 2.2mm;
             align-items: center;
+            padding: 4.2mm 4.4mm;
             text-align: center;
         }
 
         .back-logo-card {
             display: grid;
-            width: 18mm;
-            height: 18mm;
+            width: 16mm;
+            height: 16mm;
             place-items: center;
             border-radius: 4mm;
             background: rgba(255, 255, 255, .96);
@@ -222,26 +223,58 @@
         .qr-shell-card {
             display: grid;
             justify-self: center;
-            width: 35mm;
-            min-height: 37mm;
+            width: 38mm;
+            min-height: 43.5mm;
             align-content: center;
             justify-items: center;
             border-radius: 4mm;
-            background: rgba(255, 255, 255, .96);
-            padding: 3mm;
+            background: #fff;
+            padding: 2.2mm;
             color: var(--primary);
             box-shadow: 0 6mm 16mm rgba(4, 18, 35, .24);
         }
 
         .qr-code-card {
-            width: 30mm;
-            height: 30mm;
+            width: 29mm;
+            height: 29mm;
         }
 
         .qr-code-card svg {
             display: block;
             width: 100%;
             height: 100%;
+        }
+
+        .qr-code-card svg rect {
+            fill: #fff;
+        }
+
+        .qr-identity-card {
+            display: grid;
+            width: 100%;
+            min-width: 0;
+            gap: .55mm;
+            margin-top: 1.2mm;
+        }
+
+        .qr-name-card {
+            margin: 0;
+            max-width: 100%;
+            overflow: hidden;
+            color: var(--primary);
+            font-weight: 950;
+            line-height: 1.05;
+            text-overflow: clip;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .qr-number-card {
+            margin: 0;
+            color: #385873;
+            font-size: 5.7pt;
+            font-weight: 900;
+            line-height: 1.1;
         }
 
         .back-note-card {
@@ -449,6 +482,10 @@
                                     @else
                                         <p class="student-nisn-card">QR belum tersedia</p>
                                     @endif
+                                    <div class="qr-identity-card">
+                                        <p class="qr-name-card" style="font-size: {{ $kartu['ukuran_font_nama_belakang'] }}pt;">{{ $siswa?->nama_lengkap ?: '-' }}</p>
+                                        <p class="qr-number-card">NISN {{ $teks($siswa?->nisn) }}</p>
+                                    </div>
                                 </div>
 
                                 <p class="back-note-card">

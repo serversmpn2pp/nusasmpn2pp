@@ -140,6 +140,7 @@ class KartuPelajarController extends Controller
             'foto_url' => $this->fotoUrl($siswa),
             'tempat_tanggal_lahir' => $this->tempatTanggalLahir($siswa),
             'ukuran_font_nama' => $this->ukuranFontNama($siswa?->nama_lengkap),
+            'ukuran_font_nama_belakang' => $this->ukuranFontNamaBelakang($siswa?->nama_lengkap),
             'qr_svg' => preg_match('/^[0-9]{1,41}$/', $nisn) ? QrCodeNisn::svg($nisn) : null,
         ];
     }
@@ -177,5 +178,10 @@ class KartuPelajarController extends Controller
             $panjang <= 42 => 5.3,
             default => 4.7,
         };
+    }
+
+    private function ukuranFontNamaBelakang(?string $nama): float
+    {
+        return round(min($this->ukuranFontNama($nama) * 0.72, 6.2), 1);
     }
 }
