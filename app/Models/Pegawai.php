@@ -122,4 +122,9 @@ class Pegawai extends Model
     {
         return $this->hasMany(PeminjamanBarang::class);
     }
+
+    public function pengajuanBarang(): HasMany
+    {
+        return $this->hasMany(PengajuanBarang::class);
+    }
 }

@@ -31,6 +31,7 @@ use App\Http\Controllers\JenisUjianCbtController;
 use App\Http\Controllers\KartuPegawaiController;
 use App\Http\Controllers\KartuPelajarController;
 use App\Http\Controllers\KartuPesertaUjianCbtController;
+use App\Http\Controllers\KatalogBarangController;
 use App\Http\Controllers\KategoriBarangController;
 use App\Http\Controllers\KategoriPembinaanSiswaController;
 use App\Http\Controllers\KegiatanIbadahController;
@@ -64,6 +65,8 @@ use App\Http\Controllers\PeminjamanBarangController;
 use App\Http\Controllers\PendampinganSiswaController;
 use App\Http\Controllers\PenempatanSiswaController;
 use App\Http\Controllers\PenerimaanBarangController;
+use App\Http\Controllers\PengajuanBarangController;
+use App\Http\Controllers\PengajuanBarangSayaController;
 use App\Http\Controllers\PengaturanAbsensiController;
 use App\Http\Controllers\PengaturanAbsensiPegawaiController;
 use App\Http\Controllers\PengaturanBatasProsesPelanggaranController;
@@ -409,6 +412,16 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::resource('barang', BarangController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:barang.kelola');
+        Route::get('katalog-barang', [KatalogBarangController::class, 'index'])
+            ->middleware('akun_pegawai')
+            ->name('katalog-barang.index');
+        Route::middleware('akun_pegawai')->group(function () {
+            Route::get('pengajuan-barang-saya', [PengajuanBarangSayaController::class, 'index'])->name('pengajuan-barang-saya.index');
+            Route::get('pengajuan-barang-saya/create/{barang}', [PengajuanBarangSayaController::class, 'create'])->name('pengajuan-barang-saya.create');
+            Route::post('pengajuan-barang-saya', [PengajuanBarangSayaController::class, 'store'])->name('pengajuan-barang-saya.store');
+            Route::get('pengajuan-barang-saya/{pengajuanBarang}', [PengajuanBarangSayaController::class, 'show'])->name('pengajuan-barang-saya.show');
+            Route::patch('pengajuan-barang-saya/{pengajuanBarang}/batalkan', [PengajuanBarangSayaController::class, 'batalkan'])->name('pengajuan-barang-saya.batalkan');
+        });
         Route::get('dashboard-sarana-prasarana', [DashboardSaranaPrasaranaController::class, 'index'])
             ->middleware('izin:barang.lihat,barang.kelola,barang.peminjaman_kelola')
             ->name('dashboard-sarana-prasarana.index');
@@ -483,6 +496,10 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             ->only(['index', 'show'])
             ->middleware('izin:barang.lihat,barang.kelola');
         Route::middleware('izin:barang.peminjaman_kelola')->group(function () {
+            Route::get('pengajuan-barang', [PengajuanBarangController::class, 'index'])->name('pengajuan-barang.index');
+            Route::get('pengajuan-barang/{pengajuanBarang}', [PengajuanBarangController::class, 'show'])->name('pengajuan-barang.show');
+            Route::patch('pengajuan-barang/{pengajuanBarang}/penuhi', [PengajuanBarangController::class, 'penuhi'])->name('pengajuan-barang.penuhi');
+            Route::patch('pengajuan-barang/{pengajuanBarang}/tolak', [PengajuanBarangController::class, 'tolak'])->name('pengajuan-barang.tolak');
             Route::get('pengembalian-barang', [PengembalianBarangController::class, 'index'])->name('pengembalian-barang.index');
             Route::get('pengembalian-barang/identifikasi', [PengembalianBarangController::class, 'identifikasi'])->name('pengembalian-barang.identifikasi');
             Route::get('peminjaman-barang/create', [PeminjamanBarangController::class, 'create'])->name('peminjaman-barang.create');

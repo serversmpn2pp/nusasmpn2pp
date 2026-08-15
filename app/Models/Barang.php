@@ -90,6 +90,11 @@ class Barang extends Model
         return $this->hasMany(DetailPenerimaanBarang::class);
     }
 
+    public function pengajuanBarang(): HasMany
+    {
+        return $this->hasMany(PengajuanBarang::class);
+    }
+
     public function labelTipePengelolaan(): string
     {
         return self::DAFTAR_TIPE_PENGELOLAAN[$this->tipe_pengelolaan]

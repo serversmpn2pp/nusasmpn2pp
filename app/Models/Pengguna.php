@@ -116,6 +116,11 @@ class Pengguna extends Authenticatable
         return $this->hasMany(PenerimaanBarang::class, 'dibuat_oleh_pengguna_id');
     }
 
+    public function pengajuanBarangDiproses(): HasMany
+    {
+        return $this->hasMany(PengajuanBarang::class, 'diproses_oleh_pengguna_id');
+    }
+
     public function ujianOmrDibuat(): HasMany
     {
         return $this->hasMany(UjianOmr::class, 'dibuat_oleh_pengguna_id');

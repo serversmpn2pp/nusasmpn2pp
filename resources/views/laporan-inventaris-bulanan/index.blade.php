@@ -134,6 +134,46 @@
             margin-top: 5px;
         }
 
+        .inventory-service-stats {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+            padding: 16px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .inventory-service-stats div {
+            border-left: 3px solid var(--primary);
+            padding-left: 10px;
+        }
+
+        .inventory-service-stats span,
+        .inventory-service-stats strong {
+            display: block;
+        }
+
+        .inventory-service-stats span {
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 800;
+        }
+
+        .inventory-service-stats strong {
+            margin-top: 4px;
+            color: var(--primary-dark);
+            font-size: 1.45rem;
+        }
+
+        .inventory-service-items {
+            display: grid;
+            gap: 7px;
+        }
+
+        .inventory-service-item + .inventory-service-item {
+            border-top: 1px solid #e8edf3;
+            padding-top: 7px;
+        }
+
         @media (max-width: 920px) {
             .inventory-report-period,
             .inventory-report-location {
@@ -171,6 +211,10 @@
 
             .inventory-signatory-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .inventory-service-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
     </style>
@@ -280,6 +324,96 @@
                     <p class="person-meta">NIP {{ $pegawaiPenandatangan?->nip ?: '-' }}</p>
                 </div>
             @endforeach
+        </div>
+    </section>
+
+    <section class="panel inventory-report-section">
+        <div class="inventory-report-head">
+            <div>
+                <h2 class="panel-title">Layanan Barang Pegawai</h2>
+                <p class="help-text">Daftar pegawai yang meminjam aset atau menerima barang habis pakai selama {{ $labelPeriode }}.</p>
+            </div>
+            <a href="{{ route('rekap-peminjaman-barang.index', ['jenis_peminjam' => 'pegawai', 'status_pemantauan' => 'semua', 'tanggal_mulai' => $awalPeriode->toDateString(), 'tanggal_selesai' => $akhirPeriode->toDateString()]) }}" class="button button-muted button-sm">Buka rekap lengkap</a>
+        </div>
+
+        <div class="inventory-service-stats">
+            <div><span>Total layanan</span><strong>{{ $ringkasanLayananPegawai['jumlah_layanan'] }}</strong></div>
+            <div><span>Pegawai dilayani</span><strong>{{ $ringkasanLayananPegawai['pegawai_dilayani'] }}</strong></div>
+            <div><span>Peminjaman aset</span><strong>{{ $ringkasanLayananPegawai['peminjaman_aset'] }}</strong></div>
+            <div><span>Barang habis pakai</span><strong>{{ $ringkasanLayananPegawai['penyerahan_habis_pakai'] }}</strong></div>
+            <div><span>Masih dipinjam</span><strong>{{ $ringkasanLayananPegawai['pinjaman_aktif'] }}</strong></div>
+        </div>
+
+        <div class="desktop-only table-wrap">
+            <table class="employee-table" style="min-width: 1120px;">
+                <thead>
+                    <tr>
+                        <th>Transaksi</th>
+                        <th>Pegawai</th>
+                        <th>Barang</th>
+                        <th>Tanggal</th>
+                        <th>Rencana kembali</th>
+                        <th>Status</th>
+                        <th>Sumber</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($layananBarangPegawai as $item)
+                        <tr>
+                            <td><strong>{{ $item->nomor_peminjaman }}</strong></td>
+                            <td>
+                                <p class="person-name">{{ $item->pegawai?->nama_lengkap ?: 'Pegawai tidak ditemukan' }}</p>
+                                <p class="person-meta">{{ $item->pegawai?->jenis_pegawai ?: 'Pegawai' }}</p>
+                            </td>
+                            <td>
+                                <div class="inventory-service-items">
+                                    @foreach ($item->detailPeminjamanBarang as $detail)
+                                        @php
+                                            $satuanLayanan = $detail->tipe_pengelolaan === 'aset_individual' ? 'unit' : $detail->barang->satuanBarang->nama;
+                                        @endphp
+                                        <div class="inventory-service-item">
+                                            <strong>{{ $detail->barang->nama }}</strong>
+                                            <p class="person-meta">
+                                                {{ number_format((float) $detail->jumlah, 2, ',', '.') }} {{ $satuanLayanan }}
+                                                @if ($detail->unitBarang) &middot; {{ $detail->unitBarang->kode_inventaris }} @endif
+                                            </p>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </td>
+                            <td>{{ $item->tanggal_peminjaman->locale('id')->translatedFormat('d M Y') }}</td>
+                            <td>{{ $item->rencana_kembali?->locale('id')->translatedFormat('d M Y') ?: '-' }}</td>
+                            <td><span class="badge {{ $item->status === 'selesai' ? 'badge-active' : 'badge-inactive' }}">{{ $item->labelStatus() }}</span></td>
+                            <td>{{ $item->pengajuanBarang->first()?->nomor_pengajuan ?: 'Dicatat petugas' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7" class="empty-state">Belum ada layanan barang kepada pegawai pada periode ini.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mobile-only mobile-list">
+            @forelse ($layananBarangPegawai as $item)
+                <article class="mobile-card">
+                    <div class="mobile-card-head">
+                        <div><p class="person-name">{{ $item->pegawai?->nama_lengkap ?: 'Pegawai tidak ditemukan' }}</p><p class="person-meta">{{ $item->nomor_peminjaman }}</p></div>
+                        <span class="badge {{ $item->status === 'selesai' ? 'badge-active' : 'badge-inactive' }}">{{ $item->labelStatus() }}</span>
+                    </div>
+                    <div class="inventory-service-items" style="margin-top: 12px;">
+                        @foreach ($item->detailPeminjamanBarang as $detail)
+                            @php $satuanLayanan = $detail->tipe_pengelolaan === 'aset_individual' ? 'unit' : $detail->barang->satuanBarang->nama; @endphp
+                            <div class="inventory-service-item"><strong>{{ $detail->barang->nama }}</strong><p class="person-meta">{{ number_format((float) $detail->jumlah, 2, ',', '.') }} {{ $satuanLayanan }}</p></div>
+                        @endforeach
+                    </div>
+                    <dl class="quick-facts" style="margin-top: 12px;">
+                        <div><dt>Tanggal</dt><dd>{{ $item->tanggal_peminjaman->locale('id')->translatedFormat('d M Y') }}</dd></div>
+                        <div><dt>Sumber</dt><dd>{{ $item->pengajuanBarang->first()?->nomor_pengajuan ?: 'Dicatat petugas' }}</dd></div>
+                    </dl>
+                </article>
+            @empty
+                <div class="empty-state">Belum ada layanan barang kepada pegawai pada periode ini.</div>
+            @endforelse
         </div>
     </section>
 

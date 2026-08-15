@@ -6,6 +6,7 @@ use App\Models\Barang;
 use App\Models\LokasiBarang;
 use App\Models\MutasiStokBarang;
 use App\Models\Pegawai;
+use App\Models\PeminjamanBarang;
 use App\Models\SaldoStokBarang;
 use App\Models\UnitBarang;
 use Carbon\Carbon;
@@ -124,6 +125,44 @@ class LaporanInventarisBulananController extends Controller
             ->orderBy('nama')
             ->get();
 
+        $layananBarangPegawai = PeminjamanBarang::query()
+            ->where('jenis_peminjam', 'pegawai')
+            ->whereBetween('tanggal_peminjaman', [$awalPeriode->toDateString(), $akhirPeriode->toDateString()])
+            ->with([
+                'pegawai:id,nama_lengkap,nip,jenis_pegawai',
+                'pengajuanBarang:id,nomor_pengajuan,peminjaman_barang_id',
+                'detailPeminjamanBarang' => fn ($query) => $query
+                    ->when($filter['lokasi_barang_id'], fn ($query, int $lokasiId) => $query
+                        ->where('lokasi_barang_id', $lokasiId))
+                    ->with([
+                        'barang.satuanBarang',
+                        'unitBarang:id,kode_inventaris',
+                        'lokasiBarang:id,nama',
+                    ]),
+            ])
+            ->when($filter['lokasi_barang_id'], fn (Builder $query, int $lokasiId) => $query
+                ->whereHas('detailPeminjamanBarang', fn (Builder $query) => $query
+                    ->where('lokasi_barang_id', $lokasiId)))
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
+            ->get();
+
+        $ringkasanLayananPegawai = [
+            'jumlah_layanan' => $layananBarangPegawai->count(),
+            'pegawai_dilayani' => $layananBarangPegawai->pluck('pegawai_id')->filter()->unique()->count(),
+            'peminjaman_aset' => $layananBarangPegawai
+                ->filter(fn (PeminjamanBarang $peminjaman) => $peminjaman->detailPeminjamanBarang
+                    ->contains(fn ($detail) => $detail->wajib_dikembalikan))
+                ->count(),
+            'penyerahan_habis_pakai' => $layananBarangPegawai
+                ->filter(fn (PeminjamanBarang $peminjaman) => $peminjaman->detailPeminjamanBarang
+                    ->contains(fn ($detail) => ! $detail->wajib_dikembalikan))
+                ->count(),
+            'pinjaman_aktif' => $layananBarangPegawai
+                ->whereIn('status', ['dipinjam', 'sebagian_dikembalikan'])
+                ->count(),
+        ];
+
         return $filter + [
             'awalPeriode' => $awalPeriode,
             'akhirPeriode' => $akhirPeriode,
@@ -135,6 +174,8 @@ class LaporanInventarisBulananController extends Controller
             'distribusiStatusUnit' => $distribusiStatusUnit,
             'unitPerluPerhatian' => $unitPerluPerhatian,
             'barangStokBelumDicatat' => $barangStokBelumDicatat,
+            'layananBarangPegawai' => $layananBarangPegawai,
+            'ringkasanLayananPegawai' => $ringkasanLayananPegawai,
             'penandatangan' => [
                 'wakil_sarpras' => $this->pegawaiDenganPeran('wakil_pimpinan_sarana_prasarana'),
                 'petugas_inventaris' => $this->pegawaiDenganPeran('petugas_inventaris'),

@@ -65,6 +65,11 @@ class PeminjamanBarang extends Model
         return $this->hasMany(PengembalianBarang::class);
     }
 
+    public function pengajuanBarang(): HasMany
+    {
+        return $this->hasMany(PengajuanBarang::class);
+    }
+
     public function namaPeminjam(): string
     {
         return $this->jenis_peminjam === 'siswa'

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\PastikanAdministrator;
+use App\Http\Middleware\PastikanAkunPegawai;
 use App\Http\Middleware\PastikanIdentitasSesi;
 use App\Http\Middleware\PastikanIzin;
 use App\Http\Middleware\PastikanKataSandiBukanDefault;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => PastikanAdministrator::class,
+            'akun_pegawai' => PastikanAkunPegawai::class,
             'identitas_sesi' => PastikanIdentitasSesi::class,
             'izin' => PastikanIzin::class,
             'kata_sandi_bukan_default' => PastikanKataSandiBukanDefault::class,

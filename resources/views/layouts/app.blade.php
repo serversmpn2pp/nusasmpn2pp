@@ -1939,6 +1939,8 @@
                     'id' => 'sarana-prasarana',
                     'title' => 'Sarana Prasarana',
                     'items' => [
+                        ['label' => 'Katalog Barang', 'route' => 'katalog-barang.index', 'active' => ['katalog-barang.*'], 'initial' => 'KB', 'izin' => null, 'subgroup' => 'Layanan Pegawai'],
+                        ['label' => 'Pengajuan Saya', 'route' => 'pengajuan-barang-saya.index', 'active' => ['pengajuan-barang-saya.*'], 'initial' => 'PS', 'izin' => null, 'pegawai_only' => true, 'subgroup' => 'Layanan Pegawai'],
                         ['label' => 'Dashboard Sarpras', 'route' => 'dashboard-sarana-prasarana.index', 'active' => ['dashboard-sarana-prasarana.*'], 'initial' => 'DS', 'izin' => ['barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola'], 'subgroup' => 'Ringkasan'],
                         ['label' => 'Inventaris Barang', 'route' => 'barang.index', 'active' => ['barang.*'], 'initial' => 'IB', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Inventaris'],
                         ['label' => 'Unit Aset', 'route' => 'unit-barang.index', 'active' => ['unit-barang.*'], 'initial' => 'UA', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Inventaris'],
@@ -1947,6 +1949,7 @@
                         ['label' => 'Saldo Stok', 'route' => 'saldo-stok-barang.index', 'active' => ['saldo-stok-barang.*'], 'initial' => 'SS', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Stok Barang'],
                         ['label' => 'Mutasi Stok', 'route' => 'mutasi-stok-barang.index', 'active' => ['mutasi-stok-barang.*'], 'initial' => 'MS', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Stok Barang'],
                         ['label' => 'Peminjaman Barang', 'route' => 'peminjaman-barang.index', 'active' => ['peminjaman-barang.*'], 'initial' => 'PB', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola'], 'subgroup' => 'Peminjaman'],
+                        ['label' => 'Pengajuan Barang', 'route' => 'pengajuan-barang.index', 'active' => ['pengajuan-barang.*'], 'initial' => 'PJ', 'izin' => 'barang.peminjaman_kelola', 'subgroup' => 'Peminjaman'],
                         ['label' => 'Pengembalian Barang', 'route' => 'pengembalian-barang.index', 'active' => ['pengembalian-barang.*'], 'initial' => 'KM', 'izin' => ['barang.peminjaman_kelola'], 'subgroup' => 'Peminjaman'],
                         ['label' => 'Rekap Peminjaman', 'route' => 'rekap-peminjaman-barang.index', 'active' => ['rekap-peminjaman-barang.*'], 'initial' => 'RP', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola'], 'subgroup' => 'Peminjaman'],
                         ['label' => 'Laporan Inventaris', 'route' => 'laporan-inventaris-bulanan.index', 'active' => ['laporan-inventaris-bulanan.*'], 'initial' => 'LI', 'izin' => ['barang.lihat', 'barang.kelola'], 'subgroup' => 'Laporan'],
@@ -1987,6 +1990,15 @@
                         ['label' => 'Peringatan Dini Siswa', 'route' => 'peringatan-dini-siswa.index', 'active' => ['peringatan-dini-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
                         ['label' => 'Pendampingan Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
                         ['label' => 'Batas Proses Pelanggaran', 'route' => 'pengaturan-batas-proses-pelanggaran.index', 'active' => ['pengaturan-batas-proses-pelanggaran.*'], 'initial' => 'BP', 'izin' => 'poin_siswa.pengaturan'],
+                    ],
+                ],
+                [
+                    'id' => 'layanan-sarpras',
+                    'title' => 'Layanan Sarpras',
+                    'items' => [
+                        ['label' => 'Katalog Barang', 'route' => 'katalog-barang.index', 'active' => ['katalog-barang.*'], 'initial' => 'KB', 'izin' => null, 'pegawai_only' => true],
+                        ['label' => 'Pengajuan Saya', 'route' => 'pengajuan-barang-saya.index', 'active' => ['pengajuan-barang-saya.*'], 'initial' => 'PS', 'izin' => null, 'pegawai_only' => true],
+                        ['label' => 'Pengajuan Barang', 'route' => 'pengajuan-barang.index', 'active' => ['pengajuan-barang.*'], 'initial' => 'PJ', 'izin' => 'barang.peminjaman_kelola'],
                     ],
                 ],
                 [

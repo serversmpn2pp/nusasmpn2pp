@@ -129,6 +129,10 @@
             font-size: 17px;
         }
 
+        .summary.service-summary {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -358,12 +362,57 @@
     <section class="report-page page-break">
         <header class="report-head">
             <div>
-                <h1>RINCIAN MUTASI STOK</h1>
+                <h1>RINCIAN MUTASI STOK &amp; LAYANAN BARANG</h1>
                 <p><strong>SMP Negeri 2 Padang Panjang</strong></p>
                 <p class="muted">Periode: {{ $labelPeriode }} | Lokasi: {{ $lokasiBarang?->nama ?: 'Semua lokasi' }}</p>
             </div>
-            <p class="muted">{{ $ringkasan['jumlah_mutasi'] }} transaksi</p>
+            <p class="muted">{{ $ringkasanLayananPegawai['jumlah_layanan'] }} layanan pegawai</p>
         </header>
+
+        <section class="summary service-summary">
+            <div><span>Total layanan</span><strong>{{ $ringkasanLayananPegawai['jumlah_layanan'] }}</strong></div>
+            <div><span>Pegawai dilayani</span><strong>{{ $ringkasanLayananPegawai['pegawai_dilayani'] }}</strong></div>
+            <div><span>Peminjaman aset</span><strong>{{ $ringkasanLayananPegawai['peminjaman_aset'] }}</strong></div>
+            <div><span>Barang habis pakai</span><strong>{{ $ringkasanLayananPegawai['penyerahan_habis_pakai'] }}</strong></div>
+            <div><span>Masih dipinjam</span><strong>{{ $ringkasanLayananPegawai['pinjaman_aktif'] }}</strong></div>
+        </section>
+
+        <h2>LAYANAN BARANG PEGAWAI</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Tanggal</th>
+                    <th>Pegawai</th>
+                    <th>Barang</th>
+                    <th>Rencana kembali</th>
+                    <th>Status</th>
+                    <th>Sumber</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($layananBarangPegawai as $index => $item)
+                    <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>{{ $item->tanggal_peminjaman->locale('id')->translatedFormat('d M Y') }}<br><span class="muted">{{ $item->nomor_peminjaman }}</span></td>
+                        <td><strong>{{ $item->pegawai?->nama_lengkap ?: 'Pegawai tidak ditemukan' }}</strong><br><span class="muted">NIP {{ $item->pegawai?->nip ?: '-' }}</span></td>
+                        <td>
+                            @foreach ($item->detailPeminjamanBarang as $detail)
+                                @php $satuanLayanan = $detail->tipe_pengelolaan === 'aset_individual' ? 'unit' : $detail->barang->satuanBarang->nama; @endphp
+                                <strong>{{ $detail->barang->nama }}</strong> - {{ $formatJumlah($detail->jumlah) }} {{ $satuanLayanan }}
+                                @if ($detail->unitBarang) ({{ $detail->unitBarang->kode_inventaris }}) @endif
+                                @if (! $loop->last)<br>@endif
+                            @endforeach
+                        </td>
+                        <td>{{ $item->rencana_kembali?->locale('id')->translatedFormat('d M Y') ?: '-' }}</td>
+                        <td>{{ $item->labelStatus() }}</td>
+                        <td>{{ $item->pengajuanBarang->first()?->nomor_pengajuan ?: 'Dicatat petugas' }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="7" style="text-align: center;">Belum ada layanan barang kepada pegawai pada periode ini.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
 
         <h2>TRANSAKSI PERIODE</h2>
         <table>

@@ -204,6 +204,13 @@ class PermissionRouteTest extends TestCase
 
     public function test_route_master_inventaris_memakai_permission_barang(): void
     {
+        $this->assertRouteMemakaiMiddleware('katalog-barang.index', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('pengajuan-barang-saya.index', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('pengajuan-barang-saya.store', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('pengajuan-barang-saya.batalkan', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('pengajuan-barang.index', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('pengajuan-barang.penuhi', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('pengajuan-barang.tolak', 'izin:barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('dashboard-sarana-prasarana.index', 'izin:barang.lihat,barang.kelola,barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('laporan-inventaris-bulanan.index', 'izin:barang.lihat,barang.kelola');
         $this->assertRouteMemakaiMiddleware('laporan-inventaris-bulanan.cetak', 'izin:barang.lihat,barang.kelola');
