@@ -10,6 +10,125 @@
             && auth()->user()?->memilikiIzin(['perangkat_ajar.lihat', 'perangkat_ajar.periksa']);
     @endphp
 
+    <style>
+        .teaching-document-detail,
+        .teaching-document-detail .detail-shell > *,
+        .teaching-document-detail .section-stack,
+        .teaching-document-detail .panel {
+            min-width: 0;
+        }
+
+        .teaching-document-file-name,
+        .teaching-document-detail .detail-item dd {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .teaching-history-mobile {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .teaching-document-detail .page-header {
+                gap: 14px;
+            }
+
+            .teaching-document-detail .page-header .actions {
+                width: 100%;
+            }
+
+            .teaching-document-detail .detail-shell,
+            .teaching-document-detail .section-stack {
+                gap: 14px;
+            }
+
+            .teaching-document-detail .detail-profile .avatar-lg {
+                width: 88px;
+                height: 88px;
+                margin-inline: auto;
+                font-size: 1.65rem;
+            }
+
+            .teaching-document-detail .detail-profile h2 {
+                margin-top: 12px;
+                overflow-wrap: anywhere;
+            }
+
+            .teaching-document-detail .detail-grid {
+                gap: 0;
+                margin-top: 10px;
+            }
+
+            .teaching-document-detail .detail-item {
+                min-width: 0;
+                padding: 11px 0;
+                border-top: 1px solid var(--line);
+            }
+
+            .teaching-document-detail .detail-item:first-child {
+                border-top: 0;
+            }
+
+            .teaching-history-desktop {
+                display: none;
+            }
+
+            .teaching-history-mobile {
+                display: grid;
+            }
+
+            .teaching-history-card {
+                min-width: 0;
+                padding: 16px;
+                border-top: 1px solid var(--line);
+            }
+
+            .teaching-history-card-head {
+                display: grid;
+                gap: 8px;
+            }
+
+            .teaching-history-card-title {
+                margin: 0;
+                color: var(--primary-dark);
+                font-weight: 800;
+                line-height: 1.4;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+
+            .teaching-history-card-time {
+                margin: 4px 0 0;
+                color: var(--muted);
+                font-size: .86rem;
+            }
+
+            .teaching-history-card .quick-facts {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .teaching-history-card .quick-facts div {
+                min-width: 0;
+            }
+
+            .teaching-history-card .quick-facts dd {
+                overflow-wrap: anywhere;
+            }
+
+            .teaching-history-card .button {
+                width: 100%;
+                margin-top: 14px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .teaching-history-card .quick-facts {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <div class="teaching-document-detail">
     <div class="page-header">
         <div>
             <p class="eyebrow">Kurikulum</p>
@@ -69,7 +188,7 @@
                     </div>
                     <div class="detail-item">
                         <dt>File terbaru</dt>
-                        <dd>{{ $perangkatAjar->nama_file_asli }}</dd>
+                        <dd class="teaching-document-file-name">{{ $perangkatAjar->nama_file_asli }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Ukuran</dt>
@@ -111,7 +230,7 @@
                     <h2 class="panel-title">Riwayat File</h2>
                 </div>
 
-                <div class="table-wrap">
+                <div class="table-wrap teaching-history-desktop">
                     <table class="employee-table">
                         <thead>
                             <tr>
@@ -143,7 +262,37 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div class="teaching-history-mobile">
+                    @forelse ($perangkatAjar->riwayatFile as $riwayat)
+                        <article class="teaching-history-card">
+                            <div class="teaching-history-card-head">
+                                <div>
+                                    <p class="teaching-history-card-title">{{ $riwayat->nama_file_asli }}</p>
+                                    <p class="teaching-history-card-time">Diunggah {{ $riwayat->diunggah_pada?->format('d M Y H:i') ?? '-' }}</p>
+                                </div>
+                                <span class="badge badge-muted">{{ $riwayat->ukuranFileTampil() }}</span>
+                            </div>
+
+                            <dl class="quick-facts">
+                                <div>
+                                    <dt>Pengunggah</dt>
+                                    <dd>{{ $riwayat->pengunggah?->nama ?? '-' }}</dd>
+                                </div>
+                                <div>
+                                    <dt>Waktu unggah</dt>
+                                    <dd>{{ $riwayat->diunggah_pada?->format('d M Y H:i') ?? '-' }}</dd>
+                                </div>
+                            </dl>
+
+                            <a href="{{ route('perangkat-ajar-saya.download-riwayat', $riwayat) }}" class="button button-muted button-sm">Unduh file</a>
+                        </article>
+                    @empty
+                        <div class="empty-state">Riwayat file belum tersedia.</div>
+                    @endforelse
+                </div>
             </section>
         </div>
+    </div>
     </div>
 @endsection
