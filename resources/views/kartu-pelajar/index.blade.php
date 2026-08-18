@@ -307,21 +307,40 @@
         }
 
         @media print {
+            .app-sidebar,
+            .app-topbar,
             .app-header,
             .page-header,
             .card-toolbar,
             .kartu-filter,
-            .side-label {
+            .side-label,
+            .sidebar-toggle,
+            .sidebar-backdrop {
                 display: none !important;
             }
 
+            html,
             body {
+                width: auto;
+                height: auto;
+                overflow: visible !important;
                 background: #fff;
             }
 
-            main.container {
+            .app-shell,
+            .app-content {
+                display: block;
+                width: auto;
+                height: auto;
+                min-height: 0;
+                overflow: visible;
+                background: #fff;
+            }
+
+            .content-shell {
                 width: auto;
                 max-width: none;
+                margin: 0;
                 padding: 0;
             }
 

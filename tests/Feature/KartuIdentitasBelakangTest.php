@@ -58,7 +58,10 @@ class KartuIdentitasBelakangTest extends TestCase
                 'NISN 0131201150',
             ], false)
             ->assertSee('.qr-code-card svg rect', false)
-            ->assertSee('fill: #fff;', false);
+            ->assertSee('fill: #fff;', false)
+            ->assertSee('.app-sidebar,', false)
+            ->assertSee('.content-shell {', false)
+            ->assertSee('Cetak kartu');
     }
 
     public function test_bagian_belakang_kartu_pegawai_menampilkan_nama_dan_nip(): void
