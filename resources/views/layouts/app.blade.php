@@ -2024,6 +2024,13 @@
                     ],
                 ],
                 [
+                    'id' => 'tugas-guru-pl',
+                    'title' => 'Tugas Guru PL',
+                    'items' => [
+                        ['label' => 'Presensi Siswa Hari Ini', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'PS', 'izin' => 'absensi.koreksi_hari_ini', 'peran' => 'guru_pl'],
+                    ],
+                ],
+                [
                     'id' => 'kegiatan-ibadah',
                     'title' => 'Kegiatan Ibadah',
                     'items' => [

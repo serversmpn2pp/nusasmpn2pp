@@ -33,6 +33,8 @@ class RekapAbsensiHarianController extends Controller
         ]);
 
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->toDateString();
+        $koreksiHariIniTerbatas = $this->koreksiHariIniTerbatas($request);
+        $this->pastikanTanggalKoreksiDiizinkan($request, $tanggal);
         $daftarTahunPelajaran = TahunPelajaran::query()
             ->when($cakupanWaliKelas, function ($query) use ($kelasWaliIds) {
                 $query->whereHas('kelas', fn ($query) => $query->whereIn('id', $kelasWaliIds));
@@ -76,6 +78,7 @@ class RekapAbsensiHarianController extends Controller
             'labelCakupan' => $labelCakupan,
             'rangkumanWhatsapp' => $rangkumanWhatsapp,
             'bolehSalinRangkumanWhatsapp' => $bolehSalinRangkumanWhatsapp,
+            'koreksiHariIniTerbatas' => $koreksiHariIniTerbatas,
         ]);
     }
 
@@ -86,33 +89,42 @@ class RekapAbsensiHarianController extends Controller
         ]);
 
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->toDateString();
+        $this->pastikanTanggalKoreksiDiizinkan($request, $tanggal);
         $anggotaKelas->load(['tahunPelajaran', 'kelas', 'siswa']);
         $this->pastikanBolehAksesAnggotaKelas($request, $anggotaKelas);
 
         $absensi = $this->ambilAbsensi($tanggal, $anggotaKelas);
+        $this->pastikanCatatanScanTidakDiubah($request, $absensi);
         $pengaturanAbsensi = $this->ambilPengaturanAbsensi($tanggal);
+        $koreksiHariIniTerbatas = $this->koreksiHariIniTerbatas($request);
 
         return view('rekap-absensi-harian.koreksi', compact(
             'tanggal',
             'anggotaKelas',
             'absensi',
             'pengaturanAbsensi',
+            'koreksiHariIniTerbatas',
         ));
     }
 
     public function updateKoreksi(Request $request, AnggotaKelas $anggotaKelas)
     {
+        $koreksiHariIniTerbatas = $this->koreksiHariIniTerbatas($request);
         $data = $request->validate([
             'tanggal' => ['required', 'date'],
             'status_kehadiran' => ['required', Rule::in(['hadir', 'izin', 'sakit', 'alfa'])],
             'jam_masuk' => ['nullable', 'date_format:H:i'],
             'jam_pulang' => ['nullable', 'date_format:H:i'],
-            'catatan' => ['nullable', 'string'],
+            'catatan' => [$koreksiHariIniTerbatas ? 'required' : 'nullable', 'string', 'max:2000'],
+        ], [
+            'catatan.required' => 'Catatan koreksi wajib diisi oleh Guru PL.',
         ]);
 
         $tanggal = Carbon::parse($data['tanggal'])->toDateString();
+        $this->pastikanTanggalKoreksiDiizinkan($request, $tanggal);
         $anggotaKelas->load(['tahunPelajaran', 'kelas', 'siswa']);
         $this->pastikanBolehAksesAnggotaKelas($request, $anggotaKelas);
+        $this->pastikanCatatanScanTidakDiubah($request, $this->ambilAbsensi($tanggal, $anggotaKelas));
         $this->pastikanDataKoreksiValid($data);
 
         $absensi = DB::transaction(function () use ($data, $tanggal, $anggotaKelas, $request) {
@@ -302,6 +314,30 @@ class RekapAbsensiHarianController extends Controller
         abort_unless(
             $request->user()?->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id) ?? false,
             403,
+        );
+    }
+
+    private function koreksiHariIniTerbatas(Request $request): bool
+    {
+        return ($request->user()?->memilikiIzin('absensi.koreksi_hari_ini') ?? false)
+            && ! ($request->user()?->memilikiIzin('absensi.koreksi') ?? false);
+    }
+
+    private function pastikanTanggalKoreksiDiizinkan(Request $request, string $tanggal): void
+    {
+        abort_if(
+            $this->koreksiHariIniTerbatas($request) && $tanggal !== now()->toDateString(),
+            403,
+            'Guru PL hanya dapat mengoreksi presensi siswa pada hari berjalan.',
+        );
+    }
+
+    private function pastikanCatatanScanTidakDiubah(Request $request, ?AbsensiSiswa $absensi): void
+    {
+        abort_if(
+            $this->koreksiHariIniTerbatas($request) && $absensi?->sumber === 'scan',
+            403,
+            'Catatan hasil scan hanya dapat dikoreksi oleh petugas dengan kewenangan penuh.',
         );
     }
 

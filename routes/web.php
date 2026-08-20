@@ -666,12 +666,12 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('scan-absensi-pegawai', [ScanAbsensiPegawaiController::class, 'store'])->name('scan-absensi-pegawai.store');
         });
         Route::get('rekap-absensi-harian', [RekapAbsensiHarianController::class, 'index'])
-            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.laporan')
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
             ->name('rekap-absensi-harian.index');
         Route::post('rekap-absensi-harian/proses-poin-keterlambatan', [RekapAbsensiHarianController::class, 'prosesPoinKeterlambatan'])
             ->middleware('izin:poin_siswa.pengaturan,poin_siswa.verifikasi_bk')
             ->name('rekap-absensi-harian.proses-poin-keterlambatan');
-        Route::middleware('izin:absensi.koreksi')->group(function () {
+        Route::middleware('izin:absensi.koreksi,absensi.koreksi_hari_ini')->group(function () {
             Route::get('rekap-absensi-harian/{anggotaKelas}/koreksi', [RekapAbsensiHarianController::class, 'editKoreksi'])->name('rekap-absensi-harian.koreksi.edit');
             Route::put('rekap-absensi-harian/{anggotaKelas}/koreksi', [RekapAbsensiHarianController::class, 'updateKoreksi'])->name('rekap-absensi-harian.koreksi.update');
         });

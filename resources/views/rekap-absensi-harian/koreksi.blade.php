@@ -40,6 +40,10 @@
         </div>
     @endif
 
+    @if ($koreksiHariIniTerbatas ?? false)
+        <div class="alert">Koreksi Guru PL hanya berlaku hari ini. Catatan wajib diisi agar riwayat perubahan dapat diperiksa kembali.</div>
+    @endif
+
     <div class="detail-shell">
         <aside class="panel panel-pad">
             <div class="detail-profile">
@@ -124,8 +128,8 @@
                     </div>
 
                     <div class="field span-2">
-                        <label for="catatan">Catatan</label>
-                        <textarea id="catatan" name="catatan" class="textarea @error('catatan') is-invalid @enderror" placeholder="Contoh: Izin dokter, lupa membawa kartu, atau koreksi guru piket.">{{ old('catatan', $absensi?->catatan) }}</textarea>
+                        <label for="catatan">Catatan{{ ($koreksiHariIniTerbatas ?? false) ? ' *' : '' }}</label>
+                        <textarea id="catatan" name="catatan" class="textarea @error('catatan') is-invalid @enderror" placeholder="Contoh: Izin dokter, lupa membawa kartu, atau koreksi guru piket." @required($koreksiHariIniTerbatas ?? false)>{{ old('catatan', $absensi?->catatan) }}</textarea>
                         @error('catatan')
                             <p class="error-text">{{ $message }}</p>
                         @enderror

@@ -28,6 +28,10 @@ class AksesScanKegiatanIbadah
             return false;
         }
 
+        if ($pengguna->memilikiPeran('guru_pl')) {
+            return true;
+        }
+
         $tahunPelajaran ??= TahunPelajaran::query()
             ->where('aktif', true)
             ->orderByDesc('tanggal_mulai')

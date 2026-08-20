@@ -44,10 +44,11 @@ class PengaturanBerhalanganIbadahController extends Controller
         $daftarPegawaiPerempuan = Pegawai::query()
             ->where('aktif', true)
             ->where('jenis_kelamin', 'P')
-            ->whereRaw('LOWER(jenis_pegawai) = ?', ['guru'])
-            ->with(['pengguna:id,pegawai_id,aktif'])
+            ->with(['pengguna:id,pegawai_id,aktif', 'pengguna.daftarPeran:id,kode,aktif'])
             ->orderBy('nama_lengkap')
-            ->get(['id', 'nama_lengkap', 'nip', 'jenis_pegawai', 'jabatan_utama']);
+            ->get(['id', 'nama_lengkap', 'nip', 'jenis_pegawai', 'jabatan_utama'])
+            ->filter(fn (Pegawai $pegawai) => $this->dapatMenjadiPendamping($pegawai))
+            ->values();
 
         $daftarKelas = Kelas::query()
             ->whereBelongsTo($tahunPelajaran)
@@ -117,8 +118,7 @@ class PengaturanBerhalanganIbadahController extends Controller
                 'integer',
                 Rule::exists('pegawai', 'id')->where(function ($query) {
                     $query->where('aktif', true)
-                        ->where('jenis_kelamin', 'P')
-                        ->whereRaw('LOWER(jenis_pegawai) = ?', ['guru']);
+                        ->where('jenis_kelamin', 'P');
                 }),
             ],
             'semua_kelas' => ['required', 'boolean'],
@@ -132,8 +132,17 @@ class PengaturanBerhalanganIbadahController extends Controller
                 }),
             ],
         ], [
-            'pegawai_id.exists' => 'Pendamping harus merupakan guru perempuan yang masih aktif.',
+            'pegawai_id.exists' => 'Pendamping harus merupakan guru perempuan atau Guru PL perempuan yang masih aktif.',
         ]);
+
+        $pegawai = Pegawai::query()
+            ->with(['pengguna.daftarPeran:id,kode,aktif'])
+            ->findOrFail($data['pegawai_id']);
+        if (! $this->dapatMenjadiPendamping($pegawai)) {
+            throw ValidationException::withMessages([
+                'pegawai_id' => 'Pendamping harus merupakan guru perempuan atau Guru PL perempuan yang masih aktif.',
+            ]);
+        }
 
         $semuaKelas = (bool) $data['semua_kelas'];
         $kelasIds = collect($data['kelas_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
@@ -194,5 +203,15 @@ class PengaturanBerhalanganIbadahController extends Controller
         }
 
         return $tahunPelajaran;
+    }
+
+    private function dapatMenjadiPendamping(Pegawai $pegawai): bool
+    {
+        return $pegawai->aktif
+            && $pegawai->jenis_kelamin === 'P'
+            && (
+                mb_strtolower(trim((string) $pegawai->jenis_pegawai)) === 'guru'
+                || $pegawai->pengguna?->memilikiPeran('guru_pl')
+            );
     }
 }

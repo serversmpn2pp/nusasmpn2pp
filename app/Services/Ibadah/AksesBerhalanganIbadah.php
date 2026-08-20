@@ -22,7 +22,7 @@ class AksesBerhalanganIbadah
 
         if (! $pengguna->pegawai_id
             || $pengguna->pegawai?->jenis_kelamin !== 'P'
-            || mb_strtolower(trim((string) $pengguna->pegawai?->jenis_pegawai)) !== 'guru'
+            || ! $this->guruPerempuanYangDiizinkan($pengguna)
             || ! $pengguna->pegawai?->aktif) {
             return false;
         }
@@ -125,8 +125,13 @@ class AksesBerhalanganIbadah
             ->whereIn('pegawai_id', $pegawaiIds)
             ->whereHas('pegawai', fn ($query) => $query
                 ->where('aktif', true)
-                ->where('jenis_kelamin', 'P')
-                ->whereRaw('LOWER(jenis_pegawai) = ?', ['guru']))
+                ->where('jenis_kelamin', 'P'))
+            ->where(function ($query) {
+                $query->whereHas('pegawai', fn ($query) => $query->whereRaw('LOWER(jenis_pegawai) = ?', ['guru']))
+                    ->orWhereHas('daftarPeran', fn ($query) => $query
+                        ->where('kode', 'guru_pl')
+                        ->where('aktif', true));
+            })
             ->get();
     }
 
@@ -143,5 +148,11 @@ class AksesBerhalanganIbadah
             'semua_kelas' => $penugasan->contains('semua_kelas', true),
             'kelas_ids' => $penugasan->flatMap->kelas->pluck('id')->map(fn ($id) => (int) $id)->unique()->values()->all(),
         ];
+    }
+
+    private function guruPerempuanYangDiizinkan(Pengguna $pengguna): bool
+    {
+        return mb_strtolower(trim((string) $pengguna->pegawai?->jenis_pegawai)) === 'guru'
+            || $pengguna->memilikiPeran('guru_pl');
     }
 }

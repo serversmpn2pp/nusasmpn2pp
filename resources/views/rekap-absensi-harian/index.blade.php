@@ -53,6 +53,7 @@
             };
         };
         $bolehLihatLaporanPoin = auth()->user()?->memilikiIzin(['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat']) ?? false;
+        $bolehKoreksi = auth()->user()?->memilikiIzin(['absensi.koreksi', 'absensi.koreksi_hari_ini']) ?? false;
     @endphp
 
     <style>
@@ -213,7 +214,7 @@
         <div class="filter-grid filter-grid-wide">
             <div class="field">
                 <label for="tanggal">Tanggal</label>
-                <input id="tanggal" type="date" name="tanggal" value="{{ $tanggal }}" class="input">
+                <input id="tanggal" type="date" name="tanggal" value="{{ $tanggal }}" class="input" @readonly($koreksiHariIniTerbatas ?? false)>
             </div>
 
             <div class="field">
@@ -250,6 +251,10 @@
 
     @if ($cakupanWaliKelas ?? false)
         <div class="alert">Rekap dan koreksi presensi dibatasi pada kelas yang Anda wali.</div>
+    @endif
+
+    @if ($koreksiHariIniTerbatas ?? false)
+        <div class="alert">Akses Guru PL berlaku untuk presensi hari ini. Catatan hasil scan tidak dapat diubah dan setiap koreksi manual wajib disertai catatan.</div>
     @endif
 
     @if (! ($cakupanWaliKelas ?? false) && ! $kelasId)
@@ -348,9 +353,9 @@
                             <th>Keterlambatan</th>
                             <th>Status poin</th>
                             <th>Catatan</th>
-                            @izin('absensi.koreksi')
+                            @if ($bolehKoreksi)
                                 <th class="text-right">Aksi</th>
-                            @endizin
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -411,17 +416,21 @@
                                     @endif
                                 </td>
                                 <td data-label="Catatan">{{ $absensi?->catatan ?: '-' }}</td>
-                                @izin('absensi.koreksi')
+                                @if ($bolehKoreksi)
                                     <td data-label="Aksi">
                                         <div class="actions" style="justify-content: flex-end;">
-                                            <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
+                                            @if (! ($koreksiHariIniTerbatas ?? false) || $absensi?->sumber !== 'scan')
+                                                <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
+                                            @else
+                                                <span class="badge badge-muted">Hasil scan</span>
+                                            @endif
                                         </div>
                                     </td>
-                                @endizin
+                                @endif
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ auth()->user()?->memilikiIzin('absensi.koreksi') ? 10 : 9 }}" class="empty-state">Belum ada siswa aktif pada pilihan ini.</td>
+                                <td colspan="{{ $bolehKoreksi ? 10 : 9 }}" class="empty-state">Belum ada siswa aktif pada pilihan ini.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -482,11 +491,15 @@
                             <p class="help-text" style="margin-top: 12px;">{{ $absensi->catatan }}</p>
                         @endif
 
-                        @izin('absensi.koreksi')
+                        @if ($bolehKoreksi)
                             <div class="actions" style="margin-top: 14px;">
-                                <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
+                                @if (! ($koreksiHariIniTerbatas ?? false) || $absensi?->sumber !== 'scan')
+                                    <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
+                                @else
+                                    <span class="badge badge-muted">Hasil scan</span>
+                                @endif
                             </div>
-                        @endizin
+                        @endif
                     </article>
                 @empty
                     <div class="empty-state">Belum ada siswa aktif pada pilihan ini.</div>
