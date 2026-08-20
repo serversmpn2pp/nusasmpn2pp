@@ -34,4 +34,14 @@ class KegiatanIbadah extends Model
     {
         return $this->hasMany(LogScanKegiatanIbadah::class);
     }
+
+    public function presensiBerhalangan(): HasMany
+    {
+        return $this->hasMany(PresensiBerhalanganIbadah::class);
+    }
+
+    public function logScanBerhalangan(): HasMany
+    {
+        return $this->hasMany(LogScanBerhalanganIbadah::class);
+    }
 }

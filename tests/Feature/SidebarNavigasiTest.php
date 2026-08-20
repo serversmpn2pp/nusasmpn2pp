@@ -40,6 +40,7 @@ class SidebarNavigasiTest extends TestCase
             ->assertSee('Pengajuan Barang')
             ->assertSee('Pengembalian Barang')
             ->assertSee('Akun Siswa')
+            ->assertSee('Akun Orang Tua')
             ->assertSee('Role &amp; Hak Akses', false)
             ->assertDontSee('Data Master');
     }

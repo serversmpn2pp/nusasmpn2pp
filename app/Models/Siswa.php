@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Siswa extends Model
@@ -53,6 +54,13 @@ class Siswa extends Model
     public function pengguna(): HasOne
     {
         return $this->hasOne(Pengguna::class);
+    }
+
+    public function orangTuaWali(): BelongsToMany
+    {
+        return $this->belongsToMany(OrangTuaWali::class, 'orang_tua_wali_siswa')
+            ->withPivot(['hubungan', 'utama'])
+            ->withTimestamps();
     }
 
     public function nilaiSiswa(): HasMany
@@ -123,6 +131,31 @@ class Siswa extends Model
     public function logScanKegiatanIbadah(): HasMany
     {
         return $this->hasMany(LogScanKegiatanIbadah::class);
+    }
+
+    public function periodeBerhalanganIbadah(): HasMany
+    {
+        return $this->hasMany(PeriodeBerhalanganIbadah::class);
+    }
+
+    public function presensiBerhalanganIbadah(): HasMany
+    {
+        return $this->hasMany(PresensiBerhalanganIbadah::class);
+    }
+
+    public function logScanBerhalanganIbadah(): HasMany
+    {
+        return $this->hasMany(LogScanBerhalanganIbadah::class);
+    }
+
+    public function konfirmasiBerhalanganIbadah(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            KonfirmasiBerhalanganIbadah::class,
+            PeriodeBerhalanganIbadah::class,
+            'siswa_id',
+            'periode_berhalangan_ibadah_id'
+        );
     }
 
     public function peminjamanBarang(): HasMany

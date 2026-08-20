@@ -4,20 +4,25 @@ namespace App\Services\Ibadah;
 
 use App\Models\AnggotaKelas;
 use App\Models\JadwalKegiatanIbadah;
-use App\Models\LogScanKegiatanIbadah;
+use App\Models\LogScanBerhalanganIbadah;
+use App\Models\PengaturanBerhalanganIbadah;
 use App\Models\Pengguna;
 use App\Models\PeriodeBerhalanganIbadah;
 use App\Models\PresensiBerhalanganIbadah;
 use App\Models\PresensiKegiatanIbadah;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\Notifikasi\NotifikasiPenggunaService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
-class ProsesScanKegiatanIbadah
+class ProsesScanBerhalanganIbadah
 {
-    public function __construct(private AksesScanKegiatanIbadah $aksesScan) {}
+    public function __construct(
+        private AksesBerhalanganIbadah $akses,
+        private NotifikasiPenggunaService $notifikasi,
+    ) {}
 
     public function proses(
         JadwalKegiatanIbadah $jadwal,
@@ -30,7 +35,7 @@ class ProsesScanKegiatanIbadah
         $waktuScan = $waktuScan ? Carbon::instance($waktuScan) : now();
         $tahunPelajaran = TahunPelajaran::query()->where('aktif', true)->orderByDesc('tanggal_mulai')->first();
 
-        abort_unless($this->aksesScan->dapatMemindai($petugas, $tahunPelajaran, $waktuScan), 403);
+        abort_unless($this->akses->dapatMemindai($petugas, $tahunPelajaran), 403);
 
         if (! $tahunPelajaran) {
             return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'tahun_pelajaran_tidak_ada', 'Tahun pelajaran aktif belum diatur.', null, null, $ipAddress, $userAgent);
@@ -47,18 +52,7 @@ class ProsesScanKegiatanIbadah
         }
 
         if (! $this->beradaDalamJendelaScan($jadwal, $waktuScan)) {
-            return $this->gagal(
-                $jadwal,
-                $isiScan,
-                $waktuScan,
-                $petugas,
-                'di_luar_jadwal',
-                'Scan hanya dapat dilakukan pukul '.$jadwal->rentangScan().'.',
-                null,
-                null,
-                $ipAddress,
-                $userAgent,
-            );
+            return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'di_luar_jadwal', 'Scan hanya dapat dilakukan pukul '.$jadwal->rentangScan().'.', null, null, $ipAddress, $userAgent);
         }
 
         $nisn = $this->ambilNisn($isiScan);
@@ -77,6 +71,10 @@ class ProsesScanKegiatanIbadah
             return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'siswa_nonaktif', 'Siswa ditemukan, tetapi statusnya tidak aktif.', $nisn, $siswa, $ipAddress, $userAgent);
         }
 
+        if ($siswa->jenis_kelamin !== 'P') {
+            return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'bukan_siswi', 'Halaman ini khusus untuk presensi berhalangan siswi.', $nisn, $siswa, $ipAddress, $userAgent);
+        }
+
         $anggotaKelas = AnggotaKelas::query()
             ->with('kelas:id,nama')
             ->where('tahun_pelajaran_id', $tahunPelajaran->id)
@@ -85,12 +83,50 @@ class ProsesScanKegiatanIbadah
             ->first();
 
         if (! $anggotaKelas) {
-            return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'kelas_tidak_ditemukan', 'Siswa belum ditempatkan pada kelas aktif tahun pelajaran ini.', $nisn, $siswa, $ipAddress, $userAgent);
+            return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'kelas_tidak_ditemukan', 'Siswi belum ditempatkan pada kelas aktif tahun pelajaran ini.', $nisn, $siswa, $ipAddress, $userAgent);
+        }
+
+        if (! $this->akses->dapatMemindaiKelas($petugas, $tahunPelajaran, $anggotaKelas->kelas_id)) {
+            return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'di_luar_cakupan', 'Siswi berada di luar cakupan kelas pendamping.', $nisn, $siswa, $ipAddress, $userAgent);
         }
 
         return DB::transaction(function () use ($jadwal, $isiScan, $waktuScan, $petugas, $tahunPelajaran, $nisn, $siswa, $anggotaKelas, $ipAddress, $userAgent) {
             Siswa::query()->whereKey($siswa->id)->lockForUpdate()->first();
-            $presensi = PresensiKegiatanIbadah::query()
+
+            if (PresensiKegiatanIbadah::query()
+                ->where('kegiatan_ibadah_id', $jadwal->kegiatan_ibadah_id)
+                ->where('siswa_id', $siswa->id)
+                ->whereDate('tanggal', $waktuScan->toDateString())
+                ->exists()) {
+                return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'presensi_ibadah_sudah_ada', 'Siswi sudah tercatat melaksanakan kegiatan ibadah hari ini.', $nisn, $siswa, $ipAddress, $userAgent);
+            }
+
+            $pengaturan = PengaturanBerhalanganIbadah::query()
+                ->where('tahun_pelajaran_id', $tahunPelajaran->id)
+                ->first();
+            $batasHari = $pengaturan?->batas_hari_konfirmasi ?? 7;
+            $periode = PeriodeBerhalanganIbadah::query()
+                ->where('tahun_pelajaran_id', $tahunPelajaran->id)
+                ->where('siswa_id', $siswa->id)
+                ->whereIn('status', [PeriodeBerhalanganIbadah::STATUS_AKTIF, PeriodeBerhalanganIbadah::STATUS_PERLU_KONFIRMASI])
+                ->latest('tanggal_mulai')
+                ->first();
+            $periodeBaru = ! $periode;
+
+            if (! $periode) {
+                $periode = PeriodeBerhalanganIbadah::create([
+                    'tahun_pelajaran_id' => $tahunPelajaran->id,
+                    'siswa_id' => $siswa->id,
+                    'kelas_id' => $anggotaKelas->kelas_id,
+                    'anggota_kelas_id' => $anggotaKelas->id,
+                    'tanggal_mulai' => $waktuScan->toDateString(),
+                    'status' => PeriodeBerhalanganIbadah::STATUS_AKTIF,
+                    'batas_hari_konfirmasi' => $batasHari,
+                    'dimulai_oleh_pengguna_id' => $petugas->id,
+                ]);
+            }
+
+            $presensi = PresensiBerhalanganIbadah::query()
                 ->where('kegiatan_ibadah_id', $jadwal->kegiatan_ibadah_id)
                 ->where('siswa_id', $siswa->id)
                 ->whereDate('tanggal', $waktuScan->toDateString())
@@ -98,31 +134,49 @@ class ProsesScanKegiatanIbadah
             $baru = ! $presensi;
 
             if (! $presensi) {
-                $presensi = PresensiKegiatanIbadah::create([
-                    'kegiatan_ibadah_id' => $jadwal->kegiatan_ibadah_id,
-                    'siswa_id' => $siswa->id,
-                    'tanggal' => $waktuScan->toDateString(),
+                $presensi = PresensiBerhalanganIbadah::create([
+                    'periode_berhalangan_ibadah_id' => $periode->id,
                     'jadwal_kegiatan_ibadah_id' => $jadwal->id,
+                    'kegiatan_ibadah_id' => $jadwal->kegiatan_ibadah_id,
                     'tahun_pelajaran_id' => $tahunPelajaran->id,
                     'kelas_id' => $anggotaKelas->kelas_id,
                     'anggota_kelas_id' => $anggotaKelas->id,
+                    'siswa_id' => $siswa->id,
                     'dipindai_oleh_pengguna_id' => $petugas->id,
+                    'tanggal' => $waktuScan->toDateString(),
                     'waktu_scan' => $waktuScan->format('H:i:s'),
                     'sumber' => 'kamera',
                     'ip_address' => $ipAddress,
                     'user_agent' => $userAgent,
                 ]);
             }
-            $periodeBerhalanganDitutup = $this->tutupPeriodeBerhalanganAktif(
-                tahunPelajaran: $tahunPelajaran,
-                siswa: $siswa,
-                kegiatanIbadahId: $jadwal->kegiatan_ibadah_id,
-                waktuScan: $waktuScan,
-                petugas: $petugas,
-            );
+
+            $hariKe = ((int) $periode->tanggal_mulai->copy()->startOfDay()->diffInDays($waktuScan->copy()->startOfDay())) + 1;
+            $tanggalScan = $waktuScan->copy()->startOfDay();
+            $melewatiBatas = $periode->konfirmasi_berikutnya_pada
+                ? $tanggalScan->greaterThanOrEqualTo($periode->konfirmasi_berikutnya_pada->copy()->startOfDay())
+                : $hariKe > $periode->batas_hari_konfirmasi;
+
+            if (($pengaturan?->aktif ?? true) && $melewatiBatas && $periode->status === PeriodeBerhalanganIbadah::STATUS_AKTIF) {
+                $periode->update([
+                    'status' => PeriodeBerhalanganIbadah::STATUS_PERLU_KONFIRMASI,
+                    'perlu_konfirmasi_sejak' => $waktuScan->toDateString(),
+                ]);
+
+                $this->notifikasi->kirimKeBanyak(
+                    $this->akses->penggunaPendampingUntukKelas($tahunPelajaran, $anggotaKelas->kelas_id),
+                    'penting',
+                    'Konfirmasi privat diperlukan',
+                    'Ada catatan siswi kelas '.($anggotaKelas->kelas?->nama ?? '-').' yang memerlukan konfirmasi privat.',
+                    route('konfirmasi-berhalangan-ibadah.show', $periode),
+                    'konfirmasi-berhalangan-'.$periode->id.'-'.$waktuScan->toDateString(),
+                    ['periode_berhalangan_ibadah_id' => $periode->id],
+                );
+            }
+
             $pesan = $baru
-                ? 'Presensi ibadah berhasil dicatat.'
-                : 'Presensi sudah tercatat pukul '.substr((string) $presensi->waktu_scan, 0, 5).'. Tidak perlu scan ulang.';
+                ? ($periodeBaru ? 'Presensi berhalangan berhasil dicatat dan periode dimulai.' : 'Presensi berhalangan hari ini berhasil dicatat.')
+                : 'Presensi berhalangan sudah tercatat pukul '.substr((string) $presensi->waktu_scan, 0, 5).'. Tidak perlu scan ulang.';
 
             $log = $this->catatLog(
                 jadwal: $jadwal,
@@ -134,6 +188,7 @@ class ProsesScanKegiatanIbadah
                 berhasil: true,
                 nisn: $nisn,
                 siswa: $siswa,
+                periode: $periode,
                 presensi: $presensi,
                 ipAddress: $ipAddress,
                 userAgent: $userAgent,
@@ -146,8 +201,9 @@ class ProsesScanKegiatanIbadah
                 'pesan' => $pesan,
                 'siswa' => $siswa,
                 'anggota_kelas' => $anggotaKelas,
+                'periode' => $periode->fresh(),
                 'presensi' => $presensi,
-                'periode_berhalangan_ditutup' => $periodeBerhalanganDitutup,
+                'hari_ke' => $hariKe,
                 'log' => $log,
             ];
         });
@@ -165,19 +221,7 @@ class ProsesScanKegiatanIbadah
         ?string $ipAddress,
         ?string $userAgent,
     ): array {
-        $log = $this->catatLog(
-            jadwal: $jadwal,
-            isiScan: $isiScan,
-            waktuScan: $waktuScan,
-            petugas: $petugas,
-            status: $status,
-            pesan: $pesan,
-            berhasil: false,
-            nisn: $nisn,
-            siswa: $siswa,
-            ipAddress: $ipAddress,
-            userAgent: $userAgent,
-        );
+        $log = $this->catatLog($jadwal, $isiScan, $waktuScan, $petugas, $status, $pesan, false, $nisn, $siswa, null, null, $ipAddress, $userAgent);
 
         return [
             'berhasil' => false,
@@ -186,51 +230,11 @@ class ProsesScanKegiatanIbadah
             'pesan' => $pesan,
             'siswa' => $siswa,
             'anggota_kelas' => null,
+            'periode' => null,
             'presensi' => null,
-            'periode_berhalangan_ditutup' => null,
+            'hari_ke' => null,
             'log' => $log,
         ];
-    }
-
-    private function tutupPeriodeBerhalanganAktif(
-        TahunPelajaran $tahunPelajaran,
-        Siswa $siswa,
-        int $kegiatanIbadahId,
-        CarbonInterface $waktuScan,
-        Pengguna $petugas,
-    ): ?PeriodeBerhalanganIbadah {
-        $periode = PeriodeBerhalanganIbadah::query()
-            ->where('tahun_pelajaran_id', $tahunPelajaran->id)
-            ->where('siswa_id', $siswa->id)
-            ->whereIn('status', [
-                PeriodeBerhalanganIbadah::STATUS_AKTIF,
-                PeriodeBerhalanganIbadah::STATUS_PERLU_KONFIRMASI,
-            ])
-            ->latest('tanggal_mulai')
-            ->lockForUpdate()
-            ->first();
-
-        if (! $periode) {
-            return null;
-        }
-
-        PresensiBerhalanganIbadah::query()
-            ->where('periode_berhalangan_ibadah_id', $periode->id)
-            ->where('kegiatan_ibadah_id', $kegiatanIbadahId)
-            ->whereDate('tanggal', $waktuScan->toDateString())
-            ->delete();
-
-        $periode->update([
-            'tanggal_selesai' => $waktuScan->toDateString(),
-            'status' => PeriodeBerhalanganIbadah::STATUS_SELESAI,
-            'perlu_konfirmasi_sejak' => null,
-            'konfirmasi_berikutnya_pada' => null,
-            'diselesaikan_oleh_pengguna_id' => $petugas->id,
-            'diselesaikan_pada' => $waktuScan,
-            'cara_selesai' => 'scan_ibadah',
-        ]);
-
-        return $periode->fresh();
     }
 
     private function catatLog(
@@ -243,12 +247,14 @@ class ProsesScanKegiatanIbadah
         bool $berhasil,
         ?string $nisn = null,
         ?Siswa $siswa = null,
-        ?PresensiKegiatanIbadah $presensi = null,
+        ?PeriodeBerhalanganIbadah $periode = null,
+        ?PresensiBerhalanganIbadah $presensi = null,
         ?string $ipAddress = null,
         ?string $userAgent = null,
-    ): LogScanKegiatanIbadah {
-        return LogScanKegiatanIbadah::create([
-            'presensi_kegiatan_ibadah_id' => $presensi?->id,
+    ): LogScanBerhalanganIbadah {
+        return LogScanBerhalanganIbadah::create([
+            'presensi_berhalangan_ibadah_id' => $presensi?->id,
+            'periode_berhalangan_ibadah_id' => $periode?->id,
             'jadwal_kegiatan_ibadah_id' => $jadwal->id,
             'kegiatan_ibadah_id' => $jadwal->kegiatan_ibadah_id,
             'siswa_id' => $siswa?->id,

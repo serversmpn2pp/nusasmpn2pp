@@ -25,6 +25,10 @@ if (root) {
     const context = canvas.getContext('2d', { willReadFrequently: true });
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     const fallbackPhoto = root.dataset.fallbackPhoto;
+    const labelNew = root.dataset.labelNew || 'Presensi berhasil';
+    const labelKnown = root.dataset.labelKnown || 'Sudah tercatat';
+    const labelError = root.dataset.labelError || 'Scan belum dapat dicatat';
+    const readyMessage = root.dataset.readyMessage || 'Siap memindai siswa berikutnya.';
     const serverStartedAt = new Date(root.dataset.serverTime);
     const localStartedAt = Date.now();
     let stream = null;
@@ -162,12 +166,13 @@ if (root) {
 
     const showResult = (payload) => {
         result.className = `result show ${payload.berhasil ? (payload.baru ? 'success' : 'known') : 'error'}`;
-        resultKicker.textContent = payload.berhasil ? (payload.baru ? 'Presensi berhasil' : 'Sudah tercatat') : 'Scan belum dapat dicatat';
+        resultKicker.textContent = payload.berhasil ? (payload.baru ? labelNew : labelKnown) : labelError;
         resultName.textContent = payload.siswa?.nama_lengkap || 'QR tidak dikenali';
         resultPhoto.src = payload.siswa?.foto_url || fallbackPhoto;
         createMeta([
             payload.siswa?.kelas ? `Kelas ${payload.siswa.kelas}` : null,
             payload.siswa?.nisn ? `NISN ${payload.siswa.nisn}` : null,
+            payload.siswa?.hari_ke ? `Hari ke-${payload.siswa.hari_ke}` : null,
             payload.waktu_server ? `Pukul ${payload.waktu_server.slice(0, 5)}` : null,
         ]);
         resultText.textContent = payload.pesan || 'Terjadi kesalahan saat memproses QR.';
@@ -175,7 +180,7 @@ if (root) {
     };
 
     const addRecent = (presence) => {
-        if (!presence || recentList.querySelector(`[data-presence-id="${presence.id}"]`)) return;
+        if (!recentList || !presence || recentList.querySelector(`[data-presence-id="${presence.id}"]`)) return;
 
         recentList.querySelector('.recent-empty')?.remove();
         const item = document.createElement('article');
@@ -247,10 +252,10 @@ if (root) {
             if (!payload.pesan && payload.message) payload.pesan = payload.message;
             showResult(payload);
             sound(Boolean(payload.berhasil));
-            totalToday.textContent = payload.jumlah_hari_ini ?? totalToday.textContent;
+            if (totalToday) totalToday.textContent = payload.jumlah_hari_ini ?? totalToday.textContent;
             if (payload.berhasil && payload.baru) addRecent(payload.presensi);
             statusText.textContent = payload.berhasil
-                ? 'Siap memindai siswa berikutnya.'
+                ? readyMessage
                 : 'Periksa pesan hasil, lalu arahkan kembali kamera ke QR.';
         } catch (_) {
             const payload = {

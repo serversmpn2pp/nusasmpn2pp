@@ -6,12 +6,15 @@ use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalKegiatanIbadah;
 use App\Models\JadwalPiketGuru;
-use App\Models\Kelas;
 use App\Models\KegiatanIbadah;
+use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
+use App\Models\PeriodeBerhalanganIbadah;
+use App\Models\PresensiBerhalanganIbadah;
+use App\Models\PresensiKegiatanIbadah;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
@@ -52,7 +55,7 @@ class ScanKegiatanIbadahTest extends TestCase
             ->assertJsonPath('siswa.nama_lengkap', $data['siswa']->nama_lengkap)
             ->assertJsonPath('siswa.kelas', $data['kelas']->nama);
 
-        $this->assertTrue(\App\Models\PresensiKegiatanIbadah::query()
+        $this->assertTrue(PresensiKegiatanIbadah::query()
             ->where('kegiatan_ibadah_id', $data['kegiatan']->id)
             ->where('siswa_id', $data['siswa']->id)
             ->whereDate('tanggal', '2026-08-13')
@@ -77,6 +80,58 @@ class ScanKegiatanIbadahTest extends TestCase
         $this->assertSame('sudah_tercatat', $kedua['status']);
         $this->assertDatabaseCount('presensi_kegiatan_ibadah', 1);
         $this->assertDatabaseCount('log_scan_kegiatan_ibadah', 2);
+    }
+
+    public function test_scan_ibadah_biasa_otomatis_menyelesaikan_periode_berhalangan(): void
+    {
+        $data = $this->dataDasar('senin');
+        $data['siswa']->update(['jenis_kelamin' => 'P']);
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $periode = PeriodeBerhalanganIbadah::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'siswa_id' => $data['siswa']->id,
+            'kelas_id' => $data['kelas']->id,
+            'anggota_kelas_id' => $data['anggota']->id,
+            'tanggal_mulai' => '2026-08-05',
+            'status' => PeriodeBerhalanganIbadah::STATUS_PERLU_KONFIRMASI,
+            'batas_hari_konfirmasi' => 5,
+            'perlu_konfirmasi_sejak' => '2026-08-10',
+            'dimulai_oleh_pengguna_id' => $administrator->id,
+        ]);
+        PresensiBerhalanganIbadah::create([
+            'periode_berhalangan_ibadah_id' => $periode->id,
+            'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
+            'kegiatan_ibadah_id' => $data['kegiatan']->id,
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas']->id,
+            'anggota_kelas_id' => $data['anggota']->id,
+            'siswa_id' => $data['siswa']->id,
+            'dipindai_oleh_pengguna_id' => $administrator->id,
+            'tanggal' => '2026-08-10',
+            'waktu_scan' => '11:50:00',
+            'sumber' => 'kamera',
+        ]);
+
+        $hasil = app(ProsesScanKegiatanIbadah::class)->proses(
+            $data['jadwal'],
+            $data['siswa']->nisn,
+            $administrator,
+            Carbon::parse('2026-08-10 12:10:00'),
+        );
+
+        $this->assertTrue($hasil['berhasil']);
+        $this->assertTrue($hasil['baru']);
+        $this->assertNotNull($hasil['periode_berhalangan_ditutup']);
+        $this->assertSame('Presensi ibadah berhasil dicatat.', $hasil['pesan']);
+        $this->assertDatabaseHas('periode_berhalangan_ibadah', [
+            'id' => $periode->id,
+            'status' => PeriodeBerhalanganIbadah::STATUS_SELESAI,
+            'cara_selesai' => 'scan_ibadah',
+            'diselesaikan_oleh_pengguna_id' => $administrator->id,
+        ]);
+        $this->assertSame('2026-08-10', $periode->fresh()->tanggal_selesai->toDateString());
+        $this->assertDatabaseCount('presensi_berhalangan_ibadah', 0);
+        $this->assertDatabaseCount('presensi_kegiatan_ibadah', 1);
     }
 
     public function test_scan_di_luar_jadwal_dan_qr_tidak_valid_tidak_membuat_presensi(): void

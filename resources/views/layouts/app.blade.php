@@ -1775,9 +1775,10 @@
     <body>
         @php
             $penggunaAktif = auth()->user();
-            $penggunaAktif?->loadMissing(['pegawai', 'siswa', 'daftarPeran.izin']);
+            $penggunaAktif?->loadMissing(['pegawai', 'siswa', 'orangTuaWali', 'daftarPeran.izin']);
             $namaPenggunaAktif = $penggunaAktif?->pegawai?->nama_lengkap
                 ?: $penggunaAktif?->siswa?->nama_lengkap
+                ?: $penggunaAktif?->orangTuaWali?->nama_lengkap
                 ?: $penggunaAktif?->nama
                 ?: 'Pengguna NUSA';
             $notifikasiTerbaru = $penggunaAktif
@@ -1821,6 +1822,12 @@
             $dapatRingkasanIbadahBulanan = $penggunaAktif
                 ? app(\App\Services\Ibadah\AksesScanKegiatanIbadah::class)->dapatMelihatRingkasanBulanan($penggunaAktif)
                 : false;
+            $dapatScanBerhalanganIbadah = $penggunaAktif
+                ? app(\App\Services\Ibadah\AksesBerhalanganIbadah::class)->dapatMemindai($penggunaAktif)
+                : false;
+            $dapatKonfirmasiBerhalanganIbadah = $penggunaAktif
+                ? app(\App\Services\Ibadah\AksesBerhalanganIbadah::class)->dapatMengonfirmasi($penggunaAktif)
+                : false;
 
             $peranMenuLengkap = [
                 'pimpinan',
@@ -1837,6 +1844,8 @@
                 && ! $penggunaAktif->memilikiPeran($peranMenuLengkap);
             $pakaiSidebarSiswa = $penggunaAktif?->akunSiswa()
                 || $penggunaAktif?->memilikiPeran('siswa');
+            $pakaiSidebarOrangTua = $penggunaAktif?->akunOrangTua()
+                || $penggunaAktif?->memilikiPeran('orang_tua');
 
             $semuaSidebarSections = [
                 [
@@ -1902,7 +1911,11 @@
                         ['label' => 'Jadwal Guru Piket', 'route' => 'jadwal-piket-guru.index', 'active' => ['jadwal-piket-guru.*'], 'initial' => 'GP', 'izin' => 'piket_guru.kelola', 'subgroup' => 'Guru Piket'],
                         ['label' => 'Kegiatan Ibadah', 'route' => 'kegiatan-ibadah.index', 'active' => ['kegiatan-ibadah.*'], 'initial' => 'KI', 'izin' => 'ibadah.pengaturan_kelola', 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Jadwal Ibadah', 'route' => 'jadwal-kegiatan-ibadah.index', 'active' => ['jadwal-kegiatan-ibadah.*'], 'initial' => 'JI', 'izin' => 'ibadah.pengaturan_kelola', 'subgroup' => 'Ibadah Siswa'],
+                        ['label' => 'Pengaturan Berhalangan', 'route' => 'pengaturan-berhalangan-ibadah.index', 'active' => ['pengaturan-berhalangan-ibadah.*'], 'initial' => 'PB', 'izin' => 'ibadah.pengaturan_kelola', 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Scan Ibadah Siswa', 'route' => 'scan-kegiatan-ibadah.index', 'active' => ['scan-kegiatan-ibadah.*'], 'initial' => 'SI', 'izin' => 'ibadah.scan', 'blank' => true, 'subgroup' => 'Ibadah Siswa'],
+                        ['label' => 'Scan Berhalangan', 'route' => 'scan-berhalangan-ibadah.index', 'active' => ['scan-berhalangan-ibadah.*'], 'initial' => 'SB', 'izin' => null, 'blank' => true, 'scan_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
+                        ['label' => 'Konfirmasi Privat', 'route' => 'konfirmasi-berhalangan-ibadah.index', 'active' => ['konfirmasi-berhalangan-ibadah.*'], 'initial' => 'KP', 'izin' => null, 'konfirmasi_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
+                        ['label' => 'Rekap Berhalangan', 'route' => 'rekap-berhalangan-ibadah.index', 'active' => ['rekap-berhalangan-ibadah.*'], 'initial' => 'RB', 'izin' => null, 'konfirmasi_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Rekap Ibadah Siswa', 'route' => 'rekap-kegiatan-ibadah.index', 'active' => ['rekap-kegiatan-ibadah.index', 'rekap-kegiatan-ibadah.koreksi.*'], 'initial' => 'RI', 'izin' => 'ibadah.rekap', 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Ringkasan Ibadah Bulanan', 'route' => 'rekap-kegiatan-ibadah.bulanan', 'active' => ['rekap-kegiatan-ibadah.bulanan'], 'initial' => 'BI', 'izin' => 'ibadah.rekap', 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Pengaturan Presensi Siswa', 'route' => 'pengaturan-absensi.index', 'active' => ['pengaturan-absensi.*'], 'initial' => 'PA', 'izin' => 'absensi.pengaturan_kelola', 'subgroup' => 'Presensi Siswa'],
@@ -1966,6 +1979,7 @@
                     'items' => [
                         ['label' => 'Akun Pegawai', 'route' => 'akun-pegawai.index', 'active' => ['akun-pegawai.*'], 'initial' => 'AP', 'izin' => ['akun.lihat', 'akun.kelola']],
                         ['label' => 'Akun Siswa', 'route' => 'akun-siswa.index', 'active' => ['akun-siswa.*'], 'initial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.kelola', 'akun_siswa.cetak']],
+                        ['label' => 'Akun Orang Tua', 'route' => 'akun-orang-tua.index', 'active' => ['akun-orang-tua.*'], 'initial' => 'AO', 'izin' => ['akun_orang_tua.lihat', 'akun_orang_tua.kelola', 'akun_orang_tua.cetak']],
                         ['label' => 'Role & Hak Akses', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RA', 'izin' => ['peran.lihat', 'peran.kelola']],
                     ],
                 ],
@@ -2015,7 +2029,11 @@
                     'items' => [
                         ['label' => 'Kegiatan Ibadah', 'route' => 'kegiatan-ibadah.index', 'active' => ['kegiatan-ibadah.*'], 'initial' => 'KI', 'izin' => 'ibadah.pengaturan_kelola'],
                         ['label' => 'Jadwal Ibadah', 'route' => 'jadwal-kegiatan-ibadah.index', 'active' => ['jadwal-kegiatan-ibadah.*'], 'initial' => 'JI', 'izin' => 'ibadah.pengaturan_kelola'],
+                        ['label' => 'Pengaturan Berhalangan', 'route' => 'pengaturan-berhalangan-ibadah.index', 'active' => ['pengaturan-berhalangan-ibadah.*'], 'initial' => 'PB', 'izin' => 'ibadah.pengaturan_kelola'],
                         ['label' => 'Scan Ibadah Siswa', 'route' => 'scan-kegiatan-ibadah.index', 'active' => ['scan-kegiatan-ibadah.*'], 'initial' => 'SI', 'izin' => 'ibadah.scan', 'blank' => true, 'scan_ibadah_only' => true],
+                        ['label' => 'Scan Berhalangan', 'route' => 'scan-berhalangan-ibadah.index', 'active' => ['scan-berhalangan-ibadah.*'], 'initial' => 'SB', 'izin' => null, 'blank' => true, 'scan_berhalangan_only' => true],
+                        ['label' => 'Konfirmasi Privat', 'route' => 'konfirmasi-berhalangan-ibadah.index', 'active' => ['konfirmasi-berhalangan-ibadah.*'], 'initial' => 'KP', 'izin' => null, 'konfirmasi_berhalangan_only' => true],
+                        ['label' => 'Rekap Berhalangan', 'route' => 'rekap-berhalangan-ibadah.index', 'active' => ['rekap-berhalangan-ibadah.*'], 'initial' => 'RB', 'izin' => null, 'konfirmasi_berhalangan_only' => true],
                         ['label' => 'Rekap Ibadah Siswa', 'route' => 'rekap-kegiatan-ibadah.index', 'active' => ['rekap-kegiatan-ibadah.index', 'rekap-kegiatan-ibadah.koreksi.*'], 'initial' => 'RI', 'izin' => 'ibadah.rekap', 'rekap_ibadah_only' => true],
                         ['label' => 'Ringkasan Ibadah Bulanan', 'route' => 'rekap-kegiatan-ibadah.bulanan', 'active' => ['rekap-kegiatan-ibadah.bulanan'], 'initial' => 'BI', 'izin' => 'ibadah.rekap', 'ringkasan_ibadah_only' => true],
                     ],
@@ -2027,6 +2045,7 @@
                         ['label' => 'Kelas Wali Saya', 'route' => 'kelas-wali.index', 'active' => ['kelas-wali.*', 'siswa.show'], 'initial' => 'KL', 'izin' => 'kelas.lihat', 'peran' => 'wali_kelas'],
                         ['label' => 'Jadwal Kelas Saya', 'route' => 'jadwal-kelas-saya.index', 'active' => ['jadwal-kelas-saya.*'], 'initial' => 'JK', 'izin' => 'jadwal.lihat', 'peran' => 'wali_kelas'],
                         ['label' => 'Akun Siswa Kelas', 'route' => 'akun-siswa.index', 'active' => ['akun-siswa.*'], 'initial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.cetak'], 'peran' => 'wali_kelas'],
+                        ['label' => 'Akun Orang Tua Kelas', 'route' => 'akun-orang-tua.index', 'active' => ['akun-orang-tua.*'], 'initial' => 'AO', 'izin' => ['akun_orang_tua.lihat', 'akun_orang_tua.cetak'], 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Presensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi'], 'peran' => 'wali_kelas'],
                         ['label' => 'Laporan Presensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan', 'peran' => 'wali_kelas'],
                         ['label' => 'Laporan Siswa Kelas', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'LS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.lapor'], 'peran' => 'wali_kelas'],
@@ -2096,16 +2115,35 @@
                 ],
             ];
 
-            if ($pakaiSidebarSiswa) {
+            $sidebarOrangTuaSections = [
+                [
+                    'id' => 'utama',
+                    'title' => 'Utama',
+                    'items' => [
+                        ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                    ],
+                ],
+                [
+                    'id' => 'akun-saya',
+                    'title' => 'Akun Saya',
+                    'items' => [
+                        ['label' => 'Ganti Password', 'route' => 'kata-sandi.edit', 'active' => ['kata-sandi.*'], 'initial' => 'KS', 'izin' => null],
+                    ],
+                ],
+            ];
+
+            if ($pakaiSidebarOrangTua) {
+                $semuaSidebarSections = $sidebarOrangTuaSections;
+            } elseif ($pakaiSidebarSiswa) {
                 $semuaSidebarSections = $sidebarSiswaSections;
             } elseif ($pakaiSidebarPegawai) {
                 $semuaSidebarSections = $sidebarPegawaiSections;
             }
 
             $sidebarSections = collect($semuaSidebarSections)
-                ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan) {
+                ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah) {
                     $section['items'] = collect($section['items'])
-                        ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan) {
+                        ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah) {
                             if (($item['pegawai_only'] ?? false) && ! $penggunaAktif?->pegawai_id) {
                                 return false;
                             }
@@ -2127,6 +2165,14 @@
                             }
 
                             if (($item['ringkasan_ibadah_only'] ?? false) && ! $dapatRingkasanIbadahBulanan) {
+                                return false;
+                            }
+
+                            if (($item['scan_berhalangan_only'] ?? false) && ! $dapatScanBerhalanganIbadah) {
+                                return false;
+                            }
+
+                            if (($item['konfirmasi_berhalangan_only'] ?? false) && ! $dapatKonfirmasiBerhalanganIbadah) {
                                 return false;
                             }
 

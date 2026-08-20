@@ -6,8 +6,8 @@ use App\Models\AbsensiPegawai;
 use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
-use App\Models\JadwalPelajaran;
 use App\Models\JadwalKegiatanIbadah;
+use App\Models\JadwalPelajaran;
 use App\Models\JadwalPiketGuru;
 use App\Models\JamPelajaran;
 use App\Models\Kelas;
@@ -20,8 +20,8 @@ use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\PenugasanGuruWaliSiswa;
-use App\Models\PublikasiNilaiSiswa;
 use App\Models\PresensiKegiatanIbadah;
+use App\Models\PublikasiNilaiSiswa;
 use App\Models\SanksiPoinSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
@@ -52,6 +52,18 @@ class BerandaController extends Controller
                 awalBulan: $awalBulan,
                 akhirBulan: $akhirBulan,
             ));
+        }
+
+        if ($pengguna?->akunOrangTua() || $pengguna?->memilikiPeran('orang_tua')) {
+            $orangTua = $pengguna->orangTuaWali()
+                ->with(['siswa' => fn ($query) => $query->orderBy('nama_lengkap')])
+                ->first();
+
+            return view('beranda.orang-tua', [
+                'orangTua' => $orangTua,
+                'daftarAnak' => $orangTua?->siswa ?? collect(),
+                'tahunPelajaranAktif' => $tahunPelajaranAktif,
+            ]);
         }
 
         if (! $pengguna?->administrator()) {

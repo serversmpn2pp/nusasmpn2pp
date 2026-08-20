@@ -61,4 +61,14 @@ class AnggotaKelas extends Model
     {
         return $this->hasMany(PesertaUjianCbt::class);
     }
+
+    public function periodeBerhalanganIbadah(): HasMany
+    {
+        return $this->hasMany(PeriodeBerhalanganIbadah::class);
+    }
+
+    public function presensiBerhalanganIbadah(): HasMany
+    {
+        return $this->hasMany(PresensiBerhalanganIbadah::class);
+    }
 }

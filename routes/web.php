@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AksesUjianCbtController;
+use App\Http\Controllers\AkunOrangTuaController;
 use App\Http\Controllers\AkunPegawaiController;
 use App\Http\Controllers\AkunSiswaController;
 use App\Http\Controllers\AnggotaKelasController;
@@ -40,6 +41,7 @@ use App\Http\Controllers\KelasWaliController;
 use App\Http\Controllers\KenaikanKelasController;
 use App\Http\Controllers\KlarifikasiSiswaPembinaanController;
 use App\Http\Controllers\KomponenNilaiController;
+use App\Http\Controllers\KonfirmasiBerhalanganIbadahController;
 use App\Http\Controllers\KoreksiHasilScanLjkOmrController;
 use App\Http\Controllers\KoreksiKegiatanIbadahController;
 use App\Http\Controllers\KoreksiManualUjianCbtController;
@@ -70,6 +72,7 @@ use App\Http\Controllers\PengajuanBarangSayaController;
 use App\Http\Controllers\PengaturanAbsensiController;
 use App\Http\Controllers\PengaturanAbsensiPegawaiController;
 use App\Http\Controllers\PengaturanBatasProsesPelanggaranController;
+use App\Http\Controllers\PengaturanBerhalanganIbadahController;
 use App\Http\Controllers\PengaturanInventarisController;
 use App\Http\Controllers\PengaturanPeringatanDiniPoinController;
 use App\Http\Controllers\PengaturanPoinKeterlambatanController;
@@ -89,6 +92,7 @@ use App\Http\Controllers\PublikasiNilaiController;
 use App\Http\Controllers\PusatVerifikasiPelanggaranController;
 use App\Http\Controllers\RekapAbsensiHarianController;
 use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
+use App\Http\Controllers\RekapBerhalanganIbadahController;
 use App\Http\Controllers\RekapHasilUjianCbtController;
 use App\Http\Controllers\RekapKegiatanIbadahController;
 use App\Http\Controllers\RekapNilaiRaporController;
@@ -102,6 +106,7 @@ use App\Http\Controllers\SanksiPoinSiswaController;
 use App\Http\Controllers\SatuanBarangController;
 use App\Http\Controllers\ScanAbsensiController;
 use App\Http\Controllers\ScanAbsensiPegawaiController;
+use App\Http\Controllers\ScanBerhalanganIbadahController;
 use App\Http\Controllers\ScanKegiatanIbadahController;
 use App\Http\Controllers\ScanLjkUjianOmrController;
 use App\Http\Controllers\SesiUjianCbtController;
@@ -205,6 +210,21 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('akun-siswa/{siswa}', [AkunSiswaController::class, 'store'])->name('akun-siswa.store');
             Route::patch('akun-siswa/{pengguna}/reset-password', [AkunSiswaController::class, 'resetPassword'])->name('akun-siswa.reset-password');
             Route::patch('akun-siswa/{pengguna}/status', [AkunSiswaController::class, 'ubahStatus'])->name('akun-siswa.status');
+        });
+
+        Route::middleware('izin:akun_orang_tua.lihat,akun_orang_tua.kelola,akun_orang_tua.cetak')->group(function () {
+            Route::get('akun-orang-tua', [AkunOrangTuaController::class, 'index'])->name('akun-orang-tua.index');
+        });
+
+        Route::middleware('izin:akun_orang_tua.cetak,akun_orang_tua.kelola')->group(function () {
+            Route::get('akun-orang-tua/kelas/{kelas}/cetak', [AkunOrangTuaController::class, 'cetak'])->name('akun-orang-tua.cetak');
+        });
+
+        Route::middleware('izin:akun_orang_tua.kelola')->group(function () {
+            Route::post('akun-orang-tua/kelas/{kelas}/buat-massal', [AkunOrangTuaController::class, 'storeMassal'])->name('akun-orang-tua.buat-massal');
+            Route::post('akun-orang-tua/{siswa}', [AkunOrangTuaController::class, 'store'])->name('akun-orang-tua.store');
+            Route::patch('akun-orang-tua/{pengguna}/reset-password', [AkunOrangTuaController::class, 'resetPassword'])->name('akun-orang-tua.reset-password');
+            Route::patch('akun-orang-tua/{pengguna}/status', [AkunOrangTuaController::class, 'ubahStatus'])->name('akun-orang-tua.status');
         });
 
         Route::resource('peran', PeranController::class)
@@ -569,10 +589,34 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             ->parameters(['jadwal-kegiatan-ibadah' => 'jadwalKegiatanIbadah'])
             ->except(['show'])
             ->middleware('izin:ibadah.pengaturan_kelola');
+        Route::middleware('izin:ibadah.pengaturan_kelola')->group(function () {
+            Route::get('pengaturan-berhalangan-ibadah', [PengaturanBerhalanganIbadahController::class, 'index'])
+                ->name('pengaturan-berhalangan-ibadah.index');
+            Route::put('pengaturan-berhalangan-ibadah', [PengaturanBerhalanganIbadahController::class, 'update'])
+                ->name('pengaturan-berhalangan-ibadah.update');
+            Route::post('pengaturan-berhalangan-ibadah/pendamping', [PengaturanBerhalanganIbadahController::class, 'storePendamping'])
+                ->name('pengaturan-berhalangan-ibadah.pendamping.store');
+            Route::delete('pengaturan-berhalangan-ibadah/pendamping/{penugasanPendampingIbadahSiswi}', [PengaturanBerhalanganIbadahController::class, 'destroyPendamping'])
+                ->name('pengaturan-berhalangan-ibadah.pendamping.destroy');
+        });
         Route::middleware('izin:ibadah.scan')->group(function () {
             Route::get('scan-kegiatan-ibadah', [ScanKegiatanIbadahController::class, 'index'])->name('scan-kegiatan-ibadah.index');
             Route::post('scan-kegiatan-ibadah', [ScanKegiatanIbadahController::class, 'store'])->name('scan-kegiatan-ibadah.store');
         });
+        Route::get('scan-berhalangan-ibadah', [ScanBerhalanganIbadahController::class, 'index'])
+            ->name('scan-berhalangan-ibadah.index');
+        Route::post('scan-berhalangan-ibadah', [ScanBerhalanganIbadahController::class, 'store'])
+            ->name('scan-berhalangan-ibadah.store');
+        Route::get('konfirmasi-berhalangan-ibadah', [KonfirmasiBerhalanganIbadahController::class, 'index'])
+            ->name('konfirmasi-berhalangan-ibadah.index');
+        Route::get('konfirmasi-berhalangan-ibadah/{periodeBerhalanganIbadah}', [KonfirmasiBerhalanganIbadahController::class, 'show'])
+            ->name('konfirmasi-berhalangan-ibadah.show');
+        Route::put('konfirmasi-berhalangan-ibadah/{periodeBerhalanganIbadah}', [KonfirmasiBerhalanganIbadahController::class, 'update'])
+            ->name('konfirmasi-berhalangan-ibadah.update');
+        Route::get('rekap-berhalangan-ibadah', [RekapBerhalanganIbadahController::class, 'index'])
+            ->name('rekap-berhalangan-ibadah.index');
+        Route::get('rekap-berhalangan-ibadah/cetak', [RekapBerhalanganIbadahController::class, 'cetak'])
+            ->name('rekap-berhalangan-ibadah.cetak');
         Route::get('rekap-kegiatan-ibadah', [RekapKegiatanIbadahController::class, 'index'])
             ->middleware('izin:ibadah.rekap')
             ->name('rekap-kegiatan-ibadah.index');

@@ -44,6 +44,16 @@ class TahunPelajaran extends Model
         return $this->hasOne(PengaturanPeringatanDiniPoin::class);
     }
 
+    public function pengaturanBerhalanganIbadah(): HasOne
+    {
+        return $this->hasOne(PengaturanBerhalanganIbadah::class);
+    }
+
+    public function penugasanPendampingIbadahSiswi(): HasMany
+    {
+        return $this->hasMany(PenugasanPendampingIbadahSiswi::class);
+    }
+
     public function peringatanDiniSiswa(): HasMany
     {
         return $this->hasMany(PeringatanDiniSiswa::class);
@@ -87,6 +97,16 @@ class TahunPelajaran extends Model
     public function presensiKegiatanIbadah(): HasMany
     {
         return $this->hasMany(PresensiKegiatanIbadah::class);
+    }
+
+    public function periodeBerhalanganIbadah(): HasMany
+    {
+        return $this->hasMany(PeriodeBerhalanganIbadah::class);
+    }
+
+    public function presensiBerhalanganIbadah(): HasMany
+    {
+        return $this->hasMany(PresensiBerhalanganIbadah::class);
     }
 
     public function pengaturanMataPelajaran(): HasMany

@@ -6,6 +6,7 @@ use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\AkunOrangTuaService;
 use App\Services\FotoProfilService;
 use App\Services\SinkronisasiUsernameAkunService;
 use App\Support\PembacaExcelSiswa;
@@ -126,6 +127,7 @@ class SiswaController extends Controller
         Request $request,
         Siswa $siswa,
         FotoProfilService $fotoProfilService,
+        AkunOrangTuaService $akunOrangTuaService,
         SinkronisasiUsernameAkunService $sinkronisasiUsername,
     ) {
         $this->pastikanBolehAksesSiswa($request, $siswa);
@@ -135,14 +137,24 @@ class SiswaController extends Controller
             $fotoProfilService->pesanValidasi(),
         );
         $data['aktif'] = $request->boolean('aktif');
-        $siswa->loadMissing('pengguna');
+        $siswa->loadMissing(['pengguna', 'orangTuaWali.pengguna']);
         $usernameBaru = $sinkronisasiUsername->siapkanUsername(
             $siswa->pengguna,
             $data['nisn'] ?? null,
             'nisn',
             'NISN',
         );
-        $usernameBerubah = $siswa->pengguna && $usernameBaru !== $siswa->pengguna->username;
+        $orangTuaAcuan = $siswa->orangTuaWali
+            ->first(fn ($orangTua) => (int) $orangTua->siswa_acuan_username_id === (int) $siswa->id);
+        $akunOrangTua = $orangTuaAcuan?->pengguna;
+        $usernameOrangTuaBaru = $sinkronisasiUsername->siapkanUsername(
+            $akunOrangTua,
+            $akunOrangTuaService->usernameDariNisn($data['nisn'] ?? null),
+            'nisn',
+            'NISN',
+        );
+        $usernameBerubah = ($siswa->pengguna && $usernameBaru !== $siswa->pengguna->username)
+            || ($akunOrangTua && $usernameOrangTuaBaru !== $akunOrangTua->username);
         $fotoLama = $siswa->foto;
         $fotoBaru = null;
 
@@ -154,9 +166,10 @@ class SiswaController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($siswa, $data, $sinkronisasiUsername, $usernameBaru) {
+            DB::transaction(function () use ($siswa, $data, $sinkronisasiUsername, $usernameBaru, $akunOrangTua, $usernameOrangTuaBaru) {
                 $siswa->update($data);
                 $sinkronisasiUsername->sinkronkan($siswa->pengguna, $usernameBaru);
+                $sinkronisasiUsername->sinkronkan($akunOrangTua, $usernameOrangTuaBaru);
             });
         } catch (Throwable $exception) {
             $fotoProfilService->hapus($fotoBaru);
@@ -172,7 +185,7 @@ class SiswaController extends Controller
             ->route('siswa.index')
             ->with(
                 'berhasil',
-                'Data siswa berhasil diperbarui.'.($usernameBerubah ? " Username login ikut berubah menjadi {$usernameBaru}." : ''),
+                'Data siswa berhasil diperbarui.'.($usernameBerubah ? ' Username login ikut berubah mengikuti NISN baru.' : ''),
             );
     }
 

@@ -3,24 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\JadwalKegiatanIbadah;
-use App\Models\PresensiKegiatanIbadah;
+use App\Models\PresensiBerhalanganIbadah;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
-use App\Services\Ibadah\AksesScanKegiatanIbadah;
-use App\Services\Ibadah\ProsesScanKegiatanIbadah;
+use App\Services\Ibadah\AksesBerhalanganIbadah;
+use App\Services\Ibadah\ProsesScanBerhalanganIbadah;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-class ScanKegiatanIbadahController extends Controller
+class ScanBerhalanganIbadahController extends Controller
 {
-    public function index(Request $request, AksesScanKegiatanIbadah $aksesScan)
+    public function index(Request $request, AksesBerhalanganIbadah $akses)
     {
         $tahunPelajaran = TahunPelajaran::query()
             ->where('aktif', true)
             ->orderByDesc('tanggal_mulai')
             ->first();
-        abort_unless($aksesScan->dapatMemindai($request->user(), $tahunPelajaran), 403, 'Halaman scan hanya dapat dibuka oleh guru PAI, guru piket hari ini, atau pengelola kesiswaan.');
+        abort_unless($akses->dapatMemindai($request->user(), $tahunPelajaran), 403, 'Halaman privat ini hanya dapat dibuka oleh pendamping ibadah siswi yang ditugaskan.');
 
         $hari = $this->hariDariTanggal(now()->dayOfWeekIso);
         $daftarJadwal = collect();
@@ -41,23 +41,14 @@ class ScanKegiatanIbadahController extends Controller
             ?? $daftarJadwal->first(fn (JadwalKegiatanIbadah $jadwal) => $this->scanSedangDibuka($jadwal))
             ?? $daftarJadwal->first();
         $tanggal = now()->toDateString();
-        $presensiHariIni = $jadwalDipilih
-            ? PresensiKegiatanIbadah::query()
-                ->with(['siswa:id,nama_lengkap,nisn,foto', 'kelas:id,nama'])
-                ->where('kegiatan_ibadah_id', $jadwalDipilih->kegiatan_ibadah_id)
-                ->whereDate('tanggal', $tanggal)
-                ->latest('waktu_scan')
-                ->limit(8)
-                ->get()
-            : collect();
         $jumlahHariIni = $jadwalDipilih
-            ? PresensiKegiatanIbadah::query()
+            ? PresensiBerhalanganIbadah::query()
                 ->where('kegiatan_ibadah_id', $jadwalDipilih->kegiatan_ibadah_id)
                 ->whereDate('tanggal', $tanggal)
                 ->count()
             : 0;
 
-        return view('scan-kegiatan-ibadah.index', [
+        return view('scan-berhalangan-ibadah.index', [
             'tahunPelajaran' => $tahunPelajaran,
             'daftarJadwal' => $daftarJadwal,
             'jadwalDipilih' => $jadwalDipilih,
@@ -66,11 +57,10 @@ class ScanKegiatanIbadahController extends Controller
             'tanggalLabel' => now()->locale('id')->translatedFormat('l, d F Y'),
             'waktuServerIso' => now()->toIso8601String(),
             'jumlahHariIni' => $jumlahHariIni,
-            'presensiTerbaru' => $presensiHariIni->map(fn (PresensiKegiatanIbadah $presensi) => $this->dataPresensi($presensi))->values(),
         ]);
     }
 
-    public function store(Request $request, ProsesScanKegiatanIbadah $prosesScan): JsonResponse
+    public function store(Request $request, ProsesScanBerhalanganIbadah $prosesScan): JsonResponse
     {
         $data = $request->validate([
             'jadwal_kegiatan_ibadah_id' => ['required', 'integer', 'exists:jadwal_kegiatan_ibadah,id'],
@@ -96,18 +86,17 @@ class ScanKegiatanIbadahController extends Controller
             'baru' => $hasil['baru'],
             'status' => $hasil['status'],
             'pesan' => $hasil['pesan'],
-            'periode_berhalangan_diselesaikan' => (bool) $hasil['periode_berhalangan_ditutup'],
             'waktu_server' => now()->format('H:i:s'),
-            'presensi' => $presensi ? $this->dataPresensi($presensi) : null,
-            'siswa' => $this->dataSiswa($hasil['siswa'], $hasil['anggota_kelas']),
-            'jumlah_hari_ini' => PresensiKegiatanIbadah::query()
+            'presensi' => $presensi ? $this->dataPresensi($presensi, $hasil['hari_ke']) : null,
+            'siswa' => $this->dataSiswa($hasil['siswa'], $hasil['anggota_kelas'], $hasil['hari_ke']),
+            'jumlah_hari_ini' => PresensiBerhalanganIbadah::query()
                 ->where('kegiatan_ibadah_id', $jadwal->kegiatan_ibadah_id)
                 ->whereDate('tanggal', now()->toDateString())
                 ->count(),
         ], $hasil['berhasil'] ? 200 : 422);
     }
 
-    private function dataPresensi(PresensiKegiatanIbadah $presensi): array
+    private function dataPresensi(PresensiBerhalanganIbadah $presensi, ?int $hariKe): array
     {
         return [
             'id' => $presensi->id,
@@ -116,10 +105,11 @@ class ScanKegiatanIbadahController extends Controller
             'kelas' => $presensi->kelas?->nama,
             'foto_url' => $this->fotoUrl($presensi->siswa),
             'waktu_scan' => substr((string) $presensi->waktu_scan, 0, 8),
+            'hari_ke' => $hariKe,
         ];
     }
 
-    private function dataSiswa(?Siswa $siswa, $anggotaKelas): ?array
+    private function dataSiswa(?Siswa $siswa, $anggotaKelas, ?int $hariKe): ?array
     {
         if (! $siswa) {
             return null;
@@ -130,6 +120,7 @@ class ScanKegiatanIbadahController extends Controller
             'nisn' => $siswa->nisn,
             'kelas' => $anggotaKelas?->kelas?->nama,
             'foto_url' => $this->fotoUrl($siswa),
+            'hari_ke' => $hariKe,
         ];
     }
 
@@ -166,7 +157,7 @@ class ScanKegiatanIbadahController extends Controller
             return ['kode' => 'selesai', 'label' => 'Sudah ditutup', 'pesan' => 'Batas scan hari ini pukul '.$jadwal->formatJam($jadwal->jam_scan_selesai).'.'];
         }
 
-        return ['kode' => 'aktif', 'label' => 'Scan aktif', 'pesan' => 'Kamera siap digunakan untuk presensi siswa.'];
+        return ['kode' => 'aktif', 'label' => 'Scan privat aktif', 'pesan' => 'Kamera siap digunakan oleh petugas pendamping.'];
     }
 
     private function hariDariTanggal(int $hariIso): string

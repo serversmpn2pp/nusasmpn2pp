@@ -28,6 +28,9 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('akun-siswa.index', 'izin:akun_siswa.lihat,akun_siswa.kelola,akun_siswa.cetak');
         $this->assertRouteMemakaiMiddleware('akun-siswa.cetak', 'izin:akun_siswa.cetak,akun_siswa.kelola');
         $this->assertRouteMemakaiMiddleware('akun-siswa.store', 'izin:akun_siswa.kelola');
+        $this->assertRouteMemakaiMiddleware('akun-orang-tua.index', 'izin:akun_orang_tua.lihat,akun_orang_tua.kelola,akun_orang_tua.cetak');
+        $this->assertRouteMemakaiMiddleware('akun-orang-tua.cetak', 'izin:akun_orang_tua.cetak,akun_orang_tua.kelola');
+        $this->assertRouteMemakaiMiddleware('akun-orang-tua.store', 'izin:akun_orang_tua.kelola');
         $this->assertRouteMemakaiMiddleware('profil-pegawai.edit', 'izin:pegawai.profil');
         $this->assertRouteMemakaiMiddleware('profil-pegawai.update', 'izin:pegawai.profil');
         $this->assertRouteMemakaiMiddleware('profil-pegawai.foto.update', 'izin:pegawai.profil');
@@ -52,6 +55,10 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('kegiatan-ibadah.store', 'izin:ibadah.pengaturan_kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-kegiatan-ibadah.index', 'izin:ibadah.pengaturan_kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-kegiatan-ibadah.store', 'izin:ibadah.pengaturan_kelola');
+        $this->assertRouteMemakaiMiddleware('pengaturan-berhalangan-ibadah.index', 'izin:ibadah.pengaturan_kelola');
+        $this->assertRouteMemakaiMiddleware('pengaturan-berhalangan-ibadah.update', 'izin:ibadah.pengaturan_kelola');
+        $this->assertRouteMemakaiMiddleware('pengaturan-berhalangan-ibadah.pendamping.store', 'izin:ibadah.pengaturan_kelola');
+        $this->assertRouteMemakaiMiddleware('pengaturan-berhalangan-ibadah.pendamping.destroy', 'izin:ibadah.pengaturan_kelola');
         $this->assertRouteMemakaiMiddleware('scan-kegiatan-ibadah.index', 'izin:ibadah.scan');
         $this->assertRouteMemakaiMiddleware('scan-kegiatan-ibadah.store', 'izin:ibadah.scan');
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.index', 'izin:ibadah.rekap');

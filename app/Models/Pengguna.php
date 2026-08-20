@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use RuntimeException;
@@ -65,6 +66,11 @@ class Pengguna extends Authenticatable
         return $this->belongsTo(Siswa::class);
     }
 
+    public function orangTuaWali(): HasOne
+    {
+        return $this->hasOne(OrangTuaWali::class);
+    }
+
     public function daftarPeran(): BelongsToMany
     {
         return $this->belongsToMany(Peran::class, 'pengguna_peran')
@@ -89,6 +95,11 @@ class Pengguna extends Authenticatable
     public function notifikasiPengguna(): HasMany
     {
         return $this->hasMany(NotifikasiPengguna::class);
+    }
+
+    public function konfirmasiBerhalanganIbadah(): HasMany
+    {
+        return $this->hasMany(KonfirmasiBerhalanganIbadah::class, 'dikonfirmasi_oleh_pengguna_id');
     }
 
     public function penugasanGuruWaliSiswaDibuat(): HasMany
@@ -201,6 +212,19 @@ class Pengguna extends Authenticatable
     public function akunSiswa(): bool
     {
         return ! $this->akun_sistem && filled($this->siswa_id);
+    }
+
+    public function akunOrangTua(): bool
+    {
+        if ($this->akun_sistem || $this->pegawai_id || $this->siswa_id) {
+            return false;
+        }
+
+        if ($this->relationLoaded('orangTuaWali')) {
+            return $this->orangTuaWali !== null;
+        }
+
+        return $this->orangTuaWali()->exists();
     }
 
     public function membatasiCakupanWaliKelas(): bool

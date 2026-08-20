@@ -69,6 +69,17 @@ class DatabaseSeeder extends Seeder
                     Peran::where('kode', 'siswa')->value('id'),
                 ]);
             });
+        Pengguna::query()
+            ->where('peran', 'orang_tua')
+            ->whereDoesntHave('daftarPeran', function ($query) {
+                $query->where('kode', 'orang_tua');
+            })
+            ->get()
+            ->each(function (Pengguna $pengguna) {
+                $pengguna->daftarPeran()->syncWithoutDetaching([
+                    Peran::where('kode', 'orang_tua')->value('id'),
+                ]);
+            });
     }
 
     private function isiPeranBawaan(): void
@@ -123,6 +134,11 @@ class DatabaseSeeder extends Seeder
                 'nama' => 'Siswa',
                 'kode' => 'siswa',
                 'deskripsi' => 'Akses siswa untuk melihat data akademik dan kesiswaan miliknya sendiri.',
+            ],
+            [
+                'nama' => 'Orang Tua/Wali',
+                'kode' => 'orang_tua',
+                'deskripsi' => 'Akses orang tua atau wali untuk memantau informasi anak yang terhubung.',
             ],
             [
                 'nama' => 'Satpam',
@@ -229,6 +245,9 @@ class DatabaseSeeder extends Seeder
             ['kelompok' => 'Akun', 'nama' => 'Lihat akun siswa', 'kode' => 'akun_siswa.lihat', 'deskripsi' => 'Melihat status akun siswa sesuai cakupan kelas.'],
             ['kelompok' => 'Akun', 'nama' => 'Kelola akun siswa', 'kode' => 'akun_siswa.kelola', 'deskripsi' => 'Membuat, mereset, mengaktifkan, dan menonaktifkan akun siswa.'],
             ['kelompok' => 'Akun', 'nama' => 'Cetak kredensial akun siswa', 'kode' => 'akun_siswa.cetak', 'deskripsi' => 'Mencetak daftar username dan password awal akun siswa sesuai cakupan kelas.'],
+            ['kelompok' => 'Akun', 'nama' => 'Lihat akun orang tua', 'kode' => 'akun_orang_tua.lihat', 'deskripsi' => 'Melihat status akun orang tua sesuai cakupan kelas.'],
+            ['kelompok' => 'Akun', 'nama' => 'Kelola akun orang tua', 'kode' => 'akun_orang_tua.kelola', 'deskripsi' => 'Membuat, mereset, mengaktifkan, dan menonaktifkan akun orang tua.'],
+            ['kelompok' => 'Akun', 'nama' => 'Cetak kredensial akun orang tua', 'kode' => 'akun_orang_tua.cetak', 'deskripsi' => 'Mencetak daftar username dan password awal akun orang tua sesuai cakupan kelas.'],
             ['kelompok' => 'Akun', 'nama' => 'Lihat role', 'kode' => 'peran.lihat', 'deskripsi' => 'Melihat daftar role/peran.'],
             ['kelompok' => 'Akun', 'nama' => 'Kelola role dan izin', 'kode' => 'peran.kelola', 'deskripsi' => 'Menambah, mengubah, dan mengatur izin role.'],
             ['kelompok' => 'Pegawai', 'nama' => 'Lihat pegawai', 'kode' => 'pegawai.lihat', 'deskripsi' => 'Melihat data pegawai.'],
@@ -310,10 +329,11 @@ class DatabaseSeeder extends Seeder
             'wakil_pimpinan_sarana_prasarana' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
             'wakil_pimpinan_kurikulum' => ['beranda.akses', 'tahun_pelajaran.lihat', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'guru_mapel.kelola', 'jadwal.lihat', 'jadwal.kelola', 'nilai.lihat', 'nilai.rekap', 'omr.lihat', 'cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'perangkat_ajar.lihat', 'perangkat_ajar.periksa', 'perangkat_ajar.jenis_kelola', 'survei.pertanyaan_kelola', 'survei.monitor', 'laporan.export'],
             'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.pribadi', 'piket_guru.lihat_pribadi', 'piket_guru.catat_kehadiran', 'ibadah.scan', 'ibadah.rekap', 'ibadah.koreksi', 'nilai.lihat', 'nilai.komponen_kelola', 'nilai.input', 'nilai.rekap', 'survei.hasil_pribadi', 'omr.lihat', 'omr.kelola', 'cbt.lihat', 'cbt.soal_kelola', 'perangkat_ajar.upload'],
-            'wali_kelas' => ['beranda.akses', 'siswa.lihat', 'kelas.lihat', 'jadwal.lihat', 'nilai.lihat', 'nilai.rekap', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat', 'akun_siswa.lihat', 'akun_siswa.cetak'],
+            'wali_kelas' => ['beranda.akses', 'siswa.lihat', 'kelas.lihat', 'jadwal.lihat', 'nilai.lihat', 'nilai.rekap', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat', 'akun_siswa.lihat', 'akun_siswa.cetak', 'akun_orang_tua.lihat', 'akun_orang_tua.cetak'],
             'bk' => ['beranda.akses', 'siswa.lihat', 'absensi.lihat', 'bk.lihat', 'bk.kelola', 'laporan.export'],
             'pegawai' => ['beranda.akses', 'pegawai.profil', 'absensi_pegawai.pribadi', 'poin_siswa.lapor'],
             'siswa' => ['beranda.akses'],
+            'orang_tua' => ['beranda.akses'],
             'satpam' => ['beranda.akses', 'absensi.scan', 'absensi.lihat', 'keamanan.lihat', 'keamanan.kelola'],
             'petugas_kebersihan' => ['beranda.akses', 'absensi.scan', 'sarpras.lihat', 'kebersihan.lihat', 'kebersihan.kelola'],
             'petugas_inventaris' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
