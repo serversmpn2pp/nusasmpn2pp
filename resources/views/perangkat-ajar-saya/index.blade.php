@@ -161,7 +161,21 @@
         </article>
     </div>
 
-    @if ($mataPelajaran->isEmpty())
+    @if ($perangkatTanpaTingkat->isNotEmpty())
+        <section class="panel panel-pad" style="margin-bottom: 20px;">
+            <h2 class="panel-title">Dokumen lama perlu ditentukan tingkatnya</h2>
+            <p class="help-text" style="margin-top: 6px;">Dokumen berikut dibuat sebelum perangkat ajar dipisahkan per tingkat. Pilih tingkat yang benar agar masuk ke perhitungan kelengkapan.</p>
+            <div class="actions" style="margin-top: 14px;">
+                @foreach ($perangkatTanpaTingkat as $dokumenLama)
+                    <a href="{{ route('perangkat-ajar-saya.edit', $dokumenLama) }}" class="button button-muted button-sm">
+                        {{ $dokumenLama->mataPelajaran?->nama ?? '-' }} - {{ $dokumenLama->jenisPerangkatAjar?->nama ?? '-' }}
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    @if ($penugasanPerTingkat->isEmpty())
         <section class="panel empty-state">
             Belum ada penugasan guru mata pelajaran aktif untuk tahun pelajaran ini.
         </section>
@@ -170,21 +184,26 @@
             Jenis perangkat ajar belum diatur oleh Wakil Kurikulum.
         </section>
     @else
-        @foreach ($mataPelajaran as $mapel)
+        @foreach ($penugasanPerTingkat as $penugasan)
+            @php
+                $mapel = $penugasan['mata_pelajaran'];
+                $tingkat = $penugasan['tingkat'];
+                $labelTingkat = $penugasan['label_tingkat'];
+            @endphp
             <section class="panel subject-document-panel">
                 <header class="subject-document-head">
                     <div>
-                        <p class="eyebrow">{{ $mapel->kode ?: 'Mata pelajaran' }}</p>
+                        <p class="eyebrow">Tingkat {{ $labelTingkat }}</p>
                         <h2 class="panel-title">{{ $mapel->nama }}</h2>
                     </div>
 
-                    <a href="{{ route('perangkat-ajar-saya.create', ['tahun_pelajaran_id' => $tahunPelajaranId, 'semester' => $semester, 'mata_pelajaran_id' => $mapel->id]) }}" class="button button-muted button-sm">Unggah dokumen</a>
+                    <a href="{{ route('perangkat-ajar-saya.create', ['tahun_pelajaran_id' => $tahunPelajaranId, 'semester' => $semester, 'mata_pelajaran_id' => $mapel->id, 'tingkat' => $tingkat]) }}" class="button button-muted button-sm">Unggah dokumen</a>
                 </header>
 
                 <div class="subject-document-grid">
                     @foreach ($jenisPerangkatAjar as $jenis)
                         @php
-                            $dokumen = $perangkatAjar->get($mapel->id . '-' . $jenis->id);
+                            $dokumen = $perangkatAjar->get($mapel->id . '-' . $tingkat . '-' . $jenis->id);
                         @endphp
                         <article class="document-item">
                             <div>
@@ -214,7 +233,7 @@
                                     <a href="{{ route('perangkat-ajar-saya.show', $dokumen) }}" class="button button-muted button-sm">Lihat</a>
                                     <a href="{{ route('perangkat-ajar-saya.edit', $dokumen) }}" class="button button-dark button-sm">Revisi</a>
                                 @else
-                                    <a href="{{ route('perangkat-ajar-saya.create', ['tahun_pelajaran_id' => $tahunPelajaranId, 'semester' => $semester, 'mata_pelajaran_id' => $mapel->id, 'jenis_perangkat_ajar_id' => $jenis->id]) }}" class="button button-primary button-sm">Unggah PDF</a>
+                                    <a href="{{ route('perangkat-ajar-saya.create', ['tahun_pelajaran_id' => $tahunPelajaranId, 'semester' => $semester, 'mata_pelajaran_id' => $mapel->id, 'tingkat' => $tingkat, 'jenis_perangkat_ajar_id' => $jenis->id]) }}" class="button button-primary button-sm">Unggah PDF</a>
                                 @endif
                             </div>
                         </article>

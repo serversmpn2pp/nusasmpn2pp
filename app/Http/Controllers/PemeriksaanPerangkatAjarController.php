@@ -8,6 +8,7 @@ use App\Models\Pegawai;
 use App\Models\PerangkatAjar;
 use App\Models\TahunPelajaran;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
+use App\Services\PerangkatAjar\PenugasanPerangkatAjarService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -17,7 +18,10 @@ use Illuminate\Validation\Rule;
 
 class PemeriksaanPerangkatAjarController extends Controller
 {
-    public function __construct(private NotifikasiPenggunaService $notifikasiPenggunaService) {}
+    public function __construct(
+        private NotifikasiPenggunaService $notifikasiPenggunaService,
+        private PenugasanPerangkatAjarService $penugasanPerangkatAjarService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -86,21 +90,41 @@ class PemeriksaanPerangkatAjarController extends Controller
         $tahunPelajaran = $this->daftarTahunPelajaran();
         $tahunPelajaranId = $this->ambilTahunPelajaranId($data['tahun_pelajaran_id'] ?? null, $tahunPelajaran);
         $semester = (int) ($data['semester'] ?? 1);
-        $mataPelajaran = $this->mataPelajaranGuru($pegawai->id, $tahunPelajaranId);
-        abort_if($mataPelajaran->isEmpty(), 404);
+        $penugasanPerTingkat = $this->penugasanPerangkatAjarService
+            ->untukGuru($pegawai->id, $tahunPelajaranId);
+        abort_if($penugasanPerTingkat->isEmpty(), 404);
+        $mataPelajaran = $penugasanPerTingkat
+            ->pluck('mata_pelajaran')
+            ->unique('id')
+            ->values();
 
         $jenisPerangkatAjar = $this->jenisPerangkatAktif();
-        $perangkatAjar = PerangkatAjar::query()
+        $semuaPerangkatAjar = PerangkatAjar::query()
             ->with(['mataPelajaran', 'jenisPerangkatAjar', 'pemeriksa'])
             ->where('pegawai_id', $pegawai->id)
             ->when($tahunPelajaranId, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranId))
             ->where('semester', $semester)
             ->whereIn('mata_pelajaran_id', $mataPelajaran->pluck('id'))
             ->whereIn('jenis_perangkat_ajar_id', $jenisPerangkatAjar->pluck('id'))
-            ->get()
-            ->keyBy(fn (PerangkatAjar $item) => $this->kunciPerangkat($item->mata_pelajaran_id, $item->jenis_perangkat_ajar_id));
+            ->get();
+        $kunciPenugasan = $penugasanPerTingkat->pluck('kunci');
+        $perangkatTanpaTingkat = $semuaPerangkatAjar
+            ->whereNull('tingkat')
+            ->values();
+        $perangkatAjar = $semuaPerangkatAjar
+            ->filter(fn (PerangkatAjar $item) => (
+                $item->tingkat
+                && $kunciPenugasan->contains(
+                    $this->penugasanPerangkatAjarService->kunci($item->mata_pelajaran_id, $item->tingkat)
+                )
+            ))
+            ->keyBy(fn (PerangkatAjar $item) => $this->kunciPerangkat(
+                $item->mata_pelajaran_id,
+                $item->tingkat,
+                $item->jenis_perangkat_ajar_id,
+            ));
         $jenisWajibIds = $jenisPerangkatAjar->where('wajib', true)->pluck('id');
-        $jumlahWajib = $mataPelajaran->count() * $jenisWajibIds->count();
+        $jumlahWajib = $penugasanPerTingkat->count() * $jenisWajibIds->count();
         $jumlahTerunggahWajib = $perangkatAjar->whereIn('jenis_perangkat_ajar_id', $jenisWajibIds)->count();
 
         return view('pemeriksaan-perangkat-ajar.show', [
@@ -109,8 +133,10 @@ class PemeriksaanPerangkatAjarController extends Controller
             'tahunPelajaranId' => $tahunPelajaranId,
             'semester' => $semester,
             'mataPelajaran' => $mataPelajaran,
+            'penugasanPerTingkat' => $penugasanPerTingkat,
             'jenisPerangkatAjar' => $jenisPerangkatAjar,
             'perangkatAjar' => $perangkatAjar,
+            'perangkatTanpaTingkat' => $perangkatTanpaTingkat,
             'jumlahWajib' => $jumlahWajib,
             'jumlahTerunggahWajib' => $jumlahTerunggahWajib,
             'jumlahMenunggu' => $perangkatAjar->where('status', 'menunggu_pemeriksaan')->count(),
@@ -168,9 +194,10 @@ class PemeriksaanPerangkatAjarController extends Controller
             $statusDisetujui ? 'berhasil' : 'penting',
             $statusDisetujui ? 'Perangkat ajar sudah diperiksa' : 'Perangkat ajar perlu diperbaiki',
             sprintf(
-                '%s untuk mata pelajaran %s telah diperiksa.%s',
+                '%s untuk mata pelajaran %s tingkat %s telah diperiksa.%s',
                 $perangkatAjar->jenisPerangkatAjar?->nama ?? 'Perangkat ajar',
                 $perangkatAjar->mataPelajaran?->nama ?? '-',
+                $perangkatAjar->tingkatTampil(),
                 $perangkatAjar->catatan_pemeriksa ? ' Catatan: '.$perangkatAjar->catatan_pemeriksa : '',
             ),
             route('perangkat-ajar-saya.show', $perangkatAjar, false),
@@ -195,11 +222,14 @@ class PemeriksaanPerangkatAjarController extends Controller
         $jenisPerangkatAjar = $this->jenisPerangkatAktif();
         $jenisWajibIds = $jenisPerangkatAjar->where('wajib', true)->pluck('id');
         $penugasan = GuruMataPelajaran::query()
-            ->with(['pegawai', 'mataPelajaran'])
+            ->with(['pegawai', 'mataPelajaran', 'kelas'])
             ->where('tahun_pelajaran_id', $tahunPelajaranId)
             ->where('aktif', true)
             ->whereHas('pegawai', fn ($query) => $query->where('aktif', true))
             ->whereHas('mataPelajaran', fn ($query) => $query->where('aktif', true))
+            ->whereHas('kelas', fn ($query) => $query
+                ->where('aktif', true)
+                ->whereIn('tingkat', [7, 8, 9]))
             ->get()
             ->groupBy('pegawai_id');
         $perangkatAjar = PerangkatAjar::query()
@@ -211,6 +241,7 @@ class PemeriksaanPerangkatAjarController extends Controller
 
         return $penugasan
             ->map(function (Collection $penugasanGuru, $pegawaiId) use ($perangkatAjar, $jenisWajibIds) {
+                $penugasanPerTingkat = $this->penugasanPerangkatAjarService->ringkas($penugasanGuru);
                 $mataPelajaran = $penugasanGuru
                     ->pluck('mataPelajaran')
                     ->filter()
@@ -218,15 +249,23 @@ class PemeriksaanPerangkatAjarController extends Controller
                     ->sortBy('nama')
                     ->values();
                 $mapelIds = $mataPelajaran->pluck('id');
+                $kunciPenugasan = $penugasanPerTingkat->pluck('kunci');
                 $dokumenGuru = $perangkatAjar
                     ->get($pegawaiId, collect())
-                    ->whereIn('mata_pelajaran_id', $mapelIds);
-                $jumlahWajib = $mataPelajaran->count() * $jenisWajibIds->count();
+                    ->whereIn('mata_pelajaran_id', $mapelIds)
+                    ->filter(fn (PerangkatAjar $item) => (
+                        $item->tingkat
+                        && $kunciPenugasan->contains(
+                            $this->penugasanPerangkatAjarService->kunci($item->mata_pelajaran_id, $item->tingkat)
+                        )
+                    ));
+                $jumlahWajib = $penugasanPerTingkat->count() * $jenisWajibIds->count();
                 $jumlahTerunggahWajib = $dokumenGuru->whereIn('jenis_perangkat_ajar_id', $jenisWajibIds)->count();
 
                 return [
                     'pegawai' => $penugasanGuru->first()->pegawai,
                     'mata_pelajaran' => $mataPelajaran,
+                    'penugasan_per_tingkat' => $penugasanPerTingkat,
                     'jumlah_wajib' => $jumlahWajib,
                     'jumlah_terunggah_wajib' => $jumlahTerunggahWajib,
                     'persentase' => $jumlahWajib > 0 ? min(100, round($jumlahTerunggahWajib / $jumlahWajib * 100)) : 0,
@@ -237,26 +276,6 @@ class PemeriksaanPerangkatAjarController extends Controller
                 ];
             })
             ->sortBy(fn (array $item) => $item['pegawai']->nama_lengkap)
-            ->values();
-    }
-
-    private function mataPelajaranGuru(int $pegawaiId, ?int $tahunPelajaranId): Collection
-    {
-        if (! $tahunPelajaranId) {
-            return collect();
-        }
-
-        return GuruMataPelajaran::query()
-            ->with('mataPelajaran')
-            ->where('pegawai_id', $pegawaiId)
-            ->where('tahun_pelajaran_id', $tahunPelajaranId)
-            ->where('aktif', true)
-            ->whereHas('mataPelajaran', fn ($query) => $query->where('aktif', true))
-            ->get()
-            ->pluck('mataPelajaran')
-            ->filter()
-            ->unique('id')
-            ->sortBy('nama')
             ->values();
     }
 
@@ -303,8 +322,8 @@ class PemeriksaanPerangkatAjarController extends Controller
         );
     }
 
-    private function kunciPerangkat(int $mataPelajaranId, int $jenisPerangkatAjarId): string
+    private function kunciPerangkat(int $mataPelajaranId, int $tingkat, int $jenisPerangkatAjarId): string
     {
-        return $mataPelajaranId.'-'.$jenisPerangkatAjarId;
+        return $mataPelajaranId.'-'.$tingkat.'-'.$jenisPerangkatAjarId;
     }
 }

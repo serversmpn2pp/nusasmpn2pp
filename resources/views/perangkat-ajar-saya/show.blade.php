@@ -187,6 +187,10 @@
                         <dd>{{ $perangkatAjar->semester }}</dd>
                     </div>
                     <div class="detail-item">
+                        <dt>Tingkat</dt>
+                        <dd>{{ $perangkatAjar->tingkatTampil() }}</dd>
+                    </div>
+                    <div class="detail-item">
                         <dt>File terbaru</dt>
                         <dd class="teaching-document-file-name">{{ $perangkatAjar->nama_file_asli }}</dd>
                     </div>

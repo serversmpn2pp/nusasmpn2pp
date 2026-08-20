@@ -124,17 +124,28 @@
         </article>
     </section>
 
-    @foreach ($mataPelajaran as $mapel)
+    @if ($perangkatTanpaTingkat->isNotEmpty())
+        <div class="alert alert-danger">
+            Ada {{ $perangkatTanpaTingkat->count() }} dokumen lama yang belum memiliki tingkat. Dokumen tersebut belum dihitung sebagai kelengkapan dan perlu diperbarui oleh guru pemiliknya.
+        </div>
+    @endif
+
+    @foreach ($penugasanPerTingkat as $penugasan)
+        @php
+            $mapel = $penugasan['mata_pelajaran'];
+            $tingkat = $penugasan['tingkat'];
+            $labelTingkat = $penugasan['label_tingkat'];
+        @endphp
         <section class="panel teacher-document-panel">
             <header class="teacher-document-head">
-                <p class="eyebrow">{{ $mapel->kode ?: 'Mata pelajaran' }}</p>
+                <p class="eyebrow">Tingkat {{ $labelTingkat }}</p>
                 <h2 class="panel-title">{{ $mapel->nama }}</h2>
             </header>
 
             <div class="teacher-document-grid">
                 @foreach ($jenisPerangkatAjar as $jenis)
                     @php
-                        $dokumen = $perangkatAjar->get($mapel->id . '-' . $jenis->id);
+                        $dokumen = $perangkatAjar->get($mapel->id . '-' . $tingkat . '-' . $jenis->id);
                     @endphp
                     <article class="teacher-document-item">
                         <div>

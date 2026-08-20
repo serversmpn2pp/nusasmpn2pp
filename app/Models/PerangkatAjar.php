@@ -21,6 +21,7 @@ class PerangkatAjar extends Model
         'tahun_pelajaran_id',
         'semester',
         'mata_pelajaran_id',
+        'tingkat',
         'jenis_perangkat_ajar_id',
         'judul',
         'catatan_guru',
@@ -37,6 +38,7 @@ class PerangkatAjar extends Model
 
     protected $casts = [
         'semester' => 'integer',
+        'tingkat' => 'integer',
         'ukuran_file' => 'integer',
         'diunggah_pada' => 'datetime',
         'diperiksa_pada' => 'datetime',
@@ -89,6 +91,16 @@ class PerangkatAjar extends Model
 
     public function ukuranFileTampil(): string
     {
-        return number_format($this->ukuran_file / 1024 / 1024, 2, ',', '.') . ' MB';
+        return number_format($this->ukuran_file / 1024 / 1024, 2, ',', '.').' MB';
+    }
+
+    public function tingkatTampil(): string
+    {
+        return match ($this->tingkat) {
+            7 => 'VII',
+            8 => 'VIII',
+            9 => 'IX',
+            default => 'Belum ditentukan',
+        };
     }
 }

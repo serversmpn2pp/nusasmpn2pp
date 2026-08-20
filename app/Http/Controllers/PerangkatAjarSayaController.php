@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\GuruMataPelajaran;
 use App\Models\JenisPerangkatAjar;
-use App\Models\MataPelajaran;
 use App\Models\PerangkatAjar;
 use App\Models\RiwayatFilePerangkatAjar;
 use App\Models\TahunPelajaran;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
+use App\Services\PerangkatAjar\PenugasanPerangkatAjarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +21,10 @@ class PerangkatAjarSayaController extends Controller
 
     private const BATAS_PDF_BYTE = 10 * 1024 * 1024;
 
-    public function __construct(private NotifikasiPenggunaService $notifikasiPenggunaService) {}
+    public function __construct(
+        private NotifikasiPenggunaService $notifikasiPenggunaService,
+        private PenugasanPerangkatAjarService $penugasanPerangkatAjarService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -38,24 +41,44 @@ class PerangkatAjarSayaController extends Controller
         $tahunPelajaranId = $this->ambilTahunPelajaranId($data['tahun_pelajaran_id'] ?? null, $tahunPelajaran);
         $semester = (int) ($data['semester'] ?? 1);
 
-        $mataPelajaran = $this->mataPelajaranGuru($pegawai?->id, $tahunPelajaranId);
+        $penugasanPerTingkat = $this->penugasanPerangkatAjarService
+            ->untukGuru($pegawai?->id, $tahunPelajaranId);
+        $mataPelajaran = $penugasanPerTingkat
+            ->pluck('mata_pelajaran')
+            ->unique('id')
+            ->values();
         $jenisPerangkatAjar = JenisPerangkatAjar::query()
             ->where('aktif', true)
             ->orderBy('urutan')
             ->orderBy('nama')
             ->get();
-        $perangkatAjar = PerangkatAjar::query()
+        $semuaPerangkatAjar = PerangkatAjar::query()
             ->with(['mataPelajaran', 'jenisPerangkatAjar'])
             ->when($pegawai, fn ($query) => $query->where('pegawai_id', $pegawai->id), fn ($query) => $query->whereRaw('1 = 0'))
             ->when($tahunPelajaranId, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranId))
             ->where('semester', $semester)
             ->whereIn('mata_pelajaran_id', $mataPelajaran->pluck('id'))
             ->whereIn('jenis_perangkat_ajar_id', $jenisPerangkatAjar->pluck('id'))
-            ->get()
-            ->keyBy(fn (PerangkatAjar $item) => $this->kunciPerangkat($item->mata_pelajaran_id, $item->jenis_perangkat_ajar_id));
+            ->get();
+        $kunciPenugasan = $penugasanPerTingkat->pluck('kunci');
+        $perangkatTanpaTingkat = $semuaPerangkatAjar
+            ->whereNull('tingkat')
+            ->values();
+        $perangkatAjar = $semuaPerangkatAjar
+            ->filter(fn (PerangkatAjar $item) => (
+                $item->tingkat
+                && $kunciPenugasan->contains(
+                    $this->penugasanPerangkatAjarService->kunci($item->mata_pelajaran_id, $item->tingkat)
+                )
+            ))
+            ->keyBy(fn (PerangkatAjar $item) => $this->kunciPerangkat(
+                $item->mata_pelajaran_id,
+                $item->tingkat,
+                $item->jenis_perangkat_ajar_id,
+            ));
 
         $jenisWajibIds = $jenisPerangkatAjar->where('wajib', true)->pluck('id');
-        $jumlahWajib = $mataPelajaran->count() * $jenisWajibIds->count();
+        $jumlahWajib = $penugasanPerTingkat->count() * $jenisWajibIds->count();
         $jumlahTerunggah = $perangkatAjar
             ->whereIn('mata_pelajaran_id', $mataPelajaran->pluck('id'))
             ->whereIn('jenis_perangkat_ajar_id', $jenisWajibIds)
@@ -67,8 +90,10 @@ class PerangkatAjarSayaController extends Controller
             'tahunPelajaranId' => $tahunPelajaranId,
             'semester' => $semester,
             'mataPelajaran' => $mataPelajaran,
+            'penugasanPerTingkat' => $penugasanPerTingkat,
             'jenisPerangkatAjar' => $jenisPerangkatAjar,
             'perangkatAjar' => $perangkatAjar,
+            'perangkatTanpaTingkat' => $perangkatTanpaTingkat,
             'jumlahWajib' => $jumlahWajib,
             'jumlahTerunggah' => $jumlahTerunggah,
             'jumlahMenunggu' => $perangkatAjar->where('status', 'menunggu_pemeriksaan')->count(),
@@ -87,14 +112,27 @@ class PerangkatAjarSayaController extends Controller
             $request->integer('tahun_pelajaran_id') ?: null,
             $tahunPelajaran,
         );
+        $penugasanPerTingkat = $this->penugasanPerangkatAjarService
+            ->untukGuru($pegawai->id, $tahunPelajaranId);
+        $mataPelajaran = $penugasanPerTingkat
+            ->pluck('mata_pelajaran')
+            ->unique('id')
+            ->values();
+        $tingkatPerMataPelajaran = $penugasanPerTingkat
+            ->groupBy('mata_pelajaran_id')
+            ->map(fn ($items) => $items->pluck('tingkat')->values());
 
         return view('perangkat-ajar-saya.create', [
             'pegawai' => $pegawai,
             'tahunPelajaran' => $tahunPelajaran,
             'tahunPelajaranId' => $tahunPelajaranId,
             'semester' => in_array((int) $request->input('semester'), [1, 2], true) ? (int) $request->input('semester') : 1,
-            'mataPelajaran' => $this->mataPelajaranGuru($pegawai->id, $tahunPelajaranId),
+            'mataPelajaran' => $mataPelajaran,
             'mataPelajaranId' => $request->integer('mata_pelajaran_id') ?: null,
+            'tingkat' => in_array($request->integer('tingkat'), [7, 8, 9], true)
+                ? $request->integer('tingkat')
+                : null,
+            'tingkatPerMataPelajaran' => $tingkatPerMataPelajaran,
             'jenisPerangkatAjar' => JenisPerangkatAjar::query()
                 ->where('aktif', true)
                 ->orderBy('urutan')
@@ -110,7 +148,12 @@ class PerangkatAjarSayaController extends Controller
         $pegawai = $this->pegawaiAktif($request);
         $data = $request->validate($this->aturanValidasiUnggah(), $this->pesanValidasiPdf());
         unset($data['file_pdf']);
-        $this->pastikanPenugasanGuru($pegawai->id, (int) $data['tahun_pelajaran_id'], (int) $data['mata_pelajaran_id']);
+        $this->pastikanPenugasanGuru(
+            $pegawai->id,
+            (int) $data['tahun_pelajaran_id'],
+            (int) $data['mata_pelajaran_id'],
+            (int) $data['tingkat'],
+        );
         $this->pastikanJenisAktif((int) $data['jenis_perangkat_ajar_id']);
 
         $sudahAda = PerangkatAjar::query()
@@ -118,6 +161,7 @@ class PerangkatAjarSayaController extends Controller
             ->where('tahun_pelajaran_id', $data['tahun_pelajaran_id'])
             ->where('semester', $data['semester'])
             ->where('mata_pelajaran_id', $data['mata_pelajaran_id'])
+            ->where('tingkat', $data['tingkat'])
             ->where('jenis_perangkat_ajar_id', $data['jenis_perangkat_ajar_id'])
             ->first();
 
@@ -128,7 +172,13 @@ class PerangkatAjarSayaController extends Controller
         }
 
         $file = $request->file('file_pdf');
-        $lokasiFile = $this->simpanFile($file, $pegawai->id, (int) $data['tahun_pelajaran_id'], (int) $data['semester']);
+        $lokasiFile = $this->simpanFile(
+            $file,
+            $pegawai->id,
+            (int) $data['tahun_pelajaran_id'],
+            (int) $data['semester'],
+            (int) $data['tingkat'],
+        );
         $waktuUnggah = now();
 
         try {
@@ -179,9 +229,21 @@ class PerangkatAjarSayaController extends Controller
     {
         $this->pastikanPemilik($request, $perangkatAjar);
         $perangkatAjar->load(['tahunPelajaran', 'mataPelajaran', 'jenisPerangkatAjar']);
+        $daftarTingkat = $this->penugasanPerangkatAjarService
+            ->untukGuru($perangkatAjar->pegawai_id, $perangkatAjar->tahun_pelajaran_id)
+            ->where('mata_pelajaran_id', $perangkatAjar->mata_pelajaran_id)
+            ->pluck('tingkat')
+            ->when(
+                $perangkatAjar->tingkat,
+                fn ($items) => $items->push((int) $perangkatAjar->tingkat),
+            )
+            ->unique()
+            ->sort()
+            ->values();
 
         return view('perangkat-ajar-saya.edit', [
             'perangkatAjar' => $perangkatAjar,
+            'daftarTingkat' => $daftarTingkat,
             'batasUnggahPdf' => $this->informasiBatasUnggahPdf(),
         ]);
     }
@@ -191,21 +253,59 @@ class PerangkatAjarSayaController extends Controller
         $this->pastikanPemilik($request, $perangkatAjar);
         $data = $request->validate(
             [
+                'tingkat' => ['required', 'integer', Rule::in([7, 8, 9])],
                 'judul' => ['required', 'string', 'max:180'],
                 'catatan_guru' => ['nullable', 'string'],
                 'file_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:'.self::BATAS_PDF_KILOBYTE],
             ],
             $this->pesanValidasiPdf(),
         );
+        $this->pastikanPenugasanGuru(
+            $perangkatAjar->pegawai_id,
+            $perangkatAjar->tahun_pelajaran_id,
+            $perangkatAjar->mata_pelajaran_id,
+            (int) $data['tingkat'],
+        );
+        $dokumenSerupa = PerangkatAjar::query()
+            ->whereKeyNot($perangkatAjar->id)
+            ->where('pegawai_id', $perangkatAjar->pegawai_id)
+            ->where('tahun_pelajaran_id', $perangkatAjar->tahun_pelajaran_id)
+            ->where('semester', $perangkatAjar->semester)
+            ->where('mata_pelajaran_id', $perangkatAjar->mata_pelajaran_id)
+            ->where('tingkat', $data['tingkat'])
+            ->where('jenis_perangkat_ajar_id', $perangkatAjar->jenis_perangkat_ajar_id)
+            ->exists();
+
+        if ($dokumenSerupa) {
+            throw ValidationException::withMessages([
+                'tingkat' => 'Perangkat ajar untuk tingkat ini sudah tersedia. Gunakan dokumen yang sudah ada.',
+            ]);
+        }
+
+        $tingkatBerubah = (int) $perangkatAjar->tingkat !== (int) $data['tingkat'];
         $file = $request->file('file_pdf');
         unset($data['file_pdf']);
 
         if (! $file) {
+            if ($tingkatBerubah) {
+                $data = array_merge($data, [
+                    'status' => 'menunggu_pemeriksaan',
+                    'pemeriksa_pegawai_id' => null,
+                    'catatan_pemeriksa' => null,
+                    'diperiksa_pada' => null,
+                ]);
+            }
             $perangkatAjar->update($data);
+
+            if ($tingkatBerubah) {
+                $this->kirimNotifikasiMenungguPemeriksaan($request, $perangkatAjar->fresh());
+            }
 
             return redirect()
                 ->route('perangkat-ajar-saya.show', $perangkatAjar)
-                ->with('berhasil', 'Informasi perangkat ajar berhasil diperbarui.');
+                ->with('berhasil', $tingkatBerubah
+                    ? 'Tingkat perangkat ajar berhasil diperbarui dan dokumen kembali menunggu pemeriksaan.'
+                    : 'Informasi perangkat ajar berhasil diperbarui.');
         }
 
         $lokasiFile = $this->simpanFile(
@@ -213,6 +313,7 @@ class PerangkatAjarSayaController extends Controller
             $perangkatAjar->pegawai_id,
             $perangkatAjar->tahun_pelajaran_id,
             $perangkatAjar->semester,
+            (int) $data['tingkat'],
         );
         $waktuUnggah = now();
 
@@ -273,6 +374,7 @@ class PerangkatAjarSayaController extends Controller
             'tahun_pelajaran_id' => ['required', 'exists:tahun_pelajaran,id'],
             'semester' => ['required', 'integer', Rule::in([1, 2])],
             'mata_pelajaran_id' => ['required', 'exists:mata_pelajaran,id'],
+            'tingkat' => ['required', 'integer', Rule::in([7, 8, 9])],
             'jenis_perangkat_ajar_id' => ['required', 'exists:jenis_perangkat_ajar,id'],
             'judul' => ['required', 'string', 'max:180'],
             'catatan_guru' => ['nullable', 'string'],
@@ -353,10 +455,11 @@ class PerangkatAjarSayaController extends Controller
             'peringatan',
             'Perangkat ajar menunggu pemeriksaan',
             sprintf(
-                '%s mengunggah %s untuk mata pelajaran %s.',
+                '%s mengunggah %s untuk mata pelajaran %s tingkat %s.',
                 $perangkatAjar->pegawai?->nama_lengkap ?? 'Seorang guru',
                 $perangkatAjar->jenisPerangkatAjar?->nama ?? 'perangkat ajar',
                 $perangkatAjar->mataPelajaran?->nama ?? '-',
+                $perangkatAjar->tingkatTampil(),
             ),
             route('pemeriksaan-perangkat-ajar.show', [
                 'pegawai' => $perangkatAjar->pegawai_id,
@@ -397,18 +500,25 @@ class PerangkatAjarSayaController extends Controller
         );
     }
 
-    private function pastikanPenugasanGuru(int $pegawaiId, int $tahunPelajaranId, int $mataPelajaranId): void
-    {
+    private function pastikanPenugasanGuru(
+        int $pegawaiId,
+        int $tahunPelajaranId,
+        int $mataPelajaranId,
+        int $tingkat,
+    ): void {
         $ditugaskan = GuruMataPelajaran::query()
             ->where('pegawai_id', $pegawaiId)
             ->where('tahun_pelajaran_id', $tahunPelajaranId)
             ->where('mata_pelajaran_id', $mataPelajaranId)
             ->where('aktif', true)
+            ->whereHas('kelas', fn ($query) => $query
+                ->where('aktif', true)
+                ->where('tingkat', $tingkat))
             ->exists();
 
         if (! $ditugaskan) {
             throw ValidationException::withMessages([
-                'mata_pelajaran_id' => 'Pilih mata pelajaran yang ditugaskan kepada akun guru ini.',
+                'tingkat' => 'Pilih tingkat yang sesuai dengan kelas yang diajar untuk mata pelajaran ini.',
             ]);
         }
     }
@@ -422,27 +532,17 @@ class PerangkatAjarSayaController extends Controller
         }
     }
 
-    private function mataPelajaranGuru(?int $pegawaiId, ?int $tahunPelajaranId)
-    {
-        if (! $pegawaiId || ! $tahunPelajaranId) {
-            return collect();
-        }
-
-        return MataPelajaran::query()
-            ->whereHas('guruMataPelajaran', function ($query) use ($pegawaiId, $tahunPelajaranId) {
-                $query->where('pegawai_id', $pegawaiId)
-                    ->where('tahun_pelajaran_id', $tahunPelajaranId)
-                    ->where('aktif', true);
-            })
-            ->where('aktif', true)
-            ->orderBy('urutan')
-            ->orderBy('nama')
-            ->get();
-    }
-
-    private function simpanFile($file, int $pegawaiId, int $tahunPelajaranId, int $semester): string
-    {
-        return $file->store("perangkat-ajar/{$pegawaiId}/{$tahunPelajaranId}/semester-{$semester}", 'local');
+    private function simpanFile(
+        $file,
+        int $pegawaiId,
+        int $tahunPelajaranId,
+        int $semester,
+        int $tingkat,
+    ): string {
+        return $file->store(
+            "perangkat-ajar/{$pegawaiId}/{$tahunPelajaranId}/semester-{$semester}/tingkat-{$tingkat}",
+            'local',
+        );
     }
 
     private function dataFile($file, string $lokasiFile): array
@@ -481,8 +581,8 @@ class PerangkatAjarSayaController extends Controller
         return $tahunPelajaran->firstWhere('aktif', true)?->id ?? $tahunPelajaran->first()?->id;
     }
 
-    private function kunciPerangkat(int $mataPelajaranId, int $jenisPerangkatAjarId): string
+    private function kunciPerangkat(int $mataPelajaranId, int $tingkat, int $jenisPerangkatAjarId): string
     {
-        return $mataPelajaranId.'-'.$jenisPerangkatAjarId;
+        return $mataPelajaranId.'-'.$tingkat.'-'.$jenisPerangkatAjarId;
     }
 }

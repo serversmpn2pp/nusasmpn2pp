@@ -40,6 +40,10 @@
                         <dd>{{ $perangkatAjar->jenisPerangkatAjar?->nama ?? '-' }}</dd>
                     </div>
                     <div>
+                        <dt>Tingkat</dt>
+                        <dd>{{ $perangkatAjar->tingkatTampil() }}</dd>
+                    </div>
+                    <div>
                         <dt>Semester</dt>
                         <dd>{{ $perangkatAjar->semester }}</dd>
                     </div>
@@ -60,6 +64,22 @@
                 <section class="panel panel-pad">
                     <h2 class="panel-title">Perbarui Dokumen</h2>
                     <div class="form-grid">
+                        <div class="field span-2">
+                            <label for="tingkat">Tingkat</label>
+                            <select id="tingkat" name="tingkat" class="select @error('tingkat') is-invalid @enderror" required>
+                                <option value="">Pilih tingkat</option>
+                                @foreach ($daftarTingkat as $nilaiTingkat)
+                                    <option value="{{ $nilaiTingkat }}" @selected((int) old('tingkat', $perangkatAjar->tingkat) === (int) $nilaiTingkat)>
+                                        Tingkat {{ match ((int) $nilaiTingkat) { 7 => 'VII', 8 => 'VIII', 9 => 'IX', default => $nilaiTingkat } }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="help-text">Tingkat harus sesuai dengan kelas yang Anda ajar untuk mata pelajaran ini.</p>
+                            @error('tingkat')
+                                <p class="error-text">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <div class="field span-2">
                             <label for="judul">Judul dokumen</label>
                             <input id="judul" name="judul" type="text" value="{{ old('judul', $perangkatAjar->judul) }}" class="input @error('judul') is-invalid @enderror" required autofocus>

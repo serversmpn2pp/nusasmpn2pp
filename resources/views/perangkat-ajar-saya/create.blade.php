@@ -3,6 +3,18 @@
 @section('title', 'Unggah Perangkat Ajar - NUSA')
 
 @section('content')
+    @php
+        $mataPelajaranTerpilih = (int) old('mata_pelajaran_id', $mataPelajaranId);
+        $tingkatTerpilih = (int) old('tingkat', $tingkat);
+        $daftarTingkatAwal = $tingkatPerMataPelajaran->get($mataPelajaranTerpilih, collect());
+        $labelTingkat = fn (int $nilai) => match ($nilai) {
+            7 => 'VII',
+            8 => 'VIII',
+            9 => 'IX',
+            default => (string) $nilai,
+        };
+    @endphp
+
     <div class="page-header">
         <div>
             <p class="eyebrow">Kurikulum</p>
@@ -71,6 +83,22 @@
                         </div>
 
                         <div class="field">
+                            <label for="tingkat">Tingkat</label>
+                            <select id="tingkat" name="tingkat" class="select @error('tingkat') is-invalid @enderror" required>
+                                <option value="">Pilih tingkat</option>
+                                @foreach ($daftarTingkatAwal as $nilaiTingkat)
+                                    <option value="{{ $nilaiTingkat }}" @selected($tingkatTerpilih === (int) $nilaiTingkat)>
+                                        Tingkat {{ $labelTingkat((int) $nilaiTingkat) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="help-text">Hanya tingkat dari kelas yang Anda ajar.</p>
+                            @error('tingkat')
+                                <p class="error-text">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="field span-2">
                             <label for="jenis_perangkat_ajar_id">Jenis perangkat</label>
                             <select id="jenis_perangkat_ajar_id" name="jenis_perangkat_ajar_id" class="select @error('jenis_perangkat_ajar_id') is-invalid @enderror" required>
                                 <option value="">Pilih jenis perangkat</option>
@@ -123,4 +151,36 @@
     </form>
 
     @include('perangkat-ajar-saya.partials.validasi-file-pdf')
+
+    <script>
+        (() => {
+            const mataPelajaran = document.getElementById('mata_pelajaran_id');
+            const tingkat = document.getElementById('tingkat');
+            const tingkatPerMataPelajaran = @json($tingkatPerMataPelajaran);
+            const tingkatAwal = @json((string) $tingkatTerpilih);
+            const labelTingkat = { 7: 'VII', 8: 'VIII', 9: 'IX' };
+
+            if (!mataPelajaran || !tingkat) return;
+
+            const perbaruiTingkat = (nilaiTerpilih = '') => {
+                const daftarTingkat = tingkatPerMataPelajaran[mataPelajaran.value] || [];
+                tingkat.innerHTML = '<option value="">Pilih tingkat</option>';
+
+                daftarTingkat.forEach((nilai) => {
+                    const option = document.createElement('option');
+                    option.value = String(nilai);
+                    option.textContent = `Tingkat ${labelTingkat[nilai] || nilai}`;
+                    option.selected = String(nilai) === String(nilaiTerpilih);
+                    tingkat.appendChild(option);
+                });
+
+                if (daftarTingkat.length === 1 && !nilaiTerpilih) {
+                    tingkat.value = String(daftarTingkat[0]);
+                }
+            };
+
+            mataPelajaran.addEventListener('change', () => perbaruiTingkat());
+            perbaruiTingkat(tingkatAwal === '0' ? '' : tingkatAwal);
+        })();
+    </script>
 @endsection

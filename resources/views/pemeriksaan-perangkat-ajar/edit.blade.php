@@ -44,6 +44,10 @@
                         <dd>{{ $perangkatAjar->jenisPerangkatAjar?->nama ?? '-' }}</dd>
                     </div>
                     <div>
+                        <dt>Tingkat</dt>
+                        <dd>{{ $perangkatAjar->tingkatTampil() }}</dd>
+                    </div>
+                    <div>
                         <dt>Status saat ini</dt>
                         <dd>{{ $perangkatAjar->labelStatus() }}</dd>
                     </div>

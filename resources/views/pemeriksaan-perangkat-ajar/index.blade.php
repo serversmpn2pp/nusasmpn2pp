@@ -173,8 +173,8 @@
                             </td>
                             <td>
                                 <div class="curriculum-chip-row">
-                                    @foreach ($item['mata_pelajaran'] as $mapel)
-                                        <span class="badge badge-muted">{{ $mapel->nama }}</span>
+                                    @foreach ($item['penugasan_per_tingkat'] as $penugasan)
+                                        <span class="badge badge-muted">{{ $penugasan['mata_pelajaran']->nama }} · {{ $penugasan['label_tingkat'] }}</span>
                                     @endforeach
                                 </div>
                             </td>
@@ -216,8 +216,8 @@
                     </div>
 
                     <div class="curriculum-chip-row">
-                        @foreach ($item['mata_pelajaran'] as $mapel)
-                            <span class="badge badge-muted">{{ $mapel->nama }}</span>
+                        @foreach ($item['penugasan_per_tingkat'] as $penugasan)
+                            <span class="badge badge-muted">{{ $penugasan['mata_pelajaran']->nama }} · {{ $penugasan['label_tingkat'] }}</span>
                         @endforeach
                     </div>
 
