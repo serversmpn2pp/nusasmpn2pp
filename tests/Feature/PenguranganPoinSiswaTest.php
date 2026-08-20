@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
+use App\Models\OrangTuaWali;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\PenguranganPoinSiswa;
@@ -127,6 +128,39 @@ class PenguranganPoinSiswaTest extends TestCase
         ]);
     }
 
+    public function test_orang_tua_mendapat_notifikasi_setelah_pengurangan_poin_disetujui(): void
+    {
+        [$administrator, $tahun, $kelasA] = $this->buatDataDasar();
+        $siswa = $this->buatSiswaDalamKelas($tahun, $kelasA, 'Siswa Reward Disetujui', '0011000031');
+        $akunOrangTua = $this->buatAkunOrangTua($siswa);
+        $this->catatPoin($siswa, $tahun, 20, 'poin:reward-disetujui');
+        $pengurangan = PenguranganPoinSiswa::create([
+            'siswa_id' => $siswa->id,
+            'tahun_pelajaran_id' => $tahun->id,
+            'tanggal_kegiatan' => '2026-08-06',
+            'jenis_kegiatan' => 'Teladan menjaga kebersihan',
+            'poin_pengurangan' => 10,
+            'status' => 'diajukan',
+            'diajukan_oleh_pengguna_id' => $administrator->id,
+        ]);
+
+        $this->actingAs($administrator)
+            ->patch(route('pengurangan-poin-siswa.putuskan', $pengurangan), [
+                'keputusan' => 'disetujui',
+                'catatan_keputusan' => 'Kegiatan telah diverifikasi.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunOrangTua->id,
+            'jenis' => 'berhasil',
+            'judul' => 'Pengurangan poin anak disetujui',
+            'tautan' => route('pembinaan-poin-anak.index', ['tab' => 'poin'], false),
+            'kunci_unik' => "pengurangan-poin-orang-tua:{$pengurangan->id}:disetujui",
+        ]);
+    }
+
     private function buatDataDasar(): array
     {
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
@@ -170,6 +204,29 @@ class PenguranganPoinSiswaTest extends TestCase
         ]);
 
         return $siswa;
+    }
+
+    private function buatAkunOrangTua(Siswa $siswa): Pengguna
+    {
+        $pengguna = Pengguna::create([
+            'nama' => 'Orang Tua '.$siswa->nama_lengkap,
+            'username' => 'ORT-'.$siswa->nisn,
+            'kata_sandi' => 'KataSandi-Orang-Tua-2026',
+            'peran' => 'orang_tua',
+            'aktif' => true,
+        ]);
+        $pengguna->daftarPeran()->attach(Peran::where('kode', 'orang_tua')->firstOrFail());
+        $orangTua = OrangTuaWali::create([
+            'pengguna_id' => $pengguna->id,
+            'siswa_acuan_username_id' => $siswa->id,
+            'nama_lengkap' => $pengguna->nama,
+        ]);
+        $orangTua->siswa()->attach($siswa->id, [
+            'hubungan' => 'wali',
+            'utama' => true,
+        ]);
+
+        return $pengguna;
     }
 
     private function catatPoin(Siswa $siswa, TahunPelajaran $tahun, int $poin, string $kunci): void

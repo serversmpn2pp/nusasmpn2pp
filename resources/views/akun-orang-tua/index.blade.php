@@ -340,5 +340,5 @@
         </div>
     </section>
 
-    <div class="pagination-wrap">{{ $anggotaKelas->links() }}</div>
+    {{ $anggotaKelas->links() }}
 @endsection

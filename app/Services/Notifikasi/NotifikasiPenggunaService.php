@@ -135,6 +135,27 @@ class NotifikasiPenggunaService
             ->get();
     }
 
+    public function penggunaOrangTuaUntukSiswa(int $siswaId): EloquentCollection
+    {
+        return $this->penggunaOrangTuaUntukDaftarSiswa([$siswaId]);
+    }
+
+    public function penggunaOrangTuaUntukDaftarSiswa(iterable $siswaIds): EloquentCollection
+    {
+        $siswaIds = collect($siswaIds)
+            ->filter(fn ($siswaId) => is_numeric($siswaId) && (int) $siswaId > 0)
+            ->map(fn ($siswaId) => (int) $siswaId)
+            ->unique()
+            ->values()
+            ->all();
+
+        return Pengguna::query()
+            ->where('aktif', true)
+            ->whereHas('orangTuaWali.siswa', fn ($query) => $query->whereIn('siswa.id', $siswaIds))
+            ->distinct()
+            ->get();
+    }
+
     private function rapikanTautan(?string $tautan): ?string
     {
         if (blank($tautan)) {

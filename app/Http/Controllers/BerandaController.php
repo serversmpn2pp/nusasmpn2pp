@@ -59,11 +59,20 @@ class BerandaController extends Controller
                 ->with(['siswa' => fn ($query) => $query->orderBy('nama_lengkap')])
                 ->first();
 
-            return view('beranda.orang-tua', [
+            $siswaTerkait = $orangTua?->siswa
+                ->firstWhere('id', $orangTua->siswa_acuan_username_id)
+                ?: $orangTua?->siswa->first();
+
+            return view('beranda.orang-tua', array_merge($this->dataDashboardSiswa(
+                pengguna: $pengguna,
+                hariIni: $hariIni,
+                tahunPelajaranAktif: $tahunPelajaranAktif,
+                awalBulan: $awalBulan,
+                akhirBulan: $akhirBulan,
+                siswaTerkait: $siswaTerkait,
+            ), [
                 'orangTua' => $orangTua,
-                'daftarAnak' => $orangTua?->siswa ?? collect(),
-                'tahunPelajaranAktif' => $tahunPelajaranAktif,
-            ]);
+            ]));
         }
 
         if (! $pengguna?->administrator()) {
@@ -268,8 +277,9 @@ class BerandaController extends Controller
         ?TahunPelajaran $tahunPelajaranAktif,
         $awalBulan,
         $akhirBulan,
+        ?Siswa $siswaTerkait = null,
     ): array {
-        $siswa = $pengguna->siswa()->first();
+        $siswa = $siswaTerkait ?: $pengguna->siswa()->first();
         $anggotaKelas = null;
 
         if ($siswa) {

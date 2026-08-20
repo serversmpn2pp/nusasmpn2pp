@@ -173,4 +173,28 @@ class NotifikasiPenggunaTest extends TestCase
             ->assertSee('window.setInterval(perbaruiNotifikasi, 30000)', false)
             ->assertSee("document.visibilityState !== 'visible'", false);
     }
+
+    public function test_pagination_notifikasi_memakai_tampilan_nusa_yang_ringkas(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        foreach (range(1, 16) as $urutan) {
+            NotifikasiPengguna::create([
+                'pengguna_id' => $administrator->id,
+                'jenis' => 'informasi',
+                'judul' => "Notifikasi pagination {$urutan}",
+                'pesan' => "Isi notifikasi {$urutan}.",
+            ]);
+        }
+
+        $this->actingAs($administrator)
+            ->get(route('notifikasi.index'))
+            ->assertOk()
+            ->assertSee('Halaman 1 dari 2')
+            ->assertSee('1-15 dari 16 data')
+            ->assertSee('Sebelumnya')
+            ->assertSee('Berikutnya')
+            ->assertDontSee('Previous')
+            ->assertDontSee('Showing 1 to 15 of 16 results');
+    }
 }

@@ -126,5 +126,28 @@ class PublikasiNilaiService
                 'semester' => $publikasi->semester,
             ],
         );
+
+        $tautanOrangTua = route('akademik-anak.index', [
+            'tab' => 'nilai',
+            'semester' => $publikasi->semester,
+        ], false).'#mapel-'.$penugasan->id;
+
+        $this->notifikasi->kirimKeBanyak(
+            $this->notifikasi->penggunaOrangTuaUntukDaftarSiswa($siswaIds),
+            'berhasil',
+            'Nilai '.$namaMataPelajaran.' anak telah tersedia',
+            sprintf(
+                'Nilai %s untuk %s semester %s telah dipublikasikan. Rincian nilai terbuka setelah anak mengisi survei pembelajaran.',
+                $namaMataPelajaran,
+                $namaKelas,
+                $labelSemester,
+            ),
+            $tautanOrangTua,
+            "nilai-anak-dipublikasikan:{$publikasi->id}:{$kunciWaktu}",
+            [
+                'guru_mata_pelajaran_id' => $penugasan->id,
+                'semester' => $publikasi->semester,
+            ],
+        );
     }
 }

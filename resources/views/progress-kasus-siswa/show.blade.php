@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Progress Kasus - NUSA')
+@section('title', ($judulHalaman ?? 'Detail Progress Kasus').' - NUSA')
 
 @section('content')
     @include('progress-kasus-siswa._styles')
@@ -9,10 +9,10 @@
         <div class="page-header">
             <div>
                 <p class="eyebrow">Kesiswaan</p>
-                <h1 class="page-title">Detail Progress Kasus</h1>
+                <h1 class="page-title">{{ $judulHalaman ?? 'Detail Progress Kasus' }}</h1>
                 <p class="page-subtitle">{{ $laporan->nomor_laporan }}</p>
             </div>
-            <a class="case-back" href="{{ route('progress-kasus-siswa.index') }}">Kembali</a>
+            <a class="case-back" href="{{ $urlKembali ?? route('progress-kasus-siswa.index') }}">Kembali</a>
         </div>
 
         <section class="case-hero">
@@ -153,7 +153,7 @@
                 @endif
 
                 <div class="case-privacy">
-                    Rincian pemeriksaan internal dikelola oleh sekolah dan tidak ditampilkan pada akun siswa.
+                    {{ $teksPrivasi ?? 'Rincian pemeriksaan internal dikelola oleh sekolah dan tidak ditampilkan pada akun siswa.' }}
                 </div>
             </aside>
         </div>

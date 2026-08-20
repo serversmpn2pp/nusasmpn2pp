@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ButirPelanggaranLaporan;
 use App\Models\JenisPelanggaranSiswa;
 use App\Models\LaporanPembinaanSiswa;
+use App\Models\OrangTuaWali;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
@@ -111,6 +112,7 @@ class PusatVerifikasiPelanggaranTest extends TestCase
     {
         [$tahun, $siswa, $jenis] = $this->dataDasar();
         $akunSiswa = $this->buatAkunSiswa($siswa);
+        $akunOrangTua = $this->buatAkunOrangTua($siswa);
         [, $akunBk] = $this->buatAkunPegawai('BK Notifikasi Siswa', '198701012017011008', 'bk');
         [, $akunWakil] = $this->buatAkunPegawai('Wakil Notifikasi Siswa', '198801012018011009', 'wakil_pimpinan_kesiswaan');
         $laporanPembinaan = $this->buatLaporan('PB-NOTIF-001', 'diajukan', $tahun, $siswa, $jenis);
@@ -127,6 +129,12 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             'judul' => 'Pembinaan telah ditetapkan',
             'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanPembinaan->id.':ditetapkan_pembinaan',
             'tautan' => route('progress-kasus-siswa.show', $laporanPembinaan, false),
+        ]);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunOrangTua->id,
+            'judul' => 'Pembinaan anak telah ditetapkan',
+            'kunci_unik' => 'perkembangan-kasus-orang-tua:'.$laporanPembinaan->id.':ditetapkan_pembinaan',
+            'tautan' => route('pembinaan-poin-anak.show', $laporanPembinaan, false),
         ]);
 
         $this->actingAs($akunBk)->post(route('verifikasi-pelanggaran.bk', $laporanTidakTerbukti), [
@@ -149,6 +157,10 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             'pengguna_id' => $akunSiswa->id,
             'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanPoin->id.':menunggu_pengesahan_wakil',
         ]);
+        $this->assertDatabaseMissing('notifikasi_pengguna', [
+            'pengguna_id' => $akunOrangTua->id,
+            'kunci_unik' => 'perkembangan-kasus-orang-tua:'.$laporanPoin->id.':menunggu_pengesahan_wakil',
+        ]);
 
         $this->actingAs($akunWakil)->post(route('verifikasi-pelanggaran.wakil', $laporanPoin), [
             'keputusan' => 'sahkan',
@@ -161,7 +173,14 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanPoin->id.':disahkan',
             'tautan' => route('progress-kasus-siswa.show', $laporanPoin, false),
         ]);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunOrangTua->id,
+            'judul' => 'Pelanggaran berpoin anak telah disahkan',
+            'kunci_unik' => 'perkembangan-kasus-orang-tua:'.$laporanPoin->id.':disahkan',
+            'tautan' => route('pembinaan-poin-anak.show', $laporanPoin, false),
+        ]);
         $this->assertSame(3, $akunSiswa->notifikasiPengguna()->count());
+        $this->assertSame(3, $akunOrangTua->notifikasiPengguna()->count());
     }
 
     public function test_wakil_dapat_mengembalikan_rekomendasi_kepada_bk_tanpa_mencatat_poin(): void
@@ -241,6 +260,29 @@ class PusatVerifikasiPelanggaranTest extends TestCase
             'aktif' => true,
         ]);
         $pengguna->daftarPeran()->attach(Peran::where('kode', 'siswa')->firstOrFail());
+
+        return $pengguna;
+    }
+
+    private function buatAkunOrangTua(Siswa $siswa): Pengguna
+    {
+        $pengguna = Pengguna::create([
+            'nama' => 'Orang Tua '.$siswa->nama_lengkap,
+            'username' => 'ORT-'.$siswa->nisn,
+            'kata_sandi' => 'KataSandi-Orang-Tua-2026',
+            'peran' => 'orang_tua',
+            'aktif' => true,
+        ]);
+        $pengguna->daftarPeran()->attach(Peran::where('kode', 'orang_tua')->firstOrFail());
+        $orangTua = OrangTuaWali::create([
+            'pengguna_id' => $pengguna->id,
+            'siswa_acuan_username_id' => $siswa->id,
+            'nama_lengkap' => $pengguna->nama,
+        ]);
+        $orangTua->siswa()->attach($siswa->id, [
+            'hubungan' => 'wali',
+            'utama' => true,
+        ]);
 
         return $pengguna;
     }

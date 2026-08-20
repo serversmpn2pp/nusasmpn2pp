@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AkademikAnakController;
 use App\Http\Controllers\AksesUjianCbtController;
 use App\Http\Controllers\AkunOrangTuaController;
 use App\Http\Controllers\AkunPegawaiController;
@@ -62,6 +63,7 @@ use App\Http\Controllers\NilaiSayaController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
 use App\Http\Controllers\NotifikasiPenggunaController;
 use App\Http\Controllers\PegawaiController;
+use App\Http\Controllers\PembinaanPoinAnakController;
 use App\Http\Controllers\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\PeminjamanBarangController;
 use App\Http\Controllers\PendampinganSiswaController;
@@ -86,6 +88,8 @@ use App\Http\Controllers\PeringatanDiniSiswaController;
 use App\Http\Controllers\PertanyaanSurveiPembelajaranController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\PiketKehadiranSiswaController;
+use App\Http\Controllers\PresensiAnakController;
+use App\Http\Controllers\ProfilOrangTuaController;
 use App\Http\Controllers\ProfilPegawaiController;
 use App\Http\Controllers\ProgressKasusSiswaController;
 use App\Http\Controllers\PublikasiNilaiController;
@@ -167,6 +171,19 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('beranda', [BerandaController::class, 'index'])
             ->middleware('izin:beranda.akses')
             ->name('beranda');
+
+        Route::get('presensi-anak', [PresensiAnakController::class, 'index'])
+            ->name('presensi-anak.index');
+        Route::get('akademik-anak', [AkademikAnakController::class, 'index'])
+            ->name('akademik-anak.index');
+        Route::get('pembinaan-poin-anak', [PembinaanPoinAnakController::class, 'index'])
+            ->name('pembinaan-poin-anak.index');
+        Route::get('pembinaan-poin-anak/{laporanPembinaanSiswa}', [PembinaanPoinAnakController::class, 'show'])
+            ->name('pembinaan-poin-anak.show');
+        Route::get('profil-orang-tua', [ProfilOrangTuaController::class, 'edit'])
+            ->name('profil-orang-tua.edit');
+        Route::put('profil-orang-tua', [ProfilOrangTuaController::class, 'update'])
+            ->name('profil-orang-tua.update');
 
         Route::get('progress-kasus-saya', [ProgressKasusSiswaController::class, 'index'])
             ->name('progress-kasus-siswa.index');

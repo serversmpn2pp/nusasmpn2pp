@@ -2110,7 +2110,7 @@
                     'id' => 'akun-saya',
                     'title' => 'Akun Saya',
                     'items' => [
-                        ['label' => 'Ganti Password', 'route' => 'kata-sandi.edit', 'active' => ['kata-sandi.*'], 'initial' => 'KS', 'izin' => null],
+                        ['label' => 'Profil & Akun', 'route' => 'profil-orang-tua.edit', 'active' => ['profil-orang-tua.*', 'kata-sandi.*'], 'initial' => 'PA', 'izin' => null],
                     ],
                 ],
             ];
@@ -2121,6 +2121,15 @@
                     'title' => 'Utama',
                     'items' => [
                         ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
+                    ],
+                ],
+                [
+                    'id' => 'informasi-anak',
+                    'title' => 'Informasi Anak',
+                    'items' => [
+                        ['label' => 'Presensi Anak', 'route' => 'presensi-anak.index', 'active' => ['presensi-anak.*'], 'initial' => 'PA', 'izin' => null],
+                        ['label' => 'Akademik Anak', 'route' => 'akademik-anak.index', 'active' => ['akademik-anak.*'], 'initial' => 'AA', 'izin' => null],
+                        ['label' => 'Pembinaan & Poin', 'route' => 'pembinaan-poin-anak.index', 'active' => ['pembinaan-poin-anak.*'], 'initial' => 'PP', 'izin' => null],
                     ],
                 ],
                 [
@@ -2402,6 +2411,14 @@
                                                 <circle cx="12" cy="7" r="4"></circle>
                                             </svg>
                                             <span>Profil Saya</span>
+                                        </a>
+                                    @elseif ($penggunaAktif->akunOrangTua() || $penggunaAktif->memilikiPeran('orang_tua'))
+                                        <a href="{{ route('profil-orang-tua.edit') }}" class="account-dropdown-link">
+                                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                                                <path d="M20 21a8 8 0 0 0-16 0"></path>
+                                                <circle cx="12" cy="7" r="4"></circle>
+                                            </svg>
+                                            <span>Profil & Akun</span>
                                         </a>
                                     @endif
 

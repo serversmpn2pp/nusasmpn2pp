@@ -161,8 +161,19 @@ class AkunOrangTuaTest extends TestCase
 
         $this->get(route('beranda'))
             ->assertOk()
+            ->assertViewIs('beranda.orang-tua')
+            ->assertViewHas('siswaLogin', fn (?Siswa $siswaDashboard) => $siswaDashboard?->is($siswa) === true)
             ->assertSee('Dashboard Orang Tua')
             ->assertSee('Siswa Login Orang Tua')
+            ->assertSee('Presensi hari ini')
+            ->assertSee('Jadwal Pelajaran Hari Ini')
+            ->assertSee('Presensi Bulan Ini')
+            ->assertSee('Presensi Ibadah Anak')
+            ->assertSee('Nilai Anak')
+            ->assertSee('Akademik Anak')
+            ->assertSee('Pembinaan &amp; Poin', false)
+            ->assertSeeText('Poin & Pembinaan')
+            ->assertSee('Notifikasi Terbaru')
             ->assertSee('Ganti Password')
             ->assertDontSee('Katalog Barang');
     }
@@ -187,6 +198,31 @@ class AkunOrangTuaTest extends TestCase
         $akun->refresh();
         $this->assertSame('ORT-0099999999', $akun->username);
         $this->assertTrue(Hash::check($passwordAwal, $akun->kata_sandi));
+    }
+
+    public function test_pagination_daftar_akun_orang_tua_memakai_tampilan_nusa_yang_ringkas(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        [, $kelas] = $this->buatSiswaDalamKelas('Siswa Pagination 01', '0100000001');
+
+        foreach (range(2, 21) as $urutan) {
+            $this->tambahkanSiswaKeKelas(
+                $kelas,
+                'Siswa Pagination '.str_pad((string) $urutan, 2, '0', STR_PAD_LEFT),
+                '01'.str_pad((string) $urutan, 8, '0', STR_PAD_LEFT),
+                $urutan,
+            );
+        }
+
+        $this->actingAs($administrator)
+            ->get(route('akun-orang-tua.index', ['kelas_id' => $kelas->id]))
+            ->assertOk()
+            ->assertSee('Halaman 1 dari 2')
+            ->assertSee('1-20 dari 21 data')
+            ->assertSee('Sebelumnya')
+            ->assertSee('Berikutnya')
+            ->assertDontSee('Previous')
+            ->assertDontSee('Showing 1 to 20 of 21 results');
     }
 
     private function buatSiswaDalamKelas(

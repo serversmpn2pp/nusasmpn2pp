@@ -292,6 +292,31 @@ class VerifikasiPelanggaranSiswaController extends Controller
                 'status_verifikasi' => $laporan->status_verifikasi,
             ],
         );
+
+        $judulOrangTua = match ($laporan->status_verifikasi) {
+            'ditetapkan_pembinaan' => 'Pembinaan anak telah ditetapkan',
+            'tidak_terbukti' => 'Pemeriksaan laporan anak selesai',
+            'disahkan' => 'Pelanggaran berpoin anak telah disahkan',
+        };
+        $namaSiswa = $laporan->siswa?->nama_lengkap ?? 'Anak Anda';
+        $pesanOrangTua = match ($laporan->status_verifikasi) {
+            'ditetapkan_pembinaan' => sprintf('BK menetapkan laporan %s untuk %s sebagai pembinaan tanpa poin.', $laporan->nomor_laporan, $namaSiswa),
+            'tidak_terbukti' => sprintf('Pemeriksaan laporan %s untuk %s telah selesai dan dinyatakan tidak terbukti.', $laporan->nomor_laporan, $namaSiswa),
+            'disahkan' => sprintf('%d poin pada laporan %s untuk %s telah disahkan oleh Wakil Kesiswaan.', $laporan->total_poin, $laporan->nomor_laporan, $namaSiswa),
+        };
+
+        $this->notifikasiPenggunaService->kirimKeBanyak(
+            $this->notifikasiPenggunaService->penggunaOrangTuaUntukSiswa((int) $laporan->siswa_id),
+            $konfigurasi[0],
+            $judulOrangTua,
+            $pesanOrangTua,
+            route('pembinaan-poin-anak.show', $laporan, false),
+            "perkembangan-kasus-orang-tua:{$laporan->id}:{$laporan->status_verifikasi}",
+            [
+                'laporan_pembinaan_siswa_id' => $laporan->id,
+                'status_verifikasi' => $laporan->status_verifikasi,
+            ],
+        );
     }
 
     private function penerimaAsalLaporan(LaporanPembinaanSiswa $laporan, ?int $kecualiPenggunaId): Collection

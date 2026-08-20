@@ -191,6 +191,26 @@ class PenguranganPoinSiswaController extends Controller
                 $data['catatan_keputusan'] ?? null,
             );
 
+            $penguranganPoinSiswa->refresh()->loadMissing('siswa:id,nama_lengkap');
+            $this->notifikasiPenggunaService->kirimKeBanyak(
+                $this->notifikasiPenggunaService->penggunaOrangTuaUntukSiswa((int) $penguranganPoinSiswa->siswa_id),
+                'berhasil',
+                'Pengurangan poin anak disetujui',
+                sprintf(
+                    '%d poin untuk %s dikurangi melalui kegiatan %s.',
+                    $diterapkan,
+                    $penguranganPoinSiswa->siswa?->nama_lengkap ?? 'anak Anda',
+                    $penguranganPoinSiswa->jenis_kegiatan,
+                ),
+                route('pembinaan-poin-anak.index', ['tab' => 'poin'], false),
+                "pengurangan-poin-orang-tua:{$penguranganPoinSiswa->id}:disetujui",
+                [
+                    'pengurangan_poin_siswa_id' => $penguranganPoinSiswa->id,
+                    'siswa_id' => $penguranganPoinSiswa->siswa_id,
+                    'poin_pengurangan' => $diterapkan,
+                ],
+            );
+
             return back()->with('berhasil', "Pengurangan disetujui. {$diterapkan} poin diterapkan tanpa membuat saldo negatif.");
         }
 

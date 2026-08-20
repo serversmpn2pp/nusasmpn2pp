@@ -203,8 +203,6 @@
     </section>
 
     @if ($notifikasi->hasPages())
-        <div style="margin-top: 18px;">
-            {{ $notifikasi->links() }}
-        </div>
+        {{ $notifikasi->links() }}
     @endif
 @endsection

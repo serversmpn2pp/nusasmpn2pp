@@ -8,6 +8,7 @@ use App\Models\Kelas;
 use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
+use App\Models\OrangTuaWali;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
@@ -28,6 +29,7 @@ class PublikasiNilaiSiswaTest extends TestCase
     public function test_guru_hanya_dapat_mempublikasikan_nilai_dalam_penugasannya(): void
     {
         $data = $this->dataDasar();
+        $akunOrangTua = $this->buatAkunOrangTua($data['siswa']);
         [, $akunTanpaNilai] = $this->buatSiswaBerakun(
             $data['tahun'],
             $data['kelas'],
@@ -74,6 +76,14 @@ class PublikasiNilaiSiswaTest extends TestCase
             'pengguna_id' => $data['akun_siswa_lain']->id,
             'judul' => 'Nilai Matematika telah tersedia',
         ]);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunOrangTua->id,
+            'judul' => 'Nilai Matematika anak telah tersedia',
+            'tautan' => route('akademik-anak.index', [
+                'tab' => 'nilai',
+                'semester' => 'ganjil',
+            ], false).'#mapel-'.$data['guru_mapel']->id,
+        ]);
         $this->assertDatabaseMissing('notifikasi_pengguna', [
             'pengguna_id' => $akunTanpaNilai->id,
             'judul' => 'Nilai Matematika telah tersedia',
@@ -88,7 +98,7 @@ class PublikasiNilaiSiswaTest extends TestCase
             ])
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('notifikasi_pengguna', 2);
+        $this->assertDatabaseCount('notifikasi_pengguna', 3);
 
         $this->actingAs($data['akun_guru'])
             ->get(route('input-nilai.index', [
@@ -530,6 +540,29 @@ class PublikasiNilaiSiswaTest extends TestCase
             'wajib_ganti_kata_sandi' => false,
         ]);
         $akun->daftarPeran()->sync([Peran::where('kode', 'guru_mapel')->value('id')]);
+
+        return $akun;
+    }
+
+    private function buatAkunOrangTua(Siswa $siswa): Pengguna
+    {
+        $akun = Pengguna::create([
+            'nama' => 'Orang Tua '.$siswa->nama_lengkap,
+            'username' => 'ORT-'.$siswa->nisn,
+            'kata_sandi' => Hash::make('rahasia-orang-tua'),
+            'peran' => 'orang_tua',
+            'aktif' => true,
+        ]);
+        $akun->daftarPeran()->attach(Peran::where('kode', 'orang_tua')->firstOrFail());
+        $orangTua = OrangTuaWali::create([
+            'pengguna_id' => $akun->id,
+            'siswa_acuan_username_id' => $siswa->id,
+            'nama_lengkap' => $akun->nama,
+        ]);
+        $orangTua->siswa()->attach($siswa->id, [
+            'hubungan' => 'wali',
+            'utama' => true,
+        ]);
 
         return $akun;
     }
