@@ -1981,6 +1981,8 @@
                         ['label' => 'Akun Siswa', 'route' => 'akun-siswa.index', 'active' => ['akun-siswa.*'], 'initial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.kelola', 'akun_siswa.cetak']],
                         ['label' => 'Akun Orang Tua', 'route' => 'akun-orang-tua.index', 'active' => ['akun-orang-tua.*'], 'initial' => 'AO', 'izin' => ['akun_orang_tua.lihat', 'akun_orang_tua.kelola', 'akun_orang_tua.cetak']],
                         ['label' => 'Role & Hak Akses', 'route' => 'peran.index', 'active' => ['peran.*'], 'initial' => 'RA', 'izin' => ['peran.lihat', 'peran.kelola']],
+                        ['label' => 'Aktivitas Login', 'route' => 'aktivitas-login.index', 'active' => ['aktivitas-login.*'], 'initial' => 'AL', 'izin' => 'aktivitas_login.lihat'],
+                        ['label' => 'Backup & Restore', 'route' => 'cadangan-database.index', 'active' => ['cadangan-database.*'], 'initial' => 'BR', 'izin' => 'cadangan_database.kelola'],
                     ],
                 ],
             ];

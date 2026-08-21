@@ -46,7 +46,7 @@ class PengaturanBerhalanganIbadahController extends Controller
             ->where('jenis_kelamin', 'P')
             ->with(['pengguna:id,pegawai_id,aktif', 'pengguna.daftarPeran:id,kode,aktif'])
             ->orderBy('nama_lengkap')
-            ->get(['id', 'nama_lengkap', 'nip', 'jenis_pegawai', 'jabatan_utama'])
+            ->get(['id', 'nama_lengkap', 'nip', 'jenis_kelamin', 'jenis_pegawai', 'jabatan_utama', 'aktif'])
             ->filter(fn (Pegawai $pegawai) => $this->dapatMenjadiPendamping($pegawai))
             ->values();
 

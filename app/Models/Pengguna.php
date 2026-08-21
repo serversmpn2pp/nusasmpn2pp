@@ -97,6 +97,29 @@ class Pengguna extends Authenticatable
         return $this->hasMany(NotifikasiPengguna::class);
     }
 
+    public function riwayatLogin(): HasMany
+    {
+        return $this->hasMany(RiwayatLogin::class);
+    }
+
+    public function loginBerhasilTerbaru(): HasOne
+    {
+        return $this->hasOne(RiwayatLogin::class)
+            ->where('berhasil', true)
+            ->latestOfMany();
+    }
+
+    public function labelJenisAkun(): string
+    {
+        return match (true) {
+            $this->akun_sistem => 'Administrator sistem',
+            filled($this->pegawai_id) => 'Pegawai',
+            filled($this->siswa_id) => 'Siswa',
+            $this->akunOrangTua() => 'Orang tua',
+            default => 'Akun lainnya',
+        };
+    }
+
     public function konfirmasiBerhalanganIbadah(): HasMany
     {
         return $this->hasMany(KonfirmasiBerhalanganIbadah::class, 'dikonfirmasi_oleh_pengguna_id');

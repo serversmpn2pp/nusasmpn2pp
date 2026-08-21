@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AkademikAnakController;
 use App\Http\Controllers\AksesUjianCbtController;
+use App\Http\Controllers\AktivitasLoginController;
 use App\Http\Controllers\AkunOrangTuaController;
 use App\Http\Controllers\AkunPegawaiController;
 use App\Http\Controllers\AkunSiswaController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\BarangController;
 use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\BuktiLaporanPembinaanController;
 use App\Http\Controllers\BuktiPelaksanaanSanksiController;
+use App\Http\Controllers\CadanganDatabaseController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenPoinSiswaController;
 use App\Http\Controllers\FotoIdentitasController;
@@ -250,6 +252,19 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::resource('peran', PeranController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:peran.kelola');
+
+        Route::get('aktivitas-login', [AktivitasLoginController::class, 'index'])
+            ->middleware('izin:aktivitas_login.lihat')
+            ->name('aktivitas-login.index');
+
+        Route::middleware('izin:cadangan_database.kelola')->group(function () {
+            Route::get('cadangan-database', [CadanganDatabaseController::class, 'index'])->name('cadangan-database.index');
+            Route::post('cadangan-database', [CadanganDatabaseController::class, 'store'])->name('cadangan-database.store');
+            Route::post('cadangan-database/pulihkan-unggahan', [CadanganDatabaseController::class, 'restoreUpload'])->name('cadangan-database.restore-upload');
+            Route::get('cadangan-database/{namaFile}/unduh', [CadanganDatabaseController::class, 'download'])->name('cadangan-database.download');
+            Route::post('cadangan-database/{namaFile}/pulihkan', [CadanganDatabaseController::class, 'restore'])->name('cadangan-database.restore');
+            Route::delete('cadangan-database/{namaFile}', [CadanganDatabaseController::class, 'destroy'])->name('cadangan-database.destroy');
+        });
 
         Route::middleware('izin:pegawai.kelola')->group(function () {
             Route::get('pegawai/import', [PegawaiController::class, 'createImport'])->name('pegawai.import.create');

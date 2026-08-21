@@ -250,6 +250,8 @@ class DatabaseSeeder extends Seeder
             ['kelompok' => 'Akun', 'nama' => 'Cetak kredensial akun orang tua', 'kode' => 'akun_orang_tua.cetak', 'deskripsi' => 'Mencetak daftar username dan password awal akun orang tua sesuai cakupan kelas.'],
             ['kelompok' => 'Akun', 'nama' => 'Lihat role', 'kode' => 'peran.lihat', 'deskripsi' => 'Melihat daftar role/peran.'],
             ['kelompok' => 'Akun', 'nama' => 'Kelola role dan izin', 'kode' => 'peran.kelola', 'deskripsi' => 'Menambah, mengubah, dan mengatur izin role.'],
+            ['kelompok' => 'Keamanan', 'nama' => 'Lihat aktivitas login', 'kode' => 'aktivitas_login.lihat', 'deskripsi' => 'Melihat login terakhir serta riwayat login berhasil dan gagal pengguna NUSA.'],
+            ['kelompok' => 'Keamanan', 'nama' => 'Kelola backup dan restore database', 'kode' => 'cadangan_database.kelola', 'deskripsi' => 'Membuat, mengunduh, menghapus, dan memulihkan cadangan database NUSA.'],
             ['kelompok' => 'Pegawai', 'nama' => 'Lihat pegawai', 'kode' => 'pegawai.lihat', 'deskripsi' => 'Melihat data pegawai.'],
             ['kelompok' => 'Pegawai', 'nama' => 'Kelola pegawai', 'kode' => 'pegawai.kelola', 'deskripsi' => 'Menambah, mengubah, import, dan menonaktifkan pegawai.'],
             ['kelompok' => 'Pegawai', 'nama' => 'Kelola profil pegawai sendiri', 'kode' => 'pegawai.profil', 'deskripsi' => 'Melihat dan memperbarui data pribadi akun pegawai sendiri.'],

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pengguna;
+use App\Models\RiwayatLogin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -21,15 +23,29 @@ class AutentikasiController extends Controller
     public function storeLogin(Request $request)
     {
         $data = $request->validate([
-            'username' => ['required', 'string'],
+            'username' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ]);
+
+        $penggunaDitemukan = Pengguna::query()
+            ->where('username', $data['username'])
+            ->first();
 
         $berhasil = Auth::attempt([
             'username' => $data['username'],
             'password' => $data['password'],
             'aktif' => true,
         ], $request->boolean('ingat'));
+
+        $penggunaLogin = $berhasil ? Auth::user() : $penggunaDitemukan;
+
+        RiwayatLogin::create([
+            'pengguna_id' => $penggunaLogin?->id,
+            'username' => $data['username'],
+            'berhasil' => $berhasil,
+            'alamat_ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
 
         if (! $berhasil) {
             throw ValidationException::withMessages([
@@ -38,8 +54,9 @@ class AutentikasiController extends Controller
         }
 
         $request->session()->regenerate();
+        $waktuLogin = now();
         $request->user()->forceFill([
-            'terakhir_login_pada' => now(),
+            'terakhir_login_pada' => $waktuLogin,
         ])->save();
 
         $redirect = $request->user()->administrator()

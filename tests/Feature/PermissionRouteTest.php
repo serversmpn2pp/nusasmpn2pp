@@ -23,6 +23,13 @@ class PermissionRouteTest extends TestCase
     {
         $this->assertRouteMemakaiMiddleware('peran.index', 'izin:peran.lihat,peran.kelola');
         $this->assertRouteMemakaiMiddleware('peran.create', 'izin:peran.kelola');
+        $this->assertRouteMemakaiMiddleware('aktivitas-login.index', 'izin:aktivitas_login.lihat');
+        $this->assertRouteMemakaiMiddleware('cadangan-database.index', 'izin:cadangan_database.kelola');
+        $this->assertRouteMemakaiMiddleware('cadangan-database.store', 'izin:cadangan_database.kelola');
+        $this->assertRouteMemakaiMiddleware('cadangan-database.restore', 'izin:cadangan_database.kelola');
+        $this->assertRouteMemakaiMiddleware('cadangan-database.restore-upload', 'izin:cadangan_database.kelola');
+        $this->assertRouteMemakaiMiddleware('cadangan-database.download', 'izin:cadangan_database.kelola');
+        $this->assertRouteMemakaiMiddleware('cadangan-database.destroy', 'izin:cadangan_database.kelola');
         $this->assertRouteMemakaiMiddleware('akun-pegawai.index', 'izin:akun.lihat,akun.kelola');
         $this->assertRouteMemakaiMiddleware('akun-pegawai.peran.update', 'izin:akun.kelola');
         $this->assertRouteMemakaiMiddleware('akun-siswa.index', 'izin:akun_siswa.lihat,akun_siswa.kelola,akun_siswa.cetak');
