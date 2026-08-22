@@ -96,8 +96,10 @@ class SoalUjianCbtController extends Controller
         });
 
         return redirect()
-            ->route('ujian-cbt.show', $ujianCbt)
-            ->with('berhasil', 'Soal paket CBT berhasil diperbarui.');
+            ->route($ujianCbt->asesmenKelas() ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.show', $ujianCbt)
+            ->with('berhasil', $ujianCbt->asesmenKelas()
+                ? 'Pilihan soal asesmen berhasil disimpan.'
+                : 'Soal paket CBT berhasil diperbarui.');
     }
 
     private function pastikanSoalCocokDenganPaket(UjianCbt $ujianCbt, array $soalIds): void

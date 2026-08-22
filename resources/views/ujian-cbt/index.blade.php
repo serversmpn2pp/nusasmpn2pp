@@ -152,7 +152,6 @@
                                         <a href="{{ route('ujian-cbt.koreksi-manual.index', $item) }}" class="button button-muted">Koreksi</a>
                                         <a href="{{ route('ujian-cbt.soal.edit', $item) }}" class="button button-muted">Soal</a>
                                         <a href="{{ route('ujian-cbt.peserta.index', $item) }}" class="button button-muted">Peserta</a>
-                                        <a href="{{ route('ujian-cbt.kartu-peserta.index', $item) }}" class="button button-muted">Kartu</a>
                                         <a href="{{ route('ujian-cbt.edit', $item) }}" class="button button-dark">Edit</a>
                                     @endizin
                                 </div>
@@ -194,7 +193,6 @@
                             <a href="{{ route('ujian-cbt.koreksi-manual.index', $item) }}" class="button button-muted">Koreksi</a>
                             <a href="{{ route('ujian-cbt.soal.edit', $item) }}" class="button button-muted">Soal</a>
                             <a href="{{ route('ujian-cbt.peserta.index', $item) }}" class="button button-muted">Peserta</a>
-                            <a href="{{ route('ujian-cbt.kartu-peserta.index', $item) }}" class="button button-muted">Kartu</a>
                             <a href="{{ route('ujian-cbt.edit', $item) }}" class="button button-dark">Edit</a>
                         @endizin
                     </div>

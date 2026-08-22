@@ -10,6 +10,8 @@ use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PDO;
 use Tests\TestCase;
 
@@ -34,8 +36,19 @@ class SoalCbtTest extends TestCase
         $this->actingAs($administrator)
             ->get(route('soal-cbt.create'))
             ->assertOk()
-            ->assertSee('Tambah soal CBT')
-            ->assertSee('Opsi dan Kunci Jawaban');
+            ->assertSee('Tambah soal')
+            ->assertSee('Isi jawaban dan tentukan kunci')
+            ->assertSee('Tambahkan pendukung soal')
+            ->assertSee('Pratinjau soal')
+            ->assertSee('name="gambar_soal"', false)
+            ->assertSee('name="media_tabel"', false)
+            ->assertSee('name="rumus_latex"', false)
+            ->assertSee('data-formula-field', false)
+            ->assertSeeText('Simpan siap & buat berikutnya')
+            ->assertDontSee('name="kode"', false)
+            ->assertDontSee('name="tahun_pelajaran_id"', false)
+            ->assertDontSee('name="skor_maksimal"', false)
+            ->assertDontSee('name="aktif"', false);
 
         $this->actingAs($administrator)
             ->post(route('soal-cbt.store'), $this->dataSoal($tahunPelajaran, $mataPelajaran))
@@ -74,6 +87,116 @@ class SoalCbtTest extends TestCase
 
         $this->assertSame('arsip', $soalCbt->fresh()->status);
         $this->assertFalse($soalCbt->fresh()->aktif);
+    }
+
+    public function test_gambar_tabel_dan_rumus_dapat_disimpan_dan_ditampilkan(): void
+    {
+        Storage::fake('public');
+        [$tahunPelajaran, $mataPelajaran] = $this->buatDataAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $this->actingAs($administrator)
+            ->post(route('soal-cbt.store'), [
+                ...$this->dataSoal($tahunPelajaran, $mataPelajaran),
+                'rumus_latex' => '\\sqrt{\\placeholder{}}',
+            ])
+            ->assertSessionHasErrors('rumus_latex');
+
+        $this->assertDatabaseMissing('soal_cbt', ['kode' => 'SOAL-CBT-UJI-001']);
+
+        $this->actingAs($administrator)
+            ->post(route('soal-cbt.store'), [
+                ...$this->dataSoal($tahunPelajaran, $mataPelajaran),
+                'gambar_soal' => UploadedFile::fake()->createWithContent(
+                    'grafik.png',
+                    base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
+                ),
+                'gambar_alt' => 'Grafik simpangan terhadap waktu',
+                'gambar_keterangan' => 'Data percobaan siswa',
+                'media_tabel' => json_encode([
+                    ['Waktu', 'Simpangan'],
+                    ['1 sekon', '4 cm'],
+                    ['2 sekon', '8 cm'],
+                ]),
+                'tabel_judul' => 'Hasil pengamatan',
+                'rumus_latex' => 'f = \\frac{n}{t}',
+                'rumus_keterangan' => 'Rumus frekuensi',
+            ])
+            ->assertRedirect();
+
+        $soal = SoalCbt::where('kode', 'SOAL-CBT-UJI-001')->firstOrFail();
+        $pathGambar = data_get($soal->media, 'gambar.path');
+
+        Storage::disk('public')->assertExists($pathGambar);
+        $this->assertSame('Grafik simpangan terhadap waktu', data_get($soal->media, 'gambar.alt'));
+        $this->assertSame('Simpangan', data_get($soal->media, 'tabel.baris.0.1'));
+        $this->assertSame('f = \\frac{n}{t}', data_get($soal->media, 'rumus.latex'));
+
+        $this->actingAs($administrator)
+            ->get(route('soal-cbt.show', $soal))
+            ->assertOk()
+            ->assertSee('Hasil pengamatan')
+            ->assertSee('Data percobaan siswa')
+            ->assertSee('data-rumus-latex="f = \\frac{n}{t}"', false);
+
+        $this->actingAs($administrator)
+            ->put(route('soal-cbt.update', $soal), [
+                ...$this->dataSoal($tahunPelajaran, $mataPelajaran),
+                'hapus_gambar_soal' => '1',
+                'media_tabel' => '',
+                'rumus_latex' => '',
+            ])
+            ->assertRedirect(route('soal-cbt.show', $soal));
+
+        Storage::disk('public')->assertMissing($pathGambar);
+        $this->assertNull($soal->fresh()->media);
+    }
+
+    public function test_form_ringkas_mengisi_identitas_otomatis_dan_melanjutkan_konteks(): void
+    {
+        [, $mataPelajaran] = $this->buatDataAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $response = $this->actingAs($administrator)
+            ->post(route('soal-cbt.store'), [
+                'mata_pelajaran_id' => $mataPelajaran->id,
+                'tingkat' => 8,
+                'jenis_soal' => 'pilihan_ganda',
+                'topik' => 'Getaran',
+                'pertanyaan' => 'Satuan frekuensi adalah ....',
+                'opsi' => [
+                    'A' => 'Meter',
+                    'B' => 'Hertz',
+                    'C' => 'Sekon',
+                    'D' => 'Newton',
+                ],
+                'kunci_pg' => 'B',
+                'aksi' => 'simpan_lanjut',
+            ]);
+
+        $soal = SoalCbt::where('pertanyaan', 'Satuan frekuensi adalah ....')->firstOrFail();
+
+        $response->assertRedirect(route('soal-cbt.create', [
+            'mata_pelajaran_id' => $mataPelajaran->id,
+            'tingkat' => 8,
+            'jenis_soal' => 'pilihan_ganda',
+            'tingkat_kesulitan' => 'sedang',
+            'kategori' => 'umum',
+            'topik' => 'Getaran',
+            'materi' => null,
+        ]));
+
+        $this->assertMatchesRegularExpression('/^SOAL-CBT-\d{8}-\d{3}$/', $soal->kode);
+        $this->assertNull($soal->tahun_pelajaran_id);
+        $this->assertSame('siap', $soal->status);
+        $this->assertSame('1.00', $soal->skor_maksimal);
+        $this->assertTrue($soal->aktif);
+
+        $this->actingAs($administrator)
+            ->get($response->headers->get('Location'))
+            ->assertOk()
+            ->assertSee('Matematika Kelas VIII')
+            ->assertSee('value="Getaran"', false);
     }
 
     public function test_guru_mapel_hanya_dapat_mengelola_soal_mapel_yang_diajar(): void

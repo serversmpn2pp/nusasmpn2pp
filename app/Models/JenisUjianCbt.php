@@ -15,7 +15,6 @@ class JenisUjianCbt extends Model
         'deskripsi',
         'memerlukan_token',
         'dapat_diterapkan_ke_nilai',
-        'tampil_di_kartu_peserta',
         'urutan',
         'aktif',
     ];
@@ -23,7 +22,6 @@ class JenisUjianCbt extends Model
     protected $casts = [
         'memerlukan_token' => 'boolean',
         'dapat_diterapkan_ke_nilai' => 'boolean',
-        'tampil_di_kartu_peserta' => 'boolean',
         'urutan' => 'integer',
         'aktif' => 'boolean',
     ];

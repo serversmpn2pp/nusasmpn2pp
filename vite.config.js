@@ -12,6 +12,7 @@ export default defineConfig({
                 'resources/js/export-kartu-identitas.js',
                 'resources/js/scan-kegiatan-ibadah.js',
                 'resources/js/scan-presensi-ujian-cbt.js',
+                'resources/js/soal-editor.js',
             ],
             refresh: true,
             fonts: [

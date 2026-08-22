@@ -428,7 +428,6 @@
                                     <span class="question-number">{{ $nomor }}</span>
                                     <div>
                                         <span class="badge badge-muted">{{ $soal?->labelJenis() ?: 'Soal' }}</span>
-                                        <h2 class="question-title">{{ $soal?->pertanyaan ?: 'Soal tidak ditemukan.' }}</h2>
                                     </div>
                                 </div>
                                 <label class="check-row">
@@ -440,6 +439,12 @@
                             @if (filled($soal?->stimulus))
                                 <div class="stimulus">{{ $soal->stimulus }}</div>
                             @endif
+
+                            @if ($soal)
+                                <x-media-soal :media="$soal->media" />
+                            @endif
+
+                            <h2 class="question-title">{{ $soal?->pertanyaan ?: 'Soal tidak ditemukan.' }}</h2>
 
                             @if (in_array($soal?->jenis_soal, ['pilihan_ganda', 'pilihan_ganda_kompleks'], true))
                                 <div class="option-list">

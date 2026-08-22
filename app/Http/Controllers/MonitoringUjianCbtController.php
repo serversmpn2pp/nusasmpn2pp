@@ -76,7 +76,6 @@ class MonitoringUjianCbtController extends Controller
                 'kelasUjianCbt.kelas',
                 'ruangUjianCbt',
                 'anggotaKelas.siswa',
-                'akunPesertaCbt',
             ])
             ->withCount([
                 'jawabanPesertaUjianCbt as jumlah_jawaban_tersimpan' => fn ($query) => $query->whereNotNull('jawaban'),

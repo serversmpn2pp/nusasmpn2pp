@@ -8,8 +8,10 @@ use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class SoalCbtController extends Controller
 {
@@ -25,6 +27,7 @@ class SoalCbtController extends Controller
 
         $pengguna = $request->user();
         $bisaLihatSemua = $this->bisaLihatSemua($request);
+        $daftarKonteks = $this->konteksBankSoal($request);
         $mapelCakupanIds = $this->mataPelajaranCakupan($request)->pluck('id')->map(fn ($id) => (int) $id)->all();
         $kataKunci = trim((string) ($data['kata_kunci'] ?? ''));
         $mataPelajaranId = $data['mata_pelajaran_id'] ?? null;
@@ -67,31 +70,53 @@ class SoalCbtController extends Controller
             'jumlahSiap' => SoalCbt::when(! $bisaLihatSemua, fn ($query) => $query->whereIn('mata_pelajaran_id', $mapelCakupanIds))->where('status', 'siap')->count(),
             'jumlahDraft' => SoalCbt::when(! $bisaLihatSemua, fn ($query) => $query->whereIn('mata_pelajaran_id', $mapelCakupanIds))->where('status', 'draft')->count(),
             'bisaKelolaSoal' => $pengguna?->memilikiIzin(['cbt.kelola', 'cbt.soal_kelola']) ?? false,
+            'daftarKonteks' => $daftarKonteks,
         ]);
     }
 
     public function create(Request $request)
     {
+        $daftarKonteks = $this->konteksBankSoal($request);
+        $konteksTerpilih = $this->pilihKonteksDariRequest($request, $daftarKonteks)
+            ?? ($daftarKonteks->count() === 1 ? $daftarKonteks->first() : null);
+
         return view('soal-cbt.create', $this->dataForm($request, [
-            'kodeSaran' => $this->buatKodeSaran(),
+            'daftarKonteks' => $daftarKonteks,
+            'konteksTerpilih' => $konteksTerpilih,
+            'nilaiAwal' => $this->nilaiAwalDariRequest($request),
         ]));
     }
 
     public function store(Request $request)
     {
         $data = $this->rapikanData($request->validate($this->aturanValidasi()));
+        $data['kode'] = $data['kode'] ?: $this->buatKodeSaran();
         $this->pastikanMataPelajaranBoleh($request, (int) $data['mata_pelajaran_id']);
         $this->pastikanTingkatMataPelajaranTersedia($request, $data);
         $konten = $this->susunKontenJawaban($data);
+        $gambarBaru = $this->simpanGambarSoal($request);
 
-        $soalCbt = SoalCbt::create([
-            ...$this->dataSoal($data, $konten),
-            'dibuat_oleh_pengguna_id' => $request->user()?->id,
-        ]);
+        try {
+            $soalCbt = SoalCbt::create([
+                ...$this->dataSoal($data, $konten),
+                'media' => $this->susunMediaSoal($data, null, $gambarBaru),
+                'dibuat_oleh_pengguna_id' => $request->user()?->id,
+            ]);
+        } catch (Throwable $exception) {
+            $this->hapusGambarSoal($gambarBaru);
+
+            throw $exception;
+        }
+
+        if (($data['aksi'] ?? null) === 'simpan_lanjut') {
+            return redirect()
+                ->route('soal-cbt.create', $this->parameterSoalBerikutnya($soalCbt))
+                ->with('berhasil', 'Soal siap digunakan. Silakan lanjutkan ke soal berikutnya.');
+        }
 
         return redirect()
             ->route('soal-cbt.show', $soalCbt)
-            ->with('berhasil', 'Soal CBT berhasil ditambahkan.');
+            ->with('berhasil', $soalCbt->status === 'siap' ? 'Soal berhasil disimpan dan siap digunakan.' : 'Soal berhasil disimpan sebagai draf.');
     }
 
     public function show(Request $request, SoalCbt $soalCbt)
@@ -105,10 +130,15 @@ class SoalCbtController extends Controller
     public function edit(Request $request, SoalCbt $soalCbt)
     {
         $this->pastikanBolehMengakses($request, $soalCbt, perluKelola: true);
+        $daftarKonteks = $this->konteksBankSoal($request);
 
         return view('soal-cbt.edit', $this->dataForm($request, [
             'soalCbt' => $soalCbt,
-            'kodeSaran' => null,
+            'daftarKonteks' => $daftarKonteks,
+            'konteksTerpilih' => $daftarKonteks->first(fn (array $item) => (
+                (int) $item['mata_pelajaran_id'] === (int) $soalCbt->mata_pelajaran_id
+                && (int) $item['tingkat'] === (int) $soalCbt->tingkat
+            )),
         ]));
     }
 
@@ -116,15 +146,34 @@ class SoalCbtController extends Controller
     {
         $this->pastikanBolehMengakses($request, $soalCbt, perluKelola: true);
         $data = $this->rapikanData($request->validate($this->aturanValidasi($soalCbt)));
+        $data['kode'] = $data['kode'] ?: $soalCbt->kode;
+        $data['tahun_pelajaran_id'] = $data['tahun_pelajaran_id'] ?? $soalCbt->tahun_pelajaran_id;
         $this->pastikanMataPelajaranBoleh($request, (int) $data['mata_pelajaran_id']);
         $this->pastikanTingkatMataPelajaranTersedia($request, $data);
         $konten = $this->susunKontenJawaban($data);
+        $gambarLama = data_get($soalCbt->media, 'gambar.path');
+        $gambarBaru = $this->simpanGambarSoal($request);
+        $media = $this->susunMediaSoal($data, $soalCbt, $gambarBaru);
 
-        $soalCbt->update($this->dataSoal($data, $konten));
+        try {
+            $soalCbt->update([
+                ...$this->dataSoal($data, $konten),
+                'media' => $media,
+            ]);
+        } catch (Throwable $exception) {
+            $this->hapusGambarSoal($gambarBaru);
+
+            throw $exception;
+        }
+
+        $gambarSekarang = data_get($media, 'gambar.path');
+        if ($gambarLama && $gambarLama !== $gambarSekarang) {
+            $this->hapusGambarSoal($gambarLama);
+        }
 
         return redirect()
             ->route('soal-cbt.show', $soalCbt)
-            ->with('berhasil', 'Soal CBT berhasil diperbarui.');
+            ->with('berhasil', $soalCbt->status === 'siap' ? 'Soal diperbarui dan siap digunakan.' : 'Perubahan soal disimpan sebagai draf.');
     }
 
     public function destroy(Request $request, SoalCbt $soalCbt)
@@ -143,10 +192,6 @@ class SoalCbtController extends Controller
     private function dataForm(Request $request, array $tambahan = []): array
     {
         return array_merge([
-            'daftarTahunPelajaran' => TahunPelajaran::query()
-                ->orderByDesc('aktif')
-                ->orderByDesc('nama')
-                ->get(),
             'daftarMataPelajaran' => $this->bisaLihatSemua($request)
                 ? $this->semuaMataPelajaran()
                 : $this->mataPelajaranCakupan($request),
@@ -163,19 +208,20 @@ class SoalCbtController extends Controller
             'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
             'mata_pelajaran_id' => ['required', 'integer', 'exists:mata_pelajaran,id'],
             'tingkat' => ['required', 'integer', Rule::in([7, 8, 9])],
-            'kode' => ['required', 'string', 'max:60', Rule::unique('soal_cbt', 'kode')->ignore($soalCbt)],
+            'kode' => ['nullable', 'string', 'max:60', Rule::unique('soal_cbt', 'kode')->ignore($soalCbt)],
             'jenis_soal' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_JENIS))],
-            'tingkat_kesulitan' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KESULITAN))],
-            'kategori' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KATEGORI))],
+            'tingkat_kesulitan' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_KESULITAN))],
+            'kategori' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_KATEGORI))],
             'topik' => ['nullable', 'string', 'max:160'],
             'materi' => ['nullable', 'string', 'max:180'],
             'tujuan_pembelajaran' => ['nullable', 'string'],
             'stimulus' => ['nullable', 'string'],
             'pertanyaan' => ['required', 'string'],
-            'skor_maksimal' => ['required', 'numeric', 'min:0.25', 'max:100'],
+            'skor_maksimal' => ['nullable', 'numeric', 'min:0.25', 'max:100'],
             'pembahasan' => ['nullable', 'string'],
-            'status' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_STATUS))],
+            'status' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_STATUS))],
             'aktif' => ['nullable', 'boolean'],
+            'aksi' => ['nullable', Rule::in(['simpan_draf', 'simpan_siap', 'simpan_lanjut'])],
             'opsi' => ['nullable', 'array'],
             'opsi.*' => ['nullable', 'string', 'max:800'],
             'kunci_pg' => ['nullable', 'string', 'max:5'],
@@ -191,20 +237,46 @@ class SoalCbtController extends Controller
             'pasangan_kanan.*' => ['nullable', 'string', 'max:800'],
             'kunci_teks' => ['nullable', 'string'],
             'rubrik_teks' => ['nullable', 'string'],
+            'gambar_soal' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'hapus_gambar_soal' => ['nullable', 'boolean'],
+            'gambar_alt' => ['nullable', 'string', 'max:160'],
+            'gambar_keterangan' => ['nullable', 'string', 'max:220'],
+            'media_tabel' => ['nullable', 'json', 'max:24000'],
+            'tabel_judul' => ['nullable', 'string', 'max:160'],
+            'rumus_latex' => [
+                'nullable',
+                'string',
+                'max:1500',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (str_contains((string) $value, '\\placeholder')) {
+                        $fail('Lengkapi bagian rumus yang masih kosong.');
+                    }
+                },
+            ],
+            'rumus_keterangan' => ['nullable', 'string', 'max:220'],
         ];
     }
 
     private function rapikanData(array $data): array
     {
         $data['tahun_pelajaran_id'] = filled($data['tahun_pelajaran_id'] ?? null) ? (int) $data['tahun_pelajaran_id'] : null;
-        $data['kode'] = mb_strtoupper(trim($data['kode']));
+        $data['kode'] = mb_strtoupper(trim((string) ($data['kode'] ?? '')));
+        $data['tingkat_kesulitan'] = $data['tingkat_kesulitan'] ?? 'sedang';
+        $data['kategori'] = $data['kategori'] ?? 'umum';
+        $data['skor_maksimal'] = $data['skor_maksimal'] ?? 1;
+        $data['status'] = match ($data['aksi'] ?? null) {
+            'simpan_siap', 'simpan_lanjut' => 'siap',
+            'simpan_draf' => 'draft',
+            default => $data['status'] ?? 'draft',
+        };
         $data['topik'] = $this->teksAtauNull($data['topik'] ?? null);
         $data['materi'] = $this->teksAtauNull($data['materi'] ?? null);
         $data['tujuan_pembelajaran'] = $this->teksAtauNull($data['tujuan_pembelajaran'] ?? null);
         $data['stimulus'] = $this->teksAtauNull($data['stimulus'] ?? null);
         $data['pertanyaan'] = trim($data['pertanyaan']);
         $data['pembahasan'] = $this->teksAtauNull($data['pembahasan'] ?? null);
-        $data['aktif'] = filter_var($data['aktif'] ?? true, FILTER_VALIDATE_BOOLEAN);
+        $data['aktif'] = $data['status'] !== 'arsip'
+            && filter_var($data['aktif'] ?? true, FILTER_VALIDATE_BOOLEAN);
 
         return $data;
     }
@@ -367,6 +439,88 @@ class SoalCbtController extends Controller
         return $opsi;
     }
 
+    private function simpanGambarSoal(Request $request): ?string
+    {
+        if (! $request->hasFile('gambar_soal')) {
+            return null;
+        }
+
+        return $request->file('gambar_soal')->store('soal-cbt/'.now()->format('Y'), 'public');
+    }
+
+    private function susunMediaSoal(array $data, ?SoalCbt $soalCbt, ?string $gambarBaru): ?array
+    {
+        $mediaLama = $soalCbt?->media ?? [];
+        $media = [];
+        $hapusGambar = filter_var($data['hapus_gambar_soal'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $pathGambar = $gambarBaru ?: ($hapusGambar ? null : data_get($mediaLama, 'gambar.path'));
+
+        if ($pathGambar) {
+            $media['gambar'] = [
+                'path' => $pathGambar,
+                'alt' => $this->teksAtauNull($data['gambar_alt'] ?? null) ?: 'Gambar pendukung soal',
+                'keterangan' => $this->teksAtauNull($data['gambar_keterangan'] ?? null),
+            ];
+        }
+
+        $tabel = $this->rapikanTabelSoal($data['media_tabel'] ?? null);
+        if ($tabel !== []) {
+            $media['tabel'] = [
+                'judul' => $this->teksAtauNull($data['tabel_judul'] ?? null),
+                'baris' => $tabel,
+            ];
+        }
+
+        $rumus = $this->teksAtauNull($data['rumus_latex'] ?? null);
+        if ($rumus) {
+            $media['rumus'] = [
+                'latex' => $rumus,
+                'keterangan' => $this->teksAtauNull($data['rumus_keterangan'] ?? null),
+            ];
+        }
+
+        return $media === [] ? null : $media;
+    }
+
+    private function rapikanTabelSoal(?string $json): array
+    {
+        if (blank($json)) {
+            return [];
+        }
+
+        $baris = json_decode($json, true);
+        if (! is_array($baris)) {
+            throw ValidationException::withMessages(['media_tabel' => 'Isi tabel tidak dapat dibaca. Buat kembali tabel soal.']);
+        }
+
+        $baris = collect($baris)
+            ->take(10)
+            ->map(fn ($row) => collect(is_array($row) ? $row : [])
+                ->take(8)
+                ->map(fn ($cell) => str((string) $cell)->trim()->limit(500, '')->toString())
+                ->values()
+                ->all())
+            ->filter(fn ($row) => collect($row)->contains(fn ($cell) => filled($cell)))
+            ->values();
+
+        if ($baris->isEmpty()) {
+            return [];
+        }
+
+        $jumlahKolom = $baris->max(fn ($row) => count($row));
+
+        return $baris
+            ->map(fn ($row) => array_pad(array_slice($row, 0, $jumlahKolom), $jumlahKolom, ''))
+            ->all();
+    }
+
+    private function hapusGambarSoal(?string $path): void
+    {
+        if ($path) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
     private function pastikanMataPelajaranBoleh(Request $request, int $mataPelajaranId): void
     {
         if ($this->bisaLihatSemua($request)) {
@@ -417,6 +571,105 @@ class SoalCbtController extends Controller
             ->orderBy('urutan')
             ->orderBy('nama')
             ->get();
+    }
+
+    private function konteksBankSoal(Request $request): Collection
+    {
+        $tahunAktif = TahunPelajaran::query()->where('aktif', true)->first();
+
+        if (! $this->bisaLihatSemua($request)) {
+            return GuruMataPelajaran::query()
+                ->with(['mataPelajaran', 'kelas'])
+                ->where('pegawai_id', $request->user()?->pegawai_id)
+                ->where('aktif', true)
+                ->when($tahunAktif, fn ($query, $tahun) => $query->where('tahun_pelajaran_id', $tahun->id))
+                ->get()
+                ->filter(fn (GuruMataPelajaran $penugasan) => (
+                    $penugasan->mataPelajaran?->aktif
+                    && in_array((int) $penugasan->kelas?->tingkat, [7, 8, 9], true)
+                ))
+                ->map(fn (GuruMataPelajaran $penugasan) => $this->susunKonteks(
+                    $penugasan->mataPelajaran,
+                    (int) $penugasan->kelas->tingkat,
+                ))
+                ->unique('kunci')
+                ->sortBy(fn (array $item) => $item['nama_mata_pelajaran'].'-'.$item['tingkat'])
+                ->values();
+        }
+
+        return $this->semuaMataPelajaran()
+            ->load('pengaturanTingkat')
+            ->flatMap(function (MataPelajaran $mataPelajaran) use ($tahunAktif) {
+                $pengaturan = $mataPelajaran->pengaturanTingkat;
+
+                if ($pengaturan->isNotEmpty() && $tahunAktif) {
+                    $tingkatTersedia = $pengaturan
+                        ->where('tahun_pelajaran_id', $tahunAktif->id)
+                        ->where('aktif', true)
+                        ->pluck('tingkat');
+                } elseif (in_array((int) $mataPelajaran->tingkat, [7, 8, 9], true)) {
+                    $tingkatTersedia = collect([(int) $mataPelajaran->tingkat]);
+                } else {
+                    $tingkatTersedia = collect([7, 8, 9]);
+                }
+
+                return $tingkatTersedia
+                    ->unique()
+                    ->sort()
+                    ->map(fn ($tingkat) => $this->susunKonteks($mataPelajaran, (int) $tingkat));
+            })
+            ->sortBy(fn (array $item) => $item['nama_mata_pelajaran'].'-'.$item['tingkat'])
+            ->values();
+    }
+
+    private function susunKonteks(MataPelajaran $mataPelajaran, int $tingkat): array
+    {
+        return [
+            'kunci' => $mataPelajaran->id.'-'.$tingkat,
+            'mata_pelajaran_id' => (int) $mataPelajaran->id,
+            'tingkat' => $tingkat,
+            'nama_mata_pelajaran' => $mataPelajaran->nama,
+            'label' => $mataPelajaran->nama.' · Kelas '.$tingkat,
+        ];
+    }
+
+    private function pilihKonteksDariRequest(Request $request, Collection $daftarKonteks): ?array
+    {
+        $mataPelajaranId = $request->integer('mata_pelajaran_id');
+        $tingkat = $request->integer('tingkat');
+
+        return $daftarKonteks->first(fn (array $item) => (
+            $item['mata_pelajaran_id'] === $mataPelajaranId
+            && $item['tingkat'] === $tingkat
+        ));
+    }
+
+    private function nilaiAwalDariRequest(Request $request): array
+    {
+        $jenisSoal = (string) $request->query('jenis_soal', 'pilihan_ganda');
+        $kesulitan = (string) $request->query('tingkat_kesulitan', 'sedang');
+        $kategori = (string) $request->query('kategori', 'umum');
+
+        return [
+            'jenis_soal' => array_key_exists($jenisSoal, SoalCbt::DAFTAR_JENIS) ? $jenisSoal : 'pilihan_ganda',
+            'tingkat_kesulitan' => array_key_exists($kesulitan, SoalCbt::DAFTAR_KESULITAN) ? $kesulitan : 'sedang',
+            'kategori' => array_key_exists($kategori, SoalCbt::DAFTAR_KATEGORI) ? $kategori : 'umum',
+            'topik' => str($request->query('topik', ''))->limit(160, '')->toString(),
+            'materi' => str($request->query('materi', ''))->limit(180, '')->toString(),
+        ];
+    }
+
+    private function parameterSoalBerikutnya(SoalCbt $soalCbt): array
+    {
+        return [
+            'mata_pelajaran_id' => $soalCbt->mata_pelajaran_id,
+            'tingkat' => $soalCbt->tingkat,
+            'jenis_soal' => $soalCbt->jenis_soal,
+            'tingkat_kesulitan' => $soalCbt->tingkat_kesulitan,
+            'kategori' => $soalCbt->kategori,
+            'topik' => $soalCbt->topik,
+            'materi' => $soalCbt->materi,
+        ];
     }
 
     private function semuaMataPelajaran(): Collection

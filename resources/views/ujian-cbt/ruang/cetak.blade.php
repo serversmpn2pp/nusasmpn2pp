@@ -517,7 +517,7 @@
                             <tr>
                                 <td class="center">{{ $loop->iteration }}</td>
                                 <td class="center"><strong>{{ $peserta->nomor_meja ?: '-' }}</strong></td>
-                                <td>{{ $peserta->akunPesertaCbt?->nomor_peserta ?: ($peserta->nomor_peserta ?: '-') }}</td>
+                                <td>{{ $peserta->nomor_peserta ?: '-' }}</td>
                                 <td>{{ $siswa?->nama_lengkap ?: '-' }}</td>
                                 <td class="center">{{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }}</td>
                                 <td class="signature-cell"></td>

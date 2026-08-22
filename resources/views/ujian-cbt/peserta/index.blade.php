@@ -85,7 +85,6 @@
             <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-primary">Monitoring</a>
             <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
             <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Hasil</a>
-            <a href="{{ route('ujian-cbt.kartu-peserta.index', $ujianCbt) }}" class="button button-primary">Kartu peserta</a>
             <a href="{{ route('ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail paket</a>
             <a href="{{ route('ujian-cbt.index') }}" class="button button-muted">Daftar paket</a>
         </div>
@@ -131,9 +130,6 @@
                 @csrf
                 <button type="submit" class="button button-primary">Generate peserta</button>
             </form>
-            @if ($ujianCbt->pesertaUjianCbt()->exists())
-                <a href="{{ route('ujian-cbt.kartu-peserta.index', $ujianCbt) }}" class="button button-dark">Cetak kartu peserta</a>
-            @endif
         </div>
         <dl class="quick-facts" style="margin-top: 16px;">
             <div><dt>Tahun pelajaran</dt><dd>{{ $ujianCbt->tahunPelajaran?->nama ?: '-' }}</dd></div>
@@ -271,7 +267,7 @@
                     <tr>
                         <th>Peserta</th>
                         <th>Kelas</th>
-                        <th>Akun CBT</th>
+                        <th>NISN</th>
                         <th>Sesi</th>
                         <th>Status</th>
                         <th>Catatan</th>
@@ -279,21 +275,17 @@
                 </thead>
                 <tbody>
                     @forelse ($pesertaUjianCbt as $peserta)
-                        @php($akunPeserta = $peserta->akunPesertaCbt)
                         <tr>
                             <td>
                                 <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
-                                <p class="person-meta">{{ $akunPeserta?->nomor_peserta ?: $peserta->nomor_peserta }}</p>
+                                <p class="person-meta">{{ $peserta->nomor_peserta }}</p>
                             </td>
                             <td>
                                 <p>{{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }}</p>
                                 <p class="person-meta">Absen {{ $peserta->anggotaKelas?->nomor_absen ?: '-' }}</p>
                             </td>
                             <td>
-                                <div class="cbt-credential">
-                                    <span>Username: <strong>{{ $akunPeserta?->username ?: $peserta->username }}</strong></span>
-                                    <span>Password: <strong>{{ $akunPeserta?->kata_sandi ?: $peserta->kata_sandi }}</strong></span>
-                                </div>
+                                <strong>{{ $peserta->anggotaKelas?->siswa?->nisn ?: 'Belum diisi' }}</strong>
                             </td>
                             <td>
                                 <select name="peserta[{{ $peserta->id }}][sesi_ujian_cbt_id]" class="select">

@@ -19,6 +19,7 @@ class SesiUjianCbt extends Model
 
     protected $fillable = [
         'ujian_cbt_id',
+        'sesi_kegiatan_ujian_cbt_id',
         'kode',
         'nama',
         'waktu_mulai',
@@ -37,6 +38,11 @@ class SesiUjianCbt extends Model
     public function ujianCbt(): BelongsTo
     {
         return $this->belongsTo(UjianCbt::class);
+    }
+
+    public function sesiKegiatanUjianCbt(): BelongsTo
+    {
+        return $this->belongsTo(SesiKegiatanUjianCbt::class);
     }
 
     public function pesertaUjianCbt(): HasMany

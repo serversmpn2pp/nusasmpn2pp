@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AkunPesertaCbt;
 use App\Models\JawabanPesertaUjianCbt;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
@@ -15,74 +14,6 @@ use Illuminate\Validation\ValidationException;
 
 class AksesUjianCbtController extends Controller
 {
-    public function createLogin()
-    {
-        return view('cbt.login');
-    }
-
-    public function storeLogin(Request $request)
-    {
-        $data = $request->validate([
-            'username' => ['required', 'string', 'max:80'],
-            'kata_sandi' => ['required', 'string', 'max:40'],
-            'token' => ['required', 'string', 'max:20'],
-        ]);
-
-        $token = mb_strtoupper(trim($data['token']));
-        $ujianCbt = UjianCbt::query()
-            ->with(['jenisUjianCbt', 'tahunPelajaran', 'mataPelajaran'])
-            ->where('token', $token)
-            ->whereIn('status', ['terjadwal', 'berlangsung'])
-            ->first();
-
-        if (! $ujianCbt) {
-            throw ValidationException::withMessages([
-                'token' => 'Token ujian tidak valid atau ujian belum dibuka.',
-            ]);
-        }
-
-        $akunPeserta = AkunPesertaCbt::query()
-            ->with('anggotaKelas.siswa')
-            ->where('jenis_ujian_cbt_id', $ujianCbt->jenis_ujian_cbt_id)
-            ->where('tahun_pelajaran_id', $ujianCbt->tahun_pelajaran_id)
-            ->where('semester', $ujianCbt->semester)
-            ->where('username', trim($data['username']))
-            ->where('kata_sandi', trim($data['kata_sandi']))
-            ->where('status', 'aktif')
-            ->first();
-
-        if (! $akunPeserta) {
-            throw ValidationException::withMessages([
-                'username' => 'Username atau password CBT tidak sesuai.',
-            ]);
-        }
-
-        $peserta = PesertaUjianCbt::query()
-            ->with(['ujianCbt', 'sesiUjianCbt', 'kelasUjianCbt.kelas', 'anggotaKelas.siswa'])
-            ->where('ujian_cbt_id', $ujianCbt->id)
-            ->where(function ($query) use ($akunPeserta) {
-                $query->where('akun_peserta_cbt_id', $akunPeserta->id)
-                    ->orWhere('anggota_kelas_id', $akunPeserta->anggota_kelas_id);
-            })
-            ->first();
-
-        if (! $peserta) {
-            throw ValidationException::withMessages([
-                'username' => 'Akun ini tidak terdaftar sebagai peserta paket ujian tersebut.',
-            ]);
-        }
-
-        $this->pastikanPesertaBolehMasuk($peserta);
-
-        if (! $peserta->akun_peserta_cbt_id) {
-            $peserta->update(['akun_peserta_cbt_id' => $akunPeserta->id]);
-        }
-
-        $this->aktifkanSesiPeserta($request, $peserta, 'login_cbt');
-
-        return redirect()->route('cbt.ujian.show');
-    }
-
     public function masukDariAkunSiswa(Request $request, PesertaUjianCbt $pesertaUjianCbt)
     {
         $pengguna = $request->user();
@@ -119,7 +50,7 @@ class AksesUjianCbtController extends Controller
         }
 
         $this->pastikanPesertaBolehMasuk($peserta);
-        $this->aktifkanSesiPeserta($request, $peserta, 'akun_siswa', $pengguna->id);
+        $this->aktifkanSesiPeserta($request, $peserta, $pengguna->id);
 
         return redirect()->route('cbt.ujian.show');
     }
@@ -128,7 +59,6 @@ class AksesUjianCbtController extends Controller
     {
         $peserta = $this->ambilPesertaDariSesi($request);
         $peserta->load([
-            'akunPesertaCbt',
             'ujianCbt.jenisUjianCbt',
             'ujianCbt.tahunPelajaran',
             'ujianCbt.mataPelajaran',
@@ -171,7 +101,6 @@ class AksesUjianCbtController extends Controller
     {
         $peserta = $this->ambilPesertaDariSesi($request);
         $peserta->load([
-            'akunPesertaCbt',
             'ujianCbt.mataPelajaran',
             'sesiUjianCbt',
             'kelasUjianCbt.kelas',
@@ -352,15 +281,9 @@ class AksesUjianCbtController extends Controller
 
     public function logout(Request $request)
     {
-        $melaluiAkunSiswa = $request->session()->get('cbt_asal_akses') === 'akun_siswa';
-
         $this->hapusSesiPeserta($request);
 
-        if ($melaluiAkunSiswa && $request->user()?->akunSiswa()) {
-            return redirect()->route('ujian-saya.index');
-        }
-
-        return redirect()->route('cbt.login');
+        return redirect()->route('ujian-saya.index');
     }
 
     private function ambilPesertaDariSesi(Request $request): PesertaUjianCbt
@@ -368,33 +291,31 @@ class AksesUjianCbtController extends Controller
         $pesertaId = $request->session()->get('cbt_peserta_ujian_id');
 
         if (! $pesertaId) {
-            throw new HttpResponseException(redirect()->route('cbt.login'));
+            throw new HttpResponseException(redirect()->route('ujian-saya.index'));
         }
 
         $peserta = PesertaUjianCbt::find($pesertaId);
 
         if (! $peserta) {
             $this->hapusSesiPeserta($request);
-            throw new HttpResponseException(redirect()->route('cbt.login'));
+            throw new HttpResponseException(redirect()->route('ujian-saya.index'));
         }
 
-        if ($request->session()->get('cbt_asal_akses') === 'akun_siswa') {
-            $pengguna = $request->user();
-            $penggunaSesiId = (int) $request->session()->get('cbt_pengguna_id');
-            $milikSiswaLogin = $pengguna
-                && (int) $pengguna->id === $penggunaSesiId
-                && ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'))
-                && $peserta->anggotaKelas()
-                    ->where('siswa_id', $pengguna->siswa_id)
-                    ->exists();
+        $pengguna = $request->user();
+        $penggunaSesiId = (int) $request->session()->get('cbt_pengguna_id');
+        $milikSiswaLogin = $pengguna
+            && (int) $pengguna->id === $penggunaSesiId
+            && ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'))
+            && $peserta->anggotaKelas()
+                ->where('siswa_id', $pengguna->siswa_id)
+                ->exists();
 
-            if (! $milikSiswaLogin) {
-                $this->hapusSesiPeserta($request);
+        if (! $milikSiswaLogin) {
+            $this->hapusSesiPeserta($request);
 
-                throw new HttpResponseException(redirect()
-                    ->route($pengguna ? 'beranda' : 'login')
-                    ->with('gagal', 'Sesi ujian tidak sesuai dengan akun yang sedang digunakan.'));
-            }
+            throw new HttpResponseException(redirect()
+                ->route($pengguna ? 'beranda' : 'login')
+                ->with('gagal', 'Sesi ujian tidak sesuai dengan akun siswa yang sedang digunakan.'));
         }
 
         return $peserta;
@@ -403,8 +324,7 @@ class AksesUjianCbtController extends Controller
     private function aktifkanSesiPeserta(
         Request $request,
         PesertaUjianCbt $peserta,
-        string $asalAkses,
-        ?int $penggunaId = null,
+        int $penggunaId,
     ): void {
         $peserta->update([
             'ip_terakhir' => $request->ip(),
@@ -413,14 +333,8 @@ class AksesUjianCbtController extends Controller
 
         $request->session()->put([
             'cbt_peserta_ujian_id' => $peserta->id,
-            'cbt_asal_akses' => $asalAkses,
+            'cbt_pengguna_id' => $penggunaId,
         ]);
-
-        if ($penggunaId) {
-            $request->session()->put('cbt_pengguna_id', $penggunaId);
-        } else {
-            $request->session()->forget('cbt_pengguna_id');
-        }
 
         $request->session()->regenerate();
     }
@@ -429,7 +343,6 @@ class AksesUjianCbtController extends Controller
     {
         $request->session()->forget([
             'cbt_peserta_ujian_id',
-            'cbt_asal_akses',
             'cbt_pengguna_id',
         ]);
     }
@@ -441,7 +354,7 @@ class AksesUjianCbtController extends Controller
 
         if (! in_array($peserta->status, ['aktif', 'sedang_mengerjakan'], true)) {
             throw ValidationException::withMessages([
-                'username' => 'Status peserta tidak aktif untuk mengikuti ujian.',
+                'ujian' => 'Status peserta tidak aktif untuk mengikuti ujian.',
             ]);
         }
 

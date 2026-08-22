@@ -36,6 +36,7 @@ class RekapHasilUjianCbtController extends Controller
             'tahunPelajaran',
             'mataPelajaran',
             'kelasUjianCbt.kelas',
+            'kelasUjianCbt.komponenNilai',
             'sesiUjianCbt',
         ]);
 
@@ -67,7 +68,6 @@ class RekapHasilUjianCbtController extends Controller
                 'sesiUjianCbt',
                 'kelasUjianCbt.kelas',
                 'anggotaKelas.siswa',
-                'akunPesertaCbt',
                 'jawabanPesertaUjianCbt',
             ])
             ->when($kelasId, fn ($query) => $query->whereHas(
@@ -99,7 +99,7 @@ class RekapHasilUjianCbtController extends Controller
             ->filter(fn ($item) => $statusHasil === 'semua' || $item['kode_status_hasil'] === $statusHasil)
             ->values();
 
-        return view('ujian-cbt.hasil.index', [
+        $dataTampilan = [
             'ujianCbt' => $ujianCbt,
             'kelasPeserta' => $kelasPeserta,
             'sesiUjianCbt' => $sesiUjianCbt,
@@ -112,7 +112,13 @@ class RekapHasilUjianCbtController extends Controller
             'jumlahSoalOtomatis' => count($soalOtomatisIds),
             'jumlahSoalManual' => count($soalManualIds),
             'bobotTotal' => $bobotTotal,
-        ]);
+        ];
+
+        if ($ujianCbt->asesmenKelas()) {
+            return view('asesmen-kelas-cbt.hasil', $dataTampilan);
+        }
+
+        return view('ujian-cbt.hasil.index', $dataTampilan);
     }
 
     private function susunRekapPeserta(
@@ -216,12 +222,21 @@ class RekapHasilUjianCbtController extends Controller
     {
         $total = $rekapSemua->count();
         $nilaiAkhir = $rekapSemua->pluck('nilai');
+        $hasilFinal = $rekapSemua->filter(fn ($item) => in_array(
+            $item['kode_status_hasil'],
+            ['tuntas', 'belum_tuntas'],
+            true,
+        ));
+        $nilaiFinal = $hasilFinal->pluck('nilai');
 
         return [
             'total_peserta' => $total,
             'rata_rata' => $total > 0 ? round($nilaiAkhir->avg(), 2) : 0,
             'nilai_tertinggi' => $total > 0 ? round($nilaiAkhir->max(), 2) : 0,
             'nilai_terendah' => $total > 0 ? round($nilaiAkhir->min(), 2) : 0,
+            'hasil_final' => $hasilFinal->count(),
+            'rata_rata_final' => $hasilFinal->isNotEmpty() ? round($nilaiFinal->avg(), 2) : null,
+            'nilai_tertinggi_final' => $hasilFinal->isNotEmpty() ? round($nilaiFinal->max(), 2) : null,
             'tuntas' => $rekapSemua->where('kode_status_hasil', 'tuntas')->count(),
             'belum_tuntas' => $rekapSemua->where('kode_status_hasil', 'belum_tuntas')->count(),
             'perlu_koreksi' => $rekapSemua

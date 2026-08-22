@@ -74,6 +74,7 @@
                         <dd style="white-space: pre-line;">{{ $soalCbt->stimulus }}</dd>
                     </div>
                 @endif
+                <x-media-soal :media="$soalCbt->media" />
                 <div class="detail-item">
                     <dt>Pertanyaan</dt>
                     <dd style="white-space: pre-line;">{{ $soalCbt->pertanyaan }}</dd>

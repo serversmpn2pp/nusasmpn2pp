@@ -1,5 +1,9 @@
 @php
     $ujianCbt = $ujianCbt ?? null;
+    $jenisAwal = $jenisAwal ?? null;
+    $tahunPelajaranAwal = $tahunPelajaranAwal ?? null;
+    $alur = $alur ?? '';
+    $asesmenKelas = $alur === 'kelas' && !$ujianCbt;
     $nilai = fn (string $field, mixed $default = '') => old($field, $ujianCbt?->{$field} ?? $default);
     $tanggalWaktu = function (string $field) use ($nilai) {
         $value = $nilai($field);
@@ -68,6 +72,14 @@
     }
 
     @media (max-width: 760px) {
+        .cbt-package-form > aside {
+            order: 2;
+        }
+
+        .cbt-package-form > .section-stack {
+            order: 1;
+        }
+
         .cbt-class-grid {
             grid-template-columns: 1fr;
         }
@@ -89,7 +101,7 @@
     </div>
 @endif
 
-<div class="form-shell">
+<div class="form-shell cbt-package-form">
     <aside class="panel panel-pad">
         <h2 class="panel-title">Status dan keamanan</h2>
         <p class="help-text">Pengaturan ini akan dipakai saat siswa mulai mengerjakan CBT.</p>
@@ -126,45 +138,59 @@
 
     <div class="section-stack">
         <section class="panel panel-pad">
-            <h2 class="panel-title">Informasi Paket</h2>
+            <h2 class="panel-title">{{ $asesmenKelas ? 'Informasi asesmen' : 'Informasi Paket' }}</h2>
+            @if ($asesmenKelas)
+                <dl class="quick-facts" style="margin-top: 14px;">
+                    <div><dt>Jenis</dt><dd>Asesmen Kelas</dd></div>
+                    <div><dt>Tahun pelajaran</dt><dd>{{ $tahunPelajaranAwal?->nama ?: '-' }} (aktif)</dd></div>
+                </dl>
+            @endif
             <div class="form-grid">
+                @if ($asesmenKelas)
+                    <input name="kode" type="hidden" value="{{ $nilai('kode', $kodeSaran) }}">
+                    <input id="jenis_ujian_cbt_id" name="jenis_ujian_cbt_id" type="hidden" value="{{ $nilai('jenis_ujian_cbt_id', $jenisAwal?->id) }}" data-nilai="1">
+                    <input id="tahun_pelajaran_id" name="tahun_pelajaran_id" type="hidden" value="{{ $nilai('tahun_pelajaran_id', $tahunPelajaranAwal?->id) }}">
+                @else
+                    <div class="field">
+                        <label for="kode">Kode paket</label>
+                        <input id="kode" name="kode" type="text" value="{{ $nilai('kode', $kodeSaran) }}" class="{{ $inputClass('kode') }}" maxlength="50" required autofocus>
+                        @error('kode') <p class="error-text">{{ $message }}</p> @enderror
+                    </div>
+                @endif
                 <div class="field">
-                    <label for="kode">Kode paket</label>
-                    <input id="kode" name="kode" type="text" value="{{ $nilai('kode', $kodeSaran) }}" class="{{ $inputClass('kode') }}" maxlength="50" required autofocus>
-                    @error('kode') <p class="error-text">{{ $message }}</p> @enderror
-                </div>
-                <div class="field">
-                    <label for="nama">Nama paket</label>
-                    <input id="nama" name="nama" type="text" value="{{ $nilai('nama') }}" placeholder="Contoh: STS Matematika Semester Ganjil" class="{{ $inputClass('nama') }}" required>
+                    <label for="nama">{{ $asesmenKelas ? 'Nama asesmen' : 'Nama paket' }}</label>
+                    <input id="nama" name="nama" type="text" value="{{ $nilai('nama') }}" placeholder="{{ $asesmenKelas ? 'Contoh: Ulangan Bab 1 Informatika Kelas VII' : 'Contoh: STS Matematika Semester Ganjil' }}" class="{{ $inputClass('nama') }}" required autofocus>
                     @error('nama') <p class="error-text">{{ $message }}</p> @enderror
                 </div>
-                <div class="field">
-                    <label for="jenis_ujian_cbt_id">Jenis ujian</label>
-                    <select id="jenis_ujian_cbt_id" name="jenis_ujian_cbt_id" class="{{ $selectClass('jenis_ujian_cbt_id') }}" required>
-                        <option value="">Pilih jenis ujian</option>
-                        @foreach ($daftarJenisUjianCbt as $item)
-                            <option
-                                value="{{ $item->id }}"
-                                data-token="{{ $item->memerlukan_token ? '1' : '0' }}"
-                                data-nilai="{{ $item->dapat_diterapkan_ke_nilai ? '1' : '0' }}"
-                                @selected((string) $nilai('jenis_ujian_cbt_id') === (string) $item->id)
-                            >
-                                {{ $item->nama }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('jenis_ujian_cbt_id') <p class="error-text">{{ $message }}</p> @enderror
-                </div>
-                <div class="field">
-                    <label for="tahun_pelajaran_id">Tahun pelajaran</label>
-                    <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="{{ $selectClass('tahun_pelajaran_id') }}" required>
-                        <option value="">Pilih tahun pelajaran</option>
-                        @foreach ($daftarTahunPelajaran as $item)
-                            <option value="{{ $item->id }}" @selected((string) $nilai('tahun_pelajaran_id') === (string) $item->id)>{{ $item->nama }}{{ $item->aktif ? ' - aktif' : '' }}</option>
-                        @endforeach
-                    </select>
-                    @error('tahun_pelajaran_id') <p class="error-text">{{ $message }}</p> @enderror
-                </div>
+                @unless ($asesmenKelas)
+                    <div class="field">
+                        <label for="jenis_ujian_cbt_id">Jenis ujian</label>
+                        <select id="jenis_ujian_cbt_id" name="jenis_ujian_cbt_id" class="{{ $selectClass('jenis_ujian_cbt_id') }}" required>
+                            <option value="">Pilih jenis ujian</option>
+                            @foreach ($daftarJenisUjianCbt as $item)
+                                <option
+                                    value="{{ $item->id }}"
+                                    data-token="{{ $item->memerlukan_token ? '1' : '0' }}"
+                                    data-nilai="{{ $item->dapat_diterapkan_ke_nilai ? '1' : '0' }}"
+                                    @selected((string) $nilai('jenis_ujian_cbt_id', $jenisAwal?->id) === (string) $item->id)
+                                >
+                                    {{ $item->nama }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('jenis_ujian_cbt_id') <p class="error-text">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="field">
+                        <label for="tahun_pelajaran_id">Tahun pelajaran</label>
+                        <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="{{ $selectClass('tahun_pelajaran_id') }}" required>
+                            <option value="">Pilih tahun pelajaran</option>
+                            @foreach ($daftarTahunPelajaran as $item)
+                                <option value="{{ $item->id }}" @selected((string) $nilai('tahun_pelajaran_id', $tahunPelajaranAwal?->id) === (string) $item->id)>{{ $item->nama }}{{ $item->aktif ? ' - aktif' : '' }}</option>
+                            @endforeach
+                        </select>
+                        @error('tahun_pelajaran_id') <p class="error-text">{{ $message }}</p> @enderror
+                    </div>
+                @endunless
                 <div class="field">
                     <label for="mata_pelajaran_id">Mata pelajaran</label>
                     <select id="mata_pelajaran_id" name="mata_pelajaran_id" class="{{ $selectClass('mata_pelajaran_id') }}" required>
@@ -308,7 +334,9 @@
         const jenis = document.getElementById('jenis_ujian_cbt_id');
         const rows = document.querySelectorAll('[data-cbt-class]');
 
-        const jenisButuhNilai = () => jenis.selectedOptions[0]?.dataset.nilai === '1';
+        const jenisButuhNilai = () => jenis.tagName === 'SELECT'
+            ? jenis.selectedOptions[0]?.dataset.nilai === '1'
+            : jenis.dataset.nilai === '1';
 
         const sinkronkan = () => {
             rows.forEach((row) => {

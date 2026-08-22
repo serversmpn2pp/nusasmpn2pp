@@ -19,6 +19,7 @@ class UjianCbt extends Model
     ];
 
     protected $fillable = [
+        'alur',
         'jenis_ujian_cbt_id',
         'tahun_pelajaran_id',
         'mata_pelajaran_id',
@@ -112,6 +113,72 @@ class UjianCbt extends Model
     public function labelStatus(): string
     {
         return self::DAFTAR_STATUS[$this->status] ?? str($this->status)->headline()->toString();
+    }
+
+    public function asesmenKelas(): bool
+    {
+        return $this->alur === 'kelas';
+    }
+
+    public function ujianTerpusat(): bool
+    {
+        return ! $this->asesmenKelas();
+    }
+
+    public function dapatDikelolaOleh(?Pengguna $pengguna): bool
+    {
+        if (! $pengguna) {
+            return false;
+        }
+
+        if ($pengguna->memilikiIzin('cbt.kelola')) {
+            return true;
+        }
+
+        if ($this->asesmenKelas()) {
+            return $pengguna->memilikiIzin('cbt.asesmen_kelola')
+                && (int) $this->dibuat_oleh_pengguna_id === (int) $pengguna->id;
+        }
+
+        if (! $pengguna->pegawai_id || ! $pengguna->memilikiIzin('cbt.soal_kelola')) {
+            return false;
+        }
+
+        return $this->jadwalUjianCbt()
+            ->whereHas('kelas', fn ($query) => $query->whereIn(
+                'kelas.id',
+                GuruMataPelajaran::query()
+                    ->where('pegawai_id', $pengguna->pegawai_id)
+                    ->where('tahun_pelajaran_id', $this->tahun_pelajaran_id)
+                    ->where('mata_pelajaran_id', $this->mata_pelajaran_id)
+                    ->where('aktif', true)
+                    ->pluck('kelas_id')
+            ))
+            ->exists();
+    }
+
+    public function dapatDiaksesOperasionalOleh(?Pengguna $pengguna): bool
+    {
+        if ($this->dapatDikelolaOleh($pengguna)) {
+            return true;
+        }
+
+        if (! $pengguna || $this->asesmenKelas()) {
+            return false;
+        }
+
+        if ($pengguna->memilikiIzin(['cbt.kelola', 'cbt.terpusat_lihat'])) {
+            return true;
+        }
+
+        return filled($pengguna->pegawai_id)
+            && $pengguna->memilikiIzin('cbt.panitia')
+            && $this->jadwalUjianCbt()->whereHas(
+                'kegiatanUjianCbt.panitiaUjianCbt',
+                fn ($query) => $query
+                    ->where('pegawai_id', $pengguna->pegawai_id)
+                    ->where('aktif', true)
+            )->exists();
     }
 
     public function labelWaktu(): string

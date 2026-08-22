@@ -215,11 +215,15 @@
             <a href="{{ route('ujian-cbt.monitoring.index', [$ujianCbt] + $queryAutoRefresh) }}" class="button {{ $autoRefresh ? 'button-danger' : 'button-muted' }}">
                 {{ $autoRefresh ? 'Matikan auto refresh' : 'Auto refresh' }}
             </a>
-            <a href="{{ $tautanPresensi }}" class="button button-muted">Presensi ruang</a>
+            @if ($ujianCbt->ujianTerpusat())
+                <a href="{{ $tautanPresensi }}" class="button button-muted">Presensi ruang</a>
+            @endif
             <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Hasil</a>
-            <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
-            <a href="{{ route('ujian-cbt.peserta.index', $ujianCbt) }}" class="button button-muted">Peserta & sesi</a>
-            <a href="{{ route('ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail paket</a>
+            @if ($ujianCbt->ujianTerpusat())
+                <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
+                <a href="{{ route('ujian-cbt.peserta.index', $ujianCbt) }}" class="button button-muted">Peserta & sesi</a>
+            @endif
+            <a href="{{ route($ujianCbt->asesmenKelas() ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail {{ $ujianCbt->asesmenKelas() ? 'asesmen' : 'paket' }}</a>
         </div>
     </div>
 
@@ -379,7 +383,7 @@
                                 <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
                                 <div class="monitor-meta">
                                     <span>NISN {{ $peserta->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
-                                    <span>No. {{ $peserta->akunPesertaCbt?->nomor_peserta ?: $peserta->nomor_peserta }}</span>
+                                    <span>NISN {{ $peserta->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
                                 </div>
                             </td>
                             <td>

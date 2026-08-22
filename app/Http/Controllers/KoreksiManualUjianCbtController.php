@@ -52,7 +52,6 @@ class KoreksiManualUjianCbtController extends Controller
                 'sesiUjianCbt',
                 'kelasUjianCbt.kelas',
                 'anggotaKelas.siswa',
-                'akunPesertaCbt',
                 'jawabanPesertaUjianCbt' => fn ($query) => $query->whereIn('soal_ujian_cbt_id', $soalManual->pluck('id')),
             ])
             ->when($kelasId, fn ($query) => $query->whereHas(
@@ -112,6 +111,7 @@ class KoreksiManualUjianCbtController extends Controller
 
             if (! $jawabanPeserta || ! $soalManual->has($jawabanPeserta->soal_ujian_cbt_id)) {
                 $errors["skor.{$jawabanId}"] = 'Jawaban tidak valid untuk koreksi manual paket ini.';
+
                 continue;
             }
 
@@ -138,6 +138,7 @@ class KoreksiManualUjianCbtController extends Controller
                         'skor' => null,
                         'benar' => null,
                     ]);
+
                     continue;
                 }
 

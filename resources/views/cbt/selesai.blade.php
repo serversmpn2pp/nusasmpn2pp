@@ -7,7 +7,6 @@
         $siswa = $peserta->anggotaKelas?->siswa;
         $ujian = $peserta->ujianCbt;
         $kelas = $peserta->kelasUjianCbt?->kelas;
-        $melaluiAkunSiswa = session('cbt_asal_akses') === 'akun_siswa';
     @endphp
 
     <header class="cbt-topbar">
@@ -48,7 +47,7 @@
             <form action="{{ route('cbt.logout') }}" method="POST">
                 @csrf
                 <button type="submit" class="button button-primary">
-                    {{ $melaluiAkunSiswa ? 'Kembali ke Ujian Saya' : 'Kembali ke login CBT' }}
+                    Kembali ke Ujian Saya
                 </button>
             </form>
         </section>

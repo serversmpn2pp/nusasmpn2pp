@@ -1,12 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Bank Soal CBT - NUSA')
+@section('title', 'Bank Soal - NUSA')
 
 @section('content')
+    @php
+        $kunciKonteks = $mataPelajaranId && $tingkat !== 'semua' ? $mataPelajaranId . '-' . $tingkat : '';
+        $parameterTambah = $kunciKonteks ? ['mata_pelajaran_id' => $mataPelajaranId, 'tingkat' => $tingkat] : [];
+    @endphp
+
     <style>
         .soal-filter-grid {
             display: grid;
-            grid-template-columns: minmax(210px, 1fr) minmax(180px, .85fr) 120px minmax(170px, .85fr) 140px auto;
+            grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr) minmax(170px, .72fr) 140px auto;
             gap: 12px;
             align-items: end;
         }
@@ -27,11 +32,12 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">CBT</p>
-            <h1 class="page-title">Bank soal CBT</h1>
+            <h1 class="page-title">Bank soal</h1>
+            <p class="page-subtitle">Soal tersimpan menurut mata pelajaran dan tingkat sehingga dapat digunakan kembali.</p>
         </div>
 
         @if ($bisaKelolaSoal)
-            <a href="{{ route('soal-cbt.create') }}" class="button button-primary">Tambah soal</a>
+            <a href="{{ route('soal-cbt.create', $parameterTambah) }}" class="button button-primary">Tambah soal</a>
         @endif
     </div>
 
@@ -54,36 +60,28 @@
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
-    <form action="{{ route('soal-cbt.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('soal-cbt.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;" data-bank-question-filter>
         <div class="soal-filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari soal</label>
-                <input id="kata_kunci" name="kata_kunci" type="search" value="{{ $kataKunci }}" placeholder="Kode, topik, materi, atau pertanyaan" class="input">
+                <input id="kata_kunci" name="kata_kunci" type="search" value="{{ $kataKunci }}" placeholder="Materi atau isi pertanyaan" class="input" data-bank-question-search>
             </div>
 
             <div class="field">
-                <label for="mata_pelajaran_id">Mata pelajaran</label>
-                <select id="mata_pelajaran_id" name="mata_pelajaran_id" class="select">
-                    <option value="">Semua mapel</option>
-                    @foreach ($daftarMataPelajaran as $item)
-                        <option value="{{ $item->id }}" @selected((string) $mataPelajaranId === (string) $item->id)>{{ $item->nama }}{{ $item->tingkat ? ' - kelas ' . $item->tingkat : '' }}</option>
+                <label for="konteks_bank_soal">Bank soal</label>
+                <select id="konteks_bank_soal" class="select" data-bank-question-context>
+                    <option value="">Semua mata pelajaran dan tingkat</option>
+                    @foreach ($daftarKonteks as $konteks)
+                        <option value="{{ $konteks['kunci'] }}" data-mata-pelajaran-id="{{ $konteks['mata_pelajaran_id'] }}" data-tingkat="{{ $konteks['tingkat'] }}" @selected($kunciKonteks === $konteks['kunci'])>{{ $konteks['label'] }}</option>
                     @endforeach
                 </select>
-            </div>
-
-            <div class="field">
-                <label for="tingkat">Tingkat</label>
-                <select id="tingkat" name="tingkat" class="select">
-                    <option value="semua" @selected($tingkat === 'semua')>Semua</option>
-                    @foreach ([7, 8, 9] as $item)
-                        <option value="{{ $item }}" @selected((string) $tingkat === (string) $item)>Kelas {{ $item }}</option>
-                    @endforeach
-                </select>
+                <input type="hidden" name="mata_pelajaran_id" value="{{ $mataPelajaranId }}" data-bank-question-mapel>
+                <input type="hidden" name="tingkat" value="{{ $tingkat }}" data-bank-question-level>
             </div>
 
             <div class="field">
                 <label for="jenis_soal">Jenis soal</label>
-                <select id="jenis_soal" name="jenis_soal" class="select">
+                <select id="jenis_soal" name="jenis_soal" class="select" data-bank-question-auto>
                     <option value="semua" @selected($jenisSoal === 'semua')>Semua</option>
                     @foreach ($daftarJenisSoal as $kode => $label)
                         <option value="{{ $kode }}" @selected($jenisSoal === $kode)>{{ $label }}</option>
@@ -93,7 +91,7 @@
 
             <div class="field">
                 <label for="status">Status</label>
-                <select id="status" name="status" class="select">
+                <select id="status" name="status" class="select" data-bank-question-auto>
                     <option value="semua">Semua</option>
                     @foreach ($daftarStatus as $kode => $label)
                         <option value="{{ $kode }}" @selected($status === $kode)>{{ $label }}</option>
@@ -102,7 +100,6 @@
             </div>
 
             <div class="actions">
-                <button type="submit" class="button button-dark">Terapkan</button>
                 <a href="{{ route('soal-cbt.index') }}" class="button button-muted">Reset</a>
             </div>
         </div>
@@ -208,4 +205,31 @@
             </div>
         </nav>
     @endif
+
+    <script>
+        (() => {
+            const form = document.querySelector('[data-bank-question-filter]');
+            const context = document.querySelector('[data-bank-question-context]');
+            const mapel = document.querySelector('[data-bank-question-mapel]');
+            const level = document.querySelector('[data-bank-question-level]');
+            const search = document.querySelector('[data-bank-question-search]');
+            let timer;
+
+            context?.addEventListener('change', () => {
+                const option = context.selectedOptions[0];
+                mapel.value = option?.dataset.mataPelajaranId || '';
+                level.value = option?.dataset.tingkat || 'semua';
+                form.submit();
+            });
+
+            document.querySelectorAll('[data-bank-question-auto]').forEach((input) => {
+                input.addEventListener('change', () => form.submit());
+            });
+
+            search?.addEventListener('input', () => {
+                window.clearTimeout(timer);
+                timer = window.setTimeout(() => form.submit(), 450);
+            });
+        })();
+    </script>
 @endsection

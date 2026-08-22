@@ -22,6 +22,7 @@ class RuangUjianCbt extends Model
         'ujian_cbt_id',
         'sesi_ujian_cbt_id',
         'jadwal_ujian_cbt_id',
+        'ruang_kegiatan_ujian_cbt_id',
         'kode',
         'nama',
         'lokasi',
@@ -75,6 +76,11 @@ class RuangUjianCbt extends Model
     public function jadwalUjianCbt(): BelongsTo
     {
         return $this->belongsTo(JadwalUjianCbt::class);
+    }
+
+    public function ruangKegiatanUjianCbt(): BelongsTo
+    {
+        return $this->belongsTo(RuangKegiatanUjianCbt::class);
     }
 
     public function pengawasUtama(): BelongsTo

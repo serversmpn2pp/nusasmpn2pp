@@ -4,6 +4,9 @@
 
 @section('content')
     @php
+        $asesmenKelas = $ujianCbt->asesmenKelas();
+        $tautanDetail = route($asesmenKelas ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.show', $ujianCbt);
+        $tautanDaftar = route($asesmenKelas ? 'asesmen-kelas-cbt.index' : 'ujian-cbt.index');
         $jumlahDipilih = $soalDipilih->count();
         $totalBobot = $soalDipilih->sum(fn ($item) => (float) $item->bobot);
     @endphp
@@ -57,13 +60,13 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">CBT</p>
-            <h1 class="page-title">Kelola soal paket CBT</h1>
+            <p class="eyebrow">{{ $asesmenKelas ? 'Asesmen Kelas' : 'CBT' }}</p>
+            <h1 class="page-title">{{ $asesmenKelas ? 'Pilih soal asesmen' : 'Kelola soal paket CBT' }}</h1>
         </div>
 
         <div class="actions">
-            <a href="{{ route('ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail paket</a>
-            <a href="{{ route('ujian-cbt.index') }}" class="button button-muted">Daftar paket</a>
+            <a href="{{ $tautanDetail }}" class="button button-muted">Detail {{ $asesmenKelas ? 'asesmen' : 'paket' }}</a>
+            <a href="{{ $tautanDaftar }}" class="button button-muted">Daftar {{ $asesmenKelas ? 'asesmen' : 'paket' }}</a>
         </div>
     </div>
 
@@ -228,7 +231,7 @@
         </section>
 
         <div class="form-actions" style="margin-top: 20px;">
-            <a href="{{ route('ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Batal</a>
+            <a href="{{ $tautanDetail }}" class="button button-muted">Batal</a>
             <button type="submit" class="button button-primary">Simpan soal paket</button>
         </div>
     </form>

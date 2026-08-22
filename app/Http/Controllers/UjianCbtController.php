@@ -32,6 +32,7 @@ class UjianCbtController extends Controller
         $status = $data['status'] ?? 'semua';
 
         $ujianCbt = UjianCbt::query()
+            ->where('alur', 'terpusat')
             ->with(['jenisUjianCbt', 'tahunPelajaran', 'mataPelajaran'])
             ->withCount(['kelasUjianCbt', 'soalUjianCbt', 'sesiUjianCbt', 'pesertaUjianCbt'])
             ->when($tahunPelajaranId, fn ($query, $id) => $query->where('tahun_pelajaran_id', $id))
@@ -61,16 +62,24 @@ class UjianCbtController extends Controller
             'daftarStatus' => UjianCbt::DAFTAR_STATUS,
             'daftarTahunPelajaran' => $this->daftarTahunPelajaran(),
             'daftarJenisUjianCbt' => $this->daftarJenisUjianCbt(),
-            'jumlahUjian' => UjianCbt::count(),
-            'jumlahDraft' => UjianCbt::where('status', 'draft')->count(),
-            'jumlahTerjadwal' => UjianCbt::where('status', 'terjadwal')->count(),
+            'jumlahUjian' => UjianCbt::where('alur', 'terpusat')->count(),
+            'jumlahDraft' => UjianCbt::where('alur', 'terpusat')->where('status', 'draft')->count(),
+            'jumlahTerjadwal' => UjianCbt::where('alur', 'terpusat')->where('status', 'terjadwal')->count(),
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $alur = $request->string('alur')->lower()->value();
+        $jenisAwal = $alur === 'kelas'
+            ? JenisUjianCbt::query()->where('kode', 'ASESMEN_KELAS')->first()
+            : null;
+
         return view('ujian-cbt.create', $this->dataForm([
             'kodeSaran' => $this->buatKodeSaran(),
+            'jenisAwal' => $jenisAwal,
+            'tahunPelajaranAwal' => TahunPelajaran::query()->where('aktif', true)->first(),
+            'alur' => $alur,
         ]));
     }
 
@@ -97,6 +106,8 @@ class UjianCbtController extends Controller
 
     public function show(UjianCbt $ujianCbt)
     {
+        abort_unless($ujianCbt->ujianTerpusat(), 404);
+
         $ujianCbt->load([
             'jenisUjianCbt',
             'tahunPelajaran',
@@ -114,6 +125,8 @@ class UjianCbtController extends Controller
 
     public function edit(UjianCbt $ujianCbt)
     {
+        abort_unless($ujianCbt->ujianTerpusat(), 404);
+
         $ujianCbt->load('kelasUjianCbt');
 
         return view('ujian-cbt.edit', $this->dataForm([
@@ -124,6 +137,8 @@ class UjianCbtController extends Controller
 
     public function update(Request $request, UjianCbt $ujianCbt)
     {
+        abort_unless($ujianCbt->ujianTerpusat(), 404);
+
         $data = $this->rapikanData($request, $request->validate($this->aturanValidasi($ujianCbt)));
         $kelasPeserta = $this->pastikanKelasPesertaCocok($data);
         $data = $this->lengkapiTokenJikaPerlu($data);
@@ -140,6 +155,8 @@ class UjianCbtController extends Controller
 
     public function destroy(UjianCbt $ujianCbt)
     {
+        abort_unless($ujianCbt->ujianTerpusat(), 404);
+
         $ujianCbt->update(['status' => 'nonaktif']);
 
         return redirect()
@@ -272,7 +289,7 @@ class UjianCbtController extends Controller
             'status',
             'petunjuk',
             'keterangan',
-        ])->all();
+        ])->prepend('terpusat', 'alur')->all();
     }
 
     private function pastikanKelasPesertaCocok(array $data): array

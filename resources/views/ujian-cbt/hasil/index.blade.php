@@ -91,7 +91,7 @@
         </div>
 
         <div class="actions">
-            @izin('cbt.kelola')
+            @if ($ujianCbt->dapatDikelolaOleh(auth()->user()))
                 <form action="{{ route('ujian-cbt.koreksi-otomatis.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Jalankan koreksi otomatis untuk jawaban objektif pada paket ini?')">
                     @csrf
                     <button type="submit" class="button button-dark">Koreksi otomatis</button>
@@ -101,11 +101,12 @@
                     @csrf
                     <button type="submit" class="button button-primary">Terapkan nilai</button>
                 </form>
-            @endizin
-            <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
+            @endif
+            @if ($ujianCbt->ujianTerpusat())
+                <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
+            @endif
             <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Monitoring</a>
-            <a href="{{ route('ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail paket</a>
-            <a href="{{ route('ujian-cbt.index') }}" class="button button-muted">Daftar paket</a>
+            <a href="{{ route($ujianCbt->asesmenKelas() ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail {{ $ujianCbt->asesmenKelas() ? 'asesmen' : 'paket' }}</a>
         </div>
     </div>
 
@@ -225,8 +226,7 @@
                             <td>
                                 <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
                                 <div class="hasil-meta">
-                                    <span>No. {{ $peserta->akunPesertaCbt?->nomor_peserta ?: $peserta->nomor_peserta }}</span>
-                                    <span>Username: {{ $peserta->akunPesertaCbt?->username ?: $peserta->username }}</span>
+                                    <span>NISN {{ $peserta->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
                                 </div>
                             </td>
                             <td>

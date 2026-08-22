@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Pegawai;
 use App\Models\Pengguna;
+use App\Models\Peran;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -35,6 +37,9 @@ class SidebarNavigasiTest extends TestCase
                 'Jadwal Pelajaran',
             ])
             ->assertSee('Penempatan Siswa')
+            ->assertSee('Pusat CBT')
+            ->assertDontSee('Jenis Ujian CBT')
+            ->assertDontSee('Status Panitia CBT')
             ->assertSee('Pengaturan Presensi Siswa')
             ->assertSee('Peminjaman Barang')
             ->assertSee('Pengajuan Barang')
@@ -59,5 +64,30 @@ class SidebarNavigasiTest extends TestCase
             '/<details\s+(?=[^>]*class="sidebar-section\s+has-active\s*")(?=[^>]*data-sidebar-section-id="data-sekolah")(?=[^>]*\sopen(?:\s|>))[^>]*>/s',
             $response->getContent(),
         );
+    }
+
+    public function test_sidebar_guru_mapel_menampilkan_pusat_cbt(): void
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Guru CBT',
+            'nip' => '198801012020011001',
+            'aktif' => true,
+        ]);
+        $guru = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => 'Guru CBT',
+            'username' => '198801012020011001',
+            'kata_sandi' => 'secret',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+        $guru->daftarPeran()->sync([Peran::where('kode', 'guru_mapel')->value('id')]);
+
+        $this->actingAs($guru)
+            ->get(route('beranda'))
+            ->assertOk()
+            ->assertSee('Ujian &amp; Asesmen', false)
+            ->assertSee('Pusat CBT');
     }
 }

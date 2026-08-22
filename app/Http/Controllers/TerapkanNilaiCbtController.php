@@ -23,7 +23,9 @@ class TerapkanNilaiCbtController extends Controller
 
         if ($soalUjian->isEmpty() || $bobotTotal <= 0) {
             throw ValidationException::withMessages([
-                'nilai' => 'Nilai belum dapat diterapkan karena paket CBT belum memiliki soal berbobot.',
+                'nilai' => $ujianCbt->asesmenKelas()
+                    ? 'Nilai belum dapat dimasukkan karena asesmen belum memiliki soal berbobot.'
+                    : 'Nilai belum dapat diterapkan karena paket CBT belum memiliki soal berbobot.',
             ]);
         }
 
@@ -144,7 +146,9 @@ class TerapkanNilaiCbtController extends Controller
                 $item['semester'],
             ));
 
-        $pesan = "{$ringkasan['diterapkan']} nilai CBT berhasil diterapkan ke nilai siswa.";
+        $pesan = $ujianCbt->asesmenKelas()
+            ? "{$ringkasan['diterapkan']} hasil asesmen berhasil dimasukkan ke nilai siswa."
+            : "{$ringkasan['diterapkan']} nilai CBT berhasil diterapkan ke nilai siswa.";
 
         if ($ringkasan['belum_selesai']) {
             $pesan .= " {$ringkasan['belum_selesai']} peserta dilewati karena belum selesai.";

@@ -44,11 +44,7 @@ class PesertaUjianCbt extends Model
         'ruang_ujian_cbt_id',
         'nomor_meja',
         'anggota_kelas_id',
-        'akun_peserta_cbt_id',
         'nomor_peserta',
-        'username',
-        'kata_sandi',
-        'token_akses',
         'status',
         'status_kehadiran_ujian',
         'absen_ujian_pada',
@@ -99,11 +95,6 @@ class PesertaUjianCbt extends Model
     public function anggotaKelas(): BelongsTo
     {
         return $this->belongsTo(AnggotaKelas::class);
-    }
-
-    public function akunPesertaCbt(): BelongsTo
-    {
-        return $this->belongsTo(AkunPesertaCbt::class);
     }
 
     public function dibuatOleh(): BelongsTo

@@ -11,7 +11,7 @@ class KegiatanUjianCbt extends Model
     protected $table = 'kegiatan_ujian_cbt';
 
     public const DAFTAR_STATUS = [
-        'draft' => 'Draft',
+        'draft' => 'Persiapan',
         'aktif' => 'Aktif',
         'selesai' => 'Selesai',
         'nonaktif' => 'Nonaktif',
@@ -53,6 +53,44 @@ class KegiatanUjianCbt extends Model
     public function jadwalUjianCbt(): HasMany
     {
         return $this->hasMany(JadwalUjianCbt::class);
+    }
+
+    public function panitiaUjianCbt(): HasMany
+    {
+        return $this->hasMany(PanitiaUjianCbt::class);
+    }
+
+    public function sesiKegiatanUjianCbt(): HasMany
+    {
+        return $this->hasMany(SesiKegiatanUjianCbt::class);
+    }
+
+    public function ruangKegiatanUjianCbt(): HasMany
+    {
+        return $this->hasMany(RuangKegiatanUjianCbt::class);
+    }
+
+    public function kelompokPesertaKegiatanUjianCbt(): HasMany
+    {
+        return $this->hasMany(KelompokPesertaKegiatanUjianCbt::class);
+    }
+
+    public function dapatDiaksesOleh(?Pengguna $pengguna): bool
+    {
+        if (! $pengguna) {
+            return false;
+        }
+
+        if ($pengguna->memilikiIzin(['cbt.kelola', 'cbt.terpusat_lihat'])) {
+            return true;
+        }
+
+        return filled($pengguna->pegawai_id)
+            && $pengguna->memilikiIzin('cbt.panitia')
+            && $this->panitiaUjianCbt()
+                ->where('pegawai_id', $pengguna->pegawai_id)
+                ->where('aktif', true)
+                ->exists();
     }
 
     public function labelStatus(): string

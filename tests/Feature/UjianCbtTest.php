@@ -210,171 +210,6 @@ class UjianCbtTest extends TestCase
         $this->assertSame(2, $ujianCbt->soalUjianCbt()->count());
     }
 
-    public function test_administrator_dapat_mengelola_jadwal_ujian_cbt_terpusat(): void
-    {
-        [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
-        $kelasB = Kelas::create([
-            'tahun_pelajaran_id' => $tahunPelajaran->id,
-            'nama' => 'VIII.B',
-            'tingkat' => 8,
-            'kapasitas' => 32,
-            'aktif' => true,
-        ]);
-        $jenisUjian = JenisUjianCbt::where('kode', 'STS')->firstOrFail();
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
-
-        $ujianCbt = UjianCbt::create([
-            ...collect($this->dataUjian($jenisUjian, $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
-                ->except('kelas_peserta')
-                ->all(),
-            'status' => 'terjadwal',
-            'dibuat_oleh_pengguna_id' => $administrator->id,
-        ]);
-        KelasUjianCbt::create([
-            'ujian_cbt_id' => $ujianCbt->id,
-            'kelas_id' => $kelas->id,
-            'komponen_nilai_id' => $komponenNilai->id,
-        ]);
-        KelasUjianCbt::create([
-            'ujian_cbt_id' => $ujianCbt->id,
-            'kelas_id' => $kelasB->id,
-            'komponen_nilai_id' => null,
-        ]);
-
-        $this->actingAs($administrator)
-            ->get(route('jadwal-ujian-cbt.index'))
-            ->assertOk()
-            ->assertSee('Jadwal ujian terpusat')
-            ->assertSee('Buat kegiatan ujian');
-
-        $this->actingAs($administrator)
-            ->post(route('jadwal-ujian-cbt.kegiatan.store'), [
-                'jenis_ujian_cbt_id' => $jenisUjian->id,
-                'tahun_pelajaran_id' => $tahunPelajaran->id,
-                'kode' => 'SAS-2026',
-                'nama' => 'Sumatif Akhir Semester',
-                'semester' => 'ganjil',
-                'tanggal_mulai' => '2026-12-01',
-                'tanggal_selesai' => '2026-12-10',
-                'status' => 'aktif',
-                'keterangan' => 'Jadwal ujian semester ganjil.',
-            ])
-            ->assertRedirect();
-
-        $kegiatan = KegiatanUjianCbt::where('kode', 'SAS-2026')->firstOrFail();
-        $this->assertSame('Sumatif Akhir Semester', $kegiatan->nama);
-
-        $this->actingAs($administrator)
-            ->post(route('jadwal-ujian-cbt.jadwal.store'), [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-                'ujian_cbt_id' => $ujianCbt->id,
-                'mata_pelajaran_id' => $mataPelajaran->id,
-                'tanggal' => '2026-12-01',
-                'waktu_mulai' => '07:30',
-                'waktu_selesai' => '09:00',
-                'label_sesi' => 'Jam 1',
-                'tingkat' => 8,
-                'urutan' => 1,
-                'status' => 'siap',
-                'kelas_peserta' => [$kelas->id, $kelasB->id],
-                'keterangan' => 'Sesi pertama.',
-            ])
-            ->assertRedirect(route('jadwal-ujian-cbt.index', [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-            ]));
-
-        $jadwal = JadwalUjianCbt::where('kegiatan_ujian_cbt_id', $kegiatan->id)->firstOrFail();
-        $this->assertSame($ujianCbt->id, $jadwal->ujian_cbt_id);
-        $this->assertSame('siap', $jadwal->status);
-        $this->assertSame(2, $jadwal->kelas()->count());
-
-        $this->actingAs($administrator)
-            ->put(route('jadwal-ujian-cbt.jadwal.kunci', $jadwal))
-            ->assertRedirect(route('jadwal-ujian-cbt.index', [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-            ]));
-
-        $jadwal->refresh();
-        $this->assertNotNull($jadwal->dikunci_pada);
-        $this->assertSame($administrator->id, $jadwal->dikunci_oleh_pengguna_id);
-
-        $this->actingAs($administrator)
-            ->from(route('jadwal-ujian-cbt.index', ['kegiatan_ujian_cbt_id' => $kegiatan->id]))
-            ->put(route('jadwal-ujian-cbt.jadwal.update', $jadwal), [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-                'ujian_cbt_id' => $ujianCbt->id,
-                'mata_pelajaran_id' => $mataPelajaran->id,
-                'tanggal' => '2026-12-01',
-                'waktu_mulai' => '08:00',
-                'waktu_selesai' => '09:30',
-                'label_sesi' => 'Jam terkunci',
-                'tingkat' => 8,
-                'urutan' => 1,
-                'status' => 'siap',
-                'kelas_peserta' => [$kelas->id, $kelasB->id],
-            ])
-            ->assertRedirect(route('jadwal-ujian-cbt.index', ['kegiatan_ujian_cbt_id' => $kegiatan->id]))
-            ->assertSessionHasErrors('jadwal');
-
-        $this->actingAs($administrator)
-            ->put(route('jadwal-ujian-cbt.jadwal.buka-kunci', $jadwal))
-            ->assertRedirect(route('jadwal-ujian-cbt.index', [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-            ]));
-
-        $jadwal->refresh();
-        $this->assertNull($jadwal->dikunci_pada);
-
-        $this->actingAs($administrator)
-            ->get(route('jadwal-ujian-cbt.index', ['kegiatan_ujian_cbt_id' => $kegiatan->id]))
-            ->assertOk()
-            ->assertSee('Sumatif Akhir Semester')
-            ->assertSee('Jam 1')
-            ->assertSee('VIII.A')
-            ->assertSee('VIII.B')
-            ->assertSee($ujianCbt->kode);
-
-        $this->actingAs($administrator)
-            ->put(route('jadwal-ujian-cbt.jadwal.update', $jadwal), [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-                'ujian_cbt_id' => $ujianCbt->id,
-                'mata_pelajaran_id' => $mataPelajaran->id,
-                'tanggal' => '2026-12-02',
-                'waktu_mulai' => '09:30',
-                'waktu_selesai' => '10:30',
-                'label_sesi' => 'Jam 2',
-                'tingkat' => 8,
-                'urutan' => 2,
-                'status' => 'selesai',
-                'kelas_peserta' => [$kelas->id],
-                'keterangan' => 'Sesi kedua.',
-            ])
-            ->assertRedirect(route('jadwal-ujian-cbt.index', [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-            ]));
-
-        $jadwal->refresh();
-        $this->assertSame('selesai', $jadwal->status);
-        $this->assertSame('Jam 2', $jadwal->label_sesi);
-        $this->assertSame(1, $jadwal->kelas()->count());
-
-        $this->actingAs($administrator)
-            ->delete(route('jadwal-ujian-cbt.jadwal.destroy', $jadwal))
-            ->assertRedirect(route('jadwal-ujian-cbt.index', [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-            ]));
-
-        $this->assertDatabaseMissing('jadwal_ujian_cbt', [
-            'id' => $jadwal->id,
-        ]);
-
-        $this->actingAs($administrator)
-            ->delete(route('jadwal-ujian-cbt.kegiatan.destroy', $kegiatan))
-            ->assertRedirect(route('jadwal-ujian-cbt.index'));
-
-        $this->assertSame('nonaktif', $kegiatan->fresh()->status);
-    }
-
     public function test_administrator_dapat_membuat_sesi_dan_generate_peserta_cbt(): void
     {
         [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
@@ -419,46 +254,23 @@ class UjianCbtTest extends TestCase
             ->assertRedirect(route('ujian-cbt.peserta.index', $ujianCbt));
 
         $this->assertDatabaseCount('peserta_ujian_cbt', 3);
-        $this->assertDatabaseCount('akun_peserta_cbt', 3);
         $this->assertSame(3, $kelasUjianCbt->pesertaUjianCbt()->count());
 
         $peserta = PesertaUjianCbt::query()
-            ->with(['akunPesertaCbt', 'anggotaKelas.siswa'])
+            ->with('anggotaKelas.siswa')
             ->where('ujian_cbt_id', $ujianCbt->id)
             ->orderBy('id')
             ->firstOrFail();
-        $akunPeserta = $peserta->akunPesertaCbt;
 
         $this->assertSame($sesi->id, $peserta->sesi_ujian_cbt_id);
-        $this->assertNotNull($akunPeserta);
-        $this->assertNotEmpty($akunPeserta->username);
-        $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $akunPeserta->kata_sandi);
+        $this->assertNotEmpty($peserta->nomor_peserta);
 
         $this->actingAs($administrator)
             ->get(route('ujian-cbt.peserta.index', $ujianCbt))
             ->assertOk()
             ->assertSee($peserta->anggotaKelas->siswa->nama_lengkap)
-            ->assertSee($akunPeserta->username);
-
-        $usernameLama = 'CBT20260604001-VIIA-001';
-        $peserta->forceFill([
-            'akun_peserta_cbt_id' => null,
-            'username' => $usernameLama,
-        ])->save();
-
-        $this->actingAs($administrator)
-            ->get(route('ujian-cbt.kartu-peserta.index', $ujianCbt))
-            ->assertOk()
-            ->assertSee('Kartu peserta ujian')
-            ->assertSee($peserta->anggotaKelas->siswa->nama_lengkap)
-            ->assertSee($akunPeserta->username)
-            ->assertSee($akunPeserta->kata_sandi)
-            ->assertSee('Token ujian diberikan oleh pengawas/proktor.')
-            ->assertDontSee('Mapel:')
-            ->assertDontSee('Token paket:')
-            ->assertDontSee($usernameLama);
-
-        $this->assertSame($akunPeserta->id, $peserta->fresh()->akun_peserta_cbt_id);
+            ->assertSee($peserta->anggotaKelas->siswa->nisn)
+            ->assertDontSee('Password:');
 
         $this->actingAs($administrator)
             ->put(route('ujian-cbt.peserta.update', $ujianCbt), [
@@ -879,9 +691,6 @@ class UjianCbtTest extends TestCase
                     'nomor_meja' => $index < 2 ? $urutan : 1,
                     'anggota_kelas_id' => $anggotaKelas->id,
                     'nomor_peserta' => 'PRESENSI-'.str_pad((string) $urutan, 3, '0', STR_PAD_LEFT),
-                    'username' => 'presensi-'.$urutan,
-                    'kata_sandi' => '12345678',
-                    'token_akses' => 'token-presensi-'.$urutan,
                     'status' => 'aktif',
                     'status_kehadiran_ujian' => 'belum_absen',
                     'dibuat_oleh_pengguna_id' => $administrator->id,
@@ -956,7 +765,7 @@ class UjianCbtTest extends TestCase
         }
     }
 
-    public function test_administrator_dapat_melihat_status_kelengkapan_panitia_cbt(): void
+    public function test_administrator_dapat_melihat_pusat_cbt_yang_meringkas_dua_alur(): void
     {
         [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
         $jenisUjian = JenisUjianCbt::where('kode', 'STS')->firstOrFail();
@@ -1048,21 +857,15 @@ class UjianCbtTest extends TestCase
             });
 
         $this->actingAs($administrator)
-            ->get(route('status-kelengkapan-panitia-cbt.index', [
-                'kegiatan_ujian_cbt_id' => $kegiatan->id,
-            ]))
+            ->get(route('pusat-cbt.index'))
             ->assertOk()
-            ->assertSee('Status kelengkapan panitia')
-            ->assertSee('Status Panitia CBT')
-            ->assertSee('Siap panitia')
-            ->assertSee('100% lengkap')
-            ->assertSee('Paket CBT terhubung')
-            ->assertSee('Nomor meja lengkap')
-            ->assertSee('Ruang dikunci')
-            ->assertSee('Bukti daftar hadir dan BA');
+            ->assertSee('Pusat CBT')
+            ->assertSee('Asesmen Kelas')
+            ->assertSee('Ujian Terpusat')
+            ->assertSee('tidak ada lagi akun atau kartu peserta CBT terpisah');
     }
 
-    public function test_peserta_dapat_login_dan_mengerjakan_ujian_cbt(): void
+    public function test_siswa_dapat_masuk_dari_akun_nusa_dan_mengerjakan_ujian_cbt(): void
     {
         Carbon::setTestNow('2026-08-15 08:30:00');
 
@@ -1114,18 +917,29 @@ class UjianCbtTest extends TestCase
                 ->assertRedirect(route('ujian-cbt.peserta.index', $ujianCbt));
 
             $peserta = PesertaUjianCbt::query()
-                ->with(['akunPesertaCbt', 'anggotaKelas.siswa'])
+                ->with('anggotaKelas.siswa')
                 ->where('ujian_cbt_id', $ujianCbt->id)
                 ->where('kelas_ujian_cbt_id', $kelasUjianCbt->id)
                 ->firstOrFail();
 
             $this->assertSame($sesi->id, $peserta->sesi_ujian_cbt_id);
 
-            $this->post(route('cbt.login.store'), [
-                'username' => $peserta->akunPesertaCbt->username,
-                'kata_sandi' => $peserta->akunPesertaCbt->kata_sandi,
-                'token' => 'TOKEN1',
-            ])->assertRedirect(route('cbt.ujian.show'));
+            $akunSiswa = Pengguna::create([
+                'siswa_id' => $peserta->anggotaKelas->siswa_id,
+                'nama' => $peserta->anggotaKelas->siswa->nama_lengkap,
+                'username' => $peserta->anggotaKelas->siswa->nisn,
+                'kata_sandi' => 'rahasia-siswa',
+                'peran' => 'siswa',
+                'aktif' => true,
+                'akun_sistem' => false,
+                'wajib_ganti_kata_sandi' => false,
+            ]);
+
+            $this->actingAs($akunSiswa)
+                ->post(route('ujian-saya.masuk', $peserta), [
+                    'token' => 'TOKEN1',
+                ])
+                ->assertRedirect(route('cbt.ujian.show'));
 
             $this->get(route('cbt.ujian.show'))
                 ->assertOk()

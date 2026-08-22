@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class JadwalUjianCbt extends Model
 {
@@ -19,6 +20,7 @@ class JadwalUjianCbt extends Model
 
     protected $fillable = [
         'kegiatan_ujian_cbt_id',
+        'sesi_kegiatan_ujian_cbt_id',
         'ujian_cbt_id',
         'mata_pelajaran_id',
         'tanggal',
@@ -45,6 +47,11 @@ class JadwalUjianCbt extends Model
         return $this->belongsTo(KegiatanUjianCbt::class);
     }
 
+    public function sesiKegiatanUjianCbt(): BelongsTo
+    {
+        return $this->belongsTo(SesiKegiatanUjianCbt::class);
+    }
+
     public function ujianCbt(): BelongsTo
     {
         return $this->belongsTo(UjianCbt::class);
@@ -66,6 +73,11 @@ class JadwalUjianCbt extends Model
             ->withTimestamps();
     }
 
+    public function pengawasRuangUjianTerpusat(): HasMany
+    {
+        return $this->hasMany(PengawasRuangUjianTerpusat::class);
+    }
+
     public function terkunci(): bool
     {
         return filled($this->dikunci_pada);
@@ -78,6 +90,6 @@ class JadwalUjianCbt extends Model
 
     public function labelWaktu(): string
     {
-        return substr((string) $this->waktu_mulai, 0, 5) . ' - ' . substr((string) $this->waktu_selesai, 0, 5);
+        return substr((string) $this->waktu_mulai, 0, 5).' - '.substr((string) $this->waktu_selesai, 0, 5);
     }
 }

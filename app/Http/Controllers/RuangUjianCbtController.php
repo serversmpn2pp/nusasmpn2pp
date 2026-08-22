@@ -82,7 +82,6 @@ class RuangUjianCbtController extends Controller
                 'ruangUjianCbt',
                 'kelasUjianCbt.kelas',
                 'anggotaKelas.siswa',
-                'akunPesertaCbt',
             ])
             ->when($kelasId, fn ($query) => $query->whereHas(
                 'kelasUjianCbt',
@@ -165,7 +164,6 @@ class RuangUjianCbtController extends Controller
                 'pesertaUjianCbt.sesiUjianCbt',
                 'pesertaUjianCbt.kelasUjianCbt.kelas',
                 'pesertaUjianCbt.anggotaKelas.siswa',
-                'pesertaUjianCbt.akunPesertaCbt',
             ])
             ->when($sesiUjianCbtId, fn ($query) => $query->where('sesi_ujian_cbt_id', $sesiUjianCbtId))
             ->when($jadwalUjianCbtId, fn ($query) => $query->where('jadwal_ujian_cbt_id', $jadwalUjianCbtId))
@@ -246,7 +244,7 @@ class RuangUjianCbtController extends Controller
                     'sesi_ujian_cbt_id' => $data['sesi_ujian_cbt_id'] ?? null,
                     'jadwal_ujian_cbt_id' => $data['jadwal_ujian_cbt_id'] ?? null,
                     'kode' => $kode,
-                    'nama' => 'Ruang ' . str_pad((string) $i, 2, '0', STR_PAD_LEFT),
+                    'nama' => 'Ruang '.str_pad((string) $i, 2, '0', STR_PAD_LEFT),
                     'lokasi' => filled($data['lokasi'] ?? null) ? trim($data['lokasi']) : null,
                     'kapasitas' => (int) $data['kapasitas'],
                     'status' => 'draft',
@@ -793,7 +791,7 @@ class RuangUjianCbtController extends Controller
         string $prefix,
         int $urutan,
     ): string {
-        $basis = mb_strtoupper($prefix) . '-' . str_pad((string) $urutan, 2, '0', STR_PAD_LEFT);
+        $basis = mb_strtoupper($prefix).'-'.str_pad((string) $urutan, 2, '0', STR_PAD_LEFT);
         $kode = $basis;
         $suffix = 2;
 
@@ -810,7 +808,7 @@ class RuangUjianCbtController extends Controller
                 fn ($query) => $query->whereNull('jadwal_ujian_cbt_id'),
             )
             ->exists()) {
-            $kode = substr($basis, 0, 34) . '-' . $suffix;
+            $kode = substr($basis, 0, 34).'-'.$suffix;
             $suffix++;
         }
 
@@ -930,8 +928,7 @@ class RuangUjianCbtController extends Controller
         int|string|null $sesiId = null,
         ?int $ruangId = null,
         int|string|null $jadwalId = null,
-    ): array
-    {
+    ): array {
         return array_filter([
             $ujianCbt,
             'sesi_ujian_cbt_id' => $sesiId,

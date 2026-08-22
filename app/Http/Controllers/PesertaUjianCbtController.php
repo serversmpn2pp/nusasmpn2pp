@@ -7,10 +7,8 @@ use App\Models\KelasUjianCbt;
 use App\Models\PesertaUjianCbt;
 use App\Models\SesiUjianCbt;
 use App\Models\UjianCbt;
-use App\Services\Cbt\AkunPesertaCbtService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -52,7 +50,6 @@ class PesertaUjianCbtController extends Controller
                 'sesiUjianCbt',
                 'kelasUjianCbt.kelas',
                 'anggotaKelas.siswa',
-                'akunPesertaCbt',
             ])
             ->when($kelasId, fn ($query) => $query->whereHas(
                 'kelasUjianCbt',
@@ -88,7 +85,7 @@ class PesertaUjianCbtController extends Controller
         ]);
     }
 
-    public function storeMassal(Request $request, UjianCbt $ujianCbt, AkunPesertaCbtService $akunPesertaCbtService)
+    public function storeMassal(Request $request, UjianCbt $ujianCbt)
     {
         $this->pastikanDapatGenerate($ujianCbt);
 
@@ -102,7 +99,7 @@ class PesertaUjianCbtController extends Controller
         ]);
         $jumlahBaru = 0;
 
-        DB::transaction(function () use ($request, $ujianCbt, $kelasPeserta, $sesiUjianCbt, $pemakaianSesi, $akunPesertaCbtService, &$jumlahBaru) {
+        DB::transaction(function () use ($request, $ujianCbt, $kelasPeserta, $sesiUjianCbt, $pemakaianSesi, &$jumlahBaru) {
             foreach ($kelasPeserta as $kelasUjianCbt) {
                 $anggotaKelas = AnggotaKelas::query()
                     ->with('siswa')
@@ -126,7 +123,6 @@ class PesertaUjianCbtController extends Controller
                     }
 
                     $sesiTerpilih = $this->pilihSesi($sesiUjianCbt, $pemakaianSesi);
-                    $akunPeserta = $akunPesertaCbtService->ambilAtauBuat($ujianCbt, $kelasUjianCbt, $anggota, $index + 1);
                     $nomorPeserta = $this->buatNomorPeserta($ujianCbt, $kelasUjianCbt, $anggota, $index + 1);
 
                     PesertaUjianCbt::create([
@@ -134,11 +130,7 @@ class PesertaUjianCbtController extends Controller
                         'sesi_ujian_cbt_id' => $sesiTerpilih?->id,
                         'kelas_ujian_cbt_id' => $kelasUjianCbt->id,
                         'anggota_kelas_id' => $anggota->id,
-                        'akun_peserta_cbt_id' => $akunPeserta->id,
                         'nomor_peserta' => $nomorPeserta,
-                        'username' => $this->buatUsernamePaket($akunPeserta->username, $ujianCbt),
-                        'kata_sandi' => $akunPeserta->kata_sandi,
-                        'token_akses' => $this->buatTokenAkses(),
                         'status' => 'aktif',
                         'menit_tersisa' => $ujianCbt->durasi_menit,
                         'dibuat_oleh_pengguna_id' => $request->user()?->id,
@@ -155,8 +147,8 @@ class PesertaUjianCbtController extends Controller
 
         $jumlahTotal = $ujianCbt->pesertaUjianCbt()->count();
         $pesan = $jumlahBaru
-            ? "{$jumlahBaru} peserta CBT baru berhasil dibuat. Total {$jumlahTotal} peserta siap diatur."
-            : "Seluruh siswa aktif di kelas peserta sudah terdaftar. Total {$jumlahTotal} peserta CBT.";
+            ? "{$jumlahBaru} siswa berhasil dimasukkan sebagai peserta. Total {$jumlahTotal} peserta siap diatur."
+            : "Seluruh siswa aktif di kelas yang dipilih sudah terdaftar. Total {$jumlahTotal} peserta.";
 
         return redirect()
             ->route('ujian-cbt.peserta.index', $ujianCbt)
@@ -275,27 +267,12 @@ class PesertaUjianCbtController extends Controller
         $kodeUjian = $this->rapikanKode($ujianCbt->kode);
         $kodeKelas = $this->rapikanKode($kelasUjianCbt->kelas?->nama ?: 'KELAS');
         $nomor = $anggota->nomor_absen ?: $urutan;
-        $basis = substr("{$kodeUjian}-{$kodeKelas}-" . str_pad((string) $nomor, 3, '0', STR_PAD_LEFT), 0, 74);
+        $basis = substr("{$kodeUjian}-{$kodeKelas}-".str_pad((string) $nomor, 3, '0', STR_PAD_LEFT), 0, 74);
         $hasil = $basis;
         $suffix = 2;
 
         while (PesertaUjianCbt::where('nomor_peserta', $hasil)->exists()) {
-            $hasil = substr($basis, 0, 70) . '-' . $suffix;
-            $suffix++;
-        }
-
-        return $hasil;
-    }
-
-    private function buatUsernamePaket(string $usernameAkun, UjianCbt $ujianCbt): string
-    {
-        $kodePaket = $this->rapikanKode($ujianCbt->kode);
-        $basis = substr("{$usernameAkun}-{$kodePaket}", 0, 74);
-        $hasil = $basis;
-        $suffix = 2;
-
-        while (PesertaUjianCbt::where('username', $hasil)->exists()) {
-            $hasil = substr($basis, 0, 70) . '-' . $suffix;
+            $hasil = substr($basis, 0, 70).'-'.$suffix;
             $suffix++;
         }
 
@@ -307,14 +284,5 @@ class PesertaUjianCbtController extends Controller
         $hasil = preg_replace('/[^A-Za-z0-9]+/', '', $kode) ?: 'CBT';
 
         return mb_strtoupper($hasil);
-    }
-
-    private function buatTokenAkses(): string
-    {
-        do {
-            $token = Str::upper(Str::random(18));
-        } while (PesertaUjianCbt::where('token_akses', $token)->exists());
-
-        return $token;
     }
 }

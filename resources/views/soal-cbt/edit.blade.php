@@ -1,12 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Soal CBT - NUSA')
+@section('title', 'Edit Soal - NUSA')
 
 @section('content')
     <div class="page-header">
         <div>
             <p class="eyebrow">CBT</p>
-            <h1 class="page-title">Edit soal CBT</h1>
+            <h1 class="page-title">Edit soal</h1>
+            <p class="page-subtitle">Perbaiki isi atau jawaban, kemudian simpan sebagai draf atau soal siap.</p>
         </div>
 
         <div class="actions">
@@ -15,9 +16,9 @@
         </div>
     </div>
 
-    <form action="{{ route('soal-cbt.update', $soalCbt) }}" method="POST">
+    <form action="{{ route('soal-cbt.update', $soalCbt) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
-        @include('soal-cbt.partials.form', ['tombol' => 'Simpan perubahan'])
+        @include('soal-cbt.partials.form')
     </form>
 @endsection

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Koreksi Manual CBT - NUSA')
+@section('title', ($ujianCbt->asesmenKelas() ? 'Koreksi Uraian Asesmen' : 'Koreksi Manual CBT') . ' - NUSA')
 
 @section('content')
     <style>
@@ -9,6 +9,10 @@
             grid-template-columns: minmax(170px, .8fr) minmax(170px, .8fr) minmax(190px, .8fr) auto;
             gap: 12px;
             align-items: end;
+        }
+
+        .manual-filter-grid.asesmen-kelas {
+            grid-template-columns: minmax(190px, .8fr) minmax(220px, 1fr) auto;
         }
 
         .manual-table td {
@@ -66,10 +70,18 @@
             .manual-filter-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
+
+            .manual-filter-grid.asesmen-kelas {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
 
         @media (max-width: 680px) {
             .manual-filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .manual-filter-grid.asesmen-kelas {
                 grid-template-columns: 1fr;
             }
 
@@ -91,15 +103,17 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">CBT</p>
-            <h1 class="page-title">Koreksi manual CBT</h1>
+            <p class="eyebrow">{{ $ujianCbt->asesmenKelas() ? 'Asesmen Kelas' : 'CBT' }}</p>
+            <h1 class="page-title">{{ $ujianCbt->asesmenKelas() ? 'Koreksi jawaban uraian' : 'Koreksi manual CBT' }}</h1>
+            @if ($ujianCbt->asesmenKelas())
+                <p class="page-subtitle">Beri skor pada jawaban siswa yang tidak dapat dinilai otomatis.</p>
+            @endif
         </div>
 
         <div class="actions">
-            <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-primary">Hasil</a>
-            <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Monitoring</a>
-            <a href="{{ route('ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail paket</a>
-            <a href="{{ route('ujian-cbt.index') }}" class="button button-muted">Daftar paket</a>
+            <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-primary">Lihat hasil</a>
+            <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Pantau pengerjaan</a>
+            <a href="{{ route($ujianCbt->asesmenKelas() ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail {{ $ujianCbt->asesmenKelas() ? 'asesmen' : 'paket' }}</a>
         </div>
     </div>
 
@@ -122,13 +136,13 @@
                 </p>
             </div>
             <span class="badge {{ $soalManual->count() > 0 ? 'badge-warning' : 'badge-muted' }}">
-                {{ $soalManual->count() }} soal manual
+                {{ $soalManual->count() }} soal {{ $ujianCbt->asesmenKelas() ? 'uraian' : 'manual' }}
             </span>
         </div>
 
         <dl class="quick-facts" style="margin-top: 18px;">
-            <div><dt>Jenis ujian</dt><dd>{{ $ujianCbt->jenisUjianCbt?->nama ?: '-' }}</dd></div>
-            <div><dt>Jadwal paket</dt><dd>{{ $ujianCbt->labelWaktu() }}</dd></div>
+            <div><dt>{{ $ujianCbt->asesmenKelas() ? 'Mata pelajaran' : 'Jenis ujian' }}</dt><dd>{{ $ujianCbt->asesmenKelas() ? ($ujianCbt->mataPelajaran?->nama ?: '-') : ($ujianCbt->jenisUjianCbt?->nama ?: '-') }}</dd></div>
+            <div><dt>Waktu pelaksanaan</dt><dd>{{ $ujianCbt->labelWaktu() }}</dd></div>
             <div><dt>Jawaban terjawab</dt><dd>{{ $ringkasan['terjawab'] }}</dd></div>
             <div><dt>Belum dijawab</dt><dd>{{ $ringkasan['belum_dijawab'] }}</dd></div>
             <div><dt>Belum dikoreksi</dt><dd>{{ $ringkasan['belum_dikoreksi'] }}</dd></div>
@@ -137,7 +151,7 @@
     </section>
 
     <form action="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
-        <div class="manual-filter-grid">
+        <div class="manual-filter-grid {{ $ujianCbt->asesmenKelas() ? 'asesmen-kelas' : '' }}">
             <div class="field">
                 <label for="kelas_id">Kelas</label>
                 <select id="kelas_id" name="kelas_id" class="select">
@@ -147,15 +161,17 @@
                     @endforeach
                 </select>
             </div>
-            <div class="field">
-                <label for="sesi_ujian_cbt_id">Sesi</label>
-                <select id="sesi_ujian_cbt_id" name="sesi_ujian_cbt_id" class="select">
-                    <option value="">Semua sesi</option>
-                    @foreach ($sesiUjianCbt as $sesi)
-                        <option value="{{ $sesi->id }}" @selected((string) $sesiUjianCbtId === (string) $sesi->id)>{{ $sesi->nama }}</option>
-                    @endforeach
-                </select>
-            </div>
+            @unless ($ujianCbt->asesmenKelas())
+                <div class="field">
+                    <label for="sesi_ujian_cbt_id">Sesi</label>
+                    <select id="sesi_ujian_cbt_id" name="sesi_ujian_cbt_id" class="select">
+                        <option value="">Semua sesi</option>
+                        @foreach ($sesiUjianCbt as $sesi)
+                            <option value="{{ $sesi->id }}" @selected((string) $sesiUjianCbtId === (string) $sesi->id)>{{ $sesi->nama }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endunless
             <div class="field">
                 <label for="status_koreksi">Status koreksi</label>
                 <select id="status_koreksi" name="status_koreksi" class="select">
@@ -174,7 +190,7 @@
     @if ($soalManual->isEmpty())
         <section class="panel panel-pad">
             <div class="empty-state">
-                Paket ini tidak memiliki soal uraian atau upload file yang perlu koreksi manual.
+                {{ $ujianCbt->asesmenKelas() ? 'Asesmen ini' : 'Paket ini' }} tidak memiliki soal uraian atau unggahan file yang perlu dikoreksi.
             </div>
         </section>
     @else
@@ -205,9 +221,9 @@
                                 <td>
                                     <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
                                     <div class="person-meta">
-                                        {{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }} - {{ $peserta->sesiUjianCbt?->nama ?: 'Tanpa sesi' }}
+                                        {{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }}@unless ($ujianCbt->asesmenKelas()) - {{ $peserta->sesiUjianCbt?->nama ?: 'Tanpa sesi' }}@endunless
                                     </div>
-                                    <div class="person-meta">No. {{ $peserta->akunPesertaCbt?->nomor_peserta ?: $peserta->nomor_peserta }}</div>
+                                    <div class="person-meta">NISN {{ $peserta->anggotaKelas?->siswa?->nisn ?: '-' }}</div>
                                 </td>
                                 <td>
                                     <div class="manual-question">
@@ -243,7 +259,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="empty-state">Belum ada jawaban manual yang sesuai filter.</td>
+                                <td colspan="5" class="empty-state">Belum ada jawaban yang perlu dikoreksi sesuai filter.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -262,7 +278,7 @@
                         <div class="mobile-card-head">
                             <div>
                                 <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
-                                <p class="person-meta">{{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }} - {{ $peserta->sesiUjianCbt?->nama ?: 'Tanpa sesi' }}</p>
+                                <p class="person-meta">{{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }}@unless ($ujianCbt->asesmenKelas()) - {{ $peserta->sesiUjianCbt?->nama ?: 'Tanpa sesi' }}@endunless</p>
                             </div>
                             @if (! $item['sudah_dijawab'])
                                 <span class="badge badge-muted">Kosong</span>
@@ -295,7 +311,7 @@
                         @endif
                     </article>
                 @empty
-                    <div class="empty-state">Belum ada jawaban manual yang sesuai filter.</div>
+                    <div class="empty-state">Belum ada jawaban yang perlu dikoreksi sesuai filter.</div>
                 @endforelse
             </div>
 
@@ -304,7 +320,7 @@
                     <div class="panel-pad" style="padding-top: 0;">
                         <div class="actions" style="justify-content: flex-end;">
                             <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Lihat hasil</a>
-                            <button type="submit" class="button button-primary">Simpan koreksi manual</button>
+                            <button type="submit" class="button button-primary">Simpan koreksi{{ $ujianCbt->asesmenKelas() ? '' : ' manual' }}</button>
                         </div>
                     </div>
                 </div>

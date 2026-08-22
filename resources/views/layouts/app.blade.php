@@ -1897,12 +1897,7 @@
                     'id' => 'ujian-asesmen',
                     'title' => 'Ujian & Asesmen',
                     'items' => [
-                        ['label' => 'Jenis Ujian CBT', 'route' => 'jenis-ujian-cbt.index', 'active' => ['jenis-ujian-cbt.*'], 'initial' => 'JU', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
-                        ['label' => 'Bank Soal CBT', 'route' => 'soal-cbt.index', 'active' => ['soal-cbt.*'], 'initial' => 'BS', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola'], 'subgroup' => 'CBT'],
-                        ['label' => 'Paket Ujian CBT', 'route' => 'ujian-cbt.index', 'active' => ['ujian-cbt.*'], 'initial' => 'PU', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
-                        ['label' => 'Jadwal Ujian CBT', 'route' => 'jadwal-ujian-cbt.index', 'active' => ['jadwal-ujian-cbt.*'], 'initial' => 'JD', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
-                        ['label' => 'Status Panitia CBT', 'route' => 'status-kelengkapan-panitia-cbt.index', 'active' => ['status-kelengkapan-panitia-cbt.*'], 'initial' => 'SP', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
-                        ['label' => 'Presensi Ujian CBT', 'route' => 'presensi-ujian-cbt.index', 'active' => ['presensi-ujian-cbt.*'], 'initial' => 'PR', 'izin' => ['cbt.presensi', 'cbt.kelola'], 'subgroup' => 'CBT'],
+                        ['label' => 'Pusat CBT', 'route' => 'pusat-cbt.index', 'active' => ['pusat-cbt.*', 'asesmen-kelas-cbt.*', 'soal-cbt.*', 'ujian-cbt.*', 'ujian-terpusat.*', 'paket-soal-terpusat.*', 'presensi-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat'], 'subgroup' => 'CBT'],
                     ],
                 ],
                 [
@@ -2081,6 +2076,13 @@
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'peran' => 'guru_mapel'],
                         ['label' => 'Hasil Survei Saya', 'route' => 'hasil-survei-saya.index', 'active' => ['hasil-survei-saya.*'], 'initial' => 'HS', 'izin' => 'survei.hasil_pribadi', 'peran' => 'guru_mapel'],
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.upload', 'peran' => 'guru_mapel'],
+                    ],
+                ],
+                [
+                    'id' => 'ujian-asesmen',
+                    'title' => 'Ujian & Asesmen',
+                    'items' => [
+                        ['label' => 'Pusat CBT', 'route' => 'pusat-cbt.index', 'active' => ['pusat-cbt.*', 'asesmen-kelas-cbt.*', 'soal-cbt.*', 'ujian-cbt.*', 'ujian-terpusat.*', 'paket-soal-terpusat.*', 'presensi-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat']],
                     ],
                 ],
                 [

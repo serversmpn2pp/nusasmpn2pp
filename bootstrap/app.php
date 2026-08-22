@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Middleware\PastikanAdministrator;
+use App\Http\Middleware\PastikanAksesUjianCbt;
 use App\Http\Middleware\PastikanAkunPegawai;
 use App\Http\Middleware\PastikanIdentitasSesi;
 use App\Http\Middleware\PastikanIzin;
 use App\Http\Middleware\PastikanKataSandiBukanDefault;
+use App\Http\Middleware\PastikanUjianCbtTerpusat;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,10 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => PastikanAdministrator::class,
+            'akses_ujian_cbt' => PastikanAksesUjianCbt::class,
             'akun_pegawai' => PastikanAkunPegawai::class,
             'identitas_sesi' => PastikanIdentitasSesi::class,
             'izin' => PastikanIzin::class,
             'kata_sandi_bukan_default' => PastikanKataSandiBukanDefault::class,
+            'ujian_terpusat' => PastikanUjianCbtTerpusat::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

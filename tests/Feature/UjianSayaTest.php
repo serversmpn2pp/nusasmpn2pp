@@ -59,7 +59,6 @@ class UjianSayaTest extends TestCase
                 'nama' => 'Sumatif Tengah Semester',
                 'memerlukan_token' => true,
                 'dapat_diterapkan_ke_nilai' => true,
-                'tampil_di_kartu_peserta' => true,
                 'urutan' => 1,
                 'aktif' => true,
             ],
@@ -215,7 +214,6 @@ class UjianSayaTest extends TestCase
                 'nama' => 'Sumatif Tengah Semester',
                 'memerlukan_token' => true,
                 'dapat_diterapkan_ke_nilai' => true,
-                'tampil_di_kartu_peserta' => true,
                 'urutan' => 1,
                 'aktif' => true,
             ],
@@ -299,7 +297,6 @@ class UjianSayaTest extends TestCase
             ->post(route('ujian-saya.masuk', $peserta), ['token' => 'masuk1'])
             ->assertRedirect(route('cbt.ujian.show'))
             ->assertSessionHas('cbt_peserta_ujian_id', $peserta->id)
-            ->assertSessionHas('cbt_asal_akses', 'akun_siswa')
             ->assertSessionHas('cbt_pengguna_id', $akun->id);
 
         $this->get(route('cbt.ujian.show'))
@@ -474,9 +471,6 @@ class UjianSayaTest extends TestCase
             'nomor_meja' => $nomorMeja,
             'anggota_kelas_id' => $anggota->id,
             'nomor_peserta' => 'NP-'.$kode,
-            'username' => 'USR-'.$kode,
-            'kata_sandi' => '123456',
-            'token_akses' => 'TOKEN-'.$kode,
             'status' => $status,
             'menit_tersisa' => 90,
         ]);
