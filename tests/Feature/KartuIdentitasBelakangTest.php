@@ -61,7 +61,11 @@ class KartuIdentitasBelakangTest extends TestCase
             ->assertSee('fill: #fff;', false)
             ->assertSee('.app-sidebar,', false)
             ->assertSee('.content-shell {', false)
-            ->assertSee('Cetak kartu');
+            ->assertSee('Cetak kartu')
+            ->assertSee('data-card-export-root', false)
+            ->assertSee('data-card-side="depan"', false)
+            ->assertSee('data-card-side="belakang"', false)
+            ->assertSeeInOrder(['Pilih format kartu', 'PDF', 'PNG', 'JPEG']);
     }
 
     public function test_bagian_belakang_kartu_pegawai_menampilkan_nama_dan_nip(): void
@@ -84,6 +88,10 @@ class KartuIdentitasBelakangTest extends TestCase
                 'NIP 199211032019021001',
             ], false)
             ->assertSee('.employee-qr-code svg rect', false)
-            ->assertSee('fill: #fff;', false);
+            ->assertSee('fill: #fff;', false)
+            ->assertSee('data-card-export-root', false)
+            ->assertSee('data-card-side="depan"', false)
+            ->assertSee('data-card-side="belakang"', false)
+            ->assertSeeInOrder(['Pilih format kartu', 'PDF', 'PNG', 'JPEG']);
     }
 }

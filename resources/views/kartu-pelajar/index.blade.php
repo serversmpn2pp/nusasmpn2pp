@@ -5,6 +5,9 @@
 @section('content')
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
+        $kelasEkspor = $daftarKelas->firstWhere('id', (int) $kelasId)?->nama;
+        $siswaEkspor = $daftarSiswa->firstWhere('id', (int) $siswaId)?->nama_lengkap;
+        $namaEkspor = collect(['kartu-pelajar', $kelasEkspor, $siswaEkspor])->filter()->join('-');
     @endphp
 
     <style>
@@ -374,7 +377,7 @@
 
         <div class="actions">
             @izin('kartu_pelajar.cetak')
-                <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
+                <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPelajar->isEmpty())>Cetak kartu</button>
             @endizin
             @izin('siswa.kelola')
                 <a href="{{ route('foto-identitas.index', array_filter([
@@ -441,7 +444,7 @@
             <p class="help-text" style="margin-top: 4px;">Ukuran kartu: 53,98mm x 85,60mm, posisi portrait.</p>
         </div>
         @izin('kartu_pelajar.cetak')
-            <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
+            <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPelajar->isEmpty())>Cetak kartu</button>
         @endizin
     </div>
 
@@ -451,16 +454,21 @@
             <p class="help-text" style="margin-top: 8px;">Pilih tahun pelajaran dan kelas yang sudah memiliki siswa aktif.</p>
         </section>
     @else
-        <section class="card-sheet">
+        <section class="card-sheet" data-card-export-root data-export-name="{{ $namaEkspor }}">
             @foreach ($kartuPelajar as $kartu)
                 @php
                     $siswa = $kartu['siswa'];
                     $anggota = $kartu['anggota_kelas'];
                 @endphp
 
-                <article class="student-card-pair">
+                <article
+                    class="student-card-pair"
+                    data-card-export-item
+                    data-card-name="{{ $siswa?->nama_lengkap }}"
+                    data-card-number="{{ $siswa?->nisn }}"
+                >
                     <div>
-                        <div class="id-card card-front" aria-label="Kartu pelajar depan {{ $siswa?->nama_lengkap }}">
+                        <div class="id-card card-front" data-card-side="depan" aria-label="Kartu pelajar depan {{ $siswa?->nama_lengkap }}">
                             <div class="card-content">
                                 <div class="front-header-card">
                                     <div class="school-logo-card">
@@ -486,7 +494,7 @@
                     </div>
 
                     <div>
-                        <div class="id-card card-back" aria-label="Kartu pelajar belakang {{ $siswa?->nama_lengkap }}">
+                        <div class="id-card card-back" data-card-side="belakang" aria-label="Kartu pelajar belakang {{ $siswa?->nama_lengkap }}">
                             <div class="card-content">
                                 <div class="back-header-card">
                                     <div class="back-logo-card">
@@ -518,4 +526,12 @@
             @endforeach
         </section>
     @endif
+
+    @izin('kartu_pelajar.cetak')
+        <x-pilih-format-kartu :jumlah="$kartuPelajar->count()" jenis="kartu pelajar" />
+    @endizin
 @endsection
+
+@push('scripts')
+    @vite('resources/js/export-kartu-identitas.js')
+@endpush

@@ -26,11 +26,14 @@ use App\Models\SanksiPoinSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Models\TransaksiPoinSiswa;
+use App\Services\Cbt\DaftarUjianSiswaService;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
 
 class BerandaController extends Controller
 {
+    public function __construct(private readonly DaftarUjianSiswaService $daftarUjianSiswa) {}
+
     public function index()
     {
         $pengguna = auth()->user();
@@ -406,6 +409,9 @@ class BerandaController extends Controller
                 ->where('kelas_id', $kelas?->id ?: 0)
                 ->when($tahunDashboard, fn ($query) => $query->where('tahun_pelajaran_id', $tahunDashboard->id)))
             ->count();
+        $ringkasanUjianSaya = $siswa
+            ? $this->daftarUjianSiswa->siapkan($siswa)['ringkasanUjian']
+            : ['aktif' => 0, 'akan_datang' => 0, 'selesai' => 0, 'total' => 0];
 
         return [
             'hariIni' => $hariIni,
@@ -426,6 +432,7 @@ class BerandaController extends Controller
             'notifikasiDashboard' => $notifikasiDashboard,
             'urlFotoSiswa' => $urlFotoSiswa,
             'jumlahNilaiDipublikasikan' => $jumlahNilaiDipublikasikan,
+            'ringkasanUjianSaya' => $ringkasanUjianSaya,
         ];
     }
 

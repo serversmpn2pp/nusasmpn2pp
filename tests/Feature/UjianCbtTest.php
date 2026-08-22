@@ -12,16 +12,17 @@ use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
-use App\Models\PesertaUjianCbt;
 use App\Models\Pengguna;
+use App\Models\Peran;
+use App\Models\PesertaUjianCbt;
 use App\Models\RuangUjianCbt;
 use App\Models\SesiUjianCbt;
-use App\Models\SoalCbt;
 use App\Models\Siswa;
+use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use PDO;
 use Tests\TestCase;
@@ -778,6 +779,183 @@ class UjianCbtTest extends TestCase
         $this->assertNull($pesertaRuangKedua->nomor_meja);
     }
 
+    public function test_pengawas_dapat_memindai_kartu_pelajar_dan_mencatat_presensi_ruangnya(): void
+    {
+        Carbon::setTestNow('2026-08-15 07:30:00');
+
+        try {
+            [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
+            $jenisUjian = JenisUjianCbt::where('kode', 'STS')->firstOrFail();
+            $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+            $this->buatAnggotaSiswa($tahunPelajaran, $kelas, 3);
+
+            $ujianCbt = UjianCbt::create([
+                ...collect($this->dataUjian($jenisUjian, $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
+                    ->except('kelas_peserta')
+                    ->all(),
+                'status' => 'terjadwal',
+                'dibuat_oleh_pengguna_id' => $administrator->id,
+            ]);
+            $kelasUjian = KelasUjianCbt::create([
+                'ujian_cbt_id' => $ujianCbt->id,
+                'kelas_id' => $kelas->id,
+                'komponen_nilai_id' => $komponenNilai->id,
+            ]);
+            $sesi = SesiUjianCbt::create([
+                'ujian_cbt_id' => $ujianCbt->id,
+                'kode' => 'S-01',
+                'nama' => 'Sesi 1',
+                'waktu_mulai' => '2026-08-15 08:00',
+                'waktu_selesai' => '2026-08-15 10:00',
+                'status' => 'aktif',
+            ]);
+            $kegiatan = KegiatanUjianCbt::create([
+                'jenis_ujian_cbt_id' => $jenisUjian->id,
+                'tahun_pelajaran_id' => $tahunPelajaran->id,
+                'kode' => 'STS-PRESENSI-2026',
+                'nama' => 'Sumatif Tengah Semester',
+                'semester' => 'ganjil',
+                'tanggal_mulai' => '2026-08-15',
+                'tanggal_selesai' => '2026-08-15',
+                'status' => 'aktif',
+                'dibuat_oleh_pengguna_id' => $administrator->id,
+            ]);
+            $jadwal = JadwalUjianCbt::create([
+                'kegiatan_ujian_cbt_id' => $kegiatan->id,
+                'ujian_cbt_id' => $ujianCbt->id,
+                'mata_pelajaran_id' => $mataPelajaran->id,
+                'tanggal' => '2026-08-15',
+                'waktu_mulai' => '08:00',
+                'waktu_selesai' => '10:00',
+                'label_sesi' => 'Jam 1',
+                'tingkat' => $kelas->tingkat,
+                'urutan' => 1,
+                'status' => 'siap',
+            ]);
+            $jadwal->kelas()->sync([$kelas->id]);
+
+            $pegawaiPengawas = Pegawai::firstOrFail();
+            $pengawas = Pengguna::create([
+                'pegawai_id' => $pegawaiPengawas->id,
+                'nama' => $pegawaiPengawas->nama_lengkap,
+                'username' => $pegawaiPengawas->nip,
+                'kata_sandi' => 'rahasia-pengawas',
+                'peran' => 'pegawai',
+                'aktif' => true,
+            ]);
+            $pengawas->daftarPeran()->attach(Peran::where('kode', 'guru_mapel')->firstOrFail());
+
+            $ruangSatu = RuangUjianCbt::create([
+                'ujian_cbt_id' => $ujianCbt->id,
+                'sesi_ujian_cbt_id' => $sesi->id,
+                'jadwal_ujian_cbt_id' => $jadwal->id,
+                'kode' => 'R-01',
+                'nama' => 'Ruang 1',
+                'lokasi' => 'Kelas VIII.A',
+                'kapasitas' => 2,
+                'pengawas_utama_pegawai_id' => $pegawaiPengawas->id,
+                'status' => 'siap',
+            ]);
+            $ruangDua = RuangUjianCbt::create([
+                'ujian_cbt_id' => $ujianCbt->id,
+                'sesi_ujian_cbt_id' => $sesi->id,
+                'jadwal_ujian_cbt_id' => $jadwal->id,
+                'kode' => 'R-02',
+                'nama' => 'Ruang 2',
+                'lokasi' => 'Kelas VIII.B',
+                'kapasitas' => 2,
+                'status' => 'siap',
+            ]);
+
+            $anggota = $kelas->anggotaKelas()->with('siswa')->orderBy('nomor_absen')->get();
+            $peserta = $anggota->values()->map(function ($anggotaKelas, $index) use ($administrator, $kelasUjian, $ruangDua, $ruangSatu, $sesi, $ujianCbt) {
+                $urutan = $index + 1;
+
+                return PesertaUjianCbt::create([
+                    'ujian_cbt_id' => $ujianCbt->id,
+                    'sesi_ujian_cbt_id' => $sesi->id,
+                    'kelas_ujian_cbt_id' => $kelasUjian->id,
+                    'ruang_ujian_cbt_id' => $index < 2 ? $ruangSatu->id : $ruangDua->id,
+                    'nomor_meja' => $index < 2 ? $urutan : 1,
+                    'anggota_kelas_id' => $anggotaKelas->id,
+                    'nomor_peserta' => 'PRESENSI-'.str_pad((string) $urutan, 3, '0', STR_PAD_LEFT),
+                    'username' => 'presensi-'.$urutan,
+                    'kata_sandi' => '12345678',
+                    'token_akses' => 'token-presensi-'.$urutan,
+                    'status' => 'aktif',
+                    'status_kehadiran_ujian' => 'belum_absen',
+                    'dibuat_oleh_pengguna_id' => $administrator->id,
+                ]);
+            });
+
+            $this->actingAs($pengawas)
+                ->get(route('presensi-ujian-cbt.index'))
+                ->assertOk()
+                ->assertSee('R-01 - Ruang 1')
+                ->assertDontSee('R-02 - Ruang 2');
+
+            $this->actingAs($pengawas)
+                ->get(route('presensi-ujian-cbt.show', [$ujianCbt, $ruangSatu]))
+                ->assertOk()
+                ->assertSee('Scan atau masukkan NISN')
+                ->assertSee($anggota[0]->siswa->nama_lengkap)
+                ->assertSee('Meja 1');
+
+            $this->actingAs($pengawas)
+                ->postJson(route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangSatu]), [
+                    'isi_scan' => $anggota[0]->siswa->nisn,
+                ])
+                ->assertOk()
+                ->assertJsonPath('berhasil', true)
+                ->assertJsonPath('baru', true)
+                ->assertJsonPath('peserta.nomor_meja', 1)
+                ->assertJsonPath('ringkasan.hadir', 1);
+
+            $peserta[0]->refresh();
+            $this->assertSame('hadir', $peserta[0]->status_kehadiran_ujian);
+            $this->assertSame($pengawas->id, $peserta[0]->absen_ujian_oleh_pengguna_id);
+            $this->assertNotNull($peserta[0]->absen_ujian_pada);
+
+            $waktuScanPertama = $peserta[0]->absen_ujian_pada->toDateTimeString();
+            Carbon::setTestNow('2026-08-15 07:31:00');
+
+            $this->actingAs($pengawas)
+                ->postJson(route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangSatu]), [
+                    'isi_scan' => $anggota[0]->siswa->nisn,
+                ])
+                ->assertOk()
+                ->assertJsonPath('berhasil', true)
+                ->assertJsonPath('baru', false)
+                ->assertJsonPath('ringkasan.hadir', 1);
+
+            $this->assertSame($waktuScanPertama, $peserta[0]->fresh()->absen_ujian_pada->toDateTimeString());
+
+            $this->actingAs($pengawas)
+                ->postJson(route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangSatu]), [
+                    'isi_scan' => $anggota[2]->siswa->nisn,
+                ])
+                ->assertUnprocessable()
+                ->assertJsonPath('status', 'salah_ruang')
+                ->assertJsonPath('ruang_seharusnya', 'Ruang 2');
+
+            $this->actingAs($pengawas)
+                ->putJson(route('presensi-ujian-cbt.manual', [$ujianCbt, $ruangSatu, $peserta[1]]), [
+                    'status_kehadiran_ujian' => 'izin',
+                ])
+                ->assertOk()
+                ->assertJsonPath('peserta.status', 'izin')
+                ->assertJsonPath('ringkasan.tidak_hadir', 1);
+
+            $this->assertSame('izin', $peserta[1]->fresh()->status_kehadiran_ujian);
+
+            $this->actingAs($pengawas)
+                ->get(route('presensi-ujian-cbt.show', [$ujianCbt, $ruangDua]))
+                ->assertForbidden();
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_administrator_dapat_melihat_status_kelengkapan_panitia_cbt(): void
     {
         [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
@@ -1311,7 +1489,7 @@ class UjianCbtTest extends TestCase
                 'kelas_id' => $kelas->id,
                 'komponen_nilai_id' => $komponenNilai->id,
             ]);
-            SesiUjianCbt::create([
+            $sesi = SesiUjianCbt::create([
                 'ujian_cbt_id' => $ujianCbt->id,
                 'kode' => 'S-01',
                 'nama' => 'Sesi 1',
@@ -1319,6 +1497,24 @@ class UjianCbtTest extends TestCase
                 'waktu_selesai' => '2026-08-15 10:00',
                 'kapasitas' => 32,
                 'status' => 'aktif',
+            ]);
+            $ruangSatu = RuangUjianCbt::create([
+                'ujian_cbt_id' => $ujianCbt->id,
+                'sesi_ujian_cbt_id' => $sesi->id,
+                'kode' => 'R-01',
+                'nama' => 'Ruang 1',
+                'lokasi' => 'Kelas VIII.A',
+                'kapasitas' => 2,
+                'status' => 'siap',
+            ]);
+            $ruangDua = RuangUjianCbt::create([
+                'ujian_cbt_id' => $ujianCbt->id,
+                'sesi_ujian_cbt_id' => $sesi->id,
+                'kode' => 'R-02',
+                'nama' => 'Ruang 2',
+                'lokasi' => 'Kelas VIII.B',
+                'kapasitas' => 1,
+                'status' => 'siap',
             ]);
 
             $soalPertama = $this->buatSoalCbt($tahunPelajaran, $mataPelajaran, 'CBT-MON-001', 'Soal monitoring pertama.');
@@ -1344,11 +1540,23 @@ class UjianCbtTest extends TestCase
                 ->orderBy('id')
                 ->get();
 
+            $peserta[0]->update([
+                'ruang_ujian_cbt_id' => $ruangSatu->id,
+                'nomor_meja' => 1,
+            ]);
             $peserta[1]->update([
+                'ruang_ujian_cbt_id' => $ruangSatu->id,
+                'nomor_meja' => 2,
+                'status_kehadiran_ujian' => 'hadir',
+                'absen_ujian_pada' => now()->subMinutes(20),
                 'ip_terakhir' => '127.0.0.1',
                 'user_agent_terakhir' => 'Browser CBT',
             ]);
             $peserta[2]->update([
+                'ruang_ujian_cbt_id' => $ruangDua->id,
+                'nomor_meja' => 1,
+                'status_kehadiran_ujian' => 'terlambat',
+                'absen_ujian_pada' => now()->subMinutes(16),
                 'status' => 'sedang_mengerjakan',
                 'waktu_mulai' => now()->subMinutes(15),
                 'ip_terakhir' => '10.10.10.5',
@@ -1367,9 +1575,12 @@ class UjianCbtTest extends TestCase
                 ->assertOk()
                 ->assertSee('Monitoring CBT')
                 ->assertSee('MON123')
-                ->assertSee('Belum login')
-                ->assertSee('Sudah login')
+                ->assertSee('Belum hadir')
+                ->assertSee('Hadir, belum mulai')
                 ->assertSee('Sedang mengerjakan')
+                ->assertSee('R-02 - Ruang 2')
+                ->assertSee('Meja 1')
+                ->assertSee('Terlambat')
                 ->assertSee('1 / 2')
                 ->assertSee('1 ragu')
                 ->assertSee('Sisa sekitar');
@@ -1378,6 +1589,25 @@ class UjianCbtTest extends TestCase
                 ->get(route('ujian-cbt.monitoring.index', [
                     $ujianCbt,
                     'status_monitor' => 'sedang_mengerjakan',
+                ]))
+                ->assertOk()
+                ->assertSee($peserta[2]->anggotaKelas->siswa->nama_lengkap)
+                ->assertDontSee($peserta[0]->anggotaKelas->siswa->nama_lengkap);
+
+            $this->actingAs($administrator)
+                ->get(route('ujian-cbt.monitoring.index', [
+                    $ujianCbt,
+                    'status_monitor' => 'hadir_belum_mulai',
+                ]))
+                ->assertOk()
+                ->assertSee($peserta[1]->anggotaKelas->siswa->nama_lengkap)
+                ->assertDontSee($peserta[0]->anggotaKelas->siswa->nama_lengkap)
+                ->assertDontSee($peserta[2]->anggotaKelas->siswa->nama_lengkap);
+
+            $this->actingAs($administrator)
+                ->get(route('ujian-cbt.monitoring.index', [
+                    $ujianCbt,
+                    'ruang_ujian_cbt_id' => $ruangDua->id,
                 ]))
                 ->assertOk()
                 ->assertSee($peserta[2]->anggotaKelas->siswa->nama_lengkap)
@@ -1522,9 +1752,9 @@ class UjianCbtTest extends TestCase
     {
         for ($i = 1; $i <= $jumlah; $i++) {
             $siswa = Siswa::create([
-                'nama_lengkap' => 'Siswa CBT ' . $i,
-                'nis' => 'CBT' . str_pad((string) $i, 4, '0', STR_PAD_LEFT),
-                'nisn' => '999000' . str_pad((string) $i, 4, '0', STR_PAD_LEFT),
+                'nama_lengkap' => 'Siswa CBT '.$i,
+                'nis' => 'CBT'.str_pad((string) $i, 4, '0', STR_PAD_LEFT),
+                'nisn' => '999000'.str_pad((string) $i, 4, '0', STR_PAD_LEFT),
                 'jenis_kelamin' => $i % 2 === 0 ? 'P' : 'L',
                 'aktif' => true,
             ]);

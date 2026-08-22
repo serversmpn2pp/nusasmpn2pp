@@ -398,12 +398,13 @@
                             <span class="badge badge-active">Terkunci</span>
                         @endif
                         <span class="badge {{ $badgeRuang($ruang->status) }}">{{ $ruang->labelStatus() }}</span>
-                        <a href="{{ route('ujian-cbt.ruang.cetak', [
+                         <a href="{{ route('ujian-cbt.ruang.cetak', [
                             $ujianCbt,
                             'sesi_ujian_cbt_id' => $ruang->sesi_ujian_cbt_id,
                             'jadwal_ujian_cbt_id' => $ruang->jadwal_ujian_cbt_id,
                             'ruang_ujian_cbt_id' => $ruang->id,
-                        ]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak hadir & BA</a>
+                         ]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak hadir & BA</a>
+                         <a href="{{ route('presensi-ujian-cbt.show', [$ujianCbt, $ruang]) }}" target="_blank" rel="noopener" class="button button-dark">Buka presensi</a>
                         @if ($ruangTerkunci)
                             <button type="submit" form="buka_kunci_ruang_{{ $ruang->id }}" class="button button-muted" onclick="return confirm('Buka kunci ruang {{ $ruang->kode }} agar bisa direvisi?')">Buka kunci</button>
                         @else

@@ -780,6 +780,24 @@
                 <aside class="student-stack">
                     <article class="student-panel">
                         <header class="student-panel-head">
+                            <h2>Ujian Saya</h2>
+                            <a href="{{ route('ujian-saya.index') }}" class="student-action">Lihat Ujian</a>
+                        </header>
+                        <div class="student-panel-body">
+                            <div class="point-total">
+                                <div>
+                                    <strong>{{ $ringkasanUjianSaya['aktif'] }}</strong>
+                                    <span>Ujian sedang aktif</span>
+                                </div>
+                                <span class="badge {{ $ringkasanUjianSaya['aktif'] > 0 ? 'badge-active' : 'badge-muted' }}">
+                                    {{ $ringkasanUjianSaya['akan_datang'] }} akan datang
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="student-panel">
+                        <header class="student-panel-head">
                             <h2>Informasi Sekolah</h2>
                             <a href="{{ route('kata-sandi.edit') }}" class="student-action">Ganti Password</a>
                         </header>

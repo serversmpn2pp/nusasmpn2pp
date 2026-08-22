@@ -78,13 +78,48 @@ class AksesUjianCbtController extends Controller
             $peserta->update(['akun_peserta_cbt_id' => $akunPeserta->id]);
         }
 
-        $peserta->update([
-            'ip_terakhir' => $request->ip(),
-            'user_agent_terakhir' => substr((string) $request->userAgent(), 0, 1000),
-        ]);
+        $this->aktifkanSesiPeserta($request, $peserta, 'login_cbt');
 
-        $request->session()->put('cbt_peserta_ujian_id', $peserta->id);
-        $request->session()->regenerate();
+        return redirect()->route('cbt.ujian.show');
+    }
+
+    public function masukDariAkunSiswa(Request $request, PesertaUjianCbt $pesertaUjianCbt)
+    {
+        $pengguna = $request->user();
+
+        abort_unless($pengguna?->akunSiswa() || $pengguna?->memilikiPeran('siswa'), 403);
+
+        $siswa = $pengguna->siswa()->firstOrFail();
+        $peserta = PesertaUjianCbt::query()
+            ->with([
+                'ujianCbt.jenisUjianCbt',
+                'sesiUjianCbt',
+                'kelasUjianCbt.kelas',
+                'anggotaKelas.siswa',
+            ])
+            ->whereKey($pesertaUjianCbt->id)
+            ->whereHas('anggotaKelas', fn ($query) => $query->where('siswa_id', $siswa->id))
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'token' => ['nullable', 'string', 'max:20'],
+        ]);
+        $perluToken = (bool) $peserta->ujianCbt?->jenisUjianCbt?->memerlukan_token
+            && $peserta->status !== 'sedang_mengerjakan';
+
+        if ($perluToken) {
+            $tokenDimasukkan = mb_strtoupper(trim((string) ($data['token'] ?? '')));
+            $tokenUjian = mb_strtoupper(trim((string) $peserta->ujianCbt?->token));
+
+            if ($tokenDimasukkan === '' || $tokenUjian === '' || ! hash_equals($tokenUjian, $tokenDimasukkan)) {
+                throw ValidationException::withMessages([
+                    'token' => 'Token ujian tidak valid. Silakan minta token yang sedang berlaku kepada pengawas.',
+                ]);
+            }
+        }
+
+        $this->pastikanPesertaBolehMasuk($peserta);
+        $this->aktifkanSesiPeserta($request, $peserta, 'akun_siswa', $pengguna->id);
 
         return redirect()->route('cbt.ujian.show');
     }
@@ -238,6 +273,68 @@ class AksesUjianCbtController extends Controller
             ->with('berhasil', 'Jawaban berhasil disimpan.');
     }
 
+    public function simpanJawaban(Request $request, KoreksiOtomatisCbtService $koreksiOtomatisCbtService)
+    {
+        $peserta = $this->ambilPesertaDariSesi($request);
+        $peserta->load('ujianCbt');
+
+        if ($peserta->status !== 'sedang_mengerjakan') {
+            return response()->json([
+                'message' => 'Ujian tidak sedang dikerjakan.',
+                'ujian_selesai' => $peserta->status === 'selesai',
+            ], 409);
+        }
+
+        if ($this->hitungSisaDetik($peserta) <= 0) {
+            $peserta->update([
+                'status' => 'selesai',
+                'waktu_selesai' => now(),
+                'menit_tersisa' => 0,
+            ]);
+            $peserta->refresh();
+            $koreksiOtomatisCbtService->koreksiPeserta($peserta);
+
+            return response()->json([
+                'message' => 'Waktu ujian telah berakhir.',
+                'ujian_selesai' => true,
+            ], 409);
+        }
+
+        $data = $request->validate([
+            'soal_ujian_cbt_id' => ['required', 'integer'],
+            'jawaban' => ['nullable', 'array'],
+            'ragu' => ['nullable', 'boolean'],
+        ]);
+        $relasiSoal = $peserta->ujianCbt->soalUjianCbt()
+            ->whereKey((int) $data['soal_ujian_cbt_id'])
+            ->first();
+
+        abort_unless($relasiSoal, 404);
+
+        $nilaiJawaban = $this->normalisasiJawaban($data['jawaban'] ?? null);
+        $jawaban = JawabanPesertaUjianCbt::updateOrCreate(
+            [
+                'peserta_ujian_cbt_id' => $peserta->id,
+                'soal_ujian_cbt_id' => $relasiSoal->id,
+            ],
+            [
+                'soal_cbt_id' => $relasiSoal->soal_cbt_id,
+                'jawaban' => $nilaiJawaban,
+                'ragu' => (bool) ($data['ragu'] ?? false),
+                'skor' => null,
+                'benar' => null,
+                'waktu_dijawab' => $nilaiJawaban === null ? null : now(),
+            ],
+        );
+
+        return response()->json([
+            'message' => 'Jawaban tersimpan.',
+            'terjawab' => $jawaban->jawaban !== null,
+            'ragu' => $jawaban->ragu,
+            'tersimpan_pada' => now()->format('H:i:s'),
+        ]);
+    }
+
     public function selesai(Request $request)
     {
         $peserta = $this->ambilPesertaDariSesi($request);
@@ -255,7 +352,13 @@ class AksesUjianCbtController extends Controller
 
     public function logout(Request $request)
     {
-        $request->session()->forget('cbt_peserta_ujian_id');
+        $melaluiAkunSiswa = $request->session()->get('cbt_asal_akses') === 'akun_siswa';
+
+        $this->hapusSesiPeserta($request);
+
+        if ($melaluiAkunSiswa && $request->user()?->akunSiswa()) {
+            return redirect()->route('ujian-saya.index');
+        }
 
         return redirect()->route('cbt.login');
     }
@@ -271,11 +374,64 @@ class AksesUjianCbtController extends Controller
         $peserta = PesertaUjianCbt::find($pesertaId);
 
         if (! $peserta) {
-            $request->session()->forget('cbt_peserta_ujian_id');
+            $this->hapusSesiPeserta($request);
             throw new HttpResponseException(redirect()->route('cbt.login'));
         }
 
+        if ($request->session()->get('cbt_asal_akses') === 'akun_siswa') {
+            $pengguna = $request->user();
+            $penggunaSesiId = (int) $request->session()->get('cbt_pengguna_id');
+            $milikSiswaLogin = $pengguna
+                && (int) $pengguna->id === $penggunaSesiId
+                && ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'))
+                && $peserta->anggotaKelas()
+                    ->where('siswa_id', $pengguna->siswa_id)
+                    ->exists();
+
+            if (! $milikSiswaLogin) {
+                $this->hapusSesiPeserta($request);
+
+                throw new HttpResponseException(redirect()
+                    ->route($pengguna ? 'beranda' : 'login')
+                    ->with('gagal', 'Sesi ujian tidak sesuai dengan akun yang sedang digunakan.'));
+            }
+        }
+
         return $peserta;
+    }
+
+    private function aktifkanSesiPeserta(
+        Request $request,
+        PesertaUjianCbt $peserta,
+        string $asalAkses,
+        ?int $penggunaId = null,
+    ): void {
+        $peserta->update([
+            'ip_terakhir' => $request->ip(),
+            'user_agent_terakhir' => substr((string) $request->userAgent(), 0, 1000),
+        ]);
+
+        $request->session()->put([
+            'cbt_peserta_ujian_id' => $peserta->id,
+            'cbt_asal_akses' => $asalAkses,
+        ]);
+
+        if ($penggunaId) {
+            $request->session()->put('cbt_pengguna_id', $penggunaId);
+        } else {
+            $request->session()->forget('cbt_pengguna_id');
+        }
+
+        $request->session()->regenerate();
+    }
+
+    private function hapusSesiPeserta(Request $request): void
+    {
+        $request->session()->forget([
+            'cbt_peserta_ujian_id',
+            'cbt_asal_akses',
+            'cbt_pengguna_id',
+        ]);
     }
 
     private function pastikanPesertaBolehMasuk(PesertaUjianCbt $peserta): void

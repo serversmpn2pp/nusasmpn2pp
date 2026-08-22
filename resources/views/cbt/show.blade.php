@@ -9,6 +9,7 @@
         $sesi = $peserta->sesiUjianCbt;
         $kelas = $peserta->kelasUjianCbt?->kelas;
         $labelTombol = $peserta->status === 'sedang_mengerjakan' ? 'Lanjutkan ujian' : 'Mulai ujian';
+        $melaluiAkunSiswa = session('cbt_asal_akses') === 'akun_siswa';
     @endphp
 
     <header class="cbt-topbar">
@@ -22,7 +23,9 @@
             </div>
             <form action="{{ route('cbt.logout') }}" method="POST">
                 @csrf
-                <button type="submit" class="button button-muted">Keluar</button>
+                <button type="submit" class="button button-muted">
+                    {{ $melaluiAkunSiswa ? 'Kembali ke Ujian Saya' : 'Keluar' }}
+                </button>
             </form>
         </div>
     </header>
@@ -51,8 +54,10 @@
                     <p class="info-value">{{ $kelas?->nama ?: '-' }}</p>
                 </div>
                 <div class="info-item">
-                    <p class="info-label">Nomor peserta</p>
-                    <p class="info-value">{{ $peserta->akunPesertaCbt?->nomor_peserta ?: $peserta->nomor_peserta ?: '-' }}</p>
+                    <p class="info-label">{{ $melaluiAkunSiswa ? 'NISN' : 'Nomor peserta' }}</p>
+                    <p class="info-value">
+                        {{ $melaluiAkunSiswa ? ($siswa?->nisn ?: '-') : ($peserta->akunPesertaCbt?->nomor_peserta ?: $peserta->nomor_peserta ?: '-') }}
+                    </p>
                 </div>
                 <div class="info-item">
                     <p class="info-label">Mata pelajaran</p>

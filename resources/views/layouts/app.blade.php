@@ -1902,6 +1902,7 @@
                         ['label' => 'Paket Ujian CBT', 'route' => 'ujian-cbt.index', 'active' => ['ujian-cbt.*'], 'initial' => 'PU', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
                         ['label' => 'Jadwal Ujian CBT', 'route' => 'jadwal-ujian-cbt.index', 'active' => ['jadwal-ujian-cbt.*'], 'initial' => 'JD', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
                         ['label' => 'Status Panitia CBT', 'route' => 'status-kelengkapan-panitia-cbt.index', 'active' => ['status-kelengkapan-panitia-cbt.*'], 'initial' => 'SP', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
+                        ['label' => 'Presensi Ujian CBT', 'route' => 'presensi-ujian-cbt.index', 'active' => ['presensi-ujian-cbt.*'], 'initial' => 'PR', 'izin' => ['cbt.presensi', 'cbt.kelola'], 'subgroup' => 'CBT'],
                     ],
                 ],
                 [
@@ -2111,6 +2112,7 @@
                     'id' => 'informasi-saya',
                     'title' => 'Informasi Saya',
                     'items' => [
+                        ['label' => 'Ujian Saya', 'route' => 'ujian-saya.index', 'active' => ['ujian-saya.*'], 'initial' => 'US', 'izin' => null],
                         ['label' => 'Nilai Saya', 'route' => 'nilai-saya.index', 'active' => ['nilai-saya.*'], 'initial' => 'NS', 'izin' => null],
                         ['label' => 'Progress Kasus Saya', 'route' => 'progress-kasus-siswa.index', 'active' => ['progress-kasus-siswa.*'], 'initial' => 'PK', 'izin' => null],
                     ],

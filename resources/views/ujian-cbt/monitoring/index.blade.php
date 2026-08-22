@@ -6,7 +6,7 @@
     <style>
         .monitor-filter-grid {
             display: grid;
-            grid-template-columns: minmax(170px, .8fr) minmax(170px, .8fr) minmax(190px, .8fr) auto;
+            grid-template-columns: repeat(4, minmax(160px, 1fr)) auto;
             gap: 12px;
             align-items: end;
         }
@@ -105,7 +105,16 @@
             vertical-align: top;
         }
 
-        @media (max-width: 1100px) {
+        .monitor-live {
+            display: inline-flex;
+            align-items: center;
+            min-height: 36px;
+            color: var(--muted);
+            font-size: .8rem;
+            font-weight: 800;
+        }
+
+        @media (max-width: 1200px) {
             .monitor-filter-grid,
             .monitor-ready-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -128,8 +137,9 @@
     @php
         $statusLabel = [
             'semua' => 'Semua status',
-            'belum_login' => 'Belum login',
-            'sudah_login' => 'Sudah login',
+            'belum_hadir' => 'Belum hadir',
+            'hadir_belum_mulai' => 'Hadir, belum mulai',
+            'tidak_hadir' => 'Tidak hadir',
             'sedang_mengerjakan' => 'Sedang mengerjakan',
             'selesai' => 'Selesai',
             'nonaktif' => 'Nonaktif',
@@ -142,6 +152,51 @@
         $tokenSiap = filled($ujianCbt->token);
         $badgeStatusPaket = $paketDibuka ? 'badge-active' : ($ujianCbt->status === 'nonaktif' ? 'badge-inactive' : 'badge-warning');
         $persenSelesai = $ringkasan['total'] > 0 ? round(($ringkasan['selesai'] / $ringkasan['total']) * 100) : 0;
+        $ruangTerpilih = $ruangUjianCbt->firstWhere('id', (int) $ruangUjianCbtId);
+        $tautanPresensi = $ruangTerpilih
+            ? route('presensi-ujian-cbt.show', [$ujianCbt, $ruangTerpilih])
+            : route('presensi-ujian-cbt.index');
+        $detailMonitorPeserta = static function ($peserta) use ($jumlahSoalTampil, $ujianCbt, $waktuSekarang) {
+            $statusPelaksanaan = $peserta->statusPelaksanaan();
+            $statusKehadiran = $peserta->status_kehadiran_ujian ?: 'belum_absen';
+            $jawabanTersimpan = (int) $peserta->jumlah_jawaban_tersimpan;
+            $persenJawaban = $jumlahSoalTampil > 0
+                ? min(100, round(($jawabanTersimpan / $jumlahSoalTampil) * 100))
+                : 0;
+            $sisaMenit = null;
+
+            if ($peserta->status === 'sedang_mengerjakan' && $peserta->waktu_mulai) {
+                $batasPengerjaan = $peserta->waktu_mulai->copy()->addMinutes($ujianCbt->durasi_menit);
+                $batasSesi = $peserta->sesiUjianCbt?->waktu_selesai ?: $ujianCbt->tanggal_selesai;
+
+                if ($batasSesi && $batasSesi->lt($batasPengerjaan)) {
+                    $batasPengerjaan = $batasSesi;
+                }
+
+                $sisaMenit = max(0, (int) ceil($waktuSekarang->diffInSeconds($batasPengerjaan, false) / 60));
+            }
+
+            return [
+                'status_pelaksanaan' => $statusPelaksanaan,
+                'label_pelaksanaan' => $peserta->labelStatusPelaksanaan(),
+                'badge_pelaksanaan' => match ($statusPelaksanaan) {
+                    'sedang_mengerjakan', 'selesai' => 'badge-active',
+                    'hadir_belum_mulai' => 'badge-warning',
+                    'tidak_hadir', 'nonaktif', 'terblokir' => 'badge-inactive',
+                    default => 'badge-muted',
+                },
+                'label_kehadiran' => \App\Models\PesertaUjianCbt::DAFTAR_STATUS_KEHADIRAN[$statusKehadiran] ?? str($statusKehadiran)->headline()->toString(),
+                'badge_kehadiran' => match ($statusKehadiran) {
+                    'hadir' => 'badge-active',
+                    'terlambat', 'sakit', 'izin' => 'badge-warning',
+                    'alfa' => 'badge-inactive',
+                    default => 'badge-muted',
+                },
+                'jawaban_tersimpan' => $jawabanTersimpan,
+                'persen_jawaban' => $persenJawaban,
+                'sisa_menit' => $sisaMenit,
+            ];
+        };
     @endphp
 
     <div class="page-header">
@@ -160,6 +215,7 @@
             <a href="{{ route('ujian-cbt.monitoring.index', [$ujianCbt] + $queryAutoRefresh) }}" class="button {{ $autoRefresh ? 'button-danger' : 'button-muted' }}">
                 {{ $autoRefresh ? 'Matikan auto refresh' : 'Auto refresh' }}
             </a>
+            <a href="{{ $tautanPresensi }}" class="button button-muted">Presensi ruang</a>
             <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Hasil</a>
             <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
             <a href="{{ route('ujian-cbt.peserta.index', $ujianCbt) }}" class="button button-muted">Peserta & sesi</a>
@@ -199,8 +255,11 @@
             <div><dt>Jadwal paket</dt><dd>{{ $ujianCbt->labelWaktu() }}</dd></div>
             <div><dt>Durasi</dt><dd>{{ $ujianCbt->durasi_menit }} menit</dd></div>
             <div><dt>Soal paket</dt><dd>{{ $jumlahSoalPaket }} soal, tampil {{ $jumlahSoalTampil }}</dd></div>
-            <div><dt>Terakhir dipantau</dt><dd>{{ $waktuSekarang->format('d-m-Y H:i:s') }}</dd></div>
+            <div><dt>Terakhir dipantau</dt><dd id="monitoringTerakhir">{{ $waktuSekarang->format('d-m-Y H:i:s') }}</dd></div>
         </dl>
+        @if ($autoRefresh)
+            <p class="monitor-live" data-auto-refresh-status>Data diperbarui otomatis setiap 15 detik tanpa memuat ulang halaman.</p>
+        @endif
     </section>
 
     <section class="monitor-ready-grid" style="margin-bottom: 24px;">
@@ -222,34 +281,34 @@
         </dl>
     </section>
 
-    <div class="stats-grid">
+    <div class="stats-grid" id="monitoringRingkasan">
         <div class="panel stat">
             <p class="stat-label">Total peserta</p>
             <p class="stat-value">{{ $ringkasan['total'] }}</p>
         </div>
         <div class="panel stat">
-            <p class="stat-label">Belum login</p>
-            <p class="stat-value">{{ $ringkasan['belum_login'] }}</p>
+            <p class="stat-label">Belum hadir</p>
+            <p class="stat-value">{{ $ringkasan['belum_hadir'] }}</p>
         </div>
-        <div class="panel stat">
-            <p class="stat-label">Sudah login</p>
-            <p class="stat-value">{{ $ringkasan['sudah_login'] }}</p>
+        <div class="panel stat warning">
+            <p class="stat-label">Hadir, belum mulai</p>
+            <p class="stat-value">{{ $ringkasan['hadir_belum_mulai'] }}</p>
         </div>
         <div class="panel stat active">
             <p class="stat-label">Sedang mengerjakan</p>
             <p class="stat-value">{{ $ringkasan['sedang_mengerjakan'] }}</p>
         </div>
         <div class="panel stat">
-            <p class="stat-label">Selesai</p>
+            <p class="stat-label">Selesai ({{ $persenSelesai }}%)</p>
             <p class="stat-value">{{ $ringkasan['selesai'] }}</p>
         </div>
         <div class="panel stat">
-            <p class="stat-label">Progres selesai</p>
-            <p class="stat-value">{{ $persenSelesai }}%</p>
+            <p class="stat-label">Tidak hadir</p>
+            <p class="stat-value">{{ $ringkasan['tidak_hadir'] }}</p>
         </div>
     </div>
 
-    <form action="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;" data-monitor-filter>
         <div class="monitor-filter-grid">
             <div class="field">
                 <label for="kelas_id">Kelas</label>
@@ -270,6 +329,15 @@
                 </select>
             </div>
             <div class="field">
+                <label for="ruang_ujian_cbt_id">Ruang</label>
+                <select id="ruang_ujian_cbt_id" name="ruang_ujian_cbt_id" class="select">
+                    <option value="">Semua ruang</option>
+                    @foreach ($ruangUjianCbt as $ruang)
+                        <option value="{{ $ruang->id }}" @selected((string) $ruangUjianCbtId === (string) $ruang->id)>{{ $ruang->kode }} - {{ $ruang->nama }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field">
                 <label for="status_monitor">Status peserta</label>
                 <select id="status_monitor" name="status_monitor" class="select">
                     @foreach ($statusLabel as $nilai => $label)
@@ -281,59 +349,37 @@
                 @if ($autoRefresh)
                     <input type="hidden" name="auto_refresh" value="1">
                 @endif
-                <button type="submit" class="button button-dark">Terapkan</button>
+                <noscript><button type="submit" class="button button-dark">Terapkan</button></noscript>
                 <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Reset</a>
             </div>
         </div>
     </form>
 
-    <section class="panel">
+    <section class="panel" id="monitoringPeserta" aria-live="polite">
         <div class="desktop-only table-wrap">
             <table class="employee-table monitor-table">
                 <thead>
                     <tr>
                         <th>Peserta</th>
                         <th>Kelas/Sesi</th>
-                        <th>Status</th>
+                        <th>Ruang/Meja</th>
+                        <th>Presensi</th>
+                        <th>Pengerjaan</th>
                         <th>Jawaban</th>
                         <th>Waktu</th>
-                        <th>Perangkat</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($pesertaUjianCbt as $peserta)
                         @php
-                            $statusDasar = $peserta->status;
-                            $sudahLogin = $statusDasar === 'aktif' && filled($peserta->ip_terakhir);
-                            $labelStatus = match (true) {
-                                $statusDasar === 'aktif' && ! $sudahLogin => 'Belum login',
-                                $statusDasar === 'aktif' && $sudahLogin => 'Sudah login',
-                                default => $peserta->labelStatus(),
-                            };
-                            $badgeStatus = match ($statusDasar) {
-                                'sedang_mengerjakan' => 'badge-active',
-                                'selesai' => 'badge-active',
-                                'nonaktif', 'terblokir' => 'badge-inactive',
-                                default => $sudahLogin ? 'badge-warning' : 'badge-muted',
-                            };
-                            $jawabanTersimpan = (int) $peserta->jumlah_jawaban_tersimpan;
-                            $persenJawaban = $jumlahSoalTampil > 0 ? min(100, round(($jawabanTersimpan / $jumlahSoalTampil) * 100)) : 0;
-                            $sisaMenit = null;
-                            if ($peserta->status === 'sedang_mengerjakan' && $peserta->waktu_mulai) {
-                                $batasPengerjaan = $peserta->waktu_mulai->copy()->addMinutes($ujianCbt->durasi_menit);
-                                $batasSesi = $peserta->sesiUjianCbt?->waktu_selesai ?: $ujianCbt->tanggal_selesai;
-                                if ($batasSesi && $batasSesi->lt($batasPengerjaan)) {
-                                    $batasPengerjaan = $batasSesi;
-                                }
-                                $sisaMenit = max(0, (int) ceil(now()->diffInSeconds($batasPengerjaan, false) / 60));
-                            }
+                            $monitor = $detailMonitorPeserta($peserta);
                         @endphp
                         <tr>
                             <td>
                                 <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
                                 <div class="monitor-meta">
+                                    <span>NISN {{ $peserta->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
                                     <span>No. {{ $peserta->akunPesertaCbt?->nomor_peserta ?: $peserta->nomor_peserta }}</span>
-                                    <span>Username: {{ $peserta->akunPesertaCbt?->username ?: $peserta->username }}</span>
                                 </div>
                             </td>
                             <td>
@@ -344,18 +390,35 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge {{ $badgeStatus }}">{{ $labelStatus }}</span>
+                                @if ($peserta->ruangUjianCbt)
+                                    <a href="{{ route('presensi-ujian-cbt.show', [$ujianCbt, $peserta->ruangUjianCbt]) }}" class="person-name">{{ $peserta->ruangUjianCbt->kode }} - {{ $peserta->ruangUjianCbt->nama }}</a>
+                                    <div class="monitor-meta">
+                                        <span>Meja {{ $peserta->nomor_meja ?: '-' }}</span>
+                                        <span>{{ $peserta->ruangUjianCbt->lokasi ?: 'Lokasi belum diisi' }}</span>
+                                    </div>
+                                @else
+                                    <span class="badge badge-warning">Belum ditempatkan</span>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge {{ $monitor['badge_kehadiran'] }}">{{ $monitor['label_kehadiran'] }}</span>
+                                <div class="monitor-meta" style="margin-top: 7px;">
+                                    <span>{{ $peserta->absen_ujian_pada?->format('H:i:s') ?: 'Belum dipindai' }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {{ $monitor['badge_pelaksanaan'] }}">{{ $monitor['label_pelaksanaan'] }}</span>
                                 @if ($peserta->jumlah_jawaban_ragu > 0)
                                     <div style="margin-top: 7px;"><span class="badge badge-warning">{{ $peserta->jumlah_jawaban_ragu }} ragu</span></div>
                                 @endif
                             </td>
                             <td>
                                 <div class="monitor-progress">
-                                    <strong>{{ $jawabanTersimpan }} / {{ $jumlahSoalTampil }}</strong>
+                                    <strong>{{ $monitor['jawaban_tersimpan'] }} / {{ $jumlahSoalTampil }}</strong>
                                     <div class="monitor-progress-track" aria-hidden="true">
-                                        <div class="monitor-progress-fill" style="width: {{ $persenJawaban }}%;"></div>
+                                        <div class="monitor-progress-fill" style="width: {{ $monitor['persen_jawaban'] }}%;"></div>
                                     </div>
-                                    <span class="person-meta">{{ $persenJawaban }}% terisi</span>
+                                    <span class="person-meta">{{ $monitor['persen_jawaban'] }}% terisi</span>
                                     @if ($peserta->jumlah_jawaban_dikoreksi > 0)
                                         <span class="person-meta">Benar {{ $peserta->jumlah_jawaban_benar }} / {{ $peserta->jumlah_jawaban_dikoreksi }} dikoreksi</span>
                                     @endif
@@ -365,21 +428,16 @@
                                 <div class="monitor-meta">
                                     <span>Mulai: <strong>{{ $peserta->waktu_mulai?->format('H:i:s') ?: '-' }}</strong></span>
                                     <span>Selesai: <strong>{{ $peserta->waktu_selesai?->format('H:i:s') ?: '-' }}</strong></span>
-                                    @if (! is_null($sisaMenit))
-                                        <span class="monitor-time">Sisa sekitar {{ $sisaMenit }} menit</span>
+                                    @if (! is_null($monitor['sisa_menit']))
+                                        <span class="monitor-time">Sisa sekitar {{ $monitor['sisa_menit'] }} menit</span>
                                     @endif
-                                </div>
-                            </td>
-                            <td>
-                                <div class="monitor-meta">
                                     <span>IP: {{ $peserta->ip_terakhir ?: '-' }}</span>
-                                    <span title="{{ $peserta->user_agent_terakhir }}">{{ filled($peserta->user_agent_terakhir) ? str($peserta->user_agent_terakhir)->limit(52) : '-' }}</span>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="empty-state">Belum ada peserta yang sesuai filter monitoring.</td>
+                            <td colspan="7" class="empty-state">Belum ada peserta yang sesuai filter monitoring.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -389,21 +447,7 @@
         <div class="mobile-only mobile-list">
             @forelse ($pesertaUjianCbt as $peserta)
                 @php
-                    $statusDasar = $peserta->status;
-                    $sudahLogin = $statusDasar === 'aktif' && filled($peserta->ip_terakhir);
-                    $labelStatus = match (true) {
-                        $statusDasar === 'aktif' && ! $sudahLogin => 'Belum login',
-                        $statusDasar === 'aktif' && $sudahLogin => 'Sudah login',
-                        default => $peserta->labelStatus(),
-                    };
-                    $badgeStatus = match ($statusDasar) {
-                        'sedang_mengerjakan' => 'badge-active',
-                        'selesai' => 'badge-active',
-                        'nonaktif', 'terblokir' => 'badge-inactive',
-                        default => $sudahLogin ? 'badge-warning' : 'badge-muted',
-                    };
-                    $jawabanTersimpan = (int) $peserta->jumlah_jawaban_tersimpan;
-                    $persenJawaban = $jumlahSoalTampil > 0 ? min(100, round(($jawabanTersimpan / $jumlahSoalTampil) * 100)) : 0;
+                    $monitor = $detailMonitorPeserta($peserta);
                 @endphp
                 <article class="mobile-card">
                     <div class="mobile-card-head">
@@ -411,16 +455,20 @@
                             <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
                             <p class="person-meta">{{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }} - {{ $peserta->sesiUjianCbt?->nama ?: 'Tanpa sesi' }}</p>
                         </div>
-                        <span class="badge {{ $badgeStatus }}">{{ $labelStatus }}</span>
+                        <span class="badge {{ $monitor['badge_pelaksanaan'] }}">{{ $monitor['label_pelaksanaan'] }}</span>
                     </div>
                     <dl class="quick-facts">
-                        <div><dt>Jawaban</dt><dd>{{ $jawabanTersimpan }} / {{ $jumlahSoalTampil }}</dd></div>
+                        <div><dt>Ruang</dt><dd>{{ $peserta->ruangUjianCbt?->nama ?: 'Belum diatur' }}</dd></div>
+                        <div><dt>Nomor meja</dt><dd>{{ $peserta->nomor_meja ?: '-' }}</dd></div>
+                        <div><dt>Presensi</dt><dd><span class="badge {{ $monitor['badge_kehadiran'] }}">{{ $monitor['label_kehadiran'] }}</span></dd></div>
+                        <div><dt>Waktu hadir</dt><dd>{{ $peserta->absen_ujian_pada?->format('H:i:s') ?: '-' }}</dd></div>
+                        <div><dt>Jawaban</dt><dd>{{ $monitor['jawaban_tersimpan'] }} / {{ $jumlahSoalTampil }}</dd></div>
                         <div><dt>Ragu</dt><dd>{{ $peserta->jumlah_jawaban_ragu }}</dd></div>
                         <div><dt>Benar</dt><dd>{{ $peserta->jumlah_jawaban_benar }} / {{ $peserta->jumlah_jawaban_dikoreksi }}</dd></div>
                         <div><dt>Mulai</dt><dd>{{ $peserta->waktu_mulai?->format('H:i:s') ?: '-' }}</dd></div>
                         <div><dt>Selesai</dt><dd>{{ $peserta->waktu_selesai?->format('H:i:s') ?: '-' }}</dd></div>
                         <div><dt>IP</dt><dd>{{ $peserta->ip_terakhir ?: '-' }}</dd></div>
-                        <div><dt>Progres</dt><dd>{{ $persenJawaban }}%</dd></div>
+                        <div><dt>Progres</dt><dd>{{ $monitor['persen_jawaban'] }}%</dd></div>
                     </dl>
                 </article>
             @empty
@@ -433,12 +481,71 @@
 @push('scripts')
     @if ($autoRefresh)
         <script>
-            window.setTimeout(() => window.location.reload(), 15000);
+            (() => {
+                const statusPembaruan = document.querySelector('[data-auto-refresh-status]');
+                const urlPembaruan = new URL(window.location.href);
+                let sedangMemperbarui = false;
+
+                urlPembaruan.searchParams.set('auto_refresh', '0');
+
+                const perbaruiMonitoring = async () => {
+                    if (sedangMemperbarui || document.hidden) {
+                        return;
+                    }
+
+                    sedangMemperbarui = true;
+
+                    if (statusPembaruan) {
+                        statusPembaruan.textContent = 'Memperbarui data monitoring...';
+                    }
+
+                    try {
+                        const response = await fetch(urlPembaruan.toString(), {
+                            cache: 'no-store',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Pembaruan monitoring gagal.');
+                        }
+
+                        const halamanBaru = new DOMParser().parseFromString(await response.text(), 'text/html');
+
+                        ['monitoringRingkasan', 'monitoringPeserta', 'monitoringTerakhir'].forEach((id) => {
+                            const bagianSekarang = document.getElementById(id);
+                            const bagianBaru = halamanBaru.getElementById(id);
+
+                            if (bagianSekarang && bagianBaru) {
+                                bagianSekarang.innerHTML = bagianBaru.innerHTML;
+                            }
+                        });
+
+                        if (statusPembaruan) {
+                            statusPembaruan.textContent = `Pembaruan otomatis aktif - terakhir ${new Date().toLocaleTimeString('id-ID')}`;
+                        }
+                    } catch (error) {
+                        if (statusPembaruan) {
+                            statusPembaruan.textContent = 'Pembaruan otomatis tertunda. Sistem akan mencoba kembali.';
+                        }
+                    } finally {
+                        sedangMemperbarui = false;
+                    }
+                };
+
+                window.setInterval(perbaruiMonitoring, 15000);
+            })();
         </script>
     @endif
     <script>
+        const formFilterMonitoring = document.querySelector('[data-monitor-filter]');
         const tombolSalinToken = document.querySelector('[data-copy-token]');
         const tokenCbt = document.getElementById('tokenCbt');
+
+        formFilterMonitoring?.querySelectorAll('select').forEach((pilihan) => {
+            pilihan.addEventListener('change', () => formFilterMonitoring.requestSubmit());
+        });
 
         if (tombolSalinToken && tokenCbt) {
             tombolSalinToken.addEventListener('click', async () => {

@@ -5,6 +5,8 @@
 @section('content')
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
+        $pegawaiEkspor = $daftarPegawai->firstWhere('id', (int) $pegawaiId)?->nama_lengkap;
+        $namaEkspor = collect(['kartu-pegawai', $jenisPegawai, $pegawaiEkspor])->filter()->join('-');
     @endphp
 
     <style>
@@ -397,7 +399,7 @@
         </div>
 
         <div class="actions">
-            <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
+            <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPegawai->isEmpty())>Cetak kartu</button>
             @izin('pegawai.kelola')
                 <a href="{{ route('foto-identitas.index', ['tab' => 'pegawai']) }}" class="button button-dark">Kelola foto</a>
             @endizin
@@ -452,7 +454,7 @@
             <h2 class="panel-title">{{ $kartuPegawai->count() }} kartu siap cetak</h2>
             <p class="help-text" style="margin-top: 4px;">Ukuran kartu: 53,98mm x 85,60mm, posisi portrait.</p>
         </div>
-        <button type="button" class="button button-primary" onclick="window.print()">Cetak kartu</button>
+        <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPegawai->isEmpty())>Cetak kartu</button>
     </div>
 
     @if ($kartuPegawai->isEmpty())
@@ -461,15 +463,20 @@
             <p class="help-text" style="margin-top: 8px;">Pilih pegawai aktif atau periksa kembali data NIP pegawai.</p>
         </section>
     @else
-        <section class="employee-card-sheet">
+        <section class="employee-card-sheet" data-card-export-root data-export-name="{{ $namaEkspor }}">
             @foreach ($kartuPegawai as $kartu)
                 @php
                     $pegawai = $kartu['pegawai'];
                 @endphp
 
-                <article class="employee-card-pair">
+                <article
+                    class="employee-card-pair"
+                    data-card-export-item
+                    data-card-name="{{ $pegawai->nama_lengkap }}"
+                    data-card-number="{{ $pegawai->nip }}"
+                >
                     <div>
-                        <div class="employee-id-card employee-card-front" aria-label="Kartu pegawai depan {{ $pegawai->nama_lengkap }}">
+                        <div class="employee-id-card employee-card-front" data-card-side="depan" aria-label="Kartu pegawai depan {{ $pegawai->nama_lengkap }}">
                             <div class="employee-card-content">
                                 <div class="employee-front-header">
                                     <div class="employee-logo-row">
@@ -500,7 +507,7 @@
                     </div>
 
                     <div>
-                        <div class="employee-id-card employee-card-back" aria-label="Kartu pegawai belakang {{ $pegawai->nama_lengkap }}">
+                        <div class="employee-id-card employee-card-back" data-card-side="belakang" aria-label="Kartu pegawai belakang {{ $pegawai->nama_lengkap }}">
                             <div class="employee-card-content">
                                 <div class="employee-back-header">
                                     <div class="employee-back-logo">
@@ -533,4 +540,10 @@
             @endforeach
         </section>
     @endif
+
+    <x-pilih-format-kartu :jumlah="$kartuPegawai->count()" jenis="kartu pegawai" />
 @endsection
+
+@push('scripts')
+    @vite('resources/js/export-kartu-identitas.js')
+@endpush

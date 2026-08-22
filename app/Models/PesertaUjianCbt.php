@@ -19,12 +19,22 @@ class PesertaUjianCbt extends Model
     ];
 
     public const DAFTAR_STATUS_KEHADIRAN = [
-        'belum_absen' => 'Belum absen',
+        'belum_absen' => 'Belum hadir',
         'hadir' => 'Hadir',
         'terlambat' => 'Terlambat',
         'sakit' => 'Sakit',
         'izin' => 'Izin',
         'alfa' => 'Alfa',
+    ];
+
+    public const DAFTAR_STATUS_PELAKSANAAN = [
+        'belum_hadir' => 'Belum hadir',
+        'hadir_belum_mulai' => 'Hadir, belum mulai',
+        'tidak_hadir' => 'Tidak hadir',
+        'sedang_mengerjakan' => 'Sedang mengerjakan',
+        'selesai' => 'Selesai',
+        'nonaktif' => 'Nonaktif',
+        'terblokir' => 'Terblokir',
     ];
 
     protected $fillable = [
@@ -129,5 +139,29 @@ class PesertaUjianCbt extends Model
     public function labelStatusKehadiranUjian(): string
     {
         return self::DAFTAR_STATUS_KEHADIRAN[$this->status_kehadiran_ujian] ?? str($this->status_kehadiran_ujian)->headline()->toString();
+    }
+
+    public function statusPelaksanaan(): string
+    {
+        if ($this->status !== 'aktif') {
+            return $this->status;
+        }
+
+        if (in_array($this->status_kehadiran_ujian, ['hadir', 'terlambat'], true)) {
+            return 'hadir_belum_mulai';
+        }
+
+        if (in_array($this->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true)) {
+            return 'tidak_hadir';
+        }
+
+        return 'belum_hadir';
+    }
+
+    public function labelStatusPelaksanaan(): string
+    {
+        $status = $this->statusPelaksanaan();
+
+        return self::DAFTAR_STATUS_PELAKSANAAN[$status] ?? str($status)->headline()->toString();
     }
 }
