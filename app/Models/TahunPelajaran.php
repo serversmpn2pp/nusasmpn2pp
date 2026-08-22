@@ -124,11 +124,6 @@ class TahunPelajaran extends Model
         return $this->hasMany(PerangkatAjar::class);
     }
 
-    public function ujianOmr(): HasMany
-    {
-        return $this->hasMany(UjianOmr::class);
-    }
-
     public function ujianCbt(): HasMany
     {
         return $this->hasMany(UjianCbt::class);

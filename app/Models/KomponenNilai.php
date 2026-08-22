@@ -37,11 +37,6 @@ class KomponenNilai extends Model
         return $this->hasMany(NilaiSiswa::class);
     }
 
-    public function kelasUjianOmr(): HasMany
-    {
-        return $this->hasMany(KelasUjianOmr::class);
-    }
-
     public function kelasUjianCbt(): HasMany
     {
         return $this->hasMany(KelasUjianCbt::class);

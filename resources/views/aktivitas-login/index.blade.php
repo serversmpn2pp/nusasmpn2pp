@@ -82,6 +82,16 @@
             grid-template-columns: minmax(210px, 1.25fr) repeat(2, minmax(150px, .75fr)) repeat(2, minmax(145px, .7fr)) auto;
         }
 
+        .login-activity-filter-grid .field {
+            min-width: 0;
+        }
+
+        .login-activity-filter-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
         .login-activity-table-head {
             display: flex;
             align-items: center;
@@ -195,6 +205,7 @@
                 grid-column: auto;
             }
 
+            .login-activity-filter-actions,
             .login-activity-filter-grid .button {
                 width: 100%;
                 justify-content: center;
@@ -293,7 +304,7 @@
 
             <div class="field">
                 <label for="jenis_akun">Jenis akun</label>
-                <select id="jenis_akun" name="jenis_akun" data-login-auto>
+                <select id="jenis_akun" name="jenis_akun" class="select" data-login-auto>
                     @foreach ($daftarJenisAkun as $nilai => $label)
                         <option value="{{ $nilai }}" @selected($jenisAkun === $nilai)>{{ $label }}</option>
                     @endforeach
@@ -303,7 +314,7 @@
             @if ($tampilan === 'pengguna')
                 <div class="field">
                     <label for="status_login">Riwayat penggunaan</label>
-                    <select id="status_login" name="status_login" data-login-auto>
+                    <select id="status_login" name="status_login" class="select" data-login-auto>
                         <option value="semua" @selected($statusLogin === 'semua')>Semua akun</option>
                         <option value="pernah" @selected($statusLogin === 'pernah')>Pernah login</option>
                         <option value="belum" @selected($statusLogin === 'belum')>Belum pernah login</option>
@@ -312,7 +323,7 @@
             @else
                 <div class="field">
                     <label for="status_percobaan">Hasil percobaan</label>
-                    <select id="status_percobaan" name="status_percobaan" data-login-auto>
+                    <select id="status_percobaan" name="status_percobaan" class="select" data-login-auto>
                         <option value="semua" @selected($statusPercobaan === 'semua')>Semua hasil</option>
                         <option value="berhasil" @selected($statusPercobaan === 'berhasil')>Berhasil</option>
                         <option value="gagal" @selected($statusPercobaan === 'gagal')>Gagal</option>
@@ -328,7 +339,9 @@
                 </div>
             @endif
 
-            <a href="{{ route('aktivitas-login.index', ['tampilan' => $tampilan]) }}" class="button button-muted">Reset</a>
+            <div class="login-activity-filter-actions">
+                <a href="{{ route('aktivitas-login.index', ['tampilan' => $tampilan]) }}" class="button button-muted">Reset</a>
+            </div>
         </div>
     </form>
 

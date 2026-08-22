@@ -155,11 +155,6 @@ class Pengguna extends Authenticatable
         return $this->hasMany(PengajuanBarang::class, 'diproses_oleh_pengguna_id');
     }
 
-    public function ujianOmrDibuat(): HasMany
-    {
-        return $this->hasMany(UjianOmr::class, 'dibuat_oleh_pengguna_id');
-    }
-
     public function ujianCbtDibuat(): HasMany
     {
         return $this->hasMany(UjianCbt::class, 'dibuat_oleh_pengguna_id');
@@ -168,16 +163,6 @@ class Pengguna extends Authenticatable
     public function soalCbtDibuat(): HasMany
     {
         return $this->hasMany(SoalCbt::class, 'dibuat_oleh_pengguna_id');
-    }
-
-    public function lembarJawabUjianOmrDibuat(): HasMany
-    {
-        return $this->hasMany(LembarJawabUjianOmr::class, 'dibuat_oleh_pengguna_id');
-    }
-
-    public function batchScanUjianOmrDibuat(): HasMany
-    {
-        return $this->hasMany(BatchScanUjianOmr::class, 'dibuat_oleh_pengguna_id');
     }
 
     public function memilikiPeran(string|array $kode): bool

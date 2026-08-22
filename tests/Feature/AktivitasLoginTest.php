@@ -104,7 +104,10 @@ class AktivitasLoginTest extends TestCase
             ->assertSee('Aktivitas Login')
             ->assertSee('Guru Uji Aktivitas')
             ->assertSee('19870001')
-            ->assertSee('Lihat riwayat');
+            ->assertSee('Lihat riwayat')
+            ->assertSee('id="jenis_akun" name="jenis_akun" class="select"', false)
+            ->assertSee('id="status_login" name="status_login" class="select"', false)
+            ->assertSee('login-activity-filter-actions', false);
 
         $this->actingAs($administrator)
             ->get(route('aktivitas-login.index', [
@@ -114,7 +117,8 @@ class AktivitasLoginTest extends TestCase
             ->assertOk()
             ->assertSee('Riwayat percobaan login')
             ->assertSee('Android - Chrome')
-            ->assertSee('10.10.10.20');
+            ->assertSee('10.10.10.20')
+            ->assertSee('id="status_percobaan" name="status_percobaan" class="select"', false);
     }
 
     public function test_pengguna_tanpa_permission_tidak_dapat_melihat_aktivitas_login(): void

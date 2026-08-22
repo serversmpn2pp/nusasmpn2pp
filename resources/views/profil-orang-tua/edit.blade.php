@@ -4,9 +4,16 @@
 
 @push('styles')
     <style>
+        .page-header .page-description {
+            max-width: 620px;
+            margin: 7px 0 0;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
         .parent-profile-layout {
             display: grid;
-            grid-template-columns: minmax(250px, .78fr) minmax(0, 1.45fr);
+            grid-template-columns: minmax(280px, .82fr) minmax(0, 1.55fr);
             gap: 18px;
             align-items: start;
         }
@@ -25,17 +32,23 @@
             padding: 22px;
         }
 
+        .parent-profile-identity {
+            display: grid;
+            grid-template-columns: 64px minmax(0, 1fr);
+            gap: 14px;
+            align-items: center;
+        }
+
         .parent-profile-avatar {
-            width: 72px;
-            height: 72px;
+            width: 64px;
+            height: 64px;
             display: grid;
             place-items: center;
-            border-radius: 50%;
+            border-radius: 8px;
             background: var(--primary);
             color: #fff;
-            font-size: 25px;
+            font-size: 22px;
             font-weight: 800;
-            margin-bottom: 16px;
         }
 
         .parent-profile-card h2,
@@ -43,12 +56,36 @@
             margin: 0;
             font-size: 19px;
             line-height: 1.35;
+            overflow-wrap: anywhere;
         }
 
-        .parent-profile-card > p,
+        .parent-profile-copy > p,
         .parent-child-copy > p {
             color: var(--muted);
             margin: 5px 0 0;
+        }
+
+        .parent-account-status {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            margin-top: 8px;
+            border: 1px solid #bbf7d0;
+            border-radius: 999px;
+            padding: 4px 9px;
+            background: #f0fdf4;
+            color: #166534;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .parent-account-status::before {
+            width: 7px;
+            height: 7px;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: #16a34a;
+            content: '';
         }
 
         .parent-account-facts {
@@ -76,8 +113,15 @@
         }
 
         .parent-account-form h2 {
-            margin: 0 0 18px;
+            margin: 0;
             font-size: 18px;
+        }
+
+        .parent-section-description {
+            margin: 5px 0 18px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.55;
         }
 
         .parent-form-grid {
@@ -86,8 +130,7 @@
             gap: 16px;
         }
 
-        .parent-form-actions,
-        .parent-child-actions {
+        .parent-form-actions {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
@@ -141,7 +184,22 @@
         }
 
         .parent-child-actions {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
             margin-top: 16px;
+        }
+
+        .parent-child-actions .button {
+            width: 100%;
+            border-color: #bfd4e8;
+            background: #f4f8fc;
+            color: var(--primary-dark);
+        }
+
+        .parent-child-actions .button:hover {
+            border-color: var(--primary);
+            background: var(--primary-soft);
         }
 
         @media (max-width: 820px) {
@@ -175,9 +233,16 @@
                 grid-template-columns: 1fr;
             }
 
-            .parent-form-actions .button,
-            .parent-child-actions .button {
+            .parent-child-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .parent-form-actions .button {
                 flex: 1 1 100%;
+            }
+
+            .page-header > .button {
+                width: 100%;
             }
         }
     </style>
@@ -200,7 +265,8 @@
     <div class="page-header">
         <div>
             <span class="eyebrow">Akun Orang Tua</span>
-            <h1>Profil & Akun</h1>
+            <h1 class="page-title">Profil & Akun</h1>
+            <p class="page-description">Periksa data kontak serta siswa yang terhubung dengan akun ini.</p>
         </div>
         <a href="{{ route('kata-sandi.edit') }}" class="button button-muted">Ganti kata sandi</a>
     </div>
@@ -211,18 +277,21 @@
 
     <div class="parent-profile-layout">
         <section class="parent-profile-card" aria-label="Ringkasan akun">
-            <div class="parent-profile-avatar" aria-hidden="true">{{ $inisial ?: 'OT' }}</div>
-            <h2>{{ $orangTua->nama_lengkap }}</h2>
-            <p>{{ $hubungan }} dari {{ $siswa?->nama_lengkap ?: 'siswa' }}</p>
+            <div class="parent-profile-identity">
+                <div class="parent-profile-avatar" aria-hidden="true">{{ $inisial ?: 'OT' }}</div>
+                <div class="parent-profile-copy">
+                    <h2>{{ $orangTua->nama_lengkap }}</h2>
+                    <p>{{ $hubungan }} dari {{ $siswa?->nama_lengkap ?: 'siswa' }}</p>
+                    @if (auth()->user()->aktif)
+                        <span class="parent-account-status">Akun aktif</span>
+                    @endif
+                </div>
+            </div>
 
             <div class="parent-account-facts">
                 <div class="parent-account-fact">
                     <span>Username</span>
                     <strong>{{ auth()->user()->username }}</strong>
-                </div>
-                <div class="parent-account-fact">
-                    <span>Status akun</span>
-                    <strong>{{ auth()->user()->aktif ? 'Aktif' : 'Nonaktif' }}</strong>
                 </div>
                 <div class="parent-account-fact">
                     <span>Terakhir masuk</span>
@@ -235,6 +304,7 @@
             @csrf
             @method('PUT')
             <h2>Data orang tua/wali</h2>
+            <p class="parent-section-description">Nama ini digunakan sebagai identitas akun. Nomor WhatsApp dipakai sekolah untuk menghubungi orang tua atau wali.</p>
 
             <div class="parent-form-grid">
                 <div class="field">
@@ -265,7 +335,7 @@
                     <div class="parent-child-copy">
                         <span class="eyebrow">Anak Terhubung</span>
                         <h2>{{ $siswa->nama_lengkap }}</h2>
-                        <p>NISN {{ $siswa->nisn ?: '-' }}</p>
+                        <p>NISN: {{ $siswa->nisn ?: '-' }}</p>
                     </div>
                 </div>
 

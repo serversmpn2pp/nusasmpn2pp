@@ -52,11 +52,6 @@ class AnggotaKelas extends Model
         return $this->hasMany(LaporanPembinaanSiswa::class);
     }
 
-    public function lembarJawabUjianOmr(): HasMany
-    {
-        return $this->hasMany(LembarJawabUjianOmr::class);
-    }
-
     public function pesertaUjianCbt(): HasMany
     {
         return $this->hasMany(PesertaUjianCbt::class);

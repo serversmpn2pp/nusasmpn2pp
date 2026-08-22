@@ -77,11 +77,6 @@ class Kelas extends Model
             ->withTimestamps();
     }
 
-    public function kelasUjianOmr(): HasMany
-    {
-        return $this->hasMany(KelasUjianOmr::class);
-    }
-
     public function kelasUjianCbt(): HasMany
     {
         return $this->hasMany(KelasUjianCbt::class);

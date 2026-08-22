@@ -28,6 +28,7 @@ class ProfilOrangTuaTest extends TestCase
             ->get(route('profil-orang-tua.edit'))
             ->assertOk()
             ->assertSee('Profil & Akun')
+            ->assertSee('.parent-profile-layout', false)
             ->assertSee($akunOrangTua->username)
             ->assertSee($siswa->nama_lengkap)
             ->assertSee($kelas->nama)

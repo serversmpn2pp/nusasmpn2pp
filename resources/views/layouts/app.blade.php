@@ -1771,6 +1771,7 @@
                 }
             }
         </style>
+        @stack('styles')
     </head>
     <body>
         @php
@@ -1896,7 +1897,6 @@
                     'id' => 'ujian-asesmen',
                     'title' => 'Ujian & Asesmen',
                     'items' => [
-                        ['label' => 'Ujian OMR & LJK', 'route' => 'ujian-omr.index', 'active' => ['ujian-omr.*'], 'initial' => 'LJ', 'izin' => ['omr.lihat', 'omr.kelola'], 'subgroup' => 'OMR'],
                         ['label' => 'Jenis Ujian CBT', 'route' => 'jenis-ujian-cbt.index', 'active' => ['jenis-ujian-cbt.*'], 'initial' => 'JU', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
                         ['label' => 'Bank Soal CBT', 'route' => 'soal-cbt.index', 'active' => ['soal-cbt.*'], 'initial' => 'BS', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola'], 'subgroup' => 'CBT'],
                         ['label' => 'Paket Ujian CBT', 'route' => 'ujian-cbt.index', 'active' => ['ujian-cbt.*'], 'initial' => 'PU', 'izin' => ['cbt.lihat', 'cbt.kelola'], 'subgroup' => 'CBT'],
@@ -2121,7 +2121,7 @@
                     'id' => 'akun-saya',
                     'title' => 'Akun Saya',
                     'items' => [
-                        ['label' => 'Profil & Akun', 'route' => 'profil-orang-tua.edit', 'active' => ['profil-orang-tua.*', 'kata-sandi.*'], 'initial' => 'PA', 'izin' => null],
+                        ['label' => 'Profil & Akun', 'route' => 'profil-siswa.show', 'active' => ['profil-siswa.*', 'kata-sandi.*'], 'initial' => 'PA', 'izin' => null],
                     ],
                 ],
             ];
@@ -2422,6 +2422,14 @@
                                                 <circle cx="12" cy="7" r="4"></circle>
                                             </svg>
                                             <span>Profil Saya</span>
+                                        </a>
+                                    @elseif ($penggunaAktif->akunSiswa() || $penggunaAktif->memilikiPeran('siswa'))
+                                        <a href="{{ route('profil-siswa.show') }}" class="account-dropdown-link">
+                                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                                                <path d="M20 21a8 8 0 0 0-16 0"></path>
+                                                <circle cx="12" cy="7" r="4"></circle>
+                                            </svg>
+                                            <span>Profil & Akun</span>
                                         </a>
                                     @elseif ($penggunaAktif->akunOrangTua() || $penggunaAktif->memilikiPeran('orang_tua'))
                                         <a href="{{ route('profil-orang-tua.edit') }}" class="account-dropdown-link">

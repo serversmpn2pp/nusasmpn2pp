@@ -45,17 +45,14 @@ use App\Http\Controllers\KenaikanKelasController;
 use App\Http\Controllers\KlarifikasiSiswaPembinaanController;
 use App\Http\Controllers\KomponenNilaiController;
 use App\Http\Controllers\KonfirmasiBerhalanganIbadahController;
-use App\Http\Controllers\KoreksiHasilScanLjkOmrController;
 use App\Http\Controllers\KoreksiKegiatanIbadahController;
 use App\Http\Controllers\KoreksiManualUjianCbtController;
 use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
-use App\Http\Controllers\KunciJawabanUjianOmrController;
 use App\Http\Controllers\LabelBarcodeInventarisController;
 use App\Http\Controllers\LaporanAbsensiController;
 use App\Http\Controllers\LaporanAbsensiPegawaiBulananController;
 use App\Http\Controllers\LaporanInventarisBulananController;
 use App\Http\Controllers\LaporanPembinaanSiswaController;
-use App\Http\Controllers\LembarJawabUjianOmrController;
 use App\Http\Controllers\LokasiBarangController;
 use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\MonitoringSurveiController;
@@ -94,6 +91,7 @@ use App\Http\Controllers\PresensiAnakController;
 use App\Http\Controllers\PresensiUjianCbtController;
 use App\Http\Controllers\ProfilOrangTuaController;
 use App\Http\Controllers\ProfilPegawaiController;
+use App\Http\Controllers\ProfilSiswaController;
 use App\Http\Controllers\ProgressKasusSiswaController;
 use App\Http\Controllers\PublikasiNilaiController;
 use App\Http\Controllers\PusatVerifikasiPelanggaranController;
@@ -115,7 +113,6 @@ use App\Http\Controllers\ScanAbsensiController;
 use App\Http\Controllers\ScanAbsensiPegawaiController;
 use App\Http\Controllers\ScanBerhalanganIbadahController;
 use App\Http\Controllers\ScanKegiatanIbadahController;
-use App\Http\Controllers\ScanLjkUjianOmrController;
 use App\Http\Controllers\SesiUjianCbtController;
 use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\SiswaWaliSayaController;
@@ -127,10 +124,8 @@ use App\Http\Controllers\SumberPerolehanBarangController;
 use App\Http\Controllers\SurveiPembelajaranController;
 use App\Http\Controllers\TahunPelajaranController;
 use App\Http\Controllers\TerapkanNilaiCbtController;
-use App\Http\Controllers\TerapkanNilaiOmrController;
 use App\Http\Controllers\TindakLanjutPembinaanSiswaController;
 use App\Http\Controllers\UjianCbtController;
-use App\Http\Controllers\UjianOmrController;
 use App\Http\Controllers\UjianSayaController;
 use App\Http\Controllers\UnitBarangController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
@@ -189,6 +184,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             ->name('profil-orang-tua.edit');
         Route::put('profil-orang-tua', [ProfilOrangTuaController::class, 'update'])
             ->name('profil-orang-tua.update');
+        Route::get('profil-siswa', [ProfilSiswaController::class, 'show'])
+            ->name('profil-siswa.show');
 
         Route::get('progress-kasus-saya', [ProgressKasusSiswaController::class, 'index'])
             ->name('progress-kasus-siswa.index');
@@ -600,30 +597,6 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('rekap-nilai-rapor', [RekapNilaiRaporController::class, 'index'])
             ->middleware('izin:nilai.rekap')
             ->name('rekap-nilai-rapor.index');
-        Route::middleware('izin:omr.kelola')->group(function () {
-            Route::get('ujian-omr/{ujianOmr}/versi-soal/{versiSoalUjianOmr}/kunci-jawaban', [KunciJawabanUjianOmrController::class, 'edit'])->name('ujian-omr.kunci-jawaban.edit');
-            Route::put('ujian-omr/{ujianOmr}/versi-soal/{versiSoalUjianOmr}/kunci-jawaban', [KunciJawabanUjianOmrController::class, 'update'])->name('ujian-omr.kunci-jawaban.update');
-            Route::post('ujian-omr/{ujianOmr}/lembar-jawab/generate', [LembarJawabUjianOmrController::class, 'store'])->name('ujian-omr.lembar-jawab.generate');
-            Route::get('ujian-omr/{ujianOmr}/scan', [ScanLjkUjianOmrController::class, 'index'])->name('ujian-omr.scan.index');
-            Route::post('ujian-omr/{ujianOmr}/scan', [ScanLjkUjianOmrController::class, 'store'])->name('ujian-omr.scan.store');
-            Route::get('ujian-omr/{ujianOmr}/scan/{batchScan}', [ScanLjkUjianOmrController::class, 'show'])->name('ujian-omr.scan.show');
-            Route::post('ujian-omr/{ujianOmr}/scan/{batchScan}/terapkan-nilai', [TerapkanNilaiOmrController::class, 'store'])->name('ujian-omr.scan.terapkan-nilai');
-            Route::get('ujian-omr/{ujianOmr}/scan/{batchScan}/hasil/{hasilScan}/periksa', [KoreksiHasilScanLjkOmrController::class, 'edit'])->name('ujian-omr.scan.hasil.periksa');
-            Route::put('ujian-omr/{ujianOmr}/scan/{batchScan}/hasil/{hasilScan}/periksa', [KoreksiHasilScanLjkOmrController::class, 'update'])->name('ujian-omr.scan.hasil.koreksi');
-            Route::get('ujian-omr/{ujianOmr}/scan/{batchScan}/hasil/{hasilScan}/pratinjau', [ScanLjkUjianOmrController::class, 'pratinjau'])->name('ujian-omr.scan.pratinjau');
-        });
-        Route::get('ujian-omr/{ujianOmr}/lembar-jawab/cetak', [LembarJawabUjianOmrController::class, 'cetak'])
-            ->middleware('izin:omr.lihat,omr.kelola')
-            ->name('ujian-omr.lembar-jawab.cetak');
-        Route::resource('ujian-omr', UjianOmrController::class)
-            ->parameters(['ujian-omr' => 'ujianOmr'])
-            ->only(['create', 'store', 'edit', 'update', 'destroy'])
-            ->middleware('izin:omr.kelola');
-        Route::resource('ujian-omr', UjianOmrController::class)
-            ->parameters(['ujian-omr' => 'ujianOmr'])
-            ->only(['index', 'show'])
-            ->middleware('izin:omr.lihat,omr.kelola');
-
         Route::resource('pengaturan-absensi', PengaturanAbsensiController::class)
             ->middleware('izin:absensi.pengaturan_kelola');
         Route::resource('pengaturan-absensi-pegawai', PengaturanAbsensiPegawaiController::class)

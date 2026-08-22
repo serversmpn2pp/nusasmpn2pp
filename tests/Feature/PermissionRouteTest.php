@@ -117,25 +117,6 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('jadwal-kelas-saya.index', 'izin:jadwal.lihat');
     }
 
-    public function test_route_ujian_omr_memakai_permission_penilaian_omr(): void
-    {
-        $this->assertRouteMemakaiMiddleware('ujian-omr.index', 'izin:omr.lihat,omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.show', 'izin:omr.lihat,omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.create', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.store', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.kunci-jawaban.edit', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.kunci-jawaban.update', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.lembar-jawab.generate', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.lembar-jawab.cetak', 'izin:omr.lihat,omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.index', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.store', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.show', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.terapkan-nilai', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.hasil.periksa', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.hasil.koreksi', 'izin:omr.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-omr.scan.pratinjau', 'izin:omr.kelola');
-    }
-
     public function test_route_jenis_ujian_cbt_memakai_permission_cbt(): void
     {
         $this->assertRouteMemakaiMiddleware('jenis-ujian-cbt.index', 'izin:cbt.lihat,cbt.kelola');
