@@ -8,11 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\HasApiTokens;
 use RuntimeException;
 
 class Pengguna extends Authenticatable
 {
-    use Notifiable;
+    use HasApiTokens, Notifiable;
 
     protected $table = 'pengguna';
 
@@ -215,6 +217,19 @@ class Pengguna extends Authenticatable
     public function akunPegawai(): bool
     {
         return ! $this->akun_sistem && filled($this->pegawai_id);
+    }
+
+    public function harusMenggantiKataSandi(): bool
+    {
+        if ($this->wajib_ganti_kata_sandi) {
+            return true;
+        }
+
+        $kataSandiDefault = config('nusa.kata_sandi_default_pegawai');
+
+        return $this->akunPegawai()
+            && filled($kataSandiDefault)
+            && Hash::check($kataSandiDefault, $this->kata_sandi);
     }
 
     public function akunSiswa(): bool

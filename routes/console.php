@@ -40,3 +40,7 @@ Schedule::command('pembinaan:proses-poin-keterlambatan')
 Schedule::command('pembinaan:proses-peringatan-dini')
     ->dailyAt('05:30')
     ->withoutOverlapping();
+
+Schedule::command('sanctum:prune-expired --hours=24')
+    ->daily()
+    ->withoutOverlapping();
