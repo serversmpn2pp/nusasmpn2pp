@@ -9,6 +9,22 @@ AppException mapDioException(DioException exception) {
     return UnauthorizedException(cause: exception);
   }
 
+  if (statusCode == 403) {
+    return NetworkException(
+      'Anda tidak memiliki hak akses untuk membuka data ini.',
+      statusCode: statusCode,
+      cause: exception,
+    );
+  }
+
+  if (statusCode == 404) {
+    return NetworkException(
+      'Data yang diminta tidak ditemukan.',
+      statusCode: statusCode,
+      cause: exception,
+    );
+  }
+
   if (statusCode == 422) {
     final errors = <String, List<String>>{};
 

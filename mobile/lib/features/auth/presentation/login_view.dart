@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
+import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
+import 'package:nusa/shared/widgets/nusa_illustrations.dart';
+import 'package:nusa/shared/widgets/nusa_logo.dart';
 
 class LoginView extends ConsumerStatefulWidget {
   const LoginView({super.key});
@@ -43,107 +46,110 @@ class _LoginViewState extends ConsumerState<LoginView> {
     final isSubmitting = auth?.isSubmitting ?? false;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(28),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < 680;
+
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(24, compact ? 16 : 28, 24, 0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
                   child: AutofillGroup(
                     child: Form(
                       key: _formKey,
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const _NusaMark(),
-                          const SizedBox(height: 20),
+                          Align(
+                            alignment: Alignment.center,
+                            child: NusaBrand(logoSize: compact ? 64 : 76),
+                          ),
+                          SizedBox(height: compact ? 14 : 24),
                           Text(
-                            'NUSA',
-                            style: Theme.of(context).textTheme.headlineMedium
+                            'Selamat Datang',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
-                                  color: AppColors.primary,
+                                  color: NusaColors.textPrimary,
                                   fontWeight: FontWeight.w800,
                                 ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'SMP Negeri 2 Padang Panjang',
+                          const SizedBox(height: 5),
+                          const Text(
+                            'Silakan masuk untuk melanjutkan',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium,
+                            style: TextStyle(
+                              color: NusaColors.textSecondary,
+                              fontSize: 14,
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Masuk dengan akun NUSA Anda',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          SizedBox(height: compact ? 10 : 16),
+                          SizedBox(
+                            height: compact ? 70 : 96,
+                            child: const NusaSchoolIllustration(opacity: 0.62),
                           ),
                           if (auth?.errorMessage case final message?) ...[
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
                             _ErrorBanner(message: message),
                           ],
-                          const SizedBox(height: 24),
-                          TextFormField(
-                            key: const Key('login-username'),
+                          const SizedBox(height: 16),
+                          NusaTextField(
+                            fieldKey: const Key('login-username'),
                             controller: _usernameController,
                             enabled: !isSubmitting,
+                            hintText: 'NIP / Username',
+                            prefixIcon: Icons.person_outline_rounded,
                             autofillHints: const [AutofillHints.username],
                             textInputAction: TextInputAction.next,
-                            autocorrect: false,
-                            decoration: InputDecoration(
-                              labelText: 'Username',
-                              prefixIcon: const Icon(Icons.person_outline),
-                              errorText: auth?.fieldError('username'),
-                            ),
+                            errorText: auth?.fieldError('username'),
                             validator: (value) =>
                                 value == null || value.trim().isEmpty
-                                ? 'Username wajib diisi.'
+                                ? 'NIP atau username wajib diisi.'
                                 : null,
                           ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            key: const Key('login-password'),
+                          const SizedBox(height: 14),
+                          NusaTextField(
+                            fieldKey: const Key('login-password'),
                             controller: _passwordController,
                             enabled: !isSubmitting,
+                            hintText: 'Kata Sandi',
+                            prefixIcon: Icons.lock_outline_rounded,
                             obscureText: _obscurePassword,
                             autofillHints: const [AutofillHints.password],
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _submit(),
-                            decoration: InputDecoration(
-                              labelText: 'Kata sandi',
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: IconButton(
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                ),
-                                tooltip: _obscurePassword
-                                    ? 'Tampilkan kata sandi'
-                                    : 'Sembunyikan kata sandi',
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
                               ),
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                              tooltip: _obscurePassword
+                                  ? 'Tampilkan kata sandi'
+                                  : 'Sembunyikan kata sandi',
                             ),
                             validator: (value) => value == null || value.isEmpty
                                 ? 'Kata sandi wajib diisi.'
                                 : null,
                           ),
-                          const SizedBox(height: 24),
-                          FilledButton(
+                          const SizedBox(height: 20),
+                          NusaPrimaryButton(
                             key: const Key('login-submit'),
+                            label: 'Masuk',
+                            loading: isSubmitting,
                             onPressed: isSubmitting ? null : _submit,
-                            child: isSubmitting
-                                ? const SizedBox.square(
-                                    dimension: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Masuk'),
+                          ),
+                          SizedBox(height: compact ? 10 : 18),
+                          SizedBox(
+                            height: compact ? 92 : 135,
+                            child: const NusaEducationIllustration(),
                           ),
                         ],
                       ),
@@ -151,27 +157,10 @@ class _LoginViewState extends ConsumerState<LoginView> {
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
-    );
-  }
-}
-
-class _NusaMark extends StatelessWidget {
-  const _NusaMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 76,
-      height: 76,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: const Icon(Icons.school_rounded, size: 42, color: Colors.white),
     );
   }
 }

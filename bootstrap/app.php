@@ -6,6 +6,7 @@ use App\Http\Middleware\PastikanAkunApiAktif;
 use App\Http\Middleware\PastikanAkunPegawai;
 use App\Http\Middleware\PastikanIdentitasSesi;
 use App\Http\Middleware\PastikanIzin;
+use App\Http\Middleware\PastikanKataSandiApiBukanDefault;
 use App\Http\Middleware\PastikanKataSandiBukanDefault;
 use App\Http\Middleware\PastikanUjianCbtTerpusat;
 use Illuminate\Foundation\Application;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'identitas_sesi' => PastikanIdentitasSesi::class,
             'izin' => PastikanIzin::class,
             'kata_sandi_bukan_default' => PastikanKataSandiBukanDefault::class,
+            'kata_sandi_api_bukan_default' => PastikanKataSandiApiBukanDefault::class,
             'ujian_terpusat' => PastikanUjianCbtTerpusat::class,
         ]);
     })
