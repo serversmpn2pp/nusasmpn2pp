@@ -20,8 +20,14 @@ import 'package:nusa/features/home/data/home_remote_data_source.dart';
 import 'package:nusa/features/home/domain/home_dashboard.dart';
 import 'package:nusa/features/lesson_period/data/lesson_period_remote_data_source.dart';
 import 'package:nusa/features/lesson_period/domain/lesson_period.dart';
+import 'package:nusa/features/login_activity/data/login_activity_remote_data_source.dart';
+import 'package:nusa/features/login_activity/domain/login_activity.dart'
+    as login_activity;
 import 'package:nusa/features/menu/data/menu_remote_data_source.dart';
 import 'package:nusa/features/menu/domain/menu_catalog.dart';
+import 'package:nusa/features/parent_account/data/parent_account_remote_data_source.dart';
+import 'package:nusa/features/parent_account/domain/parent_account.dart'
+    as parent_account;
 import 'package:nusa/features/role_access/data/role_access_remote_data_source.dart';
 import 'package:nusa/features/role_access/domain/role_access.dart'
     as role_access;
@@ -29,6 +35,9 @@ import 'package:nusa/features/school_class/data/school_class_remote_data_source.
 import 'package:nusa/features/school_class/domain/school_class.dart';
 import 'package:nusa/features/student/data/student_remote_data_source.dart';
 import 'package:nusa/features/student/domain/student.dart';
+import 'package:nusa/features/student_account/data/student_account_remote_data_source.dart';
+import 'package:nusa/features/student_account/domain/student_account.dart'
+    as student_account;
 import 'package:nusa/features/subject/data/subject_remote_data_source.dart';
 import 'package:nusa/features/subject/domain/subject.dart';
 import 'package:nusa/features/teaching_assignment/data/teaching_assignment_remote_data_source.dart';
@@ -962,6 +971,291 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('modul Akun Siswa mengelola akun per kelas secara native', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+    await tester.enterText(
+      find.byKey(const Key('login-username')),
+      'mobile.uji',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'RahasiaNusa123',
+    );
+    await tester.tap(find.byKey(const Key('login-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bottom-nav-2')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('menu-group-sistem')));
+    await tester.tap(find.byKey(const Key('menu-group-sistem')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('menu-item-akun-siswa')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Akun Siswa'), findsOneWidget);
+    expect(find.byKey(const Key('student-account-51')), findsOneWidget);
+    expect(find.byKey(const Key('student-account-52')), findsOneWidget);
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('student-account-status-filter'),
+      optionLabel: 'Belum punya akun',
+    );
+    expect(find.byKey(const Key('student-account-52')), findsOneWidget);
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('student-account-status-filter'),
+      optionLabel: 'Semua status akun',
+    );
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('student-account-class-filter'),
+      optionLabel: 'VII.A (2 siswa)',
+    );
+    expect(
+      find.byKey(const Key('create-class-student-accounts')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('student-account-51')));
+    await tester.pumpAndSettle();
+    expect(find.text('Detail Akun Siswa'), findsOneWidget);
+    expect(find.text('0012345671'), findsWidgets);
+    expect(find.text('12345678'), findsOneWidget);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('reset-student-account-password')),
+    );
+    await tester.tap(find.byKey(const Key('reset-student-account-password')));
+    await tester.pumpAndSettle();
+    expect(find.text('Reset kata sandi?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-reset-student-password')));
+    await tester.pumpAndSettle();
+    expect(find.text('87654321'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const Key('toggle-student-account-status')),
+    );
+    await tester.tap(find.byKey(const Key('toggle-student-account-status')));
+    await tester.pumpAndSettle();
+    expect(find.text('Nonaktifkan akun?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-toggle-student-account')));
+    await tester.pumpAndSettle();
+    expect(find.text('Aktifkan Akun'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('student-account-52')));
+    await tester.pumpAndSettle();
+    expect(find.text('Akun Login Belum Tersedia'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('create-student-account')));
+    await tester.pumpAndSettle();
+    expect(find.text('Buat akun siswa?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-create-student-account')));
+    await tester.pumpAndSettle();
+    expect(find.text('Informasi Login'), findsOneWidget);
+    expect(find.text('11223344'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('modul Akun Orang Tua mengelola akun per kelas secara native', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+    await tester.enterText(
+      find.byKey(const Key('login-username')),
+      'mobile.uji',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'RahasiaNusa123',
+    );
+    await tester.tap(find.byKey(const Key('login-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bottom-nav-2')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('menu-group-sistem')));
+    await tester.tap(find.byKey(const Key('menu-group-sistem')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('menu-item-akun-orang-tua')),
+    );
+    await tester.tap(find.byKey(const Key('menu-item-akun-orang-tua')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Akun Orang Tua'), findsOneWidget);
+    expect(find.byKey(const Key('parent-account-61')), findsOneWidget);
+    expect(find.byKey(const Key('parent-account-62')), findsOneWidget);
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('parent-account-status-filter'),
+      optionLabel: 'Belum punya akun',
+    );
+    expect(find.byKey(const Key('parent-account-62')), findsOneWidget);
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('parent-account-status-filter'),
+      optionLabel: 'Semua status akun',
+    );
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('parent-account-class-filter'),
+      optionLabel: 'VII.A (2 siswa)',
+    );
+    expect(
+      find.byKey(const Key('create-class-parent-accounts')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('parent-account-61')));
+    await tester.pumpAndSettle();
+    expect(find.text('Detail Akun Orang Tua'), findsOneWidget);
+    expect(find.text('Bapak Akun Mobile'), findsWidgets);
+    expect(find.text('Ibu Kontak Mobile'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('ORT-2012345671'), 250);
+    await tester.pumpAndSettle();
+    expect(find.text('ORT-2012345671'), findsOneWidget);
+    expect(find.text('22334455'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('reset-parent-account-password')),
+      250,
+    );
+    await tester.tap(find.byKey(const Key('reset-parent-account-password')));
+    await tester.pumpAndSettle();
+    expect(find.text('Reset kata sandi?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-reset-parent-password')));
+    await tester.pumpAndSettle();
+    expect(find.text('99887766'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('toggle-parent-account-status')),
+      250,
+    );
+    await tester.tap(find.byKey(const Key('toggle-parent-account-status')));
+    await tester.pumpAndSettle();
+    expect(find.text('Nonaktifkan akun?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-toggle-parent-account')));
+    await tester.pumpAndSettle();
+    expect(find.text('Aktifkan Akun'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('parent-account-62')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('create-parent-account')),
+      250,
+    );
+    expect(find.text('Akun Login Belum Tersedia'), findsOneWidget);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-parent-account')));
+    await tester.pumpAndSettle();
+    expect(find.text('Buat akun orang tua?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-create-parent-account')));
+    await tester.pumpAndSettle();
+    expect(find.text('Informasi Login Orang Tua'), findsOneWidget);
+    expect(find.text('ORT-2012345672'), findsWidgets);
+    expect(find.text('55667788'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('modul Aktivitas Login memantau pengguna dan percobaan native', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+    await tester.enterText(
+      find.byKey(const Key('login-username')),
+      'mobile.uji',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'RahasiaNusa123',
+    );
+    await tester.tap(find.byKey(const Key('login-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bottom-nav-2')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('menu-group-sistem')));
+    await tester.tap(find.byKey(const Key('menu-group-sistem')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('menu-item-aktivitas-login')),
+    );
+    await tester.tap(find.byKey(const Key('menu-item-aktivitas-login')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aktivitas Login'), findsOneWidget);
+    expect(find.byKey(const Key('login-activity-user-71')), findsOneWidget);
+    expect(find.byKey(const Key('login-activity-user-72')), findsOneWidget);
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('login-status-filter'),
+      optionLabel: 'Belum pernah login',
+    );
+    expect(find.byKey(const Key('login-activity-user-72')), findsOneWidget);
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('login-status-filter'),
+      optionLabel: 'Semua akun',
+    );
+
+    await tester.tap(find.byKey(const Key('login-activity-user-71')));
+    await tester.pumpAndSettle();
+    expect(find.text('Riwayat'), findsOneWidget);
+    expect(find.byKey(const Key('login-attempt-901')), findsOneWidget);
+    expect(find.byKey(const Key('login-attempt-902')), findsOneWidget);
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('login-attempt-status-filter'),
+      optionLabel: 'Gagal',
+    );
+    expect(find.byKey(const Key('login-attempt-902')), findsOneWidget);
+    await _expectDropdownMatchesField(
+      tester,
+      fieldKey: const Key('login-device-filter'),
+      optionLabel: 'Windows',
+    );
+
+    await tester.tap(find.byKey(const Key('login-attempt-902')));
+    await tester.pumpAndSettle();
+    expect(find.text('Detail Aktivitas Login'), findsOneWidget);
+    expect(find.text('Percobaan Login'), findsOneWidget);
+    expect(find.text('Gagal'), findsWidgets);
+    expect(find.text('10.10.10.22'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('copy-login-user-agent')),
+      240,
+    );
+    expect(
+      find.text('Mozilla/5.0 (Windows NT 10.0) Edge/151.0'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'modul Role dan Hak Akses mengelola role dan izin secara native',
     (tester) async {
@@ -1130,6 +1424,15 @@ Widget _buildTestApp({
       ),
       employeeAccountRemoteDataSourceProvider.overrideWithValue(
         _FakeEmployeeAccountRemoteDataSource(),
+      ),
+      studentAccountRemoteDataSourceProvider.overrideWithValue(
+        _FakeStudentAccountRemoteDataSource(),
+      ),
+      parentAccountRemoteDataSourceProvider.overrideWithValue(
+        _FakeParentAccountRemoteDataSource(),
+      ),
+      loginActivityRemoteDataSourceProvider.overrideWithValue(
+        _FakeLoginActivityRemoteDataSource(),
       ),
       roleAccessRemoteDataSourceProvider.overrideWithValue(
         _FakeRoleAccessRemoteDataSource(),
@@ -1321,6 +1624,26 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
               route: '/akun-pegawai',
             ),
             MenuEntry(
+              code: 'akun-siswa',
+              label: 'Akun Siswa',
+              description: 'Kelola akun login siswa per kelas.',
+              initials: 'AS',
+              subgroup: 'Akun Pengguna',
+              icon: null,
+              status: 'tersedia',
+              route: '/akun-siswa',
+            ),
+            MenuEntry(
+              code: 'akun-orang-tua',
+              label: 'Akun Orang Tua',
+              description: 'Kelola akun login orang tua per kelas.',
+              initials: 'AO',
+              subgroup: 'Akun Pengguna',
+              icon: null,
+              status: 'tersedia',
+              route: '/akun-orang-tua',
+            ),
+            MenuEntry(
               code: 'role-hak-akses',
               label: 'Role & Hak Akses',
               description: 'Kelola role dan izin akses.',
@@ -1329,6 +1652,16 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
               icon: null,
               status: 'tersedia',
               route: '/role-hak-akses',
+            ),
+            MenuEntry(
+              code: 'aktivitas-login',
+              label: 'Aktivitas Login',
+              description: 'Pantau login dan percobaan masuk akun NUSA.',
+              initials: 'AL',
+              subgroup: 'Keamanan Akses',
+              icon: null,
+              status: 'tersedia',
+              route: '/aktivitas-login',
             ),
           ],
         ),
@@ -2676,6 +3009,700 @@ final class _FakeEmployeeAccountRemoteDataSource
     lastLoginAt: current.lastLoginAt,
     roles: roles ?? current.roles,
   );
+}
+
+final class _FakeStudentAccountRemoteDataSource
+    implements StudentAccountRemoteDataSource {
+  static const _schoolClass = student_account.StudentAccountClass(
+    id: 21,
+    name: 'VII.A',
+    grade: 7,
+    activeStudentCount: 2,
+  );
+
+  static const _students = [
+    student_account.AccountStudent(
+      id: 51,
+      name: 'Siswa Akun Mobile',
+      nis: '2600051',
+      nisn: '0012345671',
+      active: true,
+    ),
+    student_account.AccountStudent(
+      id: 52,
+      name: 'Siswa Belum Akun Mobile',
+      nis: '2600052',
+      nisn: '0012345672',
+      active: true,
+    ),
+  ];
+
+  final Map<int, student_account.ManagedStudentAccount> _accounts = {
+    51: student_account.ManagedStudentAccount(
+      available: true,
+      id: 81,
+      username: '0012345671',
+      active: true,
+      mustChangePassword: true,
+      initialPasswordAvailable: true,
+      initialPassword: '12345678',
+      lastLoginAt: DateTime(2026, 8, 25, 8, 10),
+    ),
+  };
+
+  @override
+  Future<student_account.StudentAccountPage> fetchAccounts({
+    required String query,
+    required String status,
+    required int? classId,
+    required int page,
+    int perPage = 15,
+  }) async {
+    final normalized = query.toLowerCase();
+    final items = _students
+        .map(_item)
+        .where((item) {
+          final queryMatches =
+              query.isEmpty ||
+              item.student.name.toLowerCase().contains(normalized) ||
+              (item.student.nis?.contains(query) ?? false) ||
+              (item.student.nisn?.contains(query) ?? false) ||
+              (item.account.username?.contains(query) ?? false);
+          final statusMatches = switch (status) {
+            'sudah' => item.account.available,
+            'belum' =>
+              !item.account.available && item.student.nisn?.isNotEmpty == true,
+            'tanpa_nisn' => item.student.nisn?.isNotEmpty != true,
+            _ => true,
+          };
+          return queryMatches && statusMatches;
+        })
+        .toList(growable: false);
+
+    return student_account.StudentAccountPage(
+      items: items,
+      counts: student_account.StudentAccountCounts(
+        students: _students.length,
+        withAccount: _accounts.length,
+        withoutAccount: _students
+            .where((student) => !_accounts.containsKey(student.id))
+            .length,
+        withoutNisn: 0,
+      ),
+      classes: const [_schoolClass],
+      pagination: student_account.StudentAccountPagination(
+        page: page,
+        lastPage: 1,
+        perPage: perPage,
+        total: items.length,
+        hasNextPage: false,
+      ),
+      query: query,
+      status: status,
+      classId: classId,
+      academicYear: const student_account.AcademicYearSummary(
+        id: 5,
+        name: '2026/2027',
+      ),
+      canManage: true,
+      canViewCredentials: true,
+    );
+  }
+
+  @override
+  Future<student_account.StudentAccountDetail> fetchAccount(
+    int studentId,
+  ) async => student_account.StudentAccountDetail(
+    item: _item(_students.firstWhere((student) => student.id == studentId)),
+    academicYear: const student_account.AcademicYearSummary(
+      id: 5,
+      name: '2026/2027',
+    ),
+    canManage: true,
+    canViewCredentials: true,
+  );
+
+  @override
+  Future<void> createAccount(int studentId) async {
+    final student = _students.firstWhere((item) => item.id == studentId);
+    _accounts[studentId] = student_account.ManagedStudentAccount(
+      available: true,
+      id: 80 + studentId,
+      username: student.nisn,
+      active: student.active,
+      mustChangePassword: true,
+      initialPasswordAvailable: true,
+      initialPassword: '11223344',
+    );
+  }
+
+  @override
+  Future<student_account.BulkStudentAccountResult> createClassAccounts(
+    int classId,
+  ) async {
+    var created = 0;
+    for (final student in _students) {
+      if (student.nisn?.isNotEmpty == true &&
+          !_accounts.containsKey(student.id)) {
+        await createAccount(student.id);
+        created++;
+      }
+    }
+    return student_account.BulkStudentAccountResult(
+      created: created,
+      skipped: _students.length - created,
+      notes: const [],
+    );
+  }
+
+  @override
+  Future<void> resetPassword(int studentId) async {
+    final current = _accounts[studentId]!;
+    _accounts[studentId] = _copyAccount(
+      current,
+      mustChangePassword: true,
+      initialPassword: '87654321',
+    );
+  }
+
+  @override
+  Future<void> updateStatus({
+    required int studentId,
+    required bool active,
+  }) async {
+    final current = _accounts[studentId]!;
+    _accounts[studentId] = _copyAccount(current, active: active);
+  }
+
+  student_account.StudentAccountItem _item(
+    student_account.AccountStudent student,
+  ) {
+    final account = _accounts[student.id];
+    return student_account.StudentAccountItem(
+      membership: const student_account.StudentAccountMembership(
+        id: 91,
+        attendanceNumber: 1,
+        schoolClass: _schoolClass,
+      ),
+      student: student,
+      status: account == null
+          ? student.nisn?.isNotEmpty == true
+                ? 'belum'
+                : 'tanpa_nisn'
+          : account.active
+          ? 'aktif'
+          : 'nonaktif',
+      account:
+          account ??
+          const student_account.ManagedStudentAccount(
+            available: false,
+            active: false,
+            mustChangePassword: false,
+            initialPasswordAvailable: false,
+          ),
+    );
+  }
+
+  student_account.ManagedStudentAccount _copyAccount(
+    student_account.ManagedStudentAccount current, {
+    bool? active,
+    bool? mustChangePassword,
+    String? initialPassword,
+  }) => student_account.ManagedStudentAccount(
+    available: current.available,
+    id: current.id,
+    username: current.username,
+    active: active ?? current.active,
+    mustChangePassword: mustChangePassword ?? current.mustChangePassword,
+    initialPasswordAvailable: true,
+    initialPassword: initialPassword ?? current.initialPassword,
+    lastLoginAt: current.lastLoginAt,
+  );
+}
+
+final class _FakeParentAccountRemoteDataSource
+    implements ParentAccountRemoteDataSource {
+  static const _schoolClass = parent_account.ParentAccountClass(
+    id: 31,
+    name: 'VII.A',
+    grade: 7,
+    activeStudentCount: 2,
+  );
+
+  static const _students = [
+    parent_account.ParentAccountStudent(
+      id: 61,
+      name: 'Siswa Orang Tua Mobile',
+      nis: '2600061',
+      nisn: '2012345671',
+      active: true,
+    ),
+    parent_account.ParentAccountStudent(
+      id: 62,
+      name: 'Siswa Belum Akun Orang Tua',
+      nis: '2600062',
+      nisn: '2012345672',
+      active: true,
+    ),
+  ];
+
+  final Map<int, parent_account.ManagedParentAccount> _accounts = {
+    61: parent_account.ManagedParentAccount(
+      available: true,
+      id: 91,
+      username: 'ORT-2012345671',
+      active: true,
+      mustChangePassword: true,
+      initialPasswordAvailable: true,
+      initialPassword: '22334455',
+      lastLoginAt: DateTime(2026, 8, 25, 8, 20),
+    ),
+  };
+
+  final Map<int, parent_account.ParentGuardian> _parents = {
+    61: const parent_account.ParentGuardian(
+      available: true,
+      primary: true,
+      id: 101,
+      name: 'Bapak Akun Mobile',
+      phone: '081234567891',
+      relationship: 'ayah',
+    ),
+  };
+
+  @override
+  Future<parent_account.ParentAccountPage> fetchAccounts({
+    required String query,
+    required String status,
+    required int? classId,
+    required int page,
+    int perPage = 15,
+  }) async {
+    final normalized = query.toLowerCase();
+    final items = _students
+        .map(_item)
+        .where((item) {
+          final queryMatches =
+              query.isEmpty ||
+              item.student.name.toLowerCase().contains(normalized) ||
+              (item.student.nis?.contains(query) ?? false) ||
+              (item.student.nisn?.contains(query) ?? false) ||
+              (item.parent.name?.toLowerCase().contains(normalized) ?? false) ||
+              (item.account.username?.toLowerCase().contains(normalized) ??
+                  false);
+          final statusMatches = switch (status) {
+            'aktif' => item.account.available && item.account.active,
+            'nonaktif' => item.account.available && !item.account.active,
+            'belum' =>
+              !item.account.available && item.student.nisn?.isNotEmpty == true,
+            'tanpa_nisn' => item.student.nisn?.isNotEmpty != true,
+            _ => true,
+          };
+          return queryMatches && statusMatches;
+        })
+        .toList(growable: false);
+
+    return parent_account.ParentAccountPage(
+      items: items,
+      counts: parent_account.ParentAccountCounts(
+        students: _students.length,
+        activeAccounts: _accounts.values.where((item) => item.active).length,
+        inactiveAccounts: _accounts.values.where((item) => !item.active).length,
+        withoutAccount: _students
+            .where((student) => !_accounts.containsKey(student.id))
+            .length,
+        withoutNisn: 0,
+      ),
+      classes: const [_schoolClass],
+      pagination: parent_account.ParentAccountPagination(
+        page: page,
+        lastPage: 1,
+        perPage: perPage,
+        total: items.length,
+        hasNextPage: false,
+      ),
+      query: query,
+      status: status,
+      classId: classId,
+      academicYear: const parent_account.ParentAcademicYear(
+        id: 5,
+        name: '2026/2027',
+      ),
+      canManage: true,
+      canViewCredentials: true,
+    );
+  }
+
+  @override
+  Future<parent_account.ParentAccountDetail> fetchAccount(
+    int studentId,
+  ) async => parent_account.ParentAccountDetail(
+    item: _item(
+      _students.firstWhere((student) => student.id == studentId),
+      includeContacts: true,
+    ),
+    academicYear: const parent_account.ParentAcademicYear(
+      id: 5,
+      name: '2026/2027',
+    ),
+    canManage: true,
+    canViewCredentials: true,
+  );
+
+  @override
+  Future<void> createAccount(int studentId) async {
+    final student = _students.firstWhere((item) => item.id == studentId);
+    _accounts[studentId] = parent_account.ManagedParentAccount(
+      available: true,
+      id: 90 + studentId,
+      username: 'ORT-${student.nisn}',
+      active: true,
+      mustChangePassword: true,
+      initialPasswordAvailable: true,
+      initialPassword: '55667788',
+    );
+    _parents[studentId] = parent_account.ParentGuardian(
+      available: true,
+      primary: true,
+      id: 100 + studentId,
+      name: 'Orang Tua/Wali ${student.name}',
+      relationship: 'wali',
+    );
+  }
+
+  @override
+  Future<parent_account.BulkParentAccountResult> createClassAccounts(
+    int classId,
+  ) async {
+    var created = 0;
+    for (final student in _students) {
+      if (student.nisn?.isNotEmpty == true &&
+          !_accounts.containsKey(student.id)) {
+        await createAccount(student.id);
+        created++;
+      }
+    }
+    return parent_account.BulkParentAccountResult(
+      created: created,
+      skipped: _students.length - created,
+      notes: const [],
+    );
+  }
+
+  @override
+  Future<void> resetPassword(int studentId) async {
+    final current = _accounts[studentId]!;
+    _accounts[studentId] = _copyAccount(
+      current,
+      mustChangePassword: true,
+      initialPassword: '99887766',
+    );
+  }
+
+  @override
+  Future<void> updateStatus({
+    required int studentId,
+    required bool active,
+  }) async {
+    final current = _accounts[studentId]!;
+    _accounts[studentId] = _copyAccount(current, active: active);
+  }
+
+  parent_account.ParentAccountItem _item(
+    parent_account.ParentAccountStudent student, {
+    bool includeContacts = false,
+  }) {
+    final account = _accounts[student.id];
+    return parent_account.ParentAccountItem(
+      membership: const parent_account.ParentAccountMembership(
+        id: 111,
+        attendanceNumber: 1,
+        schoolClass: _schoolClass,
+      ),
+      student: student,
+      parent:
+          _parents[student.id] ??
+          const parent_account.ParentGuardian(available: false, primary: false),
+      familyContacts: includeContacts
+          ? const [
+              parent_account.ParentFamilyContact(
+                code: 'ayah',
+                label: 'Ayah',
+                name: 'Bapak Akun Mobile',
+                phone: '081234567891',
+                primary: true,
+              ),
+              parent_account.ParentFamilyContact(
+                code: 'ibu',
+                label: 'Ibu',
+                name: 'Ibu Kontak Mobile',
+                phone: '081234567892',
+                primary: false,
+              ),
+              parent_account.ParentFamilyContact(
+                code: 'wali',
+                label: 'Wali',
+                primary: false,
+              ),
+            ]
+          : const [],
+      status: account == null
+          ? student.nisn?.isNotEmpty == true
+                ? 'belum'
+                : 'tanpa_nisn'
+          : account.active
+          ? 'aktif'
+          : 'nonaktif',
+      account:
+          account ??
+          const parent_account.ManagedParentAccount(
+            available: false,
+            active: false,
+            mustChangePassword: false,
+            initialPasswordAvailable: false,
+          ),
+    );
+  }
+
+  parent_account.ManagedParentAccount _copyAccount(
+    parent_account.ManagedParentAccount current, {
+    bool? active,
+    bool? mustChangePassword,
+    String? initialPassword,
+  }) => parent_account.ManagedParentAccount(
+    available: current.available,
+    id: current.id,
+    username: current.username,
+    active: active ?? current.active,
+    mustChangePassword: mustChangePassword ?? current.mustChangePassword,
+    initialPasswordAvailable: true,
+    initialPassword: initialPassword ?? current.initialPassword,
+    lastLoginAt: current.lastLoginAt,
+  );
+}
+
+final class _FakeLoginActivityRemoteDataSource
+    implements LoginActivityRemoteDataSource {
+  static const _administratorType = login_activity.LoginAccountType(
+    code: 'administrator',
+    label: 'Administrator sistem',
+  );
+  static const _employeeType = login_activity.LoginAccountType(
+    code: 'pegawai',
+    label: 'Pegawai',
+  );
+  static const _administratorRole = login_activity.LoginActivityRole(
+    id: 1,
+    code: 'administrator',
+    name: 'Administrator',
+  );
+  static const _employeeRole = login_activity.LoginActivityRole(
+    id: 2,
+    code: 'pegawai',
+    name: 'Pegawai',
+  );
+
+  static final _users = [
+    login_activity.LoginActivityUser(
+      id: 71,
+      name: 'Administrator Keamanan Mobile',
+      username: 'administrator.mobile',
+      accountType: _administratorType,
+      roles: const [_administratorRole],
+      active: true,
+      lastLoginAt: DateTime(2026, 8, 26, 7, 15),
+      lastDevice: 'Android - Chrome',
+      successCount: 1,
+      failureCount: 1,
+    ),
+    const login_activity.LoginActivityUser(
+      id: 72,
+      name: 'Pegawai Belum Login Mobile',
+      username: 'pegawai.belum.login',
+      accountType: _employeeType,
+      roles: [_employeeRole],
+      active: true,
+      successCount: 0,
+      failureCount: 0,
+    ),
+  ];
+
+  static final _attempts = [
+    login_activity.LoginAttempt(
+      id: 901,
+      username: 'administrator.mobile',
+      success: true,
+      ipAddress: '10.10.10.21',
+      device: const login_activity.LoginDevice(
+        code: 'android',
+        label: 'Android - Chrome',
+      ),
+      time: DateTime(2026, 8, 26, 7, 15),
+      user: const login_activity.LoginAttemptUser(
+        id: 71,
+        name: 'Administrator Keamanan Mobile',
+        username: 'administrator.mobile',
+        accountType: _administratorType,
+        roles: [_administratorRole],
+        active: true,
+      ),
+    ),
+    login_activity.LoginAttempt(
+      id: 902,
+      username: 'administrator.mobile',
+      success: false,
+      ipAddress: '10.10.10.22',
+      device: const login_activity.LoginDevice(
+        code: 'windows',
+        label: 'Windows - Edge',
+      ),
+      time: DateTime(2026, 8, 26, 7, 10),
+      user: const login_activity.LoginAttemptUser(
+        id: 71,
+        name: 'Administrator Keamanan Mobile',
+        username: 'administrator.mobile',
+        accountType: _administratorType,
+        roles: [_administratorRole],
+        active: true,
+      ),
+    ),
+    login_activity.LoginAttempt(
+      id: 903,
+      username: 'akun.tidak.dikenal',
+      success: false,
+      ipAddress: '10.10.10.90',
+      device: const login_activity.LoginDevice(
+        code: 'android',
+        label: 'Android - Browser lain',
+      ),
+      time: DateTime(2026, 8, 26, 6, 50),
+    ),
+  ];
+
+  @override
+  Future<login_activity.LoginActivityPage> fetchActivities({
+    required String view,
+    required String query,
+    required String accountType,
+    required String loginStatus,
+    required String attemptStatus,
+    required String device,
+    required String? startDate,
+    required String? endDate,
+    required int page,
+    int perPage = 15,
+  }) async {
+    final normalized = query.toLowerCase();
+    final users = view == 'pengguna'
+        ? _users
+              .where((user) {
+                final queryMatches =
+                    query.isEmpty ||
+                    user.name.toLowerCase().contains(normalized) ||
+                    user.username.toLowerCase().contains(normalized);
+                final typeMatches =
+                    accountType == 'semua' ||
+                    user.accountType.code == accountType;
+                final statusMatches = switch (loginStatus) {
+                  'pernah' => user.lastLoginAt != null,
+                  'belum' => user.lastLoginAt == null,
+                  _ => true,
+                };
+                return queryMatches && typeMatches && statusMatches;
+              })
+              .toList(growable: false)
+        : const <login_activity.LoginActivityUser>[];
+    final start = DateTime.tryParse(startDate ?? '');
+    final end = DateTime.tryParse(endDate ?? '');
+    final attempts = view == 'riwayat'
+        ? _attempts
+              .where((attempt) {
+                final queryMatches =
+                    query.isEmpty ||
+                    attempt.displayName.toLowerCase().contains(normalized) ||
+                    attempt.username.toLowerCase().contains(normalized);
+                final typeMatches =
+                    accountType == 'semua' ||
+                    attempt.user?.accountType.code == accountType;
+                final statusMatches = switch (attemptStatus) {
+                  'berhasil' => attempt.success,
+                  'gagal' => !attempt.success,
+                  _ => true,
+                };
+                final deviceMatches =
+                    device == 'semua' || attempt.device.code == device;
+                final dateMatches =
+                    (start == null ||
+                        attempt.time == null ||
+                        !attempt.time!.isBefore(start)) &&
+                    (end == null ||
+                        attempt.time == null ||
+                        attempt.time!.isBefore(
+                          end.add(const Duration(days: 1)),
+                        ));
+                return queryMatches &&
+                    typeMatches &&
+                    statusMatches &&
+                    deviceMatches &&
+                    dateMatches;
+              })
+              .toList(growable: false)
+        : const <login_activity.LoginAttempt>[];
+    final total = view == 'pengguna' ? users.length : attempts.length;
+
+    return login_activity.LoginActivityPage(
+      users: users,
+      attempts: attempts,
+      summary: const login_activity.LoginActivitySummary(
+        accounts: 2,
+        loginsToday: 1,
+        neverLoggedIn: 1,
+        failuresToday: 2,
+      ),
+      filter: login_activity.LoginActivityFilter(
+        view: view,
+        query: query,
+        accountType: accountType,
+        loginStatus: loginStatus,
+        attemptStatus: attemptStatus,
+        device: device,
+        startDate: startDate,
+        endDate: endDate,
+      ),
+      pagination: login_activity.LoginActivityPagination(
+        page: page,
+        lastPage: 1,
+        perPage: perPage,
+        total: total,
+        hasNextPage: false,
+      ),
+    );
+  }
+
+  @override
+  Future<login_activity.LoginAttemptDetail> fetchAttempt(int attemptId) async {
+    final attempt = _attempts.firstWhere((item) => item.id == attemptId);
+    final userAgent = switch (attempt.device.code) {
+      'windows' => 'Mozilla/5.0 (Windows NT 10.0) Edge/151.0',
+      'android' => 'Mozilla/5.0 (Linux; Android 16) Chrome/151.0',
+      _ => 'NUSA-Mobile/1.0',
+    };
+    return login_activity.LoginAttemptDetail(
+      attempt: login_activity.LoginAttempt(
+        id: attempt.id,
+        username: attempt.username,
+        success: attempt.success,
+        ipAddress: attempt.ipAddress,
+        device: login_activity.LoginDevice(
+          code: attempt.device.code,
+          label: attempt.device.label,
+          userAgent: userAgent,
+        ),
+        time: attempt.time,
+        user: attempt.user,
+      ),
+    );
+  }
 }
 
 final class _FakeAcademicYearRemoteDataSource

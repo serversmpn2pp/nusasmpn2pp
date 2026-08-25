@@ -188,6 +188,60 @@ perubahan membutuhkan `akun.kelola`. Username mengikuti NIP tanpa spasi, role
 dasar **Pegawai** selalu dipertahankan, dan operasi berisiko selalu meminta
 konfirmasi.
 
+Modul Akun Siswa tersedia melalui menu **Sistem → Akun Siswa**. Daftar mengikuti
+tahun pelajaran aktif dan cakupan kelas pengguna, dilengkapi pencarian, filter
+kelas/status, detail kredensial, pembuatan akun individual atau per kelas,
+reset kata sandi, serta aktivasi/nonaktivasi akun. Endpoint yang digunakan:
+
+- `GET /api/v1/akun-siswa`
+- `GET /api/v1/akun-siswa/{siswa}`
+- `POST /api/v1/akun-siswa/{siswa}`
+- `POST /api/v1/akun-siswa/kelas/{kelas}/buat-massal`
+- `PATCH /api/v1/akun-siswa/{siswa}/status`
+- `PATCH /api/v1/akun-siswa/{siswa}/reset-kata-sandi`
+
+Hak baca memakai izin `akun_siswa.lihat`, `akun_siswa.kelola`, atau
+`akun_siswa.cetak`; perubahan membutuhkan `akun_siswa.kelola`. Wali kelas hanya
+menerima siswa dari kelas yang diwalinya. Username mengikuti NISN dan kata
+sandi awal berupa delapan angka acak. Kata sandi awal hanya dikirim kepada
+pengguna yang memiliki izin kelola atau cetak kredensial.
+
+Modul Akun Orang Tua tersedia melalui menu **Sistem → Akun Orang Tua**.
+Daftar mengikuti tahun pelajaran aktif dan cakupan kelas pengguna, dilengkapi
+pencarian siswa/orang tua, filter kelas/status, informasi kontak keluarga,
+detail kredensial, pembuatan akun individual atau per kelas, reset kata sandi,
+serta aktivasi/nonaktivasi akun. Endpoint yang digunakan:
+
+- `GET /api/v1/akun-orang-tua`
+- `GET /api/v1/akun-orang-tua/{siswa}`
+- `POST /api/v1/akun-orang-tua/{siswa}`
+- `POST /api/v1/akun-orang-tua/kelas/{kelas}/buat-massal`
+- `PATCH /api/v1/akun-orang-tua/{siswa}/status`
+- `PATCH /api/v1/akun-orang-tua/{siswa}/reset-kata-sandi`
+
+Hak baca memakai izin `akun_orang_tua.lihat`, `akun_orang_tua.kelola`, atau
+`akun_orang_tua.cetak`; perubahan membutuhkan `akun_orang_tua.kelola`. Wali
+kelas hanya menerima siswa dari kelas yang diwalinya. Username mengikuti pola
+`ORT-NISN`; identitas pemilik akun dipilih dari kontak utama ayah, ibu, atau
+wali. Kata sandi awal berupa delapan angka acak dan hanya dikirim kepada
+pengguna yang memiliki izin kelola atau cetak kredensial.
+
+Modul Aktivitas Login tersedia melalui menu **Sistem → Aktivitas Login**.
+Modul keamanan yang bersifat baca saja ini menyediakan ringkasan seluruh akun,
+login hari ini, akun yang belum pernah digunakan, serta percobaan gagal hari
+ini. Pengguna dapat berpindah antara daftar akun dan riwayat percobaan,
+melakukan pencarian, memfilter jenis akun, status login, hasil percobaan,
+perangkat, dan periode tanggal, lalu membuka detail alamat IP serta user-agent.
+Endpoint yang digunakan:
+
+- `GET /api/v1/aktivitas-login`
+- `GET /api/v1/aktivitas-login/{riwayatLogin}`
+
+Kedua endpoint memerlukan izin `aktivitas_login.lihat`. Riwayat berhasil maupun
+gagal tidak dapat diubah atau dihapus melalui aplikasi mobile. Detail
+user-agent hanya dikirim pada endpoint detail untuk menjaga respons daftar
+tetap ringan.
+
 Modul Role & Hak Akses tersedia melalui menu **Sistem → Role & Hak Akses**.
 Modul ini menyediakan ringkasan role, pencarian dan filter status, detail
 cakupan izin, formulir tambah/ubah, pemilihan izin per kelompok, serta

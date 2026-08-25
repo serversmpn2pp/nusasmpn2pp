@@ -12,13 +12,19 @@ import 'package:nusa/features/employee_account/presentation/employee_account_det
 import 'package:nusa/features/employee_account/presentation/employee_account_list_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
+import 'package:nusa/features/login_activity/presentation/login_activity_list_view.dart';
+import 'package:nusa/features/login_activity/presentation/login_attempt_detail_view.dart';
 import 'package:nusa/features/menu/presentation/menu_group_view.dart';
+import 'package:nusa/features/parent_account/presentation/parent_account_detail_view.dart';
+import 'package:nusa/features/parent_account/presentation/parent_account_list_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_detail_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_list_view.dart';
 import 'package:nusa/features/school_class/presentation/school_class_detail_view.dart';
 import 'package:nusa/features/school_class/presentation/school_class_list_view.dart';
 import 'package:nusa/features/student/presentation/student_detail_view.dart';
 import 'package:nusa/features/student/presentation/student_list_view.dart';
+import 'package:nusa/features/student_account/presentation/student_account_detail_view.dart';
+import 'package:nusa/features/student_account/presentation/student_account_list_view.dart';
 import 'package:nusa/features/subject/presentation/subject_view.dart';
 import 'package:nusa/features/teaching_assignment/presentation/teaching_assignment_view.dart';
 
@@ -33,6 +39,12 @@ abstract final class AppRoutes {
   static const employeeAccountDetail = '/akun-pegawai/:id';
   static const students = '/siswa';
   static const studentDetail = '/siswa/:id';
+  static const studentAccounts = '/akun-siswa';
+  static const studentAccountDetail = '/akun-siswa/:id';
+  static const parentAccounts = '/akun-orang-tua';
+  static const parentAccountDetail = '/akun-orang-tua/:id';
+  static const loginActivities = '/aktivitas-login';
+  static const loginActivityDetail = '/aktivitas-login/:id';
   static const classes = '/kelas';
   static const academicYears = '/tahun-pelajaran';
   static const classDetail = '/kelas/:id';
@@ -142,6 +154,48 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'student-detail',
             builder: (context, state) => StudentDetailView(
               studentId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.studentAccounts,
+        name: 'student-accounts',
+        builder: (context, state) => const StudentAccountListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'student-account-detail',
+            builder: (context, state) => StudentAccountDetailView(
+              studentId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.parentAccounts,
+        name: 'parent-accounts',
+        builder: (context, state) => const ParentAccountListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'parent-account-detail',
+            builder: (context, state) => ParentAccountDetailView(
+              studentId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.loginActivities,
+        name: 'login-activities',
+        builder: (context, state) => const LoginActivityListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'login-activity-detail',
+            builder: (context, state) => LoginAttemptDetailView(
+              attemptId: int.parse(state.pathParameters['id']!),
             ),
           ),
         ],

@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AkunPegawaiController;
+use App\Http\Controllers\Api\V1\AkunOrangTuaController;
+use App\Http\Controllers\Api\V1\AkunSiswaController;
+use App\Http\Controllers\Api\V1\AktivitasLoginController;
 use App\Http\Controllers\Api\V1\AutentikasiController;
 use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
@@ -79,6 +82,51 @@ Route::prefix('v1')
         Route::patch('/akun-pegawai/{pegawai}/peran', [AkunPegawaiController::class, 'updatePeran'])
             ->middleware('izin:akun.kelola')
             ->name('akun-pegawai.peran');
+
+        Route::get('/akun-siswa', [AkunSiswaController::class, 'index'])
+            ->middleware('izin:akun_siswa.lihat,akun_siswa.kelola,akun_siswa.cetak')
+            ->name('akun-siswa.index');
+        Route::post('/akun-siswa/kelas/{kelas}/buat-massal', [AkunSiswaController::class, 'storeMassal'])
+            ->middleware('izin:akun_siswa.kelola')
+            ->name('akun-siswa.store-massal');
+        Route::get('/akun-siswa/{siswa}', [AkunSiswaController::class, 'show'])
+            ->middleware('izin:akun_siswa.lihat,akun_siswa.kelola,akun_siswa.cetak')
+            ->name('akun-siswa.show');
+        Route::post('/akun-siswa/{siswa}', [AkunSiswaController::class, 'store'])
+            ->middleware('izin:akun_siswa.kelola')
+            ->name('akun-siswa.store');
+        Route::patch('/akun-siswa/{siswa}/reset-kata-sandi', [AkunSiswaController::class, 'resetKataSandi'])
+            ->middleware('izin:akun_siswa.kelola')
+            ->name('akun-siswa.reset-kata-sandi');
+        Route::patch('/akun-siswa/{siswa}/status', [AkunSiswaController::class, 'updateStatus'])
+            ->middleware('izin:akun_siswa.kelola')
+            ->name('akun-siswa.status');
+
+        Route::get('/akun-orang-tua', [AkunOrangTuaController::class, 'index'])
+            ->middleware('izin:akun_orang_tua.lihat,akun_orang_tua.kelola,akun_orang_tua.cetak')
+            ->name('akun-orang-tua.index');
+        Route::post('/akun-orang-tua/kelas/{kelas}/buat-massal', [AkunOrangTuaController::class, 'storeMassal'])
+            ->middleware('izin:akun_orang_tua.kelola')
+            ->name('akun-orang-tua.store-massal');
+        Route::get('/akun-orang-tua/{siswa}', [AkunOrangTuaController::class, 'show'])
+            ->middleware('izin:akun_orang_tua.lihat,akun_orang_tua.kelola,akun_orang_tua.cetak')
+            ->name('akun-orang-tua.show');
+        Route::post('/akun-orang-tua/{siswa}', [AkunOrangTuaController::class, 'store'])
+            ->middleware('izin:akun_orang_tua.kelola')
+            ->name('akun-orang-tua.store');
+        Route::patch('/akun-orang-tua/{siswa}/reset-kata-sandi', [AkunOrangTuaController::class, 'resetKataSandi'])
+            ->middleware('izin:akun_orang_tua.kelola')
+            ->name('akun-orang-tua.reset-kata-sandi');
+        Route::patch('/akun-orang-tua/{siswa}/status', [AkunOrangTuaController::class, 'updateStatus'])
+            ->middleware('izin:akun_orang_tua.kelola')
+            ->name('akun-orang-tua.status');
+
+        Route::get('/aktivitas-login', [AktivitasLoginController::class, 'index'])
+            ->middleware('izin:aktivitas_login.lihat')
+            ->name('aktivitas-login.index');
+        Route::get('/aktivitas-login/{riwayatLogin}', [AktivitasLoginController::class, 'show'])
+            ->middleware('izin:aktivitas_login.lihat')
+            ->name('aktivitas-login.show');
 
         Route::get('/peran', [PeranController::class, 'index'])
             ->middleware('izin:peran.lihat,peran.kelola')

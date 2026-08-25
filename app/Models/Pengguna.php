@@ -107,8 +107,10 @@ class Pengguna extends Authenticatable
     public function loginBerhasilTerbaru(): HasOne
     {
         return $this->hasOne(RiwayatLogin::class)
-            ->where('berhasil', true)
-            ->latestOfMany();
+            ->ofMany(
+                ['created_at' => 'max', 'id' => 'max'],
+                fn ($query) => $query->where('berhasil', true),
+            );
     }
 
     public function labelJenisAkun(): string

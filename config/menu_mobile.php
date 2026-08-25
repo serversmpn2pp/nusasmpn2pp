@@ -128,10 +128,10 @@ return [
         'ikon' => 'security',
         'items' => [
             ['kode' => 'akun-pegawai', 'label' => 'Akun Pegawai', 'inisial' => 'AP', 'izin' => ['akun.lihat', 'akun.kelola'], 'status' => 'tersedia', 'rute' => '/akun-pegawai'],
-            ['kode' => 'akun-siswa', 'label' => 'Akun Siswa', 'inisial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.kelola', 'akun_siswa.cetak']],
-            ['kode' => 'akun-orang-tua', 'label' => 'Akun Orang Tua', 'inisial' => 'AO', 'izin' => ['akun_orang_tua.lihat', 'akun_orang_tua.kelola', 'akun_orang_tua.cetak']],
+            ['kode' => 'akun-siswa', 'label' => 'Akun Siswa', 'inisial' => 'AS', 'izin' => ['akun_siswa.lihat', 'akun_siswa.kelola', 'akun_siswa.cetak'], 'status' => 'tersedia', 'rute' => '/akun-siswa'],
+            ['kode' => 'akun-orang-tua', 'label' => 'Akun Orang Tua', 'inisial' => 'AO', 'izin' => ['akun_orang_tua.lihat', 'akun_orang_tua.kelola', 'akun_orang_tua.cetak'], 'status' => 'tersedia', 'rute' => '/akun-orang-tua'],
             ['kode' => 'role-hak-akses', 'label' => 'Role & Hak Akses', 'inisial' => 'RA', 'izin' => ['peran.lihat', 'peran.kelola'], 'status' => 'tersedia', 'rute' => '/role-hak-akses'],
-            ['kode' => 'aktivitas-login', 'label' => 'Aktivitas Login', 'inisial' => 'AL', 'izin' => 'aktivitas_login.lihat'],
+            ['kode' => 'aktivitas-login', 'label' => 'Aktivitas Login', 'inisial' => 'AL', 'izin' => 'aktivitas_login.lihat', 'status' => 'tersedia', 'rute' => '/aktivitas-login'],
             ['kode' => 'backup-restore', 'label' => 'Backup & Restore', 'inisial' => 'BR', 'izin' => 'cadangan_database.kelola'],
         ],
     ],
