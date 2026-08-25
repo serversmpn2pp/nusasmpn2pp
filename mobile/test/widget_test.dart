@@ -22,6 +22,9 @@ import 'package:nusa/features/lesson_period/data/lesson_period_remote_data_sourc
 import 'package:nusa/features/lesson_period/domain/lesson_period.dart';
 import 'package:nusa/features/menu/data/menu_remote_data_source.dart';
 import 'package:nusa/features/menu/domain/menu_catalog.dart';
+import 'package:nusa/features/role_access/data/role_access_remote_data_source.dart';
+import 'package:nusa/features/role_access/domain/role_access.dart'
+    as role_access;
 import 'package:nusa/features/school_class/data/school_class_remote_data_source.dart';
 import 'package:nusa/features/school_class/domain/school_class.dart';
 import 'package:nusa/features/student/data/student_remote_data_source.dart';
@@ -193,7 +196,7 @@ void main() {
 
     expect(find.text('Menu Administrasi'), findsOneWidget);
     expect(find.text('Data Sekolah'), findsOneWidget);
-    expect(find.text('10 menu sesuai hak akses akun Anda'), findsOneWidget);
+    expect(find.text('11 menu sesuai hak akses akun Anda'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('menu-group-data-sekolah')));
     await tester.pumpAndSettle();
@@ -946,6 +949,94 @@ void main() {
     expect(find.text('198808252026081202'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'modul Role dan Hak Akses mengelola role dan izin secara native',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+      await tester.enterText(
+        find.byKey(const Key('login-username')),
+        'mobile.uji',
+      );
+      await tester.enterText(
+        find.byKey(const Key('login-password')),
+        'RahasiaNusa123',
+      );
+      await tester.tap(find.byKey(const Key('login-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bottom-nav-2')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('menu-group-sistem')));
+      await tester.tap(find.byKey(const Key('menu-group-sistem')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('menu-item-role-hak-akses')),
+      );
+      await tester.tap(find.byKey(const Key('menu-item-role-hak-akses')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Role & Hak Akses'), findsOneWidget);
+      expect(find.byKey(const Key('role-1')), findsOneWidget);
+      expect(find.byKey(const Key('role-2')), findsOneWidget);
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('role-status-filter'),
+        optionLabel: 'Aktif',
+      );
+
+      await tester.tap(find.byKey(const Key('add-role')));
+      await tester.pumpAndSettle();
+      expect(find.text('Tambah Role'), findsWidgets);
+      await tester.enterText(
+        find.byKey(const Key('role-name')),
+        'Koordinator Literasi',
+      );
+      await tester.ensureVisible(find.byKey(const Key('save-role')));
+      await tester.tap(find.byKey(const Key('save-role')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('role-3')), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('role-3')));
+      await tester.drag(find.byType(ListView).last, const Offset(0, -180));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('role-3')));
+      await tester.pumpAndSettle();
+      expect(find.text('Detail Role'), findsOneWidget);
+      expect(find.text('Koordinator Literasi'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('edit-role')));
+      await tester.pumpAndSettle();
+      expect(find.text('Ubah Role'), findsWidgets);
+      await tester.enterText(
+        find.byKey(const Key('role-name')),
+        'Koordinator Literasi Digital',
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('select-all-permissions')),
+      );
+      await tester.tap(find.byKey(const Key('select-all-permissions')));
+      await tester.ensureVisible(find.byKey(const Key('save-role')));
+      await tester.tap(find.byKey(const Key('save-role')));
+      await tester.pumpAndSettle();
+      expect(find.text('Koordinator Literasi Digital'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('deactivate-role')));
+      await tester.tap(find.byKey(const Key('deactivate-role')));
+      await tester.pumpAndSettle();
+      expect(find.text('Nonaktifkan role?'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('confirm-deactivate-role')));
+      await tester.pumpAndSettle();
+      expect(find.text('Role Sudah Nonaktif'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Future<void> _expectDropdownMatchesField(
@@ -1028,6 +1119,9 @@ Widget _buildTestApp({
       employeeAccountRemoteDataSourceProvider.overrideWithValue(
         _FakeEmployeeAccountRemoteDataSource(),
       ),
+      roleAccessRemoteDataSourceProvider.overrideWithValue(
+        _FakeRoleAccessRemoteDataSource(),
+      ),
     ],
     child: const NusaApp(),
   );
@@ -1100,7 +1194,7 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
   Future<MenuCatalog> fetchCatalog() async {
     return MenuCatalog(
       generatedAt: DateTime(2026, 8, 24, 8, 15),
-      itemCount: 10,
+      itemCount: 11,
       groups: const [
         MenuGroup(
           code: 'data-sekolah',
@@ -1214,6 +1308,16 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
               status: 'tersedia',
               route: '/akun-pegawai',
             ),
+            MenuEntry(
+              code: 'role-hak-akses',
+              label: 'Role & Hak Akses',
+              description: 'Kelola role dan izin akses.',
+              initials: 'RA',
+              subgroup: 'Keamanan Akses',
+              icon: null,
+              status: 'tersedia',
+              route: '/role-hak-akses',
+            ),
           ],
         ),
         MenuGroup(
@@ -1235,6 +1339,189 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
           ],
         ),
       ],
+    );
+  }
+}
+
+final class _FakeRoleAccessRemoteDataSource
+    implements RoleAccessRemoteDataSource {
+  final _permissionGroups = const [
+    role_access.PermissionGroup(
+      name: 'Akun',
+      permissions: [
+        role_access.RolePermission(
+          id: 1,
+          name: 'Lihat role',
+          code: 'peran.lihat',
+          description: 'Melihat daftar role.',
+        ),
+        role_access.RolePermission(
+          id: 2,
+          name: 'Kelola role dan izin',
+          code: 'peran.kelola',
+          description: 'Mengatur role dan izin.',
+        ),
+      ],
+    ),
+    role_access.PermissionGroup(
+      name: 'Pegawai',
+      permissions: [
+        role_access.RolePermission(
+          id: 3,
+          name: 'Lihat pegawai',
+          code: 'pegawai.lihat',
+        ),
+      ],
+    ),
+  ];
+
+  final List<role_access.RoleAccess> _roles = [
+    const role_access.RoleAccess(
+      id: 1,
+      name: 'Administrator',
+      code: 'administrator',
+      description: 'Akses penuh untuk mengelola NUSA.',
+      system: true,
+      active: true,
+      permissionCount: 3,
+      userCount: 1,
+      permissionPercentage: 100,
+      permissionIds: [1, 2, 3],
+    ),
+    const role_access.RoleAccess(
+      id: 2,
+      name: 'Pegawai',
+      code: 'pegawai',
+      description: 'Akses dasar pegawai.',
+      system: true,
+      active: true,
+      permissionCount: 1,
+      userCount: 8,
+      permissionPercentage: 33,
+      permissionIds: [3],
+    ),
+  ];
+
+  @override
+  Future<role_access.RoleAccessPage> fetch({
+    required String query,
+    required String status,
+    required int page,
+  }) async {
+    final normalized = query.toLowerCase();
+    final items = _roles
+        .where(
+          (role) =>
+              (normalized.isEmpty ||
+                  '${role.name} ${role.code} ${role.description ?? ''}'
+                      .toLowerCase()
+                      .contains(normalized)) &&
+              (status == 'semua' ||
+                  (status == 'aktif' && role.active) ||
+                  (status == 'nonaktif' && !role.active)),
+        )
+        .toList(growable: false);
+    return role_access.RoleAccessPage(
+      items: items,
+      summary: role_access.RoleAccessSummary(
+        total: _roles.length,
+        active: _roles.where((role) => role.active).length,
+        system: _roles.where((role) => role.system).length,
+        additional: _roles.where((role) => !role.system).length,
+        activePermissions: 3,
+        connectedUsers: 9,
+      ),
+      pagination: role_access.RoleAccessPagination(
+        page: page,
+        lastPage: 1,
+        total: items.length,
+        hasNextPage: false,
+      ),
+      query: query,
+      status: status,
+      canManage: true,
+    );
+  }
+
+  @override
+  Future<role_access.RoleAccessReference> fetchReference() async =>
+      role_access.RoleAccessReference(
+        permissionGroups: _permissionGroups,
+        permissionCount: 3,
+        canManage: true,
+      );
+
+  @override
+  Future<role_access.RoleAccessDetail> fetchDetail(int roleId) async =>
+      role_access.RoleAccessDetail(
+        role: _roles.firstWhere((role) => role.id == roleId),
+        permissionGroups: _permissionGroups,
+        canManage: true,
+      );
+
+  @override
+  Future<int> create(role_access.RoleAccessFormValue value) async {
+    final id = _roles.length + 1;
+    final code = value.code?.trim().isNotEmpty == true
+        ? value.code!.trim()
+        : value.name
+              .trim()
+              .toLowerCase()
+              .replaceAll(RegExp('[^a-z0-9]+'), '_')
+              .replaceAll(RegExp(r'^_|_$'), '');
+    _roles.add(
+      role_access.RoleAccess(
+        id: id,
+        name: value.name.trim(),
+        code: code,
+        description: value.description,
+        system: false,
+        active: value.active,
+        permissionCount: value.permissionIds.length,
+        userCount: 0,
+        permissionPercentage: (value.permissionIds.length / 3 * 100).round(),
+        permissionIds: value.permissionIds,
+      ),
+    );
+    return id;
+  }
+
+  @override
+  Future<void> update({
+    required int roleId,
+    required role_access.RoleAccessFormValue value,
+  }) async {
+    final index = _roles.indexWhere((role) => role.id == roleId);
+    final current = _roles[index];
+    _roles[index] = role_access.RoleAccess(
+      id: current.id,
+      name: value.name.trim(),
+      code: current.system ? current.code : value.code?.trim() ?? current.code,
+      description: value.description,
+      system: current.system,
+      active: current.system ? true : value.active,
+      permissionCount: value.permissionIds.length,
+      userCount: current.userCount,
+      permissionPercentage: (value.permissionIds.length / 3 * 100).round(),
+      permissionIds: value.permissionIds,
+    );
+  }
+
+  @override
+  Future<void> deactivate(int roleId) async {
+    final index = _roles.indexWhere((role) => role.id == roleId);
+    final current = _roles[index];
+    _roles[index] = role_access.RoleAccess(
+      id: current.id,
+      name: current.name,
+      code: current.code,
+      description: current.description,
+      system: current.system,
+      active: false,
+      permissionCount: current.permissionCount,
+      userCount: current.userCount,
+      permissionPercentage: current.permissionPercentage,
+      permissionIds: current.permissionIds,
     );
   }
 }

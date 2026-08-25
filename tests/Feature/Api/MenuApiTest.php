@@ -61,6 +61,11 @@ class MenuApiTest extends TestCase
                 'status' => 'tersedia',
                 'rute' => '/guru-mata-pelajaran',
             ])
+            ->assertJsonFragment([
+                'kode' => 'role-hak-akses',
+                'status' => 'tersedia',
+                'rute' => '/role-hak-akses',
+            ])
             ->assertJsonMissingPath('data.kelompok.0.items.0.izin')
             ->assertJsonStructure([
                 'data' => [

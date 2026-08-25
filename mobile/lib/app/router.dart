@@ -13,6 +13,8 @@ import 'package:nusa/features/employee_account/presentation/employee_account_lis
 import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
 import 'package:nusa/features/menu/presentation/menu_group_view.dart';
+import 'package:nusa/features/role_access/presentation/role_access_detail_view.dart';
+import 'package:nusa/features/role_access/presentation/role_access_list_view.dart';
 import 'package:nusa/features/school_class/presentation/school_class_detail_view.dart';
 import 'package:nusa/features/school_class/presentation/school_class_list_view.dart';
 import 'package:nusa/features/student/presentation/student_detail_view.dart';
@@ -37,6 +39,8 @@ abstract final class AppRoutes {
   static const lessonPeriods = '/jam-pelajaran';
   static const subjects = '/mata-pelajaran';
   static const teachingAssignments = '/guru-mata-pelajaran';
+  static const roleAccess = '/role-hak-akses';
+  static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
 }
 
@@ -178,6 +182,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.teachingAssignments,
         name: 'teaching-assignments',
         builder: (context, state) => const TeachingAssignmentView(),
+      ),
+      GoRoute(
+        path: AppRoutes.roleAccess,
+        name: 'role-access',
+        builder: (context, state) => const RoleAccessListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'role-access-detail',
+            builder: (context, state) => RoleAccessDetailView(
+              roleId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.menuGroup,

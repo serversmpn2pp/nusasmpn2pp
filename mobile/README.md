@@ -188,6 +188,24 @@ perubahan membutuhkan `akun.kelola`. Username mengikuti NIP tanpa spasi, role
 dasar **Pegawai** selalu dipertahankan, dan operasi berisiko selalu meminta
 konfirmasi.
 
+Modul Role & Hak Akses tersedia melalui menu **Sistem → Role & Hak Akses**.
+Modul ini menyediakan ringkasan role, pencarian dan filter status, detail
+cakupan izin, formulir tambah/ubah, pemilihan izin per kelompok, serta
+nonaktivasi role tambahan. Endpoint yang digunakan adalah:
+
+- `GET /api/v1/peran`
+- `GET /api/v1/peran/referensi`
+- `GET /api/v1/peran/{peran}`
+- `POST /api/v1/peran`
+- `PATCH /api/v1/peran/{peran}`
+- `DELETE /api/v1/peran/{peran}`
+
+Hak baca memakai izin `peran.lihat` atau `peran.kelola`, sedangkan referensi
+formulir dan seluruh perubahan membutuhkan `peran.kelola`. Role sistem selalu
+aktif dan kodenya tidak dapat diubah. Role **Administrator** selalu disinkronkan
+dengan semua izin aktif, sedangkan aksi hapus pada mobile mengikuti Laravel
+dengan menonaktifkan role tambahan tanpa menghapus hubungan data.
+
 Modul Tahun Pelajaran menampilkan ringkasan periode, tahun yang sedang aktif,
 jumlah kelas per tahun, pencarian, filter status, serta formulir tambah/ubah
 native. Endpoint yang digunakan adalah:

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\PegawaiController;
+use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\SiswaController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
 use Illuminate\Support\Facades\Route;
@@ -78,6 +79,25 @@ Route::prefix('v1')
         Route::patch('/akun-pegawai/{pegawai}/peran', [AkunPegawaiController::class, 'updatePeran'])
             ->middleware('izin:akun.kelola')
             ->name('akun-pegawai.peran');
+
+        Route::get('/peran', [PeranController::class, 'index'])
+            ->middleware('izin:peran.lihat,peran.kelola')
+            ->name('peran.index');
+        Route::get('/peran/referensi', [PeranController::class, 'referensi'])
+            ->middleware('izin:peran.kelola')
+            ->name('peran.referensi');
+        Route::post('/peran', [PeranController::class, 'store'])
+            ->middleware('izin:peran.kelola')
+            ->name('peran.store');
+        Route::get('/peran/{peran}', [PeranController::class, 'show'])
+            ->middleware('izin:peran.lihat,peran.kelola')
+            ->name('peran.show');
+        Route::patch('/peran/{peran}', [PeranController::class, 'update'])
+            ->middleware('izin:peran.kelola')
+            ->name('peran.update');
+        Route::delete('/peran/{peran}', [PeranController::class, 'destroy'])
+            ->middleware('izin:peran.kelola')
+            ->name('peran.destroy');
 
         Route::get('/tahun-pelajaran', [TahunPelajaranController::class, 'index'])
             ->middleware('izin:tahun_pelajaran.lihat,tahun_pelajaran.kelola')
