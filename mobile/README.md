@@ -128,6 +128,25 @@ penugasan yang bukan milik kelas, kegiatan yang tidak sesuai tingkat, dan
 benturan guru. Pembatasan kelas wali juga diterapkan oleh server sehingga tidak
 hanya bergantung pada UI.
 
+Modul Kenaikan Kelas menyediakan alur penempatan siswa secara massal dari satu
+tahun pelajaran ke tahun berikutnya. Pengguna memilih tahun asal, tahun tujuan,
+dan kelas asal, lalu dapat memakai saran kelas berdasarkan tingkat serta rombel,
+meninjau kapasitas, mengubah tujuan per siswa, dan melihat ringkasan hasil.
+Endpoint yang digunakan adalah:
+
+- `GET /api/v1/kenaikan-kelas` untuk referensi, filter, saran, kapasitas, dan
+  penempatan yang sudah ada
+- `POST /api/v1/kenaikan-kelas/proses` untuk membuat atau memperbarui
+  penempatan pada tahun tujuan
+
+Kedua endpoint memerlukan izin `kenaikan_kelas.kelola`. Proses ini tidak
+mengubah atau menghapus keanggotaan kelas asal. Siswa yang sudah terdaftar pada
+tahun tujuan diperbarui secara idempoten, kelas nonaktif dan kelas di luar tahun
+tujuan ditolak, serta siswa dilewati ketika kapasitas kelas tujuan sudah penuh.
+Pengelolaan anggota pada halaman **Data Kelas** tetap digunakan untuk
+penempatan satu siswa dalam satu tahun, sehingga kedua fitur tidak saling
+tumpang tindih.
+
 Modul Jam Pelajaran menyediakan daftar slot mingguan, filter hari/status,
 penambahan slot untuk beberapa hari sekaligus, serta perubahan waktu, jenis,
 status, dan keterangan. Endpoint yang digunakan adalah:

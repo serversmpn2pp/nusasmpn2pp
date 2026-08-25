@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
 use App\Http\Controllers\Api\V1\KelasController;
+use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\PegawaiController;
@@ -156,6 +157,13 @@ Route::prefix('v1')
         Route::patch('/tahun-pelajaran/{tahunPelajaran}', [TahunPelajaranController::class, 'update'])
             ->middleware('izin:tahun_pelajaran.kelola')
             ->name('tahun-pelajaran.update');
+
+        Route::get('/kenaikan-kelas', [KenaikanKelasController::class, 'index'])
+            ->middleware('izin:kenaikan_kelas.kelola')
+            ->name('kenaikan-kelas.index');
+        Route::post('/kenaikan-kelas/proses', [KenaikanKelasController::class, 'store'])
+            ->middleware('izin:kenaikan_kelas.kelola')
+            ->name('kenaikan-kelas.store');
 
         Route::get('/siswa', [SiswaController::class, 'index'])
             ->middleware('izin:siswa.lihat,siswa.kelola')

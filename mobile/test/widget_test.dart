@@ -11,6 +11,9 @@ import 'package:nusa/features/academic_year/domain/academic_year.dart';
 import 'package:nusa/features/auth/data/auth_remote_data_source.dart';
 import 'package:nusa/features/auth/domain/auth_session.dart';
 import 'package:nusa/features/auth/domain/pengguna.dart';
+import 'package:nusa/features/class_promotion/data/class_promotion_remote_data_source.dart';
+import 'package:nusa/features/class_promotion/domain/class_promotion.dart'
+    as class_promotion;
 import 'package:nusa/features/employee/data/employee_remote_data_source.dart';
 import 'package:nusa/features/employee/domain/employee.dart' as employee;
 import 'package:nusa/features/employee_account/data/employee_account_remote_data_source.dart';
@@ -217,7 +220,7 @@ void main() {
 
     expect(find.text('Menu Administrasi'), findsOneWidget);
     expect(find.text('Data Sekolah'), findsOneWidget);
-    expect(find.text('11 menu sesuai hak akses akun Anda'), findsOneWidget);
+    expect(find.text('12 menu sesuai hak akses akun Anda'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('menu-group-data-sekolah')));
     await tester.pumpAndSettle();
@@ -1257,6 +1260,96 @@ void main() {
   });
 
   testWidgets(
+    'modul Kenaikan Kelas memproses penempatan lintas tahun secara native',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+      await tester.enterText(
+        find.byKey(const Key('login-username')),
+        'mobile.uji',
+      );
+      await tester.enterText(
+        find.byKey(const Key('login-password')),
+        'RahasiaNusa123',
+      );
+      await tester.tap(find.byKey(const Key('login-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bottom-nav-2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('menu-group-data-sekolah')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('menu-item-kenaikan-kelas')),
+      );
+      await tester.tap(find.byKey(const Key('menu-item-kenaikan-kelas')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kenaikan Kelas'), findsOneWidget);
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('promotion-source-year'),
+        optionLabel: '2025/2026',
+      );
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('promotion-destination-year'),
+        optionLabel: '2026/2027 · Aktif',
+      );
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('promotion-source-class'),
+        optionLabel: 'VII.A · 2 siswa',
+      );
+
+      expect(find.byKey(const Key('promotion-member-31')), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('promotion-member-32')),
+        220,
+        scrollable: find.descendant(
+          of: find.byKey(
+            const PageStorageKey<String>('class-promotion-scroll'),
+          ),
+          matching: find.byType(Scrollable),
+        ).first,
+      );
+      expect(find.byKey(const Key('promotion-member-32')), findsOneWidget);
+      await tester.drag(
+        find.byKey(const PageStorageKey<String>('class-promotion-scroll')),
+        const Offset(0, -180),
+      );
+      await tester.pumpAndSettle();
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('promotion-target-32'),
+        optionLabel: 'Lewati (tidak diubah)',
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('process-class-promotion')),
+      );
+      await tester.tap(find.byKey(const Key('process-class-promotion')));
+      await tester.pumpAndSettle();
+      expect(find.text('Proses kenaikan kelas?'), findsOneWidget);
+      expect(find.textContaining('1 siswa akan ditempatkan'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('confirm-class-promotion')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ringkasan Kenaikan Kelas'), findsOneWidget);
+      expect(
+        find.textContaining('1 dari 2 siswa berhasil ditempatkan'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('close-promotion-result')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Saat ini sudah di VIII.A'), findsNWidgets(2));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'modul Role dan Hak Akses mengelola role dan izin secara native',
     (tester) async {
       tester.view.physicalSize = const Size(360, 800);
@@ -1437,6 +1530,9 @@ Widget _buildTestApp({
       roleAccessRemoteDataSourceProvider.overrideWithValue(
         _FakeRoleAccessRemoteDataSource(),
       ),
+      classPromotionRemoteDataSourceProvider.overrideWithValue(
+        _FakeClassPromotionRemoteDataSource(),
+      ),
     ],
     child: const NusaApp(),
   );
@@ -1509,7 +1605,7 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
   Future<MenuCatalog> fetchCatalog() async {
     return MenuCatalog(
       generatedAt: DateTime(2026, 8, 24, 8, 15),
-      itemCount: 11,
+      itemCount: 12,
       groups: const [
         MenuGroup(
           code: 'data-sekolah',
@@ -1556,6 +1652,16 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
               icon: null,
               status: 'tersedia',
               route: '/tahun-pelajaran',
+            ),
+            MenuEntry(
+              code: 'kenaikan-kelas',
+              label: 'Kenaikan Kelas',
+              description: 'Penempatan siswa lintas tahun pelajaran.',
+              initials: 'KK',
+              subgroup: 'Siswa dan Kelas',
+              icon: null,
+              status: 'tersedia',
+              route: '/kenaikan-kelas',
             ),
           ],
         ),
@@ -3817,6 +3923,152 @@ final class _FakeAcademicYearRemoteDataSource
         classCount: item.classCount,
       );
     }
+  }
+}
+
+final class _FakeClassPromotionRemoteDataSource
+    implements ClassPromotionRemoteDataSource {
+  final Map<int, int> _placements = {32: 8};
+
+  static const _years = [
+    class_promotion.PromotionAcademicYear(
+      id: 5,
+      name: '2026/2027',
+      active: true,
+      classCount: 2,
+    ),
+    class_promotion.PromotionAcademicYear(
+      id: 4,
+      name: '2025/2026',
+      active: false,
+      classCount: 1,
+    ),
+  ];
+  static const _sourceClass = class_promotion.PromotionClass(
+    id: 41,
+    name: 'VII.A',
+    grade: 7,
+    studentCount: 2,
+    capacity: 32,
+    remainingCapacity: 30,
+    active: true,
+  );
+  static const _destinationClasses = [
+    class_promotion.PromotionClass(
+      id: 8,
+      name: 'VIII.A',
+      grade: 8,
+      studentCount: 1,
+      capacity: 32,
+      remainingCapacity: 31,
+      active: true,
+    ),
+    class_promotion.PromotionClass(
+      id: 9,
+      name: 'VIII.B',
+      grade: 8,
+      studentCount: 0,
+      capacity: 32,
+      remainingCapacity: 32,
+      active: true,
+    ),
+  ];
+
+  @override
+  Future<class_promotion.ClassPromotionPage> fetch({
+    required int? sourceYearId,
+    required int? destinationYearId,
+    required int? sourceClassId,
+  }) async {
+    final effectiveSourceYearId = sourceYearId ?? 5;
+    final hasSourceClass = effectiveSourceYearId == 4;
+    final hasDestination = destinationYearId == 5;
+    final selectedClass = hasSourceClass && sourceClassId == 41;
+    final members = selectedClass && hasDestination
+        ? [_member(31, 'Alya Promosi'), _member(32, 'Bima Promosi')]
+        : const <class_promotion.PromotionMember>[];
+    final alreadyPlaced = members
+        .where((member) => member.currentPlacement != null)
+        .length;
+
+    return class_promotion.ClassPromotionPage(
+      academicYears: _years,
+      sourceClasses: hasSourceClass ? const [_sourceClass] : const [],
+      destinationClasses: hasDestination ? _destinationClasses : const [],
+      selectedSourceClass: selectedClass ? _sourceClass : null,
+      members: members,
+      summary: class_promotion.PromotionSummary(
+        sourceStudents: members.length,
+        alreadyPlaced: alreadyPlaced,
+        notPlaced: members.length - alreadyPlaced,
+        destinationClasses: hasDestination ? _destinationClasses.length : 0,
+      ),
+      filter: class_promotion.PromotionFilter(
+        sourceYearId: effectiveSourceYearId,
+        destinationYearId: destinationYearId,
+        sourceClassId: selectedClass ? sourceClassId : null,
+      ),
+      suggestedDestinationClassId: selectedClass ? 8 : null,
+      ready: selectedClass && hasDestination && members.isNotEmpty,
+      warnings: destinationYearId == null
+          ? const ['Pilih tahun pelajaran tujuan.']
+          : sourceClassId == null
+          ? const ['Pilih kelas asal untuk menampilkan siswa.']
+          : const [],
+    );
+  }
+
+  class_promotion.PromotionMember _member(int id, String name) {
+    final targetClassId = _placements[id];
+    final targetClass = targetClassId == null
+        ? null
+        : _destinationClasses.firstWhere((item) => item.id == targetClassId);
+    return class_promotion.PromotionMember(
+      id: id,
+      attendanceNumber: id - 30,
+      student: class_promotion.PromotionStudent(
+        id: id + 100,
+        name: name,
+        nis: '202600$id',
+        nisn: '00112233$id',
+        gender: id.isOdd ? 'P' : 'L',
+        active: true,
+      ),
+      currentPlacement: targetClass == null
+          ? null
+          : class_promotion.ExistingPromotionPlacement(
+              membershipId: id + 200,
+              schoolClass: targetClass,
+            ),
+      suggestedDestinationClassId: targetClassId ?? 8,
+      initialNote: 'Penempatan massal',
+    );
+  }
+
+  @override
+  Future<class_promotion.PromotionResult> process({
+    required int sourceYearId,
+    required int destinationYearId,
+    required int sourceClassId,
+    required List<class_promotion.PromotionAssignment> assignments,
+  }) async {
+    var placed = 0;
+    final notes = <String>[];
+    for (final assignment in assignments) {
+      final target = assignment.destinationClassId;
+      if (target == null) {
+        notes.add('Siswa #${assignment.memberId}: belum ditempatkan.');
+        continue;
+      }
+      _placements[assignment.memberId] = target;
+      placed++;
+    }
+    return class_promotion.PromotionResult(
+      processed: assignments.length,
+      placed: placed,
+      skipped: assignments.length - placed,
+      notes: notes,
+    );
   }
 }
 

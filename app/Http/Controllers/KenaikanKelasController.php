@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\TahunPelajaran;
+use App\Services\Kelas\KenaikanKelasService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class KenaikanKelasController extends Controller
 {
@@ -76,7 +76,7 @@ class KenaikanKelasController extends Controller
         ));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, KenaikanKelasService $service)
     {
         $data = $request->validate([
             'tahun_asal_id' => 'required|exists:tahun_pelajaran,id|different:tahun_tujuan_id',
@@ -90,72 +90,17 @@ class KenaikanKelasController extends Controller
 
         $kelasAsal = Kelas::where('tahun_pelajaran_id', $data['tahun_asal_id'])
             ->findOrFail($data['kelas_asal_id']);
+        $tahunAsal = TahunPelajaran::findOrFail($data['tahun_asal_id']);
         $tahunTujuan = TahunPelajaran::findOrFail($data['tahun_tujuan_id']);
-        $kelasTujuan = Kelas::where('tahun_pelajaran_id', $tahunTujuan->id)
-            ->where('aktif', true)
-            ->get()
-            ->keyBy('id');
-        $anggotaAsal = $kelasAsal->anggotaKelas()->with('siswa')->get()->keyBy('id');
-        $ringkasan = [
-            'diproses' => 0,
-            'ditempatkan' => 0,
-            'dilewati' => 0,
-            'catatan' => [],
-        ];
-
-        DB::transaction(function () use ($data, $kelasTujuan, $anggotaAsal, $tahunTujuan, &$ringkasan) {
-            foreach ($data['tujuan'] ?? [] as $anggotaKelasId => $kelasTujuanId) {
-                $anggotaLama = $anggotaAsal->get((int) $anggotaKelasId);
-
-                if (! $anggotaLama) {
-                    continue;
-                }
-
-                $ringkasan['diproses']++;
-
-                if (! $kelasTujuanId) {
-                    $ringkasan['dilewati']++;
-                    $ringkasan['catatan'][] = $anggotaLama->siswa?->nama_lengkap . ': belum ditempatkan.';
-                    continue;
-                }
-
-                $kelasBaru = $kelasTujuan->get((int) $kelasTujuanId);
-
-                if (! $kelasBaru) {
-                    $ringkasan['dilewati']++;
-                    $ringkasan['catatan'][] = $anggotaLama->siswa?->nama_lengkap . ': kelas tujuan tidak valid.';
-                    continue;
-                }
-
-                $anggotaTujuan = AnggotaKelas::where('tahun_pelajaran_id', $tahunTujuan->id)
-                    ->where('siswa_id', $anggotaLama->siswa_id)
-                    ->first();
-
-                if ($this->kelasTujuanPenuh($kelasBaru, $anggotaTujuan)) {
-                    $ringkasan['dilewati']++;
-                    $ringkasan['catatan'][] = $anggotaLama->siswa?->nama_lengkap . ': kelas ' . $kelasBaru->nama . ' sudah penuh.';
-                    continue;
-                }
-
-                $payload = [
-                    'tahun_pelajaran_id' => $tahunTujuan->id,
-                    'kelas_id' => $kelasBaru->id,
-                    'siswa_id' => $anggotaLama->siswa_id,
-                    'nomor_absen' => null,
-                    'status_keanggotaan' => 'aktif',
-                    'tanggal_masuk' => $tahunTujuan->tanggal_mulai,
-                    'keterangan' => $data['keterangan'][$anggotaKelasId] ?? 'Penempatan massal',
-                ];
-
-                if ($anggotaTujuan) {
-                    $anggotaTujuan->update($payload);
-                } else {
-                    AnggotaKelas::create($payload);
-                }
-
-                $ringkasan['ditempatkan']++;
-            }
-        });
+        $penempatan = collect($data['tujuan'] ?? [])
+            ->map(fn ($kelasTujuanId, $anggotaKelasId) => [
+                'anggota_kelas_id' => (int) $anggotaKelasId,
+                'kelas_tujuan_id' => filled($kelasTujuanId) ? (int) $kelasTujuanId : null,
+                'keterangan' => $data['keterangan'][$anggotaKelasId] ?? null,
+            ])
+            ->values()
+            ->all();
+        $ringkasan = $service->proses($tahunAsal, $tahunTujuan, $kelasAsal, $penempatan);
 
         return redirect()
             ->route('kenaikan-kelas.index', [
@@ -189,14 +134,5 @@ class KenaikanKelasController extends Controller
         }
 
         return '';
-    }
-
-    private function kelasTujuanPenuh(Kelas $kelas, ?AnggotaKelas $anggotaTujuan): bool
-    {
-        if (! $kelas->kapasitas || ($anggotaTujuan && $anggotaTujuan->kelas_id === $kelas->id)) {
-            return false;
-        }
-
-        return $kelas->anggotaKelas()->count() >= $kelas->kapasitas;
     }
 }

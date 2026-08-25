@@ -6,6 +6,7 @@ import 'package:nusa/features/auth/presentation/ganti_kata_sandi_view.dart';
 import 'package:nusa/features/auth/presentation/login_view.dart';
 import 'package:nusa/features/auth/presentation/startup_view.dart';
 import 'package:nusa/features/academic_year/presentation/academic_year_view.dart';
+import 'package:nusa/features/class_promotion/presentation/class_promotion_view.dart';
 import 'package:nusa/features/employee/presentation/employee_detail_view.dart';
 import 'package:nusa/features/employee/presentation/employee_list_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_detail_view.dart';
@@ -47,6 +48,7 @@ abstract final class AppRoutes {
   static const loginActivityDetail = '/aktivitas-login/:id';
   static const classes = '/kelas';
   static const academicYears = '/tahun-pelajaran';
+  static const classPromotion = '/kenaikan-kelas';
   static const classDetail = '/kelas/:id';
   static const lessonPeriods = '/jam-pelajaran';
   static const subjects = '/mata-pelajaran';
@@ -221,6 +223,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.academicYears,
         name: 'academic-years',
         builder: (context, state) => const AcademicYearView(),
+      ),
+      GoRoute(
+        path: AppRoutes.classPromotion,
+        name: 'class-promotion',
+        builder: (context, state) => const ClassPromotionView(),
       ),
       GoRoute(
         path: AppRoutes.lessonPeriods,
