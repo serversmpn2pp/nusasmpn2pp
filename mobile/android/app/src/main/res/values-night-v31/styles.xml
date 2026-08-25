@@ -2,7 +2,7 @@
 <resources>
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowSplashScreenBackground">@color/nusa_primary_dark</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/transparent_launch_icon</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/nusa_primary_dark</item>
     </style>
 </resources>

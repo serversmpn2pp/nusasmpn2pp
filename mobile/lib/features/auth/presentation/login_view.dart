@@ -101,14 +101,14 @@ class _LoginViewState extends ConsumerState<LoginView> {
                             fieldKey: const Key('login-username'),
                             controller: _usernameController,
                             enabled: !isSubmitting,
-                            hintText: 'NIP / Username',
+                            hintText: 'NIP / NISN / ORT-NISN',
                             prefixIcon: Icons.person_outline_rounded,
                             autofillHints: const [AutofillHints.username],
                             textInputAction: TextInputAction.next,
                             errorText: auth?.fieldError('username'),
                             validator: (value) =>
                                 value == null || value.trim().isEmpty
-                                ? 'NIP atau username wajib diisi.'
+                                ? 'NIP, NISN, atau ORT-NISN wajib diisi.'
                                 : null,
                           ),
                           const SizedBox(height: 14),
@@ -146,11 +146,45 @@ class _LoginViewState extends ConsumerState<LoginView> {
                             loading: isSubmitting,
                             onPressed: isSubmitting ? null : _submit,
                           ),
-                          SizedBox(height: compact ? 10 : 18),
+                          const SizedBox(height: 12),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.info_outline_rounded,
+                                size: 16,
+                                color: NusaColors.textSecondary,
+                              ),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Lupa kata sandi? Silakan hubungi administrator sekolah.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: NusaColors.textSecondary,
+                                    fontSize: 12,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: compact ? 8 : 12),
                           SizedBox(
-                            height: compact ? 92 : 135,
+                            height: compact ? 82 : 120,
                             child: const NusaEducationIllustration(),
                           ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Tim Teknisi SMP Negeri 2 Padang Panjang',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: NusaColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                         ],
                       ),
                     ),

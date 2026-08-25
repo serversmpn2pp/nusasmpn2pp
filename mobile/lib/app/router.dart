@@ -45,7 +45,7 @@ abstract final class AppRoutes {
 }
 
 final splashGateProvider = FutureProvider<void>((ref) async {
-  await Future<void>.delayed(const Duration(milliseconds: 850));
+  await Future<void>.delayed(const Duration(milliseconds: 1800));
 });
 
 final appRouterProvider = Provider<GoRouter>((ref) {

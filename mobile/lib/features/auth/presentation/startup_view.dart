@@ -70,7 +70,7 @@ class StartupView extends ConsumerWidget {
                   const FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      'SMP Negeri 2 Padang Panjang',
+                      'SMP NEGERI 2 PADANG PANJANG',
                       style: TextStyle(
                         color: NusaColors.accent,
                         fontSize: 16,

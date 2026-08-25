@@ -101,9 +101,12 @@ void main() {
     await tester.pump();
 
     expect(find.text('NUSA'), findsOneWidget);
-    expect(find.text('SMP Negeri 2 Padang Panjang'), findsOneWidget);
+    expect(find.text('SMP NEGERI 2 PADANG PANJANG'), findsOneWidget);
     expect(find.text('Memuat...'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    await tester.pump(const Duration(milliseconds: 1000));
+    expect(find.text('Memuat...'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 900));
     await tester.pumpAndSettle();
@@ -119,6 +122,15 @@ void main() {
     expect(find.text('Silakan masuk untuk melanjutkan'), findsOneWidget);
     expect(find.byKey(const Key('login-username')), findsOneWidget);
     expect(find.byKey(const Key('login-password')), findsOneWidget);
+    expect(find.text('NIP / NISN / ORT-NISN'), findsOneWidget);
+    expect(
+      find.text('Lupa kata sandi? Silakan hubungi administrator sekolah.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Tim Teknisi SMP Negeri 2 Padang Panjang'),
+      findsOneWidget,
+    );
     expect(find.text('Masuk'), findsOneWidget);
   });
 

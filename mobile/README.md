@@ -225,8 +225,11 @@ pergantian tersebut.
 Design system mobile menggunakan `NusaColors` dengan biru `#15477A` dan kuning
 `#F1C40F`. Logo berada di `assets/images/logo-nusa.png`, sedangkan ilustrasi
 sekolah dan pendidikan dibuat sebagai vector painter agar tetap ringan dan
-responsif. Splash memiliki jeda singkat untuk transisi session restore; alur
-autentikasi tetap menggunakan session token Sanctum yang sama.
+responsif. Ikon launcher Android memakai logo NUSA di atas latar navy dengan
+ruang aman agar tidak terpotong oleh bentuk ikon perangkat. Splash memiliki
+durasi minimum 1,8 detik untuk menonjolkan identitas NUSA sambil menunggu
+session restore; alur autentikasi tetap menggunakan session token Sanctum yang
+sama.
 
 Seluruh pilihan berbentuk dropdown field wajib menggunakan
 `NusaDropdownField` dari `shared/widgets/nusa_form_widgets.dart`. Komponen ini
