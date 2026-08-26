@@ -50,6 +50,9 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ->assertOk()
             ->assertSee('Susun paket soal')
             ->assertSee('Informasi lainnya sudah diambil dari jadwal')
+            ->assertSee('Pengacakan untuk siswa')
+            ->assertSee('name="acak_soal"', false)
+            ->assertSee('name="acak_jawaban"', false)
             ->assertSee('Pratinjau')
             ->assertSee('data-open-package-preview', false)
             ->assertSee('Benar')
@@ -91,6 +94,22 @@ class PaketSoalUjianTerpusatTest extends TestCase
             'semester' => 'ganjil',
             'aktif' => true,
         ]);
+
+        $this->actingAs($data['admin'])
+            ->put(route('paket-soal-terpusat.update', $data['jadwal']), [
+                'aksi' => 'simpan',
+                'acak_soal' => '0',
+                'acak_jawaban' => '0',
+                'soal' => [
+                    $soalSatu->id => ['dipilih' => '1', 'bobot' => 1],
+                    $soalDua->id => ['dipilih' => '1', 'bobot' => 2],
+                ],
+            ])
+            ->assertRedirect(route('paket-soal-terpusat.show', $data['jadwal']));
+
+        $paket->refresh();
+        $this->assertFalse($paket->acak_soal);
+        $this->assertFalse($paket->acak_jawaban);
     }
 
     public function test_guru_hanya_mengelola_paket_mapel_dan_kelas_yang_diampu(): void

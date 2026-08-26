@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BuktiRuangUjianCbt;
 use App\Models\JadwalUjianCbt;
 use App\Models\JawabanPesertaUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Pegawai;
 use App\Models\PengawasRuangUjianTerpusat;
+use App\Models\PesertaUjianCbt;
 use App\Models\RuangKegiatanUjianCbt;
+use App\Models\RuangUjianCbt;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\SinkronkanPelaksanaanUjianTerpusat;
 use Illuminate\Http\Request;
@@ -84,11 +87,22 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             $paket = $item->ujianCbt;
             $kelompok = $kelompokPerTingkat->get($item->tingkat);
             $item->setRelation('ruangPelaksanaan', $kelompok?->ruangKegiatanUjianCbt ?? collect());
+            $item->setRelation('ruangOperasional', $paket
+                ? $paket->ruangUjianCbt()
+                    ->where('jadwal_ujian_cbt_id', $item->id)
+                    ->withCount([
+                        'buktiRuangUjianCbt as bukti_daftar_hadir_count' => fn ($query) => $query->where('jenis', BuktiRuangUjianCbt::JENIS_DAFTAR_HADIR),
+                        'buktiRuangUjianCbt as bukti_berita_acara_count' => fn ($query) => $query->where('jenis', BuktiRuangUjianCbt::JENIS_BERITA_ACARA),
+                    ])
+                    ->get()
+                    ->keyBy('ruang_kegiatan_ujian_cbt_id')
+                : collect());
             $item->setAttribute('boleh_kelola_nilai', $paket?->dapatDikelolaOleh($request->user()) ?? false);
             $item->setAttribute('perlu_koreksi_manual', $paket ? $this->jumlahPerluKoreksiManual($paket->id) : 0);
         });
 
         $paket = $jadwal->pluck('ujianCbt')->filter();
+        $ruangOperasional = $jadwal->flatMap(fn (JadwalUjianCbt $item) => $item->ruangOperasional);
         $bolehAturPengawas = $mode === 'pelaksanaan'
             && $aksesPenuh
             && $request->user()->memilikiIzin(['cbt.panitia', 'cbt.kelola']);
@@ -99,6 +113,7 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             'mode' => $mode,
             'tahapAktif' => $mode === 'hasil' ? 10 : 9,
             'bolehAturPengawas' => $bolehAturPengawas,
+            'bolehCetakDokumen' => $mode === 'pelaksanaan' && $aksesPenuh,
             'pegawai' => $bolehAturPengawas
                 ? Pegawai::query()->where('aktif', true)->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip'])
                 : collect(),
@@ -110,7 +125,77 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                 'belum_mulai' => max(0, $paket->sum('peserta_ujian_cbt_count') - $paket->sum('peserta_sedang_count') - $paket->sum('peserta_selesai_count')),
                 'nilai_diterapkan' => $paket->sum('nilai_diterapkan_count'),
                 'perlu_manual' => $jadwal->sum('perlu_koreksi_manual'),
+                'bukti_ruang' => $ruangOperasional->count(),
+                'bukti_valid' => $ruangOperasional->where('status_bukti', 'valid')->count(),
+                'bukti_menunggu' => $ruangOperasional->where('status_bukti', 'menunggu_pemeriksaan')->count(),
+                'bukti_belum_lengkap' => $ruangOperasional->whereIn('status_bukti', [
+                    'belum_diunggah',
+                    'sebagian',
+                    'siap_dikirim',
+                    'perlu_diulang',
+                ])->count(),
             ],
+        ]);
+    }
+
+    public function cetakDokumenRuang(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        JadwalUjianCbt $jadwalUjianCbt,
+        RuangKegiatanUjianCbt $ruangKegiatanUjianCbt,
+        SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+    ) {
+        abort_unless($kegiatanUjianCbt->dapatDiaksesOleh($request->user()), 403);
+        abort_unless((int) $jadwalUjianCbt->kegiatan_ujian_cbt_id === (int) $kegiatanUjianCbt->id, 404);
+        abort_unless((int) $ruangKegiatanUjianCbt->kegiatan_ujian_cbt_id === (int) $kegiatanUjianCbt->id, 404);
+
+        $ruangDipakai = $kegiatanUjianCbt->kelompokPesertaKegiatanUjianCbt()
+            ->where('tingkat', $jadwalUjianCbt->tingkat)
+            ->whereHas('ruangKegiatanUjianCbt', fn ($query) => $query->whereKey($ruangKegiatanUjianCbt->id))
+            ->exists();
+        abort_unless($ruangDipakai, 404);
+
+        $sinkronisasi->sinkronkanJadwal($jadwalUjianCbt->fresh(), $request->user());
+        $jadwalUjianCbt->loadMissing('ujianCbt');
+        $paket = $jadwalUjianCbt->ujianCbt;
+        abort_unless($paket, 404, 'Paket soal untuk jadwal ini belum diterbitkan.');
+
+        $paket->load(['jenisUjianCbt', 'tahunPelajaran', 'mataPelajaran']);
+        $ruang = RuangUjianCbt::query()
+            ->where('ujian_cbt_id', $paket->id)
+            ->where('jadwal_ujian_cbt_id', $jadwalUjianCbt->id)
+            ->where('ruang_kegiatan_ujian_cbt_id', $ruangKegiatanUjianCbt->id)
+            ->with([
+                'sesiUjianCbt',
+                'jadwalUjianCbt.kegiatanUjianCbt',
+                'jadwalUjianCbt.mataPelajaran',
+                'pengawasUtama',
+                'pengawasPendamping',
+                'pesertaUjianCbt.sesiUjianCbt',
+                'pesertaUjianCbt.kelasUjianCbt.kelas',
+                'pesertaUjianCbt.anggotaKelas.siswa',
+            ])
+            ->firstOrFail();
+
+        abort_unless($ruang->pengawas_utama_pegawai_id, 422, 'Tentukan pengawas utama sebelum mencetak dokumen ruang.');
+        $ruang->setRelation('pesertaUjianCbt', $ruang->pesertaUjianCbt
+            ->sortBy(fn ($peserta) => sprintf(
+                '%05d|%s|%05d|%s',
+                $peserta->nomor_meja ?? 999,
+                $peserta->kelasUjianCbt?->kelas?->nama ?? '',
+                $peserta->anggotaKelas?->nomor_absen ?? 999,
+                $peserta->anggotaKelas?->siswa?->nama_lengkap ?? '',
+            ))
+            ->values());
+
+        return view('ujian-cbt.ruang.cetak', [
+            'ujianCbt' => $paket,
+            'ruangUjianCbt' => collect([$ruang]),
+            'sesiUjianCbtId' => $ruang->sesi_ujian_cbt_id,
+            'jadwalUjianCbtId' => $jadwalUjianCbt->id,
+            'ruangUjianCbtId' => $ruang->id,
+            'daftarStatusKehadiran' => PesertaUjianCbt::DAFTAR_STATUS_KEHADIRAN,
+            'routeKembali' => route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatanUjianCbt),
         ]);
     }
 

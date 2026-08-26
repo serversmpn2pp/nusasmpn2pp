@@ -667,6 +667,9 @@
                             </td>
                             <td>
                                 <input name="peserta[{{ $peserta->id }}][nomor_meja]" value="{{ $peserta->nomor_meja }}" type="number" min="1" max="999" class="input" style="max-width: 110px;">
+                                @if($peserta->kode_meja)
+                                    <p class="person-meta">{{ $peserta->kode_meja }}</p>
+                                @endif
                             </td>
                             <td>
                                 <select name="peserta[{{ $peserta->id }}][status_kehadiran_ujian]" class="select">

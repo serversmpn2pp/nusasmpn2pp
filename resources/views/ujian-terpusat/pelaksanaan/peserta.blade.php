@@ -22,17 +22,19 @@
         .room-capacity-copy { display:flex; justify-content:space-between; gap:10px; margin-bottom:7px; color:var(--muted); font-size:.7rem; font-weight:800; }
         .room-capacity-track { height:7px; overflow:hidden; border-radius:4px; background:#dfe9f3; }
         .room-capacity-fill { height:100%; border-radius:inherit; background:var(--accent); }
+        .room-placement-tools { display:grid; min-width:200px; gap:10px; }
+        .room-placement-tools .button { justify-self:stretch; text-align:center; }
         .participant-table { width:100%; table-layout:fixed; border-collapse:collapse; }
         .participant-table th { padding:11px 14px; border-bottom:1px solid var(--line); background:var(--primary-soft); color:var(--primary-dark); font-size:.7rem; text-align:left; text-transform:uppercase; }
         .participant-table td { padding:12px 14px; border-bottom:1px solid var(--line); color:var(--text); font-size:.8rem; vertical-align:middle; }
         .participant-table tbody tr:last-child td { border-bottom:0; }
         .participant-table tbody tr:hover { background:#fbfdff; }
         .participant-table th:nth-child(1),.participant-table td:nth-child(1) { width:72px; text-align:center; }
-        .participant-table th:nth-child(2),.participant-table td:nth-child(2) { width:190px; }
+        .participant-table th:nth-child(2),.participant-table td:nth-child(2) { width:235px; }
         .participant-table th:nth-child(4),.participant-table td:nth-child(4) { width:100px; }
         .participant-table th:nth-child(5),.participant-table td:nth-child(5) { width:135px; }
         .seat-number { display:inline-grid; width:34px; height:30px; place-items:center; border-radius:6px; background:var(--accent-soft); color:var(--accent-text); font-weight:900; }
-        .participant-number { color:var(--muted); font-size:.76rem; font-weight:750; }
+        .participant-number { color:var(--primary-dark); font-size:.76rem; font-weight:850; }
         .participant-name { color:var(--primary-dark); font-weight:800; }
         .participant-empty { padding:28px!important; color:var(--muted)!important; text-align:center!important; }
         @media(max-width:760px){
@@ -40,7 +42,7 @@
             .placement-intro-level { min-width:0; min-height:48px; justify-self:stretch; }
             .placement-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
             .room-placement-head { grid-template-columns:1fr; }
-            .room-capacity { min-width:0; }
+            .room-capacity,.room-placement-tools { min-width:0; }
             .participant-table thead { display:none; }
             .participant-table,.participant-table tbody,.participant-table tr,.participant-table td { display:block; width:100%; }
             .participant-table tr { padding:12px 14px; border-bottom:1px solid var(--line); }
@@ -80,19 +82,24 @@
                     <div class="room-placement-title"><h2>{{ $ruang->nama }}</h2><span class="badge badge-active">{{ $ruang->kode }}</span></div>
                     <p>{{ $ruang->lokasi ?: 'Lokasi belum diisi' }} · meja diurutkan otomatis oleh NUSA</p>
                 </div>
-                <div class="room-capacity">
-                    <div class="room-capacity-copy"><span>Keterisian ruang</span><strong>{{ $daftar->count() }}/{{ $ruang->kapasitas }} kursi</strong></div>
-                    <div class="room-capacity-track" aria-label="Keterisian {{ $persentaseTerisi }} persen"><div class="room-capacity-fill" style="width:{{ $persentaseTerisi }}%"></div></div>
+                <div class="room-placement-tools">
+                    <div class="room-capacity">
+                        <div class="room-capacity-copy"><span>Keterisian ruang</span><strong>{{ $daftar->count() }}/{{ $ruang->kapasitas }} kursi</strong></div>
+                        <div class="room-capacity-track" aria-label="Keterisian {{ $persentaseTerisi }} persen"><div class="room-capacity-fill" style="width:{{ $persentaseTerisi }}%"></div></div>
+                    </div>
+                    @if($daftar->isNotEmpty())
+                        <a href="{{ route('ujian-terpusat.peserta.label-meja', [$kegiatan, $kelompok, $ruang]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak label meja</a>
+                    @endif
                 </div>
             </div>
             <div class="table-wrap">
                 <table class="participant-table">
-                    <thead><tr><th>Meja</th><th>Nomor peserta</th><th>Nama siswa</th><th>Kelas</th><th>NISN</th></tr></thead>
+                    <thead><tr><th>Meja</th><th>Kode meja</th><th>Nama siswa</th><th>Kelas</th><th>NISN</th></tr></thead>
                     <tbody>
                         @forelse($daftar as $penempatan)
                             <tr>
                                 <td data-label="Meja"><span class="seat-number">{{ $penempatan->nomor_meja }}</span></td>
-                                <td data-label="Nomor peserta"><span class="participant-number">{{ $penempatan->nomor_peserta }}</span></td>
+                                <td data-label="Kode meja"><span class="participant-number">{{ $penempatan->kode_meja }}</span></td>
                                 <td data-label="Nama siswa" class="participant-name">{{ $penempatan->anggotaKelas?->siswa?->nama_lengkap }}</td>
                                 <td data-label="Kelas">{{ $penempatan->anggotaKelas?->kelas?->nama }}</td>
                                 <td data-label="NISN">{{ $penempatan->anggotaKelas?->siswa?->nisn ?: '-' }}</td>

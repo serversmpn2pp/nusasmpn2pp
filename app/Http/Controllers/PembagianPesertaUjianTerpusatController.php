@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\KegiatanUjianCbt;
 use App\Models\KelompokPesertaKegiatanUjianCbt;
+use App\Models\RuangKegiatanUjianCbt;
 use App\Services\Cbt\BagiPesertaUjianTerpusat;
+use App\Services\Cbt\KodeMejaUjianTerpusat;
+use App\Services\Cbt\SinkronkanPelaksanaanUjianTerpusat;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -45,10 +48,16 @@ class PembagianPesertaUjianTerpusatController extends Controller
             ->with('berhasil', "{$kelompok->jumlah_peserta} siswa tingkat {$kelompok->tingkat} berhasil dibagi otomatis ke ruang ujian.");
     }
 
-    public function show(Request $request, KegiatanUjianCbt $kegiatanUjianCbt, KelompokPesertaKegiatanUjianCbt $kelompokPeserta)
-    {
+    public function show(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        KelompokPesertaKegiatanUjianCbt $kelompokPeserta,
+        KodeMejaUjianTerpusat $kodeMeja,
+        SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+    ) {
         $this->pastikanAkses($request, $kegiatanUjianCbt);
         $this->pastikanMilikKegiatan($kegiatanUjianCbt, $kelompokPeserta);
+        $this->pastikanKodeMeja($kelompokPeserta, $kegiatanUjianCbt, $request, $kodeMeja, $sinkronisasi);
         $kegiatanUjianCbt->load(['jenisUjianCbt', 'tahunPelajaran']);
         $kelompokPeserta->load([
             'sesiKegiatanUjianCbt',
@@ -65,6 +74,40 @@ class PembagianPesertaUjianTerpusatController extends Controller
             'kelompok' => $kelompokPeserta,
             'penempatanPerRuang' => $kelompokPeserta->penempatanPesertaUjianCbt
                 ->groupBy('ruang_kegiatan_ujian_cbt_id'),
+        ]);
+    }
+
+    public function cetakLabelMeja(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        KelompokPesertaKegiatanUjianCbt $kelompokPeserta,
+        RuangKegiatanUjianCbt $ruangKegiatanUjianCbt,
+        KodeMejaUjianTerpusat $kodeMeja,
+        SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+    ) {
+        $this->pastikanAkses($request, $kegiatanUjianCbt);
+        $this->pastikanMilikKegiatan($kegiatanUjianCbt, $kelompokPeserta);
+        abort_unless(
+            (int) $ruangKegiatanUjianCbt->kegiatan_ujian_cbt_id === (int) $kegiatanUjianCbt->id
+            && $kelompokPeserta->ruangKegiatanUjianCbt()->whereKey($ruangKegiatanUjianCbt->id)->exists(),
+            404,
+        );
+
+        $this->pastikanKodeMeja($kelompokPeserta, $kegiatanUjianCbt, $request, $kodeMeja, $sinkronisasi);
+        $kegiatanUjianCbt->load(['jenisUjianCbt', 'tahunPelajaran']);
+        $kelompokPeserta->load('sesiKegiatanUjianCbt');
+        $ruangKegiatanUjianCbt->load([
+            'penempatanPesertaUjianCbt' => fn ($query) => $query
+                ->where('kelompok_peserta_kegiatan_ujian_cbt_id', $kelompokPeserta->id)
+                ->with(['anggotaKelas.kelas', 'anggotaKelas.siswa'])
+                ->orderBy('nomor_meja'),
+        ]);
+
+        return view('ujian-terpusat.pelaksanaan.label-meja', [
+            'kegiatan' => $kegiatanUjianCbt,
+            'kelompok' => $kelompokPeserta,
+            'ruang' => $ruangKegiatanUjianCbt,
+            'daftar' => $ruangKegiatanUjianCbt->penempatanPesertaUjianCbt,
         ]);
     }
 
@@ -105,5 +148,18 @@ class PembagianPesertaUjianTerpusatController extends Controller
     private function pastikanMilikKegiatan(KegiatanUjianCbt $kegiatan, KelompokPesertaKegiatanUjianCbt $kelompok): void
     {
         abort_unless((int) $kelompok->kegiatan_ujian_cbt_id === (int) $kegiatan->id, 404);
+    }
+
+    private function pastikanKodeMeja(
+        KelompokPesertaKegiatanUjianCbt $kelompok,
+        KegiatanUjianCbt $kegiatan,
+        Request $request,
+        KodeMejaUjianTerpusat $kodeMeja,
+        SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+    ): void {
+        if ($kodeMeja->sinkronkanKelompok($kelompok)) {
+            $sinkronisasi->sinkronkanKegiatan($kegiatan, $request->user());
+            $kelompok->unsetRelations();
+        }
     }
 }

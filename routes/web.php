@@ -131,6 +131,7 @@ use App\Http\Controllers\SurveiPembelajaranController;
 use App\Http\Controllers\TahunPelajaranController;
 use App\Http\Controllers\TerapkanNilaiCbtController;
 use App\Http\Controllers\TindakLanjutPembinaanSiswaController;
+use App\Http\Controllers\TugasPengawasUjianController;
 use App\Http\Controllers\UjianCbtController;
 use App\Http\Controllers\UjianSayaController;
 use App\Http\Controllers\UjianTerpusatController;
@@ -372,6 +373,17 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('jadwal-kelas-saya', [JadwalKelasSayaController::class, 'index'])
             ->middleware('izin:jadwal.lihat')
             ->name('jadwal-kelas-saya.index');
+        Route::middleware('akun_pegawai')->group(function () {
+            Route::get('tugas-pengawas-ujian', [TugasPengawasUjianController::class, 'index'])->name('tugas-pengawas-ujian.index');
+            Route::get('tugas-pengawas-ujian/{ruangUjianCbt}', [TugasPengawasUjianController::class, 'show'])->name('tugas-pengawas-ujian.show');
+            Route::post('tugas-pengawas-ujian/{ruangUjianCbt}/bukti', [TugasPengawasUjianController::class, 'storeBukti'])->name('tugas-pengawas-ujian.bukti.store');
+            Route::get('tugas-pengawas-ujian/{ruangUjianCbt}/bukti/{buktiRuangUjianCbt}', [TugasPengawasUjianController::class, 'lihatBukti'])->name('tugas-pengawas-ujian.bukti.show');
+            Route::delete('tugas-pengawas-ujian/{ruangUjianCbt}/bukti/{buktiRuangUjianCbt}', [TugasPengawasUjianController::class, 'destroyBukti'])->name('tugas-pengawas-ujian.bukti.destroy');
+            Route::patch('tugas-pengawas-ujian/{ruangUjianCbt}/kirim', [TugasPengawasUjianController::class, 'kirim'])->name('tugas-pengawas-ujian.kirim');
+        });
+        Route::patch('tugas-pengawas-ujian/{ruangUjianCbt}/periksa', [TugasPengawasUjianController::class, 'periksa'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('tugas-pengawas-ujian.periksa');
         Route::get('kelas-wali', [KelasWaliController::class, 'index'])
             ->middleware('izin:kelas.lihat')
             ->name('kelas-wali.index');
@@ -404,6 +416,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('ujian-terpusat/{kegiatanUjianCbt}', [UjianTerpusatController::class, 'show'])->name('ujian-terpusat.show');
             Route::get('ujian-terpusat/{kegiatanUjianCbt}/jadwal-peserta', [PelaksanaanUjianTerpusatController::class, 'index'])->name('ujian-terpusat.pelaksanaan.index');
             Route::get('ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}', [PembagianPesertaUjianTerpusatController::class, 'show'])->name('ujian-terpusat.peserta.show');
+            Route::get('ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}/ruang/{ruangKegiatanUjianCbt}/label-meja', [PembagianPesertaUjianTerpusatController::class, 'cetakLabelMeja'])->name('ujian-terpusat.peserta.label-meja');
+            Route::get('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/ruang/{ruangKegiatanUjianCbt}/dokumen', [PelaksanaanNilaiUjianTerpusatController::class, 'cetakDokumenRuang'])->name('ujian-terpusat.dokumen-ruang.cetak');
         });
         Route::get('ujian-terpusat/{kegiatanUjianCbt}/pelaksanaan-nilai', [PelaksanaanNilaiUjianTerpusatController::class, 'index'])
             ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')

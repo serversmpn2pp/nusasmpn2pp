@@ -65,14 +65,36 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         $this->assertSame(['Aulia', 'Bella', 'Citra', 'Damar', 'Eka'], $penempatan->pluck('anggotaKelas.siswa.nama_lengkap')->all());
         $this->assertSame([$ruang[0]->id, $ruang[0]->id, $ruang[0]->id, $ruang[1]->id, $ruang[1]->id], $penempatan->pluck('ruang_kegiatan_ujian_cbt_id')->all());
         $this->assertSame([1, 2, 3, 1, 2], $penempatan->pluck('nomor_meja')->all());
+        $this->assertSame([
+            'SAS-2627-01-S01-R01-M001',
+            'SAS-2627-01-S01-R01-M002',
+            'SAS-2627-01-S01-R01-M003',
+            'SAS-2627-01-S01-R02-M001',
+            'SAS-2627-01-S01-R02-M002',
+        ], $penempatan->pluck('kode_meja')->all());
 
         $this->actingAs($admin)
             ->get(route('ujian-terpusat.peserta.show', [$kegiatan, $kelompok]))
             ->assertOk()
             ->assertSee('Daftar peserta ujian')
             ->assertSee('Susunan siswa tingkat 7')
+            ->assertSeeText('Kode meja')
+            ->assertSee('SAS-2627-01-S01-R01-M001')
+            ->assertDontSeeText('Nomor peserta')
+            ->assertDontSee('UT-2026-001-T7-001')
             ->assertSee('Aulia')
             ->assertSee('VII.B');
+
+        $this->actingAs($admin)
+            ->get(route('ujian-terpusat.peserta.label-meja', [$kegiatan, $kelompok, $ruang[0]]))
+            ->assertOk()
+            ->assertSeeText('8 label per lembar A4')
+            ->assertSeeText('SMP NEGERI 2 PADANG PANJANG')
+            ->assertSee('images/kartu-pelajar/logo-smpn2pp.png')
+            ->assertSee('SAS-2627-01-S01-R01-M001')
+            ->assertSee('Aulia')
+            ->assertSee('9000007001')
+            ->assertDontSee('UT-2026-001-T7-001');
 
         $this->actingAs($admin)
             ->get(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 5]))
@@ -84,6 +106,7 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
             ->get(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 6]))
             ->assertOk()
             ->assertSeeText('Pembagian peserta otomatis')
+            ->assertSeeText('Cetak label R01')
             ->assertSeeText('Lanjut ke Jadwal Ujian');
 
         $kegiatan->delete();

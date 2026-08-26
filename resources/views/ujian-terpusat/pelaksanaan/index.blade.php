@@ -295,6 +295,9 @@
                     <div class="distribution-actions">
                         @if ($jumlahTerbagi > 0)
                             <a href="{{ route('ujian-terpusat.peserta.show', [$kegiatan, $kelompok]) }}" class="button button-muted">Lihat hasil pembagian</a>
+                            @foreach($kelompok->ruangKegiatanUjianCbt as $ruangLabel)
+                                <a href="{{ route('ujian-terpusat.peserta.label-meja', [$kegiatan, $kelompok, $ruangLabel]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak label {{ $ruangLabel->kode }}</a>
+                            @endforeach
                         @endif
                         @if ($bolehKelola)
                             <form action="{{ route('ujian-terpusat.peserta.bangkitkan', [$kegiatan, $kelompok]) }}" method="POST">

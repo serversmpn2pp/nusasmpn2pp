@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,6 +17,15 @@ class RuangUjianCbt extends Model
         'berlangsung' => 'Berlangsung',
         'selesai' => 'Selesai',
         'nonaktif' => 'Nonaktif',
+    ];
+
+    public const DAFTAR_STATUS_BUKTI = [
+        'belum_diunggah' => 'Belum diunggah',
+        'sebagian' => 'Sebagian',
+        'siap_dikirim' => 'Siap dikirim',
+        'menunggu_pemeriksaan' => 'Menunggu pemeriksaan',
+        'valid' => 'Lengkap dan valid',
+        'perlu_diulang' => 'Perlu diulang',
     ];
 
     protected $fillable = [
@@ -49,6 +59,12 @@ class RuangUjianCbt extends Model
         'bukti_berita_acara_ukuran_file',
         'bukti_berita_acara_diunggah_pada',
         'bukti_berita_acara_diunggah_oleh_pengguna_id',
+        'status_bukti',
+        'bukti_diajukan_pada',
+        'bukti_diajukan_oleh_pengguna_id',
+        'catatan_pemeriksaan_bukti',
+        'bukti_diperiksa_pada',
+        'bukti_diperiksa_oleh_pengguna_id',
         'status',
     ];
 
@@ -61,6 +77,8 @@ class RuangUjianCbt extends Model
         'bukti_daftar_hadir_ukuran_file' => 'integer',
         'bukti_berita_acara_diunggah_pada' => 'datetime',
         'bukti_berita_acara_ukuran_file' => 'integer',
+        'bukti_diajukan_pada' => 'datetime',
+        'bukti_diperiksa_pada' => 'datetime',
     ];
 
     public function ujianCbt(): BelongsTo
@@ -111,6 +129,35 @@ class RuangUjianCbt extends Model
     public function buktiBeritaAcaraDiunggahOleh(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'bukti_berita_acara_diunggah_oleh_pengguna_id');
+    }
+
+    public function buktiRuangUjianCbt(): HasMany
+    {
+        return $this->hasMany(BuktiRuangUjianCbt::class);
+    }
+
+    public function buktiDiajukanOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'bukti_diajukan_oleh_pengguna_id');
+    }
+
+    public function buktiDiperiksaOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'bukti_diperiksa_oleh_pengguna_id');
+    }
+
+    public function scopeDitugaskanKepada(Builder $query, int $pegawaiId): Builder
+    {
+        return $query->where(function (Builder $query) use ($pegawaiId) {
+            $query->where('pengawas_utama_pegawai_id', $pegawaiId)
+                ->orWhere('pengawas_pendamping_pegawai_id', $pegawaiId);
+        });
+    }
+
+    public function labelStatusBukti(): string
+    {
+        return self::DAFTAR_STATUS_BUKTI[$this->status_bukti]
+            ?? str($this->status_bukti)->headline()->toString();
     }
 
     public function labelStatus(): string

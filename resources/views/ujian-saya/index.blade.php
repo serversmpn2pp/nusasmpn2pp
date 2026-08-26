@@ -445,8 +445,8 @@
                                         <strong>{{ $ruang?->nama ?: $ruang?->kode ?: 'Belum diatur' }}</strong>
                                     </div>
                                     <div class="student-exam-fact">
-                                        <span>Nomor meja</span>
-                                        <strong>{{ $peserta->nomor_meja ?: 'Belum diatur' }}</strong>
+                                        <span>Kode meja</span>
+                                        <strong>{{ $peserta->kode_meja ?: ($peserta->nomor_meja ? 'M'.str_pad((string) $peserta->nomor_meja, 3, '0', STR_PAD_LEFT) : 'Belum diatur') }}</strong>
                                     </div>
                                     <div class="student-exam-fact">
                                         <span>Durasi</span>

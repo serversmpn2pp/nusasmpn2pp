@@ -278,7 +278,7 @@
                         <tr>
                             <td>
                                 <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
-                                <p class="person-meta">{{ $peserta->nomor_peserta }}</p>
+                                <p class="person-meta">{{ $peserta->kode_meja ? 'Kode meja '.$peserta->kode_meja : 'NISN '.($peserta->anggotaKelas?->siswa?->nisn ?: '-') }}</p>
                             </td>
                             <td>
                                 <p>{{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }}</p>

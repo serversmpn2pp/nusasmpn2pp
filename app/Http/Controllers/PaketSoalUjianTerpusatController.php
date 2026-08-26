@@ -331,8 +331,7 @@ class PaketSoalUjianTerpusatController extends Controller
         string $status,
         bool $acakSoal,
         bool $acakJawaban,
-    ): array
-    {
+    ): array {
         $kegiatan = $jadwal->kegiatanUjianCbt;
         $mulai = Carbon::parse($jadwal->tanggal->format('Y-m-d').' '.$jadwal->waktu_mulai);
         $selesai = Carbon::parse($jadwal->tanggal->format('Y-m-d').' '.$jadwal->waktu_selesai);

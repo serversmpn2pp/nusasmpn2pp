@@ -250,7 +250,6 @@
         }
 
         .event-table .label {
-            width: 34%;
             background: var(--soft);
             color: var(--muted);
             font-weight: 800;
@@ -258,9 +257,26 @@
 
         .line {
             display: inline-block;
-            min-width: 34mm;
+            width: 100%;
+            min-width: 0;
             border-bottom: .25mm dotted #64748b;
             transform: translateY(-.5mm);
+        }
+
+        .manual-entry {
+            display: flex;
+            align-items: flex-end;
+            gap: 1.5mm;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .manual-entry .line {
+            flex: 1 1 auto;
+        }
+
+        .manual-entry .suffix {
+            flex: 0 0 auto;
         }
 
         .statement {
@@ -338,6 +354,22 @@
             color: var(--muted);
             font-size: 7.1pt;
             font-weight: 700;
+        }
+
+        .attendance-page .signature-cell {
+            height: 7mm;
+        }
+
+        .attendance-page .signature-grid {
+            padding-top: 3mm;
+        }
+
+        .attendance-page .signature-role {
+            min-height: 6mm;
+        }
+
+        .attendance-page .signature-space {
+            height: 14mm;
         }
 
         .empty-report {
@@ -436,7 +468,7 @@
 
         <div class="toolbar-actions">
             <button type="button" class="button" onclick="window.print()">Cetak / Simpan PDF</button>
-            <a href="{{ route('ujian-cbt.ruang.index', array_merge([$ujianCbt], $queryKembali)) }}" class="button button-muted">Kembali</a>
+            <a href="{{ $routeKembali ?? route('ujian-cbt.ruang.index', array_merge([$ujianCbt], $queryKembali)) }}" class="button button-muted">Kembali</a>
         </div>
     </header>
 
@@ -452,9 +484,16 @@
                 $mataPelajaranRuang = $jadwalRuang?->mataPelajaran?->nama ?: ($ujianCbt->mataPelajaran?->nama ?: '-');
                 $labelSesiRuang = $jadwalRuang?->label_sesi ?: ($ruang->sesiUjianCbt?->nama ?: 'Mengikuti jadwal paket');
                 $kegiatanUjianRuang = $jadwalRuang?->kegiatanUjianCbt?->nama ?: ($ujianCbt->jenisUjianCbt?->nama ?: '-');
+                $halamanDaftarHadir = $pesertaRuang->isEmpty() ? collect([collect()]) : $pesertaRuang->chunk(20);
             @endphp
 
-            <section class="print-page">
+            @foreach($halamanDaftarHadir as $pesertaHalaman)
+            @php
+                $nomorHalaman = $loop->iteration;
+                $jumlahHalaman = $loop->count;
+                $nomorAwal = ($nomorHalaman - 1) * 20;
+            @endphp
+            <section class="print-page attendance-page">
                 <header class="letterhead">
                     <div class="logo-box">
                         <img src="{{ asset('images/kartu-pelajar/logo-smpn2pp.png') }}" alt="Logo SMP Negeri 2 Padang Panjang">
@@ -472,7 +511,7 @@
 
                 <div class="document-title">
                     <h1>Daftar Hadir Peserta Ujian CBT</h1>
-                    <p>{{ $ruang->kode }} - {{ $ruang->nama }}</p>
+                    <p>{{ $ruang->kode }} - {{ $ruang->nama }}{{ $jumlahHalaman > 1 ? ' · Halaman '.$nomorHalaman.' dari '.$jumlahHalaman : '' }}</p>
                 </div>
 
                 <section class="meta-grid">
@@ -491,18 +530,18 @@
                 <table class="data-table" aria-label="Daftar hadir peserta CBT {{ $ruang->nama }}">
                     <colgroup>
                         <col style="width: 5%;">
+                        <col style="width: 22%;">
+                        <col style="width: 14%;">
+                        <col style="width: 25%;">
                         <col style="width: 8%;">
-                        <col style="width: 18%;">
-                        <col style="width: 31%;">
-                        <col style="width: 9%;">
-                        <col style="width: 17%;">
-                        <col style="width: 12%;">
+                        <col style="width: 16%;">
+                        <col style="width: 10%;">
                     </colgroup>
                     <thead>
                         <tr>
                             <th>No.</th>
-                            <th>No. Meja</th>
-                            <th>No. Peserta</th>
+                            <th>Kode Meja</th>
+                            <th>NISN</th>
                             <th>Nama Peserta</th>
                             <th>Kelas</th>
                             <th>Tanda Tangan Peserta</th>
@@ -510,14 +549,14 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($pesertaRuang as $peserta)
+                        @forelse ($pesertaHalaman as $peserta)
                             @php
                                 $siswa = $peserta->anggotaKelas?->siswa;
                             @endphp
                             <tr>
-                                <td class="center">{{ $loop->iteration }}</td>
-                                <td class="center"><strong>{{ $peserta->nomor_meja ?: '-' }}</strong></td>
-                                <td>{{ $peserta->nomor_peserta ?: '-' }}</td>
+                                <td class="center">{{ $nomorAwal + $loop->iteration }}</td>
+                                <td><strong>{{ $peserta->kode_meja ?: ($peserta->nomor_meja ? 'M'.str_pad((string) $peserta->nomor_meja, 3, '0', STR_PAD_LEFT) : '-') }}</strong></td>
+                                <td>{{ $siswa?->nisn ?: '-' }}</td>
                                 <td>{{ $siswa?->nama_lengkap ?: '-' }}</td>
                                 <td class="center">{{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }}</td>
                                 <td class="signature-cell"></td>
@@ -552,6 +591,7 @@
                     </div>
                 </div>
             </section>
+            @endforeach
 
             <section class="print-page">
                 <header class="letterhead">
@@ -575,6 +615,12 @@
                 </div>
 
                 <table class="event-table" aria-label="Data berita acara CBT">
+                    <colgroup>
+                        <col style="width: 22%;">
+                        <col style="width: 28%;">
+                        <col style="width: 22%;">
+                        <col style="width: 28%;">
+                    </colgroup>
                     <tbody>
                         <tr>
                             <td class="label">Kegiatan</td>
@@ -596,9 +642,9 @@
                         </tr>
                         <tr>
                             <td class="label">Jumlah hadir</td>
-                            <td><span class="line"></span> orang</td>
+                            <td><span class="manual-entry"><span class="line"></span><span class="suffix">orang</span></span></td>
                             <td class="label">Jumlah tidak hadir</td>
-                            <td><span class="line"></span> orang</td>
+                            <td><span class="manual-entry"><span class="line"></span><span class="suffix">orang</span></span></td>
                         </tr>
                         <tr>
                             <td class="label">Ujian dimulai pukul</td>

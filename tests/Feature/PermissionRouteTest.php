@@ -153,6 +153,8 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.jadwal.update', 'izin:cbt.panitia,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.jadwal.destroy', 'izin:cbt.panitia,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.pengawas.update', 'izin:cbt.panitia,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('tugas-pengawas-ujian.index', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('tugas-pengawas-ujian.periksa', 'izin:cbt.panitia,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-cbt.create', 'izin:cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-cbt.store', 'izin:cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-cbt.edit', 'izin:cbt.kelola');

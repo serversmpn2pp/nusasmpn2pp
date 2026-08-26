@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AnggotaKelas;
+use App\Models\BuktiRuangUjianCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
 use App\Models\JenisUjianCbt;
@@ -19,6 +20,8 @@ use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use App\Services\Cbt\BagiPesertaUjianTerpusat;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PDO;
 use Tests\TestCase;
 
@@ -77,6 +80,7 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'ujian_cbt_id' => $paket->id,
             'anggota_kelas_id' => $data['anggota'][0]->id,
             'nomor_meja' => 1,
+            'kode_meja' => 'STS-2627-01-S01-R01-M001',
             'status' => 'aktif',
         ]);
 
@@ -85,7 +89,8 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertOk()
             ->assertSee('Matematika')
             ->assertSee('Ruang 1')
-            ->assertSee('Nomor meja');
+            ->assertSee('Kode meja')
+            ->assertSee('STS-2627-01-S01-R01-M001');
 
         $this->actingAs($data['admin'])
             ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
@@ -95,6 +100,9 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSee('Pantau ujian')
             ->assertSeeText('Nilai & hasil')
             ->assertSee($paket->token);
+
+        $this->assertSame(2, $paket->pesertaUjianCbt()->whereNotNull('ruang_ujian_cbt_id')->count());
+        $this->assertSame(2, $paket->pesertaUjianCbt()->whereNotNull('kode_meja')->count());
 
         $this->actingAs($data['admin'])
             ->get(route('ujian-terpusat.nilai-hasil.index', $data['kegiatan']))
@@ -140,6 +148,7 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
 
     public function test_pengawas_ruang_disimpan_dan_diteruskan_ke_ruang_operasional(): void
     {
+        Storage::fake('local');
         $data = $this->buatFondasi();
         $paket = UjianCbt::create([
             'alur' => 'terpusat',
@@ -167,6 +176,16 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'jenis_pegawai' => 'Guru',
             'aktif' => true,
         ]);
+        $akunPengawas = Pengguna::create([
+            'pegawai_id' => $pengawas->id,
+            'nama' => $pengawas->nama_lengkap,
+            'username' => $pengawas->nip,
+            'kata_sandi' => 'rahasia123',
+            'wajib_ganti_kata_sandi' => false,
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
 
         $this->actingAs($data['admin'])
             ->put(route('ujian-terpusat.pengawas.update', [
@@ -189,6 +208,77 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
             'pengawas_utama_pegawai_id' => $pengawas->id,
         ]);
+        $ruangOperasional = $paket->ruangUjianCbt()->firstOrFail();
+
+        $this->actingAs($akunPengawas)
+            ->get(route('tugas-pengawas-ujian.index'))
+            ->assertOk()
+            ->assertSeeText('Tugas Pengawas Saya')
+            ->assertSeeText('Ruang 1');
+        $this->actingAs($akunPengawas)
+            ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
+            ->assertOk()
+            ->assertSeeText('Ambil foto atau pilih berkas')
+            ->assertSeeText('Kirim ke panitia');
+        $this->actingAs($data['akun_guru'])
+            ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
+            ->assertForbidden();
+
+        foreach (['daftar-hadir-1.jpg', 'daftar-hadir-2.jpg'] as $namaFile) {
+            $this->actingAs($akunPengawas)
+                ->post(route('tugas-pengawas-ujian.bukti.store', $ruangOperasional), [
+                    'jenis' => BuktiRuangUjianCbt::JENIS_DAFTAR_HADIR,
+                    'berkas' => UploadedFile::fake()->create($namaFile, 350, 'image/jpeg'),
+                ])
+                ->assertRedirect();
+        }
+        $this->actingAs($akunPengawas)
+            ->post(route('tugas-pengawas-ujian.bukti.store', $ruangOperasional), [
+                'jenis' => BuktiRuangUjianCbt::JENIS_BERITA_ACARA,
+                'berkas' => UploadedFile::fake()->create('berita-acara.jpg', 350, 'image/jpeg'),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('bukti_ruang_ujian_cbt', 3);
+        $this->assertSame('siap_dikirim', $ruangOperasional->fresh()->status_bukti);
+        $this->actingAs($akunPengawas)
+            ->patch(route('tugas-pengawas-ujian.kirim', $ruangOperasional))
+            ->assertRedirect();
+        $this->assertSame('menunggu_pemeriksaan', $ruangOperasional->fresh()->status_bukti);
+        $this->actingAs($akunPengawas)
+            ->post(route('tugas-pengawas-ujian.bukti.store', $ruangOperasional), [
+                'jenis' => BuktiRuangUjianCbt::JENIS_DAFTAR_HADIR,
+                'berkas' => UploadedFile::fake()->create('tambahan.jpg', 350, 'image/jpeg'),
+            ])
+            ->assertStatus(422);
+
+        $this->actingAs($data['admin'])
+            ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+            ->assertOk()
+            ->assertSeeText('Cetak hadir & berita acara')
+            ->assertSeeText('Menunggu pemeriksaan')
+            ->assertSeeText('2 hadir · 1 BA')
+            ->assertSeeText('Periksa bukti');
+
+        $this->actingAs($data['admin'])
+            ->patch(route('tugas-pengawas-ujian.periksa', $ruangOperasional), [
+                'hasil' => 'valid',
+            ])
+            ->assertRedirect();
+        $this->assertSame('valid', $ruangOperasional->fresh()->status_bukti);
+
+        $this->actingAs($data['admin'])
+            ->get(route('ujian-terpusat.dokumen-ruang.cetak', [
+                $data['kegiatan'],
+                $data['jadwal'],
+                $data['ruang'],
+            ]))
+            ->assertOk()
+            ->assertSeeText('Daftar Hadir Peserta Ujian CBT')
+            ->assertSeeText('Berita Acara Ujian CBT')
+            ->assertSeeText('Guru Pengawas Ruang')
+            ->assertSeeText('Ruang 1')
+            ->assertSeeText('Kode Meja');
     }
 
     private function buatFondasi(): array

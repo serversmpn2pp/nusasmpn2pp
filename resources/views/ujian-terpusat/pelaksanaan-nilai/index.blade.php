@@ -38,10 +38,17 @@
         .supervisor-row { display:grid; grid-template-columns:minmax(130px,.6fr) minmax(180px,1fr) minmax(180px,1fr) minmax(180px,.8fr) auto; gap:10px; align-items:end; padding:12px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
         .supervisor-room strong,.supervisor-room span { display:block; }
         .supervisor-room span { margin-top:3px; color:var(--muted); font-size:.74rem; }
+        .supervisor-proof { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
+        .proof-overview { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 18px; padding:15px 18px; }
+        .proof-overview-copy strong,.proof-overview-copy span { display:block; }
+        .proof-overview-copy span { margin-top:3px; color:var(--muted); font-size:.78rem; }
+        .proof-overview-stats { display:flex; flex-wrap:wrap; gap:8px; }
+        .supervisor-row .actions { display:grid; gap:7px; align-self:stretch; align-content:end; }
+        .supervisor-row .actions .button { text-align:center; }
         .empty-execution { padding:28px; text-align:center; color:var(--muted); }
         .central-wizard-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; }
         @media (max-width:1050px) { .execution-summary,.execution-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } .execution-card-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .supervisor-row { grid-template-columns:repeat(2,minmax(0,1fr)); } .supervisor-room,.supervisor-row .actions { grid-column:1 / -1; } }
-        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button { width:100%; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } }
+        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button { width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } }
         @media (max-width:480px) { .execution-summary,.execution-flow { grid-template-columns:1fr; } }
     </style>
 
@@ -89,6 +96,17 @@
             <div class="panel stat"><p class="stat-label">Total peserta</p><p class="stat-value">{{ $ringkasan['peserta'] }}</p></div>
         @endif
     </div>
+
+    @if (! $halamanHasil)
+        <section class="panel proof-overview">
+            <div class="proof-overview-copy"><strong>Kelengkapan bukti ruang</strong><span>Pengawas mengunggah foto daftar hadir dan berita acara dari Tugas Pengawas Saya.</span></div>
+            <div class="proof-overview-stats">
+                <span class="badge badge-active">{{ $ringkasan['bukti_valid'] }} valid</span>
+                <span class="badge badge-warning">{{ $ringkasan['bukti_menunggu'] }} menunggu</span>
+                <span class="badge badge-muted">{{ $ringkasan['bukti_belum_lengkap'] }} perlu tindakan</span>
+            </div>
+        </section>
+    @endif
 
     <div class="execution-flow" aria-label="Alur {{ strtolower($judulHalaman) }}">
         @if ($halamanHasil)
@@ -151,21 +169,49 @@
                             <summary>Pengawas ruang ({{ $item->ruangPelaksanaan->count() }} ruang)</summary>
                             <div class="supervisor-grid">
                                 @foreach ($item->ruangPelaksanaan as $ruang)
-                                    @php $penugasan = $pengawas->get($ruang->id); @endphp
+                                    @php
+                                        $penugasan = $pengawas->get($ruang->id);
+                                        $ruangOperasional = $item->ruangOperasional->get($ruang->id);
+                                        $kelasStatusBukti = match($ruangOperasional?->status_bukti) {
+                                            'valid' => 'badge-active',
+                                            'menunggu_pemeriksaan', 'siap_dikirim' => 'badge-warning',
+                                            'perlu_diulang' => 'badge-danger',
+                                            default => 'badge-muted',
+                                        };
+                                    @endphp
                                     @if ($bolehAturPengawas)
                                         <form class="supervisor-row" method="POST" action="{{ route('ujian-terpusat.pengawas.update', [$kegiatan, $item, $ruang]) }}">
                                             @csrf @method('PUT')
-                                            <div class="supervisor-room"><strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span></div>
+                                            <div class="supervisor-room">
+                                                <strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span>
+                                                @if($ruangOperasional)<div class="supervisor-proof"><span class="badge {{ $kelasStatusBukti }}">{{ $ruangOperasional->labelStatusBukti() }}</span><span class="badge badge-muted">{{ $ruangOperasional->bukti_daftar_hadir_count }} hadir · {{ $ruangOperasional->bukti_berita_acara_count }} BA</span></div>@endif
+                                            </div>
                                             <div class="field"><label for="utama_{{ $item->id }}_{{ $ruang->id }}">Pengawas utama</label><select id="utama_{{ $item->id }}_{{ $ruang->id }}" name="pengawas_utama_pegawai_id" class="input"><option value="">Belum ditentukan</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}" @selected((int)$penugasan?->pengawas_utama_pegawai_id === (int)$orang->id)>{{ $orang->nama_lengkap }}</option>@endforeach</select></div>
                                             <div class="field"><label for="pendamping_{{ $item->id }}_{{ $ruang->id }}">Pendamping</label><select id="pendamping_{{ $item->id }}_{{ $ruang->id }}" name="pengawas_pendamping_pegawai_id" class="input"><option value="">Tidak ada</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}" @selected((int)$penugasan?->pengawas_pendamping_pegawai_id === (int)$orang->id)>{{ $orang->nama_lengkap }}</option>@endforeach</select></div>
                                             <div class="field"><label for="catatan_{{ $item->id }}_{{ $ruang->id }}">Catatan</label><input id="catatan_{{ $item->id }}_{{ $ruang->id }}" name="catatan" class="input" value="{{ $penugasan?->catatan }}" placeholder="Opsional"></div>
-                                            <div class="actions"><button class="button button-primary" type="submit">Simpan</button></div>
+                                            <div class="actions">
+                                                <button class="button button-primary" type="submit">Simpan</button>
+                                                @if($bolehCetakDokumen && $paketSiap && $penugasan?->pengawas_utama_pegawai_id)
+                                                    <a href="{{ route('ujian-terpusat.dokumen-ruang.cetak', [$kegiatan, $item, $ruang]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak hadir & berita acara</a>
+                                                @elseif($bolehCetakDokumen && $paketSiap)
+                                                    <span class="help-text">Tentukan pengawas utama untuk mencetak.</span>
+                                                @endif
+                                                @if($ruangOperasional)<a href="{{ route('tugas-pengawas-ujian.show', ['ruangUjianCbt' => $ruangOperasional, 'kembali' => 'panitia']) }}" class="button button-muted">Periksa bukti</a>@endif
+                                            </div>
                                         </form>
                                     @else
                                         <div class="supervisor-row">
-                                            <div class="supervisor-room"><strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span></div>
+                                            <div class="supervisor-room">
+                                                <strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span>
+                                                @if($ruangOperasional)<div class="supervisor-proof"><span class="badge {{ $kelasStatusBukti }}">{{ $ruangOperasional->labelStatusBukti() }}</span><span class="badge badge-muted">{{ $ruangOperasional->bukti_daftar_hadir_count }} hadir · {{ $ruangOperasional->bukti_berita_acara_count }} BA</span></div>@endif
+                                            </div>
                                             <div><span class="help-text">Pengawas utama</span><strong>{{ $penugasan?->pengawasUtama?->nama_lengkap ?: 'Belum ditentukan' }}</strong></div>
                                             <div><span class="help-text">Pendamping</span><strong>{{ $penugasan?->pengawasPendamping?->nama_lengkap ?: 'Tidak ada' }}</strong></div>
+                                            @if($bolehCetakDokumen && $paketSiap && $penugasan?->pengawas_utama_pegawai_id)
+                                                <div class="actions"><a href="{{ route('ujian-terpusat.dokumen-ruang.cetak', [$kegiatan, $item, $ruang]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak hadir & berita acara</a>@if($ruangOperasional)<a href="{{ route('tugas-pengawas-ujian.show', ['ruangUjianCbt' => $ruangOperasional, 'kembali' => 'panitia']) }}" class="button button-muted">Periksa bukti</a>@endif</div>
+                                            @elseif($bolehCetakDokumen && $paketSiap)
+                                                <div class="actions"><span class="help-text">Pengawas utama belum ditentukan.</span></div>
+                                            @endif
                                         </div>
                                     @endif
                                 @endforeach

@@ -400,7 +400,7 @@
                                 @if ($peserta->ruangUjianCbt)
                                     <a href="{{ route('presensi-ujian-cbt.show', [$ujianCbt, $peserta->ruangUjianCbt]) }}" class="person-name">{{ $peserta->ruangUjianCbt->kode }} - {{ $peserta->ruangUjianCbt->nama }}</a>
                                     <div class="monitor-meta">
-                                        <span>Meja {{ $peserta->nomor_meja ?: '-' }}</span>
+                                        <span>{{ $peserta->kode_meja ?: ($peserta->nomor_meja ? 'Meja '.$peserta->nomor_meja : 'Meja belum diatur') }}</span>
                                         <span>{{ $peserta->ruangUjianCbt->lokasi ?: 'Lokasi belum diisi' }}</span>
                                     </div>
                                 @else
@@ -466,7 +466,7 @@
                     </div>
                     <dl class="quick-facts">
                         <div><dt>Ruang</dt><dd>{{ $peserta->ruangUjianCbt?->nama ?: 'Belum diatur' }}</dd></div>
-                        <div><dt>Nomor meja</dt><dd>{{ $peserta->nomor_meja ?: '-' }}</dd></div>
+                        <div><dt>Kode meja</dt><dd>{{ $peserta->kode_meja ?: ($peserta->nomor_meja ? 'M'.str_pad((string) $peserta->nomor_meja, 3, '0', STR_PAD_LEFT) : '-') }}</dd></div>
                         <div><dt>Presensi</dt><dd><span class="badge {{ $monitor['badge_kehadiran'] }}">{{ $monitor['label_kehadiran'] }}</span></dd></div>
                         <div><dt>Waktu hadir</dt><dd>{{ $peserta->absen_ujian_pada?->format('H:i:s') ?: '-' }}</dd></div>
                         <div><dt>Jawaban</dt><dd>{{ $monitor['jawaban_tersimpan'] }} / {{ $jumlahSoalTampil }}</dd></div>

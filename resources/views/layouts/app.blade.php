@@ -1829,6 +1829,14 @@
             $dapatKonfirmasiBerhalanganIbadah = $penggunaAktif
                 ? app(\App\Services\Ibadah\AksesBerhalanganIbadah::class)->dapatMengonfirmasi($penggunaAktif)
                 : false;
+            $dapatMengawasiUjian = $penggunaAktif?->pegawai_id
+                ? \App\Models\PengawasRuangUjianTerpusat::query()
+                    ->where(function ($query) use ($penggunaAktif) {
+                        $query->where('pengawas_utama_pegawai_id', $penggunaAktif->pegawai_id)
+                            ->orWhere('pengawas_pendamping_pegawai_id', $penggunaAktif->pegawai_id);
+                    })
+                    ->exists()
+                : false;
 
             $peranMenuLengkap = [
                 'pimpinan',
@@ -1897,6 +1905,7 @@
                     'id' => 'ujian-asesmen',
                     'title' => 'Ujian & Asesmen',
                     'items' => [
+                        ['label' => 'Tugas Pengawas Saya', 'route' => 'tugas-pengawas-ujian.index', 'active' => ['tugas-pengawas-ujian.*'], 'initial' => 'TP', 'izin' => null, 'pengawas_ujian_only' => true, 'subgroup' => 'CBT'],
                         ['label' => 'Pusat CBT', 'route' => 'pusat-cbt.index', 'active' => ['pusat-cbt.*', 'asesmen-kelas-cbt.*', 'soal-cbt.*', 'ujian-cbt.*', 'ujian-terpusat.*', 'paket-soal-terpusat.*', 'presensi-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat'], 'subgroup' => 'CBT'],
                     ],
                 ],
@@ -2082,6 +2091,7 @@
                     'id' => 'ujian-asesmen',
                     'title' => 'Ujian & Asesmen',
                     'items' => [
+                        ['label' => 'Tugas Pengawas Saya', 'route' => 'tugas-pengawas-ujian.index', 'active' => ['tugas-pengawas-ujian.*'], 'initial' => 'TP', 'izin' => null, 'pengawas_ujian_only' => true],
                         ['label' => 'Pusat CBT', 'route' => 'pusat-cbt.index', 'active' => ['pusat-cbt.*', 'asesmen-kelas-cbt.*', 'soal-cbt.*', 'ujian-cbt.*', 'ujian-terpusat.*', 'paket-soal-terpusat.*', 'presensi-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat']],
                     ],
                 ],
@@ -2163,9 +2173,9 @@
             }
 
             $sidebarSections = collect($semuaSidebarSections)
-                ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah) {
+                ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah, $dapatMengawasiUjian) {
                     $section['items'] = collect($section['items'])
-                        ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah) {
+                        ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah, $dapatMengawasiUjian) {
                             if (($item['pegawai_only'] ?? false) && ! $penggunaAktif?->pegawai_id) {
                                 return false;
                             }
@@ -2195,6 +2205,10 @@
                             }
 
                             if (($item['konfirmasi_berhalangan_only'] ?? false) && ! $dapatKonfirmasiBerhalanganIbadah) {
+                                return false;
+                            }
+
+                            if (($item['pengawas_ujian_only'] ?? false) && ! $dapatMengawasiUjian) {
                                 return false;
                             }
 

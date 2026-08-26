@@ -43,6 +43,7 @@ class PesertaUjianCbt extends Model
         'kelas_ujian_cbt_id',
         'ruang_ujian_cbt_id',
         'nomor_meja',
+        'kode_meja',
         'anggota_kelas_id',
         'nomor_peserta',
         'status',

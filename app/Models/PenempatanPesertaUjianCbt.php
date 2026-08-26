@@ -14,6 +14,7 @@ class PenempatanPesertaUjianCbt extends Model
         'anggota_kelas_id',
         'ruang_kegiatan_ujian_cbt_id',
         'nomor_meja',
+        'kode_meja',
         'nomor_peserta',
     ];
 

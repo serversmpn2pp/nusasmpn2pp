@@ -125,15 +125,16 @@ class SinkronkanPelaksanaanUjianTerpusat
             }
 
             $anggotaIds = $penempatan->pluck('anggota_kelas_id')->map(fn ($id) => (int) $id)->all();
+            PesertaUjianCbt::query()
+                ->where('ujian_cbt_id', $paket->id)
+                ->whereNotIn('status', ['sedang_mengerjakan', 'selesai'])
+                ->update(['ruang_ujian_cbt_id' => null, 'nomor_meja' => null, 'kode_meja' => null]);
+
+            // Muat ulang setelah reset agar Eloquent melihat perubahan massal di database.
             $pesertaLama = PesertaUjianCbt::query()
                 ->where('ujian_cbt_id', $paket->id)
                 ->get()
                 ->keyBy('anggota_kelas_id');
-
-            PesertaUjianCbt::query()
-                ->where('ujian_cbt_id', $paket->id)
-                ->whereNotIn('status', ['sedang_mengerjakan', 'selesai'])
-                ->update(['ruang_ujian_cbt_id' => null, 'nomor_meja' => null]);
 
             foreach ($penempatan as $item) {
                 $kelas = $kelasPaket->get($item->anggotaKelas?->kelas_id);
@@ -155,6 +156,7 @@ class SinkronkanPelaksanaanUjianTerpusat
                     'kelas_ujian_cbt_id' => $kelas->id,
                     'ruang_ujian_cbt_id' => $ruang->id,
                     'nomor_meja' => $item->nomor_meja,
+                    'kode_meja' => $item->kode_meja,
                     'nomor_peserta' => $this->nomorPeserta($jadwal, (string) $item->nomor_peserta),
                 ]);
 
@@ -173,6 +175,7 @@ class SinkronkanPelaksanaanUjianTerpusat
                     'status' => 'nonaktif',
                     'ruang_ujian_cbt_id' => null,
                     'nomor_meja' => null,
+                    'kode_meja' => null,
                 ]);
         });
     }

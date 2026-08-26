@@ -15,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class BagiPesertaUjianTerpusat
 {
-    public function __construct(private SinkronkanPelaksanaanUjianTerpusat $sinkronisasi) {}
+    public function __construct(
+        private SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        private KodeMejaUjianTerpusat $kodeMeja,
+    ) {}
 
     public function atur(
         KegiatanUjianCbt $kegiatan,
@@ -160,6 +163,7 @@ class BagiPesertaUjianTerpusat
                     'anggota_kelas_id' => $item->id,
                     'ruang_kegiatan_ujian_cbt_id' => $ruang[$indeksRuang]->id,
                     'nomor_meja' => $nomorMeja,
+                    'kode_meja' => $this->kodeMeja->buat($kegiatan, $sesi, $ruang[$indeksRuang], $nomorMeja),
                     'nomor_peserta' => sprintf('%s-T%d-%03d', $kegiatan->kode, $tingkat, $indeksPeserta + 1),
                     'created_at' => $waktu,
                     'updated_at' => $waktu,
