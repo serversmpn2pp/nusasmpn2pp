@@ -30,6 +30,7 @@ return [
             ['kode' => 'jam-pelajaran', 'label' => 'Jam Pelajaran', 'inisial' => 'JM', 'subkelompok' => 'Pembelajaran', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'administrator_only' => true, 'status' => 'tersedia', 'rute' => '/jam-pelajaran'],
             ['kode' => 'jadwal-pelajaran', 'label' => 'Jadwal Pelajaran', 'inisial' => 'JP', 'subkelompok' => 'Pembelajaran', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'status' => 'tersedia', 'rute' => '/kelas?mode=jadwal'],
             ['kode' => 'skema-bobot-nilai', 'label' => 'Skema Bobot Nilai', 'inisial' => 'BN', 'subkelompok' => 'Penilaian', 'izin' => 'nilai.skema_kelola', 'status' => 'tersedia', 'rute' => '/skema-bobot-nilai'],
+            ['kode' => 'komponen-nilai', 'label' => 'Komponen Nilai', 'inisial' => 'KN', 'subkelompok' => 'Penilaian', 'izin' => 'nilai.komponen_kelola', 'status' => 'tersedia', 'rute' => '/komponen-nilai'],
             ['kode' => 'input-nilai', 'label' => 'Input Nilai', 'inisial' => 'IN', 'subkelompok' => 'Penilaian', 'izin' => 'nilai.input'],
             ['kode' => 'rekap-nilai-rapor', 'label' => 'Rekap Nilai Rapor', 'inisial' => 'RR', 'subkelompok' => 'Penilaian', 'izin' => 'nilai.rekap'],
             ['kode' => 'pernyataan-survei', 'label' => 'Pernyataan Survei', 'inisial' => 'SV', 'subkelompok' => 'Penilaian', 'izin' => 'survei.pertanyaan_kelola'],

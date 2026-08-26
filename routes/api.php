@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
+use App\Http\Controllers\Api\V1\KomponenNilaiController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\PegawaiController;
@@ -183,6 +184,19 @@ Route::prefix('v1')
         Route::delete('/skema-bobot-nilai/{skemaBobotNilai}', [SkemaBobotNilaiController::class, 'destroy'])
             ->middleware('izin:nilai.skema_kelola')
             ->name('skema-bobot-nilai.destroy');
+
+        Route::get('/komponen-nilai', [KomponenNilaiController::class, 'index'])
+            ->middleware('izin:nilai.komponen_kelola')
+            ->name('komponen-nilai.index');
+        Route::post('/komponen-nilai', [KomponenNilaiController::class, 'store'])
+            ->middleware('izin:nilai.komponen_kelola')
+            ->name('komponen-nilai.store');
+        Route::patch('/komponen-nilai/{komponenNilai}', [KomponenNilaiController::class, 'update'])
+            ->middleware('izin:nilai.komponen_kelola')
+            ->name('komponen-nilai.update');
+        Route::delete('/komponen-nilai/{komponenNilai}', [KomponenNilaiController::class, 'destroy'])
+            ->middleware('izin:nilai.komponen_kelola')
+            ->name('komponen-nilai.destroy');
 
         Route::get('/siswa', [SiswaController::class, 'index'])
             ->middleware('izin:siswa.lihat,siswa.kelola')

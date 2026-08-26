@@ -43,6 +43,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'jam-pelajaran' => Icons.schedule_rounded,
     'jadwal-pelajaran' => Icons.calendar_view_week_rounded,
     'skema-bobot-nilai' => Icons.balance_rounded,
+    'komponen-nilai' => Icons.fact_check_rounded,
     'input-nilai' => Icons.edit_note_rounded,
     'rekap-nilai-rapor' => Icons.assessment_rounded,
     'pernyataan-survei' => Icons.ballot_rounded,

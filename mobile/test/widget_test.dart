@@ -19,6 +19,9 @@ import 'package:nusa/features/employee/domain/employee.dart' as employee;
 import 'package:nusa/features/employee_account/data/employee_account_remote_data_source.dart';
 import 'package:nusa/features/employee_account/domain/employee_account.dart'
     as employee_account;
+import 'package:nusa/features/grade_component/data/grade_component_remote_data_source.dart';
+import 'package:nusa/features/grade_component/domain/grade_component.dart'
+    as grade_component;
 import 'package:nusa/features/grade_weight_scheme/data/grade_weight_scheme_remote_data_source.dart';
 import 'package:nusa/features/grade_weight_scheme/domain/grade_weight_scheme.dart'
     as weight_scheme;
@@ -226,7 +229,7 @@ void main() {
 
     expect(find.text('Menu Administrasi'), findsOneWidget);
     expect(find.text('Data Sekolah'), findsOneWidget);
-    expect(find.text('14 menu sesuai hak akses akun Anda'), findsOneWidget);
+    expect(find.text('15 menu sesuai hak akses akun Anda'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('menu-group-data-sekolah')));
     await tester.pumpAndSettle();
@@ -1488,6 +1491,109 @@ void main() {
   );
 
   testWidgets(
+    'modul Komponen Nilai mengelola komponen guru mapel secara native',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+      await tester.enterText(
+        find.byKey(const Key('login-username')),
+        'mobile.uji',
+      );
+      await tester.enterText(
+        find.byKey(const Key('login-password')),
+        'RahasiaNusa123',
+      );
+      await tester.tap(find.byKey(const Key('login-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bottom-nav-2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('menu-group-akademik')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('menu-item-komponen-nilai')),
+      );
+      await tester.tap(find.byKey(const Key('menu-item-komponen-nilai')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Komponen Nilai'), findsOneWidget);
+      expect(find.byKey(const Key('grade-component-601')), findsOneWidget);
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('grade-component-type-filter'),
+        optionLabel: 'Semua',
+      );
+
+      await tester.tap(find.byKey(const Key('add-grade-component')));
+      await tester.pumpAndSettle();
+      expect(find.text('Tambah Komponen Nilai'), findsOneWidget);
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('grade-component-form-semester'),
+        optionLabel: 'Genap',
+      );
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('grade-component-form-type'),
+        optionLabel: 'Sumatif',
+      );
+      await tester.enterText(
+        find.byKey(const Key('grade-component-form-name')),
+        'Proyek Statistika Mobile',
+      );
+      await tester.ensureVisible(find.byKey(const Key('save-grade-component')));
+      await tester.tap(find.byKey(const Key('save-grade-component')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('grade-component-602')), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const Key('grade-component-menu-602')),
+      );
+      await tester.drag(find.byType(ListView).last, const Offset(0, -120));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('grade-component-menu-602')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ubah').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('grade-component-form-name')),
+        'Proyek Statistika Revisi',
+      );
+      await tester.ensureVisible(find.byKey(const Key('save-grade-component')));
+      await tester.tap(find.byKey(const Key('save-grade-component')));
+      await tester.pumpAndSettle();
+      expect(find.text('Proyek Statistika Revisi'), findsOneWidget);
+
+      await tester.ensureVisible(
+        find.byKey(const Key('grade-component-menu-602')),
+      );
+      await tester.drag(find.byType(ListView).last, const Offset(0, -120));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('grade-component-menu-602')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nonaktifkan').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Nonaktifkan komponen?'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const Key('confirm-deactivate-grade-component')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('grade-component-602')),
+          matching: find.text('Nonaktif'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'modul Role dan Hak Akses mengelola role dan izin secara native',
     (tester) async {
       tester.view.physicalSize = const Size(360, 800);
@@ -1677,6 +1783,9 @@ Widget _buildTestApp({
       gradeWeightSchemeRemoteDataSourceProvider.overrideWithValue(
         _FakeGradeWeightSchemeRemoteDataSource(),
       ),
+      gradeComponentRemoteDataSourceProvider.overrideWithValue(
+        _FakeGradeComponentRemoteDataSource(),
+      ),
     ],
     child: const NusaApp(),
   );
@@ -1749,7 +1858,7 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
   Future<MenuCatalog> fetchCatalog() async {
     return MenuCatalog(
       generatedAt: DateTime(2026, 8, 24, 8, 15),
-      itemCount: 14,
+      itemCount: 15,
       groups: const [
         MenuGroup(
           code: 'data-sekolah',
@@ -1874,6 +1983,16 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
               icon: null,
               status: 'tersedia',
               route: '/skema-bobot-nilai',
+            ),
+            MenuEntry(
+              code: 'komponen-nilai',
+              label: 'Komponen Nilai',
+              description: 'Kelola komponen penilaian guru mapel.',
+              initials: 'KN',
+              subgroup: 'Penilaian',
+              icon: null,
+              status: 'tersedia',
+              route: '/komponen-nilai',
             ),
           ],
         ),
@@ -4186,6 +4305,179 @@ final class _FakeMyTeachingScheduleRemoteDataSource
     today: today,
     count: schedules.length,
     schedules: schedules,
+  );
+}
+
+final class _FakeGradeComponentRemoteDataSource
+    implements GradeComponentRemoteDataSource {
+  static const _year = grade_component.ComponentAcademicYear(
+    id: 5,
+    name: '2026/2027',
+    active: true,
+  );
+  static const _oldYear = grade_component.ComponentAcademicYear(
+    id: 4,
+    name: '2025/2026',
+    active: false,
+  );
+  static const _assignment = grade_component.GradeComponentAssignment(
+    id: 91,
+    academicYear: _year,
+    schoolClass: grade_component.ComponentSchoolClass(
+      id: 8,
+      name: 'VIII.A',
+      grade: 8,
+    ),
+    subject: grade_component.ComponentSubject(
+      id: 11,
+      code: 'MTK8',
+      name: 'Matematika Mobile',
+    ),
+    employee: grade_component.ComponentEmployee(
+      id: 31,
+      name: 'Guru Mobile Uji',
+      nip: '198808242026081001',
+    ),
+  );
+
+  final List<grade_component.GradeComponent> _items = [
+    const grade_component.GradeComponent(
+      id: 601,
+      assignment: _assignment,
+      semester: 'ganjil',
+      semesterLabel: 'Ganjil',
+      type: 'formatif',
+      typeLabel: 'Formatif',
+      name: 'Kuis Aljabar Mobile',
+      assessmentDate: '2026-08-24',
+      assessmentDateLabel: '24-08-2026',
+      order: 1,
+      active: true,
+      notes: 'Komponen awal pengujian',
+    ),
+  ];
+
+  @override
+  Future<grade_component.GradeComponentPage> fetch({
+    required String search,
+    required int? academicYearId,
+    required String semester,
+    required String type,
+    required String status,
+    required int page,
+    int perPage = 15,
+  }) async {
+    final needle = search.trim().toLowerCase();
+    final filtered = _items
+        .where((item) {
+          final searchable = [
+            item.name,
+            item.assignment.employee.name,
+            item.assignment.subject.name,
+            item.assignment.schoolClass.name,
+          ].join(' ').toLowerCase();
+          final matchesSearch = needle.isEmpty || searchable.contains(needle);
+          final matchesYear =
+              academicYearId == null ||
+              item.assignment.academicYear.id == academicYearId;
+          final matchesSemester =
+              semester == 'semua' || item.semester == semester;
+          final matchesType = type == 'semua' || item.type == type;
+          final matchesStatus =
+              status == 'semua' ||
+              (status == 'aktif' && item.active) ||
+              (status == 'nonaktif' && !item.active);
+          return matchesSearch &&
+              matchesYear &&
+              matchesSemester &&
+              matchesType &&
+              matchesStatus;
+        })
+        .toList(growable: false);
+
+    return grade_component.GradeComponentPage(
+      items: filtered,
+      summary: grade_component.GradeComponentSummary(
+        total: _items.length,
+        active: _items.where((item) => item.active).length,
+        inactive: _items.where((item) => !item.active).length,
+      ),
+      academicYears: const [_year, _oldYear],
+      assignments: const [_assignment],
+      filter: grade_component.GradeComponentFilter(
+        search: search,
+        academicYearId: academicYearId,
+        semester: semester,
+        type: type,
+        status: status,
+      ),
+      pagination: grade_component.ComponentPagination(
+        page: page,
+        lastPage: 1,
+        perPage: perPage,
+        total: filtered.length,
+        hasNextPage: false,
+      ),
+      canManage: true,
+    );
+  }
+
+  @override
+  Future<void> create(grade_component.GradeComponentFormValue value) async {
+    _items.add(_itemFromValue(id: 602, value: value));
+  }
+
+  @override
+  Future<void> update({
+    required int id,
+    required grade_component.GradeComponentFormValue value,
+  }) async {
+    final index = _items.indexWhere((item) => item.id == id);
+    _items[index] = _itemFromValue(id: id, value: value);
+  }
+
+  @override
+  Future<void> deactivate(int id) async {
+    final index = _items.indexWhere((item) => item.id == id);
+    final item = _items[index];
+    _items[index] = grade_component.GradeComponent(
+      id: item.id,
+      assignment: item.assignment,
+      semester: item.semester,
+      semesterLabel: item.semesterLabel,
+      type: item.type,
+      typeLabel: item.typeLabel,
+      name: item.name,
+      assessmentDate: item.assessmentDate,
+      assessmentDateLabel: item.assessmentDateLabel,
+      order: item.order,
+      active: false,
+      notes: item.notes,
+    );
+  }
+
+  grade_component.GradeComponent _itemFromValue({
+    required int id,
+    required grade_component.GradeComponentFormValue value,
+  }) => grade_component.GradeComponent(
+    id: id,
+    assignment: _assignment,
+    semester: value.semester,
+    semesterLabel: value.semester == 'ganjil' ? 'Ganjil' : 'Genap',
+    type: value.type,
+    typeLabel: switch (value.type) {
+      'formatif' => 'Formatif',
+      'sumatif' => 'Sumatif',
+      'sts' => 'STS',
+      'sas_saj' => 'SAS',
+      _ => '-',
+    },
+    name: value.name,
+    assessmentDate: value.assessmentDate,
+    assessmentDateLabel: value.assessmentDate,
+    order: value.order,
+    active: value.active,
+    notes: value.notes,
   );
 }
 
