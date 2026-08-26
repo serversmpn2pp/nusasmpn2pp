@@ -4,6 +4,14 @@
 
 @section('content')
     <style>
+        .package-context { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(260px,.6fr); overflow:hidden; margin-bottom:18px; background:var(--primary); color:#fff; }
+        .package-context-main,.package-context-side { padding:22px 24px; }
+        .package-context-side { border-left:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); }
+        .package-context h2 { margin:0; color:#fff; font-size:1.45rem; }
+        .package-context p { margin:7px 0 0; color:rgba(255,255,255,.82); }
+        .package-context-side strong,.package-context-side span { display:block; }
+        .package-context-side strong { font-size:1rem; }
+        .package-context-side span { margin-top:8px; color:rgba(255,255,255,.82); font-size:.86rem; }
         .package-flow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:22px; }
         .package-flow-step { display:grid; grid-template-columns:34px minmax(0,1fr); gap:10px; align-items:center; min-height:66px; padding:11px 12px; border:1px solid var(--line); border-left:4px solid var(--primary); border-radius:7px; background:#fff; }
         .package-flow-number { display:grid; width:34px; height:34px; margin:0; place-items:center; align-self:center; border-radius:50%; background:var(--primary-soft); color:var(--primary-dark); font-size:.78rem; font-weight:900; line-height:1; }
@@ -25,6 +33,7 @@
         .package-status strong { font-size:.78rem; color:var(--primary-dark); }
         .package-status span { margin-top:3px; color:var(--muted); font-size:.7rem; font-weight:700; }
         .package-empty { padding:34px 18px; text-align:center; color:var(--muted); }
+        .central-wizard-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; }
         @media (max-width:1180px) {
             .package-schedule { grid-template-columns:110px 52px minmax(0,1fr) auto; }
             .package-schedule-class { grid-column:3; }
@@ -33,6 +42,8 @@
             .package-schedule-action .button { width:100%; }
         }
         @media (max-width:680px) {
+            .package-context { grid-template-columns:1fr; }
+            .package-context-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; }
             .package-flow { grid-template-columns:1fr; }
             .package-event-head { display:grid; }
             .package-event-status { justify-content:flex-start; }
@@ -41,12 +52,14 @@
             .package-level { grid-column:1; }
             .package-schedule-main { grid-column:2; }
             .package-schedule-class, .package-status, .package-schedule-action { grid-column:1 / -1; grid-row:auto; }
+            .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; }
+            .central-wizard-actions .button { width:100%; text-align:center; }
         }
     </style>
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Ujian Terpusat · Tahap 6</p>
+            <p class="eyebrow">Ujian Terpusat · Tahap 8</p>
             <h1 class="page-title">Paket soal terpusat</h1>
             <p class="page-subtitle">Guru cukup memilih jadwal yang diampu, kemudian menentukan soal dari Bank Soal.</p>
         </div>
@@ -58,6 +71,24 @@
 
     @if (session('berhasil')) <div class="alert">{{ session('berhasil') }}</div> @endif
     @if ($errors->any()) <div class="alert alert-danger">{{ $errors->first() }}</div> @endif
+
+    @if ($kegiatanAlur)
+        <section class="panel package-context">
+            <div class="package-context-main">
+                <p class="eyebrow" style="color:var(--accent);">{{ $kegiatanAlur->jenisUjianCbt?->nama ?: 'Ujian Terpusat' }}</p>
+                <h2>{{ $kegiatanAlur->nama }}</h2>
+                <p>{{ $kegiatanAlur->tahunPelajaran?->nama }} · Semester {{ ucfirst($kegiatanAlur->semester) }} · {{ $kegiatanAlur->labelPeriode() }}</p>
+            </div>
+            <div class="package-context-side">
+                <strong>{{ $jumlahSiap }} dari {{ $jumlahJadwal }} paket siap</strong>
+                <span>{{ $jumlahBelumDisusun > 0 ? $jumlahBelumDisusun.' jadwal belum memiliki paket soal' : 'Seluruh jadwal sudah memiliki paket soal' }}</span>
+            </div>
+        </section>
+    @endif
+
+    @if ($kegiatanAlur?->dapatDiaksesOleh(auth()->user()))
+        @include('ujian-terpusat.partials.alur', ['kegiatan' => $kegiatanAlur, 'tahapAktif' => 8])
+    @endif
 
     <div class="package-flow" aria-label="Alur penyusunan paket soal">
         <div class="package-flow-step"><span class="package-flow-number">1</span><div><strong>Buka jadwal</strong><span>Mapel, tingkat, kelas, dan waktu sudah diisi panitia.</span></div></div>
@@ -87,7 +118,7 @@
                 <div class="package-event-status">
                     <span class="badge {{ $siap === $daftarJadwal->count() ? 'badge-active' : 'badge-warning' }}">{{ $siap }}/{{ $daftarJadwal->count() }} paket siap</span>
                     @if (auth()->user()?->memilikiIzin(['cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola']))
-                        <a href="{{ route('ujian-terpusat.pelaksanaan.index', $kegiatan) }}" class="button button-muted">Jadwal & peserta</a>
+                        <a href="{{ route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]) }}" class="button button-muted">Jadwal ujian</a>
                     @endif
                 </div>
             </header>
@@ -113,4 +144,11 @@
             <p class="help-text" style="margin-top:6px;">Panitia perlu menyusun jadwal terlebih dahulu, atau akun guru belum memiliki penugasan mapel pada jadwal tersebut.</p>
         </section>
     @endforelse
+
+    @if ($kegiatanAlur?->dapatDiaksesOleh(auth()->user()))
+        <div class="central-wizard-actions">
+            <a href="{{ route('ujian-terpusat.pelaksanaan.index', [$kegiatanAlur, 'tahap' => 7]) }}" class="button button-muted">Kembali ke Jadwal Ujian</a>
+            <a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatanAlur) }}" class="button button-primary">Lanjut ke Pelaksanaan</a>
+        </div>
+    @endif
 @endsection

@@ -156,6 +156,7 @@
         $tautanPresensi = $ruangTerpilih
             ? route('presensi-ujian-cbt.show', [$ujianCbt, $ruangTerpilih])
             : route('presensi-ujian-cbt.index');
+        $kegiatanTerpusat = $ujianCbt->jadwalUjianCbt->first()?->kegiatanUjianCbt;
         $detailMonitorPeserta = static function ($peserta) use ($jumlahSoalTampil, $ujianCbt, $waktuSekarang) {
             $statusPelaksanaan = $peserta->statusPelaksanaan();
             $statusKehadiran = $peserta->status_kehadiran_ujian ?: 'belum_absen';
@@ -207,23 +208,25 @@
 
         <div class="actions">
             <a href="{{ route('ujian-cbt.monitoring.index', [$ujianCbt] + request()->query()) }}" class="button button-primary">Refresh</a>
-            <form action="{{ route('ujian-cbt.koreksi-otomatis.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Jalankan koreksi otomatis untuk jawaban objektif pada paket ini?')">
-                @csrf
-                <button type="submit" class="button button-dark">Koreksi otomatis</button>
-            </form>
-            <a href="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" class="button button-muted">Koreksi manual</a>
             <a href="{{ route('ujian-cbt.monitoring.index', [$ujianCbt] + $queryAutoRefresh) }}" class="button {{ $autoRefresh ? 'button-danger' : 'button-muted' }}">
                 {{ $autoRefresh ? 'Matikan auto refresh' : 'Auto refresh' }}
             </a>
-            @if ($ujianCbt->ujianTerpusat())
+            @if ($ujianCbt->ujianTerpusat() && (auth()->user()?->memilikiIzin(['cbt.presensi', 'cbt.kelola']) ?? false))
                 <a href="{{ $tautanPresensi }}" class="button button-muted">Presensi ruang</a>
             @endif
-            <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Hasil</a>
-            @if ($ujianCbt->ujianTerpusat())
-                <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
-                <a href="{{ route('ujian-cbt.peserta.index', $ujianCbt) }}" class="button button-muted">Peserta & sesi</a>
+            <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">{{ $ujianCbt->ujianTerpusat() ? 'Nilai & hasil' : 'Hasil' }}</a>
+            @if ($ujianCbt->asesmenKelas())
+                @if ($ujianCbt->dapatDikelolaOleh(auth()->user()))
+                    <form action="{{ route('ujian-cbt.koreksi-otomatis.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Jalankan koreksi otomatis untuk jawaban objektif pada asesmen ini?')">
+                        @csrf
+                        <button type="submit" class="button button-dark">Koreksi otomatis</button>
+                    </form>
+                    <a href="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" class="button button-muted">Koreksi uraian</a>
+                @endif
+                <a href="{{ route('asesmen-kelas-cbt.show', $ujianCbt) }}" class="button button-muted">Kembali ke asesmen</a>
+            @elseif ($kegiatanTerpusat)
+                <a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatanTerpusat) }}" class="button button-muted">Kembali ke pelaksanaan</a>
             @endif
-            <a href="{{ route($ujianCbt->asesmenKelas() ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail {{ $ujianCbt->asesmenKelas() ? 'asesmen' : 'paket' }}</a>
         </div>
     </div>
 

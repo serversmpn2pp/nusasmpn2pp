@@ -12,10 +12,16 @@ class PelaksanaanUjianTerpusatController extends Controller
     public function index(Request $request, KegiatanUjianCbt $kegiatanUjianCbt)
     {
         abort_unless($kegiatanUjianCbt->dapatDiaksesOleh($request->user()), 403);
+        $tahapAktif = $request->integer('tahap', 5);
+
+        if (! in_array($tahapAktif, [5, 6, 7], true)) {
+            $tahapAktif = 5;
+        }
 
         $kegiatanUjianCbt->load([
             'jenisUjianCbt',
             'tahunPelajaran',
+            'panitiaUjianCbt',
             'sesiKegiatanUjianCbt' => fn ($query) => $query->where('aktif', true)->orderBy('urutan'),
             'ruangKegiatanUjianCbt' => fn ($query) => $query->where('aktif', true)->orderBy('urutan'),
             'kelompokPesertaKegiatanUjianCbt' => fn ($query) => $query
@@ -80,6 +86,7 @@ class PelaksanaanUjianTerpusatController extends Controller
             'daftarMataPelajaran' => $daftarMataPelajaran,
             'kelompokPerTingkat' => $kegiatanUjianCbt->kelompokPesertaKegiatanUjianCbt->keyBy('tingkat'),
             'bolehKelola' => $request->user()->memilikiIzin(['cbt.kelola', 'cbt.panitia']),
+            'tahapAktif' => $tahapAktif,
         ]);
     }
 }

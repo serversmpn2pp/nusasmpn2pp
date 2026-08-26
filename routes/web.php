@@ -63,8 +63,8 @@ use App\Http\Controllers\NotifikasiPenggunaController;
 use App\Http\Controllers\PaketSoalUjianTerpusatController;
 use App\Http\Controllers\PanitiaUjianTerpusatController;
 use App\Http\Controllers\PegawaiController;
-use App\Http\Controllers\PelaksanaanUjianTerpusatController;
 use App\Http\Controllers\PelaksanaanNilaiUjianTerpusatController;
+use App\Http\Controllers\PelaksanaanUjianTerpusatController;
 use App\Http\Controllers\PembagianPesertaUjianTerpusatController;
 use App\Http\Controllers\PembinaanPoinAnakController;
 use App\Http\Controllers\PemeriksaanPerangkatAjarController;
@@ -408,6 +408,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('ujian-terpusat/{kegiatanUjianCbt}/pelaksanaan-nilai', [PelaksanaanNilaiUjianTerpusatController::class, 'index'])
             ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
             ->name('ujian-terpusat.pelaksanaan-nilai.index');
+        Route::get('ujian-terpusat/{kegiatanUjianCbt}/nilai-hasil', [PelaksanaanNilaiUjianTerpusatController::class, 'hasil'])
+            ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('ujian-terpusat.nilai-hasil.index');
         Route::middleware('izin:cbt.kelola')->group(function () {
             Route::get('ujian-terpusat-baru', [UjianTerpusatController::class, 'create'])->name('ujian-terpusat.create');
             Route::post('ujian-terpusat', [UjianTerpusatController::class, 'store'])->name('ujian-terpusat.store');
@@ -424,7 +427,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('ujian-terpusat/{kegiatanUjianCbt}/ruang', [RuangKegiatanUjianCbtController::class, 'store'])->name('ujian-terpusat.ruang.store');
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/ruang/{ruangKegiatanUjianCbt}', [RuangKegiatanUjianCbtController::class, 'update'])->name('ujian-terpusat.ruang.update');
             Route::delete('ujian-terpusat/{kegiatanUjianCbt}/ruang/{ruangKegiatanUjianCbt}', [RuangKegiatanUjianCbtController::class, 'destroy'])->name('ujian-terpusat.ruang.destroy');
-            Route::post('ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta', [PembagianPesertaUjianTerpusatController::class, 'store'])->name('ujian-terpusat.peserta.store');
+            Route::post('ujian-terpusat/{kegiatanUjianCbt}/penetapan-ruang', [PembagianPesertaUjianTerpusatController::class, 'atur'])->name('ujian-terpusat.peserta.atur');
+            Route::post('ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}/bangkitkan', [PembagianPesertaUjianTerpusatController::class, 'bangkitkan'])->name('ujian-terpusat.peserta.bangkitkan');
             Route::delete('ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}', [PembagianPesertaUjianTerpusatController::class, 'destroy'])->name('ujian-terpusat.peserta.destroy');
             Route::post('ujian-terpusat/{kegiatanUjianCbt}/jadwal', [JadwalUjianTerpusatController::class, 'store'])->name('ujian-terpusat.jadwal.store');
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}', [JadwalUjianTerpusatController::class, 'update'])->name('ujian-terpusat.jadwal.update');
@@ -475,9 +479,12 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('presensi-ujian-cbt/{ujianCbt}/{ruangUjianCbt}/scan', [PresensiUjianCbtController::class, 'scan'])->name('presensi-ujian-cbt.scan');
             Route::put('presensi-ujian-cbt/{ujianCbt}/{ruangUjianCbt}/peserta/{pesertaUjianCbt}', [PresensiUjianCbtController::class, 'updateManual'])->name('presensi-ujian-cbt.manual');
         });
-        Route::resource('ujian-cbt', UjianCbtController::class)
-            ->only(['index', 'show'])
-            ->middleware('izin:cbt.lihat,cbt.kelola');
+        Route::get('ujian-cbt', [UjianCbtController::class, 'index'])
+            ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola,cbt.presensi,cbt.asesmen_kelola,cbt.panitia,cbt.terpusat_lihat')
+            ->name('ujian-cbt.index');
+        Route::get('ujian-cbt/{ujianCbt}', [UjianCbtController::class, 'show'])
+            ->middleware('izin:cbt.lihat,cbt.kelola')
+            ->name('ujian-cbt.show');
         Route::resource('soal-cbt', SoalCbtController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:cbt.kelola,cbt.soal_kelola');

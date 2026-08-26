@@ -125,13 +125,14 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('paket-soal-terpusat.update', 'izin:cbt.soal_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('asesmen-kelas-cbt.index', 'izin:cbt.asesmen_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('asesmen-kelas-cbt.store', 'izin:cbt.asesmen_kelola,cbt.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-cbt.index', 'izin:cbt.lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-cbt.index', 'izin:cbt.lihat,cbt.kelola,cbt.soal_kelola,cbt.presensi,cbt.asesmen_kelola,cbt.panitia,cbt.terpusat_lihat');
         $this->assertRouteMemakaiMiddleware('ujian-cbt.show', 'izin:cbt.lihat,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.index', 'izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.show', 'izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.pelaksanaan.index', 'izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.peserta.show', 'izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.pelaksanaan-nilai.index', 'izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-terpusat.nilai-hasil.index', 'izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.create', 'izin:cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.store', 'izin:cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.edit', 'izin:cbt.kelola');
@@ -145,7 +146,8 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.ruang.store', 'izin:cbt.panitia,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.ruang.update', 'izin:cbt.panitia,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.ruang.destroy', 'izin:cbt.panitia,cbt.kelola');
-        $this->assertRouteMemakaiMiddleware('ujian-terpusat.peserta.store', 'izin:cbt.panitia,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-terpusat.peserta.atur', 'izin:cbt.panitia,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('ujian-terpusat.peserta.bangkitkan', 'izin:cbt.panitia,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.peserta.destroy', 'izin:cbt.panitia,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.jadwal.store', 'izin:cbt.panitia,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('ujian-terpusat.jadwal.update', 'izin:cbt.panitia,cbt.kelola');

@@ -24,6 +24,13 @@
         .package-auto-item strong, .package-auto-item span { display:block; }
         .package-auto-item strong { color:var(--primary-dark); font-size:.78rem; }
         .package-auto-item span { margin-top:4px; color:var(--muted); font-size:.72rem; font-weight:700; }
+        .shuffle-settings { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; margin-bottom:18px; padding:16px; }
+        .shuffle-setting { display:grid; grid-template-columns:auto minmax(0,1fr); gap:11px; align-items:start; padding:13px 14px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; cursor:pointer; }
+        .shuffle-setting:has(input:checked) { border-color:#8eb8df; background:var(--primary-soft); box-shadow:inset 4px 0 0 var(--primary); }
+        .shuffle-setting input { width:19px; height:19px; margin-top:2px; accent-color:var(--primary); }
+        .shuffle-setting strong,.shuffle-setting span { display:block; }
+        .shuffle-setting strong { color:var(--primary-dark); font-size:.82rem; }
+        .shuffle-setting span { margin-top:4px; color:var(--muted); font-size:.74rem; line-height:1.45; }
         .question-toolbar { display:grid; grid-template-columns:minmax(220px,1fr) 210px 210px auto; gap:10px; align-items:end; padding:15px 16px; border-bottom:1px solid var(--line); background:#f8fafc; }
         .question-toolbar-actions { display:flex; gap:7px; }
         .question-list { display:grid; }
@@ -79,7 +86,7 @@
         @media (max-width:680px) {
             .package-context { grid-template-columns:1fr; }
             .package-context-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; }
-            .package-auto, .question-toolbar { grid-template-columns:1fr; }
+            .package-auto, .question-toolbar, .shuffle-settings { grid-template-columns:1fr; }
             .question-toolbar-actions { grid-column:auto; }
             .question-toolbar-actions .button { flex:1 1 0; }
             .question-row { grid-template-columns:24px minmax(0,1fr); gap:10px; padding:14px; }
@@ -98,13 +105,13 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Ujian Terpusat · Tahap 6</p>
+            <p class="eyebrow">Ujian Terpusat · Tahap 8</p>
             <h1 class="page-title">{{ $bolehKelola ? 'Susun paket soal' : 'Detail paket soal' }}</h1>
             <p class="page-subtitle">{{ $bolehKelola ? 'Centang soal yang akan dikerjakan siswa. Informasi lainnya sudah diambil dari jadwal.' : 'Panitia dapat memantau isi dan kesiapan paket tanpa mengubah soal.' }}</p>
         </div>
         <div class="actions">
             @if ($bolehKelola)<a href="{{ route('soal-cbt.index') }}" class="button button-muted">Buka Bank Soal</a>@endif
-            @if ($paketSiap)<a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $jadwal->kegiatan_ujian_cbt_id) }}" class="button button-muted">Pelaksanaan & nilai</a>@endif
+            @if ($paketSiap)<a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $jadwal->kegiatan_ujian_cbt_id) }}" class="button button-muted">Pelaksanaan ujian</a>@endif
             <a href="{{ route('paket-soal-terpusat.index', ['kegiatan' => $jadwal->kegiatan_ujian_cbt_id]) }}" class="button button-primary">Daftar paket</a>
         </div>
     </div>
@@ -112,6 +119,10 @@
     @if (session('berhasil')) <div class="alert">{{ session('berhasil') }}</div> @endif
     @if ($errors->any())
         <div class="alert alert-danger"><strong>Ada bagian yang perlu diperbaiki.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+    @endif
+
+    @if ($jadwal->kegiatanUjianCbt?->dapatDiaksesOleh(auth()->user()))
+        @include('ujian-terpusat.partials.alur', ['kegiatan' => $jadwal->kegiatanUjianCbt, 'tahapAktif' => 8])
     @endif
 
     <section class="panel package-context">
@@ -137,7 +148,7 @@
     <div class="package-auto" aria-label="Pengaturan otomatis paket">
         <div class="package-auto-item"><strong>Jumlah soal</strong><span>Mengikuti jumlah soal yang dicentang.</span></div>
         <div class="package-auto-item"><strong>Durasi & peserta</strong><span>Mengikuti sesi serta kelas pada jadwal.</span></div>
-        <div class="package-auto-item"><strong>Keamanan</strong><span>Soal dan pilihan jawaban diacak otomatis.</span></div>
+        <div class="package-auto-item"><strong>Pengacakan</strong><span>Soal: {{ ($paket?->acak_soal ?? true) ? 'diacak' : 'tetap' }} · Pilihan: {{ ($paket?->acak_jawaban ?? true) ? 'diacak' : 'tetap' }}.</span></div>
         <div class="package-auto-item"><strong>Komponen nilai</strong><span>Dibuat otomatis saat paket diterbitkan.</span></div>
     </div>
 
@@ -145,6 +156,23 @@
         <form action="{{ route('paket-soal-terpusat.update', $jadwal) }}" method="POST" data-package-form>
             @csrf
             @method('PUT')
+
+            <section class="panel shuffle-settings" aria-labelledby="pengaturan-pengacakan">
+                <div style="grid-column:1 / -1;">
+                    <h2 id="pengaturan-pengacakan" class="panel-title">Pengacakan untuk siswa</h2>
+                    <p class="help-text" style="margin-top:4px;">Pengaturan berlaku ketika siswa membuka paket. Urutan tidak berubah saat halaman direfresh.</p>
+                </div>
+                <label class="shuffle-setting">
+                    <input type="hidden" name="acak_soal" value="0">
+                    <input type="checkbox" name="acak_soal" value="1" @checked(old('acak_soal', $paket?->acak_soal ?? true))>
+                    <span><strong>Acak urutan soal</strong><span>Setiap siswa memperoleh urutan soal yang berbeda.</span></span>
+                </label>
+                <label class="shuffle-setting">
+                    <input type="hidden" name="acak_jawaban" value="0">
+                    <input type="checkbox" name="acak_jawaban" value="1" @checked(old('acak_jawaban', $paket?->acak_jawaban ?? true))>
+                    <span><strong>Acak pilihan jawaban</strong><span>Pilihan A-D pada PG dan PG kompleks disusun berbeda untuk setiap siswa.</span></span>
+                </label>
+            </section>
     @endif
 
     <section class="panel">

@@ -11,29 +11,37 @@ use Illuminate\Validation\ValidationException;
 
 class PembagianPesertaUjianTerpusatController extends Controller
 {
-    public function store(Request $request, KegiatanUjianCbt $kegiatanUjianCbt, BagiPesertaUjianTerpusat $pembagi)
+    public function atur(Request $request, KegiatanUjianCbt $kegiatanUjianCbt, BagiPesertaUjianTerpusat $pembagi)
     {
         $this->pastikanAkses($request, $kegiatanUjianCbt);
-        $data = $request->validate([
-            'tingkat' => ['required', 'integer', Rule::in([7, 8, 9])],
-            'sesi_kegiatan_ujian_cbt_id' => ['required', 'integer'],
-            'kelas' => ['required', 'array', 'min:1'],
-            'kelas.*' => ['integer'],
-            'ruang' => ['required', 'array', 'min:1'],
-            'ruang.*' => ['integer'],
-        ]);
+        $data = $this->validasiPengaturan($request);
 
-        $kelompok = $pembagi->bagi(
+        $kelompok = $pembagi->atur(
             $kegiatanUjianCbt,
             (int) $data['tingkat'],
             (int) $data['sesi_kegiatan_ujian_cbt_id'],
             $data['kelas'],
             $data['ruang'],
-            $request->user(),
         );
 
         return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', $kegiatanUjianCbt)
+            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 5])
+            ->with('berhasil', "Kelas, sesi, dan ruang tingkat {$kelompok->tingkat} berhasil ditetapkan. Lanjutkan ke tahap pembagian peserta.");
+    }
+
+    public function bangkitkan(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        KelompokPesertaKegiatanUjianCbt $kelompokPeserta,
+        BagiPesertaUjianTerpusat $pembagi,
+    ) {
+        $this->pastikanAkses($request, $kegiatanUjianCbt);
+        $this->pastikanMilikKegiatan($kegiatanUjianCbt, $kelompokPeserta);
+
+        $kelompok = $pembagi->bangkitkan($kegiatanUjianCbt, $kelompokPeserta, $request->user());
+
+        return redirect()
+            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 6])
             ->with('berhasil', "{$kelompok->jumlah_peserta} siswa tingkat {$kelompok->tingkat} berhasil dibagi otomatis ke ruang ujian.");
     }
 
@@ -41,6 +49,7 @@ class PembagianPesertaUjianTerpusatController extends Controller
     {
         $this->pastikanAkses($request, $kegiatanUjianCbt);
         $this->pastikanMilikKegiatan($kegiatanUjianCbt, $kelompokPeserta);
+        $kegiatanUjianCbt->load(['jenisUjianCbt', 'tahunPelajaran']);
         $kelompokPeserta->load([
             'sesiKegiatanUjianCbt',
             'kelas',
@@ -72,8 +81,20 @@ class PembagianPesertaUjianTerpusatController extends Controller
         $kelompokPeserta->delete();
 
         return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', $kegiatanUjianCbt)
-            ->with('berhasil', "Pembagian peserta tingkat {$tingkat} berhasil dikosongkan.");
+            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 5])
+            ->with('berhasil', "Penetapan ruang dan pembagian peserta tingkat {$tingkat} berhasil dikosongkan.");
+    }
+
+    private function validasiPengaturan(Request $request): array
+    {
+        return $request->validate([
+            'tingkat' => ['required', 'integer', Rule::in([7, 8, 9])],
+            'sesi_kegiatan_ujian_cbt_id' => ['required', 'integer'],
+            'kelas' => ['required', 'array', 'min:1'],
+            'kelas.*' => ['integer'],
+            'ruang' => ['required', 'array', 'min:1'],
+            'ruang.*' => ['integer'],
+        ]);
     }
 
     private function pastikanAkses(Request $request, KegiatanUjianCbt $kegiatan): void

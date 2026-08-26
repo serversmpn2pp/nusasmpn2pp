@@ -85,6 +85,12 @@ class UjianTerpusatController extends Controller
     public function show(Request $request, KegiatanUjianCbt $kegiatanUjianCbt)
     {
         $this->pastikanDapatDiakses($request, $kegiatanUjianCbt);
+        $tahapAktif = $request->integer('tahap', 2);
+
+        if (! in_array($tahapAktif, [2, 3, 4], true)) {
+            $tahapAktif = 2;
+        }
+
         $kegiatanUjianCbt->load([
             'jenisUjianCbt',
             'tahunPelajaran',
@@ -109,6 +115,7 @@ class UjianTerpusatController extends Controller
             'daftarJabatan' => PanitiaUjianCbt::DAFTAR_JABATAN,
             'bolehKelolaUtama' => $request->user()->memilikiIzin('cbt.kelola'),
             'bolehKelolaPersiapan' => $request->user()->memilikiIzin(['cbt.kelola', 'cbt.panitia']),
+            'tahapAktif' => $tahapAktif,
         ]);
     }
 

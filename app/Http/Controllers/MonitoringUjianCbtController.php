@@ -48,6 +48,7 @@ class MonitoringUjianCbtController extends Controller
             'kelasUjianCbt.kelas',
             'sesiUjianCbt',
             'ruangUjianCbt',
+            'jadwalUjianCbt.kegiatanUjianCbt',
         ]);
         $jumlahSoalPaket = $ujianCbt->soalUjianCbt()->count();
         $jumlahSoalTampil = min((int) $ujianCbt->jumlah_soal, $jumlahSoalPaket);

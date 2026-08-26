@@ -90,20 +90,52 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         $this->actingAs($data['admin'])
             ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
             ->assertOk()
-            ->assertSee('Pelaksanaan & Nilai')
+            ->assertSee('Pelaksanaan ujian')
+            ->assertSee('execution-flow-number">1</span><div><strong>Siapkan ruang', false)
             ->assertSee('Pantau ujian')
+            ->assertSeeText('Nilai & hasil')
             ->assertSee($paket->token);
 
+        $this->actingAs($data['admin'])
+            ->get(route('ujian-terpusat.nilai-hasil.index', $data['kegiatan']))
+            ->assertOk()
+            ->assertSee('Nilai & hasil ujian')
+            ->assertSee('execution-flow-number">1</span><div><strong>Periksa jawaban', false)
+            ->assertSee('Lihat hasil ujian');
+
         $this->actingAs($data['akun_guru'])
-            ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+            ->get(route('ujian-terpusat.nilai-hasil.index', $data['kegiatan']))
             ->assertOk()
             ->assertSee('Koreksi uraian');
         $this->actingAs($data['akun_guru'])
             ->get(route('ujian-cbt.monitoring.index', $paket))
-            ->assertOk();
+            ->assertOk()
+            ->assertSee('Kembali ke pelaksanaan')
+            ->assertDontSee('Peserta & sesi')
+            ->assertDontSee('Detail paket')
+            ->assertDontSee('>Ruang</a>', false)
+            ->assertDontSee('Koreksi otomatis');
+
+        $this->actingAs($data['admin'])
+            ->get(route('ujian-cbt.monitoring.index', $paket))
+            ->assertOk()
+            ->assertSee('Presensi ruang')
+            ->assertDontSee('Peserta & sesi')
+            ->assertDontSee('Detail paket');
         $this->actingAs($data['akun_guru'])
             ->get(route('ujian-cbt.hasil.index', $paket))
-            ->assertOk();
+            ->assertOk()
+            ->assertSeeText('Kembali ke Nilai & Hasil')
+            ->assertDontSee('Detail paket')
+            ->assertDontSee('>Ruang</a>', false);
+
+        $this->actingAs($data['admin'])
+            ->get(route('ujian-cbt.show', $paket))
+            ->assertRedirect(route('paket-soal-terpusat.show', $data['jadwal']));
+
+        $this->actingAs($data['admin'])
+            ->get(route('ujian-cbt.index'))
+            ->assertRedirect(route('pusat-cbt.index'));
     }
 
     public function test_pengawas_ruang_disimpan_dan_diteruskan_ke_ruang_operasional(): void

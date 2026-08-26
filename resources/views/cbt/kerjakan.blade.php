@@ -344,26 +344,6 @@
         $ujian = $peserta->ujianCbt;
         $kelas = $peserta->kelasUjianCbt?->kelas;
 
-        $opsiPilihan = function ($soal) {
-            $opsi = $soal?->opsi ?? [];
-            $pilihan = $opsi['pilihan'] ?? $opsi;
-
-            return collect($pilihan)
-                ->mapWithKeys(function ($item, $key) {
-                    if (is_array($item)) {
-                        $kode = $item['kode'] ?? $key;
-                        $teks = $item['teks'] ?? $item['label'] ?? '';
-                    } else {
-                        $kode = $key;
-                        $teks = $item;
-                    }
-
-                    return [mb_strtoupper((string) $kode) => (string) $teks];
-                })
-                ->filter(fn ($teks) => filled($teks))
-                ->sortKeys()
-                ->all();
-        };
     @endphp
 
     <header class="cbt-topbar">
@@ -409,7 +389,7 @@
                             $raguSaatIni = (bool) ($jawabanModel?->ragu ?? false);
                             $jawabanAssoc = is_array($jawabanSaatIni) ? $jawabanSaatIni : [];
                             $terjawabSaatIni = collect((array) $jawabanSaatIni)->contains(fn ($nilai) => filled($nilai));
-                            $pilihan = $opsiPilihan($soal);
+                            $pilihan = $pilihanJawaban->get($relasiSoal->id, collect());
                         @endphp
 
                         <article
@@ -448,15 +428,16 @@
 
                             @if (in_array($soal?->jenis_soal, ['pilihan_ganda', 'pilihan_ganda_kompleks'], true))
                                 <div class="option-list">
-                                    @foreach ($pilihan as $kode => $teks)
+                                    @foreach ($pilihan as $kodeJawaban => $teks)
+                                        @php $labelPilihan = chr(65 + $loop->index); @endphp
                                         <label class="option-card">
                                             @if ($soal->jenis_soal === 'pilihan_ganda')
-                                                <input type="radio" name="jawaban[{{ $relasiSoal->id }}]" value="{{ $kode }}" @checked(in_array($kode, (array) $jawabanSaatIni, true))>
+                                                <input type="radio" name="jawaban[{{ $relasiSoal->id }}]" value="{{ $kodeJawaban }}" @checked(in_array($kodeJawaban, (array) $jawabanSaatIni, true))>
                                             @else
-                                                <input type="checkbox" name="jawaban[{{ $relasiSoal->id }}][]" value="{{ $kode }}" @checked(in_array($kode, (array) $jawabanSaatIni, true))>
+                                                <input type="checkbox" name="jawaban[{{ $relasiSoal->id }}][]" value="{{ $kodeJawaban }}" @checked(in_array($kodeJawaban, (array) $jawabanSaatIni, true))>
                                             @endif
                                             <span>
-                                                <span class="option-code">{{ $kode }}</span>
+                                                <span class="option-code">{{ $labelPilihan }}</span>
                                                 <span class="option-text">{{ $teks }}</span>
                                             </span>
                                         </label>

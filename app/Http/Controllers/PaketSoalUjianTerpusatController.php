@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
+use App\Models\KegiatanUjianCbt;
 use App\Models\KomponenNilai;
 use App\Models\Pengguna;
 use App\Models\SoalCbt;
@@ -45,7 +46,15 @@ class PaketSoalUjianTerpusatController extends Controller
             $item->setAttribute('boleh_kelola_paket', $this->bolehMengelola($request->user(), $item));
         });
 
+        $kegiatanAlur = filled($data['kegiatan'] ?? null)
+            ? $jadwal->first()?->kegiatanUjianCbt
+            : null;
+        if ($kegiatanAlur) {
+            $this->muatDataAlur($kegiatanAlur);
+        }
+
         return view('paket-soal-ujian-terpusat.index', [
+            'kegiatanAlur' => $kegiatanAlur,
             'jadwalPerKegiatan' => $jadwal->groupBy('kegiatan_ujian_cbt_id'),
             'jumlahJadwal' => $jadwal->count(),
             'jumlahSiap' => $jadwal->filter(fn (JadwalUjianCbt $item) => $this->paketSiap($item->ujianCbt))->count(),
@@ -65,6 +74,7 @@ class PaketSoalUjianTerpusatController extends Controller
             'ujianCbt.soalUjianCbt.soalCbt',
         ]);
         $this->pastikanBolehMelihat($request->user(), $jadwalUjianCbt);
+        $this->muatDataAlur($jadwalUjianCbt->kegiatanUjianCbt);
 
         $bolehKelola = $this->bolehMengelola($request->user(), $jadwalUjianCbt);
         $soalDipilih = $jadwalUjianCbt->ujianCbt?->soalUjianCbt?->keyBy('soal_cbt_id') ?? collect();
@@ -120,6 +130,8 @@ class PaketSoalUjianTerpusatController extends Controller
             'soal' => ['nullable', 'array'],
             'soal.*.dipilih' => ['nullable', 'boolean'],
             'soal.*.bobot' => ['nullable', 'numeric', 'min:0.25', 'max:100'],
+            'acak_soal' => ['nullable', 'boolean'],
+            'acak_jawaban' => ['nullable', 'boolean'],
         ]);
         $soalTerpilih = collect($data['soal'] ?? [])
             ->filter(fn ($item) => filter_var($item['dipilih'] ?? false, FILTER_VALIDATE_BOOLEAN))
@@ -139,11 +151,23 @@ class PaketSoalUjianTerpusatController extends Controller
             'draf' => 'draft',
             default => $jadwalUjianCbt->ujianCbt?->status ?? 'draft',
         };
+        $acakSoal = $request->has('acak_soal')
+            ? $request->boolean('acak_soal')
+            : ($jadwalUjianCbt->ujianCbt?->acak_soal ?? true);
+        $acakJawaban = $request->has('acak_jawaban')
+            ? $request->boolean('acak_jawaban')
+            : ($jadwalUjianCbt->ujianCbt?->acak_jawaban ?? true);
 
-        DB::transaction(function () use ($request, $jadwalUjianCbt, $soalTerpilih, $status) {
+        DB::transaction(function () use ($request, $jadwalUjianCbt, $soalTerpilih, $status, $acakSoal, $acakJawaban) {
             $paketSiap = in_array($status, ['terjadwal', 'berlangsung', 'selesai'], true);
             $paket = $jadwalUjianCbt->ujianCbt ?: new UjianCbt;
-            $paket->fill($this->dataPaketOtomatis($jadwalUjianCbt, $soalTerpilih->count(), $status));
+            $paket->fill($this->dataPaketOtomatis(
+                $jadwalUjianCbt,
+                $soalTerpilih->count(),
+                $status,
+                $acakSoal,
+                $acakJawaban,
+            ));
             if (! $paket->exists) {
                 $paket->dibuat_oleh_pengguna_id = $request->user()?->id;
             }
@@ -301,7 +325,13 @@ class PaketSoalUjianTerpusatController extends Controller
         }
     }
 
-    private function dataPaketOtomatis(JadwalUjianCbt $jadwal, int $jumlahSoal, string $status): array
+    private function dataPaketOtomatis(
+        JadwalUjianCbt $jadwal,
+        int $jumlahSoal,
+        string $status,
+        bool $acakSoal,
+        bool $acakJawaban,
+    ): array
     {
         $kegiatan = $jadwal->kegiatanUjianCbt;
         $mulai = Carbon::parse($jadwal->tanggal->format('Y-m-d').' '.$jadwal->waktu_mulai);
@@ -328,8 +358,8 @@ class PaketSoalUjianTerpusatController extends Controller
             'jumlah_soal' => $jumlahSoal,
             'kkm' => $pengaturan?->kkm ?? $jadwal->mataPelajaran?->kkm,
             'token' => $kegiatan->jenisUjianCbt?->memerlukan_token ? $token : null,
-            'acak_soal' => true,
-            'acak_jawaban' => true,
+            'acak_soal' => $acakSoal,
+            'acak_jawaban' => $acakJawaban,
             'batasi_satu_perangkat' => true,
             'deteksi_pindah_tab' => false,
             'wajib_fullscreen' => false,
@@ -399,5 +429,16 @@ class PaketSoalUjianTerpusatController extends Controller
     private function paketSiap(?UjianCbt $paket): bool
     {
         return $paket && in_array($paket->status, ['terjadwal', 'berlangsung', 'selesai'], true);
+    }
+
+    private function muatDataAlur(KegiatanUjianCbt $kegiatan): void
+    {
+        $kegiatan->loadMissing([
+            'panitiaUjianCbt',
+            'sesiKegiatanUjianCbt',
+            'ruangKegiatanUjianCbt',
+            'kelompokPesertaKegiatanUjianCbt' => fn ($query) => $query->withCount('penempatanPesertaUjianCbt'),
+            'jadwalUjianCbt.ujianCbt',
+        ]);
     }
 }

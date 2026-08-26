@@ -79,6 +79,13 @@
             background: #f4fbf6;
         }
 
+        .central-step.active {
+            border-color: var(--primary);
+            border-left-color: var(--accent);
+            background: var(--primary-soft);
+            box-shadow: 0 0 0 2px rgba(21, 71, 122, .08);
+        }
+
         .central-step > .central-step-number {
             display: grid;
             width: 34px;
@@ -97,6 +104,11 @@
         .central-step.complete .central-step-number {
             background: #dcf3e3;
             color: #166534;
+        }
+
+        .central-step.active .central-step-number {
+            background: var(--primary);
+            color: #fff;
         }
 
         .central-step-copy,
@@ -119,6 +131,18 @@
         .central-workspace {
             display: grid;
             gap: 20px;
+        }
+
+        .central-wizard-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 0;
+        }
+
+        .central-wizard-actions .button:last-child {
+            margin-left: auto;
         }
 
         .central-section-head {
@@ -265,7 +289,6 @@
                 padding: 18px;
             }
 
-            .central-steps,
             .central-add-grid,
             .central-add-grid.session,
             .central-add-grid.room,
@@ -296,6 +319,18 @@
             .central-row-actions .button {
                 flex: 1 1 0;
             }
+
+            .central-wizard-actions {
+                align-items: stretch;
+                flex-direction: column-reverse;
+            }
+
+            .central-wizard-actions .button,
+            .central-wizard-actions .button:last-child {
+                width: 100%;
+                margin-left: 0;
+                text-align: center;
+            }
         }
     </style>
 
@@ -303,9 +338,6 @@
         $panitiaSiap = $kegiatan->panitiaUjianCbt->isNotEmpty();
         $sesiSiap = $kegiatan->sesiKegiatanUjianCbt->isNotEmpty();
         $ruangSiap = $kegiatan->ruangKegiatanUjianCbt->isNotEmpty();
-        $pelaksanaanSiap = $kegiatan->kelompokPesertaKegiatanUjianCbt->isNotEmpty() && $kegiatan->jadwal_ujian_cbt_count > 0;
-        $jumlahPaketSiap = $kegiatan->jadwalUjianCbt->filter(fn ($jadwal) => $jadwal->ujianCbt && in_array($jadwal->ujianCbt->status, ['terjadwal', 'berlangsung', 'selesai'], true))->count();
-        $paketSiap = $kegiatan->jadwal_ujian_cbt_count > 0 && $jumlahPaketSiap === $kegiatan->jadwal_ujian_cbt_count;
     @endphp
 
     <div class="page-header">
@@ -313,15 +345,6 @@
             <p class="eyebrow">Ujian Terpusat</p>
             <h1 class="page-title">Ruang kerja panitia</h1>
             <p class="page-subtitle">{{ $kegiatan->nama }}</p>
-        </div>
-        <div class="actions">
-            <a href="{{ route('ujian-terpusat.index') }}" class="button button-muted">Daftar kegiatan</a>
-            @if ($bolehKelolaUtama)
-                <a href="{{ route('ujian-terpusat.edit', $kegiatan) }}" class="button button-primary">Edit informasi</a>
-            @endif
-            <a href="{{ route('ujian-terpusat.pelaksanaan.index', $kegiatan) }}" class="button button-dark">Jadwal & peserta</a>
-            <a href="{{ route('paket-soal-terpusat.index', ['kegiatan' => $kegiatan->id]) }}" class="button button-dark">Paket soal</a>
-            <a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatan) }}" class="button button-dark">Pelaksanaan & nilai</a>
         </div>
     </div>
 
@@ -353,17 +376,10 @@
         </div>
     </section>
 
-    <nav class="central-steps" aria-label="Tahap persiapan Ujian Terpusat">
-        <a href="{{ $bolehKelolaUtama ? route('ujian-terpusat.edit', $kegiatan) : '#panitia' }}" class="central-step complete"><span class="central-step-number">1</span><span class="central-step-copy"><strong>Informasi</strong><span class="central-step-status">Sudah diisi</span></span></a>
-        <a href="#panitia" class="central-step {{ $panitiaSiap ? 'complete' : '' }}"><span class="central-step-number">2</span><span class="central-step-copy"><strong>Panitia</strong><span class="central-step-status">{{ $panitiaSiap ? 'Sudah diisi' : 'Belum diisi' }}</span></span></a>
-        <a href="#sesi" class="central-step {{ $sesiSiap ? 'complete' : '' }}"><span class="central-step-number">3</span><span class="central-step-copy"><strong>Sesi</strong><span class="central-step-status">{{ $sesiSiap ? 'Sudah diisi' : 'Belum diisi' }}</span></span></a>
-        <a href="#ruang" class="central-step {{ $ruangSiap ? 'complete' : '' }}"><span class="central-step-number">4</span><span class="central-step-copy"><strong>Ruang</strong><span class="central-step-status">{{ $ruangSiap ? 'Sudah diisi' : 'Belum diisi' }}</span></span></a>
-        <a href="{{ route('ujian-terpusat.pelaksanaan.index', $kegiatan) }}" class="central-step {{ $pelaksanaanSiap ? 'complete' : '' }}"><span class="central-step-number">5</span><span class="central-step-copy"><strong>Jadwal & peserta</strong><span class="central-step-status">{{ $pelaksanaanSiap ? 'Sudah disusun' : 'Lanjutkan' }}</span></span></a>
-        <a href="{{ route('paket-soal-terpusat.index', ['kegiatan' => $kegiatan->id]) }}" class="central-step {{ $paketSiap ? 'complete' : '' }}"><span class="central-step-number">6</span><span class="central-step-copy"><strong>Paket soal</strong><span class="central-step-status">{{ $paketSiap ? 'Semua siap' : $jumlahPaketSiap.' siap' }}</span></span></a>
-        <a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatan) }}" class="central-step {{ $paketSiap ? 'complete' : '' }}"><span class="central-step-number">7</span><span class="central-step-copy"><strong>Pelaksanaan & nilai</strong><span class="central-step-status">{{ $paketSiap ? 'Siap dipantau' : 'Menunggu paket' }}</span></span></a>
-    </nav>
+    @include('ujian-terpusat.partials.alur')
 
     <div class="central-workspace">
+        @if ($tahapAktif === 2)
         <section id="panitia" class="panel panel-pad">
             <div class="central-section-head">
                 <div><p class="eyebrow">Tahap 2</p><h2 class="panel-title">Panitia ujian</h2><p class="help-text" style="margin-top: 5px;">Pegawai yang ditugaskan mendapat akses Panitia Ujian pada akun NUSA.</p></div>
@@ -421,6 +437,13 @@
             </div>
         </section>
 
+        <div class="central-wizard-actions">
+            <a href="{{ $bolehKelolaUtama ? route('ujian-terpusat.edit', $kegiatan) : route('ujian-terpusat.index') }}" class="button button-muted">Kembali ke Informasi</a>
+            <a href="{{ route('ujian-terpusat.show', ['kegiatanUjianCbt' => $kegiatan, 'tahap' => 3]) }}" class="button button-primary">Lanjut ke Sesi</a>
+        </div>
+        @endif
+
+        @if ($tahapAktif === 3)
         <section id="sesi" class="panel panel-pad">
             <div class="central-section-head">
                 <div><p class="eyebrow">Tahap 3</p><h2 class="panel-title">Sesi ujian</h2><p class="help-text" style="margin-top: 5px;">Sesi adalah pembagian waktu ujian dalam satu hari, misalnya sesi pagi dan sesi siang.</p></div>
@@ -473,6 +496,13 @@
             </div>
         </section>
 
+        <div class="central-wizard-actions">
+            <a href="{{ route('ujian-terpusat.show', ['kegiatanUjianCbt' => $kegiatan, 'tahap' => 2]) }}" class="button button-muted">Kembali ke Panitia</a>
+            <a href="{{ route('ujian-terpusat.show', ['kegiatanUjianCbt' => $kegiatan, 'tahap' => 4]) }}" class="button button-primary">Lanjut ke Ruang</a>
+        </div>
+        @endif
+
+        @if ($tahapAktif === 4)
         <section id="ruang" class="panel panel-pad">
             <div class="central-section-head">
                 <div><p class="eyebrow">Tahap 4</p><h2 class="panel-title">Ruang ujian</h2><p class="help-text" style="margin-top: 5px;">Ruang dibuat satu kali untuk seluruh rangkaian ujian. Nomor ruang mengikuti urutan penambahan.</p></div>
@@ -522,9 +552,15 @@
                 @endforelse
             </div>
         </section>
+
+        <div class="central-wizard-actions">
+            <a href="{{ route('ujian-terpusat.show', ['kegiatanUjianCbt' => $kegiatan, 'tahap' => 3]) }}" class="button button-muted">Kembali ke Sesi</a>
+            <a href="{{ route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 5]) }}" class="button button-primary">Lanjut ke Penetapan Ruang</a>
+        </div>
+        @endif
     </div>
 
-    @if ($bolehKelolaUtama && $kegiatan->status === 'draft' && $kegiatan->jadwal_ujian_cbt_count === 0)
+    @if ($tahapAktif === 2 && $bolehKelolaUtama && $kegiatan->status === 'draft' && $kegiatan->jadwal_ujian_cbt_count === 0)
         <form action="{{ route('ujian-terpusat.destroy', $kegiatan) }}" method="POST" style="margin-top: 22px;" onsubmit="return confirm('Hapus Ujian Terpusat {{ $kegiatan->nama }} beserta panitia, sesi, dan ruangnya?')">
             @csrf @method('DELETE')
             <button type="submit" class="button button-danger">Hapus kegiatan persiapan</button>

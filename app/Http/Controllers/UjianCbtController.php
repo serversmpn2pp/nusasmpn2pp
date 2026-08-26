@@ -15,57 +15,9 @@ use Illuminate\Validation\ValidationException;
 
 class UjianCbtController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $data = $request->validate([
-            'kata_kunci' => ['nullable', 'string', 'max:100'],
-            'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
-            'jenis_ujian_cbt_id' => ['nullable', 'integer', 'exists:jenis_ujian_cbt,id'],
-            'semester' => ['nullable', Rule::in(['semua', 'ganjil', 'genap'])],
-            'status' => ['nullable', Rule::in(['semua', ...array_keys(UjianCbt::DAFTAR_STATUS)])],
-        ]);
-
-        $kataKunci = trim((string) ($data['kata_kunci'] ?? ''));
-        $tahunPelajaranId = $data['tahun_pelajaran_id'] ?? null;
-        $jenisUjianCbtId = $data['jenis_ujian_cbt_id'] ?? null;
-        $semester = $data['semester'] ?? 'semua';
-        $status = $data['status'] ?? 'semua';
-
-        $ujianCbt = UjianCbt::query()
-            ->where('alur', 'terpusat')
-            ->with(['jenisUjianCbt', 'tahunPelajaran', 'mataPelajaran'])
-            ->withCount(['kelasUjianCbt', 'soalUjianCbt', 'sesiUjianCbt', 'pesertaUjianCbt'])
-            ->when($tahunPelajaranId, fn ($query, $id) => $query->where('tahun_pelajaran_id', $id))
-            ->when($jenisUjianCbtId, fn ($query, $id) => $query->where('jenis_ujian_cbt_id', $id))
-            ->when($semester !== 'semua', fn ($query) => $query->where('semester', $semester))
-            ->when($status !== 'semua', fn ($query) => $query->where('status', $status))
-            ->when($kataKunci !== '', function ($query) use ($kataKunci) {
-                $query->where(function ($query) use ($kataKunci) {
-                    $query->where('nama', 'like', '%'.$kataKunci.'%')
-                        ->orWhere('kode', 'like', '%'.$kataKunci.'%')
-                        ->orWhereHas('mataPelajaran', fn ($query) => $query->where('nama', 'like', '%'.$kataKunci.'%'))
-                        ->orWhereHas('jenisUjianCbt', fn ($query) => $query->where('nama', 'like', '%'.$kataKunci.'%'));
-                });
-            })
-            ->orderByDesc('tanggal_mulai')
-            ->orderByDesc('id')
-            ->paginate(12)
-            ->withQueryString();
-
-        return view('ujian-cbt.index', [
-            'ujianCbt' => $ujianCbt,
-            'kataKunci' => $kataKunci,
-            'tahunPelajaranId' => $tahunPelajaranId,
-            'jenisUjianCbtId' => $jenisUjianCbtId,
-            'semester' => $semester,
-            'status' => $status,
-            'daftarStatus' => UjianCbt::DAFTAR_STATUS,
-            'daftarTahunPelajaran' => $this->daftarTahunPelajaran(),
-            'daftarJenisUjianCbt' => $this->daftarJenisUjianCbt(),
-            'jumlahUjian' => UjianCbt::where('alur', 'terpusat')->count(),
-            'jumlahDraft' => UjianCbt::where('alur', 'terpusat')->where('status', 'draft')->count(),
-            'jumlahTerjadwal' => UjianCbt::where('alur', 'terpusat')->where('status', 'terjadwal')->count(),
-        ]);
+        return redirect()->route('pusat-cbt.index');
     }
 
     public function create(Request $request)
@@ -107,6 +59,11 @@ class UjianCbtController extends Controller
     public function show(UjianCbt $ujianCbt)
     {
         abort_unless($ujianCbt->ujianTerpusat(), 404);
+
+        $jadwalTerpusat = $ujianCbt->jadwalUjianCbt()->orderBy('id')->first();
+        if ($jadwalTerpusat) {
+            return redirect()->route('paket-soal-terpusat.show', $jadwalTerpusat);
+        }
 
         $ujianCbt->load([
             'jenisUjianCbt',

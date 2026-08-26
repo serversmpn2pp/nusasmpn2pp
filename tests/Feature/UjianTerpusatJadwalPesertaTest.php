@@ -38,15 +38,23 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         $this->buatSiswa($tahun, $kelasB, ['Damar', 'Eka'], 7100);
 
         $this->actingAs($admin)
-            ->post(route('ujian-terpusat.peserta.store', $kegiatan), [
+            ->post(route('ujian-terpusat.peserta.atur', $kegiatan), [
                 'tingkat' => 7,
                 'sesi_kegiatan_ujian_cbt_id' => $sesi->id,
                 'kelas' => [$kelasA->id, $kelasB->id],
                 'ruang' => [$ruang[0]->id, $ruang[1]->id],
             ])
-            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', $kegiatan));
+            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 5]));
 
         $kelompok = KelompokPesertaKegiatanUjianCbt::query()->firstOrFail();
+        $this->assertSame(0, $kelompok->jumlah_peserta);
+        $this->assertDatabaseCount('penempatan_peserta_ujian_cbt', 0);
+
+        $this->actingAs($admin)
+            ->post(route('ujian-terpusat.peserta.bangkitkan', [$kegiatan, $kelompok]))
+            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 6]));
+
+        $kelompok->refresh();
         $penempatan = $kelompok->penempatanPesertaUjianCbt()
             ->with('anggotaKelas.siswa')
             ->orderBy('id')
@@ -61,9 +69,22 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         $this->actingAs($admin)
             ->get(route('ujian-terpusat.peserta.show', [$kegiatan, $kelompok]))
             ->assertOk()
-            ->assertSee('Pembagian peserta tingkat 7')
+            ->assertSee('Daftar peserta ujian')
+            ->assertSee('Susunan siswa tingkat 7')
             ->assertSee('Aulia')
             ->assertSee('VII.B');
+
+        $this->actingAs($admin)
+            ->get(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 5]))
+            ->assertOk()
+            ->assertSeeText('Penetapan kelas, sesi, dan ruang')
+            ->assertDontSeeText('Pembagian peserta otomatis');
+
+        $this->actingAs($admin)
+            ->get(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 6]))
+            ->assertOk()
+            ->assertSeeText('Pembagian peserta otomatis')
+            ->assertSeeText('Lanjut ke Jadwal Ujian');
 
         $kegiatan->delete();
         $this->assertDatabaseMissing('kelompok_peserta_kegiatan_ujian_cbt', ['id' => $kelompok->id]);
@@ -78,7 +99,7 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         $this->buatSiswa($tahun, $kelas7, ['Siswa Tujuh'], 7200);
         $this->buatSiswa($tahun, $kelas8, ['Siswa Delapan'], 7300);
 
-        $this->actingAs($admin)->post(route('ujian-terpusat.peserta.store', $kegiatan), [
+        $this->actingAs($admin)->post(route('ujian-terpusat.peserta.atur', $kegiatan), [
             'tingkat' => 7,
             'sesi_kegiatan_ujian_cbt_id' => $sesi->id,
             'kelas' => [$kelas7->id],
@@ -86,14 +107,14 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->from(route('ujian-terpusat.pelaksanaan.index', $kegiatan))
-            ->post(route('ujian-terpusat.peserta.store', $kegiatan), [
+            ->from(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 5]))
+            ->post(route('ujian-terpusat.peserta.atur', $kegiatan), [
                 'tingkat' => 8,
                 'sesi_kegiatan_ujian_cbt_id' => $sesi->id,
                 'kelas' => [$kelas8->id],
                 'ruang' => [$ruang[0]->id],
             ])
-            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', $kegiatan))
+            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 5]))
             ->assertSessionHasErrors('ruang');
     }
 
@@ -112,12 +133,19 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         ]);
 
         foreach ([[7, $kelas7, $ruang[0]], [8, $kelas8, $ruang[2]]] as [$tingkat, $kelas, $ruangTingkat]) {
-            $this->actingAs($admin)->post(route('ujian-terpusat.peserta.store', $kegiatan), [
+            $this->actingAs($admin)->post(route('ujian-terpusat.peserta.atur', $kegiatan), [
                 'tingkat' => $tingkat,
                 'sesi_kegiatan_ujian_cbt_id' => $sesi->id,
                 'kelas' => [$kelas->id],
                 'ruang' => [$ruangTingkat->id],
             ]);
+
+            $kelompok = KelompokPesertaKegiatanUjianCbt::query()
+                ->where('kegiatan_ujian_cbt_id', $kegiatan->id)
+                ->where('tingkat', $tingkat)
+                ->firstOrFail();
+
+            $this->actingAs($admin)->post(route('ujian-terpusat.peserta.bangkitkan', [$kegiatan, $kelompok]));
         }
 
         $this->actingAs($admin)
@@ -127,7 +155,7 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
                 'tingkat' => [7, 8],
                 'keterangan' => 'Hari pertama',
             ])
-            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', $kegiatan));
+            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]));
 
         $jadwal = JadwalUjianCbt::query()->orderBy('tingkat')->get();
         $this->assertCount(2, $jadwal);
@@ -138,7 +166,7 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         $this->assertSame(1, $jadwal[1]->kelas()->count());
 
         $this->actingAs($admin)
-            ->get(route('ujian-terpusat.pelaksanaan.index', $kegiatan))
+            ->get(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]))
             ->assertOk()
             ->assertSee('Bahasa Indonesia')
             ->assertSee('Ruang 1')

@@ -62,7 +62,7 @@ class JadwalUjianTerpusatController extends Controller
         });
 
         return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', $kegiatanUjianCbt)
+            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
             ->with('berhasil', "Jadwal {$mataPelajaran->nama} berhasil ditambahkan untuk {$tingkat->count()} tingkat.");
     }
 
@@ -130,7 +130,7 @@ class JadwalUjianTerpusatController extends Controller
         }
 
         return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', $kegiatanUjianCbt)
+            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
             ->with('berhasil', 'Jadwal ujian berhasil diperbarui.');
     }
 
@@ -146,7 +146,7 @@ class JadwalUjianTerpusatController extends Controller
         $jadwalUjianCbt->delete();
 
         return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', $kegiatanUjianCbt)
+            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
             ->with('berhasil', 'Jadwal ujian berhasil dihapus.');
     }
 
@@ -176,11 +176,16 @@ class JadwalUjianTerpusatController extends Controller
             ->where('kegiatan_ujian_cbt_id', $kegiatan->id)
             ->whereIn('tingkat', $tingkat)
             ->with(['sesiKegiatanUjianCbt', 'kelas'])
+            ->withCount('penempatanPesertaUjianCbt')
             ->get()
             ->keyBy('tingkat');
 
         if ($kelompok->count() !== $tingkat->count()) {
             throw ValidationException::withMessages(['tingkat' => 'Buat pembagian peserta untuk setiap tingkat yang dipilih terlebih dahulu.']);
+        }
+
+        if ($kelompok->contains(fn ($item) => (int) $item->penempatan_peserta_ujian_cbt_count === 0)) {
+            throw ValidationException::withMessages(['tingkat' => 'Bagi peserta otomatis pada tahap 6 sebelum membuat jadwal ujian.']);
         }
 
         return [$tanggal->toDateString(), $mataPelajaran, $kelompok];

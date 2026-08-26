@@ -7,6 +7,7 @@ use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
+use App\Services\Cbt\PengacakPenyajianCbt;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class AksesUjianCbtController extends Controller
 {
+    public function __construct(private readonly PengacakPenyajianCbt $pengacakPenyajianCbt) {}
+
     public function masukDariAkunSiswa(Request $request, PesertaUjianCbt $pesertaUjianCbt)
     {
         $pengguna = $request->user();
@@ -129,13 +132,20 @@ class AksesUjianCbtController extends Controller
             return redirect()->route('cbt.ujian.selesai');
         }
 
-        $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt);
+        $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt, $peserta);
         $jawabanTersimpan = $peserta->jawabanPesertaUjianCbt()
             ->whereIn('soal_ujian_cbt_id', $soalUjian->pluck('id'))
             ->get()
             ->keyBy('soal_ujian_cbt_id');
+        $pilihanJawaban = $soalUjian->mapWithKeys(fn (SoalUjianCbt $relasiSoal) => [
+            $relasiSoal->id => $this->pengacakPenyajianCbt->pilihanJawaban(
+                $peserta->ujianCbt,
+                $peserta,
+                $relasiSoal,
+            ),
+        ]);
 
-        return view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'sisaDetik'));
+        return view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik'));
     }
 
     public function simpan(Request $request, KoreksiOtomatisCbtService $koreksiOtomatisCbtService)
@@ -153,7 +163,7 @@ class AksesUjianCbtController extends Controller
             'aksi' => ['nullable', 'in:simpan,selesai'],
         ]);
 
-        $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt);
+        $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt, $peserta);
         $jawaban = $data['jawaban'] ?? [];
         $ragu = collect($data['ragu'] ?? [])
             ->filter(fn ($nilai) => filter_var($nilai, FILTER_VALIDATE_BOOLEAN))
@@ -386,13 +396,14 @@ class AksesUjianCbtController extends Controller
         }
     }
 
-    private function ambilSoalUjian(UjianCbt $ujianCbt)
+    private function ambilSoalUjian(UjianCbt $ujianCbt, PesertaUjianCbt $peserta)
     {
-        return $ujianCbt->soalUjianCbt()
+        $soal = $ujianCbt->soalUjianCbt()
             ->with('soalCbt')
-            ->get()
-            ->sortBy(fn (SoalUjianCbt $item) => sprintf('%05d|%08d', $item->nomor_urut ?? 9999, $item->id))
-            ->values()
+            ->get();
+
+        return $this->pengacakPenyajianCbt
+            ->urutkanSoal($ujianCbt, $peserta, $soal)
             ->take($ujianCbt->jumlah_soal);
     }
 

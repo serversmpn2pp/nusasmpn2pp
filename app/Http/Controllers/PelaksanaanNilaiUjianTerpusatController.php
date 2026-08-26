@@ -21,6 +21,23 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         KegiatanUjianCbt $kegiatanUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
     ) {
+        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, 'pelaksanaan');
+    }
+
+    public function hasil(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+    ) {
+        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, 'hasil');
+    }
+
+    private function tampilkan(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        string $mode,
+    ) {
         $aksesPenuh = $kegiatanUjianCbt->dapatDiaksesOleh($request->user());
         $jadwalCakupan = $kegiatanUjianCbt->jadwalUjianCbt()
             ->with('ujianCbt')
@@ -33,7 +50,11 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         $kegiatanUjianCbt->load([
             'jenisUjianCbt',
             'tahunPelajaran',
+            'panitiaUjianCbt',
+            'sesiKegiatanUjianCbt',
+            'ruangKegiatanUjianCbt',
             'kelompokPesertaKegiatanUjianCbt.ruangKegiatanUjianCbt',
+            'kelompokPesertaKegiatanUjianCbt' => fn ($query) => $query->withCount('penempatanPesertaUjianCbt'),
             'jadwalUjianCbt' => fn ($query) => $query
                 ->with([
                     'sesiKegiatanUjianCbt',
@@ -68,11 +89,15 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         });
 
         $paket = $jadwal->pluck('ujianCbt')->filter();
-        $bolehAturPengawas = $aksesPenuh && $request->user()->memilikiIzin(['cbt.panitia', 'cbt.kelola']);
+        $bolehAturPengawas = $mode === 'pelaksanaan'
+            && $aksesPenuh
+            && $request->user()->memilikiIzin(['cbt.panitia', 'cbt.kelola']);
 
         return view('ujian-terpusat.pelaksanaan-nilai.index', [
             'kegiatan' => $kegiatanUjianCbt,
             'jadwal' => $jadwal,
+            'mode' => $mode,
+            'tahapAktif' => $mode === 'hasil' ? 10 : 9,
             'bolehAturPengawas' => $bolehAturPengawas,
             'pegawai' => $bolehAturPengawas
                 ? Pegawai::query()->where('aktif', true)->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip'])
@@ -82,6 +107,7 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                 'peserta' => $paket->sum('peserta_ujian_cbt_count'),
                 'sedang' => $paket->sum('peserta_sedang_count'),
                 'selesai' => $paket->sum('peserta_selesai_count'),
+                'belum_mulai' => max(0, $paket->sum('peserta_ujian_cbt_count') - $paket->sum('peserta_sedang_count') - $paket->sum('peserta_selesai_count')),
                 'nilai_diterapkan' => $paket->sum('nilai_diterapkan_count'),
                 'perlu_manual' => $jadwal->sum('perlu_koreksi_manual'),
             ],

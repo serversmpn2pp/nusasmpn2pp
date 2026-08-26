@@ -81,9 +81,29 @@ class UjianTerpusatTest extends TestCase
             ->assertOk()
             ->assertSee('Ruang kerja panitia')
             ->assertSee('Panitia Ujian')
-            ->assertSee('Sesi Pagi')
-            ->assertSee('Ruang 1')
+            ->assertDontSee('Sesi Pagi')
+            ->assertDontSee('Ruang 1')
+            ->assertDontSee('Edit informasi')
+            ->assertSee('Lanjut ke Sesi')
             ->assertDontSee('Paket CBT');
+
+        $this->actingAs($admin)
+            ->get(route('ujian-terpusat.show', ['kegiatanUjianCbt' => $kegiatan, 'tahap' => 3]))
+            ->assertOk()
+            ->assertSee('Sesi Pagi')
+            ->assertDontSee('Panitia Ujian')
+            ->assertDontSee('Ruang 1')
+            ->assertSee('Kembali ke Panitia')
+            ->assertSee('Lanjut ke Ruang');
+
+        $this->actingAs($admin)
+            ->get(route('ujian-terpusat.show', ['kegiatanUjianCbt' => $kegiatan, 'tahap' => 4]))
+            ->assertOk()
+            ->assertSee('Ruang 1')
+            ->assertDontSee('Panitia Ujian')
+            ->assertDontSee('Sesi Pagi')
+            ->assertSee('Kembali ke Sesi')
+            ->assertSeeText('Lanjut ke Penetapan Ruang');
     }
 
     public function test_panitia_hanya_melihat_kegiatan_tempat_dirinya_ditugaskan(): void

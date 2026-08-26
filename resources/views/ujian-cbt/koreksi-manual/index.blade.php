@@ -113,7 +113,7 @@
         <div class="actions">
             <a href="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-primary">Lihat hasil</a>
             <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Pantau pengerjaan</a>
-            <a href="{{ route($ujianCbt->asesmenKelas() ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail {{ $ujianCbt->asesmenKelas() ? 'asesmen' : 'paket' }}</a>
+            <a href="{{ route($ujianCbt->asesmenKelas() ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.hasil.index', $ujianCbt) }}" class="button button-muted">Kembali ke {{ $ujianCbt->asesmenKelas() ? 'asesmen' : 'hasil ujian' }}</a>
         </div>
     </div>
 

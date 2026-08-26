@@ -38,6 +38,7 @@ class RekapHasilUjianCbtController extends Controller
             'kelasUjianCbt.kelas',
             'kelasUjianCbt.komponenNilai',
             'sesiUjianCbt',
+            'jadwalUjianCbt.kegiatanUjianCbt',
         ]);
 
         $soalUjian = $this->ambilSoalUjian($ujianCbt);

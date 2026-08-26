@@ -82,6 +82,7 @@
             'belum_selesai' => 'Belum selesai',
         ];
         $formatAngka = fn ($nilai, $desimal = 2) => number_format((float) $nilai, $desimal, ',', '.');
+        $kegiatanTerpusat = $ujianCbt->jadwalUjianCbt->first()?->kegiatanUjianCbt;
     @endphp
 
     <div class="page-header">
@@ -102,11 +103,10 @@
                     <button type="submit" class="button button-primary">Terapkan nilai</button>
                 </form>
             @endif
-            @if ($ujianCbt->ujianTerpusat())
-                <a href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" class="button button-muted">Ruang</a>
-            @endif
             <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Monitoring</a>
-            <a href="{{ route($ujianCbt->asesmenKelas() ? 'asesmen-kelas-cbt.show' : 'ujian-cbt.show', $ujianCbt) }}" class="button button-muted">Detail {{ $ujianCbt->asesmenKelas() ? 'asesmen' : 'paket' }}</a>
+            @if ($kegiatanTerpusat)
+                <a href="{{ route('ujian-terpusat.nilai-hasil.index', $kegiatanTerpusat) }}" class="button button-muted">Kembali ke Nilai & Hasil</a>
+            @endif
         </div>
     </div>
 

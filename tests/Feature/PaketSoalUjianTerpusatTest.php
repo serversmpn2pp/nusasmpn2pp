@@ -39,6 +39,13 @@ class PaketSoalUjianTerpusatTest extends TestCase
         $soalDua = $this->buatSoal($data['tahun'], $data['mapel'], 'SOAL-UT-002', 'Pertanyaan kedua', 2);
 
         $this->actingAs($data['admin'])
+            ->get(route('paket-soal-terpusat.index', ['kegiatan' => $data['kegiatan']->id]))
+            ->assertOk()
+            ->assertSee($data['kegiatan']->jenisUjianCbt->nama)
+            ->assertSee($data['kegiatan']->nama)
+            ->assertSee('0 dari 1 paket siap');
+
+        $this->actingAs($data['admin'])
             ->get(route('paket-soal-terpusat.show', $data['jadwal']))
             ->assertOk()
             ->assertSee('Susun paket soal')
@@ -106,8 +113,9 @@ class PaketSoalUjianTerpusatTest extends TestCase
         $soal = $this->buatSoal($data['tahun'], $data['mapel'], 'SOAL-GURU-001', 'Soal guru');
 
         $this->actingAs($data['akun_guru'])
-            ->get(route('paket-soal-terpusat.index'))
+            ->get(route('paket-soal-terpusat.index', ['kegiatan' => $data['kegiatan']->id]))
             ->assertOk()
+            ->assertSee($data['kegiatan']->nama)
             ->assertSee('Matematika')
             ->assertDontSee('>IPA<', false);
 

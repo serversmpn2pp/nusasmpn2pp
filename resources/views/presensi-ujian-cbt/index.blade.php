@@ -32,7 +32,7 @@
             <p class="page-subtitle">Pilih ruang, lalu pindai QR pada kartu pelajar peserta.</p>
         </div>
         @if ($dapatKelolaSemua)
-            <a href="{{ route('ujian-cbt.index') }}" class="button button-muted">Kelola paket CBT</a>
+            <a href="{{ route('pusat-cbt.index') }}" class="button button-muted">Pusat CBT</a>
         @endif
     </div>
 
