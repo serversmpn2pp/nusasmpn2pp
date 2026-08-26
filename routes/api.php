@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
 use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
+use App\Http\Controllers\Api\V1\InputNilaiController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PeranController;
+use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
 use App\Http\Controllers\Api\V1\SiswaController;
 use App\Http\Controllers\Api\V1\SkemaBobotNilaiController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
@@ -197,6 +199,23 @@ Route::prefix('v1')
         Route::delete('/komponen-nilai/{komponenNilai}', [KomponenNilaiController::class, 'destroy'])
             ->middleware('izin:nilai.komponen_kelola')
             ->name('komponen-nilai.destroy');
+
+        Route::get('/input-nilai', [InputNilaiController::class, 'index'])
+            ->middleware('izin:nilai.input')
+            ->name('input-nilai.index');
+        Route::post('/input-nilai', [InputNilaiController::class, 'store'])
+            ->middleware('izin:nilai.input')
+            ->name('input-nilai.store');
+        Route::patch('/input-nilai/publikasi/{guruMataPelajaran}/{semester}', [InputNilaiController::class, 'publikasikan'])
+            ->middleware('izin:nilai.input')
+            ->name('input-nilai.publikasikan');
+        Route::patch('/input-nilai/publikasi/{guruMataPelajaran}/{semester}/draf', [InputNilaiController::class, 'jadikanDraf'])
+            ->middleware('izin:nilai.input')
+            ->name('input-nilai.jadikan-draf');
+
+        Route::get('/rekap-nilai-rapor', RekapNilaiRaporController::class)
+            ->middleware('izin:nilai.rekap')
+            ->name('rekap-nilai-rapor.index');
 
         Route::get('/siswa', [SiswaController::class, 'index'])
             ->middleware('izin:siswa.lihat,siswa.kelola')

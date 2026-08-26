@@ -13,6 +13,8 @@ import 'package:nusa/features/employee_account/presentation/employee_account_det
 import 'package:nusa/features/employee_account/presentation/employee_account_list_view.dart';
 import 'package:nusa/features/grade_weight_scheme/presentation/grade_weight_scheme_view.dart';
 import 'package:nusa/features/grade_component/presentation/grade_component_view.dart';
+import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
+import 'package:nusa/features/grade_recap/presentation/grade_recap_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
 import 'package:nusa/features/login_activity/presentation/login_activity_list_view.dart';
@@ -59,6 +61,8 @@ abstract final class AppRoutes {
   static const myTeachingSchedule = '/jadwal-mengajar-saya';
   static const gradeWeightSchemes = '/skema-bobot-nilai';
   static const gradeComponents = '/komponen-nilai';
+  static const gradeEntry = '/input-nilai';
+  static const gradeRecap = '/rekap-nilai-rapor';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -264,6 +268,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.gradeComponents,
         name: 'grade-components',
         builder: (context, state) => const GradeComponentView(),
+      ),
+      GoRoute(
+        path: AppRoutes.gradeEntry,
+        name: 'grade-entry',
+        builder: (context, state) => const GradeEntryView(),
+      ),
+      GoRoute(
+        path: AppRoutes.gradeRecap,
+        name: 'grade-recap',
+        builder: (context, state) => const GradeRecapView(),
       ),
       GoRoute(
         path: AppRoutes.roleAccess,

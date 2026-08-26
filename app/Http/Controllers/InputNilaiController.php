@@ -4,18 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\AnggotaKelas;
 use App\Models\KomponenNilai;
-use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\PublikasiNilaiSiswa;
-use App\Services\Nilai\PublikasiNilaiService;
+use App\Services\Nilai\InputNilaiService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class InputNilaiController extends Controller
 {
-    public function __construct(private PublikasiNilaiService $publikasiNilai) {}
+    public function __construct(private InputNilaiService $inputNilai) {}
 
     public function index(Request $request)
     {
@@ -103,84 +99,18 @@ class InputNilaiController extends Controller
             'komponen_nilai_id' => ['required', 'exists:komponen_nilai,id'],
         ]);
 
-        $komponenDipilih = $this->ambilKomponenDipilih($request, $request->input('komponen_nilai_id'));
-        $penilaianPredikat = $komponenDipilih
-            ->guruMataPelajaran?->mataPelajaran?->menggunakanPredikat() ?? false;
-        $aturan = [
-            'komponen_nilai_id' => ['required', 'exists:komponen_nilai,id'],
-            'nilai' => ['nullable', 'array'],
-            'predikat' => ['nullable', 'array'],
-            'catatan' => ['nullable', 'array'],
-            'catatan.*' => ['nullable', 'string', 'max:255'],
-        ];
-
-        if ($penilaianPredikat) {
-            $aturan['predikat.*'] = ['nullable', Rule::in(MataPelajaran::PREDIKAT_NILAI)];
-        } else {
-            $aturan['nilai.*'] = ['nullable', 'numeric', 'min:0', 'max:100'];
-        }
-
-        $data = $request->validate($aturan, [
-            'nilai.*.numeric' => 'Nilai harus berupa angka.',
-            'nilai.*.min' => 'Nilai minimal 0.',
-            'nilai.*.max' => 'Nilai maksimal 100.',
-            'predikat.*.in' => 'Predikat harus SB, B, C, atau K.',
-        ]);
-
-        $kelasId = $komponenDipilih->guruMataPelajaran?->kelas_id;
-        $anggotaKelas = $kelasId ? $this->ambilAnggotaKelas($kelasId) : collect();
-        $siswaIds = $anggotaKelas->pluck('siswa_id')->map(fn ($id) => (int) $id);
-        $idsDikirim = collect(array_keys($data['nilai'] ?? []))
-            ->merge(array_keys($data['predikat'] ?? []))
-            ->merge(array_keys($data['catatan'] ?? []))
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
-
-        if ($idsDikirim->diff($siswaIds)->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'komponen_nilai_id' => 'Ada data siswa yang tidak sesuai dengan kelas komponen nilai ini.',
-            ]);
-        }
-
-        DB::transaction(function () use ($komponenDipilih, $siswaIds, $data, $penilaianPredikat) {
-            foreach ($siswaIds as $siswaId) {
-                $nilaiMentah = $data['nilai'][$siswaId] ?? null;
-                $predikatMentah = $data['predikat'][$siswaId] ?? null;
-                $catatan = trim((string) ($data['catatan'][$siswaId] ?? ''));
-                $nilai = $penilaianPredikat || $nilaiMentah === null || $nilaiMentah === ''
-                    ? null
-                    : round((float) $nilaiMentah, 2);
-                $predikat = ! $penilaianPredikat || blank($predikatMentah)
-                    ? null
-                    : mb_strtoupper(trim((string) $predikatMentah));
-
-                if ($nilai === null && $predikat === null && $catatan === '') {
-                    NilaiSiswa::query()
-                        ->where('komponen_nilai_id', $komponenDipilih->id)
-                        ->where('siswa_id', $siswaId)
-                        ->delete();
-
-                    continue;
-                }
-
-                NilaiSiswa::updateOrCreate(
-                    [
-                        'komponen_nilai_id' => $komponenDipilih->id,
-                        'siswa_id' => $siswaId,
-                    ],
-                    [
-                        'nilai' => $nilai,
-                        'predikat' => $predikat,
-                        'catatan' => $catatan ?: null,
-                    ]
-                );
-            }
-        });
-
-        $publikasiDibatalkan = $this->publikasiNilai->tandaiDraf(
-            (int) $komponenDipilih->guru_mata_pelajaran_id,
-            $komponenDipilih->semester,
+        $komponenDipilih = $this->inputNilai->ambilKomponenDalamCakupan(
+            $request->user(),
+            $request->input('komponen_nilai_id'),
+        );
+        $data = $request->validate(
+            $this->inputNilai->aturanValidasi($komponenDipilih),
+            $this->inputNilai->pesanValidasi(),
+        );
+        $publikasiDibatalkan = $this->inputNilai->simpan(
+            $request->user(),
+            $komponenDipilih,
+            $data,
         );
 
         return redirect()
