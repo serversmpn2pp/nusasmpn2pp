@@ -26,7 +26,7 @@ return [
         'items' => [
             ['kode' => 'mata-pelajaran', 'label' => 'Mata Pelajaran', 'inisial' => 'MP', 'subkelompok' => 'Pembelajaran', 'izin' => ['mata_pelajaran.lihat', 'mata_pelajaran.kelola'], 'status' => 'tersedia', 'rute' => '/mata-pelajaran'],
             ['kode' => 'guru-mata-pelajaran', 'label' => 'Guru Mata Pelajaran', 'inisial' => 'GM', 'subkelompok' => 'Pembelajaran', 'izin' => ['guru_mapel.lihat', 'guru_mapel.kelola'], 'status' => 'tersedia', 'rute' => '/guru-mata-pelajaran'],
-            ['kode' => 'jadwal-mengajar-saya', 'label' => 'Jadwal Mengajar Saya', 'inisial' => 'JS', 'subkelompok' => 'Pembelajaran', 'izin' => 'jadwal.pribadi', 'pegawai_only' => true],
+            ['kode' => 'jadwal-mengajar-saya', 'label' => 'Jadwal Mengajar Saya', 'inisial' => 'JS', 'subkelompok' => 'Pembelajaran', 'izin' => 'jadwal.pribadi', 'pegawai_only' => true, 'status' => 'tersedia', 'rute' => '/jadwal-mengajar-saya'],
             ['kode' => 'jam-pelajaran', 'label' => 'Jam Pelajaran', 'inisial' => 'JM', 'subkelompok' => 'Pembelajaran', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'administrator_only' => true, 'status' => 'tersedia', 'rute' => '/jam-pelajaran'],
             ['kode' => 'jadwal-pelajaran', 'label' => 'Jadwal Pelajaran', 'inisial' => 'JP', 'subkelompok' => 'Pembelajaran', 'izin' => ['jadwal.lihat', 'jadwal.kelola'], 'status' => 'tersedia', 'rute' => '/kelas?mode=jadwal'],
             ['kode' => 'skema-bobot-nilai', 'label' => 'Skema Bobot Nilai', 'inisial' => 'BN', 'subkelompok' => 'Penilaian', 'izin' => 'nilai.skema_kelola'],

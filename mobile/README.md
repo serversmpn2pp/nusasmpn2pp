@@ -189,6 +189,19 @@ mata pelajaran tersedia pada tahun pelajaran serta tingkat yang dipilih sebelum
 menyimpan penugasan. Penugasan ini langsung menjadi pilihan pada pengelolaan
 Jadwal Pelajaran kelas.
 
+Modul Jadwal Mengajar Saya tersedia melalui menu **Akademik → Jadwal Mengajar
+Saya**. Modul baca-saja ini menampilkan ringkasan beban mengajar, filter tahun
+pelajaran, pilihan hari Senin–Sabtu, jam, mata pelajaran, dan kelas yang sesuai
+dengan akun guru yang sedang login. Endpoint yang digunakan adalah:
+
+- `GET /api/v1/jadwal-mengajar-saya`
+
+Endpoint memerlukan izin `jadwal.pribadi` dan tidak menerima `pegawai_id` dari
+aplikasi. Backend selalu mengambil pegawai dari token pengguna, sehingga guru
+tidak dapat membuka jadwal milik guru lain dengan memanipulasi parameter. Akun
+yang belum terhubung ke data pegawai menerima jadwal kosong beserta petunjuk
+untuk menghubungi administrator.
+
 Modul Akun Pegawai tersedia melalui menu **Sistem → Akun Pegawai**. Modul ini
 menyediakan ringkasan akun, pencarian, filter status, pembuatan akun tunggal dan
 massal, pengaturan role, aktivasi/nonaktivasi akun, serta reset kata sandi.

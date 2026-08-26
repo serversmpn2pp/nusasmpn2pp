@@ -1,12 +1,13 @@
 <?php
 
-use App\Http\Controllers\Api\V1\AkunPegawaiController;
-use App\Http\Controllers\Api\V1\AkunOrangTuaController;
-use App\Http\Controllers\Api\V1\AkunSiswaController;
 use App\Http\Controllers\Api\V1\AktivitasLoginController;
+use App\Http\Controllers\Api\V1\AkunOrangTuaController;
+use App\Http\Controllers\Api\V1\AkunPegawaiController;
+use App\Http\Controllers\Api\V1\AkunSiswaController;
 use App\Http\Controllers\Api\V1\AutentikasiController;
 use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
+use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
@@ -164,6 +165,10 @@ Route::prefix('v1')
         Route::post('/kenaikan-kelas/proses', [KenaikanKelasController::class, 'store'])
             ->middleware('izin:kenaikan_kelas.kelola')
             ->name('kenaikan-kelas.store');
+
+        Route::get('/jadwal-mengajar-saya', JadwalMengajarSayaController::class)
+            ->middleware('izin:jadwal.pribadi')
+            ->name('jadwal-mengajar-saya');
 
         Route::get('/siswa', [SiswaController::class, 'index'])
             ->middleware('izin:siswa.lihat,siswa.kelola')

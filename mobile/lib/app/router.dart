@@ -16,6 +16,7 @@ import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart
 import 'package:nusa/features/login_activity/presentation/login_activity_list_view.dart';
 import 'package:nusa/features/login_activity/presentation/login_attempt_detail_view.dart';
 import 'package:nusa/features/menu/presentation/menu_group_view.dart';
+import 'package:nusa/features/my_teaching_schedule/presentation/my_teaching_schedule_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_detail_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_list_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_detail_view.dart';
@@ -53,6 +54,7 @@ abstract final class AppRoutes {
   static const lessonPeriods = '/jam-pelajaran';
   static const subjects = '/mata-pelajaran';
   static const teachingAssignments = '/guru-mata-pelajaran';
+  static const myTeachingSchedule = '/jadwal-mengajar-saya';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -243,6 +245,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.teachingAssignments,
         name: 'teaching-assignments',
         builder: (context, state) => const TeachingAssignmentView(),
+      ),
+      GoRoute(
+        path: AppRoutes.myTeachingSchedule,
+        name: 'my-teaching-schedule',
+        builder: (context, state) => const MyTeachingScheduleView(),
       ),
       GoRoute(
         path: AppRoutes.roleAccess,

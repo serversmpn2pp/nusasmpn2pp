@@ -28,6 +28,9 @@ import 'package:nusa/features/login_activity/domain/login_activity.dart'
     as login_activity;
 import 'package:nusa/features/menu/data/menu_remote_data_source.dart';
 import 'package:nusa/features/menu/domain/menu_catalog.dart';
+import 'package:nusa/features/my_teaching_schedule/data/my_teaching_schedule_remote_data_source.dart';
+import 'package:nusa/features/my_teaching_schedule/domain/my_teaching_schedule.dart'
+    as my_schedule;
 import 'package:nusa/features/parent_account/data/parent_account_remote_data_source.dart';
 import 'package:nusa/features/parent_account/domain/parent_account.dart'
     as parent_account;
@@ -220,7 +223,7 @@ void main() {
 
     expect(find.text('Menu Administrasi'), findsOneWidget);
     expect(find.text('Data Sekolah'), findsOneWidget);
-    expect(find.text('12 menu sesuai hak akses akun Anda'), findsOneWidget);
+    expect(find.text('13 menu sesuai hak akses akun Anda'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('menu-group-data-sekolah')));
     await tester.pumpAndSettle();
@@ -557,6 +560,7 @@ void main() {
     await tester.ensureVisible(
       find.byKey(const Key('menu-item-jam-pelajaran')),
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('menu-item-jam-pelajaran')));
     await tester.pumpAndSettle();
 
@@ -1260,6 +1264,54 @@ void main() {
   });
 
   testWidgets(
+    'Jadwal Mengajar Saya hanya menampilkan jadwal akun guru per hari',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+      await tester.enterText(
+        find.byKey(const Key('login-username')),
+        'mobile.uji',
+      );
+      await tester.enterText(
+        find.byKey(const Key('login-password')),
+        'RahasiaNusa123',
+      );
+      await tester.tap(find.byKey(const Key('login-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bottom-nav-2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('menu-group-akademik')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('menu-item-jadwal-mengajar-saya')),
+      );
+      await tester.tap(find.byKey(const Key('menu-item-jadwal-mengajar-saya')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Jadwal Mengajar Saya'), findsOneWidget);
+      expect(find.text('Guru Mobile Uji'), findsOneWidget);
+      expect(find.text('Matematika Mobile'), findsOneWidget);
+      expect(find.text('VIII.A'), findsOneWidget);
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('my-teaching-year'),
+        optionLabel: '2025/2026',
+      );
+      await tester.ensureVisible(find.byKey(const Key('teaching-day-selasa')));
+      await tester.tap(find.byKey(const Key('teaching-day-selasa')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bahasa Indonesia Lama'), findsOneWidget);
+      expect(find.text('VII.A'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'modul Kenaikan Kelas memproses penempatan lintas tahun secara native',
     (tester) async {
       tester.view.physicalSize = const Size(360, 800);
@@ -1309,12 +1361,14 @@ void main() {
       await tester.scrollUntilVisible(
         find.byKey(const Key('promotion-member-32')),
         220,
-        scrollable: find.descendant(
-          of: find.byKey(
-            const PageStorageKey<String>('class-promotion-scroll'),
-          ),
-          matching: find.byType(Scrollable),
-        ).first,
+        scrollable: find
+            .descendant(
+              of: find.byKey(
+                const PageStorageKey<String>('class-promotion-scroll'),
+              ),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(find.byKey(const Key('promotion-member-32')), findsOneWidget);
       await tester.drag(
@@ -1533,6 +1587,9 @@ Widget _buildTestApp({
       classPromotionRemoteDataSourceProvider.overrideWithValue(
         _FakeClassPromotionRemoteDataSource(),
       ),
+      myTeachingScheduleRemoteDataSourceProvider.overrideWithValue(
+        _FakeMyTeachingScheduleRemoteDataSource(),
+      ),
     ],
     child: const NusaApp(),
   );
@@ -1605,7 +1662,7 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
   Future<MenuCatalog> fetchCatalog() async {
     return MenuCatalog(
       generatedAt: DateTime(2026, 8, 24, 8, 15),
-      itemCount: 12,
+      itemCount: 13,
       groups: const [
         MenuGroup(
           code: 'data-sekolah',
@@ -1690,6 +1747,16 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
               icon: null,
               status: 'tersedia',
               route: '/guru-mata-pelajaran',
+            ),
+            MenuEntry(
+              code: 'jadwal-mengajar-saya',
+              label: 'Jadwal Mengajar Saya',
+              description: 'Jadwal pribadi sesuai akun guru.',
+              initials: 'JS',
+              subgroup: 'Pembelajaran',
+              icon: null,
+              status: 'tersedia',
+              route: '/jadwal-mengajar-saya',
             ),
             MenuEntry(
               code: 'jam-pelajaran',
@@ -3924,6 +3991,105 @@ final class _FakeAcademicYearRemoteDataSource
       );
     }
   }
+}
+
+final class _FakeMyTeachingScheduleRemoteDataSource
+    implements MyTeachingScheduleRemoteDataSource {
+  static const _years = [
+    my_schedule.TeachingAcademicYear(id: 5, name: '2026/2027', active: true),
+    my_schedule.TeachingAcademicYear(id: 4, name: '2025/2026', active: false),
+  ];
+
+  @override
+  Future<my_schedule.MyTeachingSchedulePage> fetch({
+    required int? academicYearId,
+  }) async {
+    final selectedYearId = academicYearId ?? 5;
+    const activeSchedule = my_schedule.TeachingScheduleItem(
+      id: 901,
+      period: my_schedule.TeachingPeriod(
+        id: 41,
+        number: 1,
+        label: 'Jam 1',
+        start: '07:30',
+        end: '08:15',
+      ),
+      subject: my_schedule.TeachingSubject(
+        id: 11,
+        code: 'MTK8',
+        name: 'Matematika Mobile',
+      ),
+      schoolClass: my_schedule.TeachingClass(id: 8, name: 'VIII.A', grade: 8),
+      ongoing: false,
+    );
+    const oldSchedule = my_schedule.TeachingScheduleItem(
+      id: 902,
+      period: my_schedule.TeachingPeriod(
+        id: 42,
+        number: 2,
+        label: 'Jam 2',
+        start: '08:20',
+        end: '09:05',
+      ),
+      subject: my_schedule.TeachingSubject(
+        id: 12,
+        code: 'BIND7',
+        name: 'Bahasa Indonesia Lama',
+      ),
+      schoolClass: my_schedule.TeachingClass(id: 7, name: 'VII.A', grade: 7),
+      ongoing: false,
+    );
+    final active = selectedYearId == 5;
+    final days = [
+      _day(
+        'senin',
+        'Senin',
+        active ? const [activeSchedule] : const [],
+        today: true,
+      ),
+      _day('selasa', 'Selasa', active ? const [] : const [oldSchedule]),
+      _day('rabu', 'Rabu', const []),
+      _day('kamis', 'Kamis', const []),
+      _day('jumat', 'Jumat', const []),
+      _day('sabtu', 'Sabtu', const []),
+    ];
+
+    return my_schedule.MyTeachingSchedulePage(
+      academicYears: _years,
+      selectedAcademicYearId: selectedYearId,
+      employee: const my_schedule.TeachingEmployee(
+        id: 31,
+        name: 'Guru Mobile Uji',
+        nip: '198808242026081001',
+        position: 'Guru Mata Pelajaran',
+      ),
+      linkedEmployee: true,
+      todayCode: 'senin',
+      serverTime: DateTime(2026, 8, 24, 6, 45),
+      summary: const my_schedule.TeachingScheduleSummary(
+        teachingPeriods: 1,
+        classes: 1,
+        subjects: 1,
+        teachingDays: 1,
+        todaySchedules: 1,
+      ),
+      days: days,
+      warnings: const [],
+    );
+  }
+
+  my_schedule.TeachingScheduleDay _day(
+    String code,
+    String label,
+    List<my_schedule.TeachingScheduleItem> schedules, {
+    bool today = false,
+  }) => my_schedule.TeachingScheduleDay(
+    code: code,
+    label: label,
+    today: today,
+    count: schedules.length,
+    schedules: schedules,
+  );
 }
 
 final class _FakeClassPromotionRemoteDataSource
