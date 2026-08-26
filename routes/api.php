@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\SiswaController;
+use App\Http\Controllers\Api\V1\SkemaBobotNilaiController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
 use Illuminate\Support\Facades\Route;
 
@@ -169,6 +170,19 @@ Route::prefix('v1')
         Route::get('/jadwal-mengajar-saya', JadwalMengajarSayaController::class)
             ->middleware('izin:jadwal.pribadi')
             ->name('jadwal-mengajar-saya');
+
+        Route::get('/skema-bobot-nilai', [SkemaBobotNilaiController::class, 'index'])
+            ->middleware('izin:nilai.skema_kelola')
+            ->name('skema-bobot-nilai.index');
+        Route::post('/skema-bobot-nilai', [SkemaBobotNilaiController::class, 'store'])
+            ->middleware('izin:nilai.skema_kelola')
+            ->name('skema-bobot-nilai.store');
+        Route::patch('/skema-bobot-nilai/{skemaBobotNilai}', [SkemaBobotNilaiController::class, 'update'])
+            ->middleware('izin:nilai.skema_kelola')
+            ->name('skema-bobot-nilai.update');
+        Route::delete('/skema-bobot-nilai/{skemaBobotNilai}', [SkemaBobotNilaiController::class, 'destroy'])
+            ->middleware('izin:nilai.skema_kelola')
+            ->name('skema-bobot-nilai.destroy');
 
         Route::get('/siswa', [SiswaController::class, 'index'])
             ->middleware('izin:siswa.lihat,siswa.kelola')

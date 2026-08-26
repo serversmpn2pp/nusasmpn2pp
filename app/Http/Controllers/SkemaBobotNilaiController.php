@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\SkemaBobotNilai;
 use App\Models\TahunPelajaran;
-use App\Services\Nilai\PublikasiNilaiService;
+use App\Services\Nilai\SkemaBobotNilaiService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class SkemaBobotNilaiController extends Controller
 {
-    public function __construct(private PublikasiNilaiService $publikasiNilai) {}
+    public function __construct(private SkemaBobotNilaiService $service) {}
 
     public function index(Request $request)
     {
@@ -95,17 +94,9 @@ class SkemaBobotNilaiController extends Controller
 
     public function store(Request $request)
     {
-        $data = $this->rapikanData($request->validate($this->aturanValidasi()));
+        $data = $request->validate($this->aturanValidasi());
         $data['aktif'] = $request->boolean('aktif');
-        $this->pastikanTotalBobot100($data);
-        $this->pastikanScopeBelumAda($data);
-
-        $skemaBobotNilai = SkemaBobotNilai::create($data);
-        $this->publikasiNilai->tandaiDrafUntukSkema(
-            (int) $skemaBobotNilai->tahun_pelajaran_id,
-            $skemaBobotNilai->semester,
-            $skemaBobotNilai->tingkat,
-        );
+        $skemaBobotNilai = $this->service->tambah($data);
 
         return redirect()
             ->route('skema-bobot-nilai.show', $skemaBobotNilai)
@@ -130,27 +121,9 @@ class SkemaBobotNilaiController extends Controller
 
     public function update(Request $request, SkemaBobotNilai $skemaBobotNilai)
     {
-        $data = $this->rapikanData($request->validate($this->aturanValidasi()));
+        $data = $request->validate($this->aturanValidasi());
         $data['aktif'] = $request->boolean('aktif');
-        $this->pastikanTotalBobot100($data);
-        $this->pastikanScopeBelumAda($data, $skemaBobotNilai);
-
-        $cakupanLama = [
-            'tahun_pelajaran_id' => (int) $skemaBobotNilai->tahun_pelajaran_id,
-            'semester' => $skemaBobotNilai->semester,
-            'tingkat' => $skemaBobotNilai->tingkat,
-        ];
-        $skemaBobotNilai->update($data);
-        $this->publikasiNilai->tandaiDrafUntukSkema(
-            $cakupanLama['tahun_pelajaran_id'],
-            $cakupanLama['semester'],
-            $cakupanLama['tingkat'],
-        );
-        $this->publikasiNilai->tandaiDrafUntukSkema(
-            (int) $skemaBobotNilai->tahun_pelajaran_id,
-            $skemaBobotNilai->semester,
-            $skemaBobotNilai->tingkat,
-        );
+        $this->service->ubah($skemaBobotNilai, $data);
 
         return redirect()
             ->route('skema-bobot-nilai.show', $skemaBobotNilai)
@@ -159,12 +132,7 @@ class SkemaBobotNilaiController extends Controller
 
     public function destroy(SkemaBobotNilai $skemaBobotNilai)
     {
-        $skemaBobotNilai->update(['aktif' => false]);
-        $this->publikasiNilai->tandaiDrafUntukSkema(
-            (int) $skemaBobotNilai->tahun_pelajaran_id,
-            $skemaBobotNilai->semester,
-            $skemaBobotNilai->tingkat,
-        );
+        $this->service->nonaktifkan($skemaBobotNilai);
 
         return redirect()
             ->route('skema-bobot-nilai.index')
@@ -184,53 +152,6 @@ class SkemaBobotNilaiController extends Controller
             'aktif' => 'nullable|boolean',
             'keterangan' => 'nullable|string',
         ];
-    }
-
-    private function rapikanData(array $data): array
-    {
-        $data['tingkat'] = filled($data['tingkat'] ?? null) ? (int) $data['tingkat'] : null;
-        $data['bobot_formatif'] = (int) $data['bobot_formatif'];
-        $data['bobot_sumatif'] = (int) $data['bobot_sumatif'];
-        $data['bobot_sts'] = (int) $data['bobot_sts'];
-        $data['bobot_sas_saj'] = (int) $data['bobot_sas_saj'];
-
-        return $data;
-    }
-
-    private function pastikanTotalBobot100(array $data): void
-    {
-        $total = $data['bobot_formatif']
-            + $data['bobot_sumatif']
-            + $data['bobot_sts']
-            + $data['bobot_sas_saj'];
-
-        if ($total !== 100) {
-            throw ValidationException::withMessages([
-                'bobot_formatif' => 'Total bobot harus tepat 100%. Saat ini totalnya '.$total.'%.',
-            ]);
-        }
-    }
-
-    private function pastikanScopeBelumAda(array $data, ?SkemaBobotNilai $skemaBobotNilai = null): void
-    {
-        $sudahAda = SkemaBobotNilai::query()
-            ->where('tahun_pelajaran_id', $data['tahun_pelajaran_id'])
-            ->where('semester', $data['semester'])
-            ->when($data['tingkat'], function ($query, $tingkat) {
-                $query->where('tingkat', $tingkat);
-            }, function ($query) {
-                $query->whereNull('tingkat');
-            })
-            ->when($skemaBobotNilai, function ($query, $skemaBobotNilai) {
-                $query->whereKeyNot($skemaBobotNilai->id);
-            })
-            ->exists();
-
-        if ($sudahAda) {
-            throw ValidationException::withMessages([
-                'tingkat' => 'Skema untuk tahun pelajaran, semester, dan tingkat tersebut sudah ada.',
-            ]);
-        }
     }
 
     private function ambilTahunPelajaran()

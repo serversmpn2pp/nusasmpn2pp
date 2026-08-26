@@ -11,6 +11,7 @@ import 'package:nusa/features/employee/presentation/employee_detail_view.dart';
 import 'package:nusa/features/employee/presentation/employee_list_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_detail_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_list_view.dart';
+import 'package:nusa/features/grade_weight_scheme/presentation/grade_weight_scheme_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
 import 'package:nusa/features/login_activity/presentation/login_activity_list_view.dart';
@@ -55,6 +56,7 @@ abstract final class AppRoutes {
   static const subjects = '/mata-pelajaran';
   static const teachingAssignments = '/guru-mata-pelajaran';
   static const myTeachingSchedule = '/jadwal-mengajar-saya';
+  static const gradeWeightSchemes = '/skema-bobot-nilai';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -250,6 +252,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.myTeachingSchedule,
         name: 'my-teaching-schedule',
         builder: (context, state) => const MyTeachingScheduleView(),
+      ),
+      GoRoute(
+        path: AppRoutes.gradeWeightSchemes,
+        name: 'grade-weight-schemes',
+        builder: (context, state) => const GradeWeightSchemeView(),
       ),
       GoRoute(
         path: AppRoutes.roleAccess,

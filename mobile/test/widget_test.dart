@@ -19,6 +19,9 @@ import 'package:nusa/features/employee/domain/employee.dart' as employee;
 import 'package:nusa/features/employee_account/data/employee_account_remote_data_source.dart';
 import 'package:nusa/features/employee_account/domain/employee_account.dart'
     as employee_account;
+import 'package:nusa/features/grade_weight_scheme/data/grade_weight_scheme_remote_data_source.dart';
+import 'package:nusa/features/grade_weight_scheme/domain/grade_weight_scheme.dart'
+    as weight_scheme;
 import 'package:nusa/features/home/data/home_remote_data_source.dart';
 import 'package:nusa/features/home/domain/home_dashboard.dart';
 import 'package:nusa/features/lesson_period/data/lesson_period_remote_data_source.dart';
@@ -223,7 +226,7 @@ void main() {
 
     expect(find.text('Menu Administrasi'), findsOneWidget);
     expect(find.text('Data Sekolah'), findsOneWidget);
-    expect(find.text('13 menu sesuai hak akses akun Anda'), findsOneWidget);
+    expect(find.text('14 menu sesuai hak akses akun Anda'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('menu-group-data-sekolah')));
     await tester.pumpAndSettle();
@@ -1404,6 +1407,87 @@ void main() {
   );
 
   testWidgets(
+    'modul Skema Bobot Nilai mengelola bobot tepat 100 persen secara native',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+      await tester.enterText(
+        find.byKey(const Key('login-username')),
+        'mobile.uji',
+      );
+      await tester.enterText(
+        find.byKey(const Key('login-password')),
+        'RahasiaNusa123',
+      );
+      await tester.tap(find.byKey(const Key('login-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bottom-nav-2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('menu-group-akademik')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('menu-item-skema-bobot-nilai')),
+      );
+      await tester.tap(find.byKey(const Key('menu-item-skema-bobot-nilai')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Skema Bobot Nilai'), findsOneWidget);
+      expect(find.byKey(const Key('weight-scheme-501')), findsOneWidget);
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('weight-scheme-semester-filter'),
+        optionLabel: 'Semua',
+      );
+
+      await tester.tap(find.byKey(const Key('add-weight-scheme')));
+      await tester.pumpAndSettle();
+      expect(find.text('Tambah Skema Bobot'), findsOneWidget);
+      expect(find.text('100%'), findsWidgets);
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('weight-scheme-form-semester'),
+        optionLabel: 'Genap',
+      );
+      await _expectDropdownMatchesField(
+        tester,
+        fieldKey: const Key('weight-scheme-form-grade'),
+        optionLabel: 'IX',
+      );
+      await tester.ensureVisible(find.byKey(const Key('save-weight-scheme')));
+      await tester.tap(find.byKey(const Key('save-weight-scheme')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('weight-scheme-502')), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const Key('weight-scheme-menu-502')),
+      );
+      await tester.tap(find.byKey(const Key('weight-scheme-menu-502')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nonaktifkan').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Nonaktifkan skema?'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const Key('confirm-deactivate-weight-scheme')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('weight-scheme-502')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('weight-scheme-502')),
+          matching: find.text('Nonaktif'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'modul Role dan Hak Akses mengelola role dan izin secara native',
     (tester) async {
       tester.view.physicalSize = const Size(360, 800);
@@ -1590,6 +1674,9 @@ Widget _buildTestApp({
       myTeachingScheduleRemoteDataSourceProvider.overrideWithValue(
         _FakeMyTeachingScheduleRemoteDataSource(),
       ),
+      gradeWeightSchemeRemoteDataSourceProvider.overrideWithValue(
+        _FakeGradeWeightSchemeRemoteDataSource(),
+      ),
     ],
     child: const NusaApp(),
   );
@@ -1662,7 +1749,7 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
   Future<MenuCatalog> fetchCatalog() async {
     return MenuCatalog(
       generatedAt: DateTime(2026, 8, 24, 8, 15),
-      itemCount: 13,
+      itemCount: 14,
       groups: const [
         MenuGroup(
           code: 'data-sekolah',
@@ -1777,6 +1864,16 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
               icon: null,
               status: 'tersedia',
               route: '/kelas?mode=jadwal',
+            ),
+            MenuEntry(
+              code: 'skema-bobot-nilai',
+              label: 'Skema Bobot Nilai',
+              description: 'Atur komposisi bobot nilai rapor.',
+              initials: 'BN',
+              subgroup: 'Penilaian',
+              icon: null,
+              status: 'tersedia',
+              route: '/skema-bobot-nilai',
             ),
           ],
         ),
@@ -4090,6 +4187,151 @@ final class _FakeMyTeachingScheduleRemoteDataSource
     count: schedules.length,
     schedules: schedules,
   );
+}
+
+final class _FakeGradeWeightSchemeRemoteDataSource
+    implements GradeWeightSchemeRemoteDataSource {
+  static const _years = [
+    weight_scheme.SchemeAcademicYear(id: 5, name: '2026/2027', active: true),
+    weight_scheme.SchemeAcademicYear(id: 4, name: '2025/2026', active: false),
+  ];
+
+  final List<weight_scheme.GradeWeightScheme> _items = [
+    const weight_scheme.GradeWeightScheme(
+      id: 501,
+      academicYear: weight_scheme.SchemeAcademicYear(
+        id: 5,
+        name: '2026/2027',
+        active: true,
+      ),
+      semester: 'ganjil',
+      semesterLabel: 'Ganjil',
+      grade: 8,
+      gradeLabel: 'Kelas 8',
+      formativeWeight: 35,
+      summativeWeight: 25,
+      midtermWeight: 15,
+      finalWeight: 25,
+      finalLabel: 'SAS',
+      totalWeight: 100,
+      active: true,
+      notes: 'Skema utama kelas VIII',
+    ),
+  ];
+
+  @override
+  Future<weight_scheme.GradeWeightSchemePage> fetch({
+    required int? academicYearId,
+    required String semester,
+    required String grade,
+    required String status,
+    required int page,
+    int perPage = 15,
+  }) async {
+    final filtered = _items
+        .where((item) {
+          final matchesYear =
+              academicYearId == null || item.academicYear.id == academicYearId;
+          final matchesSemester =
+              semester == 'semua' || item.semester == semester;
+          final matchesGrade =
+              grade == 'semua' || item.grade == int.tryParse(grade);
+          final matchesStatus =
+              status == 'semua' ||
+              (status == 'aktif' && item.active) ||
+              (status == 'nonaktif' && !item.active);
+          return matchesYear &&
+              matchesSemester &&
+              matchesGrade &&
+              matchesStatus;
+        })
+        .toList(growable: false);
+
+    return weight_scheme.GradeWeightSchemePage(
+      items: filtered,
+      summary: weight_scheme.GradeWeightSchemeSummary(
+        total: _items.length,
+        active: _items.where((item) => item.active).length,
+        inactive: _items.where((item) => !item.active).length,
+      ),
+      academicYears: _years,
+      filter: weight_scheme.GradeWeightSchemeFilter(
+        academicYearId: academicYearId,
+        semester: semester,
+        grade: grade,
+        status: status,
+      ),
+      pagination: weight_scheme.SchemePagination(
+        page: page,
+        lastPage: 1,
+        perPage: perPage,
+        total: filtered.length,
+        hasNextPage: false,
+      ),
+      canManage: true,
+    );
+  }
+
+  @override
+  Future<void> create(weight_scheme.GradeWeightSchemeFormValue value) async {
+    _items.add(_itemFromValue(id: 502, value: value));
+  }
+
+  @override
+  Future<void> update({
+    required int id,
+    required weight_scheme.GradeWeightSchemeFormValue value,
+  }) async {
+    final index = _items.indexWhere((item) => item.id == id);
+    _items[index] = _itemFromValue(id: id, value: value);
+  }
+
+  @override
+  Future<void> deactivate(int id) async {
+    final index = _items.indexWhere((item) => item.id == id);
+    final item = _items[index];
+    _items[index] = weight_scheme.GradeWeightScheme(
+      id: item.id,
+      academicYear: item.academicYear,
+      semester: item.semester,
+      semesterLabel: item.semesterLabel,
+      grade: item.grade,
+      gradeLabel: item.gradeLabel,
+      formativeWeight: item.formativeWeight,
+      summativeWeight: item.summativeWeight,
+      midtermWeight: item.midtermWeight,
+      finalWeight: item.finalWeight,
+      finalLabel: item.finalLabel,
+      totalWeight: item.totalWeight,
+      active: false,
+      notes: item.notes,
+    );
+  }
+
+  weight_scheme.GradeWeightScheme _itemFromValue({
+    required int id,
+    required weight_scheme.GradeWeightSchemeFormValue value,
+  }) {
+    final year = _years.firstWhere((item) => item.id == value.academicYearId);
+    return weight_scheme.GradeWeightScheme(
+      id: id,
+      academicYear: year,
+      semester: value.semester,
+      semesterLabel: value.semester == 'ganjil' ? 'Ganjil' : 'Genap',
+      grade: value.grade,
+      gradeLabel: value.grade == null
+          ? 'Semua tingkat'
+          : 'Kelas ${value.grade}',
+      formativeWeight: value.formativeWeight,
+      summativeWeight: value.summativeWeight,
+      midtermWeight: value.midtermWeight,
+      finalWeight: value.finalWeight,
+      finalLabel: value.grade == 9 ? 'SAJ' : 'SAS',
+      totalWeight: value.total,
+      active: value.active,
+      notes: value.notes,
+    );
+  }
 }
 
 final class _FakeClassPromotionRemoteDataSource
