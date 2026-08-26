@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PengawasRuangUjianTerpusat extends Model
 {
@@ -41,5 +42,12 @@ class PengawasRuangUjianTerpusat extends Model
     public function ditugaskanOleh(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'ditugaskan_oleh_pengguna_id');
+    }
+
+    public function riwayatPergantian(): HasMany
+    {
+        return $this->hasMany(RiwayatPergantianPengawasUjian::class)
+            ->latest('diganti_pada')
+            ->latest('id');
     }
 }

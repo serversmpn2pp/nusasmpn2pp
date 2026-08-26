@@ -9,11 +9,14 @@ use App\Models\KegiatanUjianCbt;
 use App\Models\Pegawai;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\PesertaUjianCbt;
+use App\Models\RiwayatPergantianPengawasUjian;
 use App\Models\RuangKegiatanUjianCbt;
 use App\Models\RuangUjianCbt;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
+use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use App\Services\Cbt\SinkronkanPelaksanaanUjianTerpusat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -65,6 +68,8 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                     'kelas',
                     'pengawasRuangUjianTerpusat.pengawasUtama',
                     'pengawasRuangUjianTerpusat.pengawasPendamping',
+                    'pengawasRuangUjianTerpusat.riwayatPergantian' => fn ($query) => $query
+                        ->with(['pegawaiLama', 'pegawaiBaru', 'digantiOleh']),
                     'ujianCbt' => fn ($query) => $query->withCount([
                         'soalUjianCbt',
                         'pesertaUjianCbt',
@@ -205,6 +210,7 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         JadwalUjianCbt $jadwalUjianCbt,
         RuangKegiatanUjianCbt $ruangKegiatanUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        NotifikasiUjianTerpusatService $notifikasi,
     ) {
         abort_unless($kegiatanUjianCbt->dapatDiaksesOleh($request->user()), 403);
         abort_unless((int) $jadwalUjianCbt->kegiatan_ujian_cbt_id === (int) $kegiatanUjianCbt->id, 404);
@@ -234,6 +240,24 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             'pengawas_pendamping_pegawai_id' => $data['pengawas_pendamping_pegawai_id'] ?? null,
             'catatan' => filled($data['catatan'] ?? null) ? trim($data['catatan']) : null,
         ];
+        $penugasanLama = PengawasRuangUjianTerpusat::query()
+            ->where('jadwal_ujian_cbt_id', $jadwalUjianCbt->id)
+            ->where('ruang_kegiatan_ujian_cbt_id', $ruangKegiatanUjianCbt->id)
+            ->first();
+
+        foreach ([
+            'pengawas_utama_pegawai_id',
+            'pengawas_pendamping_pegawai_id',
+        ] as $kolom) {
+            $pegawaiLamaId = (int) ($penugasanLama?->{$kolom} ?? 0);
+            $pegawaiBaruId = (int) ($nilai[$kolom] ?? 0);
+
+            if ($pegawaiLamaId > 0 && $pegawaiBaruId !== $pegawaiLamaId) {
+                throw ValidationException::withMessages([
+                    $kolom => 'Pengawas yang sudah ditugaskan harus diubah melalui Ganti pengawas mendadak agar riwayatnya tercatat.',
+                ]);
+            }
+        }
 
         if (collect($nilai)->filter()->isEmpty()) {
             PengawasRuangUjianTerpusat::query()
@@ -255,7 +279,129 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
 
         $sinkronisasi->sinkronkanJadwal($jadwalUjianCbt->fresh(), $request->user());
 
+        foreach ([
+            'utama' => 'pengawas_utama_pegawai_id',
+            'pendamping' => 'pengawas_pendamping_pegawai_id',
+        ] as $peran => $kolom) {
+            $pegawaiBaruId = (int) ($nilai[$kolom] ?? 0);
+            $pegawaiLamaId = (int) ($penugasanLama?->{$kolom} ?? 0);
+
+            if ($pegawaiBaruId > 0 && $pegawaiBaruId !== $pegawaiLamaId) {
+                $notifikasi->kirimTugasPengawas(
+                    $jadwalUjianCbt,
+                    $ruangKegiatanUjianCbt,
+                    $pegawaiBaruId,
+                    $peran,
+                );
+            }
+        }
+
         return back()->with('berhasil', "Pengawas {$ruangKegiatanUjianCbt->nama} berhasil diperbarui.");
+    }
+
+    public function gantiPengawas(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        JadwalUjianCbt $jadwalUjianCbt,
+        RuangKegiatanUjianCbt $ruangKegiatanUjianCbt,
+        SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        NotifikasiUjianTerpusatService $notifikasi,
+    ) {
+        abort_unless($kegiatanUjianCbt->dapatDiaksesOleh($request->user()), 403);
+        abort_unless((int) $jadwalUjianCbt->kegiatan_ujian_cbt_id === (int) $kegiatanUjianCbt->id, 404);
+        abort_unless((int) $ruangKegiatanUjianCbt->kegiatan_ujian_cbt_id === (int) $kegiatanUjianCbt->id, 404);
+
+        $ruangDipakai = $kegiatanUjianCbt->kelompokPesertaKegiatanUjianCbt()
+            ->where('tingkat', $jadwalUjianCbt->tingkat)
+            ->whereHas('ruangKegiatanUjianCbt', fn ($query) => $query->whereKey($ruangKegiatanUjianCbt->id))
+            ->exists();
+        abort_unless($ruangDipakai, 404);
+
+        $data = $request->validate([
+            'peran_pengawas' => ['required', Rule::in(['utama', 'pendamping'])],
+            'pegawai_pengganti_id' => ['required', 'integer', Rule::exists('pegawai', 'id')->where('aktif', true)],
+            'alasan' => ['required', 'string', 'min:5', 'max:1000'],
+        ], [
+            'pegawai_pengganti_id.required' => 'Pilih pegawai yang menjadi pengawas pengganti.',
+            'alasan.required' => 'Alasan penggantian wajib ditulis agar riwayat tugas jelas.',
+            'alasan.min' => 'Alasan penggantian perlu ditulis sedikit lebih jelas.',
+        ]);
+
+        [$pengawasLama, $pengawasBaru] = DB::transaction(function () use (
+            $data,
+            $jadwalUjianCbt,
+            $ruangKegiatanUjianCbt,
+            $request,
+        ) {
+            $penugasan = PengawasRuangUjianTerpusat::query()
+                ->where('jadwal_ujian_cbt_id', $jadwalUjianCbt->id)
+                ->where('ruang_kegiatan_ujian_cbt_id', $ruangKegiatanUjianCbt->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $kolomDiganti = $data['peran_pengawas'] === 'utama'
+                ? 'pengawas_utama_pegawai_id'
+                : 'pengawas_pendamping_pegawai_id';
+            $kolomLain = $data['peran_pengawas'] === 'utama'
+                ? 'pengawas_pendamping_pegawai_id'
+                : 'pengawas_utama_pegawai_id';
+            $pegawaiLamaId = (int) ($penugasan->{$kolomDiganti} ?? 0);
+            $pegawaiBaruId = (int) $data['pegawai_pengganti_id'];
+
+            if ($pegawaiLamaId < 1) {
+                throw ValidationException::withMessages([
+                    'peran_pengawas' => 'Posisi tersebut belum memiliki pengawas. Gunakan form penugasan biasa untuk mengisinya.',
+                ]);
+            }
+
+            if ($pegawaiLamaId === $pegawaiBaruId) {
+                throw ValidationException::withMessages([
+                    'pegawai_pengganti_id' => 'Pengawas pengganti harus berbeda dari pengawas sebelumnya.',
+                ]);
+            }
+
+            if ((int) ($penugasan->{$kolomLain} ?? 0) === $pegawaiBaruId) {
+                throw ValidationException::withMessages([
+                    'pegawai_pengganti_id' => 'Pegawai ini sudah bertugas pada posisi pengawas lainnya di ruang yang sama.',
+                ]);
+            }
+
+            $pengawasLama = Pegawai::query()->findOrFail($pegawaiLamaId);
+            $pengawasBaru = Pegawai::query()->findOrFail($pegawaiBaruId);
+
+            RiwayatPergantianPengawasUjian::query()->create([
+                'pengawas_ruang_ujian_terpusat_id' => $penugasan->id,
+                'jadwal_ujian_cbt_id' => $jadwalUjianCbt->id,
+                'ruang_kegiatan_ujian_cbt_id' => $ruangKegiatanUjianCbt->id,
+                'peran_pengawas' => $data['peran_pengawas'],
+                'pegawai_lama_id' => $pengawasLama->id,
+                'pegawai_baru_id' => $pengawasBaru->id,
+                'alasan' => trim($data['alasan']),
+                'diganti_oleh_pengguna_id' => $request->user()?->id,
+                'diganti_pada' => now(),
+            ]);
+
+            $penugasan->update([
+                $kolomDiganti => $pengawasBaru->id,
+                'ditugaskan_oleh_pengguna_id' => $request->user()?->id,
+            ]);
+
+            return [$pengawasLama, $pengawasBaru];
+        });
+
+        $sinkronisasi->sinkronkanJadwal($jadwalUjianCbt->fresh(), $request->user());
+        $notifikasi->kirimPenggantianPengawas(
+            $jadwalUjianCbt,
+            $ruangKegiatanUjianCbt,
+            $pengawasLama,
+            $pengawasBaru,
+            $data['peran_pengawas'],
+            trim($data['alasan']),
+        );
+
+        return back()->with(
+            'berhasil',
+            "Pengawas {$ruangKegiatanUjianCbt->nama} berhasil diganti dari {$pengawasLama->nama_lengkap} menjadi {$pengawasBaru->nama_lengkap}.",
+        );
     }
 
     private function jumlahPerluKoreksiManual(int $ujianId): int

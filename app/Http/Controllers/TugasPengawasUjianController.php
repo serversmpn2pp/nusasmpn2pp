@@ -6,6 +6,7 @@ use App\Models\BuktiRuangUjianCbt;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Models\RuangUjianCbt;
+use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -168,8 +169,11 @@ class TugasPengawasUjianController extends Controller
         return back()->with('berhasil', 'Bukti berhasil dihapus.');
     }
 
-    public function kirim(Request $request, RuangUjianCbt $ruangUjianCbt)
-    {
+    public function kirim(
+        Request $request,
+        RuangUjianCbt $ruangUjianCbt,
+        NotifikasiUjianTerpusatService $notifikasi,
+    ) {
         $this->pastikanBolehMengunggah($request->user(), $ruangUjianCbt);
         $this->pastikanBuktiDapatDiubah($ruangUjianCbt);
 
@@ -193,12 +197,16 @@ class TugasPengawasUjianController extends Controller
             'bukti_diperiksa_pada' => null,
             'bukti_diperiksa_oleh_pengguna_id' => null,
         ]);
+        $notifikasi->kirimBuktiKepadaPanitia($ruangUjianCbt->fresh(), $request->user()?->id);
 
         return back()->with('berhasil', 'Bukti ruang berhasil dikirim dan menunggu pemeriksaan panitia.');
     }
 
-    public function periksa(Request $request, RuangUjianCbt $ruangUjianCbt)
-    {
+    public function periksa(
+        Request $request,
+        RuangUjianCbt $ruangUjianCbt,
+        NotifikasiUjianTerpusatService $notifikasi,
+    ) {
         abort_unless($this->bolehMemeriksa($request->user(), $ruangUjianCbt), 403);
         abort_unless($ruangUjianCbt->status_bukti === 'menunggu_pemeriksaan', 422, 'Bukti belum dikirim oleh pengawas.');
 
@@ -218,6 +226,14 @@ class TugasPengawasUjianController extends Controller
             'bukti_diperiksa_pada' => now(),
             'bukti_diperiksa_oleh_pengguna_id' => $request->user()?->id,
         ]);
+
+        if ($data['hasil'] === 'perlu_diulang') {
+            $notifikasi->kirimPermintaanFotoUlang(
+                $ruangUjianCbt->fresh(),
+                trim($data['catatan']),
+                $request->user()?->id,
+            );
+        }
 
         return back()->with(
             'berhasil',

@@ -35,6 +35,7 @@
         .supervisor-details { margin-top:16px; border-top:1px solid var(--line); padding-top:14px; }
         .supervisor-details > summary { cursor:pointer; color:var(--primary-dark); font-weight:800; }
         .supervisor-grid { display:grid; gap:10px; margin-top:12px; }
+        .supervisor-entry { display:grid; gap:8px; }
         .supervisor-row { display:grid; grid-template-columns:minmax(130px,.6fr) minmax(180px,1fr) minmax(180px,1fr) minmax(180px,.8fr) auto; gap:10px; align-items:end; padding:12px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
         .supervisor-room strong,.supervisor-room span { display:block; }
         .supervisor-room span { margin-top:3px; color:var(--muted); font-size:.74rem; }
@@ -45,10 +46,22 @@
         .proof-overview-stats { display:flex; flex-wrap:wrap; gap:8px; }
         .supervisor-row .actions { display:grid; gap:7px; align-self:stretch; align-content:end; }
         .supervisor-row .actions .button { text-align:center; }
+        .assigned-supervisor { min-height:44px; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+        .assigned-supervisor strong,.assigned-supervisor span { display:block; }
+        .assigned-supervisor span { margin-top:2px; color:var(--muted); font-size:.7rem; }
+        .supervisor-replacement { padding:11px 13px; border:1px solid #eab308; border-left:4px solid var(--accent); border-radius:7px; background:#fffbeb; }
+        .supervisor-replacement > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; color:#713f12; font-weight:850; }
+        .supervisor-replacement-copy { margin:8px 0 0; color:#854d0e; font-size:.78rem; }
+        .replacement-form { display:grid; grid-template-columns:minmax(170px,.65fr) minmax(210px,1fr) minmax(230px,1.2fr) auto; gap:10px; align-items:end; margin-top:12px; }
+        .replacement-history { display:grid; gap:7px; margin-top:13px; padding-top:12px; border-top:1px solid #fde68a; }
+        .replacement-history h4 { margin:0; color:#713f12; font-size:.8rem; }
+        .replacement-history-item { padding:9px 10px; border-radius:6px; background:rgba(255,255,255,.78); }
+        .replacement-history-item strong,.replacement-history-item span { display:block; }
+        .replacement-history-item span { margin-top:3px; color:#854d0e; font-size:.72rem; line-height:1.45; }
         .empty-execution { padding:28px; text-align:center; color:var(--muted); }
         .central-wizard-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; }
-        @media (max-width:1050px) { .execution-summary,.execution-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } .execution-card-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .supervisor-row { grid-template-columns:repeat(2,minmax(0,1fr)); } .supervisor-room,.supervisor-row .actions { grid-column:1 / -1; } }
-        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button { width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } }
+        @media (max-width:1050px) { .execution-summary,.execution-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } .execution-card-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .supervisor-row,.replacement-form { grid-template-columns:repeat(2,minmax(0,1fr)); } .supervisor-room,.supervisor-row .actions { grid-column:1 / -1; } .replacement-form .button { width:100%; } }
+        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row,.replacement-form { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button,.replacement-form .button { width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } }
         @media (max-width:480px) { .execution-summary,.execution-flow { grid-template-columns:1fr; } }
     </style>
 
@@ -180,25 +193,66 @@
                                         };
                                     @endphp
                                     @if ($bolehAturPengawas)
-                                        <form class="supervisor-row" method="POST" action="{{ route('ujian-terpusat.pengawas.update', [$kegiatan, $item, $ruang]) }}">
-                                            @csrf @method('PUT')
-                                            <div class="supervisor-room">
-                                                <strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span>
-                                                @if($ruangOperasional)<div class="supervisor-proof"><span class="badge {{ $kelasStatusBukti }}">{{ $ruangOperasional->labelStatusBukti() }}</span><span class="badge badge-muted">{{ $ruangOperasional->bukti_daftar_hadir_count }} hadir · {{ $ruangOperasional->bukti_berita_acara_count }} BA</span></div>@endif
-                                            </div>
-                                            <div class="field"><label for="utama_{{ $item->id }}_{{ $ruang->id }}">Pengawas utama</label><select id="utama_{{ $item->id }}_{{ $ruang->id }}" name="pengawas_utama_pegawai_id" class="input"><option value="">Belum ditentukan</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}" @selected((int)$penugasan?->pengawas_utama_pegawai_id === (int)$orang->id)>{{ $orang->nama_lengkap }}</option>@endforeach</select></div>
-                                            <div class="field"><label for="pendamping_{{ $item->id }}_{{ $ruang->id }}">Pendamping</label><select id="pendamping_{{ $item->id }}_{{ $ruang->id }}" name="pengawas_pendamping_pegawai_id" class="input"><option value="">Tidak ada</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}" @selected((int)$penugasan?->pengawas_pendamping_pegawai_id === (int)$orang->id)>{{ $orang->nama_lengkap }}</option>@endforeach</select></div>
-                                            <div class="field"><label for="catatan_{{ $item->id }}_{{ $ruang->id }}">Catatan</label><input id="catatan_{{ $item->id }}_{{ $ruang->id }}" name="catatan" class="input" value="{{ $penugasan?->catatan }}" placeholder="Opsional"></div>
-                                            <div class="actions">
-                                                <button class="button button-primary" type="submit">Simpan</button>
-                                                @if($bolehCetakDokumen && $paketSiap && $penugasan?->pengawas_utama_pegawai_id)
-                                                    <a href="{{ route('ujian-terpusat.dokumen-ruang.cetak', [$kegiatan, $item, $ruang]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak hadir & berita acara</a>
-                                                @elseif($bolehCetakDokumen && $paketSiap)
-                                                    <span class="help-text">Tentukan pengawas utama untuk mencetak.</span>
-                                                @endif
-                                                @if($ruangOperasional)<a href="{{ route('tugas-pengawas-ujian.show', ['ruangUjianCbt' => $ruangOperasional, 'kembali' => 'panitia']) }}" class="button button-muted">Periksa bukti</a>@endif
-                                            </div>
-                                        </form>
+                                        <div class="supervisor-entry">
+                                            <form class="supervisor-row" method="POST" action="{{ route('ujian-terpusat.pengawas.update', [$kegiatan, $item, $ruang]) }}">
+                                                @csrf @method('PUT')
+                                                <div class="supervisor-room">
+                                                    <strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span>
+                                                    @if($ruangOperasional)<div class="supervisor-proof"><span class="badge {{ $kelasStatusBukti }}">{{ $ruangOperasional->labelStatusBukti() }}</span><span class="badge badge-muted">{{ $ruangOperasional->bukti_daftar_hadir_count }} hadir · {{ $ruangOperasional->bukti_berita_acara_count }} BA</span></div>@endif
+                                                </div>
+                                                <div class="field">
+                                                    <label for="utama_{{ $item->id }}_{{ $ruang->id }}">Pengawas utama</label>
+                                                    @if($penugasan?->pengawas_utama_pegawai_id)
+                                                        <div class="assigned-supervisor"><strong>{{ $penugasan->pengawasUtama?->nama_lengkap }}</strong><span>Sudah ditugaskan</span></div>
+                                                        <input type="hidden" name="pengawas_utama_pegawai_id" value="{{ $penugasan->pengawas_utama_pegawai_id }}">
+                                                    @else
+                                                        <select id="utama_{{ $item->id }}_{{ $ruang->id }}" name="pengawas_utama_pegawai_id" class="input"><option value="">Belum ditentukan</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}">{{ $orang->nama_lengkap }}</option>@endforeach</select>
+                                                    @endif
+                                                </div>
+                                                <div class="field">
+                                                    <label for="pendamping_{{ $item->id }}_{{ $ruang->id }}">Pendamping</label>
+                                                    @if($penugasan?->pengawas_pendamping_pegawai_id)
+                                                        <div class="assigned-supervisor"><strong>{{ $penugasan->pengawasPendamping?->nama_lengkap }}</strong><span>Sudah ditugaskan</span></div>
+                                                        <input type="hidden" name="pengawas_pendamping_pegawai_id" value="{{ $penugasan->pengawas_pendamping_pegawai_id }}">
+                                                    @else
+                                                        <select id="pendamping_{{ $item->id }}_{{ $ruang->id }}" name="pengawas_pendamping_pegawai_id" class="input"><option value="">Tidak ada</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}">{{ $orang->nama_lengkap }}</option>@endforeach</select>
+                                                    @endif
+                                                </div>
+                                                <div class="field"><label for="catatan_{{ $item->id }}_{{ $ruang->id }}">Catatan tugas</label><input id="catatan_{{ $item->id }}_{{ $ruang->id }}" name="catatan" class="input" value="{{ $penugasan?->catatan }}" placeholder="Opsional"></div>
+                                                <div class="actions">
+                                                    <button class="button button-primary" type="submit">{{ $penugasan?->pengawas_utama_pegawai_id && $penugasan?->pengawas_pendamping_pegawai_id ? 'Simpan catatan' : 'Simpan penugasan' }}</button>
+                                                    @if($bolehCetakDokumen && $paketSiap && $penugasan?->pengawas_utama_pegawai_id)
+                                                        <a href="{{ route('ujian-terpusat.dokumen-ruang.cetak', [$kegiatan, $item, $ruang]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak hadir & berita acara</a>
+                                                    @elseif($bolehCetakDokumen && $paketSiap)
+                                                        <span class="help-text">Tentukan pengawas utama untuk mencetak.</span>
+                                                    @endif
+                                                    @if($ruangOperasional)<a href="{{ route('tugas-pengawas-ujian.show', ['ruangUjianCbt' => $ruangOperasional, 'kembali' => 'panitia']) }}" class="button button-muted">Periksa bukti</a>@endif
+                                                </div>
+                                            </form>
+
+                                            @if($penugasan?->pengawas_utama_pegawai_id || $penugasan?->pengawas_pendamping_pegawai_id)
+                                                <details class="supervisor-replacement">
+                                                    <summary><span>Ganti pengawas mendadak</span>@if($penugasan->riwayatPergantian->isNotEmpty())<span class="badge badge-warning">{{ $penugasan->riwayatPergantian->count() }} riwayat</span>@endif</summary>
+                                                    <p class="supervisor-replacement-copy">Gunakan hanya ketika pengawas berhalangan atau harus diganti. Tugas langsung berpindah dan kedua pengawas mendapat notifikasi.</p>
+                                                    <form class="replacement-form" method="POST" action="{{ route('ujian-terpusat.pengawas.ganti', [$kegiatan, $item, $ruang]) }}" onsubmit="return confirm('Ganti pengawas sekarang? Tugas akan langsung berpindah.')">
+                                                        @csrf @method('PATCH')
+                                                        <div class="field"><label for="peran_ganti_{{ $item->id }}_{{ $ruang->id }}">Posisi yang diganti</label><select id="peran_ganti_{{ $item->id }}_{{ $ruang->id }}" name="peran_pengawas" class="input" required>@if($penugasan?->pengawas_utama_pegawai_id)<option value="utama">Pengawas utama</option>@endif @if($penugasan?->pengawas_pendamping_pegawai_id)<option value="pendamping">Pengawas pendamping</option>@endif</select></div>
+                                                        <div class="field"><label for="pengganti_{{ $item->id }}_{{ $ruang->id }}">Pengawas pengganti</label><select id="pengganti_{{ $item->id }}_{{ $ruang->id }}" name="pegawai_pengganti_id" class="input" required><option value="">Pilih pegawai</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}">{{ $orang->nama_lengkap }}{{ $orang->nip ? ' · '.$orang->nip : '' }}</option>@endforeach</select></div>
+                                                        <div class="field"><label for="alasan_ganti_{{ $item->id }}_{{ $ruang->id }}">Alasan penggantian</label><input id="alasan_ganti_{{ $item->id }}_{{ $ruang->id }}" name="alasan" class="input" required maxlength="1000" placeholder="Contoh: sakit atau berhalangan mendadak"></div>
+                                                        <button class="button button-primary" type="submit">Ganti sekarang</button>
+                                                    </form>
+
+                                                    @if($penugasan->riwayatPergantian->isNotEmpty())
+                                                        <div class="replacement-history">
+                                                            <h4>Riwayat penggantian</h4>
+                                                            @foreach($penugasan->riwayatPergantian->take(5) as $riwayat)
+                                                                <div class="replacement-history-item"><strong>{{ $riwayat->labelPeran() }}: {{ $riwayat->pegawaiLama?->nama_lengkap }} → {{ $riwayat->pegawaiBaru?->nama_lengkap }}</strong><span>{{ $riwayat->diganti_pada?->locale('id')->translatedFormat('d F Y, H:i') }} oleh {{ $riwayat->digantiOleh?->nama ?: 'sistem' }} · {{ $riwayat->alasan }}</span></div>
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+                                                </details>
+                                            @endif
+                                        </div>
                                     @else
                                         <div class="supervisor-row">
                                             <div class="supervisor-room">

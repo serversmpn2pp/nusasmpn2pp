@@ -10,6 +10,7 @@ use App\Models\JenisUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
+use App\Models\PanitiaUjianCbt;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
@@ -186,6 +187,31 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'aktif' => true,
             'akun_sistem' => false,
         ]);
+        $pegawaiPanitia = Pegawai::create([
+            'nama_lengkap' => 'Panitia Pemeriksa Bukti',
+            'nip' => '198811112020121002',
+            'jenis_kelamin' => 'P',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $akunPanitia = Pengguna::create([
+            'pegawai_id' => $pegawaiPanitia->id,
+            'nama' => $pegawaiPanitia->nama_lengkap,
+            'username' => $pegawaiPanitia->nip,
+            'kata_sandi' => 'rahasia123',
+            'wajib_ganti_kata_sandi' => false,
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+        $akunPanitia->daftarPeran()->sync([Peran::query()->where('kode', 'panitia_ujian')->value('id')]);
+        PanitiaUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+            'pegawai_id' => $pegawaiPanitia->id,
+            'jabatan' => 'sekretaris',
+            'aktif' => true,
+            'ditugaskan_oleh_pengguna_id' => $data['admin']->id,
+        ]);
 
         $this->actingAs($data['admin'])
             ->put(route('ujian-terpusat.pengawas.update', [
@@ -208,6 +234,26 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
             'pengawas_utama_pegawai_id' => $pengawas->id,
         ]);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunPengawas->id,
+            'jenis' => 'penting',
+            'judul' => 'Tugas pengawas ujian baru',
+            'tautan' => route('tugas-pengawas-ujian.index', absolute: false),
+        ]);
+        $this->actingAs($data['admin'])
+            ->put(route('ujian-terpusat.pengawas.update', [
+                $data['kegiatan'],
+                $data['jadwal'],
+                $data['ruang'],
+            ]), [
+                'pengawas_utama_pegawai_id' => $pengawas->id,
+                'catatan' => 'Catatan tugas diperbarui',
+            ])
+            ->assertRedirect();
+        $this->assertSame(
+            1,
+            $akunPengawas->notifikasiPengguna()->where('judul', 'Tugas pengawas ujian baru')->count(),
+        );
         $ruangOperasional = $paket->ruangUjianCbt()->firstOrFail();
 
         $this->actingAs($akunPengawas)
@@ -245,6 +291,15 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->patch(route('tugas-pengawas-ujian.kirim', $ruangOperasional))
             ->assertRedirect();
         $this->assertSame('menunggu_pemeriksaan', $ruangOperasional->fresh()->status_bukti);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunPanitia->id,
+            'jenis' => 'penting',
+            'judul' => 'Bukti ruang menunggu pemeriksaan',
+            'tautan' => route('tugas-pengawas-ujian.show', [
+                'ruangUjianCbt' => $ruangOperasional,
+                'kembali' => 'panitia',
+            ], false),
+        ]);
         $this->actingAs($akunPengawas)
             ->post(route('tugas-pengawas-ujian.bukti.store', $ruangOperasional), [
                 'jenis' => BuktiRuangUjianCbt::JENIS_DAFTAR_HADIR,
@@ -260,6 +315,23 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('2 hadir · 1 BA')
             ->assertSeeText('Periksa bukti');
 
+        $this->actingAs($akunPanitia)
+            ->patch(route('tugas-pengawas-ujian.periksa', $ruangOperasional), [
+                'hasil' => 'perlu_diulang',
+                'catatan' => 'Foto daftar hadir halaman kedua kurang jelas.',
+            ])
+            ->assertRedirect();
+        $this->assertSame('perlu_diulang', $ruangOperasional->fresh()->status_bukti);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunPengawas->id,
+            'jenis' => 'peringatan',
+            'judul' => 'Bukti ujian perlu difoto ulang',
+            'tautan' => route('tugas-pengawas-ujian.show', $ruangOperasional, false),
+        ]);
+
+        $this->actingAs($akunPengawas)
+            ->patch(route('tugas-pengawas-ujian.kirim', $ruangOperasional))
+            ->assertRedirect();
         $this->actingAs($data['admin'])
             ->patch(route('tugas-pengawas-ujian.periksa', $ruangOperasional), [
                 'hasil' => 'valid',
@@ -279,6 +351,93 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('Guru Pengawas Ruang')
             ->assertSeeText('Ruang 1')
             ->assertSeeText('Kode Meja');
+
+        $pengawasPengganti = Pegawai::create([
+            'nama_lengkap' => 'Guru Pengawas Pengganti',
+            'nip' => '198811112020121003',
+            'jenis_kelamin' => 'L',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $akunPengganti = Pengguna::create([
+            'pegawai_id' => $pengawasPengganti->id,
+            'nama' => $pengawasPengganti->nama_lengkap,
+            'username' => $pengawasPengganti->nip,
+            'kata_sandi' => 'rahasia123',
+            'wajib_ganti_kata_sandi' => false,
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+
+        $this->actingAs($data['admin'])
+            ->put(route('ujian-terpusat.pengawas.update', [
+                $data['kegiatan'],
+                $data['jadwal'],
+                $data['ruang'],
+            ]), [
+                'pengawas_utama_pegawai_id' => $pengawasPengganti->id,
+            ])
+            ->assertSessionHasErrors('pengawas_utama_pegawai_id');
+        $this->assertDatabaseMissing('riwayat_pergantian_pengawas_ujian', [
+            'pegawai_baru_id' => $pengawasPengganti->id,
+        ]);
+
+        $this->actingAs($data['admin'])
+            ->patch(route('ujian-terpusat.pengawas.ganti', [
+                $data['kegiatan'],
+                $data['jadwal'],
+                $data['ruang'],
+            ]), [
+                'peran_pengawas' => 'utama',
+                'pegawai_pengganti_id' => $pengawasPengganti->id,
+                'alasan' => 'Pengawas utama sakit pada hari pelaksanaan ujian.',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('riwayat_pergantian_pengawas_ujian', [
+            'jadwal_ujian_cbt_id' => $data['jadwal']->id,
+            'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+            'peran_pengawas' => 'utama',
+            'pegawai_lama_id' => $pengawas->id,
+            'pegawai_baru_id' => $pengawasPengganti->id,
+            'alasan' => 'Pengawas utama sakit pada hari pelaksanaan ujian.',
+            'diganti_oleh_pengguna_id' => $data['admin']->id,
+        ]);
+        $this->assertDatabaseHas('pengawas_ruang_ujian_terpusat', [
+            'jadwal_ujian_cbt_id' => $data['jadwal']->id,
+            'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+            'pengawas_utama_pegawai_id' => $pengawasPengganti->id,
+        ]);
+        $this->assertDatabaseHas('ruang_ujian_cbt', [
+            'id' => $ruangOperasional->id,
+            'pengawas_utama_pegawai_id' => $pengawasPengganti->id,
+        ]);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunPengganti->id,
+            'jenis' => 'penting',
+            'judul' => 'Tugas sebagai pengawas pengganti',
+            'tautan' => route('tugas-pengawas-ujian.index', absolute: false),
+        ]);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunPengawas->id,
+            'jenis' => 'informasi',
+            'judul' => 'Tugas pengawas telah dialihkan',
+        ]);
+
+        $this->actingAs($akunPengawas)
+            ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
+            ->assertForbidden();
+        $this->actingAs($akunPengganti)
+            ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
+            ->assertOk()
+            ->assertSeeText('Guru Pengawas Pengganti');
+        $this->actingAs($data['admin'])
+            ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+            ->assertOk()
+            ->assertSeeText('Ganti pengawas mendadak')
+            ->assertSeeText('Pengawas utama sakit pada hari pelaksanaan ujian.')
+            ->assertSeeText('Guru Pengawas Ruang → Guru Pengawas Pengganti');
     }
 
     private function buatFondasi(): array

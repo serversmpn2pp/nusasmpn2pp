@@ -112,6 +112,22 @@ class NotifikasiPenggunaService
             ->get();
     }
 
+    public function penggunaUntukDaftarPegawai(iterable $pegawaiIds, ?int $kecualiPenggunaId = null): EloquentCollection
+    {
+        $pegawaiIds = collect($pegawaiIds)
+            ->filter(fn ($pegawaiId) => is_numeric($pegawaiId) && (int) $pegawaiId > 0)
+            ->map(fn ($pegawaiId) => (int) $pegawaiId)
+            ->unique()
+            ->values()
+            ->all();
+
+        return Pengguna::query()
+            ->whereIn('pegawai_id', $pegawaiIds)
+            ->where('aktif', true)
+            ->when($kecualiPenggunaId, fn ($query) => $query->where('id', '<>', $kecualiPenggunaId))
+            ->get();
+    }
+
     public function penggunaUntukSiswa(int $siswaId): EloquentCollection
     {
         return Pengguna::query()
