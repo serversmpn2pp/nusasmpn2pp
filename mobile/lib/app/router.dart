@@ -17,10 +17,12 @@ import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
 import 'package:nusa/features/grade_recap/presentation/grade_recap_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
+import 'package:nusa/features/learning_survey/presentation/learning_survey_view.dart';
 import 'package:nusa/features/login_activity/presentation/login_activity_list_view.dart';
 import 'package:nusa/features/login_activity/presentation/login_attempt_detail_view.dart';
 import 'package:nusa/features/menu/presentation/menu_group_view.dart';
 import 'package:nusa/features/my_teaching_schedule/presentation/my_teaching_schedule_view.dart';
+import 'package:nusa/features/my_grades/presentation/my_grades_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_detail_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_list_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_detail_view.dart';
@@ -31,8 +33,18 @@ import 'package:nusa/features/student/presentation/student_detail_view.dart';
 import 'package:nusa/features/student/presentation/student_list_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_detail_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_list_view.dart';
+import 'package:nusa/features/student_placement/presentation/student_placement_view.dart';
 import 'package:nusa/features/subject/presentation/subject_view.dart';
+import 'package:nusa/features/survey_statement/presentation/survey_statement_view.dart';
+import 'package:nusa/features/survey_monitoring/presentation/survey_monitoring_detail_view.dart';
+import 'package:nusa/features/survey_monitoring/presentation/survey_monitoring_view.dart';
 import 'package:nusa/features/teaching_assignment/presentation/teaching_assignment_view.dart';
+import 'package:nusa/features/teaching_document/presentation/teaching_document_detail_view.dart';
+import 'package:nusa/features/teaching_document/presentation/teaching_document_view.dart';
+import 'package:nusa/features/teaching_document_review/presentation/teaching_document_review_detail_view.dart';
+import 'package:nusa/features/teaching_document_review/presentation/teaching_document_review_view.dart';
+import 'package:nusa/features/teaching_document_review/presentation/teaching_document_teacher_detail_view.dart';
+import 'package:nusa/features/teaching_document_type/presentation/teaching_document_type_view.dart';
 
 abstract final class AppRoutes {
   static const startup = '/startup';
@@ -54,6 +66,7 @@ abstract final class AppRoutes {
   static const classes = '/kelas';
   static const academicYears = '/tahun-pelajaran';
   static const classPromotion = '/kenaikan-kelas';
+  static const studentPlacement = '/penempatan-siswa';
   static const classDetail = '/kelas/:id';
   static const lessonPeriods = '/jam-pelajaran';
   static const subjects = '/mata-pelajaran';
@@ -63,6 +76,13 @@ abstract final class AppRoutes {
   static const gradeComponents = '/komponen-nilai';
   static const gradeEntry = '/input-nilai';
   static const gradeRecap = '/rekap-nilai-rapor';
+  static const myGrades = '/nilai-saya';
+  static const learningSurvey = '/survei-pembelajaran/:assignmentId/:semester';
+  static const surveyStatements = '/pernyataan-survei';
+  static const surveyMonitoring = '/monitoring-survei';
+  static const teachingDocuments = '/perangkat-ajar-saya';
+  static const teachingDocumentReviews = '/pemeriksaan-perangkat-ajar';
+  static const teachingDocumentTypes = '/jenis-perangkat-ajar';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -240,6 +260,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ClassPromotionView(),
       ),
       GoRoute(
+        path: AppRoutes.studentPlacement,
+        name: 'student-placement',
+        builder: (context, state) => const StudentPlacementView(),
+      ),
+      GoRoute(
         path: AppRoutes.lessonPeriods,
         name: 'lesson-periods',
         builder: (context, state) => const LessonPeriodView(),
@@ -278,6 +303,85 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.gradeRecap,
         name: 'grade-recap',
         builder: (context, state) => const GradeRecapView(),
+      ),
+      GoRoute(
+        path: AppRoutes.myGrades,
+        name: 'my-grades',
+        builder: (context, state) => const MyGradesView(),
+      ),
+      GoRoute(
+        path: AppRoutes.learningSurvey,
+        name: 'learning-survey',
+        builder: (context, state) => LearningSurveyView(
+          assignmentId: int.parse(state.pathParameters['assignmentId']!),
+          semester: state.pathParameters['semester']!,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.surveyStatements,
+        name: 'survey-statements',
+        builder: (context, state) => const SurveyStatementView(),
+      ),
+      GoRoute(
+        path: AppRoutes.surveyMonitoring,
+        name: 'survey-monitoring',
+        builder: (context, state) => const SurveyMonitoringView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'survey-monitoring-detail',
+            builder: (context, state) => SurveyMonitoringDetailView(
+              assignmentId: int.parse(state.pathParameters['id']!),
+              semester: state.uri.queryParameters['semester'] ?? 'ganjil',
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.teachingDocuments,
+        name: 'teaching-documents',
+        builder: (context, state) => const TeachingDocumentView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'teaching-document-detail',
+            builder: (context, state) => TeachingDocumentDetailView(
+              documentId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.teachingDocumentReviews,
+        name: 'teaching-document-reviews',
+        builder: (context, state) => const TeachingDocumentReviewView(),
+        routes: [
+          GoRoute(
+            path: 'guru/:teacherId',
+            name: 'teaching-document-review-teacher',
+            builder: (context, state) => TeachingDocumentTeacherDetailView(
+              teacherId: int.parse(state.pathParameters['teacherId']!),
+              initialAcademicYearId: int.tryParse(
+                state.uri.queryParameters['tahun'] ?? '',
+              ),
+              initialSemester:
+                  int.tryParse(state.uri.queryParameters['semester'] ?? '') ??
+                  1,
+            ),
+          ),
+          GoRoute(
+            path: 'dokumen/:documentId',
+            name: 'teaching-document-review-detail',
+            builder: (context, state) => TeachingDocumentReviewDetailView(
+              documentId: int.parse(state.pathParameters['documentId']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.teachingDocumentTypes,
+        name: 'teaching-document-types',
+        builder: (context, state) => const TeachingDocumentTypeView(),
       ),
       GoRoute(
         path: AppRoutes.roleAccess,

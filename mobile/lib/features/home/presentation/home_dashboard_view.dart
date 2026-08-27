@@ -204,6 +204,7 @@ class HomeDashboardView extends StatelessWidget {
     final jadwalPelajaran = catalog.entryByCode('jadwal-pelajaran');
     final kehadiran = catalog.groupByCode('kehadiran');
     final akademik = catalog.groupByCode('akademik');
+    final nilaiSaya = catalog.entryByCode('nilai-saya');
 
     if (siswa?.isAvailable == true) {
       actions.add(
@@ -254,7 +255,9 @@ class HomeDashboardView extends StatelessWidget {
           label: 'Nilai',
           icon: Icons.workspace_premium_rounded,
           color: const Color(0xFFEFAF08),
-          onTap: () => onOpenMenuGroup(akademik!),
+          onTap: nilaiSaya?.isAvailable == true
+              ? () => onOpenMenuEntry(nilaiSaya!)
+              : () => onOpenMenuGroup(akademik!),
         ),
       );
     }

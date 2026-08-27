@@ -3,8 +3,10 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Izin;
+use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
+use App\Models\Siswa;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,6 +49,16 @@ class MenuApiTest extends TestCase
                 'rute' => '/kelas',
             ])
             ->assertJsonFragment([
+                'kode' => 'penempatan-siswa',
+                'status' => 'tersedia',
+                'rute' => '/penempatan-siswa',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'foto-identitas',
+                'status' => 'tersedia',
+                'rute' => '/foto-identitas',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'jadwal-pelajaran',
                 'status' => 'tersedia',
                 'rute' => '/kelas?mode=jadwal',
@@ -77,10 +89,32 @@ class MenuApiTest extends TestCase
                 'rute' => '/rekap-nilai-rapor',
             ])
             ->assertJsonFragment([
+                'kode' => 'pernyataan-survei',
+                'status' => 'tersedia',
+                'rute' => '/pernyataan-survei',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'monitoring-survei',
+                'status' => 'tersedia',
+                'rute' => '/monitoring-survei',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'pemeriksaan-perangkat-ajar',
+                'status' => 'tersedia',
+                'rute' => '/pemeriksaan-perangkat-ajar',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'jenis-perangkat-ajar',
+                'status' => 'tersedia',
+                'rute' => '/jenis-perangkat-ajar',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'role-hak-akses',
                 'status' => 'tersedia',
                 'rute' => '/role-hak-akses',
             ])
+            ->assertJsonMissing(['kode' => 'nilai-saya'])
+            ->assertJsonMissing(['kode' => 'perangkat-ajar-saya'])
             ->assertJsonMissingPath('data.kelompok.0.items.0.izin')
             ->assertJsonStructure([
                 'data' => [
@@ -160,6 +194,67 @@ class MenuApiTest extends TestCase
             ->getJson(route('api.v1.menu'))
             ->assertStatus(428)
             ->assertJsonPath('wajib_ganti_kata_sandi', true);
+    }
+
+    public function test_akun_siswa_menerima_menu_nilai_saya(): void
+    {
+        $siswa = Siswa::create([
+            'nama_lengkap' => 'Siswa Menu Nilai',
+            'nis' => '20269991',
+            'nisn' => '0099999991',
+            'jenis_kelamin' => 'L',
+            'aktif' => true,
+        ]);
+        $pengguna = Pengguna::create([
+            'siswa_id' => $siswa->id,
+            'nama' => $siswa->nama_lengkap,
+            'username' => $siswa->nisn,
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'siswa',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+
+        $this->withToken($this->token($pengguna))
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'kode' => 'nilai-saya',
+                'status' => 'tersedia',
+                'rute' => '/nilai-saya',
+            ]);
+    }
+
+    public function test_akun_guru_menerima_menu_perangkat_ajar_saya(): void
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Guru Perangkat Ajar',
+            'nip' => '198601012026081001',
+            'jenis_kelamin' => 'L',
+            'aktif' => true,
+        ]);
+        $pengguna = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $peran = Peran::where('kode', 'guru_mapel')->firstOrFail();
+        $pengguna->daftarPeran()->attach($peran);
+
+        $this->withToken($this->token($pengguna))
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'kode' => 'perangkat-ajar-saya',
+                'status' => 'tersedia',
+                'rute' => '/perangkat-ajar-saya',
+            ]);
     }
 
     private function token(Pengguna $pengguna): string

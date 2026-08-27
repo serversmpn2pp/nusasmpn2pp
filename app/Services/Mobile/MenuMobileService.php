@@ -49,6 +49,11 @@ class MenuMobileService
             return false;
         }
 
+        if (($item['siswa_only'] ?? false)
+            && ! ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'))) {
+            return false;
+        }
+
         $izin = $item['izin'] ?? null;
 
         return blank($izin) || $pengguna->memilikiIzin($izin);

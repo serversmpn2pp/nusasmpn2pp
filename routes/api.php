@@ -6,20 +6,29 @@ use App\Http\Controllers\Api\V1\AkunPegawaiController;
 use App\Http\Controllers\Api\V1\AkunSiswaController;
 use App\Http\Controllers\Api\V1\AutentikasiController;
 use App\Http\Controllers\Api\V1\BerandaController;
+use App\Http\Controllers\Api\V1\FotoIdentitasController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
+use App\Http\Controllers\Api\V1\InputNilaiController;
 use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
-use App\Http\Controllers\Api\V1\InputNilaiController;
+use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
+use App\Http\Controllers\Api\V1\MonitoringSurveiController;
+use App\Http\Controllers\Api\V1\NilaiSayaController;
 use App\Http\Controllers\Api\V1\PegawaiController;
+use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
+use App\Http\Controllers\Api\V1\PenempatanSiswaController;
 use App\Http\Controllers\Api\V1\PeranController;
+use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
+use App\Http\Controllers\Api\V1\PernyataanSurveiController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
 use App\Http\Controllers\Api\V1\SiswaController;
 use App\Http\Controllers\Api\V1\SkemaBobotNilaiController;
+use App\Http\Controllers\Api\V1\SurveiPembelajaranController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,6 +62,16 @@ Route::prefix('v1')
 
         Route::get('/menu', MenuController::class)
             ->name('menu');
+
+        Route::get('/foto-identitas', [FotoIdentitasController::class, 'index'])
+            ->middleware('izin:siswa.kelola,pegawai.kelola')
+            ->name('foto-identitas.index');
+        Route::post('/foto-identitas/siswa/{siswa}', [FotoIdentitasController::class, 'updateSiswa'])
+            ->middleware('izin:siswa.kelola')
+            ->name('foto-identitas.siswa.update');
+        Route::post('/foto-identitas/pegawai/{pegawai}', [FotoIdentitasController::class, 'updatePegawai'])
+            ->middleware('izin:pegawai.kelola')
+            ->name('foto-identitas.pegawai.update');
 
         Route::get('/pegawai', [PegawaiController::class, 'index'])
             ->middleware('izin:pegawai.lihat,pegawai.kelola')
@@ -170,6 +189,13 @@ Route::prefix('v1')
             ->middleware('izin:kenaikan_kelas.kelola')
             ->name('kenaikan-kelas.store');
 
+        Route::get('/penempatan-siswa', [PenempatanSiswaController::class, 'index'])
+            ->middleware('izin:kelas.lihat,kelas.kelola')
+            ->name('penempatan-siswa.index');
+        Route::post('/penempatan-siswa/masukkan', [PenempatanSiswaController::class, 'store'])
+            ->middleware('izin:kelas.kelola')
+            ->name('penempatan-siswa.store');
+
         Route::get('/jadwal-mengajar-saya', JadwalMengajarSayaController::class)
             ->middleware('izin:jadwal.pribadi')
             ->name('jadwal-mengajar-saya');
@@ -216,6 +242,75 @@ Route::prefix('v1')
         Route::get('/rekap-nilai-rapor', RekapNilaiRaporController::class)
             ->middleware('izin:nilai.rekap')
             ->name('rekap-nilai-rapor.index');
+
+        Route::get('/pernyataan-survei', [PernyataanSurveiController::class, 'index'])
+            ->middleware('izin:survei.pertanyaan_kelola')
+            ->name('pernyataan-survei.index');
+        Route::post('/pernyataan-survei', [PernyataanSurveiController::class, 'store'])
+            ->middleware('izin:survei.pertanyaan_kelola')
+            ->name('pernyataan-survei.store');
+        Route::patch('/pernyataan-survei/{pertanyaanSurveiPembelajaran}', [PernyataanSurveiController::class, 'update'])
+            ->middleware('izin:survei.pertanyaan_kelola')
+            ->name('pernyataan-survei.update');
+        Route::patch('/pernyataan-survei/{pertanyaanSurveiPembelajaran}/status', [PernyataanSurveiController::class, 'updateStatus'])
+            ->middleware('izin:survei.pertanyaan_kelola')
+            ->name('pernyataan-survei.status');
+
+        Route::get('/monitoring-survei', [MonitoringSurveiController::class, 'index'])
+            ->middleware('izin:survei.monitor')
+            ->name('monitoring-survei.index');
+        Route::get('/monitoring-survei/{guruMataPelajaran}', [MonitoringSurveiController::class, 'show'])
+            ->middleware('izin:survei.monitor')
+            ->name('monitoring-survei.show');
+
+        Route::get('/perangkat-ajar-saya', [PerangkatAjarSayaController::class, 'index'])
+            ->middleware('izin:perangkat_ajar.upload')
+            ->name('perangkat-ajar-saya.index');
+        Route::post('/perangkat-ajar-saya', [PerangkatAjarSayaController::class, 'store'])
+            ->middleware('izin:perangkat_ajar.upload')
+            ->name('perangkat-ajar-saya.store');
+        Route::get('/perangkat-ajar-saya/{perangkatAjar}', [PerangkatAjarSayaController::class, 'show'])
+            ->middleware('izin:perangkat_ajar.upload')
+            ->name('perangkat-ajar-saya.show');
+        Route::post('/perangkat-ajar-saya/{perangkatAjar}', [PerangkatAjarSayaController::class, 'update'])
+            ->middleware('izin:perangkat_ajar.upload')
+            ->name('perangkat-ajar-saya.update');
+
+        Route::get('/pemeriksaan-perangkat-ajar', [PemeriksaanPerangkatAjarController::class, 'index'])
+            ->middleware('izin:perangkat_ajar.lihat,perangkat_ajar.periksa')
+            ->name('pemeriksaan-perangkat-ajar.index');
+        Route::get('/pemeriksaan-perangkat-ajar/guru/{pegawai}', [PemeriksaanPerangkatAjarController::class, 'showTeacher'])
+            ->middleware('izin:perangkat_ajar.lihat,perangkat_ajar.periksa')
+            ->name('pemeriksaan-perangkat-ajar.guru');
+        Route::get('/pemeriksaan-perangkat-ajar/dokumen/{perangkatAjar}', [PemeriksaanPerangkatAjarController::class, 'showDocument'])
+            ->middleware('izin:perangkat_ajar.lihat,perangkat_ajar.periksa')
+            ->name('pemeriksaan-perangkat-ajar.dokumen');
+        Route::get('/pemeriksaan-perangkat-ajar/dokumen/{perangkatAjar}/file', [PemeriksaanPerangkatAjarController::class, 'file'])
+            ->middleware('izin:perangkat_ajar.lihat,perangkat_ajar.periksa')
+            ->name('pemeriksaan-perangkat-ajar.file');
+        Route::patch('/pemeriksaan-perangkat-ajar/dokumen/{perangkatAjar}', [PemeriksaanPerangkatAjarController::class, 'update'])
+            ->middleware('izin:perangkat_ajar.periksa')
+            ->name('pemeriksaan-perangkat-ajar.update');
+
+        Route::get('/jenis-perangkat-ajar', [JenisPerangkatAjarController::class, 'index'])
+            ->middleware('izin:perangkat_ajar.jenis_kelola')
+            ->name('jenis-perangkat-ajar.index');
+        Route::post('/jenis-perangkat-ajar', [JenisPerangkatAjarController::class, 'store'])
+            ->middleware('izin:perangkat_ajar.jenis_kelola')
+            ->name('jenis-perangkat-ajar.store');
+        Route::patch('/jenis-perangkat-ajar/{jenisPerangkatAjar}', [JenisPerangkatAjarController::class, 'update'])
+            ->middleware('izin:perangkat_ajar.jenis_kelola')
+            ->name('jenis-perangkat-ajar.update');
+        Route::delete('/jenis-perangkat-ajar/{jenisPerangkatAjar}', [JenisPerangkatAjarController::class, 'destroy'])
+            ->middleware('izin:perangkat_ajar.jenis_kelola')
+            ->name('jenis-perangkat-ajar.destroy');
+
+        Route::get('/nilai-saya', NilaiSayaController::class)
+            ->name('nilai-saya.index');
+        Route::get('/survei-pembelajaran/{guruMataPelajaran}/{semester}', [SurveiPembelajaranController::class, 'show'])
+            ->name('survei-pembelajaran.show');
+        Route::post('/survei-pembelajaran/{guruMataPelajaran}/{semester}', [SurveiPembelajaranController::class, 'store'])
+            ->name('survei-pembelajaran.store');
 
         Route::get('/siswa', [SiswaController::class, 'index'])
             ->middleware('izin:siswa.lihat,siswa.kelola')

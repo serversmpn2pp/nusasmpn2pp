@@ -46,6 +46,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'komponen-nilai' => Icons.fact_check_rounded,
     'input-nilai' => Icons.edit_note_rounded,
     'rekap-nilai-rapor' => Icons.assessment_rounded,
+    'nilai-saya' => Icons.workspace_premium_rounded,
     'pernyataan-survei' => Icons.ballot_rounded,
     'hasil-survei-saya' => Icons.poll_rounded,
     'monitoring-survei' => Icons.analytics_rounded,
