@@ -172,9 +172,15 @@
 
             .time-panel {
                 display: grid;
+                container-type: inline-size;
                 align-content: space-between;
                 gap: 22px;
+                overflow: hidden;
                 padding: clamp(18px, 3vw, 30px);
+            }
+
+            .time-panel > * {
+                min-width: 0;
             }
 
             .time-label {
@@ -185,9 +191,14 @@
             }
 
             .clock {
+                width: 100%;
+                max-width: 100%;
                 margin: 4px 0 0;
                 color: #fff;
-                font-size: clamp(3.2rem, 10vw, 8.2rem);
+                font-feature-settings: "tnum" 1;
+                font-size: clamp(3rem, 6.8vw, 7.4rem);
+                font-size: clamp(3rem, 18cqi, 7.4rem);
+                font-variant-numeric: tabular-nums;
                 font-weight: 950;
                 letter-spacing: 0;
                 line-height: .94;
@@ -204,11 +215,15 @@
 
             .schedule-grid {
                 display: grid;
+                width: 100%;
+                min-width: 0;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 12px;
             }
 
             .schedule-item {
+                min-width: 0;
+                overflow: hidden;
                 border: 1px solid rgba(255, 255, 255, .22);
                 border-radius: 8px;
                 background: rgba(255, 255, 255, .12);
@@ -225,15 +240,20 @@
                 color: var(--accent);
                 font-size: .88rem;
                 font-weight: 950;
+                overflow-wrap: anywhere;
                 text-transform: uppercase;
             }
 
             .schedule-time {
                 margin: 0;
                 color: #fff;
-                font-size: clamp(1.65rem, 3.3vw, 2.25rem);
+                font-feature-settings: "tnum" 1;
+                font-size: clamp(1.65rem, 3vw, 2.25rem);
+                font-size: clamp(1.65rem, 9cqi, 2.25rem);
+                font-variant-numeric: tabular-nums;
                 font-weight: 950;
                 line-height: 1.1;
+                white-space: nowrap;
             }
 
             .schedule-note {
@@ -241,6 +261,7 @@
                 color: var(--muted);
                 font-size: .9rem;
                 font-weight: 750;
+                overflow-wrap: anywhere;
             }
 
             .schedule-note strong {
@@ -532,7 +553,8 @@
                 }
 
                 .clock {
-                    font-size: clamp(3rem, 16vw, 5.2rem);
+                    font-size: clamp(3rem, 13vw, 5.2rem);
+                    font-size: clamp(3rem, 18cqi, 5.2rem);
                 }
 
                 .history-item {
