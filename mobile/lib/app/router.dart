@@ -35,6 +35,7 @@ import 'package:nusa/features/student/presentation/student_detail_view.dart';
 import 'package:nusa/features/student/presentation/student_list_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_detail_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_list_view.dart';
+import 'package:nusa/features/student_card/presentation/student_card_view.dart';
 import 'package:nusa/features/student_placement/presentation/student_placement_view.dart';
 import 'package:nusa/features/subject/presentation/subject_view.dart';
 import 'package:nusa/features/survey_statement/presentation/survey_statement_view.dart';
@@ -71,6 +72,7 @@ abstract final class AppRoutes {
   static const studentPlacement = '/penempatan-siswa';
   static const identityPhotos = '/foto-identitas';
   static const employeeCards = '/kartu-pegawai';
+  static const studentCards = '/kartu-pelajar';
   static const classDetail = '/kelas/:id';
   static const lessonPeriods = '/jam-pelajaran';
   static const subjects = '/mata-pelajaran';
@@ -277,6 +279,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.employeeCards,
         name: 'employee-cards',
         builder: (context, state) => const EmployeeCardView(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentCards,
+        name: 'student-cards',
+        builder: (context, state) => const StudentCardView(),
       ),
       GoRoute(
         path: AppRoutes.lessonPeriods,

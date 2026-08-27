@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
 use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
 use App\Http\Controllers\Api\V1\KartuPegawaiController;
+use App\Http\Controllers\Api\V1\KartuPelajarController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
@@ -77,6 +78,10 @@ Route::prefix('v1')
         Route::get('/kartu-pegawai', KartuPegawaiController::class)
             ->middleware('izin:pegawai.lihat,pegawai.kelola')
             ->name('kartu-pegawai.index');
+
+        Route::get('/kartu-pelajar', KartuPelajarController::class)
+            ->middleware('izin:kartu_pelajar.lihat,kartu_pelajar.cetak')
+            ->name('kartu-pelajar.index');
 
         Route::get('/pegawai', [PegawaiController::class, 'index'])
             ->middleware('izin:pegawai.lihat,pegawai.kelola')

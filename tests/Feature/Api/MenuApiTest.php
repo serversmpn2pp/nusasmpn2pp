@@ -64,6 +64,11 @@ class MenuApiTest extends TestCase
                 'rute' => '/kartu-pegawai',
             ])
             ->assertJsonFragment([
+                'kode' => 'kartu-pelajar',
+                'status' => 'tersedia',
+                'rute' => '/kartu-pelajar',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'jadwal-pelajaran',
                 'status' => 'tersedia',
                 'rute' => '/kelas?mode=jadwal',
