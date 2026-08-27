@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\InputNilaiController;
 use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
 use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
+use App\Http\Controllers\Api\V1\KartuPegawaiController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
@@ -72,6 +73,10 @@ Route::prefix('v1')
         Route::post('/foto-identitas/pegawai/{pegawai}', [FotoIdentitasController::class, 'updatePegawai'])
             ->middleware('izin:pegawai.kelola')
             ->name('foto-identitas.pegawai.update');
+
+        Route::get('/kartu-pegawai', KartuPegawaiController::class)
+            ->middleware('izin:pegawai.lihat,pegawai.kelola')
+            ->name('kartu-pegawai.index');
 
         Route::get('/pegawai', [PegawaiController::class, 'index'])
             ->middleware('izin:pegawai.lihat,pegawai.kelola')

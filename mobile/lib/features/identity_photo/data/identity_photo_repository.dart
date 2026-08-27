@@ -35,7 +35,6 @@ final class IdentityPhotoRepository {
 }
 
 final identityPhotoRepositoryProvider = Provider<IdentityPhotoRepository>(
-  (ref) => IdentityPhotoRepository(
-    ref.watch(identityPhotoRemoteDataSourceProvider),
-  ),
+  (ref) =>
+      IdentityPhotoRepository(ref.watch(identityPhotoRemoteDataSourceProvider)),
 );

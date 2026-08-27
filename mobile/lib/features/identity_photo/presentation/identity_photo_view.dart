@@ -51,10 +51,8 @@ class _IdentityPhotoViewState extends ConsumerState<IdentityPhotoView> {
         top: false,
         child: photos.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stackTrace) => _PhotoError(
-            message: _errorMessage(error),
-            onRetry: _refresh,
-          ),
+          error: (error, stackTrace) =>
+              _PhotoError(message: _errorMessage(error), onRetry: _refresh),
           data: (page) => RefreshIndicator(
             onRefresh: _refresh,
             child: CustomScrollView(
@@ -188,10 +186,8 @@ class _IdentityPhotoViewState extends ConsumerState<IdentityPhotoView> {
             value: page.classId,
             options: page.classes
                 .map(
-                  (item) => NusaDropdownOption(
-                    value: item.id,
-                    label: item.name,
-                  ),
+                  (item) =>
+                      NusaDropdownOption(value: item.id, label: item.name),
                 )
                 .toList(growable: false),
             decoration: const InputDecoration(
@@ -209,10 +205,7 @@ class _IdentityPhotoViewState extends ConsumerState<IdentityPhotoView> {
                   fieldKey: const Key('identity-photo-employee-type'),
                   value: page.employeeType,
                   options: [
-                    const NusaDropdownOption(
-                      value: '',
-                      label: 'Semua jenis',
-                    ),
+                    const NusaDropdownOption(value: '', label: 'Semua jenis'),
                     ...page.employeeTypes.map(
                       (item) => NusaDropdownOption(value: item, label: item),
                     ),
@@ -343,10 +336,7 @@ class _IdentityPhotoViewState extends ConsumerState<IdentityPhotoView> {
     ref.read(identityPhotoControllerProvider.notifier).search('');
   }
 
-  Future<void> _pickAndUpload(
-    String tab,
-    IdentityPhotoPerson person,
-  ) async {
+  Future<void> _pickAndUpload(String tab, IdentityPhotoPerson person) async {
     final source = await showModalBottomSheet<IdentityPhotoSource>(
       context: context,
       useSafeArea: true,
@@ -418,6 +408,9 @@ class _IdentityPhotoViewState extends ConsumerState<IdentityPhotoView> {
               ),
               FilledButton.icon(
                 key: const Key('confirm-identity-photo-upload'),
+                style: const ButtonStyle(
+                  minimumSize: WidgetStatePropertyAll(Size(0, 44)),
+                ),
                 onPressed: () => Navigator.pop(context, true),
                 icon: const Icon(Icons.cloud_upload_outlined),
                 label: const Text('Unggah Foto'),
@@ -563,39 +556,81 @@ class _IdentityPhotoCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _PhotoStatus(hasPhoto: person.hasPhoto),
-                    const Spacer(),
-                    FilledButton.tonalIcon(
-                      key: Key('upload-identity-photo-$tab-${person.id}'),
-                      onPressed: enabled ? onUpload : null,
-                      icon: uploading
-                          ? const SizedBox.square(
-                              dimension: 15,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              person.hasPhoto
-                                  ? Icons.cameraswitch_outlined
-                                  : Icons.add_a_photo_outlined,
-                              size: 17,
-                            ),
-                      label: Text(
-                        uploading
-                            ? 'Mengunggah'
-                            : person.hasPhoto
-                            ? 'Ganti'
-                            : 'Unggah',
-                      ),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final status = _PhotoStatus(hasPhoto: person.hasPhoto);
+                    final button = _PhotoUploadButton(
+                      person: person,
+                      tab: tab,
+                      uploading: uploading,
+                      enabled: enabled,
+                      onUpload: onUpload,
+                    );
+                    if (constraints.maxWidth < 225) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          status,
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: button,
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(children: [status, const Spacer(), button]);
+                  },
                 ),
               ],
             ),
           ),
         ],
       ),
+    ),
+  );
+}
+
+class _PhotoUploadButton extends StatelessWidget {
+  const _PhotoUploadButton({
+    required this.person,
+    required this.tab,
+    required this.uploading,
+    required this.enabled,
+    required this.onUpload,
+  });
+
+  final IdentityPhotoPerson person;
+  final String tab;
+  final bool uploading;
+  final bool enabled;
+  final VoidCallback onUpload;
+
+  @override
+  Widget build(BuildContext context) => FilledButton.tonalIcon(
+    key: Key('upload-identity-photo-$tab-${person.id}'),
+    style: const ButtonStyle(
+      minimumSize: WidgetStatePropertyAll(Size(0, 40)),
+      padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
+    ),
+    onPressed: enabled ? onUpload : null,
+    icon: uploading
+        ? const SizedBox.square(
+            dimension: 15,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Icon(
+            person.hasPhoto
+                ? Icons.cameraswitch_outlined
+                : Icons.add_a_photo_outlined,
+            size: 17,
+          ),
+    label: Text(
+      uploading
+          ? 'Mengunggah'
+          : person.hasPhoto
+          ? 'Ganti'
+          : 'Unggah',
     ),
   );
 }
@@ -721,7 +756,10 @@ class _PhotoSourceSheet extends StatelessWidget {
           key: const Key('identity-photo-source-gallery'),
           leading: const CircleAvatar(
             backgroundColor: NusaColors.surfaceBlue,
-            child: Icon(Icons.photo_library_outlined, color: NusaColors.primary),
+            child: Icon(
+              Icons.photo_library_outlined,
+              color: NusaColors.primary,
+            ),
           ),
           title: const Text('Pilih dari galeri'),
           subtitle: const Text('Pilih foto yang sudah tersimpan'),
@@ -747,7 +785,11 @@ class _EmptyPhotos extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.no_photography_outlined, size: 50, color: NusaColors.primary),
+          Icon(
+            Icons.no_photography_outlined,
+            size: 50,
+            color: NusaColors.primary,
+          ),
           SizedBox(height: 12),
           Text(
             'Tidak ada data yang cocok dengan filter foto ini.',
@@ -773,11 +815,18 @@ class _PhotoError extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off_rounded, size: 48, color: NusaColors.primary),
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 48,
+            color: NusaColors.primary,
+          ),
           const SizedBox(height: 12),
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 14),
           FilledButton.tonalIcon(
+            style: const ButtonStyle(
+              minimumSize: WidgetStatePropertyAll(Size(0, 44)),
+            ),
             onPressed: onRetry,
             icon: const Icon(Icons.refresh_rounded),
             label: const Text('Coba lagi'),

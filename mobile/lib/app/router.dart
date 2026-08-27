@@ -9,6 +9,7 @@ import 'package:nusa/features/academic_year/presentation/academic_year_view.dart
 import 'package:nusa/features/class_promotion/presentation/class_promotion_view.dart';
 import 'package:nusa/features/employee/presentation/employee_detail_view.dart';
 import 'package:nusa/features/employee/presentation/employee_list_view.dart';
+import 'package:nusa/features/employee_card/presentation/employee_card_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_detail_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_list_view.dart';
 import 'package:nusa/features/grade_weight_scheme/presentation/grade_weight_scheme_view.dart';
@@ -16,6 +17,7 @@ import 'package:nusa/features/grade_component/presentation/grade_component_view.
 import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
 import 'package:nusa/features/grade_recap/presentation/grade_recap_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
+import 'package:nusa/features/identity_photo/presentation/identity_photo_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
 import 'package:nusa/features/learning_survey/presentation/learning_survey_view.dart';
 import 'package:nusa/features/login_activity/presentation/login_activity_list_view.dart';
@@ -67,6 +69,8 @@ abstract final class AppRoutes {
   static const academicYears = '/tahun-pelajaran';
   static const classPromotion = '/kenaikan-kelas';
   static const studentPlacement = '/penempatan-siswa';
+  static const identityPhotos = '/foto-identitas';
+  static const employeeCards = '/kartu-pegawai';
   static const classDetail = '/kelas/:id';
   static const lessonPeriods = '/jam-pelajaran';
   static const subjects = '/mata-pelajaran';
@@ -263,6 +267,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.studentPlacement,
         name: 'student-placement',
         builder: (context, state) => const StudentPlacementView(),
+      ),
+      GoRoute(
+        path: AppRoutes.identityPhotos,
+        name: 'identity-photos',
+        builder: (context, state) => const IdentityPhotoView(),
+      ),
+      GoRoute(
+        path: AppRoutes.employeeCards,
+        name: 'employee-cards',
+        builder: (context, state) => const EmployeeCardView(),
       ),
       GoRoute(
         path: AppRoutes.lessonPeriods,

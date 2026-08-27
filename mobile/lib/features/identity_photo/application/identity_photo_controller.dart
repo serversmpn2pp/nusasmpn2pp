@@ -109,9 +109,10 @@ class IdentityPhotoController extends AsyncNotifier<IdentityPhotoPage> {
 }
 
 final identityPhotoControllerProvider =
-    AsyncNotifierProvider.autoDispose<IdentityPhotoController, IdentityPhotoPage>(
-      IdentityPhotoController.new,
-    );
+    AsyncNotifierProvider.autoDispose<
+      IdentityPhotoController,
+      IdentityPhotoPage
+    >(IdentityPhotoController.new);
 
 final identityPhotoActionsProvider = Provider<IdentityPhotoActions>(
   IdentityPhotoActions.new,

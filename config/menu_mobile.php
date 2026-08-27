@@ -14,7 +14,7 @@ return [
             ['kode' => 'penempatan-siswa', 'label' => 'Penempatan Siswa', 'inisial' => 'PS', 'subkelompok' => 'Siswa dan Kelas', 'izin' => ['kelas.lihat', 'kelas.kelola'], 'status' => 'tersedia', 'rute' => '/penempatan-siswa'],
             ['kode' => 'kenaikan-kelas', 'label' => 'Kenaikan Kelas', 'inisial' => 'KK', 'subkelompok' => 'Siswa dan Kelas', 'izin' => 'kenaikan_kelas.kelola', 'status' => 'tersedia', 'rute' => '/kenaikan-kelas'],
             ['kode' => 'foto-identitas', 'label' => 'Foto Identitas', 'inisial' => 'FI', 'subkelompok' => 'Identitas dan Kartu', 'izin' => ['siswa.kelola', 'pegawai.kelola'], 'status' => 'tersedia', 'rute' => '/foto-identitas'],
-            ['kode' => 'kartu-pegawai', 'label' => 'Kartu Pegawai', 'inisial' => 'KG', 'subkelompok' => 'Identitas dan Kartu', 'izin' => 'pegawai.lihat'],
+            ['kode' => 'kartu-pegawai', 'label' => 'Kartu Pegawai', 'inisial' => 'KG', 'subkelompok' => 'Identitas dan Kartu', 'izin' => ['pegawai.lihat', 'pegawai.kelola'], 'status' => 'tersedia', 'rute' => '/kartu-pegawai'],
             ['kode' => 'kartu-pelajar', 'label' => 'Kartu Pelajar', 'inisial' => 'KP', 'subkelompok' => 'Identitas dan Kartu', 'izin' => ['kartu_pelajar.lihat', 'kartu_pelajar.cetak']],
         ],
     ],
