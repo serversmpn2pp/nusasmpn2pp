@@ -57,7 +57,8 @@ return [
         'deskripsi' => 'Piket, kegiatan ibadah, serta presensi siswa dan pegawai.',
         'ikon' => 'attendance',
         'items' => [
-            ['kode' => 'jadwal-guru-piket', 'label' => 'Jadwal Guru Piket', 'inisial' => 'GP', 'subkelompok' => 'Guru Piket', 'izin' => 'piket_guru.kelola'],
+            ['kode' => 'jadwal-guru-piket', 'label' => 'Jadwal Guru Piket', 'inisial' => 'GP', 'subkelompok' => 'Guru Piket', 'izin' => 'piket_guru.kelola', 'status' => 'tersedia', 'rute' => '/jadwal-guru-piket'],
+            ['kode' => 'piket-saya', 'label' => 'Piket Saya & Kehadiran', 'inisial' => 'PS', 'subkelompok' => 'Guru Piket', 'izin' => ['piket_guru.lihat_pribadi', 'piket_guru.catat_kehadiran'], 'pegawai_only' => true, 'status' => 'tersedia', 'rute' => '/piket-saya'],
             ['kode' => 'kegiatan-ibadah', 'label' => 'Kegiatan Ibadah', 'inisial' => 'KI', 'subkelompok' => 'Ibadah Siswa', 'izin' => 'ibadah.pengaturan_kelola'],
             ['kode' => 'jadwal-ibadah', 'label' => 'Jadwal Ibadah', 'inisial' => 'JI', 'subkelompok' => 'Ibadah Siswa', 'izin' => 'ibadah.pengaturan_kelola'],
             ['kode' => 'pengaturan-berhalangan', 'label' => 'Pengaturan Berhalangan', 'inisial' => 'PB', 'subkelompok' => 'Ibadah Siswa', 'izin' => 'ibadah.pengaturan_kelola'],

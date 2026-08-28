@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\FotoIdentitasController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
 use App\Http\Controllers\Api\V1\InputNilaiController;
+use App\Http\Controllers\Api\V1\JadwalGuruPiketController;
 use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
 use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
@@ -24,10 +25,11 @@ use App\Http\Controllers\Api\V1\NilaiSayaController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\Api\V1\PenempatanSiswaController;
+use App\Http\Controllers\Api\V1\PengaturanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
 use App\Http\Controllers\Api\V1\PernyataanSurveiController;
-use App\Http\Controllers\Api\V1\PengaturanPresensiSiswaController;
+use App\Http\Controllers\Api\V1\PiketSayaController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
 use App\Http\Controllers\Api\V1\SiswaController;
 use App\Http\Controllers\Api\V1\SkemaBobotNilaiController;
@@ -66,6 +68,29 @@ Route::prefix('v1')
 
         Route::get('/menu', MenuController::class)
             ->name('menu');
+
+        Route::get('/jadwal-guru-piket', [JadwalGuruPiketController::class, 'index'])
+            ->middleware('izin:piket_guru.kelola')
+            ->name('jadwal-guru-piket.index');
+        Route::get('/jadwal-guru-piket/referensi', [JadwalGuruPiketController::class, 'referensi'])
+            ->middleware('izin:piket_guru.kelola')
+            ->name('jadwal-guru-piket.referensi');
+        Route::post('/jadwal-guru-piket', [JadwalGuruPiketController::class, 'store'])
+            ->middleware('izin:piket_guru.kelola')
+            ->name('jadwal-guru-piket.store');
+        Route::patch('/jadwal-guru-piket/{jadwalPiketGuru}', [JadwalGuruPiketController::class, 'update'])
+            ->middleware('izin:piket_guru.kelola')
+            ->name('jadwal-guru-piket.update');
+        Route::delete('/jadwal-guru-piket/{jadwalPiketGuru}', [JadwalGuruPiketController::class, 'destroy'])
+            ->middleware('izin:piket_guru.kelola')
+            ->name('jadwal-guru-piket.destroy');
+
+        Route::get('/piket-saya', [PiketSayaController::class, 'index'])
+            ->middleware('izin:piket_guru.lihat_pribadi,piket_guru.catat_kehadiran')
+            ->name('piket-saya.index');
+        Route::patch('/piket-saya/kehadiran/{anggotaKelas}', [PiketSayaController::class, 'update'])
+            ->middleware('izin:piket_guru.catat_kehadiran')
+            ->name('piket-saya.kehadiran.update');
 
         Route::get('/foto-identitas', [FotoIdentitasController::class, 'index'])
             ->middleware('izin:siswa.kelola,pegawai.kelola')

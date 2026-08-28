@@ -50,6 +50,8 @@ import 'package:nusa/features/teaching_document_review/presentation/teaching_doc
 import 'package:nusa/features/teaching_document_review/presentation/teaching_document_review_view.dart';
 import 'package:nusa/features/teaching_document_review/presentation/teaching_document_teacher_detail_view.dart';
 import 'package:nusa/features/teaching_document_type/presentation/teaching_document_type_view.dart';
+import 'package:nusa/features/teacher_duty/presentation/my_teacher_duty_view.dart';
+import 'package:nusa/features/teacher_duty/presentation/teacher_duty_schedule_view.dart';
 
 abstract final class AppRoutes {
   static const startup = '/startup';
@@ -77,6 +79,8 @@ abstract final class AppRoutes {
   static const studentCards = '/kartu-pelajar';
   static const studentAttendanceSettings = '/pengaturan-presensi-siswa';
   static const studentScanStatus = '/status-scan-presensi-siswa';
+  static const teacherDutySchedules = '/jadwal-guru-piket';
+  static const myTeacherDuty = '/piket-saya';
   static const classDetail = '/kelas/:id';
   static const lessonPeriods = '/jam-pelajaran';
   static const subjects = '/mata-pelajaran';
@@ -298,6 +302,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.studentScanStatus,
         name: 'student-scan-status',
         builder: (context, state) => const StudentScanStatusView(),
+      ),
+      GoRoute(
+        path: AppRoutes.teacherDutySchedules,
+        name: 'teacher-duty-schedules',
+        builder: (context, state) => const TeacherDutyScheduleView(),
+      ),
+      GoRoute(
+        path: AppRoutes.myTeacherDuty,
+        name: 'my-teacher-duty',
+        builder: (context, state) => const MyTeacherDutyView(),
       ),
       GoRoute(
         path: AppRoutes.lessonPeriods,
