@@ -941,7 +941,9 @@
             const scanQueue = [];
             const riwayat = [];
             const statusSudahTercatat = new Set(['duplikat_cepat', 'sudah_scan_masuk', 'sudah_scan_pulang']);
+            const durasiTampilanHasil = 5000;
             let sedangMemproses = false;
+            let timerResetHasil = null;
             const formatterWaktu = new Intl.DateTimeFormat('id-ID', {
                 timeZone: 'Asia/Jakarta',
                 hour: '2-digit',
@@ -1054,6 +1056,8 @@
             }
 
             function tambahAntrean(nilaiScan) {
+                batalkanResetHasil();
+
                 scanQueue.push({
                     isi_scan: nilaiScan,
                     waktu: jamDariTanggal(waktuServer()),
@@ -1075,6 +1079,7 @@
                 }
 
                 sedangMemproses = true;
+                batalkanResetHasil();
                 perbaruiAntrean();
 
                 const item = scanQueue.shift();
@@ -1185,6 +1190,36 @@
                 elements.resultMessage.textContent = payload.pesan || 'Scan selesai diproses.';
                 tampilkanFoto(payload.pegawai);
                 tampilkanMeta(payload);
+                jadwalkanResetHasil();
+            }
+
+            function batalkanResetHasil() {
+                if (timerResetHasil === null) {
+                    return;
+                }
+
+                clearTimeout(timerResetHasil);
+                timerResetHasil = null;
+            }
+
+            function jadwalkanResetHasil() {
+                batalkanResetHasil();
+
+                timerResetHasil = setTimeout(() => {
+                    timerResetHasil = null;
+                    resetTampilanHasil();
+                }, durasiTampilanHasil);
+            }
+
+            function resetTampilanHasil() {
+                elements.resultCard.classList.remove('is-success', 'is-recorded', 'is-warning', 'is-error');
+                elements.resultStatus.textContent = 'Siap scan';
+                elements.resultName.textContent = 'Tempelkan kartu pegawai';
+                elements.resultNip.textContent = 'NIP akan tampil setelah scan berhasil';
+                elements.resultMessage.textContent = 'Scanner kantor siap menerima data.';
+                elements.resultMeta.innerHTML = '';
+                elements.employeePhoto.innerHTML = '';
+                elements.employeePhoto.textContent = 'P';
             }
 
             function tampilkanFoto(pegawai) {
