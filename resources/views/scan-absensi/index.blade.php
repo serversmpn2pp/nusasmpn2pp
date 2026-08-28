@@ -222,7 +222,9 @@
             }
 
             .schedule-item {
+                display: grid;
                 min-width: 0;
+                grid-template-rows: minmax(2.5em, auto) auto 1fr;
                 overflow: hidden;
                 border: 1px solid rgba(255, 255, 255, .22);
                 border-radius: 8px;
@@ -236,16 +238,20 @@
             }
 
             .schedule-label {
-                margin: 0 0 8px;
+                display: flex;
+                min-height: 2.5em;
+                align-items: flex-start;
+                margin: 0;
                 color: var(--accent);
                 font-size: .88rem;
                 font-weight: 950;
+                line-height: 1.25;
                 overflow-wrap: anywhere;
                 text-transform: uppercase;
             }
 
             .schedule-time {
-                margin: 0;
+                margin: 8px 0 0;
                 color: #fff;
                 font-feature-settings: "tnum" 1;
                 font-size: clamp(1.65rem, 3vw, 2.25rem);
@@ -458,8 +464,12 @@
 
             .history-list {
                 display: grid;
+                min-height: 0;
                 max-height: 190px;
-                overflow: auto;
+                align-content: start;
+                overflow-x: hidden;
+                overflow-y: auto;
+                overscroll-behavior: contain;
                 gap: 8px;
                 padding-right: 4px;
             }
@@ -515,6 +525,199 @@
                 padding: 12px 14px;
                 color: #fff;
                 font-weight: 850;
+            }
+
+            @media (min-width: 1001px) {
+                html,
+                body {
+                    height: 100%;
+                    overflow: hidden;
+                }
+
+                .scan-page,
+                .scan-shell {
+                    height: 100vh;
+                    height: 100dvh;
+                    min-height: 0;
+                }
+
+                .scan-shell {
+                    grid-template-rows: auto minmax(0, 1fr);
+                }
+
+                .scan-main,
+                .time-panel,
+                .scanner-panel {
+                    min-height: 0;
+                }
+
+                .scan-main,
+                .scanner-panel {
+                    overflow: hidden;
+                }
+
+                .scanner-panel {
+                    grid-template-rows: auto auto minmax(0, 1fr) minmax(92px, 160px);
+                }
+
+                .result-card {
+                    min-height: 0;
+                }
+
+                .history-list {
+                    max-height: none;
+                }
+            }
+
+            @media (min-width: 1001px) and (max-height: 850px) {
+                .scan-shell {
+                    gap: 12px;
+                    padding: 14px 18px;
+                }
+
+                .brand {
+                    gap: 10px;
+                }
+
+                .brand-mark {
+                    width: 52px;
+                    padding: 5px;
+                }
+
+                .brand-title {
+                    font-size: 1.45rem;
+                }
+
+                .brand-subtitle {
+                    font-size: .84rem;
+                }
+
+                .status-strip {
+                    gap: 7px;
+                }
+
+                .status-pill {
+                    min-height: 32px;
+                    padding: 6px 10px;
+                    font-size: .8rem;
+                }
+
+                .scan-main {
+                    gap: 12px;
+                }
+
+                .time-panel,
+                .scanner-panel {
+                    padding: 14px;
+                }
+
+                .time-panel {
+                    gap: 14px;
+                }
+
+                .date-line {
+                    margin-top: 7px;
+                    font-size: 1rem;
+                }
+
+                .schedule-grid {
+                    gap: 10px;
+                }
+
+                .schedule-item {
+                    padding: 11px;
+                }
+
+                .schedule-label {
+                    font-size: .78rem;
+                }
+
+                .schedule-time {
+                    margin-top: 6px;
+                    font-size: clamp(1.55rem, 9cqi, 2rem);
+                }
+
+                .schedule-note {
+                    margin-top: 7px;
+                    font-size: .76rem;
+                    line-height: 1.35;
+                }
+
+                .scanner-panel {
+                    grid-template-rows: auto auto minmax(0, 1fr) minmax(88px, 126px);
+                    gap: 10px;
+                }
+
+                .scanner-title {
+                    font-size: 1.4rem;
+                }
+
+                .queue-badge {
+                    min-height: 34px;
+                    padding: 6px 12px;
+                    font-size: .86rem;
+                }
+
+                .scan-capture-wrap {
+                    gap: 5px;
+                }
+
+                .scan-capture {
+                    min-height: 44px;
+                    padding: 9px 12px;
+                }
+
+                .result-card {
+                    grid-template-columns: minmax(108px, 145px) minmax(0, 1fr);
+                    gap: 14px;
+                    padding: 14px;
+                }
+
+                .result-status {
+                    margin-bottom: 8px;
+                    padding: 5px 9px;
+                    font-size: .75rem;
+                }
+
+                .result-name {
+                    font-size: clamp(1.35rem, 2.6vw, 2rem);
+                }
+
+                .result-nisn {
+                    margin-top: 6px;
+                    font-size: .98rem;
+                }
+
+                .result-message {
+                    margin-top: 8px;
+                    font-size: .92rem;
+                }
+
+                .result-meta {
+                    gap: 6px;
+                    margin-top: 10px;
+                }
+
+                .meta-pill {
+                    padding: 5px 8px;
+                    font-size: .76rem;
+                }
+
+                .history-list {
+                    gap: 6px;
+                }
+
+                .history-item {
+                    grid-template-columns: 68px minmax(0, 1fr) auto;
+                    gap: 8px;
+                    padding: 7px 9px;
+                }
+
+                .history-time,
+                .history-kind,
+                .history-name {
+                    font-size: .78rem;
+                }
             }
 
             @media (max-width: 1000px) {

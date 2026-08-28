@@ -59,8 +59,8 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'jadwal-ibadah' => Icons.event_available_rounded,
     'pengaturan-berhalangan' => Icons.tune_rounded,
     'scan-ibadah-siswa' ||
-    'scan-presensi-siswa' ||
     'scan-presensi-pegawai' => Icons.qr_code_scanner_rounded,
+    'scan-presensi-siswa' => Icons.sensors_rounded,
     'rekap-ibadah-siswa' => Icons.bar_chart_rounded,
     'ringkasan-ibadah-bulanan' => Icons.calendar_view_month_rounded,
     'pengaturan-presensi-siswa' => Icons.settings_accessibility_rounded,

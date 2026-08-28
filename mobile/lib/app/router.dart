@@ -35,6 +35,8 @@ import 'package:nusa/features/student/presentation/student_detail_view.dart';
 import 'package:nusa/features/student/presentation/student_list_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_detail_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_list_view.dart';
+import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
+import 'package:nusa/features/student_scan_status/presentation/student_scan_status_view.dart';
 import 'package:nusa/features/student_card/presentation/student_card_view.dart';
 import 'package:nusa/features/student_placement/presentation/student_placement_view.dart';
 import 'package:nusa/features/subject/presentation/subject_view.dart';
@@ -73,6 +75,8 @@ abstract final class AppRoutes {
   static const identityPhotos = '/foto-identitas';
   static const employeeCards = '/kartu-pegawai';
   static const studentCards = '/kartu-pelajar';
+  static const studentAttendanceSettings = '/pengaturan-presensi-siswa';
+  static const studentScanStatus = '/status-scan-presensi-siswa';
   static const classDetail = '/kelas/:id';
   static const lessonPeriods = '/jam-pelajaran';
   static const subjects = '/mata-pelajaran';
@@ -284,6 +288,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.studentCards,
         name: 'student-cards',
         builder: (context, state) => const StudentCardView(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentAttendanceSettings,
+        name: 'student-attendance-settings',
+        builder: (context, state) => const StudentAttendanceSettingsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentScanStatus,
+        name: 'student-scan-status',
+        builder: (context, state) => const StudentScanStatusView(),
       ),
       GoRoute(
         path: AppRoutes.lessonPeriods,

@@ -27,9 +27,11 @@ use App\Http\Controllers\Api\V1\PenempatanSiswaController;
 use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
 use App\Http\Controllers\Api\V1\PernyataanSurveiController;
+use App\Http\Controllers\Api\V1\PengaturanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
 use App\Http\Controllers\Api\V1\SiswaController;
 use App\Http\Controllers\Api\V1\SkemaBobotNilaiController;
+use App\Http\Controllers\Api\V1\StatusScanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\SurveiPembelajaranController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
 use Illuminate\Support\Facades\Route;
@@ -205,6 +207,20 @@ Route::prefix('v1')
         Route::post('/penempatan-siswa/masukkan', [PenempatanSiswaController::class, 'store'])
             ->middleware('izin:kelas.kelola')
             ->name('penempatan-siswa.store');
+
+        Route::get('/pengaturan-presensi-siswa', [PengaturanPresensiSiswaController::class, 'index'])
+            ->middleware('izin:absensi.pengaturan_kelola')
+            ->name('pengaturan-presensi-siswa.index');
+        Route::post('/pengaturan-presensi-siswa', [PengaturanPresensiSiswaController::class, 'store'])
+            ->middleware('izin:absensi.pengaturan_kelola')
+            ->name('pengaturan-presensi-siswa.store');
+        Route::patch('/pengaturan-presensi-siswa/{pengaturanAbsensi}', [PengaturanPresensiSiswaController::class, 'update'])
+            ->middleware('izin:absensi.pengaturan_kelola')
+            ->name('pengaturan-presensi-siswa.update');
+
+        Route::get('/status-scan-presensi-siswa', StatusScanPresensiSiswaController::class)
+            ->middleware('izin:absensi.scan,absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
+            ->name('status-scan-presensi-siswa.index');
 
         Route::get('/jadwal-mengajar-saya', JadwalMengajarSayaController::class)
             ->middleware('izin:jadwal.pribadi')

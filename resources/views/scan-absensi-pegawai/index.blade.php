@@ -55,22 +55,25 @@
             .office-scan-page {
                 min-height: 100vh;
                 background:
-                    linear-gradient(90deg, var(--primary) 0 34%, transparent 34%),
+                    linear-gradient(90deg, var(--primary) 0 40%, transparent 40%),
                     #eef4fa;
             }
 
             .office-shell {
                 display: grid;
                 min-height: 100vh;
-                grid-template-columns: minmax(300px, 36vw) minmax(0, 1fr);
+                grid-template-columns: minmax(430px, 40%) minmax(0, 1fr);
             }
 
             .office-side {
                 display: grid;
-                align-content: space-between;
-                gap: 28px;
+                min-height: 0;
+                grid-template-rows: auto auto auto minmax(0, 1fr);
+                align-content: stretch;
+                gap: 14px;
                 min-width: 0;
-                padding: clamp(18px, 3vw, 34px);
+                overflow: hidden;
+                padding: clamp(18px, 2vw, 28px);
                 color: #fff;
             }
 
@@ -83,7 +86,7 @@
 
             .brand-mark {
                 display: grid;
-                width: clamp(54px, 6vw, 74px);
+                width: clamp(54px, 5vw, 66px);
                 aspect-ratio: 1;
                 place-items: center;
                 border: 1px solid rgba(241, 196, 15, .82);
@@ -117,7 +120,8 @@
 
             .clock-panel {
                 display: grid;
-                gap: 12px;
+                min-width: 0;
+                gap: 8px;
             }
 
             .label {
@@ -129,9 +133,13 @@
             }
 
             .clock {
+                width: 100%;
+                max-width: 100%;
                 margin: 0;
                 color: #fff;
-                font-size: clamp(3.4rem, 8vw, 6.6rem);
+                font-feature-settings: "tnum" 1;
+                font-size: clamp(3.2rem, 6.5vw, 5.4rem);
+                font-variant-numeric: tabular-nums;
                 font-weight: 950;
                 letter-spacing: 0;
                 line-height: .92;
@@ -147,17 +155,20 @@
 
             .mode-panel {
                 display: grid;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
                 gap: 10px;
                 border: 1px solid rgba(255, 255, 255, .2);
                 border-radius: 8px;
                 background: rgba(255, 255, 255, .1);
-                padding: 16px;
+                padding: 14px 16px;
             }
 
             .mode-value {
                 margin: 0;
                 color: var(--accent);
-                font-size: clamp(1.2rem, 2.7vw, 1.8rem);
+                font-size: clamp(1.25rem, 2vw, 1.65rem);
                 font-weight: 950;
                 line-height: 1.08;
             }
@@ -170,9 +181,11 @@
 
             .office-main {
                 display: grid;
+                min-height: 0;
                 min-width: 0;
                 grid-template-rows: auto minmax(0, 1fr);
                 gap: 16px;
+                overflow: hidden;
                 padding: clamp(16px, 3vw, 32px);
             }
 
@@ -206,13 +219,6 @@
                 box-shadow: 0 8px 22px rgba(21, 71, 122, .08);
             }
 
-            .work-grid {
-                display: grid;
-                min-height: 0;
-                grid-template-columns: minmax(360px, .98fr) minmax(0, 1.02fr);
-                gap: 16px;
-            }
-
             .scanner-panel,
             .schedule-panel,
             .result-card {
@@ -225,7 +231,10 @@
 
             .scanner-panel {
                 display: grid;
-                align-content: start;
+                min-height: 0;
+                grid-template-rows: auto minmax(0, 1fr) minmax(96px, 150px);
+                align-content: stretch;
+                overflow: hidden;
                 gap: 16px;
                 padding: clamp(16px, 2.4vw, 24px);
             }
@@ -258,10 +267,10 @@
 
             .result-card {
                 display: grid;
-                grid-template-columns: minmax(124px, 165px) minmax(0, 1fr);
+                min-height: 0;
+                grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
                 gap: clamp(14px, 2vw, 22px);
                 align-items: center;
-                min-height: 286px;
                 padding: clamp(16px, 2.5vw, 24px);
             }
 
@@ -342,7 +351,7 @@
                 margin: 0;
                 overflow-wrap: anywhere;
                 color: #0f172a;
-                font-size: clamp(1.45rem, 3.3vw, 2.1rem);
+                font-size: clamp(1.75rem, 3vw, 2.6rem);
                 font-weight: 950;
                 line-height: 1.1;
             }
@@ -351,6 +360,7 @@
             .result-message {
                 margin: 10px 0 0;
                 color: #475569;
+                font-size: clamp(1rem, 1.4vw, 1.16rem);
                 font-weight: 850;
             }
 
@@ -376,10 +386,15 @@
 
             .schedule-panel {
                 display: grid;
+                width: 100%;
+                max-width: 100%;
                 min-height: 0;
-                grid-template-rows: auto minmax(0, 1fr) auto;
+                min-width: 0;
+                grid-template-rows: auto minmax(0, 1fr);
                 gap: 12px;
-                padding: clamp(16px, 2.4vw, 24px);
+                overflow: hidden;
+                padding: 16px;
+                color: var(--text);
             }
 
             .panel-head {
@@ -392,26 +407,29 @@
             .panel-title {
                 margin: 0;
                 color: var(--primary-dark);
-                font-size: 1rem;
+                font-size: 1.12rem;
                 font-weight: 950;
             }
 
             .schedule-list {
                 display: grid;
+                min-height: 0;
                 align-content: start;
-                max-height: 330px;
-                overflow: auto;
+                max-height: none;
+                overflow-x: hidden;
+                overflow-y: auto;
+                overscroll-behavior: contain;
                 gap: 10px;
                 padding-right: 4px;
             }
 
             .schedule-item {
                 display: grid;
-                gap: 8px;
+                gap: 10px;
                 border: 1px solid var(--line);
                 border-radius: 8px;
                 background: #f8fafc;
-                padding: 12px;
+                padding: 14px;
             }
 
             .schedule-item.is-active {
@@ -429,7 +447,7 @@
             .schedule-name {
                 margin: 0;
                 color: #0f172a;
-                font-size: .95rem;
+                font-size: 1.04rem;
                 font-weight: 950;
                 line-height: 1.2;
             }
@@ -437,7 +455,7 @@
             .schedule-target {
                 margin: 3px 0 0;
                 color: var(--muted);
-                font-size: .84rem;
+                font-size: .88rem;
                 font-weight: 800;
             }
 
@@ -463,23 +481,33 @@
             }
 
             .schedule-time {
+                display: grid;
+                min-width: 0;
+                grid-template-rows: minmax(2.4em, auto) auto 1fr;
                 border-radius: 8px;
                 background: #fff;
-                padding: 9px;
+                padding: 11px;
             }
 
             .schedule-time span {
                 display: block;
                 color: var(--muted);
-                font-size: .74rem;
+                font-size: .8rem;
                 font-weight: 900;
+            }
+
+            .schedule-time > span:first-child {
+                min-height: 2.4em;
+                line-height: 1.2;
             }
 
             .schedule-time strong {
                 display: block;
-                margin-top: 4px;
+                margin-top: 5px;
                 color: var(--primary-dark);
-                font-size: 1.35rem;
+                font-feature-settings: "tnum" 1;
+                font-size: clamp(1.45rem, 2.4vw, 1.8rem);
+                font-variant-numeric: tabular-nums;
                 font-weight: 950;
                 line-height: 1.05;
             }
@@ -487,8 +515,9 @@
             .schedule-time .schedule-window {
                 margin-top: 8px;
                 color: #475569;
-                font-size: .78rem;
+                font-size: .82rem;
                 line-height: 1.35;
+                overflow-wrap: anywhere;
             }
 
             .schedule-time .schedule-window b {
@@ -498,7 +527,13 @@
 
             .history-list {
                 display: grid;
+                min-height: 0;
+                align-content: start;
+                overflow-x: hidden;
+                overflow-y: auto;
+                overscroll-behavior: contain;
                 gap: 8px;
+                padding-right: 4px;
             }
 
             .history-item {
@@ -545,6 +580,7 @@
             }
 
             .warning-note {
+                align-self: start;
                 border: 1px solid rgba(241, 196, 15, .8);
                 border-radius: 8px;
                 background: var(--accent-soft);
@@ -553,23 +589,196 @@
                 font-weight: 850;
             }
 
+            @media (min-width: 1101px) {
+                html,
+                body,
+                .office-scan-page,
+                .office-shell {
+                    height: 100vh;
+                    height: 100dvh;
+                    min-height: 0;
+                }
+
+                html,
+                body {
+                    overflow: hidden;
+                }
+            }
+
+            @media (min-width: 1101px) and (max-height: 850px) {
+                .office-side {
+                    gap: 12px;
+                    padding: 16px 18px;
+                }
+
+                .brand {
+                    gap: 11px;
+                }
+
+                .brand-mark {
+                    width: 56px;
+                    padding: 5px;
+                }
+
+                .brand-title {
+                    font-size: 1.45rem;
+                }
+
+                .brand-subtitle {
+                    font-size: .82rem;
+                }
+
+                .clock-panel {
+                    gap: 5px;
+                }
+
+                .clock {
+                    font-size: clamp(3.2rem, 6vw, 4.7rem);
+                }
+
+                .date-line {
+                    font-size: .96rem;
+                }
+
+                .mode-panel {
+                    gap: 6px;
+                    padding: 10px 13px;
+                }
+
+                .mode-value {
+                    font-size: 1.3rem;
+                }
+
+                .status-line {
+                    font-size: .86rem;
+                }
+
+                .schedule-panel {
+                    gap: 9px;
+                    padding: 12px;
+                }
+
+                .panel-title {
+                    font-size: 1rem;
+                }
+
+                .schedule-item {
+                    gap: 8px;
+                    padding: 11px;
+                }
+
+                .schedule-name {
+                    font-size: .96rem;
+                }
+
+                .schedule-target {
+                    font-size: .78rem;
+                }
+
+                .schedule-time {
+                    padding: 9px;
+                }
+
+                .schedule-time strong {
+                    font-size: 1.45rem;
+                }
+
+                .schedule-time .schedule-window {
+                    font-size: .75rem;
+                }
+
+                .office-main {
+                    gap: 12px;
+                    padding: 16px 18px;
+                }
+
+                .page-title {
+                    font-size: 1.65rem;
+                }
+
+                .queue-badge {
+                    min-height: 36px;
+                    padding: 7px 12px;
+                    font-size: .86rem;
+                }
+
+                .scanner-panel {
+                    grid-template-rows: auto minmax(0, 1fr) minmax(92px, 132px);
+                    gap: 12px;
+                    padding: 16px;
+                }
+
+                .scan-label {
+                    margin-bottom: 5px;
+                }
+
+                .scan-capture {
+                    min-height: 48px;
+                    padding: 10px 13px;
+                }
+
+                .result-card {
+                    grid-template-columns: minmax(140px, 180px) minmax(0, 1fr);
+                    gap: 18px;
+                    padding: 18px;
+                }
+
+                .result-status {
+                    margin-bottom: 8px;
+                }
+
+                .result-name {
+                    font-size: clamp(1.7rem, 2.8vw, 2.35rem);
+                }
+
+                .result-nip,
+                .result-message {
+                    margin-top: 7px;
+                }
+
+                .result-meta {
+                    margin-top: 11px;
+                }
+
+                .history-item {
+                    padding: 7px 10px;
+                }
+            }
+
             @media (max-width: 1100px) {
                 .office-scan-page {
                     background: #eef4fa;
                 }
 
-                .office-shell,
-                .work-grid {
+                .office-shell {
                     grid-template-columns: 1fr;
                 }
 
                 .office-side {
+                    grid-template-rows: auto auto auto auto;
+                    overflow: visible;
                     background: var(--primary);
                 }
 
-                .clock-panel {
-                    grid-template-columns: minmax(0, 1fr) auto;
-                    align-items: end;
+                .schedule-list {
+                    max-height: 330px;
+                }
+
+                .office-main,
+                .scanner-panel {
+                    overflow: visible;
+                }
+
+                .scanner-panel {
+                    grid-template-rows: auto auto auto;
+                }
+
+                .result-card {
+                    min-height: 286px;
+                }
+
+                .history-list {
+                    max-height: 260px;
                 }
             }
 
@@ -580,6 +789,7 @@
                 }
 
                 .top-strip,
+                .panel-head,
                 .schedule-item-head,
                 .clock-panel {
                     align-items: stretch;
@@ -627,17 +837,61 @@
                     </div>
 
                     <div class="clock-panel">
-                        <div>
-                            <p class="label">Waktu server</p>
-                            <p class="clock" id="clockText">--:--:--</p>
-                            <p class="date-line">{{ $hariLabel }}, {{ $tanggalHariIni }}</p>
-                        </div>
-                        <div class="mode-panel">
-                            <p class="label">Mode aktif</p>
-                            <p class="mode-value" id="modeText">Memuat</p>
-                            <p class="status-line">Status: <span id="statusText">Siap</span></p>
-                        </div>
+                        <p class="label">Waktu server</p>
+                        <p class="clock" id="clockText">--:--:--</p>
+                        <p class="date-line">{{ $hariLabel }}, {{ $tanggalHariIni }}</p>
                     </div>
+
+                    <div class="mode-panel">
+                        <p class="label">Mode aktif</p>
+                        <p class="mode-value" id="modeText">Memuat</p>
+                        <p class="status-line">Status: <span id="statusText">Siap</span></p>
+                    </div>
+
+                    <section class="schedule-panel" aria-label="Jadwal presensi pegawai hari ini">
+                        <div class="panel-head">
+                            <h2 class="panel-title">Jadwal Hari Ini</h2>
+                            <span class="queue-badge">{{ $jadwalHariIni->count() }} aktif</span>
+                        </div>
+
+                        @if ($jadwalHariIni->isEmpty())
+                            <div class="warning-note">
+                                Belum ada jadwal presensi pegawai aktif untuk hari ini.
+                            </div>
+                        @else
+                            <div class="schedule-list" id="scheduleList">
+                                @foreach ($jadwalHariIni as $jadwal)
+                                    <article
+                                        class="schedule-item"
+                                        data-masuk-mulai="{{ $jadwal->formatJam($jadwal->jam_scan_masuk_mulai) }}"
+                                        data-masuk-selesai="{{ $jadwal->formatJam($jadwal->jam_scan_masuk_selesai) }}"
+                                        data-pulang-mulai="{{ $jadwal->formatJam($jadwal->jam_scan_pulang_mulai) }}"
+                                        data-pulang-selesai="{{ $jadwal->formatJam($jadwal->jam_scan_pulang_selesai) }}"
+                                    >
+                                        <div class="schedule-item-head">
+                                            <div>
+                                                <p class="schedule-name">{{ $jadwal->nama_jadwal }}</p>
+                                                <p class="schedule-target">{{ $jadwal->labelCakupan() }} · {{ $jadwal->labelSasaran() }}</p>
+                                            </div>
+                                            <span class="schedule-mode">Menunggu</span>
+                                        </div>
+                                        <div class="schedule-time-grid">
+                                            <div class="schedule-time">
+                                                <span>Batas Tepat Waktu</span>
+                                                <strong>{{ $jadwal->formatJam($jadwal->jam_masuk) }}</strong>
+                                                <span class="schedule-window"><b>Waktu scan masuk:</b> {{ $jadwal->formatJam($jadwal->jam_scan_masuk_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_masuk_selesai) }}</span>
+                                            </div>
+                                            <div class="schedule-time">
+                                                <span>Jam Pulang Resmi</span>
+                                                <strong>{{ $jadwal->formatJam($jadwal->jam_pulang) }}</strong>
+                                                <span class="schedule-window"><b>Waktu scan pulang:</b> {{ $jadwal->formatJam($jadwal->jam_scan_pulang_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_pulang_selesai) }}</span>
+                                            </div>
+                                        </div>
+                                    </article>
+                                @endforeach
+                            </div>
+                        @endif
+                    </section>
                 </aside>
 
                 <main class="office-main">
@@ -646,82 +900,35 @@
                         <span class="queue-badge">Antrean: <span id="queueCount">0</span></span>
                     </div>
 
-                    <div class="work-grid">
-                        <section class="scanner-panel" aria-label="Scanner presensi pegawai">
+                    <section class="scanner-panel" aria-label="Scanner presensi pegawai">
+                        <div>
+                            <label class="scan-label" for="scanInput">Area scan aktif</label>
+                            <input
+                                id="scanInput"
+                                class="scan-capture"
+                                type="text"
+                                name="isi_scan"
+                                autocomplete="off"
+                                autofocus
+                                placeholder="Scan kartu pegawai"
+                            >
+                        </div>
+
+                        <div class="result-card" id="resultCard">
+                            <div class="employee-photo" id="employeePhoto">P</div>
                             <div>
-                                <label class="scan-label" for="scanInput">Area scan aktif</label>
-                                <input
-                                    id="scanInput"
-                                    class="scan-capture"
-                                    type="text"
-                                    name="isi_scan"
-                                    autocomplete="off"
-                                    autofocus
-                                    placeholder="Scan kartu pegawai"
-                                >
+                                <span class="result-status" id="resultStatus">Siap scan</span>
+                                <h2 class="result-name" id="resultName">Tempelkan kartu pegawai</h2>
+                                <p class="result-nip" id="resultNip">NIP akan tampil setelah scan berhasil</p>
+                                <p class="result-message" id="resultMessage">Scanner kantor siap menerima data.</p>
+                                <div class="result-meta" id="resultMeta"></div>
                             </div>
+                        </div>
 
-                            <div class="result-card" id="resultCard">
-                                <div class="employee-photo" id="employeePhoto">P</div>
-                                <div>
-                                    <span class="result-status" id="resultStatus">Siap scan</span>
-                                    <h2 class="result-name" id="resultName">Tempelkan kartu pegawai</h2>
-                                    <p class="result-nip" id="resultNip">NIP akan tampil setelah scan berhasil</p>
-                                    <p class="result-message" id="resultMessage">Scanner kantor siap menerima data.</p>
-                                    <div class="result-meta" id="resultMeta"></div>
-                                </div>
-                            </div>
-
-                            <div class="history-list" id="historyList">
-                                <div class="empty-note" id="emptyHistory">Belum ada scan pada sesi ini.</div>
-                            </div>
-                        </section>
-
-                        <section class="schedule-panel" aria-label="Jadwal presensi pegawai hari ini">
-                            <div class="panel-head">
-                                <h2 class="panel-title">Jadwal Hari Ini</h2>
-                                <span class="queue-badge">{{ $jadwalHariIni->count() }} aktif</span>
-                            </div>
-
-                            @if ($jadwalHariIni->isEmpty())
-                                <div class="warning-note">
-                                    Belum ada jadwal presensi pegawai aktif untuk hari ini.
-                                </div>
-                            @else
-                                <div class="schedule-list" id="scheduleList">
-                                    @foreach ($jadwalHariIni as $jadwal)
-                                        <article
-                                            class="schedule-item"
-                                            data-masuk-mulai="{{ $jadwal->formatJam($jadwal->jam_scan_masuk_mulai) }}"
-                                            data-masuk-selesai="{{ $jadwal->formatJam($jadwal->jam_scan_masuk_selesai) }}"
-                                            data-pulang-mulai="{{ $jadwal->formatJam($jadwal->jam_scan_pulang_mulai) }}"
-                                            data-pulang-selesai="{{ $jadwal->formatJam($jadwal->jam_scan_pulang_selesai) }}"
-                                        >
-                                            <div class="schedule-item-head">
-                                                <div>
-                                                    <p class="schedule-name">{{ $jadwal->nama_jadwal }}</p>
-                                                    <p class="schedule-target">{{ $jadwal->labelCakupan() }} · {{ $jadwal->labelSasaran() }}</p>
-                                                </div>
-                                                <span class="schedule-mode">Menunggu</span>
-                                            </div>
-                                            <div class="schedule-time-grid">
-                                                <div class="schedule-time">
-                                                    <span>Batas Tepat Waktu</span>
-                                                    <strong>{{ $jadwal->formatJam($jadwal->jam_masuk) }}</strong>
-                                                    <span class="schedule-window"><b>Waktu scan masuk:</b> {{ $jadwal->formatJam($jadwal->jam_scan_masuk_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_masuk_selesai) }}</span>
-                                                </div>
-                                                <div class="schedule-time">
-                                                    <span>Jam Pulang Resmi</span>
-                                                    <strong>{{ $jadwal->formatJam($jadwal->jam_pulang) }}</strong>
-                                                    <span class="schedule-window"><b>Waktu scan pulang:</b> {{ $jadwal->formatJam($jadwal->jam_scan_pulang_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_pulang_selesai) }}</span>
-                                                </div>
-                                            </div>
-                                        </article>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </section>
-                    </div>
+                        <div class="history-list" id="historyList">
+                            <div class="empty-note" id="emptyHistory">Belum ada scan pada sesi ini.</div>
+                        </div>
+                    </section>
                 </main>
             </div>
         </div>
