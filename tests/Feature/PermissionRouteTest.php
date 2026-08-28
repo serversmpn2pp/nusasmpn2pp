@@ -50,6 +50,11 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('scan-absensi.index', 'izin:absensi.scan');
         $this->assertRouteMemakaiMiddleware('rekap-absensi-harian.index', 'izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan');
         $this->assertRouteMemakaiMiddleware('rekap-absensi-harian.koreksi.edit', 'izin:absensi.koreksi,absensi.koreksi_hari_ini');
+        $this->assertRouteMemakaiMiddleware('api.v1.rekap-presensi-siswa.index', 'izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan');
+        $this->assertRouteMemakaiMiddleware('api.v1.rekap-presensi-siswa.show', 'izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan');
+        $this->assertRouteMemakaiMiddleware('api.v1.rekap-presensi-siswa.update', 'izin:absensi.koreksi,absensi.koreksi_hari_ini');
+        $this->assertRouteMemakaiMiddleware('api.v1.laporan-presensi-siswa.index', 'izin:absensi.laporan');
+        $this->assertRouteMemakaiMiddleware('api.v1.laporan-presensi-siswa.show', 'izin:absensi.laporan');
         $this->assertRouteMemakaiMiddleware('rekap-absensi-pegawai-harian.index', 'izin:absensi.lihat,absensi.koreksi,absensi.laporan,absensi_pegawai.pribadi');
         $this->assertRouteMemakaiMiddleware('absensi-pegawai-saya.rekap', 'izin:absensi_pegawai.pribadi');
         $this->assertRouteMemakaiMiddleware('laporan-absensi.index', 'izin:absensi.laporan');
@@ -73,6 +78,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.koreksi.edit', 'izin:ibadah.koreksi');
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.koreksi.update', 'izin:ibadah.koreksi');
         $this->assertRouteMemakaiMiddleware('laporan-absensi.export', 'izin:laporan.export');
+        $this->assertRouteMemakaiMiddleware('api.v1.laporan-presensi-siswa.export', 'izin:laporan.export');
         $this->assertRouteMemakaiMiddleware('laporan-absensi-pegawai-bulanan.index', 'izin:absensi.laporan,absensi_pegawai.pribadi');
         $this->assertRouteMemakaiMiddleware('absensi-pegawai-saya.laporan', 'izin:absensi_pegawai.pribadi');
         $this->assertRouteMemakaiMiddleware('absensi-pegawai-saya.cetak', 'izin:absensi_pegawai.pribadi');

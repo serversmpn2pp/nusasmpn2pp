@@ -7,18 +7,19 @@ use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
-use App\Models\RiwayatPerubahanAbsensiSiswa;
 use App\Models\TahunPelajaran;
+use App\Services\Absensi\KoreksiPresensiSiswaService;
 use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class RekapAbsensiHarianController extends Controller
 {
-    public function __construct(private ProsesPoinKeterlambatanService $prosesPoinKeterlambatan) {}
+    public function __construct(
+        private ProsesPoinKeterlambatanService $prosesPoinKeterlambatan,
+        private KoreksiPresensiSiswaService $koreksiPresensi,
+    ) {}
 
     public function index(Request $request)
     {
@@ -121,66 +122,7 @@ class RekapAbsensiHarianController extends Controller
         ]);
 
         $tanggal = Carbon::parse($data['tanggal'])->toDateString();
-        $this->pastikanTanggalKoreksiDiizinkan($request, $tanggal);
-        $anggotaKelas->load(['tahunPelajaran', 'kelas', 'siswa']);
-        $this->pastikanBolehAksesAnggotaKelas($request, $anggotaKelas);
-        $this->pastikanCatatanScanTidakDiubah($request, $this->ambilAbsensi($tanggal, $anggotaKelas));
-        $this->pastikanDataKoreksiValid($data);
-
-        $absensi = DB::transaction(function () use ($data, $tanggal, $anggotaKelas, $request) {
-            $pengaturanAbsensi = $this->ambilPengaturanAbsensi($tanggal);
-            $statusKehadiran = $data['status_kehadiran'];
-            $jamMasuk = $statusKehadiran === 'hadir' ? ($data['jam_masuk'] ?? null) : null;
-            $jamPulang = $statusKehadiran === 'hadir' ? ($data['jam_pulang'] ?? null) : null;
-            $statusMasuk = null;
-            $statusPulang = null;
-            $menitTerlambat = 0;
-            $menitPulangCepat = 0;
-
-            if ($statusKehadiran === 'hadir') {
-                [$statusMasuk, $menitTerlambat] = $this->hitungStatusMasuk($jamMasuk, $pengaturanAbsensi);
-                [$statusPulang, $menitPulangCepat] = $this->hitungStatusPulang($jamPulang, $pengaturanAbsensi);
-            }
-
-            $absensi = AbsensiSiswa::query()
-                ->whereDate('tanggal', $tanggal)
-                ->where('siswa_id', $anggotaKelas->siswa_id)
-                ->first() ?? new AbsensiSiswa([
-                    'tanggal' => $tanggal,
-                    'siswa_id' => $anggotaKelas->siswa_id,
-                ]);
-            $statusSebelum = $absensi->exists ? $absensi->status_kehadiran : null;
-
-            $absensi->fill([
-                'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
-                'kelas_id' => $anggotaKelas->kelas_id,
-                'anggota_kelas_id' => $anggotaKelas->id,
-                'jam_masuk' => $jamMasuk,
-                'status_masuk' => $statusMasuk,
-                'menit_terlambat' => $menitTerlambat,
-                'jam_pulang' => $jamPulang,
-                'status_pulang' => $statusPulang,
-                'menit_pulang_cepat' => $menitPulangCepat,
-                'status_kehadiran' => $statusKehadiran,
-                'sumber' => 'manual',
-                'catatan' => $data['catatan'] ?? null,
-            ])->save();
-
-            RiwayatPerubahanAbsensiSiswa::create([
-                'absensi_siswa_id' => $absensi->id,
-                'siswa_id' => $anggotaKelas->siswa_id,
-                'tanggal' => $tanggal,
-                'status_sebelum' => $statusSebelum,
-                'status_sesudah' => $statusKehadiran,
-                'sumber' => 'koreksi_manual',
-                'catatan' => $data['catatan'] ?? null,
-                'dibuat_oleh_pengguna_id' => $request->user()?->id,
-            ]);
-
-            return $absensi;
-        });
-
-        $this->prosesPoinKeterlambatan->sinkronkanAbsensi($absensi, $request->user()?->id);
+        $this->koreksiPresensi->koreksi($request->user(), $anggotaKelas, $data);
 
         return redirect()
             ->route('rekap-absensi-harian.index', [
@@ -347,60 +289,6 @@ class RekapAbsensiHarianController extends Controller
             ->where('hari', $this->hariDariTanggal(Carbon::parse($tanggal)->isoWeekday()))
             ->where('aktif', true)
             ->first();
-    }
-
-    private function pastikanDataKoreksiValid(array $data): void
-    {
-        if ($data['status_kehadiran'] === 'hadir' && blank($data['jam_masuk'] ?? null)) {
-            throw ValidationException::withMessages([
-                'jam_masuk' => 'Jam masuk wajib diisi jika status kehadiran adalah hadir.',
-            ]);
-        }
-
-        if (filled($data['jam_masuk'] ?? null) && filled($data['jam_pulang'] ?? null)) {
-            if ($this->menitDariJam($data['jam_pulang']) < $this->menitDariJam($data['jam_masuk'])) {
-                throw ValidationException::withMessages([
-                    'jam_pulang' => 'Jam pulang tidak boleh lebih awal dari jam masuk.',
-                ]);
-            }
-        }
-    }
-
-    private function hitungStatusMasuk(?string $jamMasuk, ?PengaturanAbsensi $pengaturanAbsensi): array
-    {
-        if (! $jamMasuk) {
-            return [null, 0];
-        }
-
-        if (! $pengaturanAbsensi) {
-            return ['manual', 0];
-        }
-
-        $menitTerlambat = max(0, $this->menitDariJam($jamMasuk) - $this->menitDariJam($pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_masuk)));
-
-        return [$menitTerlambat > 0 ? 'terlambat' : 'tepat_waktu', $menitTerlambat];
-    }
-
-    private function hitungStatusPulang(?string $jamPulang, ?PengaturanAbsensi $pengaturanAbsensi): array
-    {
-        if (! $jamPulang) {
-            return [null, 0];
-        }
-
-        if (! $pengaturanAbsensi) {
-            return ['manual', 0];
-        }
-
-        $menitPulangCepat = max(0, $this->menitDariJam($pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang)) - $this->menitDariJam($jamPulang));
-
-        return [$menitPulangCepat > 0 ? 'pulang_cepat' : 'normal', $menitPulangCepat];
-    }
-
-    private function menitDariJam(string $jam): int
-    {
-        [$hour, $minute] = array_map('intval', explode(':', substr($jam, 0, 5)));
-
-        return ($hour * 60) + $minute;
     }
 
     private function hariDariTanggal(int $isoWeekday): string

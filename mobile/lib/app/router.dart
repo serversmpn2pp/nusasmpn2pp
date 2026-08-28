@@ -36,6 +36,8 @@ import 'package:nusa/features/student/presentation/student_list_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_detail_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_list_view.dart';
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
+import 'package:nusa/features/student_attendance_recap/presentation/student_attendance_recap_view.dart';
+import 'package:nusa/features/student_attendance_report/presentation/student_attendance_report_view.dart';
 import 'package:nusa/features/student_scan_status/presentation/student_scan_status_view.dart';
 import 'package:nusa/features/student_card/presentation/student_card_view.dart';
 import 'package:nusa/features/student_placement/presentation/student_placement_view.dart';
@@ -79,6 +81,8 @@ abstract final class AppRoutes {
   static const studentCards = '/kartu-pelajar';
   static const studentAttendanceSettings = '/pengaturan-presensi-siswa';
   static const studentScanStatus = '/status-scan-presensi-siswa';
+  static const studentAttendanceRecap = '/rekap-presensi-siswa';
+  static const studentAttendanceReport = '/laporan-presensi-siswa';
   static const teacherDutySchedules = '/jadwal-guru-piket';
   static const myTeacherDuty = '/piket-saya';
   static const classDetail = '/kelas/:id';
@@ -302,6 +306,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.studentScanStatus,
         name: 'student-scan-status',
         builder: (context, state) => const StudentScanStatusView(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentAttendanceRecap,
+        name: 'student-attendance-recap',
+        builder: (context, state) => const StudentAttendanceRecapView(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentAttendanceReport,
+        name: 'student-attendance-report',
+        builder: (context, state) => const StudentAttendanceReportView(),
       ),
       GoRoute(
         path: AppRoutes.teacherDutySchedules,

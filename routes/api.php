@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\KartuPelajarController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
+use App\Http\Controllers\Api\V1\LaporanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\MonitoringSurveiController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
 use App\Http\Controllers\Api\V1\PernyataanSurveiController;
 use App\Http\Controllers\Api\V1\PiketSayaController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
+use App\Http\Controllers\Api\V1\RekapPresensiSiswaController;
 use App\Http\Controllers\Api\V1\SiswaController;
 use App\Http\Controllers\Api\V1\SkemaBobotNilaiController;
 use App\Http\Controllers\Api\V1\StatusScanPresensiSiswaController;
@@ -246,6 +248,26 @@ Route::prefix('v1')
         Route::get('/status-scan-presensi-siswa', StatusScanPresensiSiswaController::class)
             ->middleware('izin:absensi.scan,absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
             ->name('status-scan-presensi-siswa.index');
+
+        Route::get('/rekap-presensi-siswa', [RekapPresensiSiswaController::class, 'index'])
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
+            ->name('rekap-presensi-siswa.index');
+        Route::get('/rekap-presensi-siswa/{anggotaKelas}', [RekapPresensiSiswaController::class, 'show'])
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
+            ->name('rekap-presensi-siswa.show');
+        Route::patch('/rekap-presensi-siswa/{anggotaKelas}/koreksi', [RekapPresensiSiswaController::class, 'update'])
+            ->middleware('izin:absensi.koreksi,absensi.koreksi_hari_ini')
+            ->name('rekap-presensi-siswa.update');
+
+        Route::get('/laporan-presensi-siswa/export', [LaporanPresensiSiswaController::class, 'export'])
+            ->middleware('izin:laporan.export')
+            ->name('laporan-presensi-siswa.export');
+        Route::get('/laporan-presensi-siswa', [LaporanPresensiSiswaController::class, 'index'])
+            ->middleware('izin:absensi.laporan')
+            ->name('laporan-presensi-siswa.index');
+        Route::get('/laporan-presensi-siswa/{anggotaKelas}', [LaporanPresensiSiswaController::class, 'show'])
+            ->middleware('izin:absensi.laporan')
+            ->name('laporan-presensi-siswa.show');
 
         Route::get('/jadwal-mengajar-saya', JadwalMengajarSayaController::class)
             ->middleware('izin:jadwal.pribadi')
