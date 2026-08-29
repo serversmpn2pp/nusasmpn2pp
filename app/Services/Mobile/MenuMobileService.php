@@ -4,10 +4,14 @@ namespace App\Services\Mobile;
 
 use App\Models\Pengguna;
 use App\Services\Ibadah\AksesBerhalanganIbadah;
+use App\Services\Ibadah\AksesScanKegiatanIbadah;
 
 class MenuMobileService
 {
-    public function __construct(private AksesBerhalanganIbadah $aksesBerhalangan) {}
+    public function __construct(
+        private AksesBerhalanganIbadah $aksesBerhalangan,
+        private AksesScanKegiatanIbadah $aksesIbadah,
+    ) {}
 
     public function siapkan(Pengguna $pengguna): array
     {
@@ -64,6 +68,16 @@ class MenuMobileService
 
         if (($item['konfirmasi_berhalangan_only'] ?? false)
             && ! $this->aksesBerhalangan->dapatMengonfirmasi($pengguna)) {
+            return false;
+        }
+
+        if (($item['rekap_ibadah_only'] ?? false)
+            && ! $this->aksesIbadah->dapatMelihatRekap($pengguna)) {
+            return false;
+        }
+
+        if (($item['ringkasan_ibadah_only'] ?? false)
+            && ! $this->aksesIbadah->dapatMelihatRingkasanBulanan($pengguna)) {
             return false;
         }
 

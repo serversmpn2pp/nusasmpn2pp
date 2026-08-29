@@ -63,8 +63,12 @@ import 'package:nusa/features/teacher_duty/presentation/my_teacher_duty_view.dar
 import 'package:nusa/features/teacher_duty/presentation/teacher_duty_schedule_view.dart';
 import 'package:nusa/features/worship_activity/presentation/worship_activity_view.dart';
 import 'package:nusa/features/worship_absence_settings/presentation/worship_absence_settings_view.dart';
+import 'package:nusa/features/worship_monthly_summary/presentation/worship_monthly_summary_view.dart';
 import 'package:nusa/features/worship_schedule/presentation/worship_schedule_view.dart';
 import 'package:nusa/features/worship_scan/presentation/worship_scan_view.dart';
+import 'package:nusa/features/worship_recap/domain/worship_recap.dart';
+import 'package:nusa/features/worship_recap/presentation/worship_correction_view.dart';
+import 'package:nusa/features/worship_recap/presentation/worship_recap_view.dart';
 
 abstract final class AppRoutes {
   static const startup = '/startup';
@@ -123,6 +127,9 @@ abstract final class AppRoutes {
   static const privateWorshipScan = '/scan-berhalangan-ibadah';
   static const privateConfirmation = '/konfirmasi-berhalangan-ibadah';
   static const privateConfirmationDetail = '/konfirmasi-berhalangan-ibadah/:id';
+  static const worshipRecap = '/rekap-kegiatan-ibadah';
+  static const worshipCorrection = '/rekap-kegiatan-ibadah/koreksi/:id';
+  static const worshipMonthlySummary = '/ringkasan-kegiatan-ibadah-bulanan';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -526,6 +533,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.worshipRecap,
+        name: 'worship-recap',
+        builder: (context, state) => const WorshipRecapView(),
+        routes: [
+          GoRoute(
+            path: 'koreksi/:id',
+            name: 'worship-correction',
+            builder: (context, state) => WorshipCorrectionView(
+              query: WorshipCorrectionQuery(
+                memberId: int.parse(state.pathParameters['id']!),
+                date: state.uri.queryParameters['tanggal'] ?? '',
+                activityId:
+                    int.tryParse(state.uri.queryParameters['kegiatan'] ?? '') ??
+                    0,
+              ),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.worshipMonthlySummary,
+        name: 'worship-monthly-summary',
+        builder: (context, state) => const WorshipMonthlySummaryView(),
       ),
       GoRoute(
         path: AppRoutes.roleAccess,

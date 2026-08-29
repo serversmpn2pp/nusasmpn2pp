@@ -99,6 +99,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('api.v1.scan-kegiatan-ibadah.store', 'izin:ibadah.scan');
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.index', 'izin:ibadah.rekap');
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.bulanan', 'izin:ibadah.rekap');
+        $this->assertRouteMemakaiMiddleware('api.v1.ringkasan-kegiatan-ibadah-bulanan', 'izin:ibadah.rekap');
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.koreksi.edit', 'izin:ibadah.koreksi');
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.koreksi.update', 'izin:ibadah.koreksi');
         $this->assertRouteMemakaiMiddleware('laporan-absensi.export', 'izin:laporan.export');

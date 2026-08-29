@@ -37,9 +37,11 @@ use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
 use App\Http\Controllers\Api\V1\PernyataanSurveiController;
 use App\Http\Controllers\Api\V1\PiketSayaController;
+use App\Http\Controllers\Api\V1\RekapKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
 use App\Http\Controllers\Api\V1\RekapPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\RekapPresensiSiswaController;
+use App\Http\Controllers\Api\V1\RingkasanKegiatanIbadahBulananController;
 use App\Http\Controllers\Api\V1\ScanBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\ScanKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\SiswaController;
@@ -479,6 +481,20 @@ Route::prefix('v1')
             ->name('konfirmasi-berhalangan-ibadah.show');
         Route::put('/konfirmasi-berhalangan-ibadah/{periodeBerhalanganIbadah}', [KonfirmasiBerhalanganIbadahController::class, 'update'])
             ->name('konfirmasi-berhalangan-ibadah.update');
+
+        Route::get('/rekap-kegiatan-ibadah', [RekapKegiatanIbadahController::class, 'index'])
+            ->middleware('izin:ibadah.rekap')
+            ->name('rekap-kegiatan-ibadah.index');
+        Route::get('/rekap-kegiatan-ibadah/koreksi/{anggotaKelas}', [RekapKegiatanIbadahController::class, 'showCorrection'])
+            ->middleware('izin:ibadah.koreksi')
+            ->name('rekap-kegiatan-ibadah.koreksi.show');
+        Route::put('/rekap-kegiatan-ibadah/koreksi/{anggotaKelas}', [RekapKegiatanIbadahController::class, 'updateCorrection'])
+            ->middleware('izin:ibadah.koreksi')
+            ->name('rekap-kegiatan-ibadah.koreksi.update');
+
+        Route::get('/ringkasan-kegiatan-ibadah-bulanan', RingkasanKegiatanIbadahBulananController::class)
+            ->middleware('izin:ibadah.rekap')
+            ->name('ringkasan-kegiatan-ibadah-bulanan');
 
         Route::get('/nilai-saya', NilaiSayaController::class)
             ->name('nilai-saya.index');

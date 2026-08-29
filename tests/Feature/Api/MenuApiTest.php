@@ -149,6 +149,16 @@ class MenuApiTest extends TestCase
                 'rute' => '/konfirmasi-berhalangan-ibadah',
             ])
             ->assertJsonFragment([
+                'kode' => 'rekap-ibadah-siswa',
+                'status' => 'tersedia',
+                'rute' => '/rekap-kegiatan-ibadah',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'ringkasan-ibadah-bulanan',
+                'status' => 'tersedia',
+                'rute' => '/ringkasan-kegiatan-ibadah-bulanan',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'pengaturan-presensi-pegawai',
                 'status' => 'tersedia',
                 'rute' => '/pengaturan-presensi-pegawai',
