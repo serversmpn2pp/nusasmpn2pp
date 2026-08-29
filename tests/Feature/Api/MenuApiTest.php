@@ -27,7 +27,7 @@ class MenuApiTest extends TestCase
         $response = $this->withToken($this->token($administrator))
             ->getJson(route('api.v1.menu'))
             ->assertOk()
-            ->assertJsonPath('data.jumlah_menu', 75)
+            ->assertJsonPath('data.jumlah_menu', 76)
             ->assertJsonCount(7, 'data.kelompok')
             ->assertJsonPath('data.kelompok.0.kode', 'data-sekolah')
             ->assertJsonPath('data.kelompok.0.items.0.kode', 'tahun-pelajaran')
@@ -117,6 +117,51 @@ class MenuApiTest extends TestCase
                 'kode' => 'jenis-perangkat-ajar',
                 'status' => 'tersedia',
                 'rute' => '/jenis-perangkat-ajar',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'kegiatan-ibadah',
+                'status' => 'tersedia',
+                'rute' => '/kegiatan-ibadah',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'jadwal-ibadah',
+                'status' => 'tersedia',
+                'rute' => '/jadwal-kegiatan-ibadah',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'pengaturan-berhalangan',
+                'status' => 'tersedia',
+                'rute' => '/pengaturan-berhalangan-ibadah',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'scan-ibadah-siswa',
+                'status' => 'tersedia',
+                'rute' => '/scan-kegiatan-ibadah',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'scan-berhalangan-ibadah',
+                'status' => 'tersedia',
+                'rute' => '/scan-berhalangan-ibadah',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'pengaturan-presensi-pegawai',
+                'status' => 'tersedia',
+                'rute' => '/pengaturan-presensi-pegawai',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'scan-presensi-pegawai',
+                'status' => 'tersedia',
+                'rute' => '/status-scan-presensi-pegawai',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'rekap-presensi-pegawai',
+                'status' => 'tersedia',
+                'rute' => '/rekap-presensi-pegawai',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'laporan-presensi-pegawai',
+                'status' => 'tersedia',
+                'rute' => '/laporan-presensi-pegawai',
             ])
             ->assertJsonFragment([
                 'kode' => 'role-hak-akses',

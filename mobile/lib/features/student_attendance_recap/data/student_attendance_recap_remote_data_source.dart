@@ -17,6 +17,11 @@ abstract interface class StudentAttendanceRecapRemoteDataSource {
     required int classMemberId,
     required String date,
   });
+  Future<StudentAttendanceWhatsAppMessage> whatsAppMessage({
+    required String date,
+    int? academicYearId,
+    int? classId,
+  });
   Future<void> correct({
     required int classMemberId,
     required String date,
@@ -69,6 +74,29 @@ final class DioStudentAttendanceRecapRemoteDataSource
         queryParameters: {'tanggal': date},
       );
       return StudentAttendanceDetail.fromJson(
+        Map<String, dynamic>.from(response.data!['data'] as Map),
+      );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<StudentAttendanceWhatsAppMessage> whatsAppMessage({
+    required String date,
+    int? academicYearId,
+    int? classId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        'rekap-presensi-siswa/pesan-whatsapp',
+        queryParameters: {
+          'tanggal': date,
+          'tahun_pelajaran_id': ?academicYearId,
+          'kelas_id': ?classId,
+        },
+      );
+      return StudentAttendanceWhatsAppMessage.fromJson(
         Map<String, dynamic>.from(response.data!['data'] as Map),
       );
     } on DioException catch (exception) {

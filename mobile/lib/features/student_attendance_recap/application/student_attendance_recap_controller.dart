@@ -96,6 +96,7 @@ class StudentAttendanceRecapController
           page: next.page,
           hasMore: next.hasMore,
           canCorrect: next.canCorrect,
+          canCopyWhatsApp: next.canCopyWhatsApp,
           todayOnly: next.todayOnly,
           guardianScope: next.guardianScope,
         ),
@@ -126,6 +127,19 @@ class StudentAttendanceRecapActions {
   }) => _ref
       .read(studentAttendanceRecapRepositoryProvider)
       .detail(classMemberId: classMemberId, date: date);
+  Future<StudentAttendanceWhatsAppMessage> whatsAppMessage({
+    required String date,
+    int? academicYearId,
+    int? classId,
+  }) => _guardResult(
+    () => _ref
+        .read(studentAttendanceRecapRepositoryProvider)
+        .whatsAppMessage(
+          date: date,
+          academicYearId: academicYearId,
+          classId: classId,
+        ),
+  );
   Future<void> correct({
     required int classMemberId,
     required String date,
@@ -139,6 +153,15 @@ class StudentAttendanceRecapActions {
   Future<void> _guard(Future<void> Function() operation) async {
     try {
       await operation();
+    } on UnauthorizedException {
+      await _ref.read(authControllerProvider.notifier).logout();
+      rethrow;
+    }
+  }
+
+  Future<T> _guardResult<T>(Future<T> Function() operation) async {
+    try {
+      return await operation();
     } on UnauthorizedException {
       await _ref.read(authControllerProvider.notifier).logout();
       rethrow;

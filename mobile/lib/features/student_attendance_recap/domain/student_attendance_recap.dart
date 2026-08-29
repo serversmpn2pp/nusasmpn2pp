@@ -171,6 +171,7 @@ class StudentAttendanceRecapPage {
     required this.page,
     required this.hasMore,
     required this.canCorrect,
+    required this.canCopyWhatsApp,
     required this.todayOnly,
     required this.guardianScope,
     this.academicYearId,
@@ -199,6 +200,7 @@ class StudentAttendanceRecapPage {
       page: _integer(pagination['halaman']),
       hasMore: pagination['ada_halaman_berikutnya'] as bool? ?? false,
       canCorrect: access['dapat_koreksi'] as bool? ?? false,
+      canCopyWhatsApp: access['dapat_pesan_whatsapp'] as bool? ?? false,
       todayOnly: access['koreksi_hari_ini_terbatas'] as bool? ?? false,
       guardianScope: access['cakupan_wali_kelas'] as bool? ?? false,
     );
@@ -216,8 +218,35 @@ class StudentAttendanceRecapPage {
   final int page;
   final bool hasMore;
   final bool canCorrect;
+  final bool canCopyWhatsApp;
   final bool todayOnly;
   final bool guardianScope;
+}
+
+class StudentAttendanceWhatsAppMessage {
+  const StudentAttendanceWhatsAppMessage({
+    required this.date,
+    required this.dateLabel,
+    required this.scope,
+    required this.studentCount,
+    required this.message,
+  });
+
+  factory StudentAttendanceWhatsAppMessage.fromJson(
+    Map<String, dynamic> json,
+  ) => StudentAttendanceWhatsAppMessage(
+    date: json['tanggal'] as String? ?? '',
+    dateLabel: json['tanggal_label'] as String? ?? '-',
+    scope: json['cakupan'] as String? ?? '-',
+    studentCount: _integer(json['jumlah_siswa']),
+    message: json['pesan'] as String? ?? '',
+  );
+
+  final String date;
+  final String dateLabel;
+  final String scope;
+  final int studentCount;
+  final String message;
 }
 
 class AttendanceHistoryEntry {

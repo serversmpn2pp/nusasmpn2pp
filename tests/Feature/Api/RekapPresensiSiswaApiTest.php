@@ -49,8 +49,26 @@ class RekapPresensiSiswaApiTest extends TestCase
             ->assertJsonPath('data.ringkasan.total', 2)
             ->assertJsonPath('data.ringkasan.hadir', 1)
             ->assertJsonPath('data.ringkasan.belum_scan', 1)
+            ->assertJsonPath('data.hak_akses.dapat_pesan_whatsapp', true)
             ->assertJsonFragment(['sumber' => 'scan'])
             ->assertJsonFragment(['status' => 'belum_scan']);
+
+        $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.pesan-whatsapp', [
+            'tanggal' => '2026-08-27',
+            'tahun_pelajaran_id' => $data['tahun']->id,
+        ]))->assertUnprocessable();
+
+        $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.pesan-whatsapp', [
+            'tanggal' => '2026-08-27',
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas']->id,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('data.cakupan', 'Kelas VII.A Mobile')
+            ->assertJsonPath('data.jumlah_siswa', 2)
+            ->assertJsonPath('data.pesan', fn (string $pesan) => str_contains($pesan, '*REKAP KEHADIRAN SISWA*')
+                && str_contains($pesan, 'Siswa Belum Scan')
+                && str_contains($pesan, '*Belum Scan*'));
 
         $this->withToken($token)->patchJson(route('api.v1.rekap-presensi-siswa.update', $data['anggotaBelum']), [
             'tanggal' => '2026-08-27',
@@ -149,9 +167,18 @@ class RekapPresensiSiswaApiTest extends TestCase
         $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.index', ['tanggal' => '2026-08-27']))
             ->assertOk()
             ->assertJsonPath('data.hak_akses.cakupan_wali_kelas', true)
+            ->assertJsonPath('data.hak_akses.dapat_pesan_whatsapp', true)
             ->assertJsonPath('data.ringkasan.total', 2)
             ->assertJsonCount(1, 'data.kelas')
             ->assertJsonPath('data.kelas.0.id', $data['kelas']->id);
+
+        $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.pesan-whatsapp', [
+            'tanggal' => '2026-08-27',
+            'tahun_pelajaran_id' => $data['tahun']->id,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('data.cakupan', 'Kelas VII.A Mobile')
+            ->assertJsonPath('data.jumlah_siswa', 2);
 
         $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.show', [
             'anggotaKelas' => $anggotaLain,

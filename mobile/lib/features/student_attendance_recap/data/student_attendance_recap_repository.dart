@@ -24,6 +24,15 @@ class StudentAttendanceRecapRepository {
     required int classMemberId,
     required String date,
   }) => _remote.detail(classMemberId: classMemberId, date: date);
+  Future<StudentAttendanceWhatsAppMessage> whatsAppMessage({
+    required String date,
+    int? academicYearId,
+    int? classId,
+  }) => _remote.whatsAppMessage(
+    date: date,
+    academicYearId: academicYearId,
+    classId: classId,
+  );
   Future<void> correct({
     required int classMemberId,
     required String date,

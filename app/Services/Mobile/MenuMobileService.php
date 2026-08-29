@@ -3,9 +3,12 @@
 namespace App\Services\Mobile;
 
 use App\Models\Pengguna;
+use App\Services\Ibadah\AksesBerhalanganIbadah;
 
 class MenuMobileService
 {
+    public function __construct(private AksesBerhalanganIbadah $aksesBerhalangan) {}
+
     public function siapkan(Pengguna $pengguna): array
     {
         $pengguna->loadMissing('daftarPeran.izin');
@@ -51,6 +54,11 @@ class MenuMobileService
 
         if (($item['siswa_only'] ?? false)
             && ! ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'))) {
+            return false;
+        }
+
+        if (($item['scan_berhalangan_only'] ?? false)
+            && ! $this->aksesBerhalangan->dapatMemindai($pengguna)) {
             return false;
         }
 

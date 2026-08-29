@@ -11,6 +11,7 @@ use App\Models\RiwayatPerubahanAbsensiSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Services\Absensi\KoreksiPresensiSiswaService;
+use App\Services\Absensi\RangkumanWhatsappPresensiSiswaService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -18,7 +19,10 @@ use Illuminate\Support\Facades\Storage;
 
 class RekapPresensiSiswaMobileService
 {
-    public function __construct(private readonly KoreksiPresensiSiswaService $koreksi) {}
+    public function __construct(
+        private readonly KoreksiPresensiSiswaService $koreksi,
+        private readonly RangkumanWhatsappPresensiSiswaService $rangkumanWhatsapp,
+    ) {}
 
     public function daftar(Pengguna $pengguna, array $filter): array
     {
@@ -85,6 +89,7 @@ class RekapPresensiSiswaMobileService
                 'dapat_koreksi' => $pengguna->memilikiIzin(['absensi.koreksi', 'absensi.koreksi_hari_ini']),
                 'koreksi_hari_ini_terbatas' => $this->koreksi->koreksiHariIniTerbatas($pengguna),
                 'cakupan_wali_kelas' => $cakupanWali,
+                'dapat_pesan_whatsapp' => $cakupanWali || filled($kelasId),
             ],
         ];
     }
@@ -126,6 +131,63 @@ class RekapPresensiSiswaMobileService
                 'dibuat_pada' => $item->created_at?->toIso8601String(),
             ])->values(),
             'hak_akses' => $akses,
+        ];
+    }
+
+    public function pesanWhatsapp(Pengguna $pengguna, array $filter): array
+    {
+        $tanggal = Carbon::parse($filter['tanggal'] ?? now())->toDateString();
+        $this->koreksi->pastikanTanggalDiizinkan($pengguna, $tanggal);
+        $cakupanWali = $pengguna->membatasiCakupanWaliKelas();
+        $kelasWaliIds = $cakupanWali ? $pengguna->kelasWaliIds() : [];
+        $tahun = $this->daftarTahun($cakupanWali, $kelasWaliIds);
+        $tahunId = $this->ambilTahunId($filter['tahun_pelajaran_id'] ?? null, $tahun);
+        $kelas = $this->daftarKelas($tahunId, $cakupanWali, $kelasWaliIds);
+        $kelasId = $this->ambilKelasId($filter['kelas_id'] ?? null, $kelas, $cakupanWali);
+
+        abort_unless(
+            $cakupanWali || filled($kelasId),
+            422,
+            'Pilih satu kelas terlebih dahulu untuk membuat pesan WA grup orang tua.',
+        );
+
+        $anggota = $this->queryAnggota($tahunId, $kelasId, $cakupanWali ? $kelasWaliIds : null)
+            ->with(['kelas:id,nama,tingkat', 'siswa:id,nama_lengkap,nis,nisn'])
+            ->orderBy('kelas_id')
+            ->orderByRaw('nomor_absen IS NULL')
+            ->orderBy('nomor_absen')
+            ->orderBy('id')
+            ->get();
+        $absensi = AbsensiSiswa::query()
+            ->whereDate('tanggal', $tanggal)
+            ->whereIn('siswa_id', $anggota->pluck('siswa_id'))
+            ->get();
+        $absensiPerAnggota = $absensi->whereNotNull('anggota_kelas_id')->keyBy('anggota_kelas_id');
+        $absensiPerSiswa = $absensi->keyBy('siswa_id');
+        $rekap = $anggota->map(function (AnggotaKelas $item) use ($absensiPerAnggota, $absensiPerSiswa) {
+            $presensi = $absensiPerAnggota->get($item->id) ?? $absensiPerSiswa->get($item->siswa_id);
+            $status = $presensi?->status_kehadiran ?? 'alfa';
+
+            return [
+                'anggota_kelas' => $item,
+                'absensi' => $presensi,
+                'status_kehadiran' => $status,
+                'status_sumber' => $presensi ? 'catatan' : 'inferensi',
+                'terlambat' => (int) ($presensi?->menit_terlambat ?? 0),
+                'pulang_cepat' => (int) ($presensi?->menit_pulang_cepat ?? 0),
+                'belum_pulang' => $status === 'hadir' && $presensi?->jam_masuk && ! $presensi?->jam_pulang,
+            ];
+        });
+        $kelasDipilih = $kelasId ? $kelas->firstWhere('id', $kelasId) : null;
+        $labelCakupan = $kelasDipilih ? 'Kelas '.$kelasDipilih->nama : 'Semua kelas wali';
+        $ringkasan = $this->ringkasan($tahunId, $kelasId, $cakupanWali ? $kelasWaliIds : null, $tanggal);
+
+        return [
+            'tanggal' => $tanggal,
+            'tanggal_label' => Carbon::parse($tanggal)->locale('id')->translatedFormat('d F Y'),
+            'cakupan' => $labelCakupan,
+            'jumlah_siswa' => $anggota->count(),
+            'pesan' => $this->rangkumanWhatsapp->buat($tanggal, $labelCakupan, $ringkasan, $rekap),
         ];
     }
 

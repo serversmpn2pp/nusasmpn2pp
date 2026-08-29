@@ -10,14 +10,17 @@ use App\Http\Controllers\Api\V1\FotoIdentitasController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
 use App\Http\Controllers\Api\V1\InputNilaiController;
 use App\Http\Controllers\Api\V1\JadwalGuruPiketController;
+use App\Http\Controllers\Api\V1\JadwalKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
 use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
 use App\Http\Controllers\Api\V1\KartuPegawaiController;
 use App\Http\Controllers\Api\V1\KartuPelajarController;
+use App\Http\Controllers\Api\V1\KegiatanIbadahController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
+use App\Http\Controllers\Api\V1\LaporanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\LaporanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
@@ -26,15 +29,21 @@ use App\Http\Controllers\Api\V1\NilaiSayaController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\Api\V1\PenempatanSiswaController;
+use App\Http\Controllers\Api\V1\PengaturanBerhalanganIbadahController;
+use App\Http\Controllers\Api\V1\PengaturanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\PengaturanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
 use App\Http\Controllers\Api\V1\PernyataanSurveiController;
 use App\Http\Controllers\Api\V1\PiketSayaController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
+use App\Http\Controllers\Api\V1\RekapPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\RekapPresensiSiswaController;
+use App\Http\Controllers\Api\V1\ScanBerhalanganIbadahController;
+use App\Http\Controllers\Api\V1\ScanKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\SiswaController;
 use App\Http\Controllers\Api\V1\SkemaBobotNilaiController;
+use App\Http\Controllers\Api\V1\StatusScanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\StatusScanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\SurveiPembelajaranController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
@@ -245,19 +254,46 @@ Route::prefix('v1')
             ->middleware('izin:absensi.pengaturan_kelola')
             ->name('pengaturan-presensi-siswa.update');
 
+        Route::get('/pengaturan-presensi-pegawai', [PengaturanPresensiPegawaiController::class, 'index'])
+            ->middleware('izin:absensi.pengaturan_kelola')
+            ->name('pengaturan-presensi-pegawai.index');
+        Route::post('/pengaturan-presensi-pegawai', [PengaturanPresensiPegawaiController::class, 'store'])
+            ->middleware('izin:absensi.pengaturan_kelola')
+            ->name('pengaturan-presensi-pegawai.store');
+        Route::patch('/pengaturan-presensi-pegawai/{pengaturanAbsensiPegawai}', [PengaturanPresensiPegawaiController::class, 'update'])
+            ->middleware('izin:absensi.pengaturan_kelola')
+            ->name('pengaturan-presensi-pegawai.update');
+
         Route::get('/status-scan-presensi-siswa', StatusScanPresensiSiswaController::class)
             ->middleware('izin:absensi.scan,absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
             ->name('status-scan-presensi-siswa.index');
 
+        Route::get('/status-scan-presensi-pegawai', StatusScanPresensiPegawaiController::class)
+            ->middleware('izin:absensi.scan,absensi.lihat,absensi.koreksi,absensi.laporan')
+            ->name('status-scan-presensi-pegawai.index');
+
         Route::get('/rekap-presensi-siswa', [RekapPresensiSiswaController::class, 'index'])
             ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
             ->name('rekap-presensi-siswa.index');
+        Route::get('/rekap-presensi-siswa/pesan-whatsapp', [RekapPresensiSiswaController::class, 'pesanWhatsapp'])
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
+            ->name('rekap-presensi-siswa.pesan-whatsapp');
         Route::get('/rekap-presensi-siswa/{anggotaKelas}', [RekapPresensiSiswaController::class, 'show'])
             ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
             ->name('rekap-presensi-siswa.show');
         Route::patch('/rekap-presensi-siswa/{anggotaKelas}/koreksi', [RekapPresensiSiswaController::class, 'update'])
             ->middleware('izin:absensi.koreksi,absensi.koreksi_hari_ini')
             ->name('rekap-presensi-siswa.update');
+
+        Route::get('/rekap-presensi-pegawai', [RekapPresensiPegawaiController::class, 'index'])
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.laporan,absensi_pegawai.pribadi')
+            ->name('rekap-presensi-pegawai.index');
+        Route::get('/rekap-presensi-pegawai/{pegawai}', [RekapPresensiPegawaiController::class, 'show'])
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.laporan,absensi_pegawai.pribadi')
+            ->name('rekap-presensi-pegawai.show');
+        Route::patch('/rekap-presensi-pegawai/{pegawai}/koreksi', [RekapPresensiPegawaiController::class, 'update'])
+            ->middleware('izin:absensi.koreksi')
+            ->name('rekap-presensi-pegawai.update');
 
         Route::get('/laporan-presensi-siswa/export', [LaporanPresensiSiswaController::class, 'export'])
             ->middleware('izin:laporan.export')
@@ -268,6 +304,13 @@ Route::prefix('v1')
         Route::get('/laporan-presensi-siswa/{anggotaKelas}', [LaporanPresensiSiswaController::class, 'show'])
             ->middleware('izin:absensi.laporan')
             ->name('laporan-presensi-siswa.show');
+
+        Route::get('/laporan-presensi-pegawai', [LaporanPresensiPegawaiController::class, 'index'])
+            ->middleware('izin:absensi.laporan,absensi_pegawai.pribadi')
+            ->name('laporan-presensi-pegawai.index');
+        Route::get('/laporan-presensi-pegawai/{pegawai}', [LaporanPresensiPegawaiController::class, 'show'])
+            ->middleware('izin:absensi.laporan,absensi_pegawai.pribadi')
+            ->name('laporan-presensi-pegawai.show');
 
         Route::get('/jadwal-mengajar-saya', JadwalMengajarSayaController::class)
             ->middleware('izin:jadwal.pribadi')
@@ -377,6 +420,57 @@ Route::prefix('v1')
         Route::delete('/jenis-perangkat-ajar/{jenisPerangkatAjar}', [JenisPerangkatAjarController::class, 'destroy'])
             ->middleware('izin:perangkat_ajar.jenis_kelola')
             ->name('jenis-perangkat-ajar.destroy');
+
+        Route::get('/kegiatan-ibadah', [KegiatanIbadahController::class, 'index'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('kegiatan-ibadah.index');
+        Route::post('/kegiatan-ibadah', [KegiatanIbadahController::class, 'store'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('kegiatan-ibadah.store');
+        Route::patch('/kegiatan-ibadah/{kegiatanIbadah}', [KegiatanIbadahController::class, 'update'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('kegiatan-ibadah.update');
+        Route::delete('/kegiatan-ibadah/{kegiatanIbadah}', [KegiatanIbadahController::class, 'destroy'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('kegiatan-ibadah.destroy');
+
+        Route::get('/jadwal-kegiatan-ibadah', [JadwalKegiatanIbadahController::class, 'index'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('jadwal-kegiatan-ibadah.index');
+        Route::post('/jadwal-kegiatan-ibadah', [JadwalKegiatanIbadahController::class, 'store'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('jadwal-kegiatan-ibadah.store');
+        Route::patch('/jadwal-kegiatan-ibadah/{jadwalKegiatanIbadah}', [JadwalKegiatanIbadahController::class, 'update'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('jadwal-kegiatan-ibadah.update');
+        Route::delete('/jadwal-kegiatan-ibadah/{jadwalKegiatanIbadah}', [JadwalKegiatanIbadahController::class, 'destroy'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('jadwal-kegiatan-ibadah.destroy');
+
+        Route::get('/pengaturan-berhalangan-ibadah', [PengaturanBerhalanganIbadahController::class, 'index'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('pengaturan-berhalangan-ibadah.index');
+        Route::put('/pengaturan-berhalangan-ibadah', [PengaturanBerhalanganIbadahController::class, 'update'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('pengaturan-berhalangan-ibadah.update');
+        Route::post('/pengaturan-berhalangan-ibadah/pendamping', [PengaturanBerhalanganIbadahController::class, 'storePendamping'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('pengaturan-berhalangan-ibadah.pendamping.store');
+        Route::delete('/pengaturan-berhalangan-ibadah/pendamping/{penugasanPendampingIbadahSiswi}', [PengaturanBerhalanganIbadahController::class, 'destroyPendamping'])
+            ->middleware('izin:ibadah.pengaturan_kelola')
+            ->name('pengaturan-berhalangan-ibadah.pendamping.destroy');
+
+        Route::get('/scan-kegiatan-ibadah', [ScanKegiatanIbadahController::class, 'index'])
+            ->middleware('izin:ibadah.scan')
+            ->name('scan-kegiatan-ibadah.index');
+        Route::post('/scan-kegiatan-ibadah', [ScanKegiatanIbadahController::class, 'store'])
+            ->middleware('izin:ibadah.scan')
+            ->name('scan-kegiatan-ibadah.store');
+
+        Route::get('/scan-berhalangan-ibadah', [ScanBerhalanganIbadahController::class, 'index'])
+            ->name('scan-berhalangan-ibadah.index');
+        Route::post('/scan-berhalangan-ibadah', [ScanBerhalanganIbadahController::class, 'store'])
+            ->name('scan-berhalangan-ibadah.store');
 
         Route::get('/nilai-saya', NilaiSayaController::class)
             ->name('nilai-saya.index');

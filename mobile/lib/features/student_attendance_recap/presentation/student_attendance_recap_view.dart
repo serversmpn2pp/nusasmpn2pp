@@ -18,6 +18,7 @@ class _StudentAttendanceRecapViewState
     extends ConsumerState<StudentAttendanceRecapView> {
   final _search = TextEditingController();
   bool _mutating = false;
+  bool _loadingWhatsApp = false;
   @override
   void dispose() {
     _search.dispose();
@@ -30,8 +31,33 @@ class _StudentAttendanceRecapViewState
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: const Text('Rekap & Koreksi Presensi'),
+        title: const Text(
+          'Rekap & Koreksi Presensi',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
+          if (async.hasValue)
+            IconButton(
+              key: const Key('attendance-whatsapp-button'),
+              tooltip: async.requireValue.canCopyWhatsApp
+                  ? 'Pesan WA grup orang tua'
+                  : 'Pilih kelas terlebih dahulu',
+              onPressed: _loadingWhatsApp
+                  ? null
+                  : () => _openWhatsApp(async.requireValue),
+              icon: _loadingWhatsApp
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      Icons.forum_rounded,
+                      color: async.requireValue.canCopyWhatsApp
+                          ? NusaColors.success
+                          : NusaColors.textSecondary,
+                    ),
+            ),
           IconButton(
             tooltip: 'Perbarui',
             onPressed: async.isLoading
@@ -252,6 +278,36 @@ class _StudentAttendanceRecapViewState
       await ref
           .read(studentAttendanceRecapControllerProvider.notifier)
           .filterDate(_isoDate(value));
+    }
+  }
+
+  Future<void> _openWhatsApp(StudentAttendanceRecapPage page) async {
+    if (!page.canCopyWhatsApp) {
+      _show('Pilih satu kelas terlebih dahulu untuk membuat pesan WA grup.');
+      return;
+    }
+    setState(() => _loadingWhatsApp = true);
+    try {
+      final data = await ref
+          .read(studentAttendanceRecapActionsProvider)
+          .whatsAppMessage(
+            date: page.date,
+            academicYearId: page.academicYearId,
+            classId: page.classId,
+          );
+      if (!mounted) return;
+      setState(() => _loadingWhatsApp = false);
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (_) => StudentAttendanceWhatsAppSheet(data: data),
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _loadingWhatsApp = false);
+        _show(_errorMessage(error), error: true);
+      }
     }
   }
 

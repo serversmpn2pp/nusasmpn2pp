@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_attendance_recap/domain/student_attendance_recap.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
@@ -563,3 +564,140 @@ Color attendanceStatusColor(String status) => switch (status) {
   'alfa' => const Color(0xFFB42318),
   _ => NusaColors.textSecondary,
 };
+
+class StudentAttendanceWhatsAppSheet extends StatefulWidget {
+  const StudentAttendanceWhatsAppSheet({required this.data, super.key});
+  final StudentAttendanceWhatsAppMessage data;
+
+  @override
+  State<StudentAttendanceWhatsAppSheet> createState() =>
+      _StudentAttendanceWhatsAppSheetState();
+}
+
+class _StudentAttendanceWhatsAppSheetState
+    extends State<StudentAttendanceWhatsAppSheet> {
+  bool _copied = false;
+
+  @override
+  Widget build(BuildContext context) => DraggableScrollableSheet(
+    expand: false,
+    initialChildSize: .82,
+    minChildSize: .55,
+    maxChildSize: .95,
+    builder: (context, controller) => Padding(
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+      child: Column(
+        children: [
+          Container(
+            width: 42,
+            height: 4,
+            decoration: BoxDecoration(
+              color: NusaColors.outline,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: NusaColors.success.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.forum_rounded,
+                  color: NusaColors.success,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pesan WA Grup Orang Tua',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      '${widget.data.dateLabel} · ${widget.data.scope}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: NusaColors.textSecondary,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tutup',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: NusaColors.surfaceBlue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${widget.data.studentCount} siswa · Pesan siap ditempel ke grup WhatsApp orang tua.',
+              style: const TextStyle(
+                color: NusaColors.primary,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: NusaColors.outline),
+              ),
+              child: SingleChildScrollView(
+                controller: controller,
+                child: SelectableText(
+                  widget.data.message,
+                  key: const Key('attendance-whatsapp-message'),
+                  style: const TextStyle(fontSize: 12.5, height: 1.48),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          NusaPrimaryButton(
+            key: const Key('attendance-whatsapp-copy'),
+            label: _copied ? 'Pesan Berhasil Disalin' : 'Salin Pesan',
+            onPressed: _copy,
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.data.message));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Pesan berhasil disalin.')));
+  }
+}

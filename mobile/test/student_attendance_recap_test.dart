@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_attendance_recap/data/student_attendance_recap_remote_data_source.dart';
@@ -38,6 +39,7 @@ void main() {
       'paginasi': {'halaman': 1, 'ada_halaman_berikutnya': false},
       'hak_akses': {
         'dapat_koreksi': true,
+        'dapat_pesan_whatsapp': true,
         'koreksi_hari_ini_terbatas': false,
         'cakupan_wali_kelas': false,
       },
@@ -47,6 +49,7 @@ void main() {
     expect(page.items.single.source, 'scan');
     expect(page.items.single.lateMinutes, 10);
     expect(page.items.single.correction.allowed, isTrue);
+    expect(page.canCopyWhatsApp, isTrue);
   });
 
   testWidgets('rekap dan koreksi presensi rapi pada layar Android sempit', (
@@ -56,6 +59,15 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          SystemChannels.platform,
+          (call) async => null,
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
     final remote = _FakeStudentAttendanceRecapRemoteDataSource();
 
     await tester.pumpWidget(
@@ -77,6 +89,21 @@ void main() {
     expect(find.byKey(const Key('attendance-recap-date')), findsOneWidget);
     expect(find.byKey(const Key('attendance-recap-year')), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('attendance-whatsapp-button')));
+    await tester.pumpAndSettle();
+    expect(remote.whatsAppCalls, 1);
+    expect(find.text('Pesan WA Grup Orang Tua'), findsOneWidget);
+    expect(
+      find.byKey(const Key('attendance-whatsapp-message')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('attendance-whatsapp-copy')));
+    await tester.pumpAndSettle();
+    expect(find.text('Pesan Berhasil Disalin'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.close_rounded).last);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -420));
     await tester.pumpAndSettle();
@@ -141,6 +168,7 @@ Map<String, dynamic> _recordJson() => {
 final class _FakeStudentAttendanceRecapRemoteDataSource
     implements StudentAttendanceRecapRemoteDataSource {
   int correctCalls = 0;
+  int whatsAppCalls = 0;
   String lastStatus = 'hadir';
 
   StudentAttendanceRecord get record => StudentAttendanceRecord.fromJson({
@@ -190,6 +218,7 @@ final class _FakeStudentAttendanceRecapRemoteDataSource
     page: page,
     hasMore: false,
     canCorrect: true,
+    canCopyWhatsApp: true,
     todayOnly: false,
     guardianScope: false,
   );
@@ -218,6 +247,22 @@ final class _FakeStudentAttendanceRecapRemoteDataSource
       todayOnly: false,
     ),
   );
+
+  @override
+  Future<StudentAttendanceWhatsAppMessage> whatsAppMessage({
+    required String date,
+    int? academicYearId,
+    int? classId,
+  }) async {
+    whatsAppCalls++;
+    return StudentAttendanceWhatsAppMessage(
+      date: date,
+      dateLabel: '28 Agustus 2026',
+      scope: 'Kelas VII.A',
+      studentCount: 1,
+      message: '*REKAP KEHADIRAN SISWA*\nSMP Negeri 2 Padang Panjang\nCakupan: Kelas VII.A',
+    );
+  }
 
   @override
   Future<void> correct({

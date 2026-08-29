@@ -38,6 +38,17 @@ class RekapPresensiSiswaController extends Controller
         return $this->tanpaCache(['data' => $service->detail($request->user(), $anggotaKelas, $data['tanggal'])]);
     }
 
+    public function pesanWhatsapp(Request $request, RekapPresensiSiswaMobileService $service): JsonResponse
+    {
+        $filter = $request->validate([
+            'tanggal' => ['nullable', 'date'],
+            'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+        ]);
+
+        return $this->tanpaCache(['data' => $service->pesanWhatsapp($request->user(), $filter)]);
+    }
+
     public function update(
         Request $request,
         AnggotaKelas $anggotaKelas,
