@@ -64,6 +64,7 @@ return [
             ['kode' => 'pengaturan-berhalangan', 'label' => 'Pengaturan Berhalangan', 'inisial' => 'PB', 'subkelompok' => 'Ibadah Siswa', 'izin' => 'ibadah.pengaturan_kelola', 'status' => 'tersedia', 'rute' => '/pengaturan-berhalangan-ibadah'],
             ['kode' => 'scan-ibadah-siswa', 'label' => 'Scan Ibadah Siswa', 'inisial' => 'SI', 'subkelompok' => 'Ibadah Siswa', 'izin' => 'ibadah.scan', 'status' => 'tersedia', 'rute' => '/scan-kegiatan-ibadah'],
             ['kode' => 'scan-berhalangan-ibadah', 'label' => 'Scan Berhalangan', 'inisial' => 'SB', 'subkelompok' => 'Ibadah Siswa', 'scan_berhalangan_only' => true, 'status' => 'tersedia', 'rute' => '/scan-berhalangan-ibadah'],
+            ['kode' => 'konfirmasi-berhalangan-ibadah', 'label' => 'Konfirmasi Privat', 'inisial' => 'KP', 'subkelompok' => 'Ibadah Siswa', 'konfirmasi_berhalangan_only' => true, 'status' => 'tersedia', 'rute' => '/konfirmasi-berhalangan-ibadah'],
             ['kode' => 'rekap-ibadah-siswa', 'label' => 'Rekap Ibadah Siswa', 'inisial' => 'RI', 'subkelompok' => 'Ibadah Siswa', 'izin' => 'ibadah.rekap'],
             ['kode' => 'ringkasan-ibadah-bulanan', 'label' => 'Ringkasan Ibadah Bulanan', 'inisial' => 'BI', 'subkelompok' => 'Ibadah Siswa', 'izin' => 'ibadah.rekap'],
             ['kode' => 'pengaturan-presensi-siswa', 'label' => 'Pengaturan Presensi Siswa', 'inisial' => 'PA', 'subkelompok' => 'Presensi Siswa', 'izin' => 'absensi.pengaturan_kelola', 'status' => 'tersedia', 'rute' => '/pengaturan-presensi-siswa'],

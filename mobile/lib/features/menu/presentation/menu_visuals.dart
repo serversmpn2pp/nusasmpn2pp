@@ -60,6 +60,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'jadwal-ibadah' => Icons.event_available_rounded,
     'pengaturan-berhalangan' => Icons.tune_rounded,
     'scan-berhalangan-ibadah' => Icons.lock_person_rounded,
+    'konfirmasi-berhalangan-ibadah' => Icons.privacy_tip_rounded,
     'scan-ibadah-siswa' ||
     'scan-presensi-pegawai' => Icons.qr_code_scanner_rounded,
     'scan-presensi-siswa' => Icons.sensors_rounded,

@@ -62,6 +62,11 @@ class MenuMobileService
             return false;
         }
 
+        if (($item['konfirmasi_berhalangan_only'] ?? false)
+            && ! $this->aksesBerhalangan->dapatMengonfirmasi($pengguna)) {
+            return false;
+        }
+
         $izin = $item['izin'] ?? null;
 
         return blank($izin) || $pengguna->memilikiIzin($izin);

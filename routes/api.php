@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\KegiatanIbadahController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
+use App\Http\Controllers\Api\V1\KonfirmasiBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\LaporanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\LaporanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
@@ -471,6 +472,13 @@ Route::prefix('v1')
             ->name('scan-berhalangan-ibadah.index');
         Route::post('/scan-berhalangan-ibadah', [ScanBerhalanganIbadahController::class, 'store'])
             ->name('scan-berhalangan-ibadah.store');
+
+        Route::get('/konfirmasi-berhalangan-ibadah', [KonfirmasiBerhalanganIbadahController::class, 'index'])
+            ->name('konfirmasi-berhalangan-ibadah.index');
+        Route::get('/konfirmasi-berhalangan-ibadah/{periodeBerhalanganIbadah}', [KonfirmasiBerhalanganIbadahController::class, 'show'])
+            ->name('konfirmasi-berhalangan-ibadah.show');
+        Route::put('/konfirmasi-berhalangan-ibadah/{periodeBerhalanganIbadah}', [KonfirmasiBerhalanganIbadahController::class, 'update'])
+            ->name('konfirmasi-berhalangan-ibadah.update');
 
         Route::get('/nilai-saya', NilaiSayaController::class)
             ->name('nilai-saya.index');

@@ -32,6 +32,8 @@ import 'package:nusa/features/my_grades/presentation/my_grades_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_detail_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_list_view.dart';
 import 'package:nusa/features/private_worship_scan/presentation/private_worship_scan_view.dart';
+import 'package:nusa/features/private_confirmation/presentation/private_confirmation_detail_view.dart';
+import 'package:nusa/features/private_confirmation/presentation/private_confirmation_list_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_detail_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_list_view.dart';
 import 'package:nusa/features/school_class/presentation/school_class_detail_view.dart';
@@ -119,6 +121,8 @@ abstract final class AppRoutes {
   static const worshipSchedules = '/jadwal-kegiatan-ibadah';
   static const worshipScan = '/scan-kegiatan-ibadah';
   static const privateWorshipScan = '/scan-berhalangan-ibadah';
+  static const privateConfirmation = '/konfirmasi-berhalangan-ibadah';
+  static const privateConfirmationDetail = '/konfirmasi-berhalangan-ibadah/:id';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -508,6 +512,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.privateWorshipScan,
         name: 'private-worship-scan',
         builder: (context, state) => const PrivateWorshipScanView(),
+      ),
+      GoRoute(
+        path: AppRoutes.privateConfirmation,
+        name: 'private-confirmation',
+        builder: (context, state) => const PrivateConfirmationListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'private-confirmation-detail',
+            builder: (context, state) => PrivateConfirmationDetailView(
+              periodId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.roleAccess,
