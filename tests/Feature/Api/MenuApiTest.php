@@ -169,6 +169,21 @@ class MenuApiTest extends TestCase
                 'rute' => '/jenis-pelanggaran-siswa',
             ])
             ->assertJsonFragment([
+                'kode' => 'aturan-sanksi-poin',
+                'status' => 'tersedia',
+                'rute' => '/aturan-sanksi-poin',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'poin-keterlambatan',
+                'status' => 'tersedia',
+                'rute' => '/pengaturan-poin-keterlambatan',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'peringatan-dini-poin',
+                'status' => 'tersedia',
+                'rute' => '/pengaturan-peringatan-dini-poin',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'pengaturan-presensi-pegawai',
                 'status' => 'tersedia',
                 'rute' => '/pengaturan-presensi-pegawai',

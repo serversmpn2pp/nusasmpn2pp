@@ -14,6 +14,7 @@ import 'package:nusa/features/employee_attendance_settings/presentation/employee
 import 'package:nusa/features/employee_attendance_recap/presentation/employee_attendance_recap_view.dart';
 import 'package:nusa/features/employee_attendance_report/presentation/employee_attendance_report_view.dart';
 import 'package:nusa/features/employee_scan_status/presentation/employee_scan_status_view.dart';
+import 'package:nusa/features/early_warning_setting/presentation/early_warning_setting_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_detail_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_list_view.dart';
 import 'package:nusa/features/grade_weight_scheme/presentation/grade_weight_scheme_view.dart';
@@ -24,6 +25,7 @@ import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/identity_photo/presentation/identity_photo_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
 import 'package:nusa/features/learning_survey/presentation/learning_survey_view.dart';
+import 'package:nusa/features/late_point_setting/presentation/late_point_setting_view.dart';
 import 'package:nusa/features/login_activity/presentation/login_activity_list_view.dart';
 import 'package:nusa/features/login_activity/presentation/login_attempt_detail_view.dart';
 import 'package:nusa/features/menu/presentation/menu_group_view.dart';
@@ -31,6 +33,7 @@ import 'package:nusa/features/my_teaching_schedule/presentation/my_teaching_sche
 import 'package:nusa/features/my_grades/presentation/my_grades_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_detail_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_list_view.dart';
+import 'package:nusa/features/point_sanction_rule/presentation/point_sanction_rule_view.dart';
 import 'package:nusa/features/private_worship_scan/presentation/private_worship_scan_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_detail_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_list_view.dart';
@@ -134,6 +137,9 @@ abstract final class AppRoutes {
   static const worshipMonthlySummary = '/ringkasan-kegiatan-ibadah-bulanan';
   static const studentGuidanceCategories = '/kategori-pembinaan-siswa';
   static const studentViolationTypes = '/jenis-pelanggaran-siswa';
+  static const pointSanctionRules = '/aturan-sanksi-poin';
+  static const latePointSettings = '/pengaturan-poin-keterlambatan';
+  static const earlyWarningSettings = '/pengaturan-peringatan-dini-poin';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -572,6 +578,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.studentViolationTypes,
         name: 'student-violation-types',
         builder: (context, state) => const StudentViolationTypeView(),
+      ),
+      GoRoute(
+        path: AppRoutes.pointSanctionRules,
+        name: 'point-sanction-rules',
+        builder: (context, state) => const PointSanctionRuleView(),
+      ),
+      GoRoute(
+        path: AppRoutes.latePointSettings,
+        name: 'late-point-settings',
+        builder: (context, state) => const LatePointSettingView(),
+      ),
+      GoRoute(
+        path: AppRoutes.earlyWarningSettings,
+        name: 'early-warning-settings',
+        builder: (context, state) => const EarlyWarningSettingView(),
       ),
       GoRoute(
         path: AppRoutes.roleAccess,

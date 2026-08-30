@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AktivitasLoginController;
 use App\Http\Controllers\Api\V1\AkunOrangTuaController;
 use App\Http\Controllers\Api\V1\AkunPegawaiController;
 use App\Http\Controllers\Api\V1\AkunSiswaController;
+use App\Http\Controllers\Api\V1\AturanSanksiPoinController;
 use App\Http\Controllers\Api\V1\AutentikasiController;
 use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\FotoIdentitasController;
@@ -33,6 +34,8 @@ use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\Api\V1\PenempatanSiswaController;
 use App\Http\Controllers\Api\V1\PengaturanBerhalanganIbadahController;
+use App\Http\Controllers\Api\V1\PengaturanPeringatanDiniPoinController;
+use App\Http\Controllers\Api\V1\PengaturanPoinKeterlambatanController;
 use App\Http\Controllers\Api\V1\PengaturanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\PengaturanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\PeranController;
@@ -464,6 +467,33 @@ Route::prefix('v1')
         Route::delete('/jenis-pelanggaran-siswa/{jenisPelanggaranSiswa}', [JenisPelanggaranSiswaController::class, 'destroy'])
             ->middleware('izin:poin_siswa.pengaturan')
             ->name('jenis-pelanggaran-siswa.destroy');
+
+        Route::get('/aturan-sanksi-poin', [AturanSanksiPoinController::class, 'index'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('aturan-sanksi-poin.index');
+        Route::post('/aturan-sanksi-poin', [AturanSanksiPoinController::class, 'store'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('aturan-sanksi-poin.store');
+        Route::patch('/aturan-sanksi-poin/{aturanSanksiPoin}', [AturanSanksiPoinController::class, 'update'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('aturan-sanksi-poin.update');
+        Route::delete('/aturan-sanksi-poin/{aturanSanksiPoin}', [AturanSanksiPoinController::class, 'destroy'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('aturan-sanksi-poin.destroy');
+
+        Route::get('/pengaturan-poin-keterlambatan', [PengaturanPoinKeterlambatanController::class, 'index'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-poin-keterlambatan.index');
+        Route::put('/pengaturan-poin-keterlambatan/{tahunPelajaran}', [PengaturanPoinKeterlambatanController::class, 'update'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-poin-keterlambatan.update');
+
+        Route::get('/pengaturan-peringatan-dini-poin', [PengaturanPeringatanDiniPoinController::class, 'index'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-peringatan-dini-poin.index');
+        Route::put('/pengaturan-peringatan-dini-poin/{tahunPelajaran}', [PengaturanPeringatanDiniPoinController::class, 'update'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-peringatan-dini-poin.update');
 
         Route::get('/jadwal-kegiatan-ibadah', [JadwalKegiatanIbadahController::class, 'index'])
             ->middleware('izin:ibadah.pengaturan_kelola')
