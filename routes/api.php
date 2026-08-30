@@ -26,13 +26,17 @@ use App\Http\Controllers\Api\V1\KomponenNilaiController;
 use App\Http\Controllers\Api\V1\KonfirmasiBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\LaporanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\LaporanPresensiSiswaController;
+use App\Http\Controllers\Api\V1\LaporanSiswaController;
+use App\Http\Controllers\Api\V1\LaporkanKejadianController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\MonitoringSurveiController;
 use App\Http\Controllers\Api\V1\NilaiSayaController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
+use App\Http\Controllers\Api\V1\PemeriksaanPengesahanController;
 use App\Http\Controllers\Api\V1\PenempatanSiswaController;
+use App\Http\Controllers\Api\V1\PengaturanBatasProsesPelanggaranController;
 use App\Http\Controllers\Api\V1\PengaturanBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\PengaturanPeringatanDiniPoinController;
 use App\Http\Controllers\Api\V1\PengaturanPoinKeterlambatanController;
@@ -55,6 +59,7 @@ use App\Http\Controllers\Api\V1\StatusScanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\StatusScanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\SurveiPembelajaranController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
+use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')
@@ -87,6 +92,36 @@ Route::prefix('v1')
 
         Route::get('/menu', MenuController::class)
             ->name('menu');
+
+        Route::get('/laporkan-kejadian/referensi', [LaporkanKejadianController::class, 'referensi'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lapor'])
+            ->name('laporkan-kejadian.referensi');
+        Route::post('/laporkan-kejadian', [LaporkanKejadianController::class, 'store'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lapor'])
+            ->name('laporkan-kejadian.store');
+
+        Route::get('/laporan-siswa', [LaporanSiswaController::class, 'index'])
+            ->middleware(['akun_pegawai', 'izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
+            ->name('laporan-siswa.index');
+        Route::get('/laporan-siswa/{laporanPembinaanSiswa}', [LaporanSiswaController::class, 'show'])
+            ->middleware(['akun_pegawai', 'izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
+            ->name('laporan-siswa.show');
+        Route::get('/laporan-siswa/bukti/{buktiLaporanPembinaanSiswa}/file', [LaporanSiswaController::class, 'evidence'])
+            ->middleware(['akun_pegawai', 'izin:bk.lihat,bk.kelola,poin_siswa.lapor,poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
+            ->name('laporan-siswa.bukti');
+
+        Route::get('/pemeriksaan-pengesahan', [PemeriksaanPengesahanController::class, 'index'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
+            ->name('pemeriksaan-pengesahan.index');
+        Route::get('/pemeriksaan-pengesahan/{laporanPembinaanSiswa}', [PemeriksaanPengesahanController::class, 'show'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
+            ->name('pemeriksaan-pengesahan.show');
+        Route::post('/pemeriksaan-pengesahan/{laporanPembinaanSiswa}/verifikasi-bk', [VerifikasiPelanggaranSiswaController::class, 'verifikasiBk'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.verifikasi_bk'])
+            ->name('pemeriksaan-pengesahan.verifikasi-bk');
+        Route::post('/pemeriksaan-pengesahan/{laporanPembinaanSiswa}/pengesahan-wakil', [VerifikasiPelanggaranSiswaController::class, 'pengesahanWakil'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.sahkan_wakil'])
+            ->name('pemeriksaan-pengesahan.pengesahan-wakil');
 
         Route::get('/jadwal-guru-piket', [JadwalGuruPiketController::class, 'index'])
             ->middleware('izin:piket_guru.kelola')
@@ -494,6 +529,13 @@ Route::prefix('v1')
         Route::put('/pengaturan-peringatan-dini-poin/{tahunPelajaran}', [PengaturanPeringatanDiniPoinController::class, 'update'])
             ->middleware('izin:poin_siswa.pengaturan')
             ->name('pengaturan-peringatan-dini-poin.update');
+
+        Route::get('/pengaturan-batas-proses-pelanggaran', [PengaturanBatasProsesPelanggaranController::class, 'index'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-batas-proses-pelanggaran.index');
+        Route::put('/pengaturan-batas-proses-pelanggaran/{tahunPelajaran}', [PengaturanBatasProsesPelanggaranController::class, 'update'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('pengaturan-batas-proses-pelanggaran.update');
 
         Route::get('/jadwal-kegiatan-ibadah', [JadwalKegiatanIbadahController::class, 'index'])
             ->middleware('izin:ibadah.pengaturan_kelola')

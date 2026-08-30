@@ -48,7 +48,9 @@ class MenuMobileService
 
     private function bolehDilihat(array $item, Pengguna $pengguna): bool
     {
-        if (($item['pegawai_only'] ?? false) && ! $pengguna->pegawai_id) {
+        if (($item['pegawai_only'] ?? false)
+            && ! $pengguna->pegawai_id
+            && ! (($item['administrator_allowed'] ?? false) && $pengguna->administrator())) {
             return false;
         }
 

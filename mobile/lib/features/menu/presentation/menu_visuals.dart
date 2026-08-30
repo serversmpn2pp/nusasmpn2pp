@@ -80,6 +80,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'rekap-poin-siswa' => Icons.score_rounded,
     'penghargaan-pengurangan-poin' => Icons.emoji_events_rounded,
     'penugasan-guru-wali' => Icons.supervisor_account_rounded,
+    'laporkan-kejadian' => Icons.campaign_rounded,
     'jenis-pelanggaran-poin' => Icons.rule_rounded,
     'aturan-sanksi-poin' => Icons.policy_rounded,
     'poin-keterlambatan' => Icons.timer_rounded,

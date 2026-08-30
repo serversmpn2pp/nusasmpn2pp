@@ -101,6 +101,7 @@ class NusaTextField extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.prefixIcon,
+    this.labelText,
     this.enabled = true,
     this.obscureText = false,
     this.autofillHints,
@@ -116,6 +117,7 @@ class NusaTextField extends StatelessWidget {
   final Key fieldKey;
   final TextEditingController controller;
   final String hintText;
+  final String? labelText;
   final IconData prefixIcon;
   final bool enabled;
   final bool obscureText;
@@ -141,6 +143,7 @@ class NusaTextField extends StatelessWidget {
       validator: validator,
       autocorrect: false,
       decoration: InputDecoration(
+        labelText: labelText,
         hintText: hintText,
         prefixIcon: Icon(prefixIcon),
         suffixIcon: suffixIcon,

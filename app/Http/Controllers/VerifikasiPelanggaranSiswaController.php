@@ -87,12 +87,26 @@ class VerifikasiPelanggaranSiswaController extends Controller
         $laporanPembinaanSiswa->refresh();
         $this->notifikasiHasilPemeriksaan($request, $laporanPembinaanSiswa, $data['hasil']);
 
-        return back()->with('berhasil', match ($data['hasil']) {
+        $pesan = match ($data['hasil']) {
             'sanksi_poin' => 'Rekomendasi poin dari BK disimpan dan dikirim kepada Wakil Kesiswaan untuk disahkan.',
             'pembinaan' => 'Keputusan BK disimpan sebagai pembinaan tanpa poin.',
             'tidak_terbukti' => 'Laporan dinyatakan tidak terbukti dan tidak menambah poin.',
             default => 'Laporan dikembalikan untuk melengkapi klarifikasi.',
-        });
+        };
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $pesan,
+                'data' => [
+                    'id' => (int) $laporanPembinaanSiswa->id,
+                    'status_verifikasi' => $laporanPembinaanSiswa->status_verifikasi,
+                    'label_status_verifikasi' => $laporanPembinaanSiswa->labelStatusVerifikasi(),
+                    'total_poin' => (int) $laporanPembinaanSiswa->total_poin,
+                ],
+            ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        }
+
+        return back()->with('berhasil', $pesan);
     }
 
     public function pengesahanWakil(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
@@ -155,9 +169,23 @@ class VerifikasiPelanggaranSiswaController extends Controller
         $laporanPembinaanSiswa->refresh();
         $this->notifikasiPengesahanWakil($request, $laporanPembinaanSiswa, $data['keputusan']);
 
-        return back()->with('berhasil', $data['keputusan'] === 'sahkan'
+        $pesan = $data['keputusan'] === 'sahkan'
             ? 'Pelanggaran berpoin berhasil disahkan. Poin siswa sekarang resmi tercatat.'
-            : 'Rekomendasi dikembalikan kepada BK untuk diperiksa kembali.');
+            : 'Rekomendasi dikembalikan kepada BK untuk diperiksa kembali.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $pesan,
+                'data' => [
+                    'id' => (int) $laporanPembinaanSiswa->id,
+                    'status_verifikasi' => $laporanPembinaanSiswa->status_verifikasi,
+                    'label_status_verifikasi' => $laporanPembinaanSiswa->labelStatusVerifikasi(),
+                    'total_poin' => (int) $laporanPembinaanSiswa->total_poin,
+                ],
+            ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        }
+
+        return back()->with('berhasil', $pesan);
     }
 
     private function rekomendasikanSanksiPoin(LaporanPembinaanSiswa $laporan, array $jenisPelanggaranIds): void

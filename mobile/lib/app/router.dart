@@ -23,6 +23,7 @@ import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
 import 'package:nusa/features/grade_recap/presentation/grade_recap_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/identity_photo/presentation/identity_photo_view.dart';
+import 'package:nusa/features/incident_reporting/presentation/incident_reporting_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
 import 'package:nusa/features/learning_survey/presentation/learning_survey_view.dart';
 import 'package:nusa/features/late_point_setting/presentation/late_point_setting_view.dart';
@@ -52,6 +53,8 @@ import 'package:nusa/features/student_scan_status/presentation/student_scan_stat
 import 'package:nusa/features/student_card/presentation/student_card_view.dart';
 import 'package:nusa/features/student_guidance_category/presentation/student_guidance_category_view.dart';
 import 'package:nusa/features/student_placement/presentation/student_placement_view.dart';
+import 'package:nusa/features/student_report/presentation/student_report_detail_view.dart';
+import 'package:nusa/features/student_report/presentation/student_report_list_view.dart';
 import 'package:nusa/features/student_violation_type/presentation/student_violation_type_view.dart';
 import 'package:nusa/features/subject/presentation/subject_view.dart';
 import 'package:nusa/features/survey_statement/presentation/survey_statement_view.dart';
@@ -71,6 +74,7 @@ import 'package:nusa/features/worship_absence_settings/presentation/worship_abse
 import 'package:nusa/features/worship_monthly_summary/presentation/worship_monthly_summary_view.dart';
 import 'package:nusa/features/worship_schedule/presentation/worship_schedule_view.dart';
 import 'package:nusa/features/worship_scan/presentation/worship_scan_view.dart';
+import 'package:nusa/features/violation_process_deadline/presentation/violation_process_deadline_view.dart';
 import 'package:nusa/features/worship_recap/domain/worship_recap.dart';
 import 'package:nusa/features/worship_recap/presentation/worship_correction_view.dart';
 import 'package:nusa/features/worship_recap/presentation/worship_recap_view.dart';
@@ -80,6 +84,9 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const gantiKataSandi = '/ganti-kata-sandi';
   static const home = '/beranda';
+  static const incidentReporting = '/laporkan-kejadian';
+  static const studentReports = '/daftar-laporan-siswa';
+  static const studentReportDetail = '/daftar-laporan-siswa/:id';
   static const employees = '/pegawai';
   static const employeeDetail = '/pegawai/:id';
   static const employeeAccounts = '/akun-pegawai';
@@ -140,6 +147,8 @@ abstract final class AppRoutes {
   static const pointSanctionRules = '/aturan-sanksi-poin';
   static const latePointSettings = '/pengaturan-poin-keterlambatan';
   static const earlyWarningSettings = '/pengaturan-peringatan-dini-poin';
+  static const violationProcessDeadlines =
+      '/pengaturan-batas-proses-pelanggaran';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -204,6 +213,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'home',
         pageBuilder: (context, state) =>
             _fadePage(key: state.pageKey, child: const HomeView()),
+      ),
+      GoRoute(
+        path: AppRoutes.incidentReporting,
+        name: 'incident-reporting',
+        builder: (context, state) => const IncidentReportingView(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentReports,
+        name: 'student-reports',
+        builder: (context, state) => const StudentReportListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'student-report-detail',
+            builder: (context, state) => StudentReportDetailView(
+              reportId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.employees,
@@ -593,6 +621,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.earlyWarningSettings,
         name: 'early-warning-settings',
         builder: (context, state) => const EarlyWarningSettingView(),
+      ),
+      GoRoute(
+        path: AppRoutes.violationProcessDeadlines,
+        name: 'violation-process-deadlines',
+        builder: (context, state) => const ViolationProcessDeadlineView(),
       ),
       GoRoute(
         path: AppRoutes.roleAccess,
