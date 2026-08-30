@@ -38,6 +38,8 @@ import 'package:nusa/features/point_sanction_rule/presentation/point_sanction_ru
 import 'package:nusa/features/private_worship_scan/presentation/private_worship_scan_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_detail_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_list_view.dart';
+import 'package:nusa/features/report_verification/presentation/report_verification_detail_view.dart';
+import 'package:nusa/features/report_verification/presentation/report_verification_list_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_detail_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_list_view.dart';
 import 'package:nusa/features/school_class/presentation/school_class_detail_view.dart';
@@ -46,6 +48,11 @@ import 'package:nusa/features/student/presentation/student_detail_view.dart';
 import 'package:nusa/features/student/presentation/student_list_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_detail_view.dart';
 import 'package:nusa/features/student_account/presentation/student_account_list_view.dart';
+import 'package:nusa/features/student_assistance/presentation/student_assistance_create_view.dart';
+import 'package:nusa/features/student_assistance/presentation/student_assistance_detail_view.dart';
+import 'package:nusa/features/student_assistance/presentation/student_assistance_list_view.dart';
+import 'package:nusa/features/student_sanction/presentation/student_sanction_detail_view.dart';
+import 'package:nusa/features/student_sanction/presentation/student_sanction_list_view.dart';
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
 import 'package:nusa/features/student_attendance_recap/presentation/student_attendance_recap_view.dart';
 import 'package:nusa/features/student_attendance_report/presentation/student_attendance_report_view.dart';
@@ -87,6 +94,10 @@ abstract final class AppRoutes {
   static const incidentReporting = '/laporkan-kejadian';
   static const studentReports = '/daftar-laporan-siswa';
   static const studentReportDetail = '/daftar-laporan-siswa/:id';
+  static const reportVerification = '/pemeriksaan-pengesahan';
+  static const reportVerificationDetail = '/pemeriksaan-pengesahan/:id';
+  static const studentAssistance = '/pendampingan-siswa';
+  static const studentSanctions = '/pelaksanaan-sanksi-siswa';
   static const employees = '/pegawai';
   static const employeeDetail = '/pegawai/:id';
   static const employeeAccounts = '/akun-pegawai';
@@ -229,6 +240,58 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'student-report-detail',
             builder: (context, state) => StudentReportDetailView(
               reportId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.reportVerification,
+        name: 'report-verification',
+        builder: (context, state) => const ReportVerificationListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'report-verification-detail',
+            builder: (context, state) => ReportVerificationDetailView(
+              reportId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.studentAssistance,
+        name: 'student-assistance',
+        builder: (context, state) => const StudentAssistanceListView(),
+        routes: [
+          GoRoute(
+            path: 'tambah',
+            name: 'student-assistance-create',
+            builder: (context, state) => StudentAssistanceCreateView(
+              academicYearId: int.tryParse(
+                state.uri.queryParameters['tahun'] ?? '',
+              ),
+              classId: int.tryParse(state.uri.queryParameters['kelas'] ?? ''),
+            ),
+          ),
+          GoRoute(
+            path: ':id',
+            name: 'student-assistance-detail',
+            builder: (context, state) => StudentAssistanceDetailView(
+              assistanceId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.studentSanctions,
+        name: 'student-sanctions',
+        builder: (context, state) => const StudentSanctionListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'student-sanction-detail',
+            builder: (context, state) => StudentSanctionDetailView(
+              sanctionId: int.parse(state.pathParameters['id']!),
             ),
           ),
         ],

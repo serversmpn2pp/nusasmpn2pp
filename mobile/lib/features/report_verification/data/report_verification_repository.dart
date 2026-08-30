@@ -32,11 +32,7 @@ final class ReportVerificationRepository {
     required int reportId,
     required String decision,
     required String? note,
-  }) => _remote.approve(
-    reportId: reportId,
-    decision: decision,
-    note: note,
-  );
+  }) => _remote.approve(reportId: reportId, decision: decision, note: note);
 }
 
 final reportVerificationRepositoryProvider =

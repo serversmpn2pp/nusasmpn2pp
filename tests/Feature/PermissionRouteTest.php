@@ -144,6 +144,17 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('api.v1.pemeriksaan-pengesahan.show', 'izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil');
         $this->assertRouteMemakaiMiddleware('api.v1.pemeriksaan-pengesahan.verifikasi-bk', 'izin:poin_siswa.verifikasi_bk');
         $this->assertRouteMemakaiMiddleware('api.v1.pemeriksaan-pengesahan.pengesahan-wakil', 'izin:poin_siswa.sahkan_wakil');
+        $this->assertRouteMemakaiMiddleware('api.v1.pendampingan-siswa.index', 'izin:poin_siswa.lihat');
+        $this->assertRouteMemakaiMiddleware('api.v1.pendampingan-siswa.index', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.pendampingan-siswa.referensi', 'izin:poin_siswa.pendampingan_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pendampingan-siswa.store', 'izin:poin_siswa.pendampingan_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pendampingan-siswa.update', 'izin:poin_siswa.pendampingan_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-sanksi-siswa.index', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-sanksi-siswa.index', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-sanksi-siswa.show', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-sanksi-siswa.update', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-sanksi-siswa.bukti.store', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-sanksi-siswa.bukti.destroy', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola');
         $this->assertRouteMemakaiMiddleware('laporan-saya.index', 'izin:poin_siswa.lapor');
         $this->assertRouteMemakaiMiddleware('laporan-saya.show', 'izin:poin_siswa.lapor');
         $this->assertRouteMemakaiMiddleware('verifikasi-pelanggaran.bk', 'izin:poin_siswa.verifikasi_bk');

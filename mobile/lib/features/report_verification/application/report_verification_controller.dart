@@ -87,8 +87,9 @@ final reportVerificationDetailProvider = FutureProvider.autoDispose
       }
     });
 
-final reportVerificationActionsProvider =
-    Provider<ReportVerificationActions>(ReportVerificationActions.new);
+final reportVerificationActionsProvider = Provider<ReportVerificationActions>(
+  ReportVerificationActions.new,
+);
 
 class ReportVerificationActions {
   const ReportVerificationActions(this._ref);

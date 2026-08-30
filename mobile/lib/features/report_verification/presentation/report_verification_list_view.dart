@@ -106,9 +106,7 @@ class _ReportVerificationListViewState
                         page: current,
                         loadingMore: _loadingMore,
                         onRefresh: ref
-                            .read(
-                              reportVerificationControllerProvider.notifier,
-                            )
+                            .read(reportVerificationControllerProvider.notifier)
                             .refresh,
                         onLoadMore: _loadMore,
                         onOpen: _open,
@@ -140,9 +138,7 @@ class _ReportVerificationListViewState
     if (_loadingMore) return;
     setState(() => _loadingMore = true);
     try {
-      await ref
-          .read(reportVerificationControllerProvider.notifier)
-          .loadMore();
+      await ref.read(reportVerificationControllerProvider.notifier).loadMore();
     } catch (error) {
       if (mounted) _showMessage(_errorMessage(error));
     } finally {
@@ -155,9 +151,7 @@ class _ReportVerificationListViewState
       '/pemeriksaan-pengesahan/${task.report.id}',
     );
     if (changed == true && mounted) {
-      await ref
-          .read(reportVerificationControllerProvider.notifier)
-          .refresh();
+      await ref.read(reportVerificationControllerProvider.notifier).refresh();
     }
   }
 
@@ -381,7 +375,10 @@ class _TaskCard extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  _Badge(label: report.verificationStatusLabel, color: statusColor),
+                  _Badge(
+                    label: report.verificationStatusLabel,
+                    color: statusColor,
+                  ),
                   if (report.totalPoints > 0)
                     _Badge(
                       label: '${report.totalPoints} poin',
@@ -443,7 +440,10 @@ class _TaskCard extends StatelessWidget {
                   'Keputusan BK terakhir: ${task.lastDecision!.resultLabel}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ],
@@ -462,9 +462,13 @@ class _ProcessSteps extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Expanded(child: _Step(label: '1. Pemeriksaan BK', state: _state(1))),
+      Expanded(
+        child: _Step(label: '1. Pemeriksaan BK', state: _state(1)),
+      ),
       const SizedBox(width: 6),
-      Expanded(child: _Step(label: '2. Pengesahan Wakil', state: _state(2))),
+      Expanded(
+        child: _Step(label: '2. Pengesahan Wakil', state: _state(2)),
+      ),
     ],
   );
 
@@ -496,7 +500,11 @@ class _Step extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
-        style: TextStyle(color: color, fontSize: 8.5, fontWeight: FontWeight.w800),
+        style: TextStyle(
+          color: color,
+          fontSize: 8.5,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -518,7 +526,11 @@ class _Badge extends StatelessWidget {
     ),
     child: Text(
       label,
-      style: TextStyle(color: color, fontSize: 8.5, fontWeight: FontWeight.w800),
+      style: TextStyle(
+        color: color,
+        fontSize: 8.5,
+        fontWeight: FontWeight.w800,
+      ),
     ),
   );
 }
@@ -565,7 +577,10 @@ class _PageError extends StatelessWidget {
           const SizedBox(height: 10),
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 14),
-          FilledButton.tonal(onPressed: onRetry, child: const Text('Coba Lagi')),
+          FilledButton.tonal(
+            onPressed: onRetry,
+            child: const Text('Coba Lagi'),
+          ),
         ],
       ),
     ),
@@ -573,9 +588,15 @@ class _PageError extends StatelessWidget {
 }
 
 String _accessLabel(ReportVerificationAccess access) {
-  if (access.canReview && access.canApprove) return 'Pemeriksaan BK & Pengesahan Wakil';
-  if (access.canReview) return 'Antrean Pemeriksaan BK';
-  if (access.canApprove) return 'Antrean Pengesahan Wakil Kesiswaan';
+  if (access.canReview && access.canApprove) {
+    return 'Pemeriksaan BK & Pengesahan Wakil';
+  }
+  if (access.canReview) {
+    return 'Antrean Pemeriksaan BK';
+  }
+  if (access.canApprove) {
+    return 'Antrean Pengesahan Wakil Kesiswaan';
+  }
   return 'Monitoring Proses Laporan';
 }
 

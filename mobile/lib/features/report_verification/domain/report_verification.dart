@@ -120,9 +120,7 @@ class ReportVerificationTask {
         waitingDays: _integer(json['hari_menunggu']),
         remainingDays: _integer(json['sisa_hari']),
         overdue: json['terlambat_diproses'] as bool? ?? false,
-        facts: ReportFactCompleteness.fromJson(
-          _map(json['kelengkapan_fakta']),
-        ),
+        facts: ReportFactCompleteness.fromJson(_map(json['kelengkapan_fakta'])),
         lastDecision: _nullableMap(
           json['keputusan_bk_terakhir'],
           ReportLastDecision.fromJson,
@@ -263,9 +261,7 @@ class ReportVerificationProcess {
         waitingDays: _integer(json['hari_menunggu']),
         remainingDays: _integer(json['sisa_hari']),
         overdue: json['terlambat_diproses'] as bool? ?? false,
-        facts: ReportFactCompleteness.fromJson(
-          _map(json['kelengkapan_fakta']),
-        ),
+        facts: ReportFactCompleteness.fromJson(_map(json['kelengkapan_fakta'])),
       );
 
   final String userTask;

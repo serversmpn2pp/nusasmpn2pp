@@ -159,6 +159,7 @@ class LaporanSiswaMobileService
             ],
             'butir_pelanggaran' => $laporan->butirPelanggaranLaporan->map(fn ($item) => [
                 'id' => (int) $item->id,
+                'jenis_pelanggaran_id' => (int) $item->jenis_pelanggaran_siswa_id,
                 'kode' => $item->kode_pelanggaran,
                 'nama' => $item->nama_pelanggaran,
                 'tingkat' => $item->tingkat,

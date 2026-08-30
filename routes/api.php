@@ -33,8 +33,10 @@ use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\MonitoringSurveiController;
 use App\Http\Controllers\Api\V1\NilaiSayaController;
 use App\Http\Controllers\Api\V1\PegawaiController;
-use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
+use App\Http\Controllers\Api\V1\PelaksanaanSanksiSiswaController;
 use App\Http\Controllers\Api\V1\PemeriksaanPengesahanController;
+use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
+use App\Http\Controllers\Api\V1\PendampinganSiswaController;
 use App\Http\Controllers\Api\V1\PenempatanSiswaController;
 use App\Http\Controllers\Api\V1\PengaturanBatasProsesPelanggaranController;
 use App\Http\Controllers\Api\V1\PengaturanBerhalanganIbadahController;
@@ -116,6 +118,41 @@ Route::prefix('v1')
         Route::get('/pemeriksaan-pengesahan/{laporanPembinaanSiswa}', [PemeriksaanPengesahanController::class, 'show'])
             ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
             ->name('pemeriksaan-pengesahan.show');
+
+        Route::get('/pendampingan-siswa', [PendampinganSiswaController::class, 'index'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat'])
+            ->name('pendampingan-siswa.index');
+        Route::get('/pendampingan-siswa/referensi', [PendampinganSiswaController::class, 'referensi'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.pendampingan_kelola'])
+            ->name('pendampingan-siswa.referensi');
+        Route::get('/pendampingan-siswa/{pendampinganSiswa}', [PendampinganSiswaController::class, 'show'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat'])
+            ->name('pendampingan-siswa.show');
+        Route::post('/pendampingan-siswa', [PendampinganSiswaController::class, 'store'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.pendampingan_kelola'])
+            ->name('pendampingan-siswa.store');
+        Route::put('/pendampingan-siswa/{pendampinganSiswa}', [PendampinganSiswaController::class, 'update'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.pendampingan_kelola'])
+            ->name('pendampingan-siswa.update');
+
+        Route::get('/pelaksanaan-sanksi-siswa', [PelaksanaanSanksiSiswaController::class, 'index'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola'])
+            ->name('pelaksanaan-sanksi-siswa.index');
+        Route::get('/pelaksanaan-sanksi-siswa/bukti/{buktiPelaksanaanSanksi}/file', [PelaksanaanSanksiSiswaController::class, 'evidence'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola'])
+            ->name('pelaksanaan-sanksi-siswa.bukti');
+        Route::delete('/pelaksanaan-sanksi-siswa/bukti/{buktiPelaksanaanSanksi}', [PelaksanaanSanksiSiswaController::class, 'destroyEvidence'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola'])
+            ->name('pelaksanaan-sanksi-siswa.bukti.destroy');
+        Route::get('/pelaksanaan-sanksi-siswa/{sanksiPoinSiswa}', [PelaksanaanSanksiSiswaController::class, 'show'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola'])
+            ->name('pelaksanaan-sanksi-siswa.show');
+        Route::put('/pelaksanaan-sanksi-siswa/{sanksiPoinSiswa}', [PelaksanaanSanksiSiswaController::class, 'update'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola'])
+            ->name('pelaksanaan-sanksi-siswa.update');
+        Route::post('/pelaksanaan-sanksi-siswa/{sanksiPoinSiswa}/bukti', [PelaksanaanSanksiSiswaController::class, 'storeEvidence'])
+            ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.sanksi_kelola'])
+            ->name('pelaksanaan-sanksi-siswa.bukti.store');
         Route::post('/pemeriksaan-pengesahan/{laporanPembinaanSiswa}/verifikasi-bk', [VerifikasiPelanggaranSiswaController::class, 'verifikasiBk'])
             ->middleware(['akun_pegawai', 'izin:poin_siswa.verifikasi_bk'])
             ->name('pemeriksaan-pengesahan.verifikasi-bk');

@@ -204,6 +204,16 @@ class MenuApiTest extends TestCase
                 'rute' => '/daftar-laporan-siswa',
             ])
             ->assertJsonFragment([
+                'kode' => 'pendampingan-siswa',
+                'status' => 'tersedia',
+                'rute' => '/pendampingan-siswa',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'pelaksanaan-sanksi-siswa',
+                'status' => 'tersedia',
+                'rute' => '/pelaksanaan-sanksi-siswa',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'pengaturan-presensi-pegawai',
                 'status' => 'tersedia',
                 'rute' => '/pengaturan-presensi-pegawai',

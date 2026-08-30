@@ -450,11 +450,13 @@ class StudentReportViolation {
     required this.name,
     required this.level,
     required this.points,
+    this.violationTypeId,
     this.note,
   });
   factory StudentReportViolation.fromJson(Map<String, dynamic> json) =>
       StudentReportViolation(
         id: _integer(json['id']),
+        violationTypeId: _nullableInteger(json['jenis_pelanggaran_id']),
         code: json['kode'] as String? ?? '-',
         name: json['nama'] as String? ?? '-',
         level: json['tingkat'] as String? ?? '',
@@ -462,6 +464,7 @@ class StudentReportViolation {
         note: json['catatan'] as String?,
       );
   final int id;
+  final int? violationTypeId;
   final String code;
   final String name;
   final String level;

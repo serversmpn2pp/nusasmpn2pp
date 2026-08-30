@@ -83,8 +83,7 @@ final class DioReportVerificationRemoteDataSource
         'pemeriksaan-pengesahan/$reportId/verifikasi-bk',
         data: {
           'hasil': result,
-          if (result == 'sanksi_poin')
-            'jenis_pelanggaran_ids': violationIds,
+          if (result == 'sanksi_poin') 'jenis_pelanggaran_ids': violationIds,
           'catatan': _clean(note),
         },
       );
@@ -119,6 +118,5 @@ String? _clean(String? value) {
 
 final reportVerificationRemoteDataSourceProvider =
     Provider<ReportVerificationRemoteDataSource>(
-      (ref) =>
-          DioReportVerificationRemoteDataSource(ref.watch(dioProvider)),
+      (ref) => DioReportVerificationRemoteDataSource(ref.watch(dioProvider)),
     );
