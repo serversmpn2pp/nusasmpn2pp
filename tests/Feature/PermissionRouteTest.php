@@ -102,6 +102,14 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('api.v1.ringkasan-kegiatan-ibadah-bulanan', 'izin:ibadah.rekap');
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.koreksi.edit', 'izin:ibadah.koreksi');
         $this->assertRouteMemakaiMiddleware('rekap-kegiatan-ibadah.koreksi.update', 'izin:ibadah.koreksi');
+        $this->assertRouteMemakaiMiddleware('api.v1.kategori-pembinaan-siswa.index', 'izin:bk.lihat,bk.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.kategori-pembinaan-siswa.store', 'izin:bk.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.kategori-pembinaan-siswa.update', 'izin:bk.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.kategori-pembinaan-siswa.destroy', 'izin:bk.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.jenis-pelanggaran-siswa.index', 'izin:poin_siswa.pengaturan');
+        $this->assertRouteMemakaiMiddleware('api.v1.jenis-pelanggaran-siswa.store', 'izin:poin_siswa.pengaturan');
+        $this->assertRouteMemakaiMiddleware('api.v1.jenis-pelanggaran-siswa.update', 'izin:poin_siswa.pengaturan');
+        $this->assertRouteMemakaiMiddleware('api.v1.jenis-pelanggaran-siswa.destroy', 'izin:poin_siswa.pengaturan');
         $this->assertRouteMemakaiMiddleware('laporan-absensi.export', 'izin:laporan.export');
         $this->assertRouteMemakaiMiddleware('api.v1.laporan-presensi-siswa.export', 'izin:laporan.export');
         $this->assertRouteMemakaiMiddleware('laporan-absensi-pegawai-bulanan.index', 'izin:absensi.laporan,absensi_pegawai.pribadi');

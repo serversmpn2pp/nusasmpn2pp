@@ -47,7 +47,9 @@ import 'package:nusa/features/student_attendance_recap/presentation/student_atte
 import 'package:nusa/features/student_attendance_report/presentation/student_attendance_report_view.dart';
 import 'package:nusa/features/student_scan_status/presentation/student_scan_status_view.dart';
 import 'package:nusa/features/student_card/presentation/student_card_view.dart';
+import 'package:nusa/features/student_guidance_category/presentation/student_guidance_category_view.dart';
 import 'package:nusa/features/student_placement/presentation/student_placement_view.dart';
+import 'package:nusa/features/student_violation_type/presentation/student_violation_type_view.dart';
 import 'package:nusa/features/subject/presentation/subject_view.dart';
 import 'package:nusa/features/survey_statement/presentation/survey_statement_view.dart';
 import 'package:nusa/features/survey_monitoring/presentation/survey_monitoring_detail_view.dart';
@@ -130,6 +132,8 @@ abstract final class AppRoutes {
   static const worshipRecap = '/rekap-kegiatan-ibadah';
   static const worshipCorrection = '/rekap-kegiatan-ibadah/koreksi/:id';
   static const worshipMonthlySummary = '/ringkasan-kegiatan-ibadah-bulanan';
+  static const studentGuidanceCategories = '/kategori-pembinaan-siswa';
+  static const studentViolationTypes = '/jenis-pelanggaran-siswa';
   static const roleAccess = '/role-hak-akses';
   static const roleAccessDetail = '/role-hak-akses/:id';
   static const menuGroup = '/menu/:groupCode';
@@ -558,6 +562,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.worshipMonthlySummary,
         name: 'worship-monthly-summary',
         builder: (context, state) => const WorshipMonthlySummaryView(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentGuidanceCategories,
+        name: 'student-guidance-categories',
+        builder: (context, state) => const StudentGuidanceCategoryView(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentViolationTypes,
+        name: 'student-violation-types',
+        builder: (context, state) => const StudentViolationTypeView(),
       ),
       GoRoute(
         path: AppRoutes.roleAccess,

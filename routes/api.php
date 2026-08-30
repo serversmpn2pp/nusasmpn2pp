@@ -13,9 +13,11 @@ use App\Http\Controllers\Api\V1\JadwalGuruPiketController;
 use App\Http\Controllers\Api\V1\JadwalKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\JadwalMengajarSayaController;
 use App\Http\Controllers\Api\V1\JamPelajaranController;
+use App\Http\Controllers\Api\V1\JenisPelanggaranSiswaController;
 use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
 use App\Http\Controllers\Api\V1\KartuPegawaiController;
 use App\Http\Controllers\Api\V1\KartuPelajarController;
+use App\Http\Controllers\Api\V1\KategoriPembinaanSiswaController;
 use App\Http\Controllers\Api\V1\KegiatanIbadahController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
@@ -436,6 +438,32 @@ Route::prefix('v1')
         Route::delete('/kegiatan-ibadah/{kegiatanIbadah}', [KegiatanIbadahController::class, 'destroy'])
             ->middleware('izin:ibadah.pengaturan_kelola')
             ->name('kegiatan-ibadah.destroy');
+
+        Route::get('/kategori-pembinaan-siswa', [KategoriPembinaanSiswaController::class, 'index'])
+            ->middleware('izin:bk.lihat,bk.kelola')
+            ->name('kategori-pembinaan-siswa.index');
+        Route::post('/kategori-pembinaan-siswa', [KategoriPembinaanSiswaController::class, 'store'])
+            ->middleware('izin:bk.kelola')
+            ->name('kategori-pembinaan-siswa.store');
+        Route::patch('/kategori-pembinaan-siswa/{kategoriPembinaanSiswa}', [KategoriPembinaanSiswaController::class, 'update'])
+            ->middleware('izin:bk.kelola')
+            ->name('kategori-pembinaan-siswa.update');
+        Route::delete('/kategori-pembinaan-siswa/{kategoriPembinaanSiswa}', [KategoriPembinaanSiswaController::class, 'destroy'])
+            ->middleware('izin:bk.kelola')
+            ->name('kategori-pembinaan-siswa.destroy');
+
+        Route::get('/jenis-pelanggaran-siswa', [JenisPelanggaranSiswaController::class, 'index'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('jenis-pelanggaran-siswa.index');
+        Route::post('/jenis-pelanggaran-siswa', [JenisPelanggaranSiswaController::class, 'store'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('jenis-pelanggaran-siswa.store');
+        Route::patch('/jenis-pelanggaran-siswa/{jenisPelanggaranSiswa}', [JenisPelanggaranSiswaController::class, 'update'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('jenis-pelanggaran-siswa.update');
+        Route::delete('/jenis-pelanggaran-siswa/{jenisPelanggaranSiswa}', [JenisPelanggaranSiswaController::class, 'destroy'])
+            ->middleware('izin:poin_siswa.pengaturan')
+            ->name('jenis-pelanggaran-siswa.destroy');
 
         Route::get('/jadwal-kegiatan-ibadah', [JadwalKegiatanIbadahController::class, 'index'])
             ->middleware('izin:ibadah.pengaturan_kelola')
