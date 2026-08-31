@@ -322,6 +322,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('penerimaan-barang.show', 'izin:barang.lihat,barang.kelola');
         $this->assertRouteMemakaiMiddleware('penerimaan-barang.create', 'izin:barang.kelola');
         $this->assertRouteMemakaiMiddleware('penerimaan-barang.store', 'izin:barang.kelola');
+        $this->assertRouteMemakaiMiddleware('penerimaan-barang.batalkan', 'izin:barang.kelola');
         $this->assertRouteMemakaiMiddleware('penerimaan-barang.import.create', 'izin:barang.kelola');
         $this->assertRouteMemakaiMiddleware('penerimaan-barang.import.template', 'izin:barang.kelola');
         $this->assertRouteMemakaiMiddleware('penerimaan-barang.import.unggah', 'izin:barang.kelola');

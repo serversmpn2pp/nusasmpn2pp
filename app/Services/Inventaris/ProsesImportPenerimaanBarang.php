@@ -108,6 +108,7 @@ class ProsesImportPenerimaanBarang
             $informasi = $pratinjau['informasi'];
 
             if (filled($informasi['nomor_dokumen'] ?? null) && PenerimaanBarang::query()
+                ->where('status', PenerimaanBarang::STATUS_AKTIF)
                 ->whereRaw('LOWER(nomor_dokumen) = ?', [mb_strtolower($informasi['nomor_dokumen'])])
                 ->exists()) {
                 throw ValidationException::withMessages([
@@ -172,6 +173,7 @@ class ProsesImportPenerimaanBarang
         $catatan = $this->bersihkanTeks($data['catatan'] ?? null);
 
         if ($nomorDokumen && PenerimaanBarang::query()
+            ->where('status', PenerimaanBarang::STATUS_AKTIF)
             ->whereRaw('LOWER(nomor_dokumen) = ?', [mb_strtolower($nomorDokumen)])
             ->exists()) {
             $kesalahan[] = 'Nomor dokumen sudah pernah digunakan pada penerimaan sebelumnya.';

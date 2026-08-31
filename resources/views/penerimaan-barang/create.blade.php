@@ -16,8 +16,9 @@
         </div>
     </div>
 
-    <form action="{{ route('penerimaan-barang.store') }}" method="POST">
+    <form id="form-penerimaan-barang" action="{{ route('penerimaan-barang.store') }}" method="POST">
         @csrf
+        <input type="hidden" name="token_penyimpanan" value="{{ old('token_penyimpanan', $tokenPenyimpanan) }}">
         @include('penerimaan-barang.partials.form')
     </form>
 @endsection

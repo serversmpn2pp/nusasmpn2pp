@@ -26,7 +26,11 @@ class LabelBarcodeInventarisController extends Controller
     {
         $data = $request->validate([
             'jenis_label' => ['nullable', Rule::in(['unit', 'stok'])],
-            'penerimaan_barang_id' => ['nullable', 'integer', 'exists:penerimaan_barang,id'],
+            'penerimaan_barang_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('penerimaan_barang', 'id')->where('status', PenerimaanBarang::STATUS_AKTIF),
+            ],
             'tahun_perolehan' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'kategori_barang_id' => ['nullable', 'integer', 'exists:kategori_barang,id'],
             'barang_id' => ['nullable', 'integer', 'exists:barang,id'],
@@ -100,6 +104,7 @@ class LabelBarcodeInventarisController extends Controller
             'daftarPilihanUnit' => $daftarPilihanUnit,
             'daftarPilihanStok' => $daftarPilihanStok,
             'daftarPenerimaan' => PenerimaanBarang::query()
+                ->where('status', PenerimaanBarang::STATUS_AKTIF)
                 ->orderByDesc('tanggal_penerimaan')
                 ->orderByDesc('id')
                 ->get(['id', 'nomor_penerimaan', 'tanggal_penerimaan']),

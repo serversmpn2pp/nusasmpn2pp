@@ -21,6 +21,7 @@ class DetailPenerimaanBarang extends Model
         'kondisi',
         'keterangan',
         'mutasi_stok_barang_id',
+        'mutasi_pembatalan_stok_barang_id',
     ];
 
     protected $casts = [
@@ -46,6 +47,11 @@ class DetailPenerimaanBarang extends Model
     public function mutasiStokBarang(): BelongsTo
     {
         return $this->belongsTo(MutasiStokBarang::class);
+    }
+
+    public function mutasiPembatalanStokBarang(): BelongsTo
+    {
+        return $this->belongsTo(MutasiStokBarang::class, 'mutasi_pembatalan_stok_barang_id');
     }
 
     public function unitBarang(): HasMany

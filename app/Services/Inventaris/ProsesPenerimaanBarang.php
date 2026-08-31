@@ -9,6 +9,7 @@ use App\Models\PenerimaanBarang;
 use App\Models\SumberPerolehanBarang;
 use App\Models\UnitBarang;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -21,40 +22,71 @@ class ProsesPenerimaanBarang
 
     public function catat(array $data, ?int $penggunaId = null): PenerimaanBarang
     {
-        return DB::transaction(function () use ($data, $penggunaId) {
-            $tanggal = Carbon::parse($data['tanggal_penerimaan']);
-            $sumber = SumberPerolehanBarang::query()->findOrFail($data['sumber_perolehan_barang_id']);
+        $tokenPenyimpanan = $data['token_penyimpanan'] ?? null;
+        $penerimaanTersimpan = $this->berdasarkanToken($tokenPenyimpanan);
 
-            if (! $sumber->aktif) {
-                throw ValidationException::withMessages([
-                    'sumber_perolehan_barang_id' => 'Sumber perolehan yang dipilih sudah tidak aktif.',
+        if ($penerimaanTersimpan) {
+            return $this->muatPenerimaan($penerimaanTersimpan);
+        }
+
+        try {
+            return DB::transaction(function () use ($data, $penggunaId, $tokenPenyimpanan) {
+                $tanggal = Carbon::parse($data['tanggal_penerimaan']);
+                $sumber = SumberPerolehanBarang::query()->findOrFail($data['sumber_perolehan_barang_id']);
+
+                if (! $sumber->aktif) {
+                    throw ValidationException::withMessages([
+                        'sumber_perolehan_barang_id' => 'Sumber perolehan yang dipilih sudah tidak aktif.',
+                    ]);
+                }
+
+                $penerimaan = PenerimaanBarang::create([
+                    'token_penyimpanan' => $tokenPenyimpanan,
+                    'nomor_penerimaan' => $this->generatorIdentitas->buatNomorPenerimaanBarang($tanggal->year),
+                    'tanggal_penerimaan' => $tanggal->toDateString(),
+                    'sumber_perolehan_barang_id' => $sumber->id,
+                    'cara_perolehan' => $data['cara_perolehan'],
+                    'status' => PenerimaanBarang::STATUS_AKTIF,
+                    'nomor_dokumen' => $data['nomor_dokumen'] ?? null,
+                    'asal_barang' => $data['asal_barang'] ?? null,
+                    'catatan' => $data['catatan'] ?? null,
+                    'dibuat_oleh_pengguna_id' => $penggunaId,
                 ]);
+
+                foreach ($data['rincian'] as $indeks => $rincian) {
+                    $this->catatRincian($penerimaan, $sumber, $tanggal, $rincian, $indeks, $penggunaId);
+                }
+
+                return $this->muatPenerimaan($penerimaan);
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            $penerimaanTersimpan = $this->berdasarkanToken($tokenPenyimpanan);
+
+            if (! $penerimaanTersimpan) {
+                throw $exception;
             }
 
-            $penerimaan = PenerimaanBarang::create([
-                'nomor_penerimaan' => $this->generatorIdentitas->buatNomorPenerimaanBarang($tanggal->year),
-                'tanggal_penerimaan' => $tanggal->toDateString(),
-                'sumber_perolehan_barang_id' => $sumber->id,
-                'cara_perolehan' => $data['cara_perolehan'],
-                'nomor_dokumen' => $data['nomor_dokumen'] ?? null,
-                'asal_barang' => $data['asal_barang'] ?? null,
-                'catatan' => $data['catatan'] ?? null,
-                'dibuat_oleh_pengguna_id' => $penggunaId,
-            ]);
+            return $this->muatPenerimaan($penerimaanTersimpan);
+        }
+    }
 
-            foreach ($data['rincian'] as $indeks => $rincian) {
-                $this->catatRincian($penerimaan, $sumber, $tanggal, $rincian, $indeks, $penggunaId);
-            }
+    private function berdasarkanToken(?string $tokenPenyimpanan): ?PenerimaanBarang
+    {
+        return filled($tokenPenyimpanan)
+            ? PenerimaanBarang::query()->where('token_penyimpanan', $tokenPenyimpanan)->first()
+            : null;
+    }
 
-            return $penerimaan->load([
-                'sumberPerolehanBarang',
-                'dibuatOleh',
-                'detailPenerimaanBarang.barang.satuanBarang',
-                'detailPenerimaanBarang.lokasiBarang',
-                'detailPenerimaanBarang.unitBarang',
-                'detailPenerimaanBarang.mutasiStokBarang',
-            ]);
-        });
+    private function muatPenerimaan(PenerimaanBarang $penerimaan): PenerimaanBarang
+    {
+        return $penerimaan->load([
+            'sumberPerolehanBarang',
+            'dibuatOleh',
+            'detailPenerimaanBarang.barang.satuanBarang',
+            'detailPenerimaanBarang.lokasiBarang',
+            'detailPenerimaanBarang.unitBarang',
+            'detailPenerimaanBarang.mutasiStokBarang',
+        ]);
     }
 
     private function catatRincian(

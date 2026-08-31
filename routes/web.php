@@ -556,6 +556,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('penerimaan-barang/import/pratinjau', [ImportPenerimaanBarangController::class, 'unggah'])->name('penerimaan-barang.import.unggah');
             Route::get('penerimaan-barang/import/pratinjau/{token}', [ImportPenerimaanBarangController::class, 'pratinjau'])->name('penerimaan-barang.import.pratinjau');
             Route::post('penerimaan-barang/import/konfirmasi', [ImportPenerimaanBarangController::class, 'konfirmasi'])->name('penerimaan-barang.import.konfirmasi');
+            Route::patch('penerimaan-barang/{penerimaanBarang}/batalkan', [PenerimaanBarangController::class, 'batalkan'])->name('penerimaan-barang.batalkan');
         });
         Route::resource('penerimaan-barang', PenerimaanBarangController::class)
             ->only(['create', 'store'])

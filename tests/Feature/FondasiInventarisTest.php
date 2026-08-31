@@ -180,6 +180,40 @@ class FondasiInventarisTest extends TestCase
         $this->assertNull($unit->tahun_perolehan);
     }
 
+    public function test_halaman_edit_unit_tetap_memuat_sumber_perolehan_yang_sudah_nonaktif(): void
+    {
+        [$kategori, $satuan, $lokasi] = $this->buatMasterBarang();
+        $barang = Barang::create([
+            'nama' => 'Laptop Pembelajaran',
+            'kode' => '02.06.01.05.40.03',
+            'kategori_barang_id' => $kategori->id,
+            'satuan_barang_id' => $satuan->id,
+            'lokasi_penyimpanan_id' => $lokasi->id,
+            'jenis_barang' => 'tidak_habis_pakai',
+            'tipe_pengelolaan' => 'aset_individual',
+            'aktif' => true,
+        ]);
+        $sumber = SumberPerolehanBarang::where('kode', 'DAK')->firstOrFail();
+        $sumber->update(['aktif' => false]);
+        $unit = UnitBarang::create([
+            'barang_id' => $barang->id,
+            'nomor_unit' => 1,
+            'kode_inventaris' => 'AST-2026-000099',
+            'lokasi_barang_id' => $lokasi->id,
+            'kondisi' => 'baik',
+            'status_unit' => 'tersedia',
+            'sumber_perolehan_barang_id' => $sumber->id,
+            'sumber_perolehan' => $sumber->nama,
+            'aktif' => true,
+        ]);
+
+        $this->get(route('unit-barang.edit', $unit))
+            ->assertOk()
+            ->assertSee('Edit unit aset')
+            ->assertSee($sumber->nama)
+            ->assertSee('(nonaktif)');
+    }
+
     private function buatMasterBarang(): array
     {
         $kategori = KategoriBarang::create(['kode' => 'ATK', 'nama' => 'Perlengkapan', 'aktif' => true]);

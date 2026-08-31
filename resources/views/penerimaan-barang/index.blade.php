@@ -41,7 +41,7 @@
 
     <div class="stats-grid">
         <div class="panel stat">
-            <p class="stat-label">Total penerimaan</p>
+            <p class="stat-label">Total catatan</p>
             <p class="stat-value">{{ $jumlahPenerimaan }}</p>
         </div>
         <div class="panel stat active">
@@ -110,7 +110,14 @@
                 <tbody>
                     @forelse ($penerimaanBarang as $item)
                         <tr>
-                            <td><strong>{{ $item->nomor_penerimaan }}</strong></td>
+                            <td>
+                                <strong>{{ $item->nomor_penerimaan }}</strong>
+                                <p class="person-meta" style="margin-top: 4px;">
+                                    <span class="badge {{ $item->sudahDibatalkan() ? 'badge-inactive' : 'badge-active' }}">
+                                        {{ $item->sudahDibatalkan() ? 'Dibatalkan' : 'Aktif' }}
+                                    </span>
+                                </p>
+                            </td>
                             <td>{{ $item->tanggal_penerimaan->locale('id')->translatedFormat('d M Y') }}</td>
                             <td>
                                 <span class="badge badge-active">{{ $item->sumberPerolehanBarang->nama }}</span>
@@ -145,7 +152,9 @@
                             <p class="person-name">{{ $item->nomor_penerimaan }}</p>
                             <p class="person-meta">{{ $item->tanggal_penerimaan->locale('id')->translatedFormat('d M Y') }}</p>
                         </div>
-                        <span class="badge badge-active">{{ $item->sumberPerolehanBarang->nama }}</span>
+                        <span class="badge {{ $item->sudahDibatalkan() ? 'badge-inactive' : 'badge-active' }}">
+                            {{ $item->sudahDibatalkan() ? 'Dibatalkan' : $item->sumberPerolehanBarang->nama }}
+                        </span>
                     </div>
 
                     <dl class="quick-facts">

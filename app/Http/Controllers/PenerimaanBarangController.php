@@ -7,8 +7,10 @@ use App\Models\LokasiBarang;
 use App\Models\PenerimaanBarang;
 use App\Models\SumberPerolehanBarang;
 use App\Models\UnitBarang;
+use App\Services\Inventaris\BatalkanPenerimaanBarang;
 use App\Services\Inventaris\ProsesPenerimaanBarang;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class PenerimaanBarangController extends Controller
@@ -55,11 +57,14 @@ class PenerimaanBarangController extends Controller
             'tanggalSelesai' => $tanggalSelesai,
             'daftarSumberPerolehan' => SumberPerolehanBarang::orderByDesc('aktif')->orderBy('nama')->get(),
             'jumlahPenerimaan' => PenerimaanBarang::count(),
-            'jumlahHariIni' => PenerimaanBarang::whereDate('tanggal_penerimaan', now()->toDateString())->count(),
-            'jumlahUnitDibuat' => UnitBarang::whereNotNull('detail_penerimaan_barang_id')->count(),
+            'jumlahHariIni' => PenerimaanBarang::where('status', PenerimaanBarang::STATUS_AKTIF)
+                ->whereDate('tanggal_penerimaan', now()->toDateString())
+                ->count(),
+            'jumlahUnitDibuat' => UnitBarang::whereNotNull('detail_penerimaan_barang_id')->where('aktif', true)->count(),
             'jumlahJenisStokMasuk' => PenerimaanBarang::query()
                 ->join('detail_penerimaan_barang', 'detail_penerimaan_barang.penerimaan_barang_id', '=', 'penerimaan_barang.id')
                 ->join('barang', 'barang.id', '=', 'detail_penerimaan_barang.barang_id')
+                ->where('penerimaan_barang.status', PenerimaanBarang::STATUS_AKTIF)
                 ->where('barang.jenis_barang', 'habis_pakai')
                 ->count('detail_penerimaan_barang.id'),
         ]);
@@ -77,12 +82,14 @@ class PenerimaanBarangController extends Controller
             'daftarSumberPerolehan' => SumberPerolehanBarang::where('aktif', true)->orderBy('nama')->get(),
             'daftarCaraPerolehan' => PenerimaanBarang::DAFTAR_CARA_PEROLEHAN,
             'daftarKondisi' => UnitBarang::DAFTAR_KONDISI,
+            'tokenPenyimpanan' => (string) Str::uuid(),
         ]);
     }
 
     public function store(Request $request, ProsesPenerimaanBarang $prosesPenerimaan)
     {
         $data = $request->validate([
+            'token_penyimpanan' => ['required', 'uuid'],
             'tanggal_penerimaan' => ['required', 'date', 'before_or_equal:today'],
             'sumber_perolehan_barang_id' => [
                 'required',
@@ -123,13 +130,40 @@ class PenerimaanBarangController extends Controller
         $penerimaanBarang->load([
             'sumberPerolehanBarang',
             'dibuatOleh',
+            'dibatalkanOleh',
             'detailPenerimaanBarang.barang.satuanBarang',
             'detailPenerimaanBarang.lokasiBarang',
             'detailPenerimaanBarang.mutasiStokBarang',
+            'detailPenerimaanBarang.mutasiPembatalanStokBarang',
             'detailPenerimaanBarang.unitBarang',
         ]);
 
         return view('penerimaan-barang.show', compact('penerimaanBarang'));
+    }
+
+    public function batalkan(
+        Request $request,
+        PenerimaanBarang $penerimaanBarang,
+        BatalkanPenerimaanBarang $pembatalan,
+    ) {
+        $data = $request->validate([
+            'alasan_pembatalan' => ['required', 'string', 'min:10', 'max:1000'],
+            'konfirmasi_pembatalan' => ['accepted'],
+        ], [
+            'alasan_pembatalan.required' => 'Alasan pembatalan wajib diisi.',
+            'alasan_pembatalan.min' => 'Alasan pembatalan minimal 10 karakter.',
+            'konfirmasi_pembatalan.accepted' => 'Centang konfirmasi setelah memastikan penerimaan yang dipilih benar.',
+        ]);
+
+        $pembatalan->batalkan(
+            $penerimaanBarang,
+            trim($data['alasan_pembatalan']),
+            $request->user()?->id,
+        );
+
+        return redirect()
+            ->route('penerimaan-barang.show', $penerimaanBarang)
+            ->with('berhasil', 'Penerimaan berhasil dibatalkan. Stok dan unit aset telah dikoreksi.');
     }
 
     private function rapikanData(array $data): array

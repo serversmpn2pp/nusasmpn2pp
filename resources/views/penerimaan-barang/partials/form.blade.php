@@ -277,7 +277,7 @@
 
         <div class="form-actions">
             <a href="{{ route('penerimaan-barang.index') }}" class="button button-muted">Batal</a>
-            <button type="submit" class="button button-primary" @disabled($daftarBarang->isEmpty() || $daftarLokasi->isEmpty() || $daftarSumberPerolehan->isEmpty())>Simpan barang datang</button>
+            <button type="submit" class="button button-primary" data-simpan-penerimaan @disabled($daftarBarang->isEmpty() || $daftarLokasi->isEmpty() || $daftarSumberPerolehan->isEmpty())>Simpan barang datang</button>
         </div>
     </div>
 
@@ -352,9 +352,28 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('form-penerimaan-barang');
+            const tombolSimpan = form?.querySelector('[data-simpan-penerimaan]');
             const daftar = document.getElementById('daftar-rincian');
             const template = document.getElementById('template-rincian');
             let indeksBerikutnya = {{ count($barisRincian) }};
+            let sedangMenyimpan = false;
+
+            form?.addEventListener('submit', (event) => {
+                if (sedangMenyimpan) {
+                    event.preventDefault();
+
+                    return;
+                }
+
+                sedangMenyimpan = true;
+                form.setAttribute('aria-busy', 'true');
+
+                if (tombolSimpan) {
+                    tombolSimpan.disabled = true;
+                    tombolSimpan.textContent = 'Sedang menyimpan...';
+                }
+            });
 
             const perbaruiNomor = () => {
                 daftar.querySelectorAll('[data-rincian]').forEach((baris, indeks) => {

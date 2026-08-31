@@ -196,7 +196,7 @@ class UnitBarangController extends Controller
                     $query->where('aktif', true)
                         ->when(
                             $unitBarang?->sumber_perolehan_barang_id,
-                            fn ($query, $sumberId) => $query->orWhereKey($sumberId),
+                            fn ($query, $sumberId) => $query->orWhere('id', $sumberId),
                         );
                 })
                 ->orderByDesc('aktif')

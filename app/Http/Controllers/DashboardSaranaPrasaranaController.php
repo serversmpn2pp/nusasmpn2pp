@@ -132,16 +132,18 @@ class DashboardSaranaPrasaranaController extends Controller
         $penerimaan = PenerimaanBarang::query()
             ->with('sumberPerolehanBarang:id,nama')
             ->withCount('detailPenerimaanBarang')
-            ->latest('id')
+            ->latest('updated_at')
             ->limit(8)
             ->get()
             ->map(fn (PenerimaanBarang $item) => [
-                'jenis' => 'Barang datang',
+                'jenis' => $item->sudahDibatalkan() ? 'Barang datang dibatalkan' : 'Barang datang',
                 'judul' => $item->nomor_penerimaan,
-                'keterangan' => $item->sumberPerolehanBarang->nama.' - '.$item->detail_penerimaan_barang_count.' jenis barang',
-                'waktu' => $item->created_at,
+                'keterangan' => $item->sudahDibatalkan()
+                    ? $item->alasan_pembatalan
+                    : $item->sumberPerolehanBarang->nama.' - '.$item->detail_penerimaan_barang_count.' jenis barang',
+                'waktu' => $item->dibatalkan_pada ?? $item->created_at,
                 'route' => route('penerimaan-barang.show', $item),
-                'warna' => 'badge-active',
+                'warna' => $item->sudahDibatalkan() ? 'badge-inactive' : 'badge-active',
                 'izin' => ['barang.lihat', 'barang.kelola'],
             ]);
 
