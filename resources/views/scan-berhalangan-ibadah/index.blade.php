@@ -92,7 +92,7 @@
                         <div class="camera-placeholder"><strong>{{ $scanDibuka ? 'Kamera belum dinyalakan' : $statusJadwal['label'] }}</strong><p>{{ $scanDibuka ? 'Tekan Mulai kamera, lalu izinkan NUSA menggunakan kamera belakang HP.' : $statusJadwal['pesan'] }}</p></div>
                         <div class="scan-frame" aria-hidden="true"></div><div class="camera-message">Posisikan QR di dalam kotak</div>
                     </div>
-                    <div class="camera-controls"><button id="start-camera" class="button button-primary button-grow" type="button" @disabled(!$scanDibuka)>Mulai kamera</button><button id="switch-camera" class="button button-secondary" type="button" disabled>Ganti kamera</button><button id="stop-camera" class="button button-danger" type="button" disabled>Hentikan</button></div>
+                    <div class="camera-controls"><button id="start-camera" class="button button-primary button-grow" type="button" aria-describedby="camera-warning" @disabled(!$scanDibuka)>{{ $scanDibuka ? 'Mulai kamera' : $statusJadwal['label'] }}</button><button id="switch-camera" class="button button-secondary" type="button" disabled>Ganti kamera</button><button id="stop-camera" class="button button-danger" type="button" disabled>Hentikan</button></div>
                     <p id="camera-warning" class="camera-warning" @if($scanDibuka) hidden @endif>{{ $statusJadwal['pesan'] }}</p>
                 </section>
 

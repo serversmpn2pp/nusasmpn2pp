@@ -133,6 +133,8 @@ class ScanBerhalanganIbadahTest extends TestCase
             ->assertOk()
             ->assertSee('MODE PRIVAT')
             ->assertSee('Scan Berhalangan Ibadah')
+            ->assertSee('data-scan-active="1"', false)
+            ->assertSee('>Mulai kamera</button>', false)
             ->assertDontSee('Presensi Terbaru');
 
         $this->actingAs($akunBukanPendamping)
