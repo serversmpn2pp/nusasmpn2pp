@@ -218,16 +218,8 @@
             </div>
 
             <div class="field">
-                <label for="tahun_pelajaran_id">Tahun pelajaran</label>
-                <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select">
-                    @forelse ($daftarTahunPelajaran as $tahunPelajaran)
-                        <option value="{{ $tahunPelajaran->id }}" @selected((string) $tahunPelajaranId === (string) $tahunPelajaran->id)>
-                            {{ $tahunPelajaran->nama }}{{ $tahunPelajaran->aktif ? ' - aktif' : '' }}
-                        </option>
-                    @empty
-                        <option value="">Belum ada tahun pelajaran</option>
-                    @endforelse
-                </select>
+                <label for="cari">Cari nama siswa</label>
+                <input id="cari" type="search" name="cari" value="{{ $cari }}" maxlength="100" autocomplete="off" class="input" placeholder="Ketik nama siswa">
             </div>
 
             <div class="field">
@@ -326,10 +318,10 @@
         </div>
     </div>
 
-    @if ($daftarTahunPelajaran->isEmpty())
+    @if (! $tahunPelajaranId)
         <section class="panel panel-pad">
-            <h2 class="panel-title">Tahun pelajaran belum tersedia</h2>
-            <p class="help-text" style="margin-top: 8px;">Tambahkan tahun pelajaran dan kelas terlebih dahulu agar rekap presensi dapat ditampilkan.</p>
+            <h2 class="panel-title">Tahun pelajaran aktif belum tersedia</h2>
+            <p class="help-text" style="margin-top: 8px;">Aktifkan tahun pelajaran dan siapkan kelas terlebih dahulu agar rekap presensi dapat ditampilkan.</p>
         </section>
     @else
         <section class="panel">

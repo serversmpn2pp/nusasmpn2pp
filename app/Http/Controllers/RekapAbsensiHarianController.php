@@ -31,23 +31,20 @@ class RekapAbsensiHarianController extends Controller
 
         $data = $request->validate([
             'tanggal' => ['nullable', 'date'],
-            'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'cari' => ['nullable', 'string', 'max:100'],
         ]);
 
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->toDateString();
+        $cari = trim((string) ($data['cari'] ?? ''));
         $koreksiHariIniTerbatas = $this->koreksiHariIniTerbatas($request);
         $this->pastikanTanggalKoreksiDiizinkan($request, $tanggal);
-        $daftarTahunPelajaran = TahunPelajaran::query()
-            ->when($cakupanWaliKelas, function ($query) use ($kelasWaliIds) {
-                $query->whereHas('kelas', fn ($query) => $query->whereIn('id', $kelasWaliIds));
-            })
-            ->orderByDesc('aktif')
+        $tahunPelajaranId = TahunPelajaran::query()
+            ->where('aktif', true)
             ->orderByDesc('tanggal_mulai')
             ->orderByDesc('id')
-            ->get();
+            ->value('id');
 
-        $tahunPelajaranId = $this->ambilTahunPelajaranId($data['tahun_pelajaran_id'] ?? null, $daftarTahunPelajaran);
         $daftarKelas = $tahunPelajaranId
             ? Kelas::query()
                 ->where('tahun_pelajaran_id', $tahunPelajaranId)
@@ -60,7 +57,7 @@ class RekapAbsensiHarianController extends Controller
 
         $kelasId = $this->ambilKelasId($data['kelas_id'] ?? null, $daftarKelas, $cakupanWaliKelas);
         $rekapAbsensi = $tahunPelajaranId
-            ? $this->ambilRekapAbsensi($tanggal, $tahunPelajaranId, $kelasId, $cakupanWaliKelas ? $kelasWaliIds : null)
+            ? $this->ambilRekapAbsensi($tanggal, $tahunPelajaranId, $kelasId, $cari, $cakupanWaliKelas ? $kelasWaliIds : null)
             : collect();
         $ringkasan = $this->hitungRingkasan($rekapAbsensi);
         $labelCakupan = $this->labelCakupan($kelasId, $daftarKelas, $cakupanWaliKelas);
@@ -71,9 +68,9 @@ class RekapAbsensiHarianController extends Controller
 
         return view('rekap-absensi-harian.index', [
             'tanggal' => $tanggal,
+            'cari' => $cari,
             'tahunPelajaranId' => $tahunPelajaranId,
             'kelasId' => $kelasId,
-            'daftarTahunPelajaran' => $daftarTahunPelajaran,
             'daftarKelas' => $daftarKelas,
             'rekapAbsensi' => $rekapAbsensi,
             'ringkasan' => $ringkasan,
@@ -166,17 +163,6 @@ class RekapAbsensiHarianController extends Controller
         ])->with('berhasil', $pesan);
     }
 
-    private function ambilTahunPelajaranId(?int $tahunPelajaranId, $daftarTahunPelajaran): ?int
-    {
-        if ($tahunPelajaranId && $daftarTahunPelajaran->contains('id', $tahunPelajaranId)) {
-            return $tahunPelajaranId;
-        }
-
-        $tahunAktif = $daftarTahunPelajaran->firstWhere('aktif', true);
-
-        return $tahunAktif?->id ?? $daftarTahunPelajaran->first()?->id;
-    }
-
     private function ambilKelasId(?int $kelasId, $daftarKelas, bool $cakupanWaliKelas): ?int
     {
         if ($kelasId && $daftarKelas->contains('id', $kelasId)) {
@@ -190,15 +176,22 @@ class RekapAbsensiHarianController extends Controller
         return null;
     }
 
-    private function ambilRekapAbsensi(string $tanggal, int $tahunPelajaranId, ?int $kelasId, ?array $kelasIdsTerjangkau = null)
-    {
+    private function ambilRekapAbsensi(
+        string $tanggal,
+        int $tahunPelajaranId,
+        ?int $kelasId,
+        string $cari,
+        ?array $kelasIdsTerjangkau = null,
+    ) {
+        $polaPencarian = '%'.mb_strtolower($cari).'%';
         $anggotaKelas = AnggotaKelas::query()
             ->with(['kelas', 'siswa'])
             ->where('tahun_pelajaran_id', $tahunPelajaranId)
             ->where('status_keanggotaan', 'aktif')
             ->when(is_array($kelasIdsTerjangkau), fn ($query) => $query->whereIn('kelas_id', $kelasIdsTerjangkau))
-            ->whereHas('siswa', function ($query) {
-                $query->where('aktif', true);
+            ->whereHas('siswa', function ($query) use ($cari, $polaPencarian) {
+                $query->where('aktif', true)
+                    ->when($cari !== '', fn ($query) => $query->whereRaw('LOWER(nama_lengkap) LIKE ?', [$polaPencarian]));
             })
             ->when($kelasId, function ($query) use ($kelasId) {
                 $query->where('kelas_id', $kelasId);
