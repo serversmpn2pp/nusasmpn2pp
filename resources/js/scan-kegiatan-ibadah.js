@@ -41,14 +41,18 @@ if (root) {
     let lastValueUntil = 0;
     let wakeLock = null;
 
+    const currentServerTime = () => new Date(serverStartedAt.getTime() + (Date.now() - localStartedAt));
+    const formatClock = (time) => new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).format(time).replaceAll('.', ':');
     const updateClock = () => {
-        const current = new Date(serverStartedAt.getTime() + (Date.now() - localStartedAt));
-        clock.textContent = new Intl.DateTimeFormat('id-ID', {
-            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-        }).format(current).replaceAll('.', ':');
+        if (!clock) return;
+        clock.textContent = formatClock(currentServerTime());
     };
-    updateClock();
-    window.setInterval(updateClock, 1000);
+    if (clock) {
+        updateClock();
+        window.setInterval(updateClock, 1000);
+    }
 
     const showWarning = (message) => {
         warning.textContent = message;
@@ -261,7 +265,7 @@ if (root) {
             const payload = {
                 berhasil: false,
                 pesan: 'Tidak dapat terhubung ke server NUSA. Periksa jaringan lalu coba kembali.',
-                waktu_server: clock.textContent,
+                waktu_server: clock?.textContent || formatClock(currentServerTime()),
             };
             showResult(payload);
             sound(false);
