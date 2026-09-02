@@ -67,8 +67,12 @@ void main() {
       routes: [
         GoRoute(
           path: '/tambah',
-          builder: (context, state) =>
-              const StudentAssistanceCreateView(academicYearId: 1),
+          builder: (context, state) => const StudentAssistanceCreateView(
+            academicYearId: 1,
+            warningId: 4,
+            studentId: 1,
+            initialQuery: 'Siswa Pendampingan Native',
+          ),
         ),
         GoRoute(
           path: '/pendampingan-siswa/:id',
@@ -88,9 +92,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('student-assistance-student')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Siswa Pendampingan Native · VIII.A').last);
     await tester.ensureVisible(
       find.byKey(const Key('student-assistance-officer')),
     );
@@ -115,6 +116,7 @@ void main() {
 
     expect(remote.createCalls, 1);
     expect(remote.lastPayload?.studentId, 1);
+    expect(remote.lastPayload?.warningId, 4);
     expect(find.text('Tersimpan'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

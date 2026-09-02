@@ -141,7 +141,7 @@ Map<String, dynamic> _referenceJson() => {
       'nis': 'MOB-002',
       'nisn': '0099550002',
       'penempatan': [
-        {'tahun_pelajaran_id': 1, 'kelas_id': 1, 'kelas': 'VII.A'},
+        {'tahun_pelajaran_id': 2, 'kelas_id': 2, 'kelas': 'VIII.B'},
       ],
     },
   ],

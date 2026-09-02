@@ -12,11 +12,17 @@ class StudentAssistanceCreateView extends ConsumerStatefulWidget {
   const StudentAssistanceCreateView({
     this.academicYearId,
     this.classId,
+    this.warningId,
+    this.studentId,
+    this.initialQuery = '',
     super.key,
   });
 
   final int? academicYearId;
   final int? classId;
+  final int? warningId;
+  final int? studentId;
+  final String initialQuery;
 
   @override
   ConsumerState<StudentAssistanceCreateView> createState() =>
@@ -25,14 +31,22 @@ class StudentAssistanceCreateView extends ConsumerStatefulWidget {
 
 class _StudentAssistanceCreateViewState
     extends ConsumerState<StudentAssistanceCreateView> {
-  final _searchController = TextEditingController();
+  late final TextEditingController _searchController;
   final _noteController = TextEditingController();
-  String _query = '';
-  int? _studentId;
+  late String _query;
+  late int? _studentId;
   int? _officerId;
   String _type = 'konseling';
   late String _date = _isoDate(DateTime.now());
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _query = widget.initialQuery.trim();
+    _studentId = widget.studentId;
+    _searchController = TextEditingController(text: widget.initialQuery);
+  }
 
   @override
   void dispose() {
@@ -192,6 +206,7 @@ class _StudentAssistanceCreateViewState
             StudentAssistancePayload(
               studentId: studentId,
               academicYearId: academicYearId,
+              warningId: widget.warningId,
               type: _type,
               officerId: officerId,
               date: _date,

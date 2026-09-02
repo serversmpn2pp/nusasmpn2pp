@@ -7,6 +7,8 @@ import 'package:nusa/features/auth/presentation/login_view.dart';
 import 'package:nusa/features/auth/presentation/startup_view.dart';
 import 'package:nusa/features/academic_year/presentation/academic_year_view.dart';
 import 'package:nusa/features/class_promotion/presentation/class_promotion_view.dart';
+import 'package:nusa/features/cbt_center/domain/cbt_center.dart';
+import 'package:nusa/features/cbt_center/presentation/cbt_center_view.dart';
 import 'package:nusa/features/employee/presentation/employee_detail_view.dart';
 import 'package:nusa/features/employee/presentation/employee_list_view.dart';
 import 'package:nusa/features/employee_card/presentation/employee_card_view.dart';
@@ -21,6 +23,8 @@ import 'package:nusa/features/grade_weight_scheme/presentation/grade_weight_sche
 import 'package:nusa/features/grade_component/presentation/grade_component_view.dart';
 import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
 import 'package:nusa/features/grade_recap/presentation/grade_recap_view.dart';
+import 'package:nusa/features/guardian_assignment/presentation/guardian_assignment_create_view.dart';
+import 'package:nusa/features/guardian_assignment/presentation/guardian_assignment_list_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/identity_photo/presentation/identity_photo_view.dart';
 import 'package:nusa/features/incident_reporting/presentation/incident_reporting_view.dart';
@@ -32,9 +36,12 @@ import 'package:nusa/features/login_activity/presentation/login_attempt_detail_v
 import 'package:nusa/features/menu/presentation/menu_group_view.dart';
 import 'package:nusa/features/my_teaching_schedule/presentation/my_teaching_schedule_view.dart';
 import 'package:nusa/features/my_grades/presentation/my_grades_view.dart';
+import 'package:nusa/features/my_guardian_students/presentation/my_guardian_student_detail_view.dart';
+import 'package:nusa/features/my_guardian_students/presentation/my_guardian_student_list_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_detail_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_list_view.dart';
 import 'package:nusa/features/point_sanction_rule/presentation/point_sanction_rule_view.dart';
+import 'package:nusa/features/point_reduction/presentation/point_reduction_view.dart';
 import 'package:nusa/features/private_worship_scan/presentation/private_worship_scan_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_detail_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_list_view.dart';
@@ -51,6 +58,10 @@ import 'package:nusa/features/student_account/presentation/student_account_list_
 import 'package:nusa/features/student_assistance/presentation/student_assistance_create_view.dart';
 import 'package:nusa/features/student_assistance/presentation/student_assistance_detail_view.dart';
 import 'package:nusa/features/student_assistance/presentation/student_assistance_list_view.dart';
+import 'package:nusa/features/student_early_warning/presentation/student_early_warning_detail_view.dart';
+import 'package:nusa/features/student_early_warning/presentation/student_early_warning_list_view.dart';
+import 'package:nusa/features/student_point_recap/presentation/student_point_recap_detail_view.dart';
+import 'package:nusa/features/student_point_recap/presentation/student_point_recap_list_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_detail_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_list_view.dart';
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
@@ -62,6 +73,7 @@ import 'package:nusa/features/student_guidance_category/presentation/student_gui
 import 'package:nusa/features/student_placement/presentation/student_placement_view.dart';
 import 'package:nusa/features/student_report/presentation/student_report_detail_view.dart';
 import 'package:nusa/features/student_report/presentation/student_report_list_view.dart';
+import 'package:nusa/features/student_report/domain/student_report.dart';
 import 'package:nusa/features/student_violation_type/presentation/student_violation_type_view.dart';
 import 'package:nusa/features/subject/presentation/subject_view.dart';
 import 'package:nusa/features/survey_statement/presentation/survey_statement_view.dart';
@@ -91,12 +103,22 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const gantiKataSandi = '/ganti-kata-sandi';
   static const home = '/beranda';
+  static const cbtCenter = '/pusat-cbt';
+  static const myExamSupervision = '/tugas-pengawas-ujian';
+  static const myExams = '/ujian-saya';
   static const incidentReporting = '/laporkan-kejadian';
   static const studentReports = '/daftar-laporan-siswa';
   static const studentReportDetail = '/daftar-laporan-siswa/:id';
+  static const guardianStudentReports = '/laporan-siswa-wali';
+  static const guardianStudentReportDetail = '/laporan-siswa-wali/:id';
   static const reportVerification = '/pemeriksaan-pengesahan';
   static const reportVerificationDetail = '/pemeriksaan-pengesahan/:id';
   static const studentAssistance = '/pendampingan-siswa';
+  static const studentEarlyWarnings = '/peringatan-dini-siswa';
+  static const studentPointRecaps = '/rekap-poin-siswa';
+  static const pointReductions = '/pengurangan-poin-siswa';
+  static const guardianAssignments = '/penugasan-guru-wali';
+  static const myGuardianStudents = '/siswa-wali-saya';
   static const studentSanctions = '/pelaksanaan-sanksi-siswa';
   static const employees = '/pegawai';
   static const employeeDetail = '/pegawai/:id';
@@ -226,6 +248,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             _fadePage(key: state.pageKey, child: const HomeView()),
       ),
       GoRoute(
+        path: AppRoutes.cbtCenter,
+        name: 'cbt-center',
+        builder: (context, state) =>
+            const CbtCenterView(focus: CbtCenterFocus.management),
+      ),
+      GoRoute(
+        path: AppRoutes.myExamSupervision,
+        name: 'my-exam-supervision',
+        builder: (context, state) =>
+            const CbtCenterView(focus: CbtCenterFocus.supervisor),
+      ),
+      GoRoute(
+        path: AppRoutes.myExams,
+        name: 'my-exams',
+        builder: (context, state) =>
+            const CbtCenterView(focus: CbtCenterFocus.student),
+      ),
+      GoRoute(
         path: AppRoutes.incidentReporting,
         name: 'incident-reporting',
         builder: (context, state) => const IncidentReportingView(),
@@ -240,6 +280,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'student-report-detail',
             builder: (context, state) => StudentReportDetailView(
               reportId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.guardianStudentReports,
+        name: 'guardian-student-reports',
+        builder: (context, state) => const StudentReportListView(
+          scope: StudentReportScope.guardianStudents,
+        ),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'guardian-student-report-detail',
+            builder: (context, state) => StudentReportDetailView(
+              reportId: int.parse(state.pathParameters['id']!),
+              scope: StudentReportScope.guardianStudents,
             ),
           ),
         ],
@@ -271,6 +328,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 state.uri.queryParameters['tahun'] ?? '',
               ),
               classId: int.tryParse(state.uri.queryParameters['kelas'] ?? ''),
+              warningId: int.tryParse(
+                state.uri.queryParameters['peringatan'] ?? '',
+              ),
+              studentId: int.tryParse(state.uri.queryParameters['siswa'] ?? ''),
+              initialQuery: state.uri.queryParameters['q'] ?? '',
             ),
           ),
           GoRoute(
@@ -278,6 +340,68 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'student-assistance-detail',
             builder: (context, state) => StudentAssistanceDetailView(
               assistanceId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.studentEarlyWarnings,
+        name: 'student-early-warnings',
+        builder: (context, state) => const StudentEarlyWarningListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'student-early-warning-detail',
+            builder: (context, state) => StudentEarlyWarningDetailView(
+              warningId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.studentPointRecaps,
+        name: 'student-point-recaps',
+        builder: (context, state) => const StudentPointRecapListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'student-point-recap-detail',
+            builder: (context, state) => StudentPointRecapDetailView(
+              studentId: int.parse(state.pathParameters['id']!),
+              academicYearId: int.tryParse(
+                state.uri.queryParameters['tahun'] ?? '',
+              ),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.pointReductions,
+        name: 'point-reductions',
+        builder: (context, state) => const PointReductionView(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianAssignments,
+        name: 'guardian-assignments',
+        builder: (context, state) => const GuardianAssignmentListView(),
+        routes: [
+          GoRoute(
+            path: 'tambah',
+            name: 'guardian-assignment-create',
+            builder: (context, state) => const GuardianAssignmentCreateView(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.myGuardianStudents,
+        name: 'my-guardian-students',
+        builder: (context, state) => const MyGuardianStudentListView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'my-guardian-student-detail',
+            builder: (context, state) => MyGuardianStudentDetailView(
+              studentId: int.parse(state.pathParameters['id']!),
             ),
           ),
         ],

@@ -29,9 +29,13 @@ abstract interface class StudentReportRemoteDataSource {
 
 final class DioStudentReportRemoteDataSource
     implements StudentReportRemoteDataSource {
-  DioStudentReportRemoteDataSource(this._dio);
+  DioStudentReportRemoteDataSource(
+    this._dio, {
+    this.endpoint = 'laporan-siswa',
+  });
 
   final Dio _dio;
+  final String endpoint;
 
   @override
   Future<StudentReportPage> fetch({
@@ -59,7 +63,7 @@ final class DioStudentReportRemoteDataSource
       }
       if (classId != null) parameters['kelas_id'] = classId;
       final response = await _dio.get<Map<String, dynamic>>(
-        'laporan-siswa',
+        endpoint,
         queryParameters: parameters,
       );
       return StudentReportPage.fromJson(
@@ -73,9 +77,7 @@ final class DioStudentReportRemoteDataSource
   @override
   Future<StudentReportDetail> fetchDetail(int id) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        'laporan-siswa/$id',
-      );
+      final response = await _dio.get<Map<String, dynamic>>('$endpoint/$id');
       return StudentReportDetail.fromJson(
         response.data!['data'] as Map<String, dynamic>,
       );
@@ -92,7 +94,7 @@ final class DioStudentReportRemoteDataSource
   }) async {
     try {
       final response = await _dio.get<List<int>>(
-        'laporan-siswa/bukti/$id/file',
+        '$endpoint/bukti/$id/file',
         options: Options(responseType: ResponseType.bytes),
       );
       return StudentReportEvidenceDownload(
@@ -109,4 +111,12 @@ final class DioStudentReportRemoteDataSource
 final studentReportRemoteDataSourceProvider =
     Provider<StudentReportRemoteDataSource>(
       (ref) => DioStudentReportRemoteDataSource(ref.watch(dioProvider)),
+    );
+
+final guardianStudentReportRemoteDataSourceProvider =
+    Provider<StudentReportRemoteDataSource>(
+      (ref) => DioStudentReportRemoteDataSource(
+        ref.watch(dioProvider),
+        endpoint: 'laporan-siswa-wali',
+      ),
     );

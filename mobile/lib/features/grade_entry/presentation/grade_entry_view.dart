@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/errors/app_exception.dart';
@@ -20,6 +22,20 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
   int? _loadedComponentId;
   bool _dirty = false;
   bool _mutating = false;
+  bool _autoSaving = false;
+  bool _autoSaveRequested = false;
+  int _draftRevision = 0;
+  Timer? _autoSaveDebounce;
+  Future<bool>? _activeAutoSave;
+  String? _autoSaveError;
+  DateTime? _lastAutoSavedAt;
+  String? _lastSaveMessage;
+
+  @override
+  void dispose() {
+    _autoSaveDebounce?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,38 +43,87 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
     final current = result.value;
     if (current != null) _synchronizeDraft(current);
 
-    return Scaffold(
-      backgroundColor: NusaColors.background,
-      appBar: AppBar(
-        title: const Text('Input Nilai'),
-        actions: [
-          IconButton(
-            tooltip: 'Perbarui',
-            onPressed: result.isLoading || _mutating ? null : _refresh,
-            icon: const Icon(Icons.refresh_rounded),
+    return PopScope(
+      canPop: !_dirty && !_autoSaving,
+      onPopInvokedWithResult: _handlePop,
+      child: Scaffold(
+        backgroundColor: NusaColors.background,
+        appBar: AppBar(
+          title: const Text('Input Nilai'),
+          actions: [
+            IconButton(
+              tooltip: 'Perbarui',
+              onPressed: result.isLoading || _mutating ? null : _refresh,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
+        bottomNavigationBar:
+            current?.selectedComponent != null && current?.canInput == true
+            ? _SaveBar(
+                dirty: _dirty,
+                loading: _mutating,
+                autoSaving: _autoSaving,
+                autoSaveError: _autoSaveError,
+                lastAutoSavedAt: _lastAutoSavedAt,
+                onSave: _mutating || _autoSaving ? null : () => _save(current!),
+              )
+            : null,
+        body: SafeArea(
+          top: false,
+          child: result.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stackTrace) => _GradeEntryError(
+              message: _errorMessage(error),
+              onRetry: ref.read(gradeEntryControllerProvider.notifier).refresh,
+            ),
+            data: (page) => _buildContent(page),
           ),
-        ],
-      ),
-      bottomNavigationBar:
-          current?.selectedComponent != null && current?.canInput == true
-          ? _SaveBar(
-              dirty: _dirty,
-              loading: _mutating,
-              onSave: _mutating ? null : () => _save(current!),
-            )
-          : null,
-      body: SafeArea(
-        top: false,
-        child: result.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stackTrace) => _GradeEntryError(
-            message: _errorMessage(error),
-            onRetry: ref.read(gradeEntryControllerProvider.notifier).refresh,
-          ),
-          data: (page) => _buildContent(page),
         ),
       ),
     );
+  }
+
+  Future<void> _handlePop(bool didPop, Object? result) async {
+    if (didPop || !mounted) return;
+    final page = ref.read(gradeEntryControllerProvider).value;
+    var canLeave = page == null;
+    if (page != null) {
+      canLeave = await _flushAutoSave(page, showError: true);
+    }
+    if (!canLeave && mounted) {
+      canLeave =
+          await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              icon: const Icon(
+                Icons.cloud_off_rounded,
+                color: NusaColors.primary,
+              ),
+              title: const Text('Perubahan belum tersimpan'),
+              content: const Text(
+                'Autosave belum berhasil. Tetap di halaman ini untuk mencoba '
+                'lagi agar perubahan nilai tidak hilang.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Tetap di Sini'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Keluar Tanpa Menyimpan'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+    }
+    if (!canLeave || !mounted) return;
+    setState(() => _dirty = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop(result);
+    });
   }
 
   Widget _buildContent(GradeEntryPage page) {
@@ -118,6 +183,7 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
             publication: page.publication,
             enabled: !_mutating,
             dirty: _dirty,
+            canPublishOverride: _draftComplete(page),
             onPublish: () => _changePublication(page, publish: true),
             onUnpublish: () => _changePublication(page, publish: false),
           ),
@@ -172,15 +238,13 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
                 enabled: page.canInput && !_mutating,
                 onScoreChanged: (value) {
                   _scores[student.studentId] = value;
-                  _markDirty();
+                  _markDirtyAndSchedule(page);
                 },
                 onPredicateChanged: (value) {
-                  setState(() {
-                    _predicates[student.studentId] = value;
-                    _dirty = true;
-                  });
+                  _predicates[student.studentId] = value;
+                  _markDirtyAndSchedule(page);
                 },
-                onEditNotes: () => _editNotes(student),
+                onEditNotes: () => _editNotes(page, student),
               ),
               const SizedBox(height: 9),
             ],
@@ -214,18 +278,32 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
         ),
       );
     _dirty = false;
+    _autoSaveError = null;
   }
 
-  void _markDirty() {
-    if (_dirty || !mounted) return;
-    setState(() => _dirty = true);
+  void _markDirtyAndSchedule(GradeEntryPage page) {
+    if (!mounted) return;
+    _autoSaveDebounce?.cancel();
+    setState(() {
+      _dirty = true;
+      _draftRevision++;
+      _autoSaveError = null;
+    });
+    _autoSaveDebounce = Timer(
+      const Duration(milliseconds: 900),
+      () => unawaited(_runAutoSave(page)),
+    );
   }
 
   Future<void> _refresh() =>
       _changeFilter(ref.read(gradeEntryControllerProvider.notifier).refresh);
 
   Future<void> _changeFilter(Future<void> Function() operation) async {
-    if (_dirty && !await _confirmDiscard()) return;
+    final current = ref.read(gradeEntryControllerProvider).value;
+    if (current != null && (_dirty || _autoSaving)) {
+      final saved = await _flushAutoSave(current, showError: true);
+      if (!saved) return;
+    }
     if (mounted) {
       setState(() {
         _dirty = false;
@@ -235,82 +313,21 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
     await operation();
   }
 
-  Future<bool> _confirmDiscard() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            icon: const Icon(
-              Icons.edit_note_rounded,
-              color: NusaColors.primary,
-            ),
-            title: const Text('Buang perubahan?'),
-            content: const Text(
-              'Ada nilai atau catatan yang belum disimpan. Perubahan tersebut '
-              'akan hilang jika Anda melanjutkan.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Tetap di Sini'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Buang'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-  }
-
   Future<void> _save(GradeEntryPage page) async {
-    final component = page.selectedComponent;
-    if (component == null) return;
-    final scores = <int, double?>{};
-    for (final student in page.students) {
-      final raw = (_scores[student.studentId] ?? '').trim().replaceAll(
-        ',',
-        '.',
-      );
-      final score = raw.isEmpty ? null : double.tryParse(raw);
-      if (!page.usesPredicate &&
-          raw.isNotEmpty &&
-          (score == null || score < 0 || score > 100)) {
-        _showErrorMessage(
-          'Nilai ${student.name} harus berupa angka antara 0 sampai 100.',
-        );
-        return;
-      }
-      scores[student.studentId] = page.usesPredicate ? null : score;
-    }
-
-    await _runMutation(() async {
-      final message = await ref
-          .read(gradeEntryActionsProvider)
-          .save(
-            GradeEntryFormValue(
-              componentId: component.id,
-              scores: scores,
-              predicates: {
-                for (final student in page.students)
-                  student.studentId: page.usesPredicate
-                      ? _predicates[student.studentId]
-                      : null,
-              },
-              notes: {
-                for (final student in page.students)
-                  student.studentId:
-                      (_notes[student.studentId] ?? '').trim().isEmpty
-                      ? null
-                      : _notes[student.studentId]!.trim(),
-              },
-            ),
-          );
+    setState(() => _mutating = true);
+    try {
+      final saved = await _flushAutoSave(page, showError: true);
+      if (!saved || !mounted) return;
       _loadedComponentId = null;
-      _dirty = false;
       await ref.read(gradeEntryControllerProvider.notifier).refresh();
-      return message;
-    });
+      if (mounted) {
+        _showSuccessMessage(
+          _lastSaveMessage ?? 'Nilai berhasil disimpan sebagai draf.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _mutating = false);
+    }
   }
 
   Future<void> _changePublication(
@@ -319,6 +336,10 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
   }) async {
     final assignmentId = page.filter.assignmentId;
     if (assignmentId == null) return;
+    if (_dirty || _autoSaving) {
+      final saved = await _flushAutoSave(page, showError: true);
+      if (!saved || !mounted) return;
+    }
     final confirmed =
         await showDialog<bool>(
           context: context,
@@ -371,60 +392,164 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
     });
   }
 
-  Future<void> _editNotes(GradeEntryStudent student) async {
-    final controller = TextEditingController(text: _notes[student.studentId]);
+  Future<void> _editNotes(
+    GradeEntryPage page,
+    GradeEntryStudent student,
+  ) async {
     final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          18,
-          20,
-          20 + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Catatan ${student.name}',
-              style: const TextStyle(
-                color: NusaColors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('grade-notes-input'),
-              controller: controller,
-              autofocus: true,
-              minLines: 3,
-              maxLines: 5,
-              maxLength: 255,
-              decoration: const InputDecoration(
-                hintText: 'Catatan opsional untuk siswa',
-              ),
-            ),
-            const SizedBox(height: 10),
-            FilledButton(
-              key: const Key('save-grade-notes'),
-              onPressed: () => Navigator.pop(context, controller.text),
-              child: const Text('Simpan Catatan'),
-            ),
-          ],
-        ),
+      builder: (context) => _GradeNotesSheet(
+        studentName: student.name,
+        initialValue: _notes[student.studentId] ?? '',
       ),
     );
-    controller.dispose();
     if (result == null || !mounted) return;
-    setState(() {
-      _notes[student.studentId] = result;
-      _dirty = true;
-    });
+    _notes[student.studentId] = result;
+    _markDirtyAndSchedule(page);
   }
+
+  Future<bool> _flushAutoSave(
+    GradeEntryPage page, {
+    required bool showError,
+  }) async {
+    _autoSaveDebounce?.cancel();
+    final active = _activeAutoSave;
+    if (active != null) await active;
+    if (!_dirty) return true;
+    return _runAutoSave(page, showError: showError);
+  }
+
+  Future<bool> _runAutoSave(GradeEntryPage page, {bool showError = false}) {
+    final active = _activeAutoSave;
+    if (active != null) {
+      _autoSaveRequested = true;
+      return active.then((_) {
+        if (!_dirty) return true;
+        final current = ref.read(gradeEntryControllerProvider).value;
+        return _runAutoSave(current ?? page, showError: showError);
+      });
+    }
+
+    late Future<bool> operation;
+    operation = _executeAutoSave(page, showError: showError).whenComplete(() {
+      if (identical(_activeAutoSave, operation)) _activeAutoSave = null;
+      if (_autoSaveRequested && mounted) {
+        _autoSaveRequested = false;
+        final current = ref.read(gradeEntryControllerProvider).value;
+        if (current != null && _dirty) {
+          _autoSaveDebounce?.cancel();
+          _autoSaveDebounce = Timer(
+            const Duration(milliseconds: 250),
+            () => unawaited(_runAutoSave(current)),
+          );
+        }
+      }
+    });
+    _activeAutoSave = operation;
+    return operation;
+  }
+
+  Future<bool> _executeAutoSave(
+    GradeEntryPage page, {
+    required bool showError,
+  }) async {
+    if (_loadedComponentId != page.filter.componentId || !page.canInput) {
+      return false;
+    }
+    late GradeEntryFormValue form;
+    try {
+      form = _formValue(page);
+    } catch (error) {
+      final message = _errorMessage(error);
+      if (mounted) {
+        setState(() => _autoSaveError = message);
+        if (showError) _showErrorMessage(message);
+      }
+      return false;
+    }
+
+    final revision = _draftRevision;
+    if (mounted) {
+      setState(() {
+        _autoSaving = true;
+        _autoSaveError = null;
+      });
+    }
+    try {
+      final message = await ref.read(gradeEntryActionsProvider).save(form);
+      _lastSaveMessage = message;
+      if (mounted) {
+        setState(() {
+          if (revision == _draftRevision) _dirty = false;
+          _lastAutoSavedAt = DateTime.now();
+          _autoSaveError = null;
+        });
+      }
+      return true;
+    } catch (error) {
+      final message = _errorMessage(error);
+      if (mounted) {
+        setState(() => _autoSaveError = message);
+        if (showError) _showErrorMessage(message);
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _autoSaving = false);
+    }
+  }
+
+  GradeEntryFormValue _formValue(GradeEntryPage page) {
+    final component = page.selectedComponent;
+    if (component == null) {
+      throw const ValidationException('Komponen nilai belum dipilih.');
+    }
+    final scores = <int, double?>{};
+    for (final student in page.students) {
+      final raw = (_scores[student.studentId] ?? '').trim().replaceAll(
+        ',',
+        '.',
+      );
+      final score = raw.isEmpty ? null : double.tryParse(raw);
+      if (!page.usesPredicate &&
+          raw.isNotEmpty &&
+          (score == null || score < 0 || score > 100)) {
+        throw ValidationException(
+          'Nilai ${student.name} harus berupa angka antara 0 sampai 100.',
+        );
+      }
+      scores[student.studentId] = page.usesPredicate ? null : score;
+    }
+    return GradeEntryFormValue(
+      componentId: component.id,
+      scores: scores,
+      predicates: {
+        for (final student in page.students)
+          student.studentId: page.usesPredicate
+              ? _predicates[student.studentId]
+              : null,
+      },
+      notes: {
+        for (final student in page.students)
+          student.studentId: (_notes[student.studentId] ?? '').trim().isEmpty
+              ? null
+              : _notes[student.studentId]!.trim(),
+      },
+    );
+  }
+
+  bool _draftComplete(GradeEntryPage page) =>
+      page.students.isNotEmpty &&
+      page.students.every((student) {
+        if (page.usesPredicate) {
+          return (_predicates[student.studentId] ?? '').trim().isNotEmpty;
+        }
+        final value = double.tryParse(
+          (_scores[student.studentId] ?? '').trim().replaceAll(',', '.'),
+        );
+        return value != null && value >= 0 && value <= 100;
+      });
 
   Future<void> _runMutation(Future<String> Function() operation) async {
     setState(() => _mutating = true);
@@ -446,13 +571,29 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
 class _SaveBar extends StatelessWidget {
-  const _SaveBar({required this.dirty, required this.loading, this.onSave});
+  const _SaveBar({
+    required this.dirty,
+    required this.loading,
+    required this.autoSaving,
+    required this.autoSaveError,
+    required this.lastAutoSavedAt,
+    this.onSave,
+  });
 
   final bool dirty;
   final bool loading;
+  final bool autoSaving;
+  final String? autoSaveError;
+  final DateTime? lastAutoSavedAt;
   final VoidCallback? onSave;
 
   @override
@@ -463,26 +604,154 @@ class _SaveBar extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-        child: FilledButton.icon(
-          key: const Key('save-grades'),
-          onPressed: onSave,
-          icon: loading
-              ? const SizedBox.square(
-                  dimension: 17,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              key: const Key('grade-autosave-status'),
+              children: [
+                if (autoSaving)
+                  const SizedBox.square(
+                    dimension: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Icon(
+                    autoSaveError != null
+                        ? Icons.error_outline_rounded
+                        : dirty
+                        ? Icons.schedule_rounded
+                        : Icons.cloud_done_rounded,
+                    size: 16,
+                    color: autoSaveError != null
+                        ? Colors.red
+                        : NusaColors.primary,
                   ),
-                )
-              : Icon(dirty ? Icons.save_rounded : Icons.check_circle_rounded),
-          label: Text(
-            loading
-                ? 'Menyimpan...'
-                : dirty
-                ? 'Simpan Perubahan'
-                : 'Simpan Nilai',
-          ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    autoSaving
+                        ? 'Menyimpan otomatis...'
+                        : autoSaveError != null
+                        ? 'Autosave gagal: $autoSaveError'
+                        : dirty
+                        ? 'Perubahan akan disimpan otomatis'
+                        : lastAutoSavedAt != null
+                        ? 'Tersimpan otomatis'
+                        : 'Autosave aktif',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: autoSaveError != null
+                          ? Colors.red
+                          : NusaColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 7),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                key: const Key('save-grades'),
+                onPressed: onSave,
+                icon: loading || autoSaving
+                    ? const SizedBox.square(
+                        dimension: 17,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(
+                        dirty ? Icons.save_rounded : Icons.check_circle_rounded,
+                      ),
+                label: Text(
+                  loading || autoSaving
+                      ? 'Menyimpan...'
+                      : dirty
+                      ? 'Simpan Sekarang'
+                      : 'Nilai Tersimpan',
+                ),
+              ),
+            ),
+          ],
         ),
+      ),
+    ),
+  );
+}
+
+class _GradeNotesSheet extends StatefulWidget {
+  const _GradeNotesSheet({
+    required this.studentName,
+    required this.initialValue,
+  });
+
+  final String studentName;
+  final String initialValue;
+
+  @override
+  State<_GradeNotesSheet> createState() => _GradeNotesSheetState();
+}
+
+class _GradeNotesSheetState extends State<_GradeNotesSheet> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialValue,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      20,
+      18,
+      20,
+      20 + MediaQuery.viewInsetsOf(context).bottom,
+    ),
+    child: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Catatan ${widget.studentName}',
+            style: const TextStyle(
+              color: NusaColors.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('grade-notes-input'),
+            controller: _controller,
+            autofocus: true,
+            minLines: 3,
+            maxLines: 5,
+            maxLength: 255,
+            decoration: const InputDecoration(
+              hintText: 'Catatan opsional untuk siswa',
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              key: const Key('save-grade-notes'),
+              onPressed: () => Navigator.pop(context, _controller.text),
+              child: const Text('Simpan Catatan'),
+            ),
+          ),
+        ],
       ),
     ),
   );

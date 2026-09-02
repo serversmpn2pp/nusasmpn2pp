@@ -106,6 +106,88 @@ void main() {
     expect(remote.requestedSemesters.last, 'genap');
     expect(remote.requestedComponentIds.last, isNull);
   });
+
+  testWidgets('nilai tersimpan otomatis setelah pengguna berhenti mengetik', (
+    tester,
+  ) async {
+    final remote = _FakeGradeEntryRemoteDataSource();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          gradeEntryRemoteDataSourceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const GradeEntryView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('grade-score-101')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.enterText(find.byKey(const Key('grade-score-101')), '91');
+    await tester.pump(const Duration(milliseconds: 450));
+    await tester.enterText(find.byKey(const Key('grade-score-101')), '93.5');
+    await tester.pump(const Duration(milliseconds: 899));
+    expect(remote.saveCalls, 0);
+
+    await tester.pump(const Duration(milliseconds: 2));
+    await tester.pumpAndSettle();
+
+    expect(remote.saveCalls, 1);
+    expect(remote.savedScore, 93.5);
+    expect(find.text('Tersimpan otomatis'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('menutup catatan aman dan catatan ikut autosave', (tester) async {
+    final remote = _FakeGradeEntryRemoteDataSource();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          gradeEntryRemoteDataSourceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const GradeEntryView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('grade-notes-101')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.byKey(const Key('grade-notes-101')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('grade-notes-input')),
+      'Perlu pendampingan pada materi pecahan.',
+    );
+    await tester.tap(find.byKey(const Key('save-grade-notes')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.text('Perlu pendampingan pada materi pecahan.'),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(milliseconds: 901));
+    await tester.pumpAndSettle();
+
+    expect(remote.saveCalls, 1);
+    expect(remote.savedNotes, 'Perlu pendampingan pada materi pecahan.');
+    expect(find.text('Tersimpan otomatis'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('grade-notes-101')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('grade-notes-input')), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('grade-notes-input')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 final class _FakeGradeEntryRemoteDataSource
@@ -117,6 +199,7 @@ final class _FakeGradeEntryRemoteDataSource
   String? savedPredicate;
   String? savedNotes;
   bool published = false;
+  int saveCalls = 0;
   final List<String> requestedSemesters = [];
   final List<int?> requestedComponentIds = [];
 
@@ -215,6 +298,7 @@ final class _FakeGradeEntryRemoteDataSource
 
   @override
   Future<String> save(GradeEntryFormValue value) async {
+    saveCalls++;
     savedScore = value.scores[101];
     savedPredicate = value.predicates[101];
     savedNotes = value.notes[101];

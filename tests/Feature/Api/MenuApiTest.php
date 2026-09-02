@@ -35,8 +35,8 @@ class MenuApiTest extends TestCase
             ->assertJsonPath('data.kelompok.6.items.5.kode', 'backup-restore')
             ->assertJsonFragment([
                 'kode' => 'pusat-cbt',
-                'status' => 'segera_hadir',
-                'rute' => null,
+                'status' => 'tersedia',
+                'rute' => '/pusat-cbt',
             ])
             ->assertJsonFragment([
                 'kode' => 'siswa',
@@ -214,6 +214,16 @@ class MenuApiTest extends TestCase
                 'rute' => '/pelaksanaan-sanksi-siswa',
             ])
             ->assertJsonFragment([
+                'kode' => 'peringatan-dini-siswa',
+                'status' => 'tersedia',
+                'rute' => '/peringatan-dini-siswa',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'rekap-poin-siswa',
+                'status' => 'tersedia',
+                'rute' => '/rekap-poin-siswa',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'pengaturan-presensi-pegawai',
                 'status' => 'tersedia',
                 'rute' => '/pengaturan-presensi-pegawai',
@@ -348,6 +358,11 @@ class MenuApiTest extends TestCase
                 'kode' => 'nilai-saya',
                 'status' => 'tersedia',
                 'rute' => '/nilai-saya',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'ujian-saya',
+                'status' => 'tersedia',
+                'rute' => '/ujian-saya',
             ]);
     }
 

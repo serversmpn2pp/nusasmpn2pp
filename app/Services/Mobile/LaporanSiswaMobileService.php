@@ -15,7 +15,7 @@ class LaporanSiswaMobileService
 {
     public function __construct(private AksesLaporanPembinaanService $akses) {}
 
-    public function daftar(Pengguna $pengguna, array $filter): array
+    public function daftar(Pengguna $pengguna, array $filter, bool $khususGuruWali = false): array
     {
         $kataKunci = trim((string) ($filter['kata_kunci'] ?? ''));
         $status = $filter['status'] ?? 'semua';
@@ -26,7 +26,9 @@ class LaporanSiswaMobileService
         $kelasId = isset($filter['kelas_id']) ? (int) $filter['kelas_id'] : null;
         $halaman = max(1, (int) ($filter['halaman'] ?? 1));
         $perHalaman = min(30, max(5, (int) ($filter['per_halaman'] ?? 15)));
-        $cakupan = $this->queryCakupan($pengguna);
+        $cakupan = $khususGuruWali
+            ? $this->queryCakupanGuruWali($pengguna)
+            : $this->queryCakupan($pengguna);
 
         $ringkasan = [
             'total' => (clone $cakupan)->count(),
@@ -97,7 +99,7 @@ class LaporanSiswaMobileService
                         'aktif' => (bool) $tahun->aktif,
                     ])->values(),
                 'kelas' => Kelas::query()
-                    ->when(! $this->akses->aksesLuas($pengguna), fn (Builder $query) => $query->whereIn('id', $kelasCakupan))
+                    ->when($khususGuruWali || ! $this->akses->aksesLuas($pengguna), fn (Builder $query) => $query->whereIn('id', $kelasCakupan))
                     ->orderBy('tingkat')->orderBy('nama')->get(['id', 'tahun_pelajaran_id', 'nama', 'tingkat'])
                     ->map(fn (Kelas $kelas) => [
                         'id' => (int) $kelas->id,
@@ -122,10 +124,18 @@ class LaporanSiswaMobileService
                 'ada_halaman_berikutnya' => $paginasi->hasMorePages(),
             ],
             'hak_akses' => [
-                'cakupan_luas' => $this->akses->aksesLuas($pengguna),
+                'cakupan_luas' => ! $khususGuruWali && $this->akses->aksesLuas($pengguna),
                 'dapat_melaporkan' => $pengguna->memilikiIzin('poin_siswa.lapor'),
+                'konteks_guru_wali' => $khususGuruWali,
             ],
         ];
+    }
+
+    public function daftarGuruWali(Pengguna $pengguna, array $filter): array
+    {
+        $this->pastikanGuruWali($pengguna);
+
+        return $this->daftar($pengguna, $filter, true);
     }
 
     public function rincian(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): array
@@ -241,6 +251,19 @@ class LaporanSiswaMobileService
         ];
     }
 
+    public function rincianGuruWali(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): array
+    {
+        $this->pastikanLaporanGuruWali($pengguna, $laporan);
+
+        return $this->rincian($pengguna, $laporan);
+    }
+
+    public function pastikanLaporanGuruWali(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): void
+    {
+        $this->pastikanGuruWali($pengguna);
+        abort_unless(in_array((int) $laporan->siswa_id, $pengguna->siswaWaliIds(), true), 403);
+    }
+
     private function queryCakupan(Pengguna $pengguna): Builder
     {
         $query = LaporanPembinaanSiswa::query();
@@ -257,6 +280,23 @@ class LaporanSiswaMobileService
                 ->when($kelasWaliIds !== [], fn (Builder $query) => $query->orWhereIn('kelas_id', $kelasWaliIds))
                 ->when($siswaWaliIds !== [], fn (Builder $query) => $query->orWhereIn('siswa_id', $siswaWaliIds));
         });
+    }
+
+    private function queryCakupanGuruWali(Pengguna $pengguna): Builder
+    {
+        $siswaWaliIds = $pengguna->siswaWaliIds();
+
+        return LaporanPembinaanSiswa::query()
+            ->when(
+                $siswaWaliIds === [],
+                fn (Builder $query) => $query->whereRaw('1 = 0'),
+                fn (Builder $query) => $query->whereIn('siswa_id', $siswaWaliIds),
+            );
+    }
+
+    private function pastikanGuruWali(Pengguna $pengguna): void
+    {
+        abort_unless($pengguna->pegawai_id && $pengguna->memilikiPeran('guru_wali'), 403);
     }
 
     public function ringkas(LaporanPembinaanSiswa $laporan): array

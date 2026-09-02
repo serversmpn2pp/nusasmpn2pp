@@ -2,6 +2,7 @@
 
 namespace App\Services\Mobile;
 
+use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Services\Ibadah\AksesBerhalanganIbadah;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
@@ -63,6 +64,12 @@ class MenuMobileService
             return false;
         }
 
+        if (filled($item['peran_only'] ?? null)
+            && ! $pengguna->memilikiPeran((array) $item['peran_only'])
+            && ! (($item['administrator_allowed'] ?? false) && $pengguna->administrator())) {
+            return false;
+        }
+
         if (($item['scan_berhalangan_only'] ?? false)
             && ! $this->aksesBerhalangan->dapatMemindai($pengguna)) {
             return false;
@@ -83,9 +90,28 @@ class MenuMobileService
             return false;
         }
 
+        if (($item['pengawas_ujian_only'] ?? false)
+            && ! $this->dapatMengawasiUjian($pengguna)) {
+            return false;
+        }
+
         $izin = $item['izin'] ?? null;
 
         return blank($izin) || $pengguna->memilikiIzin($izin);
+    }
+
+    private function dapatMengawasiUjian(Pengguna $pengguna): bool
+    {
+        if (! $pengguna->pegawai_id) {
+            return false;
+        }
+
+        return PengawasRuangUjianTerpusat::query()
+            ->where(function ($query) use ($pengguna) {
+                $query->where('pengawas_utama_pegawai_id', $pengguna->pegawai_id)
+                    ->orWhere('pengawas_pendamping_pegawai_id', $pengguna->pegawai_id);
+            })
+            ->exists();
     }
 
     private function siapkanItem(array $item): array

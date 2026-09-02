@@ -174,6 +174,7 @@ class GradePublicationCard extends StatelessWidget {
     required this.publication,
     required this.enabled,
     required this.dirty,
+    this.canPublishOverride,
     required this.onPublish,
     required this.onUnpublish,
     super.key,
@@ -182,6 +183,7 @@ class GradePublicationCard extends StatelessWidget {
   final GradePublication publication;
   final bool enabled;
   final bool dirty;
+  final bool? canPublishOverride;
   final VoidCallback onPublish;
   final VoidCallback onUnpublish;
 
@@ -288,7 +290,10 @@ class GradePublicationCard extends StatelessWidget {
                     )
                   : FilledButton.tonalIcon(
                       key: const Key('publish-grades'),
-                      onPressed: enabled && publication.canPublish && !dirty
+                      onPressed:
+                          enabled &&
+                              (canPublishOverride ?? publication.canPublish) &&
+                              !dirty
                           ? onPublish
                           : null,
                       icon: const Icon(Icons.publish_rounded),

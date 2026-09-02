@@ -381,12 +381,14 @@ class StudentAssistancePayload {
     required this.note,
     this.studentId,
     this.academicYearId,
+    this.warningId,
     this.status,
     this.result,
   });
 
   final int? studentId;
   final int? academicYearId;
+  final int? warningId;
   final String type;
   final int officerId;
   final String date;
@@ -397,6 +399,7 @@ class StudentAssistancePayload {
   Map<String, dynamic> toJson({required bool create}) => {
     if (create) 'siswa_id': studentId,
     if (create) 'tahun_pelajaran_id': academicYearId,
+    if (create && warningId != null) 'peringatan_dini_siswa_id': warningId,
     'jenis_tindakan': type,
     'petugas_pegawai_id': officerId,
     'tanggal_tindak_lanjut': date,

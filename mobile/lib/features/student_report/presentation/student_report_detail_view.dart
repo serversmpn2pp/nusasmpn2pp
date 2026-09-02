@@ -7,9 +7,14 @@ import 'package:nusa/features/student_report/data/student_report_evidence_saver.
 import 'package:nusa/features/student_report/domain/student_report.dart';
 
 class StudentReportDetailView extends ConsumerStatefulWidget {
-  const StudentReportDetailView({required this.reportId, super.key});
+  const StudentReportDetailView({
+    required this.reportId,
+    this.scope = StudentReportScope.all,
+    super.key,
+  });
 
   final int reportId;
+  final StudentReportScope scope;
 
   @override
   ConsumerState<StudentReportDetailView> createState() =>
@@ -22,7 +27,9 @@ class _StudentReportDetailViewState
 
   @override
   Widget build(BuildContext context) {
-    final detail = ref.watch(studentReportDetailProvider(widget.reportId));
+    final detail = widget.scope == StudentReportScope.guardianStudents
+        ? ref.watch(guardianStudentReportDetailProvider(widget.reportId))
+        : ref.watch(studentReportDetailProvider(widget.reportId));
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
@@ -30,11 +37,7 @@ class _StudentReportDetailViewState
         actions: [
           IconButton(
             tooltip: 'Perbarui',
-            onPressed: detail.isLoading
-                ? null
-                : () => ref.invalidate(
-                    studentReportDetailProvider(widget.reportId),
-                  ),
+            onPressed: detail.isLoading ? null : _invalidateDetail,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -45,8 +48,7 @@ class _StudentReportDetailViewState
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => _DetailError(
             message: _errorMessage(error),
-            onRetry: () =>
-                ref.invalidate(studentReportDetailProvider(widget.reportId)),
+            onRetry: _invalidateDetail,
           ),
           data: _buildDetail,
         ),
@@ -58,8 +60,14 @@ class _StudentReportDetailViewState
     final report = detail.report;
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(studentReportDetailProvider(widget.reportId));
-        await ref.read(studentReportDetailProvider(widget.reportId).future);
+        _invalidateDetail();
+        if (widget.scope == StudentReportScope.guardianStudents) {
+          await ref.read(
+            guardianStudentReportDetailProvider(widget.reportId).future,
+          );
+        } else {
+          await ref.read(studentReportDetailProvider(widget.reportId).future);
+        }
       },
       child: ListView(
         key: const Key('student-report-detail-scroll'),
@@ -296,7 +304,7 @@ class _StudentReportDetailViewState
     try {
       final download = await ref
           .read(studentReportActionsProvider)
-          .downloadEvidence(evidence: evidence);
+          .downloadEvidence(evidence: evidence, scope: widget.scope);
       final saved = await ref
           .read(studentReportEvidenceSaverProvider)
           .save(download);
@@ -316,6 +324,14 @@ class _StudentReportDetailViewState
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _invalidateDetail() {
+    if (widget.scope == StudentReportScope.guardianStudents) {
+      ref.invalidate(guardianStudentReportDetailProvider(widget.reportId));
+    } else {
+      ref.invalidate(studentReportDetailProvider(widget.reportId));
+    }
   }
 }
 

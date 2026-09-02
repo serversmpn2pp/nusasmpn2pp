@@ -26,6 +26,7 @@ class PemeriksaanPengesahanMobileService
 
     public function daftar(Pengguna $pengguna, array $filter): array
     {
+        $this->pastikanDapatMembuka($pengguna);
         $kataKunci = trim((string) ($filter['kata_kunci'] ?? ''));
         $jenisAntrean = (string) ($filter['antrean'] ?? 'semua');
         $halaman = max(1, (int) ($filter['halaman'] ?? 1));
@@ -116,6 +117,7 @@ class PemeriksaanPengesahanMobileService
 
     public function rincian(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): array
     {
+        $this->pastikanDapatMembuka($pengguna);
         abort_unless(
             (clone $this->antrean->queryUntuk($pengguna))->whereKey($laporan->id)->exists(),
             403,
@@ -177,5 +179,14 @@ class PemeriksaanPengesahanMobileService
             'dapat_sahkan_wakil' => $pengguna->memilikiIzin('poin_siswa.sahkan_wakil'),
             'dapat_memantau_semua' => $this->antrean->dapatMemantauSemua($pengguna),
         ];
+    }
+
+    private function pastikanDapatMembuka(Pengguna $pengguna): void
+    {
+        abort_unless(
+            $pengguna->administrator()
+            || $pengguna->memilikiPeran(['bk', 'pimpinan', 'wakil_pimpinan_kesiswaan']),
+            403,
+        );
     }
 }

@@ -8,7 +8,9 @@ import 'package:nusa/features/student_report/domain/student_report.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
 class StudentReportListView extends ConsumerStatefulWidget {
-  const StudentReportListView({super.key});
+  const StudentReportListView({this.scope = StudentReportScope.all, super.key});
+
+  final StudentReportScope scope;
 
   @override
   ConsumerState<StudentReportListView> createState() =>
@@ -27,18 +29,20 @@ class _StudentReportListViewState extends ConsumerState<StudentReportListView> {
 
   @override
   Widget build(BuildContext context) {
-    final reports = ref.watch(studentReportControllerProvider);
+    final reports = _watchReports();
     final current = reports.value;
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: const Text('Daftar Laporan Siswa'),
+        title: Text(
+          widget.scope == StudentReportScope.guardianStudents
+              ? 'Laporan Siswa Wali'
+              : 'Daftar Laporan Siswa',
+        ),
         actions: [
           IconButton(
             tooltip: 'Perbarui',
-            onPressed: reports.isLoading
-                ? null
-                : ref.read(studentReportControllerProvider.notifier).refresh,
+            onPressed: reports.isLoading ? null : _controller().refresh,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -58,9 +62,7 @@ class _StudentReportListViewState extends ConsumerState<StudentReportListView> {
                       key: const Key('student-report-search'),
                       controller: _searchController,
                       enabled: !reports.isLoading,
-                      onChanged: ref
-                          .read(studentReportControllerProvider.notifier)
-                          .search,
+                      onChanged: _controller().search,
                       decoration: const InputDecoration(
                         hintText: 'Nomor, siswa, NISN, tempat, atau kronologi',
                         prefixIcon: Icon(Icons.search_rounded),
@@ -93,11 +95,7 @@ class _StudentReportListViewState extends ConsumerState<StudentReportListView> {
                           ],
                           onChanged: (value) {
                             if (value != null) {
-                              ref
-                                  .read(
-                                    studentReportControllerProvider.notifier,
-                                  )
-                                  .filterVerification(value);
+                              _controller().filterVerification(value);
                             }
                           },
                         );
@@ -142,24 +140,18 @@ class _StudentReportListViewState extends ConsumerState<StudentReportListView> {
                     : _ReportResults(
                         page: current,
                         loadingMore: _loadingMore,
-                        onRefresh: ref
-                            .read(studentReportControllerProvider.notifier)
-                            .refresh,
+                        onRefresh: _controller().refresh,
                         onLoadMore: _loadMore,
                         onOpen: _openReport,
                       ),
                 error: (error, stackTrace) => _ReportError(
                   message: _errorMessage(error),
-                  onRetry: ref
-                      .read(studentReportControllerProvider.notifier)
-                      .refresh,
+                  onRetry: _controller().refresh,
                 ),
                 data: (page) => _ReportResults(
                   page: page,
                   loadingMore: _loadingMore,
-                  onRefresh: ref
-                      .read(studentReportControllerProvider.notifier)
-                      .refresh,
+                  onRefresh: _controller().refresh,
                   onLoadMore: _loadMore,
                   onOpen: _openReport,
                 ),
@@ -180,25 +172,23 @@ class _StudentReportListViewState extends ConsumerState<StudentReportListView> {
     );
     if (result == null) return;
     if (result.reset) {
-      await ref.read(studentReportControllerProvider.notifier).resetFilters();
+      await _controller().resetFilters();
       return;
     }
-    await ref
-        .read(studentReportControllerProvider.notifier)
-        .applyFilters(
-          status: result.status,
-          level: result.level,
-          type: result.type,
-          academicYearId: result.academicYearId,
-          classId: result.classId,
-        );
+    await _controller().applyFilters(
+      status: result.status,
+      level: result.level,
+      type: result.type,
+      academicYearId: result.academicYearId,
+      classId: result.classId,
+    );
   }
 
   Future<void> _loadMore() async {
     if (_loadingMore) return;
     setState(() => _loadingMore = true);
     try {
-      await ref.read(studentReportControllerProvider.notifier).loadMore();
+      await _controller().loadMore();
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -210,8 +200,21 @@ class _StudentReportListViewState extends ConsumerState<StudentReportListView> {
   }
 
   void _openReport(StudentReportItem report) {
-    context.push('/daftar-laporan-siswa/${report.id}');
+    final basePath = widget.scope == StudentReportScope.guardianStudents
+        ? '/laporan-siswa-wali'
+        : '/daftar-laporan-siswa';
+    context.push('$basePath/${report.id}');
   }
+
+  AsyncValue<StudentReportPage> _watchReports() =>
+      widget.scope == StudentReportScope.guardianStudents
+      ? ref.watch(guardianStudentReportControllerProvider)
+      : ref.watch(studentReportControllerProvider);
+
+  BaseStudentReportController _controller() =>
+      widget.scope == StudentReportScope.guardianStudents
+      ? ref.read(guardianStudentReportControllerProvider.notifier)
+      : ref.read(studentReportControllerProvider.notifier);
 }
 
 class _ReportSummary extends StatelessWidget {

@@ -6,7 +6,8 @@ import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/student_report/data/student_report_repository.dart';
 import 'package:nusa/features/student_report/domain/student_report.dart';
 
-class StudentReportController extends AsyncNotifier<StudentReportPage> {
+abstract class BaseStudentReportController
+    extends AsyncNotifier<StudentReportPage> {
   String _query = '';
   String _status = 'semua';
   String _level = 'semua';
@@ -16,6 +17,8 @@ class StudentReportController extends AsyncNotifier<StudentReportPage> {
   int? _classId;
   Timer? _debounce;
   int _requestVersion = 0;
+
+  StudentReportRepository readRepository();
 
   @override
   Future<StudentReportPage> build() {
@@ -84,18 +87,16 @@ class StudentReportController extends AsyncNotifier<StudentReportPage> {
   }
 
   Future<StudentReportPage> _fetch({required int page}) => _guard(
-    () => ref
-        .read(studentReportRepositoryProvider)
-        .fetch(
-          query: _query,
-          status: _status,
-          level: _level,
-          type: _type,
-          verificationStatus: _verificationStatus,
-          academicYearId: _academicYearId,
-          classId: _classId,
-          page: page,
-        ),
+    () => readRepository().fetch(
+      query: _query,
+      status: _status,
+      level: _level,
+      type: _type,
+      verificationStatus: _verificationStatus,
+      academicYearId: _academicYearId,
+      classId: _classId,
+      page: page,
+    ),
   );
 
   Future<T> _guard<T>(Future<T> Function() operation) async {
@@ -108,16 +109,46 @@ class StudentReportController extends AsyncNotifier<StudentReportPage> {
   }
 }
 
+class StudentReportController extends BaseStudentReportController {
+  @override
+  StudentReportRepository readRepository() =>
+      ref.read(studentReportRepositoryProvider);
+}
+
+class GuardianStudentReportController extends BaseStudentReportController {
+  @override
+  StudentReportRepository readRepository() =>
+      ref.read(guardianStudentReportRepositoryProvider);
+}
+
 final studentReportControllerProvider =
     AsyncNotifierProvider.autoDispose<
       StudentReportController,
       StudentReportPage
     >(StudentReportController.new);
 
+final guardianStudentReportControllerProvider =
+    AsyncNotifierProvider.autoDispose<
+      GuardianStudentReportController,
+      StudentReportPage
+    >(GuardianStudentReportController.new);
+
 final studentReportDetailProvider = FutureProvider.autoDispose
     .family<StudentReportDetail, int>((ref, id) async {
       try {
         return await ref.read(studentReportRepositoryProvider).fetchDetail(id);
+      } on UnauthorizedException {
+        await ref.read(authControllerProvider.notifier).logout();
+        rethrow;
+      }
+    });
+
+final guardianStudentReportDetailProvider = FutureProvider.autoDispose
+    .family<StudentReportDetail, int>((ref, id) async {
+      try {
+        return await ref
+            .read(guardianStudentReportRepositoryProvider)
+            .fetchDetail(id);
       } on UnauthorizedException {
         await ref.read(authControllerProvider.notifier).logout();
         rethrow;
@@ -135,10 +166,15 @@ class StudentReportActions {
 
   Future<StudentReportEvidenceDownload> downloadEvidence({
     required StudentReportEvidence evidence,
+    StudentReportScope scope = StudentReportScope.all,
   }) async {
     try {
       return await _ref
-          .read(studentReportRepositoryProvider)
+          .read(
+            scope == StudentReportScope.guardianStudents
+                ? guardianStudentReportRepositoryProvider
+                : studentReportRepositoryProvider,
+          )
           .downloadEvidence(
             id: evidence.id,
             fileName: evidence.fileName,

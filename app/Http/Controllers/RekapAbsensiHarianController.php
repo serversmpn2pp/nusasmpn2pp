@@ -17,6 +17,17 @@ use Illuminate\Validation\Rule;
 
 class RekapAbsensiHarianController extends Controller
 {
+    private const DAFTAR_STATUS_REKAP = [
+        'semua' => 'Semua status',
+        'hadir' => 'Hadir',
+        'izin' => 'Izin',
+        'sakit' => 'Sakit',
+        'alfa' => 'Alfa',
+        'terlambat' => 'Terlambat',
+        'pulang_cepat' => 'Pulang cepat',
+        'belum_pulang' => 'Belum pulang',
+    ];
+
     public function __construct(
         private ProsesPoinKeterlambatanService $prosesPoinKeterlambatan,
         private KoreksiPresensiSiswaService $koreksiPresensi,
@@ -33,10 +44,12 @@ class RekapAbsensiHarianController extends Controller
             'tanggal' => ['nullable', 'date'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'cari' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', Rule::in(array_keys(self::DAFTAR_STATUS_REKAP))],
         ]);
 
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->toDateString();
         $cari = trim((string) ($data['cari'] ?? ''));
+        $status = $data['status'] ?? 'semua';
         $koreksiHariIniTerbatas = $this->koreksiHariIniTerbatas($request);
         $this->pastikanTanggalKoreksiDiizinkan($request, $tanggal);
         $tahunPelajaranId = TahunPelajaran::query()
@@ -59,6 +72,7 @@ class RekapAbsensiHarianController extends Controller
         $rekapAbsensi = $tahunPelajaranId
             ? $this->ambilRekapAbsensi($tanggal, $tahunPelajaranId, $kelasId, $cari, $cakupanWaliKelas ? $kelasWaliIds : null)
             : collect();
+        $rekapAbsensi = $this->saringStatus($rekapAbsensi, $status);
         $ringkasan = $this->hitungRingkasan($rekapAbsensi);
         $labelCakupan = $this->labelCakupan($kelasId, $daftarKelas, $cakupanWaliKelas);
         $bolehSalinRangkumanWhatsapp = $cakupanWaliKelas || filled($kelasId);
@@ -69,6 +83,8 @@ class RekapAbsensiHarianController extends Controller
         return view('rekap-absensi-harian.index', [
             'tanggal' => $tanggal,
             'cari' => $cari,
+            'statusFilter' => $status,
+            'daftarStatusRekap' => self::DAFTAR_STATUS_REKAP,
             'tahunPelajaranId' => $tahunPelajaranId,
             'kelasId' => $kelasId,
             'daftarKelas' => $daftarKelas,
@@ -311,6 +327,19 @@ class RekapAbsensiHarianController extends Controller
             'pulang_cepat' => $rekapAbsensi->where('pulang_cepat', '>', 0)->count(),
             'belum_pulang' => $rekapAbsensi->where('belum_pulang', true)->count(),
         ];
+    }
+
+    private function saringStatus($rekapAbsensi, string $status)
+    {
+        return match ($status) {
+            'hadir', 'izin', 'sakit', 'alfa' => $rekapAbsensi
+                ->where('status_kehadiran', $status)
+                ->values(),
+            'terlambat' => $rekapAbsensi->where('terlambat', '>', 0)->values(),
+            'pulang_cepat' => $rekapAbsensi->where('pulang_cepat', '>', 0)->values(),
+            'belum_pulang' => $rekapAbsensi->where('belum_pulang', true)->values(),
+            default => $rekapAbsensi,
+        };
     }
 
     private function labelCakupan(?int $kelasId, $daftarKelas, bool $cakupanWaliKelas): string

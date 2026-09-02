@@ -129,7 +129,32 @@
             font-weight: 800;
         }
 
+        .attendance-filter-grid {
+            display: grid;
+            grid-template-columns: 170px minmax(220px, 1fr) minmax(160px, .8fr) minmax(180px, .85fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        @media (max-width: 1100px) {
+            .attendance-filter-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .attendance-filter-actions {
+                grid-column: 1 / -1;
+            }
+        }
+
         @media (max-width: 620px) {
+            .attendance-filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .attendance-filter-actions {
+                grid-column: auto;
+            }
+
             .wa-summary-modal {
                 align-items: center;
                 padding: 10px;
@@ -210,8 +235,8 @@
         </div>
     </div>
 
-    <form action="{{ route('rekap-absensi-harian.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
-        <div class="filter-grid filter-grid-wide">
+    <form action="{{ route('rekap-absensi-harian.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;" data-auto-filter>
+        <div class="attendance-filter-grid">
             <div class="field">
                 <label for="tanggal">Tanggal</label>
                 <input id="tanggal" type="date" name="tanggal" value="{{ $tanggal }}" class="input" @readonly($koreksiHariIniTerbatas ?? false)>
@@ -234,7 +259,16 @@
                 </select>
             </div>
 
-            <div class="actions">
+            <div class="field">
+                <label for="status">Status siswa</label>
+                <select id="status" name="status" class="select">
+                    @foreach ($daftarStatusRekap as $kodeStatus => $labelStatusRekap)
+                        <option value="{{ $kodeStatus }}" @selected($statusFilter === $kodeStatus)>{{ $labelStatusRekap }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="actions attendance-filter-actions">
                 <button type="submit" class="button button-dark">Tampilkan</button>
                 <a href="{{ route('rekap-absensi-harian.index') }}" class="button button-muted">Reset</a>
             </div>

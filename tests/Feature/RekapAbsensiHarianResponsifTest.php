@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\Pengguna;
@@ -74,6 +75,73 @@ class RekapAbsensiHarianResponsifTest extends TestCase
             ->assertDontSee('ANNISA TAHUN LAMA')
             ->assertSee('id="cari"', false)
             ->assertDontSee('id="tahun_pelajaran_id"', false);
+    }
+
+    public function test_rekap_dapat_disaring_berdasarkan_status_presensi_siswa(): void
+    {
+        TahunPelajaran::query()->update(['aktif' => false]);
+        $tahun = TahunPelajaran::create([
+            'nama' => '2026/2027',
+            'tanggal_mulai' => '2026-07-01',
+            'tanggal_selesai' => '2027-06-30',
+            'aktif' => true,
+        ]);
+        $kelas = Kelas::create([
+            'tahun_pelajaran_id' => $tahun->id,
+            'nama' => 'VII.A',
+            'tingkat' => 7,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $siswaTerlambat = $this->buatAnggotaKelas($tahun, $kelas, 'ALDI TERLAMBAT', '0010000011', 1);
+        $siswaSakit = $this->buatAnggotaKelas($tahun, $kelas, 'BUNGA SAKIT', '0010000012', 2);
+        $anggotaTerlambat = AnggotaKelas::where('siswa_id', $siswaTerlambat->id)->firstOrFail();
+        $anggotaSakit = AnggotaKelas::where('siswa_id', $siswaSakit->id)->firstOrFail();
+        $tanggal = '2026-08-21';
+
+        AbsensiSiswa::create([
+            'tanggal' => $tanggal,
+            'tahun_pelajaran_id' => $tahun->id,
+            'kelas_id' => $kelas->id,
+            'anggota_kelas_id' => $anggotaTerlambat->id,
+            'siswa_id' => $siswaTerlambat->id,
+            'jam_masuk' => '07:12',
+            'status_masuk' => 'terlambat',
+            'menit_terlambat' => 12,
+            'status_kehadiran' => 'hadir',
+            'sumber' => 'scan',
+        ]);
+        AbsensiSiswa::create([
+            'tanggal' => $tanggal,
+            'tahun_pelajaran_id' => $tahun->id,
+            'kelas_id' => $kelas->id,
+            'anggota_kelas_id' => $anggotaSakit->id,
+            'siswa_id' => $siswaSakit->id,
+            'status_kehadiran' => 'sakit',
+            'sumber' => 'manual',
+        ]);
+
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $this->actingAs($administrator)
+            ->get(route('rekap-absensi-harian.index', [
+                'tanggal' => $tanggal,
+                'status' => 'terlambat',
+            ]))
+            ->assertOk()
+            ->assertSee('Status siswa')
+            ->assertSee('id="status"', false)
+            ->assertSee('value="terlambat" selected', false)
+            ->assertSee($siswaTerlambat->nama_lengkap)
+            ->assertDontSee($siswaSakit->nama_lengkap);
+
+        $this->get(route('rekap-absensi-harian.index', [
+            'tanggal' => $tanggal,
+            'status' => 'sakit',
+        ]))
+            ->assertOk()
+            ->assertSee($siswaSakit->nama_lengkap)
+            ->assertDontSee($siswaTerlambat->nama_lengkap);
     }
 
     private function buatAnggotaKelas(

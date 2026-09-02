@@ -627,10 +627,12 @@ class _StudentPickerSheetState extends State<_StudentPickerSheet> {
     final query = _searchController.text.trim().toLowerCase();
     final students = widget.students
         .where((student) {
-          final matchesPlacement = student.belongsTo(
-            academicYearId: widget.academicYearId,
-            classId: widget.classId,
-          );
+          final matchesPlacement =
+              widget.classId == null ||
+              student.belongsTo(
+                academicYearId: widget.academicYearId,
+                classId: widget.classId,
+              );
           final haystack =
               '${student.name} ${student.studentNumber ?? ''} ${student.nationalStudentNumber ?? ''}'
                   .toLowerCase();

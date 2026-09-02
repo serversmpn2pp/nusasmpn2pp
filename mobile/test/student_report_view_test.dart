@@ -58,6 +58,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('konteks guru wali memakai daftar laporan siswa dampingan', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final remote = _FakeStudentReportRemoteDataSource();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          guardianStudentReportRemoteDataSourceProvider.overrideWithValue(
+            remote,
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const StudentReportListView(
+            scope: StudentReportScope.guardianStudents,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Laporan Siswa Wali'), findsOneWidget);
+    expect(find.text('Siswa Laporan Native'), findsOneWidget);
+    expect(remote.fetchCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('detail menampilkan fakta dan mengunduh bukti privat', (
     tester,
   ) async {
