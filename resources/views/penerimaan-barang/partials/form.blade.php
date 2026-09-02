@@ -52,11 +52,11 @@
     }
 
     .receipt-flow-step strong,
-    .receipt-flow-step span {
+    .receipt-flow-step div > span {
         display: block;
     }
 
-    .receipt-flow-step span {
+    .receipt-flow-step div > span {
         margin-top: 2px;
         color: var(--muted);
         font-size: .8rem;

@@ -44,11 +44,11 @@
     }
 
     .inventory-guide-row strong,
-    .inventory-guide-row span {
+    .inventory-guide-row div > span {
         display: block;
     }
 
-    .inventory-guide-row span {
+    .inventory-guide-row div > span {
         margin-top: 3px;
         color: var(--muted);
         font-size: .82rem;
