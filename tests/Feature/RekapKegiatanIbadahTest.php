@@ -4,10 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
+use App\Models\Izin;
 use App\Models\JadwalKegiatanIbadah;
 use App\Models\JadwalPiketGuru;
-use App\Models\Kelas;
 use App\Models\KegiatanIbadah;
+use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
@@ -139,6 +140,66 @@ class RekapKegiatanIbadahTest extends TestCase
             'tanggal' => '2026-08-13',
             'kegiatan_ibadah_id' => $data['kegiatan']->id,
         ]))->assertOk();
+    }
+
+    public function test_wali_kelas_dengan_izin_melihat_menu_dan_hanya_mengelola_rekap_kelasnya(): void
+    {
+        Carbon::setTestNow('2026-08-13 12:30:00');
+        $data = $this->dataDasar();
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Wali Kelas VII A',
+            'nip' => '198001012010011001',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $akun = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => 'KataSandi-Uji-2026',
+            'wajib_ganti_kata_sandi' => false,
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+        $peranWali = Peran::where('kode', 'wali_kelas')->firstOrFail();
+        $peranWali->izin()->syncWithoutDetaching(
+            Izin::whereIn('kode', ['ibadah.rekap', 'ibadah.koreksi'])->pluck('id'),
+        );
+        $akun->daftarPeran()->attach($peranWali);
+        $data['kelas_a']->update(['wali_kelas_id' => $pegawai->id]);
+
+        $this->actingAs($akun)
+            ->get(route('beranda'))
+            ->assertOk()
+            ->assertSee('Rekap Ibadah Siswa');
+
+        $this->get(route('rekap-kegiatan-ibadah.index', [
+            'tanggal' => '2026-08-13',
+            'kegiatan_ibadah_id' => $data['kegiatan']->id,
+            'kelas_id' => $data['kelas_a']->id,
+        ]))
+            ->assertOk()
+            ->assertSee('Siswa Kelas VII.A')
+            ->assertViewHas('daftarKelas', fn ($kelas) => $kelas->pluck('id')->all() === [$data['kelas_a']->id]);
+
+        $this->get(route('rekap-kegiatan-ibadah.index', [
+            'tanggal' => '2026-08-13',
+            'kegiatan_ibadah_id' => $data['kegiatan']->id,
+            'kelas_id' => $data['kelas_b']->id,
+        ]))->assertForbidden();
+
+        $this->get(route('rekap-kegiatan-ibadah.koreksi.edit', [
+            'anggotaKelas' => $data['anggota_a1'],
+            'tanggal' => '2026-08-13',
+            'kegiatan_ibadah_id' => $data['kegiatan']->id,
+        ]))->assertOk();
+
+        $this->get(route('rekap-kegiatan-ibadah.koreksi.edit', [
+            'anggotaKelas' => $data['anggota_b1'],
+            'tanggal' => '2026-08-13',
+            'kegiatan_ibadah_id' => $data['kegiatan']->id,
+        ]))->assertForbidden();
     }
 
     public function test_input_koreksi_dan_pembatalan_presensi_manual_menyimpan_riwayat(): void
@@ -277,8 +338,7 @@ class RekapKegiatanIbadahTest extends TestCase
             ->assertOk()
             ->assertSee('Ringkasan Ibadah Bulanan')
             ->assertViewHas('tanggalKegiatan', fn ($tanggal) => $tanggal->values()->all() === ['2026-08-06', '2026-08-13'])
-            ->assertViewHas('ringkasan', fn (array $ringkasan) =>
-                $ringkasan['hari_kegiatan'] === 2
+            ->assertViewHas('ringkasan', fn (array $ringkasan) => $ringkasan['hari_kegiatan'] === 2
                 && $ringkasan['target'] === 6
                 && $ringkasan['tercatat'] === 3
                 && $ringkasan['belum'] === 3

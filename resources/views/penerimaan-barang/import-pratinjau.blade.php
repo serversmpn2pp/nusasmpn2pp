@@ -138,7 +138,7 @@
                 <div class="page-header" style="margin-bottom: 0;">
                     <div>
                         <h2 class="panel-title">Rincian barang</h2>
-                        <p class="help-text">Barang baru akan dibuat bersamaan ketika import dikonfirmasi.</p>
+                        <p class="help-text">Barang baru dibuat saat dikonfirmasi. Nomor unit setiap baris dimulai kembali dari .01.</p>
                     </div>
                     <span class="badge badge-muted">{{ $pratinjau['total_unit_aset'] }} unit aset</span>
                 </div>

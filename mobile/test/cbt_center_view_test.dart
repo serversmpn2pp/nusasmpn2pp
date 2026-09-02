@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/cbt_center/data/cbt_center_remote_data_source.dart';
 import 'package:nusa/features/cbt_center/domain/cbt_center.dart';
@@ -24,6 +25,29 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) =>
+                const CbtCenterView(focus: CbtCenterFocus.management),
+          ),
+          GoRoute(
+            path: '/bank-soal',
+            builder: (context, state) =>
+                const Scaffold(body: Center(child: Text('Bank Soal Native'))),
+          ),
+          GoRoute(
+            path: '/asesmen-kelas',
+            builder: (context, state) => const Scaffold(
+              body: Center(child: Text('Asesmen Kelas Native')),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -31,9 +55,9 @@ void main() {
               _FakeCbtCenterRemoteDataSource(),
             ),
           ],
-          child: MaterialApp(
+          child: MaterialApp.router(
             theme: AppTheme.light,
-            home: const CbtCenterView(focus: CbtCenterFocus.management),
+            routerConfig: router,
           ),
         ),
       );
@@ -43,14 +67,16 @@ void main() {
       expect(find.text('Ringkasan Pengelolaan'), findsOneWidget);
       expect(find.text('48'), findsOneWidget);
 
-    await tester.drag(find.byType(ListView), const Offset(0, -700));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Bank Soal'));
-    await tester.pump();
-    expect(find.textContaining('akan dilanjutkan'), findsOneWidget);
+      await tester.drag(find.byType(ListView), const Offset(0, -700));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bank Soal'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bank Soal Native'), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView), const Offset(0, -700));
-    await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -700));
+      await tester.pumpAndSettle();
       expect(find.text('Labor Komputer 1'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
@@ -119,16 +145,22 @@ Map<String, dynamic> _response() => {
     ],
     'alat': [
       {
+        'kode': 'asesmen-kelas',
+        'label': 'Asesmen Kelas',
+        'status': 'tersedia',
+        'rute': '/asesmen-kelas',
+      },
+      {
         'kode': 'bank-soal',
         'label': 'Bank Soal',
-        'status': 'fondasi',
-        'rute': null,
+        'status': 'tersedia',
+        'rute': '/bank-soal',
       },
       {
         'kode': 'paket-soal',
         'label': 'Paket Soal',
-        'status': 'fondasi',
-        'rute': null,
+        'status': 'tersedia',
+        'rute': '/paket-soal',
       },
     ],
   },

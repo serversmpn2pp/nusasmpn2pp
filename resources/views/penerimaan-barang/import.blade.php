@@ -102,9 +102,11 @@
             <h2 class="panel-title">Ketentuan template</h2>
             <ul style="margin: 12px 0 0; padding-left: 20px; color: var(--muted); line-height: 1.75;">
                 <li>Jangan mengganti nama sheet atau judul kolom.</li>
-                <li>Barang lama cukup diisi menggunakan kode barang yang sudah ada.</li>
+                <li>Barang yang sudah terdaftar cukup diisi menggunakan kode barang pada sheet Referensi NUSA.</li>
                 <li>Barang baru wajib dilengkapi dengan nama, jenis, kategori, satuan, dan lokasi.</li>
-                <li>Kode BHP dibuat otomatis; kode aset tidak habis pakai diisi sesuai klasifikasi baku.</li>
+                <li>Kode barang tidak habis pakai berisi sepuluh angka, misalnya <strong>02.06.01.05.40</strong>. Titik boleh diketik atau tidak.</li>
+                <li>Jangan menulis akhiran unit. NUSA membuat <strong>.01, .02, dan seterusnya</strong> saat import disimpan.</li>
+                <li>Setiap baris penerimaan baru selalu memulai nomor unit kembali dari <strong>.01</strong>.</li>
             </ul>
         </section>
 

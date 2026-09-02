@@ -46,7 +46,8 @@ class PenerimaanBarangTest extends TestCase
         $this->get(route('penerimaan-barang.create'))
             ->assertOk()
             ->assertSee('Catat barang datang')
-            ->assertSee('Proses otomatis')
+            ->assertSee('Yang dilakukan NUSA')
+            ->assertSee('Jika barang yang sama datang lagi pada dokumen berikutnya, nomornya kembali ke .01.')
             ->assertSee('name="token_penyimpanan"', false)
             ->assertSee('data-simpan-penerimaan', false)
             ->assertSee('Sedang menyimpan...');
@@ -86,7 +87,7 @@ class PenerimaanBarangTest extends TestCase
                     'harga_satuan' => 12000,
                 ],
                 [
-                    'kode_barang' => '02.06.01.05.40.02',
+                    'kode_barang' => '0206010541',
                     'nama_barang' => 'Laptop Pembelajaran',
                     'jenis_barang' => 'tidak_habis_pakai',
                     'kode_kategori' => $kategori->kode,
@@ -142,7 +143,7 @@ class PenerimaanBarangTest extends TestCase
             ])->assertRedirect();
 
             $penerimaan = PenerimaanBarang::where('nomor_dokumen', $nomorDokumen)->firstOrFail();
-            $laptop = Barang::where('kode', '02.06.01.05.40.02')->firstOrFail();
+            $laptop = Barang::where('kode', '02.06.01.05.41')->firstOrFail();
             $kertas = Barang::where('nama', 'Kertas HVS A4')->firstOrFail();
 
             $this->assertSame('5.00', SaldoStokBarang::where('barang_id', $barangHabisPakai->id)->value('jumlah'));
@@ -172,7 +173,7 @@ class PenerimaanBarangTest extends TestCase
                 'cara_perolehan' => 'pembelian',
             ],
             [[
-                'kode_barang' => '02.06.01.05.40.03',
+                'kode_barang' => '02.06.01.05.42',
                 'nama_barang' => 'Proyektor Baru',
                 'jenis_barang' => 'tidak_habis_pakai',
                 'kode_kategori' => $kategori->kode,
@@ -262,6 +263,11 @@ class PenerimaanBarangTest extends TestCase
             'AST-'.$tahun.'-000001',
             'AST-'.$tahun.'-000002',
         ], $unit->pluck('kode_inventaris')->all());
+        $this->assertSame([1, 2], $unit->pluck('urutan_dalam_penerimaan')->all());
+        $this->assertSame([
+            '02.06.01.05.40.01',
+            '02.06.01.05.40.02',
+        ], $unit->map->kodeBarangUnit()->all());
         $this->assertSame([
             '12.03.15.08.10.'.$tahun.'.08',
         ], $unit->pluck('nomor_aset_resmi')->unique()->values()->all());
@@ -327,6 +333,44 @@ class PenerimaanBarangTest extends TestCase
             ->assertSee('BHP-000001')
             ->assertSee('Gudang Utama')
             ->assertViewHas('labelBarcode', fn ($label) => $label->count() === 1);
+    }
+
+    public function test_nomor_unit_dimulai_lagi_dari_satu_pada_setiap_barang_datang(): void
+    {
+        [$lokasi, , $barangAset, $sumber] = $this->buatDataDasar();
+        $tanggal = now()->toDateString();
+
+        foreach ([2, 3] as $indeks => $jumlah) {
+            $this->post(route('penerimaan-barang.store'), [
+                'token_penyimpanan' => (string) Str::uuid(),
+                'tanggal_penerimaan' => $tanggal,
+                'sumber_perolehan_barang_id' => $sumber->id,
+                'cara_perolehan' => 'pembelian',
+                'nomor_dokumen' => 'ULANG-'.($indeks + 1),
+                'rincian' => [[
+                    'barang_id' => $barangAset->id,
+                    'lokasi_barang_id' => $lokasi->id,
+                    'jumlah' => $jumlah,
+                    'kondisi' => 'baik',
+                ]],
+            ])->assertRedirect();
+        }
+
+        $unit = UnitBarang::query()
+            ->where('barang_id', $barangAset->id)
+            ->orderBy('id')
+            ->get();
+
+        $this->assertSame([1, 2, 1, 2, 3], $unit->pluck('urutan_dalam_penerimaan')->all());
+        $this->assertSame([1, 2, 3, 4, 5], $unit->pluck('nomor_unit')->all());
+        $this->assertSame([
+            '02.06.01.05.40.01',
+            '02.06.01.05.40.02',
+            '02.06.01.05.40.01',
+            '02.06.01.05.40.02',
+            '02.06.01.05.40.03',
+        ], $unit->map->kodeBarangUnit()->all());
+        $this->assertSame(5, $unit->pluck('kode_inventaris')->unique()->count());
     }
 
     public function test_pengiriman_form_yang_sama_dua_kali_tidak_menggandakan_penerimaan_dan_stok(): void
@@ -574,7 +618,7 @@ class PenerimaanBarangTest extends TestCase
             'aktif' => true,
         ]);
         $barangAset = Barang::create([
-            'kode' => '02.06.01.05.40.01',
+            'kode' => '02.06.01.05.40',
             'nama' => 'Printer',
             'kategori_barang_id' => $kategori->id,
             'satuan_barang_id' => $satuan->id,

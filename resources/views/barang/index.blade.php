@@ -118,7 +118,7 @@
                         <tr>
                             <td>
                                 <p class="person-name">{{ $item->nama }}</p>
-                                <p class="person-meta">{{ $item->kode }}</p>
+                                <p class="person-meta">{{ $item->kodeKlasifikasi() }}</p>
                             </td>
                             <td>{{ $item->kategoriBarang->nama }}</td>
                             <td>{{ $item->labelJenisBarang() }}</td>
@@ -162,7 +162,7 @@
                     <div class="mobile-card-head">
                         <div>
                             <p class="person-name">{{ $item->nama }}</p>
-                            <p class="person-meta">{{ $item->kode }}</p>
+                            <p class="person-meta">{{ $item->kodeKlasifikasi() }}</p>
                         </div>
 
                         @if ($item->aktif)

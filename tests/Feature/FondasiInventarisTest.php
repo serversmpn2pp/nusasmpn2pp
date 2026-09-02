@@ -87,7 +87,7 @@ class FondasiInventarisTest extends TestCase
 
         $this->post(route('barang.store'), [
             'nama' => 'Printer',
-            'kode' => '02.06.01.05.40.01',
+            'kode' => '0206010540',
             'jenis_barang' => 'tidak_habis_pakai',
             'kategori_barang_id' => $kategori->id,
             'satuan_barang_id' => $satuan->id,
@@ -103,9 +103,28 @@ class FondasiInventarisTest extends TestCase
         ]);
         $this->assertDatabaseHas('barang', [
             'nama' => 'Printer',
-            'kode' => '02.06.01.05.40.01',
+            'kode' => '02.06.01.05.40',
             'jenis_barang' => 'tidak_habis_pakai',
             'tipe_pengelolaan' => 'aset_individual',
+        ]);
+    }
+
+    public function test_nomor_unit_tidak_boleh_dimasukkan_ke_kode_master_barang(): void
+    {
+        [$kategori, $satuan, $lokasi] = $this->buatMasterBarang();
+
+        $this->post(route('barang.store'), [
+            'nama' => 'Printer dengan nomor unit',
+            'kode' => '02.06.01.05.40.01',
+            'jenis_barang' => 'tidak_habis_pakai',
+            'kategori_barang_id' => $kategori->id,
+            'satuan_barang_id' => $satuan->id,
+            'lokasi_penyimpanan_id' => $lokasi->id,
+            'aktif' => 1,
+        ])->assertSessionHasErrors('kode');
+
+        $this->assertDatabaseMissing('barang', [
+            'nama' => 'Printer dengan nomor unit',
         ]);
     }
 
@@ -114,7 +133,7 @@ class FondasiInventarisTest extends TestCase
         [$kategori, $satuan, $lokasi] = $this->buatMasterBarang();
         $barang = Barang::create([
             'nama' => 'Printer',
-            'kode' => '02.06.01.05.40.01',
+            'kode' => '02.06.01.05.40',
             'kategori_barang_id' => $kategori->id,
             'satuan_barang_id' => $satuan->id,
             'lokasi_penyimpanan_id' => $lokasi->id,
@@ -140,6 +159,8 @@ class FondasiInventarisTest extends TestCase
 
         $unit = UnitBarang::where('barang_id', $barang->id)->orderBy('nomor_unit')->get();
         $this->assertSame(['AST-2024-000001', 'AST-2024-000002'], $unit->pluck('kode_inventaris')->all());
+        $this->assertSame([1, 2], $unit->pluck('urutan_dalam_penerimaan')->all());
+        $this->assertSame(['02.06.01.05.40.01', '02.06.01.05.40.02'], $unit->map->kodeBarangUnit()->all());
         $this->assertSame(['12.03.15.08.10.2024.08'], $unit->pluck('nomor_aset_resmi')->unique()->values()->all());
         $this->assertSame(['DAK'], $unit->pluck('sumber_perolehan')->unique()->values()->all());
     }
@@ -149,7 +170,7 @@ class FondasiInventarisTest extends TestCase
         [$kategori, $satuan, $lokasi] = $this->buatMasterBarang();
         $barang = Barang::create([
             'nama' => 'Proyektor Lama',
-            'kode' => '02.06.01.05.40.02',
+            'kode' => '02.06.01.05.41',
             'kategori_barang_id' => $kategori->id,
             'satuan_barang_id' => $satuan->id,
             'lokasi_penyimpanan_id' => $lokasi->id,
@@ -185,7 +206,7 @@ class FondasiInventarisTest extends TestCase
         [$kategori, $satuan, $lokasi] = $this->buatMasterBarang();
         $barang = Barang::create([
             'nama' => 'Laptop Pembelajaran',
-            'kode' => '02.06.01.05.40.03',
+            'kode' => '02.06.01.05.42',
             'kategori_barang_id' => $kategori->id,
             'satuan_barang_id' => $satuan->id,
             'lokasi_penyimpanan_id' => $lokasi->id,

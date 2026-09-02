@@ -28,8 +28,9 @@ class RekapKegiatanIbadahMobileService
         abort_unless(
             $this->akses->dapatMelihatRekap($pengguna, $tahunPelajaran, $tanggal),
             403,
-            'Rekap hanya dapat dibuka oleh guru PAI, guru piket pada hari terkait, atau pengelola kesiswaan.',
+            'Rekap hanya dapat dibuka oleh wali kelas untuk kelasnya, guru PAI, guru piket pada hari terkait, atau pengelola kesiswaan.',
         );
+        $cakupanKelasIds = $this->akses->cakupanKelasRekap($pengguna, $tahunPelajaran, $tanggal);
 
         $daftarKegiatan = KegiatanIbadah::query()
             ->orderByDesc('aktif')
@@ -40,7 +41,13 @@ class RekapKegiatanIbadahMobileService
                 ? (int) $filter['kegiatan_ibadah_id']
                 : $daftarKegiatan->firstWhere('aktif', true)?->id;
         $kegiatanDipilih = $daftarKegiatan->firstWhere('id', $kegiatanId);
-        $daftarKelas = $tahunPelajaran ? $this->daftarKelas($tahunPelajaran) : collect();
+        $daftarKelas = $tahunPelajaran ? $this->daftarKelas($tahunPelajaran, $cakupanKelasIds) : collect();
+        $kelasDimintaId = filled($filter['kelas_id'] ?? null) ? (int) $filter['kelas_id'] : null;
+        abort_if(
+            $kelasDimintaId && $cakupanKelasIds !== null && ! in_array($kelasDimintaId, $cakupanKelasIds, true),
+            403,
+            'Wali kelas hanya dapat membuka rekap kelas yang diampunya.',
+        );
         $kelasId = filled($filter['kelas_id'] ?? null)
             && $daftarKelas->contains('id', (int) $filter['kelas_id'])
                 ? (int) $filter['kelas_id']
@@ -172,6 +179,7 @@ class RekapKegiatanIbadahMobileService
             ],
             'hak_akses' => [
                 'dapat_koreksi' => $this->akses->dapatMengoreksi($pengguna, $tahunPelajaran, $tanggal),
+                'cakupan_wali_kelas' => $cakupanKelasIds !== null,
                 'dapat_scan_sekarang' => $tanggal->isToday()
                     && $this->akses->dapatMemindai($pengguna, $tahunPelajaran, now()),
             ],
@@ -355,11 +363,12 @@ class RekapKegiatanIbadahMobileService
             : $query->whereDoesntHave('siswa.presensiKegiatanIbadah', $relasi);
     }
 
-    private function daftarKelas(TahunPelajaran $tahunPelajaran)
+    private function daftarKelas(TahunPelajaran $tahunPelajaran, ?array $cakupanKelasIds = null)
     {
         return Kelas::query()
             ->where('tahun_pelajaran_id', $tahunPelajaran->id)
             ->where('aktif', true)
+            ->when($cakupanKelasIds !== null, fn (Builder $query) => $query->whereIn('id', $cakupanKelasIds))
             ->withCount([
                 'anggotaKelas as jumlah_siswa' => fn (Builder $query) => $query
                     ->where('status_keanggotaan', 'aktif')
@@ -451,6 +460,12 @@ class RekapKegiatanIbadahMobileService
         $tahun = $this->tahunPelajaranAktif();
         abort_unless((int) $anggota->tahun_pelajaran_id === (int) $tahun->id && $anggota->status_keanggotaan === 'aktif', 404);
         abort_unless($this->akses->dapatMengoreksi($pengguna, $tahun, $tanggal), 403);
+        $cakupanKelasIds = $this->akses->cakupanKelasRekap($pengguna, $tahun, $tanggal);
+        abort_if(
+            $cakupanKelasIds !== null && ! in_array((int) $anggota->kelas_id, $cakupanKelasIds, true),
+            403,
+            'Wali kelas hanya dapat mengoreksi presensi ibadah siswa di kelas yang diampunya.',
+        );
         $kegiatan = KegiatanIbadah::query()->findOrFail($kegiatanId);
 
         return [$tahun, $kegiatan, $this->jadwalPada($tahun, $kegiatanId, $tanggal)];

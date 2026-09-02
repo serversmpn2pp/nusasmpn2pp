@@ -53,7 +53,21 @@ class PusatCbtApiTest extends TestCase
                     ],
                 ],
             ])
-            ->assertJsonFragment(['kode' => 'bank-soal'])
+            ->assertJsonFragment([
+                'kode' => 'asesmen-kelas',
+                'status' => 'tersedia',
+                'rute' => '/asesmen-kelas',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'bank-soal',
+                'status' => 'tersedia',
+                'rute' => '/bank-soal',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'paket-soal',
+                'status' => 'tersedia',
+                'rute' => '/paket-soal',
+            ])
             ->assertJsonPath('data.pengawas', null)
             ->assertJsonPath('data.siswa', null);
 

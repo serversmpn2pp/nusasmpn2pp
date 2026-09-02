@@ -106,4 +106,16 @@ class Barang extends Model
         return self::DAFTAR_JENIS_BARANG[$this->jenis_barang]
             ?? str($this->jenis_barang)->headline()->toString();
     }
+
+    public function kodeKlasifikasi(): string
+    {
+        $kode = trim((string) $this->kode);
+
+        if ($this->jenis_barang === 'tidak_habis_pakai'
+            && preg_match('/^(\d{2}(?:\.\d{2}){4})\.\d{2}$/', $kode, $bagian)) {
+            return $bagian[1];
+        }
+
+        return $kode;
+    }
 }

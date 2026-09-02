@@ -135,6 +135,8 @@ class LabelBarcodeInventarisController extends Controller
             ->when($lokasiBarangId, fn ($query) => $query->where('lokasi_barang_id', $lokasiBarangId))
             ->when($fokusUnitIds !== [], fn ($query) => $query->whereIn('id', $fokusUnitIds))
             ->orderBy('barang_id')
+            ->orderBy('detail_penerimaan_barang_id')
+            ->orderBy('urutan_dalam_penerimaan')
             ->orderBy('nomor_unit')
             ->get();
     }
@@ -180,7 +182,7 @@ class LabelBarcodeInventarisController extends Controller
                 'kode' => $unit->kode_inventaris,
                 'nama' => $unit->barang->nama,
                 'nomor_aset_resmi' => $unit->nomor_aset_resmi ?: '-',
-                'kode_barang' => $unit->barang->kode,
+                'kode_barang' => $unit->kodeBarangUnit(),
                 'sumber_tahun' => collect([
                     $unit->sumberPerolehanBarang?->nama ?: $unit->sumber_perolehan,
                     $unit->tahun_perolehan,

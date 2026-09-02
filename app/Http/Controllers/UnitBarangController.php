@@ -25,6 +25,9 @@ class UnitBarangController extends Controller
         $statusUnit = $this->pilihanValid($request->input('status_unit', 'semua'), array_merge(['semua'], array_keys(UnitBarang::DAFTAR_STATUS)));
         $barangId = $request->input('barang_id', 'semua');
         $lokasiBarangId = $request->input('lokasi_barang_id', 'semua');
+        $bagianKodeUnit = preg_match('/^(\d{2}(?:\.\d{2}){4})\.(\d+)$/', $kataKunci, $bagian)
+            ? ['kode' => $bagian[1], 'urutan' => (int) $bagian[2]]
+            : null;
 
         $unitBarang = UnitBarang::query()
             ->with(['barang.kategoriBarang', 'lokasiBarang', 'sumberPerolehanBarang'])
@@ -34,14 +37,25 @@ class UnitBarangController extends Controller
             ->when($statusUnit !== 'semua', fn ($query) => $query->where('status_unit', $statusUnit))
             ->when($barangId !== 'semua', fn ($query) => $query->where('barang_id', $barangId))
             ->when($lokasiBarangId !== 'semua', fn ($query) => $query->where('lokasi_barang_id', $lokasiBarangId))
-            ->when($kataKunci !== '', function ($query) use ($kataKunci) {
-                $query->where(function ($query) use ($kataKunci) {
+            ->when($kataKunci !== '', function ($query) use ($kataKunci, $bagianKodeUnit) {
+                $query->where(function ($query) use ($kataKunci, $bagianKodeUnit) {
                     $query->where('kode_inventaris', 'ilike', '%'.$kataKunci.'%')
                         ->orWhere('nomor_aset_resmi', 'ilike', '%'.$kataKunci.'%')
                         ->orWhere('nomor_seri', 'ilike', '%'.$kataKunci.'%')
                         ->orWhere('merek', 'ilike', '%'.$kataKunci.'%')
                         ->orWhere('tipe', 'ilike', '%'.$kataKunci.'%')
-                        ->orWhereHas('barang', fn ($query) => $query->where('nama', 'ilike', '%'.$kataKunci.'%'));
+                        ->orWhereHas('barang', fn ($query) => $query
+                            ->where('nama', 'ilike', '%'.$kataKunci.'%')
+                            ->orWhere('kode', 'ilike', '%'.$kataKunci.'%'));
+
+                    if ($bagianKodeUnit) {
+                        $query->orWhere(function ($query) use ($bagianKodeUnit) {
+                            $query->where('urutan_dalam_penerimaan', $bagianKodeUnit['urutan'])
+                                ->whereHas('barang', fn ($query) => $query
+                                    ->where('kode', $bagianKodeUnit['kode'])
+                                    ->orWhere('kode', 'like', $bagianKodeUnit['kode'].'.__'));
+                        });
+                    }
                 });
             })
             ->orderByDesc('aktif')
@@ -104,6 +118,7 @@ class UnitBarangController extends Controller
                 $nomorUnit = $nomorTerakhir + $urutan;
                 $unit = UnitBarang::create(array_merge($data, [
                     'nomor_unit' => $nomorUnit,
+                    'urutan_dalam_penerimaan' => $urutan,
                     'kode_inventaris' => $this->generatorIdentitas->buatKodeUnitAset((int) $data['tahun_perolehan']),
                     'nomor_aset_resmi' => $this->generatorIdentitas->buatNomorAsetResmi((int) $data['tahun_perolehan']),
                 ]));

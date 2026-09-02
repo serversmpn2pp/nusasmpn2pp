@@ -265,6 +265,10 @@
                         <dd>{{ $unitBarang->kode_inventaris }}</dd>
                     </div>
                     <div class="detail-item">
+                        <dt>Kode unit barang</dt>
+                        <dd>{{ $unitBarang->kodeBarangUnit() }}</dd>
+                    </div>
+                    <div class="detail-item">
                         <dt>Nomor aset resmi</dt>
                         <dd>{{ $unitBarang->nomor_aset_resmi ?: '-' }}</dd>
                     </div>
@@ -273,8 +277,8 @@
                         <dd>{{ $unitBarang->barang->nama }}</dd>
                     </div>
                     <div class="detail-item">
-                        <dt>Kode barang</dt>
-                        <dd>{{ $unitBarang->barang->kode }}</dd>
+                        <dt>Kode master barang</dt>
+                        <dd>{{ $unitBarang->barang->kodeKlasifikasi() }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Kategori</dt>

@@ -328,7 +328,7 @@
                 <select id="barang_id" name="barang_id" class="select">
                     <option value="">Semua barang</option>
                     @foreach ($daftarBarang as $item)
-                        <option value="{{ $item->id }}" @selected((string) $barangId === (string) $item->id)>{{ $item->nama }} - {{ $item->kode }}</option>
+                        <option value="{{ $item->id }}" @selected((string) $barangId === (string) $item->id)>{{ $item->nama }} - {{ $item->kodeKlasifikasi() }}</option>
                     @endforeach
                 </select>
             </div>
@@ -389,8 +389,9 @@
                     <label class="label-choice">
                         <input type="checkbox" name="unit_barang_id[]" value="{{ $unit->id }}" @checked(! $seleksiDiterapkan || in_array($unit->id, $unitBarangIds, true))>
                         <span>
-                            <strong>{{ $unit->kode_inventaris }}</strong>
+                            <strong>{{ $unit->kodeBarangUnit() }}</strong>
                             <small>{{ $unit->barang->nama }} - {{ $unit->lokasiBarang?->nama ?: 'Tanpa lokasi' }}</small>
+                            <small>ID NUSA {{ $unit->kode_inventaris }}</small>
                         </span>
                     </label>
                 @empty
@@ -402,7 +403,7 @@
                         <input type="checkbox" name="saldo_stok_barang_id[]" value="{{ $saldo->id }}" @checked(! $seleksiDiterapkan || in_array($saldo->id, $saldoStokBarangIds, true))>
                         <span>
                             <strong>{{ $saldo->barang->nama }}</strong>
-                            <small>{{ $saldo->barang->kode }} - {{ $saldo->lokasiBarang->nama }}</small>
+                            <small>{{ $saldo->barang->kodeKlasifikasi() }} - {{ $saldo->lokasiBarang->nama }}</small>
                         </span>
                     </label>
                 @empty

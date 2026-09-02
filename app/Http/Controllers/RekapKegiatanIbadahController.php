@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AnggotaKelas;
 use App\Models\JadwalKegiatanIbadah;
-use App\Models\Kelas;
 use App\Models\KegiatanIbadah;
+use App\Models\Kelas;
 use App\Models\PresensiKegiatanIbadah;
 use App\Models\TahunPelajaran;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
@@ -33,8 +33,9 @@ class RekapKegiatanIbadahController extends Controller
         abort_unless(
             $akses->dapatMelihatRekap($request->user(), $tahunPelajaran, $tanggal),
             403,
-            'Rekap hanya dapat dibuka oleh guru PAI, guru piket pada hari terkait, atau pengelola kesiswaan.',
+            'Rekap hanya dapat dibuka oleh wali kelas untuk kelasnya, guru PAI, guru piket pada hari terkait, atau pengelola kesiswaan.',
         );
+        $cakupanKelasIds = $akses->cakupanKelasRekap($request->user(), $tahunPelajaran, $tanggal);
 
         $daftarKegiatan = KegiatanIbadah::query()
             ->orderByDesc('aktif')
@@ -49,6 +50,7 @@ class RekapKegiatanIbadahController extends Controller
             ? Kelas::query()
                 ->where('tahun_pelajaran_id', $tahunPelajaran->id)
                 ->where('aktif', true)
+                ->when($cakupanKelasIds !== null, fn ($query) => $query->whereIn('id', $cakupanKelasIds))
                 ->withCount([
                     'anggotaKelas as jumlah_siswa' => fn ($query) => $query
                         ->where('status_keanggotaan', 'aktif')
@@ -58,6 +60,12 @@ class RekapKegiatanIbadahController extends Controller
                 ->orderBy('nama')
                 ->get()
             : collect();
+        $kelasDimintaId = isset($data['kelas_id']) ? (int) $data['kelas_id'] : null;
+        abort_if(
+            $kelasDimintaId && $cakupanKelasIds !== null && ! in_array($kelasDimintaId, $cakupanKelasIds, true),
+            403,
+            'Wali kelas hanya dapat membuka rekap kelas yang diampunya.',
+        );
         $kelasId = isset($data['kelas_id']) && $daftarKelas->contains('id', (int) $data['kelas_id'])
             ? (int) $data['kelas_id']
             : null;

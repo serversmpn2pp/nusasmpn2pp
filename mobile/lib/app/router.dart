@@ -7,6 +7,10 @@ import 'package:nusa/features/auth/presentation/login_view.dart';
 import 'package:nusa/features/auth/presentation/startup_view.dart';
 import 'package:nusa/features/academic_year/presentation/academic_year_view.dart';
 import 'package:nusa/features/class_promotion/presentation/class_promotion_view.dart';
+import 'package:nusa/features/class_assessment/presentation/class_assessment_detail_view.dart';
+import 'package:nusa/features/class_assessment/presentation/class_assessment_form_view.dart';
+import 'package:nusa/features/class_assessment/presentation/class_assessment_list_view.dart';
+import 'package:nusa/features/class_assessment/presentation/class_assessment_questions_view.dart';
 import 'package:nusa/features/cbt_center/domain/cbt_center.dart';
 import 'package:nusa/features/cbt_center/presentation/cbt_center_view.dart';
 import 'package:nusa/features/employee/presentation/employee_detail_view.dart';
@@ -45,6 +49,11 @@ import 'package:nusa/features/point_reduction/presentation/point_reduction_view.
 import 'package:nusa/features/private_worship_scan/presentation/private_worship_scan_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_detail_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_list_view.dart';
+import 'package:nusa/features/question_bank/presentation/question_bank_detail_view.dart';
+import 'package:nusa/features/question_bank/presentation/question_bank_form_view.dart';
+import 'package:nusa/features/question_bank/presentation/question_bank_list_view.dart';
+import 'package:nusa/features/question_package/presentation/question_package_detail_view.dart';
+import 'package:nusa/features/question_package/presentation/question_package_list_view.dart';
 import 'package:nusa/features/report_verification/presentation/report_verification_detail_view.dart';
 import 'package:nusa/features/report_verification/presentation/report_verification_list_view.dart';
 import 'package:nusa/features/role_access/presentation/role_access_detail_view.dart';
@@ -106,6 +115,17 @@ abstract final class AppRoutes {
   static const cbtCenter = '/pusat-cbt';
   static const myExamSupervision = '/tugas-pengawas-ujian';
   static const myExams = '/ujian-saya';
+  static const questionBank = '/bank-soal';
+  static const questionBankCreate = '/bank-soal/tambah';
+  static const questionBankDetail = '/bank-soal/:id';
+  static const questionBankEdit = '/bank-soal/:id/ubah';
+  static const questionPackages = '/paket-soal';
+  static const questionPackageDetail = '/paket-soal/:id';
+  static const classAssessments = '/asesmen-kelas';
+  static const classAssessmentCreate = '/asesmen-kelas/tambah';
+  static const classAssessmentDetail = '/asesmen-kelas/:id';
+  static const classAssessmentEdit = '/asesmen-kelas/:id/ubah';
+  static const classAssessmentQuestions = '/asesmen-kelas/:id/soal';
   static const incidentReporting = '/laporkan-kejadian';
   static const studentReports = '/daftar-laporan-siswa';
   static const studentReportDetail = '/daftar-laporan-siswa/:id';
@@ -264,6 +284,73 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'my-exams',
         builder: (context, state) =>
             const CbtCenterView(focus: CbtCenterFocus.student),
+      ),
+      GoRoute(
+        path: AppRoutes.questionBank,
+        name: 'question-bank',
+        builder: (context, state) => const QuestionBankListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.questionBankCreate,
+        name: 'question-bank-create',
+        builder: (context, state) => const QuestionBankFormView(),
+      ),
+      GoRoute(
+        path: AppRoutes.questionBankEdit,
+        name: 'question-bank-edit',
+        builder: (context, state) => QuestionBankFormView(
+          questionId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.questionBankDetail,
+        name: 'question-bank-detail',
+        builder: (context, state) => QuestionBankDetailView(
+          questionId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.questionPackages,
+        name: 'question-packages',
+        builder: (context, state) => const QuestionPackageListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.questionPackageDetail,
+        name: 'question-package-detail',
+        builder: (context, state) => QuestionPackageDetailView(
+          scheduleId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.classAssessments,
+        name: 'class-assessments',
+        builder: (context, state) => const ClassAssessmentListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.classAssessmentCreate,
+        name: 'class-assessment-create',
+        builder: (context, state) => const ClassAssessmentFormView(),
+      ),
+      GoRoute(
+        path: AppRoutes.classAssessmentEdit,
+        name: 'class-assessment-edit',
+        builder: (context, state) => ClassAssessmentFormView(
+          assessmentId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.classAssessmentQuestions,
+        name: 'class-assessment-questions',
+        builder: (context, state) => ClassAssessmentQuestionsView(
+          assessmentId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.classAssessmentDetail,
+        name: 'class-assessment-detail',
+        builder: (context, state) => ClassAssessmentDetailView(
+          assessmentId: int.parse(state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: AppRoutes.incidentReporting,

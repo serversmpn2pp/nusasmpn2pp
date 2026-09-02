@@ -133,7 +133,7 @@ class ImportPenerimaanBarangController extends Controller
                 ->orderBy('nama')
                 ->get()
                 ->map(fn (Barang $barang) => [
-                    'kode' => $barang->kode,
+                    'kode' => $barang->kodeKlasifikasi(),
                     'nama' => $barang->nama,
                     'jenis' => $barang->jenis_barang,
                     'kategori' => $barang->kategoriBarang?->kode ?: '-',

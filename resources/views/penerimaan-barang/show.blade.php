@@ -12,12 +12,23 @@
         }
 
         .receipt-code {
+            display: block;
             padding: 8px 10px;
             border: 1px solid #d8e2ec;
             border-radius: 5px;
             background: #f8fafc;
             font-size: .85rem;
             overflow-wrap: anywhere;
+        }
+
+        .receipt-code strong,
+        .receipt-code small {
+            display: block;
+        }
+
+        .receipt-code small {
+            margin-top: 3px;
+            color: var(--muted);
         }
 
         .receipt-cancel-dialog {
@@ -176,7 +187,7 @@
                         <tr>
                             <td>
                                 <p class="person-name">{{ $detail->barang->nama }}</p>
-                                <p class="person-meta">{{ $detail->barang->kode }}</p>
+                                <p class="person-meta">{{ $detail->barang->kodeKlasifikasi() }}</p>
                                 @if ($detail->merek || $detail->tipe)
                                     <p class="person-meta">{{ collect([$detail->merek, $detail->tipe])->filter()->join(' - ') }}</p>
                                 @endif
@@ -197,7 +208,10 @@
                                     <strong>{{ $detail->unitBarang->count() }} unit {{ $penerimaanBarang->sudahDibatalkan() ? 'dinonaktifkan' : 'dibuat' }}</strong>
                                     <div class="receipt-result">
                                         @foreach ($detail->unitBarang as $unit)
-                                            <a href="{{ route('unit-barang.show', $unit) }}" class="receipt-code">{{ $unit->kode_inventaris }}</a>
+                                            <a href="{{ route('unit-barang.show', $unit) }}" class="receipt-code">
+                                                <strong>{{ $unit->kodeBarangUnit() }}</strong>
+                                                <small>ID NUSA {{ $unit->kode_inventaris }}</small>
+                                            </a>
                                         @endforeach
                                     </div>
                                 @endif
@@ -212,7 +226,7 @@
             @foreach ($penerimaanBarang->detailPenerimaanBarang as $detail)
                 <article class="mobile-card">
                     <div class="mobile-card-head">
-                        <div><p class="person-name">{{ $detail->barang->nama }}</p><p class="person-meta">{{ $detail->barang->kode }}</p></div>
+                        <div><p class="person-name">{{ $detail->barang->nama }}</p><p class="person-meta">{{ $detail->barang->kodeKlasifikasi() }}</p></div>
                         <span class="badge {{ $detail->barang->jenis_barang === 'habis_pakai' ? 'badge-active' : 'badge-inactive' }}">{{ $detail->barang->jenis_barang === 'habis_pakai' ? 'Habis pakai' : 'Aset' }}</span>
                     </div>
                     <dl class="quick-facts">
@@ -231,7 +245,12 @@
                         @else
                             <strong>{{ $detail->unitBarang->count() }} unit {{ $penerimaanBarang->sudahDibatalkan() ? 'dinonaktifkan' : 'dibuat' }}</strong>
                             <div class="receipt-result">
-                                @foreach ($detail->unitBarang as $unit)<a href="{{ route('unit-barang.show', $unit) }}" class="receipt-code">{{ $unit->kode_inventaris }}</a>@endforeach
+                                @foreach ($detail->unitBarang as $unit)
+                                    <a href="{{ route('unit-barang.show', $unit) }}" class="receipt-code">
+                                        <strong>{{ $unit->kodeBarangUnit() }}</strong>
+                                        <small>ID NUSA {{ $unit->kode_inventaris }}</small>
+                                    </a>
+                                @endforeach
                             </div>
                         @endif
                     </div>

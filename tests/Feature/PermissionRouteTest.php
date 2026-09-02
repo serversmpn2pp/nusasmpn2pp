@@ -214,6 +214,21 @@ class PermissionRouteTest extends TestCase
 
     public function test_route_cbt_memakai_permission_cbt(): void
     {
+        $this->assertRouteMemakaiMiddleware('api.v1.bank-soal.index', 'izin:cbt.lihat,cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.bank-soal.show', 'izin:cbt.lihat,cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.bank-soal.store', 'izin:cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.bank-soal.update', 'izin:cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.bank-soal.destroy', 'izin:cbt.kelola,cbt.soal_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.paket-soal.index', 'izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat');
+        $this->assertRouteMemakaiMiddleware('api.v1.paket-soal.show', 'izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat');
+        $this->assertRouteMemakaiMiddleware('api.v1.paket-soal.update', 'izin:cbt.soal_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.index', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.store', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.show', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.update', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.destroy', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.soal', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.soal.update', 'izin:cbt.asesmen_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('pusat-cbt.index', 'izin:cbt.lihat,cbt.kelola,cbt.soal_kelola,cbt.presensi,cbt.asesmen_kelola,cbt.panitia,cbt.terpusat_lihat');
         $this->assertRouteMemakaiMiddleware('paket-soal-terpusat.index', 'izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat');
         $this->assertRouteMemakaiMiddleware('paket-soal-terpusat.show', 'izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat');

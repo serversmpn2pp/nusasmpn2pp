@@ -161,6 +161,7 @@ class ProsesPenerimaanBarang
                 'barang_id' => $barang->id,
                 'detail_penerimaan_barang_id' => $detail->id,
                 'nomor_unit' => $nomorTerakhir + $urutan,
+                'urutan_dalam_penerimaan' => $urutan,
                 'kode_inventaris' => $this->generatorIdentitas->buatKodeUnitAset($tanggal->year),
                 'nomor_aset_resmi' => $this->generatorIdentitas->buatNomorAsetResmi($tanggal->year),
                 'lokasi_barang_id' => $lokasi->id,

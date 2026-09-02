@@ -4,8 +4,10 @@ use App\Http\Controllers\Api\V1\AktivitasLoginController;
 use App\Http\Controllers\Api\V1\AkunOrangTuaController;
 use App\Http\Controllers\Api\V1\AkunPegawaiController;
 use App\Http\Controllers\Api\V1\AkunSiswaController;
+use App\Http\Controllers\Api\V1\AsesmenKelasController;
 use App\Http\Controllers\Api\V1\AturanSanksiPoinController;
 use App\Http\Controllers\Api\V1\AutentikasiController;
+use App\Http\Controllers\Api\V1\BankSoalController;
 use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\FotoIdentitasController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
@@ -33,6 +35,7 @@ use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\MonitoringSurveiController;
 use App\Http\Controllers\Api\V1\NilaiSayaController;
+use App\Http\Controllers\Api\V1\PaketSoalController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PelaksanaanSanksiSiswaController;
 use App\Http\Controllers\Api\V1\PemeriksaanPengesahanController;
@@ -104,6 +107,54 @@ Route::prefix('v1')
 
         Route::get('/pusat-cbt', PusatCbtController::class)
             ->name('pusat-cbt');
+
+        Route::get('/bank-soal', [BankSoalController::class, 'index'])
+            ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola')
+            ->name('bank-soal.index');
+        Route::post('/bank-soal', [BankSoalController::class, 'store'])
+            ->middleware('izin:cbt.kelola,cbt.soal_kelola')
+            ->name('bank-soal.store');
+        Route::get('/bank-soal/{soalCbt}', [BankSoalController::class, 'show'])
+            ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola')
+            ->name('bank-soal.show');
+        Route::post('/bank-soal/{soalCbt}', [BankSoalController::class, 'update'])
+            ->middleware('izin:cbt.kelola,cbt.soal_kelola')
+            ->name('bank-soal.update');
+        Route::delete('/bank-soal/{soalCbt}', [BankSoalController::class, 'destroy'])
+            ->middleware('izin:cbt.kelola,cbt.soal_kelola')
+            ->name('bank-soal.destroy');
+
+        Route::get('/paket-soal', [PaketSoalController::class, 'index'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat')
+            ->name('paket-soal.index');
+        Route::get('/paket-soal/{jadwalUjianCbt}', [PaketSoalController::class, 'show'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat')
+            ->name('paket-soal.show');
+        Route::post('/paket-soal/{jadwalUjianCbt}', [PaketSoalController::class, 'update'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola')
+            ->name('paket-soal.update');
+
+        Route::get('/asesmen-kelas', [AsesmenKelasController::class, 'index'])
+            ->middleware('izin:cbt.asesmen_kelola,cbt.kelola')
+            ->name('asesmen-kelas.index');
+        Route::post('/asesmen-kelas', [AsesmenKelasController::class, 'store'])
+            ->middleware('izin:cbt.asesmen_kelola,cbt.kelola')
+            ->name('asesmen-kelas.store');
+        Route::get('/asesmen-kelas/{ujianCbt}', [AsesmenKelasController::class, 'show'])
+            ->middleware('izin:cbt.asesmen_kelola,cbt.kelola')
+            ->name('asesmen-kelas.show');
+        Route::patch('/asesmen-kelas/{ujianCbt}', [AsesmenKelasController::class, 'update'])
+            ->middleware('izin:cbt.asesmen_kelola,cbt.kelola')
+            ->name('asesmen-kelas.update');
+        Route::delete('/asesmen-kelas/{ujianCbt}', [AsesmenKelasController::class, 'destroy'])
+            ->middleware('izin:cbt.asesmen_kelola,cbt.kelola')
+            ->name('asesmen-kelas.destroy');
+        Route::get('/asesmen-kelas/{ujianCbt}/soal', [AsesmenKelasController::class, 'questions'])
+            ->middleware('izin:cbt.asesmen_kelola,cbt.kelola')
+            ->name('asesmen-kelas.soal');
+        Route::put('/asesmen-kelas/{ujianCbt}/soal', [AsesmenKelasController::class, 'updateQuestions'])
+            ->middleware('izin:cbt.asesmen_kelola,cbt.kelola')
+            ->name('asesmen-kelas.soal.update');
 
         Route::get('/laporkan-kejadian/referensi', [LaporkanKejadianController::class, 'referensi'])
             ->middleware(['akun_pegawai', 'izin:poin_siswa.lapor'])

@@ -26,7 +26,7 @@
             <div class="detail-profile">
                 <div class="avatar avatar-lg">IB</div>
                 <h2>{{ $barang->nama }}</h2>
-                <p>{{ $barang->kode }}</p>
+                <p>{{ $barang->kodeKlasifikasi() }}</p>
 
                 <div class="actions" style="justify-content: center; margin-top: 16px;">
                     @if ($barang->aktif)
@@ -55,7 +55,7 @@
                 <dl class="detail-grid">
                     <div class="detail-item">
                         <dt>Kode barang</dt>
-                        <dd>{{ $barang->kode }}</dd>
+                        <dd>{{ $barang->kodeKlasifikasi() }}</dd>
                     </div>
                     <div class="detail-item">
                         <dt>Kategori</dt>
@@ -108,7 +108,7 @@
                 @else
                     <p class="help-text" style="margin-top: 8px;">Saldo barang diperbarui melalui mutasi stok masuk, keluar, atau penyesuaian hasil pemeriksaan fisik.</p>
                     <div class="actions" style="margin-top: 14px;">
-                        <a href="{{ route('saldo-stok-barang.index', ['kata_kunci' => $barang->kode]) }}" class="button button-muted">Lihat saldo stok</a>
+                        <a href="{{ route('saldo-stok-barang.index', ['kata_kunci' => $barang->kodeKlasifikasi()]) }}" class="button button-muted">Lihat saldo stok</a>
                         @izin('barang.kelola')
                             <a href="{{ route('mutasi-stok-barang.create', ['barang_id' => $barang->id]) }}" class="button button-primary">Catat mutasi stok</a>
                         @endizin

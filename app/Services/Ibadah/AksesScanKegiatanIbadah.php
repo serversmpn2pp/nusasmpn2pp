@@ -4,6 +4,7 @@ namespace App\Services\Ibadah;
 
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalPiketGuru;
+use App\Models\Kelas;
 use App\Models\Pengguna;
 use App\Models\TahunPelajaran;
 use Carbon\Carbon;
@@ -80,6 +81,10 @@ class AksesScanKegiatanIbadah
             return true;
         }
 
+        if ($this->kelasWaliAktif($pengguna, $tahunPelajaran) !== []) {
+            return true;
+        }
+
         $tanggal = $tanggal ? Carbon::instance($tanggal) : now();
 
         return $this->guruPiketPada($pengguna, $tahunPelajaran, $tanggal);
@@ -112,6 +117,10 @@ class AksesScanKegiatanIbadah
         }
 
         if ($this->guruPendidikanAgamaIslam($pengguna, $tahunPelajaran)) {
+            return true;
+        }
+
+        if ($this->kelasWaliAktif($pengguna, $tahunPelajaran) !== []) {
             return true;
         }
 
@@ -156,6 +165,37 @@ class AksesScanKegiatanIbadah
             ->exists();
     }
 
+    /**
+     * Null berarti pengguna dapat melihat seluruh kelas. Array hanya berisi kelas
+     * yang boleh dibuka oleh wali kelas pada tahun pelajaran tersebut.
+     *
+     * @return array<int, int>|null
+     */
+    public function cakupanKelasRekap(
+        Pengguna $pengguna,
+        ?TahunPelajaran $tahunPelajaran,
+        ?CarbonInterface $tanggal = null,
+    ): ?array {
+        if ($pengguna->administrator() || $pengguna->memilikiPeran('wakil_pimpinan_kesiswaan')) {
+            return null;
+        }
+
+        if (! $pengguna->pegawai_id || ! $tahunPelajaran) {
+            return [];
+        }
+
+        if ($this->guruPendidikanAgamaIslam($pengguna, $tahunPelajaran)) {
+            return null;
+        }
+
+        $tanggal = $tanggal ? Carbon::instance($tanggal) : now();
+        if ($this->guruPiketPada($pengguna, $tahunPelajaran, $tanggal)) {
+            return null;
+        }
+
+        return $this->kelasWaliAktif($pengguna, $tahunPelajaran);
+    }
+
     private function guruPiketPada(Pengguna $pengguna, TahunPelajaran $tahunPelajaran, CarbonInterface $tanggal): bool
     {
         $hari = array_keys(JadwalPiketGuru::DAFTAR_HARI)[$tanggal->dayOfWeekIso - 1] ?? null;
@@ -184,5 +224,21 @@ class AksesScanKegiatanIbadah
                     });
             })
             ->exists();
+    }
+
+    /** @return array<int, int> */
+    private function kelasWaliAktif(Pengguna $pengguna, TahunPelajaran $tahunPelajaran): array
+    {
+        if (! $pengguna->pegawai_id || ! $pengguna->memilikiPeran('wali_kelas')) {
+            return [];
+        }
+
+        return Kelas::query()
+            ->where('tahun_pelajaran_id', $tahunPelajaran->id)
+            ->where('wali_kelas_id', $pengguna->pegawai_id)
+            ->where('aktif', true)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 }

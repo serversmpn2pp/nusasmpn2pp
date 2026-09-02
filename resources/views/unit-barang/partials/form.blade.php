@@ -53,7 +53,7 @@
                         <select id="barang_id" name="barang_id" class="{{ $selectClass('barang_id') }}" required>
                             <option value="">Pilih aset individual</option>
                             @foreach ($daftarBarang as $item)
-                                <option value="{{ $item->id }}" @selected((string) old('barang_id', $barangTerpilihId ?? '') === (string) $item->id)>{{ $item->nama }} - {{ $item->kode }}</option>
+                                <option value="{{ $item->id }}" @selected((string) old('barang_id', $barangTerpilihId ?? '') === (string) $item->id)>{{ $item->nama }} - {{ $item->kodeKlasifikasi() }}</option>
                             @endforeach
                         </select>
                         @error('barang_id')

@@ -175,6 +175,12 @@ class KoreksiKegiatanIbadahController extends Controller
         abort_unless((int) $anggotaKelas->tahun_pelajaran_id === (int) $tahunPelajaran->id, 404);
         abort_unless($anggotaKelas->status_keanggotaan === 'aktif', 404);
         abort_unless($akses->dapatMengoreksi($request->user(), $tahunPelajaran, $tanggal), 403);
+        $cakupanKelasIds = $akses->cakupanKelasRekap($request->user(), $tahunPelajaran, $tanggal);
+        abort_if(
+            $cakupanKelasIds !== null && ! in_array((int) $anggotaKelas->kelas_id, $cakupanKelasIds, true),
+            403,
+            'Wali kelas hanya dapat mengoreksi presensi ibadah siswa di kelas yang diampunya.',
+        );
 
         $kegiatan = KegiatanIbadah::query()->findOrFail($kegiatanId);
         $hari = array_keys(JadwalKegiatanIbadah::DAFTAR_HARI)[$tanggal->dayOfWeekIso - 1] ?? 'minggu';

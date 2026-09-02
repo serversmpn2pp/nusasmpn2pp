@@ -89,7 +89,7 @@ class PenulisTemplateExcelPenerimaanBarang
     {
         $baris = [
             [$this->sel('RINCIAN BARANG DATANG', 1)],
-            [$this->sel('Barang lama cukup memakai kode barang. Untuk barang baru, lengkapi nama, jenis, kategori, satuan, dan lokasi.', 2)],
+            [$this->sel('Kode barang tidak habis pakai terdiri dari 10 angka. Titik boleh diketik atau tidak. Nomor unit .01, .02, dan seterusnya dibuat otomatis saat import disimpan.', 2)],
             [],
             array_map(fn (string $judul) => $this->sel($judul, 5), [
                 'No.',

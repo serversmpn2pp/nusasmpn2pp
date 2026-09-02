@@ -201,7 +201,7 @@ class ProsesImportPenerimaanBarang
         $data = $baris['data'] ?? [];
         $nomorBaris = (int) ($baris['nomor_baris'] ?? 0);
         $kesalahan = [];
-        $kodeInput = strtoupper($this->bersihkanTeks($data['kode_barang'] ?? null) ?? '');
+        $kodeInput = $this->rapikanKodeBarang(strtoupper($this->bersihkanTeks($data['kode_barang'] ?? null) ?? ''));
         $namaInput = $this->batasiTeks($data['nama_barang'] ?? null, 150, 'Nama barang', $kesalahan);
         $barang = null;
 
@@ -241,8 +241,8 @@ class ProsesImportPenerimaanBarang
         if (! $barang && $jenisBarang === 'tidak_habis_pakai') {
             if ($kodeInput === '' || $kodeInput === 'OTOMATIS') {
                 $kesalahan[] = 'Kode klasifikasi wajib diisi untuk barang tidak habis pakai.';
-            } elseif (! preg_match('/^\d{2}(?:\.\d{2}){5}$/', $kodeInput)) {
-                $kesalahan[] = 'Kode aset harus terdiri dari enam kelompok dua angka, misalnya 02.06.01.05.40.01.';
+            } elseif (! preg_match('/^\d{2}(?:\.\d{2}){4}$/', $kodeInput)) {
+                $kesalahan[] = 'Kode barang harus terdiri dari lima kelompok dua angka, misalnya 02.06.01.05.40. Nomor unit dibuat otomatis.';
             }
         }
 
@@ -287,7 +287,7 @@ class ProsesImportPenerimaanBarang
         $merek = $this->batasiTeks($data['merek'] ?? null, 120, 'Merek', $kesalahan);
         $tipe = $this->batasiTeks($data['tipe'] ?? null, 120, 'Tipe', $kesalahan);
         $keterangan = $this->batasiTeks($data['keterangan'] ?? null, 1000, 'Keterangan', $kesalahan);
-        $kodeTampilan = $barang?->kode ?: ($jenisBarang === 'habis_pakai' ? 'Otomatis oleh NUSA' : $kodeInput);
+        $kodeTampilan = $barang?->kodeKlasifikasi() ?: ($jenisBarang === 'habis_pakai' ? 'Otomatis oleh NUSA' : $kodeInput);
         $namaTampilan = $barang?->nama ?: ($namaInput ?: '-');
         $kunciBarang = $barang
             ? 'barang-'.$barang->id
@@ -400,7 +400,16 @@ class ProsesImportPenerimaanBarang
     {
         $kode = $this->normalisasi($kode);
 
-        return $daftar->first(fn ($item) => $this->normalisasi($item->kode) === $kode);
+        return $daftar->first(fn ($item) => $this->normalisasi($item->kodeKlasifikasi()) === $kode);
+    }
+
+    private function rapikanKodeBarang(string $kode): string
+    {
+        $angka = preg_replace('/\D/', '', $kode);
+
+        return strlen($angka) === 10
+            ? implode('.', str_split($angka, 2))
+            : $kode;
     }
 
     private function normalisasiCaraPerolehan(mixed $nilai): ?string

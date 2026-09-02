@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/cbt_center/application/cbt_center_controller.dart';
@@ -330,7 +331,13 @@ class _ManagementSection extends StatelessWidget {
                     (tool) => _ToolCard(
                       width: width,
                       tool: tool,
-                      onTap: () => _showFoundationMessage(context, tool.label),
+                      onTap: () {
+                        if (tool.route case final route?) {
+                          context.push(route);
+                        } else {
+                          _showFoundationMessage(context, tool.label);
+                        }
+                      },
                     ),
                   )
                   .toList(),
@@ -339,7 +346,7 @@ class _ManagementSection extends StatelessWidget {
         ),
       const SizedBox(height: 11),
       const _ScopeNotice(
-        message: 'Tahap fondasi: ringkasan dan navigasi sudah native. Pengelolaan tiap alat CBT dibangun bertahap berikutnya.',
+        message: 'Bank Soal dan Paket Soal sudah dapat dikelola secara native. Alat CBT lainnya dibangun bertahap berikutnya.',
       ),
     ],
   );
@@ -504,11 +511,16 @@ class _ToolCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              const Text(
-                'Fondasi',
+              Text(
+                tool.status == 'tersedia' ? 'Tersedia' : 'Fondasi',
                 style: TextStyle(
-                  color: NusaColors.textSecondary,
+                  color: tool.status == 'tersedia'
+                      ? NusaColors.success
+                      : NusaColors.textSecondary,
                   fontSize: 8.5,
+                  fontWeight: tool.status == 'tersedia'
+                      ? FontWeight.w700
+                      : FontWeight.normal,
                 ),
               ),
             ],

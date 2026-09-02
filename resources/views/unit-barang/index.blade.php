@@ -126,7 +126,7 @@
             <table class="employee-table">
                 <thead>
                     <tr>
-                        <th>Kode inventaris</th>
+                        <th>Kode unit barang</th>
                         <th>Barang</th>
                         <th>Lokasi</th>
                         <th>Kondisi</th>
@@ -139,8 +139,8 @@
                     @forelse ($unitBarang as $item)
                         <tr>
                             <td>
-                                <p class="person-name">{{ $item->kode_inventaris }}</p>
-                                <p class="person-meta">Unit {{ $item->nomor_unit }}</p>
+                                <p class="person-name">{{ $item->kodeBarangUnit() }}</p>
+                                <p class="person-meta">ID NUSA {{ $item->kode_inventaris }}</p>
                             </td>
                             <td>{{ $item->barang->nama }}</td>
                             <td>{{ $item->lokasiBarang?->nama ?: '-' }}</td>
@@ -174,7 +174,8 @@
                     <div class="mobile-card-head">
                         <div>
                             <p class="person-name">{{ $item->barang->nama }}</p>
-                            <p class="person-meta">{{ $item->kode_inventaris }}</p>
+                            <p class="person-meta">{{ $item->kodeBarangUnit() }}</p>
+                            <p class="person-meta">ID NUSA {{ $item->kode_inventaris }}</p>
                         </div>
                         <span class="badge {{ $item->status_unit === 'tersedia' ? 'badge-active' : 'badge-inactive' }}">{{ $item->labelStatus() }}</span>
                     </div>

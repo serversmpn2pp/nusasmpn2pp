@@ -190,7 +190,7 @@ class BarangController extends Controller
             && $this->rapikanKodeBaku(request()->input('kode')) === $barang->kode;
 
         if ($jenisBarang === 'tidak_habis_pakai' && ! $kodeLamaTetap) {
-            $aturanKode[] = 'regex:/^\d{2}(?:\.\d{2}){5}$/';
+            $aturanKode[] = 'regex:/^\d{2}(?:\.\d{2}){4}$/';
         }
 
         return [
@@ -223,13 +223,19 @@ class BarangController extends Controller
     {
         return [
             'kode.required' => 'Kode barang wajib diisi untuk barang tidak habis pakai.',
-            'kode.regex' => 'Kode barang harus terdiri dari enam kelompok dua angka, misalnya 02.06.01.05.40.01.',
+            'kode.regex' => 'Kode barang harus terdiri dari lima kelompok dua angka, misalnya 02.06.01.05.40. Nomor unit tidak perlu diketik.',
         ];
     }
 
     private function rapikanKodeBaku(mixed $kode): ?string
     {
         $kode = trim((string) $kode);
+
+        $angka = preg_replace('/\D/', '', $kode);
+
+        if (strlen($angka) === 10) {
+            $kode = implode('.', str_split($angka, 2));
+        }
 
         return $kode !== '' ? $kode : null;
     }

@@ -28,6 +28,7 @@ class UnitBarang extends Model
         'barang_id',
         'detail_penerimaan_barang_id',
         'nomor_unit',
+        'urutan_dalam_penerimaan',
         'kode_inventaris',
         'nomor_aset_resmi',
         'lokasi_barang_id',
@@ -47,6 +48,7 @@ class UnitBarang extends Model
 
     protected $casts = [
         'nomor_unit' => 'integer',
+        'urutan_dalam_penerimaan' => 'integer',
         'tanggal_perolehan' => 'date',
         'tahun_perolehan' => 'integer',
         'harga_perolehan' => 'decimal:2',
@@ -86,5 +88,12 @@ class UnitBarang extends Model
     public function labelStatus(): string
     {
         return self::DAFTAR_STATUS[$this->status_unit] ?? str($this->status_unit)->headline()->toString();
+    }
+
+    public function kodeBarangUnit(): string
+    {
+        $urutan = $this->urutan_dalam_penerimaan ?: $this->nomor_unit;
+
+        return $this->barang->kodeKlasifikasi().'.'.str_pad((string) $urutan, 2, '0', STR_PAD_LEFT);
     }
 }

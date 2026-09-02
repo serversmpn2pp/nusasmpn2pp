@@ -172,7 +172,7 @@ class KatalogBarangController extends Controller
 
                     return [
                         'nama' => $peminjaman->namaPeminjam(),
-                        'unit' => $unit->kode_inventaris,
+                        'unit' => $unit->kodeBarangUnit(),
                         'rencana_kembali' => $peminjaman->rencana_kembali,
                     ];
                 })
