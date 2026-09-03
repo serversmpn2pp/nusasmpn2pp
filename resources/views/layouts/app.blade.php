@@ -1950,6 +1950,7 @@
                         ['label' => 'Poin Keterlambatan', 'route' => 'pengaturan-poin-keterlambatan.index', 'active' => ['pengaturan-poin-keterlambatan.*'], 'initial' => 'PK', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
                         ['label' => 'Peringatan Dini Poin', 'route' => 'pengaturan-peringatan-dini-poin.index', 'active' => ['pengaturan-peringatan-dini-poin.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
                         ['label' => 'Batas Proses Pelanggaran', 'route' => 'pengaturan-batas-proses-pelanggaran.index', 'active' => ['pengaturan-batas-proses-pelanggaran.*'], 'initial' => 'BP', 'izin' => 'poin_siswa.pengaturan', 'subgroup' => 'Pengaturan'],
+                        ['label' => 'Penugasan Tingkat Guru BK', 'route' => 'penugasan-guru-bk-tingkat.index', 'active' => ['penugasan-guru-bk-tingkat.*'], 'initial' => 'TB', 'izin' => 'bk.penugasan_tingkat_kelola', 'subgroup' => 'Pengaturan'],
                         ['label' => 'Kategori Pembinaan Non-Poin', 'route' => 'kategori-pembinaan-siswa.index', 'active' => ['kategori-pembinaan-siswa.*'], 'initial' => 'KP', 'izin' => 'bk.kelola', 'subgroup' => 'Pengaturan'],
                     ],
                 ],
@@ -2011,6 +2012,7 @@
                         ['label' => 'Peringatan Dini Siswa', 'route' => 'peringatan-dini-siswa.index', 'active' => ['peringatan-dini-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
                         ['label' => 'Pendampingan Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
                         ['label' => 'Batas Proses Pelanggaran', 'route' => 'pengaturan-batas-proses-pelanggaran.index', 'active' => ['pengaturan-batas-proses-pelanggaran.*'], 'initial' => 'BP', 'izin' => 'poin_siswa.pengaturan'],
+                        ['label' => 'Penugasan Tingkat Guru BK', 'route' => 'penugasan-guru-bk-tingkat.index', 'active' => ['penugasan-guru-bk-tingkat.*'], 'initial' => 'TB', 'izin' => 'bk.penugasan_tingkat_kelola'],
                     ],
                 ],
                 [

@@ -18,6 +18,7 @@ use App\Services\Pembinaan\AksesLaporanPembinaanService;
 use App\Services\Pembinaan\AntreanVerifikasiPelanggaranService;
 use App\Services\Pembinaan\CatatRiwayatPembinaanService;
 use App\Services\Pembinaan\PengaturanBatasProsesPelanggaranService;
+use App\Services\Pembinaan\PenugasanGuruBkTingkatService;
 use App\Services\Pembinaan\ProsesPoinSiswaService;
 use App\Services\Pembinaan\SimpanBuktiLaporanService;
 use Carbon\CarbonImmutable;
@@ -36,6 +37,7 @@ class LaporanPembinaanSiswaController extends Controller
         private CatatRiwayatPembinaanService $riwayatPembinaan,
         private SimpanBuktiLaporanService $penyimpananBukti,
         private PengaturanBatasProsesPelanggaranService $pengaturanBatasProses,
+        private PenugasanGuruBkTingkatService $penugasanBk,
     ) {}
 
     public function index(Request $request)
@@ -271,9 +273,12 @@ class LaporanPembinaanSiswaController extends Controller
 
         $bolehKelolaFakta = $this->aksesLaporan->bolehKelolaFakta($request->user(), $laporanPembinaanSiswa);
         $bolehMencatatKlarifikasi = $this->aksesLaporan->bolehMencatatKlarifikasi($request->user(), $laporanPembinaanSiswa);
+        $bolehMemprosesBk = $this->aksesLaporan->bolehMemprosesBk($request->user(), $laporanPembinaanSiswa);
+        $modeBacaBk = $this->aksesLaporan->modeBacaBk($request->user(), $laporanPembinaanSiswa);
+        $bolehMengubahLaporan = $this->aksesLaporan->bolehMengubahLaporan($request->user(), $laporanPembinaanSiswa);
         $daftarSiswaSaksi = $bolehKelolaFakta ? Siswa::where('aktif', true)->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nisn']) : collect();
         $daftarPegawaiSaksi = $bolehKelolaFakta ? Pegawai::where('aktif', true)->orderBy('nama_lengkap')->get(['id', 'nama_lengkap', 'nip']) : collect();
-        $daftarJenisPelanggaranKeputusan = $request->user()?->memilikiIzin('poin_siswa.verifikasi_bk')
+        $daftarJenisPelanggaranKeputusan = $bolehMemprosesBk && ($request->user()?->memilikiIzin('poin_siswa.verifikasi_bk') ?? false)
             ? JenisPelanggaranSiswa::where('aktif', true)->orderBy('urutan')->get()
             : collect();
         $laporanMirip = LaporanPembinaanSiswa::query()
@@ -289,6 +294,7 @@ class LaporanPembinaanSiswaController extends Controller
 
         return view('laporan-pembinaan-siswa.show', compact(
             'laporanPembinaanSiswa', 'bolehKelolaFakta', 'bolehMencatatKlarifikasi',
+            'bolehMemprosesBk', 'modeBacaBk', 'bolehMengubahLaporan',
             'daftarSiswaSaksi', 'daftarPegawaiSaksi', 'daftarJenisPelanggaranKeputusan', 'laporanMirip',
             'konteksGuruWali', 'konteksLaporanSaya',
         ));
@@ -297,6 +303,7 @@ class LaporanPembinaanSiswaController extends Controller
     public function edit(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+        abort_unless($this->aksesLaporan->bolehMengubahLaporan($request->user(), $laporanPembinaanSiswa), 403);
         abort_if($laporanPembinaanSiswa->berasalDariAbsensi(), 422, 'Laporan otomatis diperbarui melalui koreksi rekap presensi.');
         abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['menunggu_pengesahan_wakil', 'disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diajukan untuk pengesahan atau telah diputuskan tidak dapat diedit.');
 
@@ -311,6 +318,7 @@ class LaporanPembinaanSiswaController extends Controller
     public function update(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+        abort_unless($this->aksesLaporan->bolehMengubahLaporan($request->user(), $laporanPembinaanSiswa), 403);
         abort_if($laporanPembinaanSiswa->berasalDariAbsensi(), 422, 'Laporan otomatis diperbarui melalui koreksi rekap presensi.');
         abort_if(in_array($laporanPembinaanSiswa->status_verifikasi, ['menunggu_pengesahan_wakil', 'disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'], true), 422, 'Laporan yang sudah diajukan untuk pengesahan atau telah diputuskan tidak dapat diedit.');
 
@@ -361,6 +369,7 @@ class LaporanPembinaanSiswaController extends Controller
     public function destroy(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
+        abort_unless($this->aksesLaporan->bolehMengubahLaporan($request->user(), $laporanPembinaanSiswa), 403);
         abort_if(
             $laporanPembinaanSiswa->status_verifikasi === 'menunggu_pengesahan_wakil',
             422,
@@ -683,8 +692,7 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $laporan->loadMissing(['siswa', 'kelas', 'kategoriPembinaanSiswa', 'pelaporPegawai']);
         $menungguBk = in_array($laporan->jenis_laporan, ['kejadian', 'pelanggaran'], true);
-        $penerima = $this->notifikasiPenggunaService
-            ->penggunaDenganPeran(['administrator', 'bk'], $request->user()?->id);
+        $penerima = $this->penugasanBk->penerimaNotifikasi($laporan, $request->user()?->id);
 
         $this->notifikasiPenggunaService->kirimKeBanyak(
             $penerima,
@@ -702,15 +710,26 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $laporanPertama = $daftarLaporan->first();
         $menungguBk = in_array($laporanPertama?->jenis_laporan, ['kejadian', 'pelanggaran'], true);
-        $this->notifikasiPenggunaService->kirimKeBanyak(
-            $this->notifikasiPenggunaService->penggunaDenganPeran(['administrator', 'bk'], $request->user()?->id),
-            'peringatan',
-            $menungguBk ? 'Laporan kolektif menunggu pemeriksaan BK' : 'Catatan pembinaan kolektif baru',
-            sprintf('%d siswa dilaporkan dalam kejadian yang sama.', $daftarLaporan->count()),
-            route('laporan-pembinaan-siswa.index', [], false),
-            "laporan-kolektif-baru:{$laporanPertama?->id}:{$daftarLaporan->last()?->id}",
-            ['jumlah_siswa' => $daftarLaporan->count()],
-        );
+
+        $daftarLaporan
+            ->each(fn (LaporanPembinaanSiswa $laporan) => $laporan->loadMissing('kelas:id,nama,tingkat'))
+            ->groupBy(fn (LaporanPembinaanSiswa $laporan) => $this->penugasanBk->tingkatLaporan($laporan) ?? 'tanpa-tingkat')
+            ->each(function (Collection $laporanTingkat, int|string $tingkat) use ($request, $daftarLaporan, $laporanPertama, $menungguBk): void {
+                $acuan = $laporanTingkat->first();
+                $this->notifikasiPenggunaService->kirimKeBanyak(
+                    $this->penugasanBk->penerimaNotifikasi($acuan, $request->user()?->id),
+                    'peringatan',
+                    $menungguBk ? 'Laporan kolektif menunggu pemeriksaan BK' : 'Catatan pembinaan kolektif baru',
+                    sprintf(
+                        '%d siswa%s dilaporkan dalam kejadian yang sama.',
+                        $laporanTingkat->count(),
+                        is_numeric($tingkat) ? ' tingkat '.$tingkat : '',
+                    ),
+                    route('laporan-pembinaan-siswa.index', [], false),
+                    "laporan-kolektif-baru:{$laporanPertama?->id}:{$daftarLaporan->last()?->id}",
+                    ['jumlah_siswa' => $laporanTingkat->count(), 'tingkat' => is_numeric($tingkat) ? (int) $tingkat : null],
+                );
+            });
     }
 
     private function kirimNotifikasiWaliKelas(Request $request, LaporanPembinaanSiswa $laporan): void

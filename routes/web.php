@@ -83,6 +83,7 @@ use App\Http\Controllers\PengaturanPeringatanDiniPoinController;
 use App\Http\Controllers\PengaturanPoinKeterlambatanController;
 use App\Http\Controllers\PengembalianBarangController;
 use App\Http\Controllers\PenguranganPoinSiswaController;
+use App\Http\Controllers\PenugasanGuruBkTingkatController;
 use App\Http\Controllers\PenugasanGuruWaliController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PerangkatAjarSayaController;
@@ -938,6 +939,16 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::put('pengaturan-batas-proses-pelanggaran/{tahunPelajaran}', [PengaturanBatasProsesPelanggaranController::class, 'update'])
             ->middleware('izin:poin_siswa.pengaturan')
             ->name('pengaturan-batas-proses-pelanggaran.update');
+
+        Route::get('penugasan-guru-bk-tingkat', [PenugasanGuruBkTingkatController::class, 'index'])
+            ->middleware('izin:bk.penugasan_tingkat_kelola')
+            ->name('penugasan-guru-bk-tingkat.index');
+        Route::post('penugasan-guru-bk-tingkat', [PenugasanGuruBkTingkatController::class, 'store'])
+            ->middleware('izin:bk.penugasan_tingkat_kelola')
+            ->name('penugasan-guru-bk-tingkat.store');
+        Route::delete('penugasan-guru-bk-tingkat/{penugasanGuruBkTingkat}', [PenugasanGuruBkTingkatController::class, 'destroy'])
+            ->middleware('izin:bk.penugasan_tingkat_kelola')
+            ->name('penugasan-guru-bk-tingkat.destroy');
 
         Route::get('penugasan-guru-wali', [PenugasanGuruWaliController::class, 'index'])
             ->middleware('izin:guru_wali.kelola')

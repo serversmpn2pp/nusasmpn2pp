@@ -134,6 +134,11 @@ class Pengguna extends Authenticatable
         return $this->hasMany(PenugasanGuruWaliSiswa::class, 'dibuat_oleh_pengguna_id');
     }
 
+    public function penugasanGuruBkTingkatDibuat(): HasMany
+    {
+        return $this->hasMany(PenugasanGuruBkTingkat::class, 'dibuat_oleh_pengguna_id');
+    }
+
     public function mutasiStokBarangDibuat(): HasMany
     {
         return $this->hasMany(MutasiStokBarang::class, 'dibuat_oleh_pengguna_id');

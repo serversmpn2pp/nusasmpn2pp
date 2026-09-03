@@ -154,7 +154,8 @@ class _WorshipRecapViewState extends ConsumerState<WorshipRecapView> {
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _StudentCard(
                           record: record,
-                          canCorrect: page.access.canCorrect,
+                          canCorrect:
+                              page.access.canCorrect && record.canBeCorrected,
                           onCorrect: () => _openCorrection(page, record),
                         ),
                       ),
@@ -471,27 +472,59 @@ class _SummaryStrip extends StatelessWidget {
       borderRadius: BorderRadius.circular(17),
       border: Border.all(color: NusaColors.outline),
     ),
-    child: Row(
+    child: Column(
       children: [
-        _SummaryItem(
-          value: summary.total,
-          label: 'Total',
-          color: NusaColors.primary,
+        Row(
+          children: [
+            _SummaryItem(
+              value: summary.total,
+              label: 'Total siswa',
+              color: NusaColors.primary,
+            ),
+            _SummaryItem(
+              value: summary.atSchool,
+              label: 'Hadir sekolah',
+              color: NusaColors.primaryLight,
+            ),
+            _SummaryItem(
+              value: summary.notAtSchool,
+              label: 'Tidak hadir',
+              color: NusaColors.textSecondary,
+            ),
+            _SummaryItem(
+              value: summary.excused,
+              label: 'Berhalangan',
+              color: const Color(0xFF7657A6),
+            ),
+          ],
         ),
-        _SummaryItem(
-          value: summary.present,
-          label: 'Sudah',
-          color: NusaColors.success,
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 7, vertical: 10),
+          child: Divider(height: 1, color: NusaColors.outline),
         ),
-        _SummaryItem(
-          value: summary.notPresent,
-          label: 'Belum',
-          color: const Color(0xFFB57900),
-        ),
-        _SummaryItem(
-          value: summary.percentage,
-          label: 'Capaian %',
-          color: NusaColors.primaryLight,
+        Row(
+          children: [
+            _SummaryItem(
+              value: summary.requiredToPray,
+              label: 'Wajib salat',
+              color: NusaColors.primary,
+            ),
+            _SummaryItem(
+              value: summary.present,
+              label: 'Sudah salat',
+              color: NusaColors.success,
+            ),
+            _SummaryItem(
+              value: summary.notPresent,
+              label: 'Belum salat',
+              color: const Color(0xFFB57900),
+            ),
+            _SummaryItem(
+              value: summary.percentage,
+              label: 'Capaian %',
+              color: NusaColors.primaryLight,
+            ),
+          ],
         ),
       ],
     ),
@@ -583,7 +616,7 @@ class _ClassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final complete = item.total > 0 && item.notPresent == 0;
+    final complete = item.requiredToPray > 0 && item.notPresent == 0;
     final color = complete ? NusaColors.success : NusaColors.primary;
     return Material(
       color: selected ? NusaColors.surfaceBlue : Colors.white,
@@ -623,10 +656,18 @@ class _ClassCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '${item.present} dari ${item.total} siswa',
+                '${item.present} dari ${item.requiredToPray} siswa wajib salat',
                 style: const TextStyle(
                   color: NusaColors.textSecondary,
                   fontSize: 10.5,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '${item.notAtSchool} tidak hadir · ${item.excused} berhalangan',
+                style: const TextStyle(
+                  color: NusaColors.textSecondary,
+                  fontSize: 9.5,
                 ),
               ),
               const SizedBox(height: 8),
@@ -720,11 +761,16 @@ class _StudentFilters extends StatelessWidget {
         value: status,
         options: const [
           NusaDropdownOption(value: 'semua', label: 'Semua status'),
-          NusaDropdownOption(value: 'sudah', label: 'Sudah presensi'),
-          NusaDropdownOption(value: 'belum', label: 'Belum presensi'),
+          NusaDropdownOption(value: 'sudah', label: 'Sudah salat'),
+          NusaDropdownOption(value: 'belum', label: 'Belum salat'),
+          NusaDropdownOption(value: 'berhalangan', label: 'Berhalangan'),
+          NusaDropdownOption(
+            value: 'tidak_hadir',
+            label: 'Tidak hadir sekolah',
+          ),
         ],
         decoration: const InputDecoration(
-          labelText: 'Status presensi',
+          labelText: 'Status ibadah',
           prefixIcon: Icon(Icons.filter_alt_outlined),
         ),
         onChanged: onStatusChanged,
@@ -776,7 +822,20 @@ class _StudentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = record.present ? NusaColors.success : const Color(0xFFB57900);
+    final color = switch (record.status) {
+      'sudah' => NusaColors.success,
+      'belum' => const Color(0xFFB57900),
+      'berhalangan' => const Color(0xFF7657A6),
+      'tidak_hadir' => NusaColors.textSecondary,
+      _ => NusaColors.primary,
+    };
+    final icon = switch (record.status) {
+      'sudah' => Icons.check_circle_rounded,
+      'belum' => Icons.schedule_rounded,
+      'berhalangan' => Icons.privacy_tip_outlined,
+      'tidak_hadir' => Icons.event_busy_rounded,
+      _ => Icons.info_outline_rounded,
+    };
     return Container(
       key: Key('worship-recap-student-${record.memberId}'),
       padding: const EdgeInsets.all(14),
@@ -823,29 +882,51 @@ class _StudentCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  record.present ? 'Sudah' : 'Belum',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, color: color, size: 13),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          record.statusLabel,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 11),
+          _Fact(
+            label: 'Kehadiran sekolah',
+            value: record.schoolAttendanceLabel,
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: _Fact(
-                  label: 'Waktu',
+                  label: 'Waktu ibadah',
                   value: record.attendance?.time ?? '-',
                 ),
               ),

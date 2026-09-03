@@ -7,9 +7,11 @@ use App\Models\Pengguna;
 use App\Models\PersetujuanPelanggaran;
 use App\Models\VerifikasiBkPelanggaran;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
+use App\Services\Pembinaan\AksesLaporanPembinaanService;
 use App\Services\Pembinaan\AntreanVerifikasiPelanggaranService;
 use App\Services\Pembinaan\CatatRiwayatPembinaanService;
 use App\Services\Pembinaan\PengaturanBatasProsesPelanggaranService;
+use App\Services\Pembinaan\PenugasanGuruBkTingkatService;
 use App\Services\Pembinaan\ProsesPoinSiswaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -23,11 +25,14 @@ class VerifikasiPelanggaranSiswaController extends Controller
         private NotifikasiPenggunaService $notifikasiPenggunaService,
         private CatatRiwayatPembinaanService $riwayatPembinaan,
         private PengaturanBatasProsesPelanggaranService $pengaturanBatasProses,
+        private AksesLaporanPembinaanService $aksesLaporan,
+        private PenugasanGuruBkTingkatService $penugasanBk,
     ) {}
 
     public function verifikasiBk(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
         abort_unless($request->user()?->memilikiIzin('poin_siswa.verifikasi_bk'), 403);
+        abort_unless($this->aksesLaporan->bolehMemprosesBk($request->user(), $laporanPembinaanSiswa), 403);
         abort_unless(in_array($laporanPembinaanSiswa->jenis_laporan, ['kejadian', 'pelanggaran'], true), 422);
         abort_unless(
             in_array($laporanPembinaanSiswa->status_verifikasi, AntreanVerifikasiPelanggaranService::STATUS_BK, true),
@@ -259,8 +264,8 @@ class VerifikasiPelanggaranSiswaController extends Controller
         string $keputusan,
     ): void {
         $laporan->loadMissing('siswa:id,nama_lengkap');
-        $penerima = $this->notifikasiPenggunaService
-            ->penggunaDenganIzin('poin_siswa.verifikasi_bk', $request->user()?->id)
+        $penerima = $this->penugasanBk
+            ->penerimaNotifikasi($laporan, $request->user()?->id)
             ->merge($this->penerimaAsalLaporan($laporan, $request->user()?->id))
             ->unique('id')
             ->values();

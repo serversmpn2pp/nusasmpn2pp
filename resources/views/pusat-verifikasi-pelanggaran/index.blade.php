@@ -25,6 +25,7 @@
         .verification-row > * { min-width:0; }
         .verification-name { font-size:16px; font-weight:800; margin:3px 0; overflow-wrap:anywhere; }
         .verification-task { color:var(--primary-dark); font-size:14px; font-weight:800; margin:8px 0 0; }
+        .verification-readonly { color:#725900; font-size:12px; font-weight:750; margin:7px 0 0; }
         .verification-flow { display:grid; gap:6px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:12px; }
         .verification-step { background:#edf1f5; border-radius:6px; color:var(--muted); font-size:11px; font-weight:800; padding:7px 5px; text-align:center; }
         .verification-step.done { background:#e6f4ec; color:#21643c; }
@@ -81,13 +82,15 @@
                     $fakta = $item->kelengkapan_fakta;
                     $tahap = (int) $item->tahap_aktif;
                     $keputusanBk = $item->verifikasiBkPelanggaran->first();
+                    $modeBacaBk = (bool) $item->mode_baca_bk;
                 @endphp
                 <article class="verification-row">
                     <div>
                         <p class="person-meta">{{ $item->nomor_laporan }} &middot; {{ $item->tanggal_kejadian?->format('d/m/Y') }}</p>
                         <p class="verification-name">{{ $item->siswa?->nama_lengkap }}</p>
                         <p class="person-meta">{{ $item->kelas?->nama ?: 'Kelas belum ditentukan' }} &middot; NISN {{ $item->siswa?->nisn ?: '-' }}</p>
-                        <p class="verification-task">{{ $item->tugas_pengguna }}</p>
+                        <p class="verification-task">{{ $modeBacaBk ? 'Ditangani Guru BK tingkat lain' : $item->tugas_pengguna }}</p>
+                        @if($modeBacaBk)<p class="verification-readonly">Anda tetap dapat melihat perkembangan laporan ini.</p>@endif
                         <span class="{{ $badgeStatus($item->status_verifikasi) }}" style="margin-top:8px">{{ $item->labelStatusVerifikasi() }}</span>
                     </div>
 
@@ -121,7 +124,7 @@
                         @endif
                     </div>
 
-                    <div class="verification-actions"><a href="{{ route('laporan-pembinaan-siswa.show',$item) }}" class="button button-primary">{{ in_array($item->status_verifikasi,\App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_FINAL,true)?'Lihat hasil':(in_array($item->status_verifikasi,\App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_WAKIL,true)?'Buka pengesahan':'Buka pemeriksaan') }}</a></div>
+                    <div class="verification-actions"><a href="{{ route('laporan-pembinaan-siswa.show',$item) }}" class="button button-primary">{{ $modeBacaBk?'Lihat laporan':(in_array($item->status_verifikasi,\App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_FINAL,true)?'Lihat hasil':(in_array($item->status_verifikasi,\App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_WAKIL,true)?'Buka pengesahan':'Buka pemeriksaan')) }}</a></div>
                 </article>
             @empty
                 <div class="empty-state">Tidak ada laporan dalam antrean ini.</div>

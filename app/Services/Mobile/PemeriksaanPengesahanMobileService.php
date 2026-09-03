@@ -6,6 +6,7 @@ use App\Models\JenisPelanggaranSiswa;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\Pengguna;
 use App\Models\VerifikasiBkPelanggaran;
+use App\Services\Pembinaan\AksesLaporanPembinaanService;
 use App\Services\Pembinaan\AntreanVerifikasiPelanggaranService;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -22,6 +23,7 @@ class PemeriksaanPengesahanMobileService
     public function __construct(
         private AntreanVerifikasiPelanggaranService $antrean,
         private LaporanSiswaMobileService $laporanSiswa,
+        private AksesLaporanPembinaanService $aksesLaporan,
     ) {}
 
     public function daftar(Pengguna $pengguna, array $filter): array
@@ -78,6 +80,8 @@ class PemeriksaanPengesahanMobileService
 
             return $this->laporanSiswa->ringkas($laporan) + [
                 'tugas_pengguna' => $laporan->tugas_pengguna,
+                'dapat_diproses_bk' => (bool) $laporan->dapat_diproses_bk,
+                'mode_baca_bk' => (bool) $laporan->mode_baca_bk,
                 'tahap_aktif' => (int) $laporan->tahap_aktif,
                 'batas_hari' => (int) $laporan->batas_hari,
                 'hari_menunggu' => (int) $laporan->hari_menunggu,
@@ -165,7 +169,9 @@ class PemeriksaanPengesahanMobileService
                 ])->values(),
             'hak_aksi' => [
                 'dapat_verifikasi_bk' => $pengguna->memilikiIzin('poin_siswa.verifikasi_bk')
+                    && $this->aksesLaporan->bolehMemprosesBk($pengguna, $laporan)
                     && in_array($laporan->status_verifikasi, AntreanVerifikasiPelanggaranService::STATUS_BK, true),
+                'mode_baca_bk' => $this->aksesLaporan->modeBacaBk($pengguna, $laporan),
                 'dapat_sahkan_wakil' => $pengguna->memilikiIzin('poin_siswa.sahkan_wakil')
                     && in_array($laporan->status_verifikasi, AntreanVerifikasiPelanggaranService::STATUS_WAKIL, true),
             ],

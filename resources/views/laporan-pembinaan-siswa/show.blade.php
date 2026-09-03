@@ -9,8 +9,8 @@
         $statusFinal = in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan','ditetapkan_pembinaan','tidak_terbukti','dibatalkan'], true);
         $menungguPengesahanWakil = in_array($laporanPembinaanSiswa->status_verifikasi, \App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_WAKIL, true);
         $dalamAntreanBk = in_array($laporanPembinaanSiswa->status_verifikasi, \App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_BK, true);
-        $bolehEdit = !$statusFinal && !$menungguPengesahanWakil && !$laporanPembinaanSiswa->berasalDariAbsensi() && ($pengguna?->memilikiIzin(['bk.kelola','poin_siswa.lapor']) ?? false);
-        $bolehVerifikasiBk = $dalamAntreanBk && ($pengguna?->memilikiIzin('poin_siswa.verifikasi_bk') ?? false);
+        $bolehEdit = $bolehMengubahLaporan && !$statusFinal && !$menungguPengesahanWakil && !$laporanPembinaanSiswa->berasalDariAbsensi() && ($pengguna?->memilikiIzin(['bk.kelola','poin_siswa.lapor']) ?? false);
+        $bolehVerifikasiBk = $bolehMemprosesBk && $dalamAntreanBk && ($pengguna?->memilikiIzin('poin_siswa.verifikasi_bk') ?? false);
         $bolehSahkanWakil = $menungguPengesahanWakil && ($pengguna?->memilikiIzin('poin_siswa.sahkan_wakil') ?? false);
         $melaluiPemeriksaanBk = $laporanPembinaanSiswa->status_verifikasi !== 'tidak_perlu';
         $keputusanWakil = $laporanPembinaanSiswa->persetujuanPelanggaran->first();
@@ -66,7 +66,7 @@
                     <a href="{{ route('laporan-pembinaan-siswa.edit',$laporanPembinaanSiswa) }}" class="button button-dark">Edit</a>
                 @endif
                 @izin('bk.kelola')
-                    @if($laporanPembinaanSiswa->status!=='dibatalkan')
+                    @if($bolehMemprosesBk && $laporanPembinaanSiswa->status!=='dibatalkan')
                         <a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah tindak lanjut</a>
                     @endif
                 @endizin
@@ -76,6 +76,9 @@
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
     @if(session('gagal'))<div class="alert alert-danger">{{ session('gagal') }}</div>@endif
     @if($errors->any())<div class="alert alert-danger"><strong>Ada data yang perlu diperbaiki.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+    @if($modeBacaBk)
+        <div class="alert"><strong>Mode lihat saja.</strong> Laporan siswa tingkat {{ $laporanPembinaanSiswa->kelas?->tingkat ?: '-' }} ini ditangani Guru BK tingkat lain. Anda tetap dapat melihat seluruh perkembangan, tetapi tidak dapat mengubah atau memprosesnya.</div>
+    @endif
     @if($laporanPembinaanSiswa->berasalDariAbsensi())
         <div class="alert"><strong>Laporan otomatis dari presensi.</strong> Tercatat terlambat {{ $laporanPembinaanSiswa->menit_terlambat_tercatat }} menit. Perubahan waktu dilakukan melalui koreksi rekap presensi.</div>
     @endif
@@ -94,7 +97,7 @@
         <aside class="panel panel-pad">
             <div class="detail-profile"><div class="avatar avatar-lg">{{ str($laporanPembinaanSiswa->siswa?->nama_lengkap)->substr(0,2)->upper() }}</div><h2>{{ $laporanPembinaanSiswa->siswa?->nama_lengkap }}</h2><p>NISN {{ $laporanPembinaanSiswa->siswa?->nisn ?: '-' }}</p></div>
             <dl class="quick-facts" style="margin-top:20px"><div><dt>Kelas</dt><dd>{{ $laporanPembinaanSiswa->kelas?->nama ?: '-' }}</dd></div><div><dt>Tahun</dt><dd>{{ $laporanPembinaanSiswa->tahunPelajaran?->nama ?: '-' }}</dd></div><div><dt>Wali kelas</dt><dd>{{ $laporanPembinaanSiswa->waliKelasPegawai?->nama_lengkap ?: 'Belum ditentukan' }}</dd></div><div><dt>Guru wali</dt><dd>{{ $laporanPembinaanSiswa->guruWaliPegawai?->nama_lengkap ?: 'Belum ditugaskan' }}</dd></div></dl>
-            @izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan' && !$menungguPengesahanWakil)<form action="{{ route('laporan-pembinaan-siswa.destroy',$laporanPembinaanSiswa) }}" method="POST" style="margin-top:20px" onsubmit="return confirm('Batalkan laporan dan koreksi poinnya?')">@csrf @method('DELETE')<button class="button button-danger button-full">Batalkan laporan</button></form>@endif @endizin
+            @izin('bk.kelola')@if($bolehMengubahLaporan && $laporanPembinaanSiswa->status!=='dibatalkan' && !$menungguPengesahanWakil)<form action="{{ route('laporan-pembinaan-siswa.destroy',$laporanPembinaanSiswa) }}" method="POST" style="margin-top:20px" onsubmit="return confirm('Batalkan laporan dan koreksi poinnya?')">@csrf @method('DELETE')<button class="button button-danger button-full">Batalkan laporan</button></form>@endif @endizin
         </aside>
 
         <div class="section-stack">
@@ -219,7 +222,7 @@
             <section class="panel panel-pad"><h2 class="panel-title">Tindakan Awal</h2><p style="white-space:pre-line;margin-bottom:0">{{ $teks($laporanPembinaanSiswa->tindakan_awal) }}</p></section>
             @izin('bk.kelola')<section class="panel panel-pad"><h2 class="panel-title">Catatan Rahasia BK</h2><p style="white-space:pre-line;margin-bottom:0">{{ $teks($laporanPembinaanSiswa->catatan_rahasia) }}</p></section>@endizin
 
-            <section class="panel panel-pad"><div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Riwayat Tindak Lanjut</h2><p class="help-text">Konseling, pemanggilan, mediasi, dan keputusan akhir.</p></div>@izin('bk.kelola')@if($laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah</a>@endif @endizin</div><div class="follow-up-list">@forelse($laporanPembinaanSiswa->tindakLanjutPembinaanSiswa as $tindak)<article class="follow-up-item"><div class="mobile-card-head"><div><p class="person-name">{{ $tindak->labelJenis() }}</p><p class="person-meta">{{ $tindak->tanggal_tindak_lanjut?->format('d/m/Y') }} · {{ $tindak->petugasPegawai?->nama_lengkap ?: '-' }}</p></div><span class="badge badge-muted">{{ $tindak->labelStatusLaporan() }}</span></div><div class="follow-up-body"><div><p class="person-meta">Ringkasan</p><p style="white-space:pre-line">{{ $tindak->ringkasan }}</p></div><div><p class="person-meta">Hasil</p><p style="white-space:pre-line">{{ $teks($tindak->hasil) }}</p></div></div>@izin('bk.kelola')<div class="actions"><a href="{{ route('tindak-lanjut-pembinaan-siswa.edit',$tindak) }}" class="button button-muted button-sm">Edit</a></div>@endizin</article>@empty<div class="empty-state">Belum ada tindak lanjut.</div>@endforelse</div></section>
+            <section class="panel panel-pad"><div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Riwayat Tindak Lanjut</h2><p class="help-text">Konseling, pemanggilan, mediasi, dan keputusan akhir.</p></div>@izin('bk.kelola')@if($bolehMemprosesBk && $laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah</a>@endif @endizin</div><div class="follow-up-list">@forelse($laporanPembinaanSiswa->tindakLanjutPembinaanSiswa as $tindak)<article class="follow-up-item"><div class="mobile-card-head"><div><p class="person-name">{{ $tindak->labelJenis() }}</p><p class="person-meta">{{ $tindak->tanggal_tindak_lanjut?->format('d/m/Y') }} · {{ $tindak->petugasPegawai?->nama_lengkap ?: '-' }}</p></div><span class="badge badge-muted">{{ $tindak->labelStatusLaporan() }}</span></div><div class="follow-up-body"><div><p class="person-meta">Ringkasan</p><p style="white-space:pre-line">{{ $tindak->ringkasan }}</p></div><div><p class="person-meta">Hasil</p><p style="white-space:pre-line">{{ $teks($tindak->hasil) }}</p></div></div>@izin('bk.kelola')@if($bolehMemprosesBk)<div class="actions"><a href="{{ route('tindak-lanjut-pembinaan-siswa.edit',$tindak) }}" class="button button-muted button-sm">Edit</a></div>@endif @endizin</article>@empty<div class="empty-state">Belum ada tindak lanjut.</div>@endforelse</div></section>
         </div>
     </div>
     <script>

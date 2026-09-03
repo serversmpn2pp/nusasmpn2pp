@@ -20,6 +20,7 @@ class ProsesPeringatanDiniSiswaService
         private PengaturanPeringatanDiniPoinService $pengaturan,
         private MonitoringPoinSiswaService $monitoring,
         private NotifikasiPenggunaService $notifikasi,
+        private PenugasanGuruBkTingkatService $penugasanBk,
     ) {}
 
     public function proses(?int $tahunPelajaranId = null): array
@@ -387,8 +388,13 @@ class ProsesPeringatanDiniSiswaService
         }
 
         $penerima = $penerima
-            ->merge($this->notifikasi->penggunaDenganPeran(['pimpinan', 'wakil_pimpinan_kesiswaan', 'bk']))
-            ->merge($this->notifikasi->penggunaDenganIzin(['poin_siswa.verifikasi_bk', 'poin_siswa.putus_konflik']));
+            ->merge($this->penugasanBk->penerimaNotifikasiTingkat(
+                (int) $tahun->id,
+                is_numeric($anggota?->kelas?->tingkat) ? (int) $anggota->kelas->tingkat : null,
+                sertakanAdministrator: false,
+            ))
+            ->merge($this->notifikasi->penggunaDenganPeran(['pimpinan', 'wakil_pimpinan_kesiswaan']))
+            ->merge($this->notifikasi->penggunaDenganIzin('poin_siswa.putus_konflik'));
 
         return $penerima
             ->filter(fn ($pengguna) => $pengguna instanceof Pengguna && $pengguna->aktif)

@@ -12,6 +12,7 @@ use App\Models\TahunPelajaran;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
 use App\Services\Pembinaan\CatatRiwayatPembinaanService;
 use App\Services\Pembinaan\PengaturanBatasProsesPelanggaranService;
+use App\Services\Pembinaan\PenugasanGuruBkTingkatService;
 use App\Services\Pembinaan\SimpanBuktiLaporanService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
@@ -26,6 +27,7 @@ class LaporkanKejadianMobileService
         private SimpanBuktiLaporanService $bukti,
         private PengaturanBatasProsesPelanggaranService $batasProses,
         private NotifikasiPenggunaService $notifikasi,
+        private PenugasanGuruBkTingkatService $penugasanBk,
     ) {}
 
     public function referensi(): array
@@ -294,24 +296,30 @@ class LaporkanKejadianMobileService
             return;
         }
 
-        $penerimaBk = $this->notifikasi->penggunaDenganPeran(['administrator', 'bk'], $pengguna->id);
-        $this->notifikasi->kirimKeBanyak(
-            $penerimaBk,
-            'peringatan',
-            $laporan->count() > 1
-                ? 'Laporan kolektif menunggu pemeriksaan BK'
-                : 'Laporan kejadian menunggu pemeriksaan BK',
-            $laporan->count() > 1
-                ? $laporan->count().' siswa dilaporkan dalam kejadian yang sama.'
-                : ($pertama->siswa()->value('nama_lengkap') ?? 'Siswa').' memiliki laporan kejadian baru.',
-            $laporan->count() > 1
-                ? route('laporan-pembinaan-siswa.index', [], false)
-                : route('laporan-pembinaan-siswa.show', $pertama, false),
-            $laporan->count() > 1
-                ? "laporan-kolektif-baru:{$pertama->id}:{$laporan->last()->id}"
-                : "laporan-pembinaan-baru:{$pertama->id}",
-            ['jumlah_siswa' => $laporan->count()],
-        );
+        $laporan
+            ->each(fn (LaporanPembinaanSiswa $item) => $item->loadMissing('kelas:id,nama,tingkat'))
+            ->groupBy(fn (LaporanPembinaanSiswa $item) => $this->penugasanBk->tingkatLaporan($item) ?? 'tanpa-tingkat')
+            ->each(function (Collection $laporanTingkat, int|string $tingkat) use ($laporan, $pengguna): void {
+                $acuan = $laporanTingkat->first();
+                $kolektif = $laporan->count() > 1;
+                $this->notifikasi->kirimKeBanyak(
+                    $this->penugasanBk->penerimaNotifikasi($acuan, $pengguna->id),
+                    'peringatan',
+                    $kolektif
+                        ? 'Laporan kolektif menunggu pemeriksaan BK'
+                        : 'Laporan kejadian menunggu pemeriksaan BK',
+                    $kolektif
+                        ? $laporanTingkat->count().' siswa'.(is_numeric($tingkat) ? ' tingkat '.$tingkat : '').' dilaporkan dalam kejadian yang sama.'
+                        : ($acuan->siswa()->value('nama_lengkap') ?? 'Siswa').' memiliki laporan kejadian baru.',
+                    $kolektif
+                        ? route('laporan-pembinaan-siswa.index', [], false)
+                        : route('laporan-pembinaan-siswa.show', $acuan, false),
+                    $kolektif
+                        ? "laporan-kolektif-baru:{$laporan->first()->id}:{$laporan->last()->id}"
+                        : "laporan-pembinaan-baru:{$acuan->id}",
+                    ['jumlah_siswa' => $laporanTingkat->count(), 'tingkat' => is_numeric($tingkat) ? (int) $tingkat : null],
+                );
+            });
 
         foreach ($laporan as $item) {
             if (! $item->wali_kelas_pegawai_id || (int) $item->wali_kelas_pegawai_id === (int) $pengguna->pegawai_id) {

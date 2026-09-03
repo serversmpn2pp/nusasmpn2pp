@@ -190,6 +190,10 @@ class WorshipRecapSchedule {
 class WorshipRecapSummary {
   const WorshipRecapSummary({
     required this.total,
+    required this.atSchool,
+    required this.notAtSchool,
+    required this.excused,
+    required this.requiredToPray,
     required this.present,
     required this.notPresent,
     required this.percentage,
@@ -198,12 +202,20 @@ class WorshipRecapSummary {
   factory WorshipRecapSummary.fromJson(Map<String, dynamic> json) =>
       WorshipRecapSummary(
         total: _integer(json['total']),
+        atSchool: _integer(json['hadir']),
+        notAtSchool: _integer(json['tidak_hadir']),
+        excused: _integer(json['berhalangan']),
+        requiredToPray: _integer(json['wajib']),
         present: _integer(json['sudah']),
         notPresent: _integer(json['belum']),
         percentage: _integer(json['persentase']),
       );
 
   final int total;
+  final int atSchool;
+  final int notAtSchool;
+  final int excused;
+  final int requiredToPray;
   final int present;
   final int notPresent;
   final int percentage;
@@ -213,6 +225,10 @@ class WorshipRecapClassSummary {
   const WorshipRecapClassSummary({
     required this.schoolClass,
     required this.total,
+    required this.atSchool,
+    required this.notAtSchool,
+    required this.excused,
+    required this.requiredToPray,
     required this.present,
     required this.notPresent,
     required this.percentage,
@@ -222,6 +238,10 @@ class WorshipRecapClassSummary {
       WorshipRecapClassSummary(
         schoolClass: WorshipRecapClass.fromJson(_map(json['kelas'])),
         total: _integer(json['total']),
+        atSchool: _integer(json['hadir']),
+        notAtSchool: _integer(json['tidak_hadir']),
+        excused: _integer(json['berhalangan']),
+        requiredToPray: _integer(json['wajib']),
         present: _integer(json['sudah']),
         notPresent: _integer(json['belum']),
         percentage: _integer(json['persentase']),
@@ -229,6 +249,10 @@ class WorshipRecapClassSummary {
 
   final WorshipRecapClass schoolClass;
   final int total;
+  final int atSchool;
+  final int notAtSchool;
+  final int excused;
+  final int requiredToPray;
   final int present;
   final int notPresent;
   final int percentage;
@@ -241,6 +265,8 @@ class WorshipRecapRecord {
     required this.schoolClass,
     required this.status,
     required this.statusLabel,
+    required this.schoolAttendance,
+    required this.schoolAttendanceLabel,
     this.rollNumber,
     this.attendance,
   });
@@ -251,8 +277,12 @@ class WorshipRecapRecord {
         rollNumber: _nullableInteger(json['nomor_absen']),
         student: WorshipRecapStudent.fromJson(_map(json['siswa'])),
         schoolClass: WorshipRecapClass.fromJson(_map(json['kelas'])),
-        status: json['status'] as String? ?? 'belum',
-        statusLabel: json['status_label'] as String? ?? 'Belum presensi',
+        status: json['status'] as String? ?? 'tidak_hadir',
+        statusLabel: json['status_label'] as String? ?? 'Tidak hadir sekolah',
+        schoolAttendance: json['status_kehadiran'] as String? ?? 'alfa',
+        schoolAttendanceLabel:
+            json['status_kehadiran_label'] as String? ??
+            'Belum tercatat di presensi sekolah',
         attendance: json['presensi'] is Map<String, dynamic>
             ? WorshipRecapAttendance.fromJson(_map(json['presensi']))
             : null,
@@ -264,9 +294,12 @@ class WorshipRecapRecord {
   final WorshipRecapClass schoolClass;
   final String status;
   final String statusLabel;
+  final String schoolAttendance;
+  final String schoolAttendanceLabel;
   final WorshipRecapAttendance? attendance;
 
   bool get present => status == 'sudah';
+  bool get canBeCorrected => status == 'sudah' || status == 'belum';
 }
 
 class WorshipRecapStudent {

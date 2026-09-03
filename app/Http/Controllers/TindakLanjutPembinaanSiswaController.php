@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\Pegawai;
 use App\Models\TindakLanjutPembinaanSiswa;
+use App\Services\Pembinaan\AksesLaporanPembinaanService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class TindakLanjutPembinaanSiswaController extends Controller
 {
+    public function __construct(private AksesLaporanPembinaanService $akses) {}
+
     public function create(LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
+        abort_unless($this->akses->bolehMemprosesBk(auth()->user(), $laporanPembinaanSiswa), 403);
+
         if ($laporanPembinaanSiswa->status === 'dibatalkan') {
             return redirect()
                 ->route('laporan-pembinaan-siswa.show', $laporanPembinaanSiswa)
@@ -33,6 +38,8 @@ class TindakLanjutPembinaanSiswaController extends Controller
 
     public function store(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
+        abort_unless($this->akses->bolehMemprosesBk($request->user(), $laporanPembinaanSiswa), 403);
+
         if ($laporanPembinaanSiswa->status === 'dibatalkan') {
             return redirect()
                 ->route('laporan-pembinaan-siswa.show', $laporanPembinaanSiswa)
@@ -54,6 +61,7 @@ class TindakLanjutPembinaanSiswaController extends Controller
     {
         $tindakLanjutPembinaanSiswa->load('laporanPembinaanSiswa.siswa', 'laporanPembinaanSiswa.kelas');
         $laporanPembinaanSiswa = $tindakLanjutPembinaanSiswa->laporanPembinaanSiswa;
+        abort_unless($this->akses->bolehMemprosesBk(auth()->user(), $laporanPembinaanSiswa), 403);
 
         return view('tindak-lanjut-pembinaan-siswa.edit', array_merge(
             compact('laporanPembinaanSiswa', 'tindakLanjutPembinaanSiswa'),
@@ -63,6 +71,8 @@ class TindakLanjutPembinaanSiswaController extends Controller
 
     public function update(Request $request, TindakLanjutPembinaanSiswa $tindakLanjutPembinaanSiswa)
     {
+        abort_unless($this->akses->bolehMemprosesBk($request->user(), $tindakLanjutPembinaanSiswa->laporanPembinaanSiswa), 403);
+
         $data = $this->rapikanData($request->validate($this->aturanValidasi()));
 
         $tindakLanjutPembinaanSiswa->update($data);
@@ -76,6 +86,7 @@ class TindakLanjutPembinaanSiswaController extends Controller
     public function destroy(TindakLanjutPembinaanSiswa $tindakLanjutPembinaanSiswa)
     {
         $laporanPembinaanSiswa = $tindakLanjutPembinaanSiswa->laporanPembinaanSiswa;
+        abort_unless($this->akses->bolehMemprosesBk(auth()->user(), $laporanPembinaanSiswa), 403);
 
         $tindakLanjutPembinaanSiswa->delete();
         $this->sinkronkanStatusLaporan($laporanPembinaanSiswa);

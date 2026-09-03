@@ -20,6 +20,7 @@ class ProsesPoinKeterlambatanService
         private CatatRiwayatPembinaanService $riwayatPembinaan,
         private ProsesPoinSiswaService $prosesPoin,
         private NotifikasiPenggunaService $notifikasi,
+        private PenugasanGuruBkTingkatService $penugasanBk,
     ) {}
 
     /** @return array{total: int, dibuat: int, diperbarui: int, dibatalkan: int, diabaikan: int, laporan_baru_ids: array<int, int>} */
@@ -352,15 +353,27 @@ class ProsesPoinKeterlambatanService
     /** @param array<int, int> $laporanIds */
     private function kirimNotifikasiRingkas(CarbonImmutable $tanggal, array $laporanIds, ?int $penggunaId): void
     {
-        $jumlah = count($laporanIds);
-        $this->notifikasi->kirimKeBanyak(
-            $this->notifikasi->penggunaDenganIzin('poin_siswa.verifikasi_bk', $penggunaId),
-            'peringatan',
-            'Laporan keterlambatan menunggu pemeriksaan',
-            sprintf('%d laporan keterlambatan tanggal %s dibuat dari rekap presensi.', $jumlah, $tanggal->locale('id')->translatedFormat('d F Y')),
-            route('pusat-verifikasi-pelanggaran.index', ['antrean' => 'pemeriksaan_bk'], false),
-            'laporan-keterlambatan:'.$tanggal->format('Ymd').':'.max($laporanIds),
-            ['jumlah' => $jumlah, 'laporan_ids' => $laporanIds],
-        );
+        LaporanPembinaanSiswa::query()
+            ->with('kelas:id,nama,tingkat')
+            ->whereIn('id', $laporanIds)
+            ->get()
+            ->groupBy(fn (LaporanPembinaanSiswa $laporan) => $this->penugasanBk->tingkatLaporan($laporan) ?? 'tanpa-tingkat')
+            ->each(function ($laporanTingkat, int|string $tingkat) use ($tanggal, $laporanIds, $penggunaId): void {
+                $jumlah = $laporanTingkat->count();
+                $this->notifikasi->kirimKeBanyak(
+                    $this->penugasanBk->penerimaNotifikasi($laporanTingkat->first(), $penggunaId),
+                    'peringatan',
+                    'Laporan keterlambatan menunggu pemeriksaan',
+                    sprintf(
+                        '%d laporan keterlambatan%s tanggal %s dibuat dari rekap presensi.',
+                        $jumlah,
+                        is_numeric($tingkat) ? ' tingkat '.$tingkat : '',
+                        $tanggal->locale('id')->translatedFormat('d F Y'),
+                    ),
+                    route('pusat-verifikasi-pelanggaran.index', ['antrean' => 'bk'], false),
+                    'laporan-keterlambatan:'.$tanggal->format('Ymd').':'.max($laporanIds),
+                    ['jumlah' => $jumlah, 'laporan_ids' => $laporanTingkat->pluck('id')->all(), 'tingkat' => is_numeric($tingkat) ? (int) $tingkat : null],
+                );
+            });
     }
 }

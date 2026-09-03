@@ -12,10 +12,21 @@ void main() {
   test('domain rekap membaca ringkasan tanpa data privat', () {
     final page = WorshipRecapPage.fromJson(_pageJson(classId: 1));
 
-    expect(page.summary.total, 2);
+    expect(page.summary.total, 4);
+    expect(page.summary.atSchool, 3);
+    expect(page.summary.notAtSchool, 1);
+    expect(page.summary.excused, 1);
+    expect(page.summary.requiredToPray, 2);
     expect(page.summary.present, 1);
     expect(page.classSummaries.single.percentage, 50);
-    expect(page.records.last.present, isFalse);
+    expect(page.records.map((record) => record.status), [
+      'sudah',
+      'belum',
+      'berhalangan',
+      'tidak_hadir',
+    ]);
+    expect(page.records[2].canBeCorrected, isFalse);
+    expect(page.records.last.schoolAttendanceLabel, 'Sakit');
     expect(_pageJson(classId: 1).toString(), isNot(contains('catatan_privat')));
   });
 
@@ -42,10 +53,9 @@ void main() {
     expect(find.text('Rekap Ibadah Siswa'), findsOneWidget);
     expect(find.byKey(const Key('worship-recap-date')), findsOneWidget);
     expect(find.byKey(const Key('worship-recap-activity')), findsOneWidget);
-    await tester.scrollUntilVisible(
+    await _dragUntilBuilt(
+      tester,
       find.byKey(const Key('worship-recap-class-1')),
-      260,
-      scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.byKey(const Key('worship-recap-class-1')));
     await tester.pumpAndSettle();
@@ -57,6 +67,58 @@ void main() {
 
     expect(find.textContaining('Siswa Sudah Ibadah'), findsOneWidget);
     expect(find.text('Kamera HP'), findsOneWidget);
+    expect(find.text('Rahasia berhalangan'), findsNothing);
+    expect(find.byKey(const Key('worship-recap-correct-1')), findsOneWidget);
+    await _dragUntilBuilt(tester, find.textContaining('Siswa Sakit'));
+    expect(find.textContaining('Siswa Sakit'), findsOneWidget);
+    expect(find.text('Tidak hadir sekolah'), findsOneWidget);
+    expect(find.text('Sakit'), findsOneWidget);
+    expect(find.byKey(const Key('worship-recap-correct-4')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('filter rekap menyediakan empat status sesuai desktop', (
+    tester,
+  ) async {
+    final remote = _FakeWorshipRecapRemoteDataSource();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          worshipRecapRemoteDataSourceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const WorshipRecapView(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _dragUntilBuilt(
+      tester,
+      find.byKey(const Key('worship-recap-class-1')),
+    );
+    await tester.tap(find.byKey(const Key('worship-recap-class-1')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('worship-recap-status')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('worship-recap-status')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sudah salat'), findsWidgets);
+    expect(find.text('Belum salat'), findsWidgets);
+    expect(find.text('Berhalangan'), findsWidgets);
+    expect(find.text('Tidak hadir sekolah'), findsWidgets);
+    await tester.tap(find.text('Berhalangan').last);
+    await tester.pumpAndSettle();
+
+    expect(remote.lastFetchStatus, 'berhalangan');
+    await _dragUntilBuilt(tester, find.textContaining('Siswi Berhalangan'));
+    expect(find.byKey(const Key('worship-recap-student-3')), findsOneWidget);
+    expect(find.byKey(const Key('worship-recap-correct-3')), findsNothing);
     expect(find.text('Rahasia berhalangan'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -126,7 +188,20 @@ void main() {
   });
 }
 
-Map<String, dynamic> _pageJson({int? classId}) => {
+Future<void> _dragUntilBuilt(WidgetTester tester, Finder finder) async {
+  final scrollable = find.byKey(
+    const PageStorageKey<String>('worship-recap-scroll'),
+  );
+  for (var attempt = 0; attempt < 12 && finder.evaluate().isEmpty; attempt++) {
+    await tester.drag(scrollable, const Offset(0, -180));
+    await tester.pumpAndSettle();
+  }
+  expect(finder, findsOneWidget);
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+}
+
+Map<String, dynamic> _pageJson({int? classId, String status = 'semua'}) => {
   'tersedia': true,
   'tanggal': '2026-08-13',
   'tanggal_label': 'Kamis, 13 Agustus 2026',
@@ -138,13 +213,13 @@ Map<String, dynamic> _pageJson({int? classId}) => {
     'aktif': true,
   },
   'kelas_dipilih_id': classId,
-  'filter': {'status': 'semua', 'cari': ''},
+  'filter': {'status': status, 'cari': ''},
   'referensi': {
     'kegiatan': [
       {'id': 1, 'nama': 'Sholat Duhur Berjamaah', 'aktif': true},
     ],
     'kelas': [
-      {'id': 1, 'nama': 'VII.A', 'tingkat': 7, 'jumlah_siswa': 2},
+      {'id': 1, 'nama': 'VII.A', 'tingkat': 7, 'jumlah_siswa': 4},
     ],
   },
   'jadwal': {
@@ -156,11 +231,24 @@ Map<String, dynamic> _pageJson({int? classId}) => {
     'rentang_scan': '11:30 - 13:00',
     'keterangan': null,
   },
-  'ringkasan': {'total': 2, 'sudah': 1, 'belum': 1, 'persentase': 50},
+  'ringkasan': {
+    'total': 4,
+    'hadir': 3,
+    'tidak_hadir': 1,
+    'berhalangan': 1,
+    'wajib': 2,
+    'sudah': 1,
+    'belum': 1,
+    'persentase': 50,
+  },
   'ringkasan_kelas': [
     {
       'kelas': {'id': 1, 'nama': 'VII.A', 'tingkat': 7},
-      'total': 2,
+      'total': 4,
+      'hadir': 3,
+      'tidak_hadir': 1,
+      'berhalangan': 1,
+      'wajib': 2,
       'sudah': 1,
       'belum': 1,
       'persentase': 50,
@@ -169,55 +257,101 @@ Map<String, dynamic> _pageJson({int? classId}) => {
   'items': classId == null
       ? const []
       : [
-          {
-            'anggota_kelas_id': 1,
-            'nomor_absen': 1,
-            'siswa': {
-              'id': 1,
-              'nama': 'Siswa Sudah Ibadah',
-              'nis': '26001',
-              'nisn': '0131201150',
-              'foto_url': null,
+          if (status == 'semua' || status == 'sudah')
+            {
+              'anggota_kelas_id': 1,
+              'nomor_absen': 1,
+              'siswa': {
+                'id': 1,
+                'nama': 'Siswa Sudah Ibadah',
+                'nis': '26001',
+                'nisn': '0131201150',
+                'foto_url': null,
+              },
+              'kelas': {'id': 1, 'nama': 'VII.A'},
+              'status': 'sudah',
+              'status_label': 'Sudah salat',
+              'status_kehadiran': 'hadir',
+              'status_kehadiran_label': 'Hadir di sekolah',
+              'presensi': {
+                'id': 1,
+                'waktu': '12:05',
+                'sumber': 'kamera',
+                'sumber_label': 'Kamera HP',
+                'dicatat_oleh': 'Administrator',
+                'dikoreksi_oleh': null,
+                'dikoreksi_pada': null,
+                'catatan_koreksi': null,
+              },
             },
-            'kelas': {'id': 1, 'nama': 'VII.A'},
-            'status': 'sudah',
-            'status_label': 'Sudah presensi',
-            'presensi': {
-              'id': 1,
-              'waktu': '12:05',
-              'sumber': 'kamera',
-              'sumber_label': 'Kamera HP',
-              'dicatat_oleh': 'Administrator',
-              'dikoreksi_oleh': null,
-              'dikoreksi_pada': null,
-              'catatan_koreksi': null,
+          if (status == 'semua' || status == 'belum')
+            {
+              'anggota_kelas_id': 2,
+              'nomor_absen': 2,
+              'siswa': {
+                'id': 2,
+                'nama': 'Siswa Belum Ibadah',
+                'nis': '26002',
+                'nisn': '0131201151',
+                'foto_url': null,
+              },
+              'kelas': {'id': 1, 'nama': 'VII.A'},
+              'status': 'belum',
+              'status_label': 'Belum salat',
+              'status_kehadiran': 'hadir',
+              'status_kehadiran_label': 'Hadir di sekolah',
+              'presensi': null,
             },
-          },
-          {
-            'anggota_kelas_id': 2,
-            'nomor_absen': 2,
-            'siswa': {
-              'id': 2,
-              'nama': 'Siswa Belum Ibadah',
-              'nis': '26002',
-              'nisn': '0131201151',
-              'foto_url': null,
+          if (status == 'semua' || status == 'berhalangan')
+            {
+              'anggota_kelas_id': 3,
+              'nomor_absen': 3,
+              'siswa': {
+                'id': 3,
+                'nama': 'Siswi Berhalangan',
+                'nis': '26003',
+                'nisn': '0131201152',
+                'foto_url': null,
+              },
+              'kelas': {'id': 1, 'nama': 'VII.A'},
+              'status': 'berhalangan',
+              'status_label': 'Berhalangan',
+              'status_kehadiran': 'hadir',
+              'status_kehadiran_label': 'Hadir di sekolah',
+              'presensi': null,
             },
-            'kelas': {'id': 1, 'nama': 'VII.A'},
-            'status': 'belum',
-            'status_label': 'Belum presensi',
-            'presensi': null,
-          },
+          if (status == 'semua' || status == 'tidak_hadir')
+            {
+              'anggota_kelas_id': 4,
+              'nomor_absen': 4,
+              'siswa': {
+                'id': 4,
+                'nama': 'Siswa Sakit',
+                'nis': '26004',
+                'nisn': '0131201153',
+                'foto_url': null,
+              },
+              'kelas': {'id': 1, 'nama': 'VII.A'},
+              'status': 'tidak_hadir',
+              'status_label': 'Tidak hadir sekolah',
+              'status_kehadiran': 'sakit',
+              'status_kehadiran_label': 'Sakit',
+              'presensi': null,
+            },
         ],
   'paginasi': {
     'halaman': 1,
     'halaman_terakhir': 1,
     'per_halaman': 40,
-    'total': classId == null ? 0 : 2,
+    'total': classId == null
+        ? 0
+        : status == 'semua'
+        ? 4
+        : 1,
     'ada_halaman_berikutnya': false,
   },
   'hak_akses': {'dapat_koreksi': true, 'dapat_scan_sekarang': true},
-  'pesan_privasi': 'Status berhalangan tidak ditampilkan pada rekap umum dan tetap dikelola melalui ruang privat pendamping.',
+  'pesan_privasi': 'Rekap umum hanya menampilkan status berhalangan. Catatan privat dan rincian konfirmasi tetap hanya tersedia bagi pendamping yang berwenang.',
 };
 
 Map<String, dynamic> _correctionJson({bool present = false}) => {
@@ -265,6 +399,7 @@ Map<String, dynamic> _correctionJson({bool present = false}) => {
 final class _FakeWorshipRecapRemoteDataSource
     implements WorshipRecapRemoteDataSource {
   int updateCalls = 0;
+  String? lastFetchStatus;
   String? lastStatus;
   String? lastTime;
   String? lastReason;
@@ -277,7 +412,12 @@ final class _FakeWorshipRecapRemoteDataSource
     required String status,
     required String query,
     required int page,
-  }) async => WorshipRecapPage.fromJson(_pageJson(classId: classId));
+  }) async {
+    lastFetchStatus = status;
+    return WorshipRecapPage.fromJson(
+      _pageJson(classId: classId, status: status),
+    );
+  }
 
   @override
   Future<WorshipCorrectionDetail> fetchCorrection(

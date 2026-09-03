@@ -24,6 +24,8 @@ class AntreanVerifikasiPelanggaranService
 
     public const STATUS_FINAL = ['disahkan', 'ditetapkan_pembinaan', 'tidak_terbukti', 'dibatalkan'];
 
+    public function __construct(private PenugasanGuruBkTingkatService $penugasanBk) {}
+
     public function queryUntuk(Pengguna $pengguna): Builder
     {
         $query = LaporanPembinaanSiswa::query()->where('status_verifikasi', '!=', 'tidak_perlu');
@@ -91,6 +93,12 @@ class AntreanVerifikasiPelanggaranService
             'saksi' => $laporan->saksi_laporan_pembinaan_siswa_count > 0,
             'klarifikasi' => $laporan->klarifikasi_siswa_pembinaan_count > 0,
         ]);
+        $laporan->setAttribute('dapat_diproses_bk', $this->penugasanBk->bolehMemproses($pengguna, $laporan));
+        $modeBacaBk = $this->penugasanBk->modeBaca($pengguna, $laporan);
+        $laporan->setAttribute('mode_baca_bk', $modeBacaBk);
+        if ($modeBacaBk) {
+            $laporan->setAttribute('tugas_pengguna', 'Ditangani Guru BK tingkat lain');
+        }
 
         return $laporan;
     }

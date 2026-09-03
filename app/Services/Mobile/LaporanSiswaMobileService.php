@@ -247,6 +247,8 @@ class LaporanSiswaMobileService
             'hak_akses' => [
                 'dapat_kelola_fakta' => $this->akses->bolehKelolaFakta($pengguna, $laporan),
                 'dapat_mencatat_klarifikasi' => $this->akses->bolehMencatatKlarifikasi($pengguna, $laporan),
+                'dapat_memproses_bk' => $this->akses->bolehMemprosesBk($pengguna, $laporan),
+                'mode_baca_bk' => $this->akses->modeBacaBk($pengguna, $laporan),
             ],
         ];
     }
