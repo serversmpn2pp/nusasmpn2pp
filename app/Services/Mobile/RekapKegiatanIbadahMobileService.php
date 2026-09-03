@@ -11,6 +11,7 @@ use App\Models\PresensiKegiatanIbadah;
 use App\Models\RiwayatKoreksiKegiatanIbadah;
 use App\Models\TahunPelajaran;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
+use App\Services\Ibadah\RekapHarianKegiatanIbadah;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,10 @@ use Illuminate\Validation\ValidationException;
 
 class RekapKegiatanIbadahMobileService
 {
-    public function __construct(private AksesScanKegiatanIbadah $akses) {}
+    public function __construct(
+        private AksesScanKegiatanIbadah $akses,
+        private RekapHarianKegiatanIbadah $rekapHarian,
+    ) {}
 
     public function daftar(Pengguna $pengguna, array $filter): array
     {
@@ -57,19 +61,13 @@ class RekapKegiatanIbadahMobileService
         $halaman = (int) ($filter['halaman'] ?? 1);
         $tanggalString = $tanggal->toDateString();
 
-        $jumlahPresensiPerKelas = ($tahunPelajaran && $kegiatanId)
-            ? PresensiKegiatanIbadah::query()
-                ->selectRaw('kelas_id, COUNT(DISTINCT siswa_id) as jumlah')
-                ->where('tahun_pelajaran_id', $tahunPelajaran->id)
-                ->where('kegiatan_ibadah_id', $kegiatanId)
-                ->whereDate('tanggal', $tanggalString)
-                ->whereIn('kelas_id', $daftarKelas->pluck('id'))
-                ->groupBy('kelas_id')
-                ->pluck('jumlah', 'kelas_id')
-            : collect();
-        $ringkasanKelas = $daftarKelas->map(function (Kelas $kelas) use ($jumlahPresensiPerKelas) {
-            $total = (int) $kelas->jumlah_siswa;
-            $sudah = min((int) ($jumlahPresensiPerKelas[$kelas->id] ?? 0), $total);
+        $hasilHarian = ($tahunPelajaran && $kegiatanId)
+            ? $this->rekapHarian->hitung($tahunPelajaran, $daftarKelas, $kegiatanId, $tanggal)
+            : ['status_per_siswa' => collect(), 'ringkasan_per_kelas' => collect()];
+        $statusPerSiswa = $hasilHarian['status_per_siswa'];
+        $ringkasanKelas = $daftarKelas->map(function (Kelas $kelas) use ($hasilHarian) {
+            $ringkasan = $hasilHarian['ringkasan_per_kelas']->get((int) $kelas->id)
+                ?? RekapHarianKegiatanIbadah::ringkasanKosong();
 
             return [
                 'kelas' => [
@@ -77,10 +75,7 @@ class RekapKegiatanIbadahMobileService
                     'nama' => $kelas->nama,
                     'tingkat' => (int) $kelas->tingkat,
                 ],
-                'total' => $total,
-                'sudah' => $sudah,
-                'belum' => max($total - $sudah, 0),
-                'persentase' => $total > 0 ? (int) round(($sudah / $total) * 100) : 0,
+                ...$ringkasan,
             ];
         });
         $ringkasan = $kelasId
@@ -106,8 +101,10 @@ class RekapKegiatanIbadahMobileService
                             });
                         });
                 })
-                ->when($status === 'sudah', fn (Builder $query) => $this->filterStatus($query, true, $tahunPelajaran, $kegiatanId, $tanggalString))
-                ->when($status === 'belum', fn (Builder $query) => $this->filterStatus($query, false, $tahunPelajaran, $kegiatanId, $tanggalString))
+                ->when($status !== 'semua', fn (Builder $query) => $query->whereIn(
+                    'siswa_id',
+                    $statusPerSiswa->where('status', $status)->keys(),
+                ))
                 ->orderByRaw('nomor_absen IS NULL')
                 ->orderBy('nomor_absen')
                 ->orderBy('id')
@@ -159,6 +156,10 @@ class RekapKegiatanIbadahMobileService
             'jadwal' => $this->dataJadwal($jadwal),
             'ringkasan' => [
                 'total' => (int) ($ringkasan['total'] ?? 0),
+                'hadir' => (int) ($ringkasan['hadir'] ?? 0),
+                'tidak_hadir' => (int) ($ringkasan['tidak_hadir'] ?? 0),
+                'berhalangan' => (int) ($ringkasan['berhalangan'] ?? 0),
+                'wajib' => (int) ($ringkasan['wajib'] ?? 0),
                 'sudah' => (int) ($ringkasan['sudah'] ?? 0),
                 'belum' => (int) ($ringkasan['belum'] ?? 0),
                 'persentase' => (int) ($ringkasan['persentase'] ?? 0),
@@ -168,6 +169,7 @@ class RekapKegiatanIbadahMobileService
                 ? collect($paginator->items())->map(fn (AnggotaKelas $anggota) => $this->dataAnggota(
                     $anggota,
                     $presensiPerSiswa->get($anggota->siswa_id),
+                    $statusPerSiswa->get($anggota->siswa_id),
                 ))->values()
                 : [],
             'paginasi' => [
@@ -183,7 +185,7 @@ class RekapKegiatanIbadahMobileService
                 'dapat_scan_sekarang' => $tanggal->isToday()
                     && $this->akses->dapatMemindai($pengguna, $tahunPelajaran, now()),
             ],
-            'pesan_privasi' => 'Status berhalangan tidak ditampilkan pada rekap umum dan tetap dikelola melalui ruang privat pendamping.',
+            'pesan_privasi' => 'Rekap umum hanya menampilkan status berhalangan. Catatan privat dan rincian konfirmasi tetap hanya tersedia bagi pendamping yang berwenang.',
         ];
     }
 
@@ -351,18 +353,6 @@ class RekapKegiatanIbadahMobileService
             : 'Catatan presensi berhasil dibatalkan dan riwayat perubahan tetap tersimpan.';
     }
 
-    private function filterStatus(Builder $query, bool $sudah, TahunPelajaran $tahun, int $kegiatanId, string $tanggal): Builder
-    {
-        $relasi = fn (Builder $query) => $query
-            ->where('tahun_pelajaran_id', $tahun->id)
-            ->where('kegiatan_ibadah_id', $kegiatanId)
-            ->whereDate('tanggal', $tanggal);
-
-        return $sudah
-            ? $query->whereHas('siswa.presensiKegiatanIbadah', $relasi)
-            : $query->whereDoesntHave('siswa.presensiKegiatanIbadah', $relasi);
-    }
-
     private function daftarKelas(TahunPelajaran $tahunPelajaran, ?array $cakupanKelasIds = null)
     {
         return Kelas::query()
@@ -381,18 +371,22 @@ class RekapKegiatanIbadahMobileService
 
     private function jumlahkanRingkasan($items): array
     {
-        $total = (int) $items->sum('total');
-        $sudah = (int) $items->sum('sudah');
+        $ringkasan = RekapHarianKegiatanIbadah::ringkasanKosong();
 
-        return [
-            'total' => $total,
-            'sudah' => $sudah,
-            'belum' => max($total - $sudah, 0),
-            'persentase' => $total > 0 ? (int) round(($sudah / $total) * 100) : 0,
-        ];
+        foreach (array_keys($ringkasan) as $kunci) {
+            if ($kunci !== 'persentase') {
+                $ringkasan[$kunci] = (int) $items->sum($kunci);
+            }
+        }
+
+        $ringkasan['persentase'] = $ringkasan['wajib'] > 0
+            ? (int) round(($ringkasan['sudah'] / $ringkasan['wajib']) * 100)
+            : 0;
+
+        return $ringkasan;
     }
 
-    private function dataAnggota(AnggotaKelas $anggota, ?PresensiKegiatanIbadah $presensi): array
+    private function dataAnggota(AnggotaKelas $anggota, ?PresensiKegiatanIbadah $presensi, ?array $statusHarian): array
     {
         return [
             'anggota_kelas_id' => (int) $anggota->id,
@@ -408,8 +402,10 @@ class RekapKegiatanIbadahMobileService
                 'id' => (int) $anggota->kelas_id,
                 'nama' => $anggota->kelas?->nama,
             ],
-            'status' => $presensi ? 'sudah' : 'belum',
-            'status_label' => $presensi ? 'Sudah presensi' : 'Belum presensi',
+            'status' => $statusHarian['status'] ?? 'tidak_hadir',
+            'status_label' => $statusHarian['status_label'] ?? 'Tidak hadir sekolah',
+            'status_kehadiran' => $statusHarian['status_kehadiran'] ?? 'alfa',
+            'status_kehadiran_label' => $statusHarian['status_kehadiran_label'] ?? 'Belum tercatat di presensi sekolah',
             'presensi' => $presensi ? $this->dataPresensi($presensi) : null,
         ];
     }

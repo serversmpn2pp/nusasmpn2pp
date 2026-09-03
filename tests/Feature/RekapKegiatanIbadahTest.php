@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\Izin;
@@ -13,6 +14,8 @@ use App\Models\MataPelajaran;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
+use App\Models\PeriodeBerhalanganIbadah;
+use App\Models\PresensiBerhalanganIbadah;
 use App\Models\PresensiKegiatanIbadah;
 use App\Models\RiwayatKoreksiKegiatanIbadah;
 use App\Models\Siswa;
@@ -59,8 +62,8 @@ class RekapKegiatanIbadahTest extends TestCase
             ->assertSee('Siswa Kelas VII.A')
             ->assertSee('Siswa Sudah Presensi')
             ->assertSee('Siswa Belum Presensi')
-            ->assertSee('Sudah presensi')
-            ->assertSee('Belum presensi');
+            ->assertSee('Sudah salat')
+            ->assertSee('Belum salat');
     }
 
     public function test_filter_belum_presensi_hanya_menampilkan_siswa_yang_belum_scan(): void
@@ -80,6 +83,97 @@ class RekapKegiatanIbadahTest extends TestCase
             ->assertOk()
             ->assertSee('Siswa Belum Presensi')
             ->assertDontSee('Siswa Sudah Presensi');
+    }
+
+    public function test_rekap_harian_mengecualikan_siswa_tidak_hadir_dan_berhalangan_dari_wajib_salat(): void
+    {
+        Carbon::setTestNow('2026-08-13 12:30:00');
+        $data = $this->dataDasar();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->buatPresensi($data, $data['anggota_a1'], $administrator);
+        $periode = PeriodeBerhalanganIbadah::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'siswa_id' => $data['anggota_a2']->siswa_id,
+            'kelas_id' => $data['kelas_a']->id,
+            'anggota_kelas_id' => $data['anggota_a2']->id,
+            'tanggal_mulai' => '2026-08-13',
+            'status' => PeriodeBerhalanganIbadah::STATUS_AKTIF,
+            'batas_hari_konfirmasi' => 7,
+            'catatan_privat' => 'Catatan privat tidak boleh muncul di rekap umum.',
+        ]);
+        PresensiBerhalanganIbadah::create([
+            'periode_berhalangan_ibadah_id' => $periode->id,
+            'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
+            'kegiatan_ibadah_id' => $data['kegiatan']->id,
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas_a']->id,
+            'anggota_kelas_id' => $data['anggota_a2']->id,
+            'siswa_id' => $data['anggota_a2']->siswa_id,
+            'tanggal' => '2026-08-13',
+            'waktu_scan' => '12:04:00',
+            'sumber' => 'kamera',
+        ]);
+        $siswaSakit = Siswa::create([
+            'nama_lengkap' => 'Siswa Sakit',
+            'nis' => '26004',
+            'nisn' => '0131201153',
+            'aktif' => true,
+        ]);
+        $anggotaSakit = AnggotaKelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas_a']->id,
+            'siswa_id' => $siswaSakit->id,
+            'nomor_absen' => 3,
+            'status_keanggotaan' => 'aktif',
+        ]);
+        AbsensiSiswa::create([
+            'tanggal' => '2026-08-13',
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas_a']->id,
+            'anggota_kelas_id' => $anggotaSakit->id,
+            'siswa_id' => $siswaSakit->id,
+            'status_kehadiran' => 'sakit',
+            'sumber' => 'manual',
+        ]);
+
+        $parameter = [
+            'tanggal' => '2026-08-13',
+            'kegiatan_ibadah_id' => $data['kegiatan']->id,
+            'kelas_id' => $data['kelas_a']->id,
+        ];
+        $response = $this->actingAs($administrator)
+            ->get(route('rekap-kegiatan-ibadah.index', $parameter))
+            ->assertOk()
+            ->assertSee('Capaian siswa wajib salat')
+            ->assertSee('Berhalangan')
+            ->assertSee('Sakit')
+            ->assertDontSee('Catatan privat tidak boleh muncul di rekap umum.');
+
+        $response->assertViewHas('ringkasan', fn (array $ringkasan) => $ringkasan['total'] === 3
+            && $ringkasan['hadir'] === 2
+            && $ringkasan['tidak_hadir'] === 1
+            && $ringkasan['berhalangan'] === 1
+            && $ringkasan['wajib'] === 1
+            && $ringkasan['sudah'] === 1
+            && $ringkasan['belum'] === 0
+            && $ringkasan['persentase'] === 100
+        );
+        $response->assertViewHas('statusPerSiswa', fn ($status) => $status->get($data['anggota_a1']->siswa_id)['status'] === 'sudah'
+            && $status->get($data['anggota_a2']->siswa_id)['status'] === 'berhalangan'
+            && $status->get($anggotaSakit->siswa_id)['status'] === 'tidak_hadir'
+        );
+
+        $this->get(route('rekap-kegiatan-ibadah.index', [...$parameter, 'status' => 'belum']))
+            ->assertOk()
+            ->assertViewHas('anggotaKelas', fn ($anggota) => $anggota->total() === 0);
+        $this->get(route('rekap-kegiatan-ibadah.index', [...$parameter, 'status' => 'berhalangan']))
+            ->assertOk()
+            ->assertSee('Siswa Belum Presensi')
+            ->assertDontSee('Siswa Sakit');
+        $this->get(route('rekap-kegiatan-ibadah.index', [...$parameter, 'status' => 'tidak_hadir']))
+            ->assertOk()
+            ->assertSee('Siswa Sakit')
+            ->assertDontSee('Siswa Belum Presensi');
     }
 
     public function test_guru_pai_dan_guru_piket_pada_hari_terkait_dapat_melihat_rekap(): void
@@ -403,6 +497,19 @@ class RekapKegiatanIbadahTest extends TestCase
         $anggotaA1 = AnggotaKelas::create(['tahun_pelajaran_id' => $tahun->id, 'kelas_id' => $kelasA->id, 'siswa_id' => $siswaA1->id, 'nomor_absen' => 1, 'status_keanggotaan' => 'aktif']);
         $anggotaA2 = AnggotaKelas::create(['tahun_pelajaran_id' => $tahun->id, 'kelas_id' => $kelasA->id, 'siswa_id' => $siswaA2->id, 'nomor_absen' => 2, 'status_keanggotaan' => 'aktif']);
         $anggotaB1 = AnggotaKelas::create(['tahun_pelajaran_id' => $tahun->id, 'kelas_id' => $kelasB->id, 'siswa_id' => $siswaB1->id, 'nomor_absen' => 1, 'status_keanggotaan' => 'aktif']);
+        foreach ([$anggotaA1, $anggotaA2, $anggotaB1] as $anggota) {
+            AbsensiSiswa::create([
+                'tanggal' => '2026-08-13',
+                'tahun_pelajaran_id' => $tahun->id,
+                'kelas_id' => $anggota->kelas_id,
+                'anggota_kelas_id' => $anggota->id,
+                'siswa_id' => $anggota->siswa_id,
+                'jam_masuk' => '06:30:00',
+                'status_masuk' => 'tepat_waktu',
+                'status_kehadiran' => 'hadir',
+                'sumber' => 'scan',
+            ]);
+        }
         $kegiatan = KegiatanIbadah::where('kode', 'sholat_duhur')->firstOrFail();
         $jadwal = JadwalKegiatanIbadah::create([
             'kegiatan_ibadah_id' => $kegiatan->id,

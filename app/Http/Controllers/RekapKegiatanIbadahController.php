@@ -9,19 +9,23 @@ use App\Models\Kelas;
 use App\Models\PresensiKegiatanIbadah;
 use App\Models\TahunPelajaran;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
+use App\Services\Ibadah\RekapHarianKegiatanIbadah;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class RekapKegiatanIbadahController extends Controller
 {
-    public function index(Request $request, AksesScanKegiatanIbadah $akses)
-    {
+    public function index(
+        Request $request,
+        AksesScanKegiatanIbadah $akses,
+        RekapHarianKegiatanIbadah $rekapHarian,
+    ) {
         $data = $request->validate([
             'tanggal' => ['nullable', 'date', 'before_or_equal:today'],
             'kegiatan_ibadah_id' => ['nullable', 'integer', 'exists:kegiatan_ibadah,id'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'status' => ['nullable', Rule::in(['semua', 'sudah', 'belum'])],
+            'status' => ['nullable', Rule::in(['semua', 'sudah', 'belum', 'berhalangan', 'tidak_hadir'])],
             'cari' => ['nullable', 'string', 'max:100'],
         ]);
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->startOfDay();
@@ -74,38 +78,18 @@ class RekapKegiatanIbadahController extends Controller
         $cari = trim((string) ($data['cari'] ?? ''));
         $tanggalString = $tanggal->toDateString();
 
-        $jumlahPresensiPerKelas = ($tahunPelajaran && $kegiatanId)
-            ? PresensiKegiatanIbadah::query()
-                ->selectRaw('kelas_id, COUNT(DISTINCT siswa_id) as jumlah')
-                ->where('tahun_pelajaran_id', $tahunPelajaran->id)
-                ->where('kegiatan_ibadah_id', $kegiatanId)
-                ->whereDate('tanggal', $tanggalString)
-                ->whereIn('kelas_id', $daftarKelas->pluck('id'))
-                ->groupBy('kelas_id')
-                ->pluck('jumlah', 'kelas_id')
-            : collect();
-        $ringkasanKelas = $daftarKelas->map(function (Kelas $kelas) use ($jumlahPresensiPerKelas) {
-            $total = (int) $kelas->jumlah_siswa;
-            $sudah = min((int) ($jumlahPresensiPerKelas[$kelas->id] ?? 0), $total);
-
-            return [
-                'kelas' => $kelas,
-                'total' => $total,
-                'sudah' => $sudah,
-                'belum' => max($total - $sudah, 0),
-                'persentase' => $total > 0 ? (int) round(($sudah / $total) * 100) : 0,
-            ];
-        });
+        $hasilHarian = ($tahunPelajaran && $kegiatanId)
+            ? $rekapHarian->hitung($tahunPelajaran, $daftarKelas, $kegiatanId, $tanggal)
+            : ['status_per_siswa' => collect(), 'ringkasan_per_kelas' => collect()];
+        $statusPerSiswa = $hasilHarian['status_per_siswa'];
+        $ringkasanKelas = $daftarKelas->map(fn (Kelas $kelas) => [
+            'kelas' => $kelas,
+            ...($hasilHarian['ringkasan_per_kelas']->get((int) $kelas->id)
+                ?? RekapHarianKegiatanIbadah::ringkasanKosong()),
+        ]);
         $cakupan = $kelasId
             ? $ringkasanKelas->first(fn (array $item) => (int) $item['kelas']->id === $kelasId)
-            : [
-                'total' => $ringkasanKelas->sum('total'),
-                'sudah' => $ringkasanKelas->sum('sudah'),
-                'belum' => $ringkasanKelas->sum('belum'),
-                'persentase' => $ringkasanKelas->sum('total') > 0
-                    ? (int) round(($ringkasanKelas->sum('sudah') / $ringkasanKelas->sum('total')) * 100)
-                    : 0,
-            ];
+            : $this->jumlahkanRingkasan($ringkasanKelas);
 
         $anggotaKelas = null;
         $presensiPerSiswa = collect();
@@ -127,19 +111,9 @@ class RekapKegiatanIbadahController extends Controller
                             });
                         });
                 })
-                ->when($status === 'sudah', fn ($query) => $query->whereHas(
-                    'siswa.presensiKegiatanIbadah',
-                    fn ($query) => $query
-                        ->where('tahun_pelajaran_id', $tahunPelajaran->id)
-                        ->where('kegiatan_ibadah_id', $kegiatanId)
-                        ->whereDate('tanggal', $tanggalString),
-                ))
-                ->when($status === 'belum', fn ($query) => $query->whereDoesntHave(
-                    'siswa.presensiKegiatanIbadah',
-                    fn ($query) => $query
-                        ->where('tahun_pelajaran_id', $tahunPelajaran->id)
-                        ->where('kegiatan_ibadah_id', $kegiatanId)
-                        ->whereDate('tanggal', $tanggalString),
+                ->when($status !== 'semua', fn ($query) => $query->whereIn(
+                    'siswa_id',
+                    $statusPerSiswa->where('status', $status)->keys(),
                 ))
                 ->orderByRaw('nomor_absen IS NULL')
                 ->orderBy('nomor_absen')
@@ -181,9 +155,27 @@ class RekapKegiatanIbadahController extends Controller
             'ringkasan' => $cakupan,
             'anggotaKelas' => $anggotaKelas,
             'presensiPerSiswa' => $presensiPerSiswa,
+            'statusPerSiswa' => $statusPerSiswa,
             'jadwal' => $jadwal,
             'dapatScanSekarang' => $tanggal->isToday() && $akses->dapatMemindai($request->user(), $tahunPelajaran, now()),
             'dapatKoreksi' => $akses->dapatMengoreksi($request->user(), $tahunPelajaran, $tanggal),
         ]);
+    }
+
+    private function jumlahkanRingkasan($items): array
+    {
+        $ringkasan = RekapHarianKegiatanIbadah::ringkasanKosong();
+
+        foreach (array_keys($ringkasan) as $kunci) {
+            if ($kunci !== 'persentase') {
+                $ringkasan[$kunci] = (int) $items->sum($kunci);
+            }
+        }
+
+        $ringkasan['persentase'] = $ringkasan['wajib'] > 0
+            ? (int) round(($ringkasan['sudah'] / $ringkasan['wajib']) * 100)
+            : 0;
+
+        return $ringkasan;
     }
 }

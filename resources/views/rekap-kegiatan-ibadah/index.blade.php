@@ -24,7 +24,7 @@
         <div>
             <p class="eyebrow">Kehadiran Siswa</p>
             <h1 class="page-title">Rekap Kegiatan Ibadah</h1>
-            <p class="page-subtitle">Pantau siswa yang sudah dan belum melakukan presensi berdasarkan kelas.</p>
+            <p class="page-subtitle">Pantau siswa yang sudah salat, belum salat, berhalangan, atau tidak hadir berdasarkan kelas.</p>
         </div>
         <div class="actions">
             <a href="{{ route('rekap-kegiatan-ibadah.bulanan') }}" class="button button-muted">Ringkasan bulanan</a>
@@ -59,9 +59,13 @@
 
         <div class="stats-grid worship-stats-grid">
             <div class="panel stat"><p class="stat-label">{{ $kelasDipilih ? 'Siswa kelas '.$kelasDipilih->nama : 'Seluruh siswa' }}</p><p class="stat-value">{{ $ringkasan['total'] }}</p></div>
-            <div class="panel stat active"><p class="stat-label">Sudah presensi</p><p class="stat-value">{{ $ringkasan['sudah'] }}</p></div>
-            <div class="panel stat inactive"><p class="stat-label">Belum presensi</p><p class="stat-value">{{ $ringkasan['belum'] }}</p></div>
-            <div class="panel stat"><p class="stat-label">Capaian</p><p class="stat-value">{{ $ringkasan['persentase'] }}%</p></div>
+            <div class="panel stat"><p class="stat-label">Hadir di sekolah</p><p class="stat-value">{{ $ringkasan['hadir'] }}</p></div>
+            <div class="panel stat inactive"><p class="stat-label">Tidak hadir</p><p class="stat-value">{{ $ringkasan['tidak_hadir'] }}</p></div>
+            <div class="panel stat"><p class="stat-label">Berhalangan</p><p class="stat-value">{{ $ringkasan['berhalangan'] }}</p></div>
+            <div class="panel stat"><p class="stat-label">Wajib salat</p><p class="stat-value">{{ $ringkasan['wajib'] }}</p></div>
+            <div class="panel stat active"><p class="stat-label">Sudah salat</p><p class="stat-value">{{ $ringkasan['sudah'] }}</p></div>
+            <div class="panel stat inactive"><p class="stat-label">Belum salat</p><p class="stat-value">{{ $ringkasan['belum'] }}</p></div>
+            <div class="panel stat"><p class="stat-label">Capaian siswa wajib salat</p><p class="stat-value">{{ $ringkasan['persentase'] }}%</p></div>
         </div>
 
         <div class="section-heading" style="margin:22px 0 12px;"><div><h2 class="panel-title">Ringkasan per kelas</h2><p class="help-text">Tekan kelas untuk membuka daftar siswanya.</p></div>@if($kelasId)<a href="{{ route('rekap-kegiatan-ibadah.index',['tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId]) }}" class="button button-muted button-sm">Semua kelas</a>@endif</div>
@@ -70,8 +74,13 @@
                 @php
                     $parameter = ['tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId,'kelas_id'=>$item['kelas']->id];
                 @endphp
-                <a href="{{ route('rekap-kegiatan-ibadah.index',$parameter) }}" class="worship-class-card {{ (int)$kelasId===(int)$item['kelas']->id ? 'selected' : '' }} {{ $item['total'] > 0 && $item['belum'] === 0 ? 'complete' : '' }}">
-                    <div class="worship-class-main"><div class="worship-class-head"><strong>{{ $item['kelas']->nama }}</strong><span class="worship-percent">{{ $item['persentase'] }}%</span></div><div class="worship-class-count"><strong>{{ $item['sudah'] }}</strong><span>dari {{ $item['total'] }} siswa</span></div></div><div class="worship-progress"><span style="width:{{ $item['persentase'] }}%"></span></div>
+                <a href="{{ route('rekap-kegiatan-ibadah.index',$parameter) }}" class="worship-class-card {{ (int)$kelasId===(int)$item['kelas']->id ? 'selected' : '' }} {{ $item['wajib'] > 0 && $item['belum'] === 0 ? 'complete' : '' }}">
+                    <div class="worship-class-main">
+                        <div class="worship-class-head"><strong>{{ $item['kelas']->nama }}</strong><span class="worship-percent">{{ $item['persentase'] }}%</span></div>
+                        <div class="worship-class-count"><strong>{{ $item['sudah'] }}</strong><span>dari {{ $item['wajib'] }} siswa wajib salat</span></div>
+                        <p class="help-text" style="margin-top:8px;">{{ $item['tidak_hadir'] }} tidak hadir &middot; {{ $item['berhalangan'] }} berhalangan</p>
+                    </div>
+                    <div class="worship-progress"><span style="width:{{ $item['persentase'] }}%"></span></div>
                 </a>
             @empty
                 <div class="panel panel-pad" style="grid-column:1/-1;">Belum ada kelas aktif pada tahun pelajaran ini.</div>
@@ -81,23 +90,45 @@
         @if($kelasDipilih)
             <form method="GET" action="{{ route('rekap-kegiatan-ibadah.index') }}" class="panel panel-pad" style="margin-bottom:16px;">
                 <input type="hidden" name="tanggal" value="{{ $tanggal }}"><input type="hidden" name="kegiatan_ibadah_id" value="{{ $kegiatanId }}"><input type="hidden" name="kelas_id" value="{{ $kelasId }}">
-                <div class="worship-status-layout"><div class="filter-grid"><div class="field"><label for="cari">Cari siswa</label><input id="cari" name="cari" value="{{ $cari }}" class="input" placeholder="Nama, NIS, atau NISN"></div><div class="field"><label for="status">Status presensi</label><select id="status" name="status" class="select" onchange="this.form.submit()"><option value="semua" @selected($status==='semua')>Semua status</option><option value="sudah" @selected($status==='sudah')>Sudah presensi</option><option value="belum" @selected($status==='belum')>Belum presensi</option></select></div></div><div class="actions"><button class="button button-dark" type="submit">Cari</button><a href="{{ route('rekap-kegiatan-ibadah.index',['tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId,'kelas_id'=>$kelasId]) }}" class="button button-muted">Reset</a></div></div>
+                <div class="worship-status-layout"><div class="filter-grid"><div class="field"><label for="cari">Cari siswa</label><input id="cari" name="cari" value="{{ $cari }}" class="input" placeholder="Nama, NIS, atau NISN"></div><div class="field"><label for="status">Status ibadah</label><select id="status" name="status" class="select" onchange="this.form.submit()"><option value="semua" @selected($status==='semua')>Semua status</option><option value="sudah" @selected($status==='sudah')>Sudah salat</option><option value="belum" @selected($status==='belum')>Belum salat</option><option value="berhalangan" @selected($status==='berhalangan')>Berhalangan</option><option value="tidak_hadir" @selected($status==='tidak_hadir')>Tidak hadir sekolah</option></select></div></div><div class="actions"><button class="button button-dark" type="submit">Cari</button><a href="{{ route('rekap-kegiatan-ibadah.index',['tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId,'kelas_id'=>$kelasId]) }}" class="button button-muted">Reset</a></div></div>
             </form>
 
             <section class="panel">
-                <div class="panel-pad" style="border-bottom:1px solid var(--line);"><h2 class="panel-title">Siswa Kelas {{ $kelasDipilih->nama }}</h2><p class="help-text" style="margin-top:5px;">Status belum presensi berarti QR belum tercatat pada kegiatan dan tanggal yang dipilih. Input manual dan koreksi selalu disimpan dalam riwayat.</p></div>
-                <div class="desktop-only table-wrap"><table class="employee-table"><thead><tr><th>No.</th><th>Siswa</th><th>Status</th><th>Waktu</th><th>Dicatat oleh</th>@if($dapatKoreksi)<th>Aksi</th>@endif</tr></thead><tbody>
+                <div class="panel-pad" style="border-bottom:1px solid var(--line);"><h2 class="panel-title">Siswa Kelas {{ $kelasDipilih->nama }}</h2><p class="help-text" style="margin-top:5px;">Belum salat hanya berlaku untuk siswa yang hadir di sekolah, tidak berhalangan, dan belum melakukan scan ibadah. Catatan privat berhalangan tidak ditampilkan di rekap umum.</p></div>
+                <div class="desktop-only table-wrap"><table class="employee-table"><thead><tr><th>No.</th><th>Siswa</th><th>Status ibadah</th><th>Kehadiran sekolah</th><th>Waktu</th><th>Dicatat oleh</th>@if($dapatKoreksi)<th>Aksi</th>@endif</tr></thead><tbody>
                     @forelse($anggotaKelas as $anggota)
-                        @php $presensi=$presensiPerSiswa->get($anggota->siswa_id); @endphp
-                        <tr><td>{{ $anggota->nomor_absen ?: $loop->iteration }}</td><td><div class="student-identity"><img class="student-avatar" src="{{ $anggota->siswa?->foto ? asset('storage/'.$anggota->siswa->foto) : asset('images/kartu-pelajar/default-user.png') }}" alt=""><div><strong>{{ $anggota->siswa?->nama_lengkap }}</strong><span>NISN {{ $anggota->siswa?->nisn ?: '-' }}</span></div></div></td><td><span class="badge {{ $presensi ? 'badge-active' : 'badge-warning' }}">{{ $presensi ? 'Sudah presensi' : 'Belum presensi' }}</span></td><td>{{ $presensi ? substr((string)$presensi->waktu_scan,0,5) : '-' }}</td><td>{{ $presensi?->dipindaiOleh?->nama ?: '-' }}@if($presensi?->dikoreksiOleh)<div class="help-text">Koreksi: {{ $presensi->dikoreksiOleh->nama }}</div>@endif</td>@if($dapatKoreksi)<td><a class="button button-muted button-sm" href="{{ route('rekap-kegiatan-ibadah.koreksi.edit',['anggotaKelas'=>$anggota,'tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId]) }}">{{ $presensi ? 'Koreksi' : 'Input manual' }}</a></td>@endif</tr>
+                        @php
+                            $presensi = $presensiPerSiswa->get($anggota->siswa_id);
+                            $statusHarian = $statusPerSiswa->get($anggota->siswa_id);
+                            $statusKode = $statusHarian['status'] ?? 'tidak_hadir';
+                            $kelasBadge = match($statusKode) {
+                                'sudah' => 'badge-active',
+                                'belum' => 'badge-warning',
+                                'berhalangan' => 'badge-muted',
+                                default => 'badge-inactive',
+                            };
+                            $dapatDikoreksiSiswa = in_array($statusKode, ['sudah', 'belum'], true);
+                        @endphp
+                        <tr><td>{{ $anggota->nomor_absen ?: $loop->iteration }}</td><td><div class="student-identity"><img class="student-avatar" src="{{ $anggota->siswa?->foto ? asset('storage/'.$anggota->siswa->foto) : asset('images/kartu-pelajar/default-user.png') }}" alt=""><div><strong>{{ $anggota->siswa?->nama_lengkap }}</strong><span>NISN {{ $anggota->siswa?->nisn ?: '-' }}</span></div></div></td><td><span class="badge {{ $kelasBadge }}">{{ $statusHarian['status_label'] ?? 'Tidak hadir sekolah' }}</span></td><td>{{ $statusHarian['status_kehadiran_label'] ?? 'Belum tercatat di presensi sekolah' }}</td><td>{{ $presensi ? substr((string)$presensi->waktu_scan,0,5) : '-' }}</td><td>{{ $presensi?->dipindaiOleh?->nama ?: '-' }}@if($presensi?->dikoreksiOleh)<div class="help-text">Koreksi: {{ $presensi->dikoreksiOleh->nama }}</div>@endif</td>@if($dapatKoreksi)<td>@if($dapatDikoreksiSiswa)<a class="button button-muted button-sm" href="{{ route('rekap-kegiatan-ibadah.koreksi.edit',['anggotaKelas'=>$anggota,'tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId]) }}">{{ $presensi ? 'Koreksi' : 'Input manual' }}</a>@else<span class="help-text">Tidak perlu</span>@endif</td>@endif</tr>
                     @empty
-                        <tr><td colspan="{{ $dapatKoreksi ? 6 : 5 }}" class="empty-state">Tidak ada siswa sesuai pencarian atau status.</td></tr>
+                        <tr><td colspan="{{ $dapatKoreksi ? 7 : 6 }}" class="empty-state">Tidak ada siswa sesuai pencarian atau status.</td></tr>
                     @endforelse
                 </tbody></table></div>
                 <div class="mobile-only mobile-list">
                     @forelse($anggotaKelas as $anggota)
-                        @php $presensi=$presensiPerSiswa->get($anggota->siswa_id); @endphp
-                        <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $anggota->nomor_absen ?: $loop->iteration }}. {{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $presensi ? 'badge-active' : 'badge-warning' }}">{{ $presensi ? 'Sudah' : 'Belum' }}</span></div><dl class="mobile-facts"><div><dt>Waktu</dt><dd>{{ $presensi ? substr((string)$presensi->waktu_scan,0,5) : '-' }}</dd></div><div><dt>Dicatat oleh</dt><dd>{{ $presensi?->dipindaiOleh?->nama ?: '-' }}</dd></div></dl>@if($dapatKoreksi)<div class="form-actions" style="margin-top:12px;"><a class="button button-muted button-sm button-full" href="{{ route('rekap-kegiatan-ibadah.koreksi.edit',['anggotaKelas'=>$anggota,'tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId]) }}">{{ $presensi ? 'Koreksi presensi' : 'Input manual' }}</a></div>@endif</article>
+                        @php
+                            $presensi = $presensiPerSiswa->get($anggota->siswa_id);
+                            $statusHarian = $statusPerSiswa->get($anggota->siswa_id);
+                            $statusKode = $statusHarian['status'] ?? 'tidak_hadir';
+                            $kelasBadge = match($statusKode) {
+                                'sudah' => 'badge-active',
+                                'belum' => 'badge-warning',
+                                'berhalangan' => 'badge-muted',
+                                default => 'badge-inactive',
+                            };
+                            $dapatDikoreksiSiswa = in_array($statusKode, ['sudah', 'belum'], true);
+                        @endphp
+                        <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $anggota->nomor_absen ?: $loop->iteration }}. {{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $kelasBadge }}">{{ $statusHarian['status_label'] ?? 'Tidak hadir sekolah' }}</span></div><dl class="mobile-facts"><div><dt>Kehadiran sekolah</dt><dd>{{ $statusHarian['status_kehadiran_label'] ?? 'Belum tercatat di presensi sekolah' }}</dd></div><div><dt>Waktu ibadah</dt><dd>{{ $presensi ? substr((string)$presensi->waktu_scan,0,5) : '-' }}</dd></div><div><dt>Dicatat oleh</dt><dd>{{ $presensi?->dipindaiOleh?->nama ?: '-' }}</dd></div></dl>@if($dapatKoreksi && $dapatDikoreksiSiswa)<div class="form-actions" style="margin-top:12px;"><a class="button button-muted button-sm button-full" href="{{ route('rekap-kegiatan-ibadah.koreksi.edit',['anggotaKelas'=>$anggota,'tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId]) }}">{{ $presensi ? 'Koreksi presensi' : 'Input manual' }}</a></div>@endif</article>
                     @empty
                         <div class="empty-state">Tidak ada siswa sesuai pencarian atau status.</div>
                     @endforelse
@@ -105,7 +136,7 @@
             </section>
             @if($anggotaKelas->hasPages())<div style="margin-top:16px;">{{ $anggotaKelas->links() }}</div>@endif
         @else
-            <section class="panel panel-pad"><h2 class="panel-title">Pilih kelas untuk melihat siswa</h2><p class="help-text" style="margin-top:7px;">Ringkasan seluruh kelas sudah tampil di atas. Tekan salah satu kelas untuk melihat siapa yang sudah dan belum melakukan presensi.</p></section>
+            <section class="panel panel-pad"><h2 class="panel-title">Pilih kelas untuk melihat siswa</h2><p class="help-text" style="margin-top:7px;">Ringkasan seluruh kelas sudah tampil di atas. Tekan salah satu kelas untuk melihat status ibadah dan kehadiran sekolah setiap siswa.</p></section>
         @endif
     @endif
 @endsection
