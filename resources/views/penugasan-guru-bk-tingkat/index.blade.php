@@ -4,29 +4,39 @@
 
 @section('content')
     <style>
-        .bk-assignment-intro { align-items:start; display:grid; gap:18px; grid-template-columns:minmax(0,1fr) minmax(220px,320px); margin-bottom:20px; }
-        .bk-assignment-notes { display:grid; gap:10px; }
-        .bk-assignment-note { align-items:start; background:#f4f8fc; border-left:3px solid var(--primary); border-radius:6px; display:grid; gap:3px; padding:11px 13px; }
-        .bk-assignment-note strong { color:var(--primary-dark); font-size:13px; }
+        .bk-assignment-intro { align-items:stretch; display:grid; gap:16px; grid-template-columns:minmax(0,1fr) 320px; margin-bottom:20px; }
+        .bk-assignment-notes { display:grid; gap:10px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+        .bk-assignment-note { align-items:flex-start; background:#fff; border:1px solid #cbd9e7; border-left:4px solid var(--primary); border-radius:7px; display:grid; gap:3px; grid-template-columns:32px minmax(0,1fr); min-height:112px; padding:14px; }
+        .bk-assignment-note-number { align-items:center; background:var(--primary-soft); border:1px solid #c8dced; border-radius:50%; color:var(--primary-dark); display:flex; font-size:13px; font-weight:850; height:32px; justify-content:center; width:32px; }
+        .bk-assignment-note-copy { display:grid; gap:4px; min-width:0; padding-top:2px; }
+        .bk-assignment-note strong { color:var(--primary-dark); font-size:13px; line-height:1.35; }
         .bk-assignment-note span { color:var(--muted); font-size:13px; line-height:1.45; }
-        .bk-assignment-form { align-items:end; display:grid; gap:14px; grid-template-columns:minmax(240px,1fr) minmax(300px,1.15fr) auto; }
+        .bk-year-filter { align-items:center; border-color:#cbd9e7; display:flex; margin:0; padding:16px 18px; }
+        .bk-year-filter .field { margin:0; width:100%; }
+        .bk-year-filter .select { border-color:#b9c9d9; height:46px; width:100%; }
+        .bk-assignment-panel { border-color:#cbd9e7; }
+        .bk-assignment-form { align-items:end; display:grid; gap:14px; grid-template-columns:minmax(250px,1.1fr) minmax(390px,1.25fr) 166px; }
+        .bk-assignment-form .field { margin:0; min-width:0; }
+        .bk-assignment-form .select { border-color:#b9c9d9; height:46px; width:100%; }
+        .bk-assignment-form > .button { height:46px; width:100%; }
         .bk-grade-options { display:grid; gap:8px; grid-template-columns:repeat(3,minmax(0,1fr)); }
-        .bk-grade-option { align-items:center; border:1px solid var(--line); border-radius:7px; cursor:pointer; display:flex; font-size:14px; font-weight:750; gap:8px; min-height:44px; padding:9px 11px; }
-        .bk-grade-option:has(input:checked) { background:#edf5fc; border-color:#91b9dd; color:var(--primary); }
-        .bk-grade-option input { accent-color:var(--primary); margin:0; }
+        .bk-assignment-form .bk-grade-options > label.bk-grade-option { align-items:center; background:#fff; border:1px solid #b9c9d9; border-radius:7px; cursor:pointer; display:flex; font-size:14px; font-weight:750; gap:8px; height:46px; margin:0; padding:9px 11px; }
+        .bk-assignment-form .bk-grade-options > label.bk-grade-option:has(input:checked) { background:#edf5fc; border-color:#91b9dd; color:var(--primary); }
+        .bk-grade-option input { accent-color:var(--primary); flex:0 0 auto; height:16px; margin:0; width:16px; }
         .bk-grade-grid { display:grid; gap:14px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:20px; }
-        .bk-grade-card { background:#fff; border:1px solid var(--line); border-radius:8px; min-width:0; overflow:hidden; }
-        .bk-grade-head { align-items:center; background:#edf4fa; border-bottom:1px solid #d8e4ef; display:flex; justify-content:space-between; padding:15px 16px; }
+        .bk-grade-card { background:#fff; border:1px solid #c5d5e4; border-radius:8px; display:grid; grid-template-rows:auto 1fr; min-height:142px; min-width:0; overflow:hidden; }
+        .bk-grade-head { align-items:center; background:#eaf2f9; border-bottom:1px solid #c5d5e4; display:flex; gap:12px; justify-content:space-between; min-height:56px; padding:13px 16px; }
         .bk-grade-head h2 { color:var(--primary-dark); font-size:17px; margin:0; }
         .bk-assignee-list { display:grid; }
         .bk-assignee { align-items:center; border-bottom:1px solid var(--line); display:grid; gap:10px; grid-template-columns:minmax(0,1fr) auto; padding:14px 16px; }
         .bk-assignee:last-child { border-bottom:0; }
         .bk-assignee-name { font-weight:800; margin:0; overflow-wrap:anywhere; }
         .bk-assignee-meta { color:var(--muted); font-size:12px; margin:3px 0 0; }
-        .bk-grade-empty { color:var(--muted); font-size:13px; line-height:1.5; padding:20px 16px; text-align:center; }
-        .bk-unassigned { background:#fff7d6; border:1px solid #ecd56b; border-radius:6px; color:#685200; font-size:13px; margin-top:20px; padding:11px 13px; }
-        @media(max-width:980px){.bk-assignment-intro,.bk-assignment-form{grid-template-columns:1fr}.bk-grade-grid{grid-template-columns:1fr}.bk-assignment-form .button{width:100%}}
-        @media(max-width:520px){.bk-grade-options{grid-template-columns:1fr}}
+        .bk-grade-empty { align-items:center; color:var(--muted); display:flex; font-size:13px; justify-content:center; line-height:1.5; min-height:84px; padding:18px 20px; text-align:center; }
+        .bk-unassigned { background:#fff8d9; border:1px solid #dfc552; border-left:4px solid #c69e00; border-radius:7px; color:#685200; font-size:13px; margin-top:20px; padding:12px 14px; }
+        @media(max-width:1080px){.bk-assignment-intro{grid-template-columns:1fr}.bk-assignment-notes{grid-template-columns:repeat(3,minmax(0,1fr))}.bk-year-filter{min-height:auto}.bk-assignment-form{grid-template-columns:1fr 1.15fr}.bk-assignment-form>.button{grid-column:1/-1}}
+        @media(max-width:760px){.bk-assignment-notes,.bk-assignment-form,.bk-grade-grid{grid-template-columns:1fr}.bk-assignment-note{min-height:auto}.bk-assignment-form>.button{grid-column:auto}}
+        @media(max-width:520px){.bk-grade-options{grid-template-columns:1fr}.bk-grade-option{width:100%}}
     </style>
 
     <div class="page-header">
@@ -42,11 +52,11 @@
 
     <div class="bk-assignment-intro">
         <div class="bk-assignment-notes">
-            <div class="bk-assignment-note"><strong>Tetap dapat melihat semua laporan</strong><span>Semua Guru BK dapat membuka laporan seluruh tingkat untuk pemantauan.</span></div>
-            <div class="bk-assignment-note"><strong>Tindakan mengikuti penugasan</strong><span>Keputusan, klarifikasi, bukti, dan tindak lanjut hanya dapat dikerjakan oleh Guru BK tingkat terkait.</span></div>
-            <div class="bk-assignment-note"><strong>Notifikasi lebih terarah</strong><span>Laporan baru dan pengingat hanya dikirim kepada Guru BK yang ditugaskan pada tingkat siswa.</span></div>
+            <div class="bk-assignment-note"><span class="bk-assignment-note-number">1</span><div class="bk-assignment-note-copy"><strong>Tetap dapat melihat semua laporan</strong><span>Semua Guru BK dapat membuka laporan seluruh tingkat untuk pemantauan.</span></div></div>
+            <div class="bk-assignment-note"><span class="bk-assignment-note-number">2</span><div class="bk-assignment-note-copy"><strong>Tindakan mengikuti penugasan</strong><span>Keputusan, klarifikasi, bukti, dan tindak lanjut hanya dapat dikerjakan oleh Guru BK tingkat terkait.</span></div></div>
+            <div class="bk-assignment-note"><span class="bk-assignment-note-number">3</span><div class="bk-assignment-note-copy"><strong>Notifikasi lebih terarah</strong><span>Laporan baru dan pengingat hanya dikirim kepada Guru BK yang ditugaskan pada tingkat siswa.</span></div></div>
         </div>
-        <form method="GET" class="panel panel-pad">
+        <form method="GET" class="panel panel-pad bk-year-filter">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
                 <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select" onchange="this.form.submit()">
@@ -58,7 +68,7 @@
         </form>
     </div>
 
-    <section class="panel panel-pad">
+    <section class="panel panel-pad bk-assignment-panel">
         <div class="page-header" style="margin-bottom:16px">
             <div><h2 class="panel-title">Tambah penugasan</h2><p class="help-text">Satu Guru BK boleh ditugaskan pada beberapa tingkat. Satu tingkat juga boleh ditangani bersama.</p></div>
         </div>
