@@ -61,9 +61,13 @@
     @elseif(!$kegiatanDipilih)
         <section class="panel panel-pad" style="margin-top:20px;"><h2 class="panel-title">Kegiatan ibadah belum tersedia</h2></section>
     @else
+        @if($kegiatanDipilih->khususLakiLaki())
+            <div class="alert" style="margin-top:20px;">Sholat Jumat hanya menghitung siswa laki-laki. Siswi yang langsung pulang tidak menjadi target dan tidak dihitung sebagai belum tercatat.</div>
+        @endif
+
         <div class="monthly-worship-stats">
             <div class="panel stat"><p class="stat-label">Hari kegiatan</p><p class="stat-value">{{ $ringkasan['hari_kegiatan'] }}</p></div>
-            <div class="panel stat"><p class="stat-label">{{ $kelasDipilih ? 'Siswa '.$kelasDipilih->nama : 'Siswa' }}</p><p class="stat-value">{{ $ringkasan['siswa'] }}</p></div>
+            <div class="panel stat"><p class="stat-label">{{ $kelasDipilih ? 'Siswa wajib '.$kelasDipilih->nama : 'Siswa wajib' }}</p><p class="stat-value">{{ $ringkasan['siswa'] }}</p></div>
             <div class="panel stat active"><p class="stat-label">Presensi tercatat</p><p class="stat-value">{{ $ringkasan['tercatat'] }}</p></div>
             <div class="panel stat inactive"><p class="stat-label">Belum tercatat</p><p class="stat-value">{{ $ringkasan['belum'] }}</p></div>
             <div class="panel stat"><p class="stat-label">Capaian</p><p class="stat-value">{{ $formatPersen($ringkasan['persentase']) }}</p></div>
@@ -87,7 +91,7 @@
                 <a href="{{ route('rekap-kegiatan-ibadah.bulanan',$parameterDasar + ['kelas_id'=>$item['kelas']->id]) }}" class="monthly-class-card {{ (int)$kelasId === (int)$item['kelas']->id ? 'selected' : '' }} {{ $item['target'] > 0 && $item['belum'] === 0 ? 'complete' : '' }}">
                     <div class="monthly-class-content">
                         <div class="monthly-class-head"><strong>{{ $item['kelas']->nama }}</strong><span>{{ $formatPersen($item['persentase']) }}</span></div>
-                        <div class="monthly-class-numbers"><div><strong>{{ $item['siswa'] }}</strong><span>Siswa</span></div><div><strong>{{ $item['tercatat'] }}</strong><span>Tercatat</span></div><div><strong>{{ $item['belum'] }}</strong><span>Belum</span></div></div>
+                        <div class="monthly-class-numbers"><div><strong>{{ $item['siswa'] }}</strong><span>Siswa wajib</span></div><div><strong>{{ $item['tercatat'] }}</strong><span>Tercatat</span></div><div><strong>{{ $item['belum'] }}</strong><span>Belum</span></div></div>
                     </div>
                     <div class="monthly-progress"><span style="width:{{ $item['persentase'] }}%"></span></div>
                 </a>

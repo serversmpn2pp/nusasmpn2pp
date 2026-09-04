@@ -4,6 +4,7 @@ namespace App\Services\Ibadah;
 
 use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
+use App\Models\KegiatanIbadah;
 use App\Models\PresensiBerhalanganIbadah;
 use App\Models\PresensiKegiatanIbadah;
 use App\Models\TahunPelajaran;
@@ -20,6 +21,8 @@ class RekapHarianKegiatanIbadah
 
     public const STATUS_TIDAK_HADIR = 'tidak_hadir';
 
+    public const STATUS_TIDAK_WAJIB = 'tidak_wajib';
+
     public function hitung(
         TahunPelajaran $tahunPelajaran,
         Collection $daftarKelas,
@@ -35,8 +38,12 @@ class RekapHarianKegiatanIbadah
             ];
         }
 
+        $khususLakiLaki = KegiatanIbadah::query()
+            ->whereKey($kegiatanIbadahId)
+            ->value('kode') === KegiatanIbadah::KODE_SHOLAT_JUMAT;
         $anggotaKelas = AnggotaKelas::query()
             ->select(['id', 'tahun_pelajaran_id', 'kelas_id', 'siswa_id'])
+            ->with('siswa:id,jenis_kelamin')
             ->where('tahun_pelajaran_id', $tahunPelajaran->id)
             ->whereIn('kelas_id', $kelasIds)
             ->where('status_keanggotaan', 'aktif')
@@ -69,12 +76,14 @@ class RekapHarianKegiatanIbadah
             ->whereIn('siswa_id', $siswaIds)
             ->pluck('id', 'siswa_id');
 
-        $statusPerSiswa = $anggotaKelas->mapWithKeys(function (AnggotaKelas $anggota) use ($absensiPerSiswa, $presensiPerSiswa, $berhalanganPerSiswa) {
+        $statusPerSiswa = $anggotaKelas->mapWithKeys(function (AnggotaKelas $anggota) use ($absensiPerSiswa, $presensiPerSiswa, $berhalanganPerSiswa, $khususLakiLaki) {
             $absensi = $absensiPerSiswa->get($anggota->siswa_id);
             $statusKehadiran = $absensi?->status_kehadiran ?: 'alfa';
 
             if ($statusKehadiran !== 'hadir') {
                 $status = self::STATUS_TIDAK_HADIR;
+            } elseif ($khususLakiLaki && $anggota->siswa?->jenis_kelamin === 'P') {
+                $status = self::STATUS_TIDAK_WAJIB;
             } elseif ($presensiPerSiswa->has($anggota->siswa_id)) {
                 $status = self::STATUS_SUDAH;
             } elseif ($berhalanganPerSiswa->has($anggota->siswa_id)) {
@@ -104,6 +113,7 @@ class RekapHarianKegiatanIbadah
             $belum = $statusKelas->where('status', self::STATUS_BELUM)->count();
             $berhalangan = $statusKelas->where('status', self::STATUS_BERHALANGAN)->count();
             $tidakHadir = $statusKelas->where('status', self::STATUS_TIDAK_HADIR)->count();
+            $tidakWajib = $statusKelas->where('status', self::STATUS_TIDAK_WAJIB)->count();
             $wajib = $sudah + $belum;
 
             return [
@@ -112,6 +122,7 @@ class RekapHarianKegiatanIbadah
                     'hadir' => $total - $tidakHadir,
                     'tidak_hadir' => $tidakHadir,
                     'berhalangan' => $berhalangan,
+                    'tidak_wajib' => $tidakWajib,
                     'wajib' => $wajib,
                     'sudah' => $sudah,
                     'belum' => $belum,
@@ -133,6 +144,7 @@ class RekapHarianKegiatanIbadah
             'hadir' => 0,
             'tidak_hadir' => 0,
             'berhalangan' => 0,
+            'tidak_wajib' => 0,
             'wajib' => 0,
             'sudah' => 0,
             'belum' => 0,
@@ -147,6 +159,7 @@ class RekapHarianKegiatanIbadah
             self::STATUS_BELUM => 'Belum salat',
             self::STATUS_BERHALANGAN => 'Berhalangan',
             self::STATUS_TIDAK_HADIR => 'Tidak hadir sekolah',
+            self::STATUS_TIDAK_WAJIB => 'Tidak wajib (pulang)',
             default => 'Belum diketahui',
         };
     }

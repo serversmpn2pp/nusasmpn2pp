@@ -58,6 +58,24 @@ void main() {
     expect(find.text('Belum dibuka'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('jadwal Sholat Jumat menampilkan ketentuan peserta', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpView(
+      tester,
+      _FakeWorshipScanRemoteDataSource(fridayPrayer: true),
+    );
+
+    expect(find.byKey(const Key('worship-scan-friday-notice')), findsOneWidget);
+    expect(find.textContaining('Khusus siswa laki-laki'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpView(
@@ -91,9 +109,13 @@ Future<void> _pumpView(
 
 final class _FakeWorshipScanRemoteDataSource
     implements WorshipScanRemoteDataSource {
-  _FakeWorshipScanRemoteDataSource({this.open = true});
+  _FakeWorshipScanRemoteDataSource({
+    this.open = true,
+    this.fridayPrayer = false,
+  });
 
   final bool open;
+  final bool fridayPrayer;
   final List<String> submittedValues = [];
   int todayCount = 0;
   final List<WorshipScanAttendance> recent = [];
@@ -117,8 +139,8 @@ final class _FakeWorshipScanRemoteDataSource
           WorshipScanSchedule(
             id: 1,
             activityId: 1,
-            activity: 'Sholat Duhur Berjamaah',
-            activityCode: 'sholat_duhur',
+            activity: fridayPrayer ? 'Sholat Jumat' : 'Sholat Duhur Berjamaah',
+            activityCode: fridayPrayer ? 'sholat_jumat' : 'sholat_duhur',
             scanStart: '11:30',
             eventTime: '12:00',
             scanEnd: '13:00',

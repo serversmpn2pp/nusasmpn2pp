@@ -27,6 +27,7 @@
         .schedule-block { min-width:0; padding:15px 17px; background:#fff; }.schedule-block span,.schedule-block strong { display:block; }.schedule-block span { color:var(--muted); font-size:.75rem; font-weight:700; }.schedule-block strong { margin-top:5px; overflow-wrap:anywhere; font-size:1rem; }
         .schedule-block.highlight { background:#fff8d6; }.schedule-block.highlight strong { color:var(--blue-dark); font-size:1.12rem; }
         .schedule-select { width:100%; margin-top:7px; padding:9px 34px 9px 10px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--ink); font-weight:800; }
+        .friday-note { margin:-2px 0 18px; padding:12px 14px; border:1px solid #f2d374; border-radius:8px; background:#fff8d6; color:#715d09; font-size:.88rem; font-weight:700; line-height:1.45; }
         .scan-layout { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(330px,.75fr); gap:18px; align-items:start; }
         .panel { overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:var(--shadow); }
         .panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px; border-bottom:1px solid var(--line); }.panel-head h2 { margin:0; font-size:1rem; }.panel-head p { margin:4px 0 0; color:var(--muted); font-size:.78rem; }
@@ -85,6 +86,10 @@
             <div class="schedule-block"><span>Waktu scan</span><strong>{{ $jadwalDipilih?->rentangScan() ?? '-' }}</strong></div>
             <div class="schedule-block"><span>Tanggal</span><strong>{{ $tanggalLabel }}</strong></div>
         </section>
+
+        @if($jadwalDipilih?->kegiatanIbadah?->khususLakiLaki())
+            <div class="friday-note"><strong>Sholat Jumat khusus siswa laki-laki.</strong> Siswi tidak perlu melakukan scan dan otomatis dicatat sebagai tidak wajib (pulang) pada rekap.</div>
+        @endif
 
         <div class="scan-layout">
             <div>

@@ -3,6 +3,7 @@
 namespace App\Services\Mobile;
 
 use App\Models\JadwalKegiatanIbadah;
+use App\Models\KegiatanIbadah;
 use App\Models\PengaturanBerhalanganIbadah;
 use App\Models\Pengguna;
 use App\Models\PresensiBerhalanganIbadah;
@@ -109,7 +110,9 @@ class ScanBerhalanganIbadahMobileService
             ->where('tahun_pelajaran_id', $tahunPelajaran->id)
             ->where('hari', $hari)
             ->where('aktif', true)
-            ->whereHas('kegiatanIbadah', fn ($query) => $query->where('aktif', true))
+            ->whereHas('kegiatanIbadah', fn ($query) => $query
+                ->where('aktif', true)
+                ->where('kode', '!=', KegiatanIbadah::KODE_SHOLAT_JUMAT))
             ->orderBy('jam_pelaksanaan')
             ->get();
     }

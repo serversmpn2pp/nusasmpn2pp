@@ -110,6 +110,34 @@ class ScanKegiatanIbadahApiTest extends TestCase
         $this->assertDatabaseCount('log_scan_kegiatan_ibadah', 2);
     }
 
+    public function test_scan_sholat_jumat_menolak_kartu_siswi(): void
+    {
+        Carbon::setTestNow('2026-08-14 12:10:00');
+        $data = $this->dataDasar('jumat');
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $kegiatanJumat = KegiatanIbadah::create([
+            'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
+            'nama' => 'Sholat Jumat',
+            'aktif' => true,
+        ]);
+        $data['siswa']->update(['jenis_kelamin' => 'P']);
+        $data['jadwal']->update(['kegiatan_ibadah_id' => $kegiatanJumat->id]);
+
+        $this->withToken($this->token($administrator))
+            ->postJson(route('api.v1.scan-kegiatan-ibadah.store'), [
+                'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
+                'isi_scan' => $data['siswa']->nisn,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('data.berhasil', false)
+            ->assertJsonPath('data.status', 'peserta_tidak_wajib')
+            ->assertJsonPath('data.siswa.nama_lengkap', $data['siswa']->nama_lengkap)
+            ->assertJsonPath('data.jumlah_hari_ini', 0);
+
+        $this->assertDatabaseCount('presensi_kegiatan_ibadah', 0);
+        $this->assertDatabaseCount('log_scan_kegiatan_ibadah', 1);
+    }
+
     public function test_qr_tidak_valid_dikembalikan_sebagai_hasil_scan_yang_dapat_ditampilkan_mobile(): void
     {
         Carbon::setTestNow('2026-08-10 12:10:00');

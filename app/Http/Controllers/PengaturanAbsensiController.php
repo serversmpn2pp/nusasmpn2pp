@@ -115,6 +115,10 @@ class PengaturanAbsensiController extends Controller
             'jam_scan_pulang_mulai' => ['required', 'date_format:H:i'],
             'jam_pulang' => ['required', 'date_format:H:i'],
             'jam_scan_pulang_selesai' => ['required', 'date_format:H:i'],
+            'pulang_jumat_dibedakan' => ['nullable', 'boolean'],
+            'jam_scan_pulang_perempuan_mulai' => ['nullable', 'date_format:H:i'],
+            'jam_pulang_perempuan' => ['nullable', 'date_format:H:i'],
+            'jam_scan_pulang_perempuan_selesai' => ['nullable', 'date_format:H:i'],
             'aktif' => ['nullable', 'boolean'],
             'keterangan' => ['nullable', 'string'],
         ];
@@ -123,6 +127,14 @@ class PengaturanAbsensiController extends Controller
     private function rapikanData(array $data): array
     {
         $data['urutan_hari'] = PengaturanAbsensi::DAFTAR_HARI[$data['hari']]['urutan'];
+        $data['pulang_jumat_dibedakan'] = $data['hari'] === 'jumat'
+            && (bool) ($data['pulang_jumat_dibedakan'] ?? false);
+
+        if (! $data['pulang_jumat_dibedakan']) {
+            $data['jam_scan_pulang_perempuan_mulai'] = null;
+            $data['jam_pulang_perempuan'] = null;
+            $data['jam_scan_pulang_perempuan_selesai'] = null;
+        }
 
         return $data;
     }
@@ -145,6 +157,43 @@ class PengaturanAbsensiController extends Controller
         if ($mulaiPulang > $jamPulang || $jamPulang > $selesaiPulang) {
             throw ValidationException::withMessages([
                 'jam_pulang' => 'Jam pulang harus berada di antara jam mulai scan pulang dan tutup scan pulang.',
+            ]);
+        }
+
+        if (! $data['pulang_jumat_dibedakan']) {
+            return;
+        }
+
+        $kolomPerempuan = [
+            'jam_scan_pulang_perempuan_mulai' => 'Waktu mulai scan pulang siswi wajib diisi.',
+            'jam_pulang_perempuan' => 'Jam pulang resmi siswi wajib diisi.',
+            'jam_scan_pulang_perempuan_selesai' => 'Waktu tutup scan pulang siswi wajib diisi.',
+        ];
+        $pesan = [];
+
+        foreach ($kolomPerempuan as $kolom => $message) {
+            if (blank($data[$kolom] ?? null)) {
+                $pesan[$kolom] = $message;
+            }
+        }
+
+        if ($pesan !== []) {
+            throw ValidationException::withMessages($pesan);
+        }
+
+        $mulaiPerempuan = $this->menit($data['jam_scan_pulang_perempuan_mulai']);
+        $jamPerempuan = $this->menit($data['jam_pulang_perempuan']);
+        $selesaiPerempuan = $this->menit($data['jam_scan_pulang_perempuan_selesai']);
+
+        if ($mulaiPerempuan > $jamPerempuan || $jamPerempuan > $selesaiPerempuan) {
+            throw ValidationException::withMessages([
+                'jam_pulang_perempuan' => 'Jam pulang resmi siswi harus berada di antara waktu mulai dan tutup scan.',
+            ]);
+        }
+
+        if ($mulaiPerempuan > $mulaiPulang || $jamPerempuan > $jamPulang) {
+            throw ValidationException::withMessages([
+                'jam_pulang_perempuan' => 'Jadwal pulang siswi harus sama atau lebih awal daripada jadwal siswa laki-laki.',
             ]);
         }
     }

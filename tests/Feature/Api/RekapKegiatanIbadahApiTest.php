@@ -196,6 +196,77 @@ class RekapKegiatanIbadahApiTest extends TestCase
             ->assertJsonPath('data.items.0.status', 'tidak_hadir');
     }
 
+    public function test_rekap_api_sholat_jumat_mengecualikan_siswi_dari_capaian(): void
+    {
+        Carbon::setTestNow('2026-08-14 12:30:00');
+        $data = $this->dataDasar();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $kegiatanJumat = KegiatanIbadah::create([
+            'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
+            'nama' => 'Sholat Jumat',
+            'aktif' => true,
+        ]);
+        Siswa::whereKey($data['anggota_sudah']->siswa_id)->update(['jenis_kelamin' => 'L']);
+        Siswa::whereKey($data['anggota_belum']->siswa_id)->update(['jenis_kelamin' => 'P']);
+        $data['jadwal']->update([
+            'kegiatan_ibadah_id' => $kegiatanJumat->id,
+            'hari' => 'jumat',
+            'urutan_hari' => 5,
+        ]);
+
+        foreach ([$data['anggota_sudah'], $data['anggota_belum']] as $anggota) {
+            AbsensiSiswa::create([
+                'tanggal' => '2026-08-14',
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'kelas_id' => $anggota->kelas_id,
+                'anggota_kelas_id' => $anggota->id,
+                'siswa_id' => $anggota->siswa_id,
+                'jam_masuk' => '06:30:00',
+                'status_masuk' => 'tepat_waktu',
+                'status_kehadiran' => 'hadir',
+                'sumber' => 'scan',
+            ]);
+        }
+        PresensiKegiatanIbadah::create([
+            'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
+            'kegiatan_ibadah_id' => $kegiatanJumat->id,
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas']->id,
+            'anggota_kelas_id' => $data['anggota_sudah']->id,
+            'siswa_id' => $data['anggota_sudah']->siswa_id,
+            'dipindai_oleh_pengguna_id' => $administrator->id,
+            'tanggal' => '2026-08-14',
+            'waktu_scan' => '12:05:00',
+            'sumber' => 'kamera',
+        ]);
+        $parameter = [
+            'tanggal' => '2026-08-14',
+            'kegiatan_ibadah_id' => $kegiatanJumat->id,
+            'kelas_id' => $data['kelas']->id,
+        ];
+
+        $response = $this->withToken($this->token($administrator))
+            ->getJson(route('api.v1.rekap-kegiatan-ibadah.index', $parameter))
+            ->assertOk()
+            ->assertJsonPath('data.ringkasan.total', 2)
+            ->assertJsonPath('data.ringkasan.hadir', 2)
+            ->assertJsonPath('data.ringkasan.tidak_wajib', 1)
+            ->assertJsonPath('data.ringkasan.wajib', 1)
+            ->assertJsonPath('data.ringkasan.sudah', 1)
+            ->assertJsonPath('data.ringkasan.belum', 0)
+            ->assertJsonPath('data.ringkasan.persentase', 100);
+
+        $items = collect($response->json('data.items'))->keyBy('status');
+        $this->assertSame('Siswa Belum Ibadah', $items['tidak_wajib']['siswa']['nama']);
+        $this->assertSame('Tidak wajib (pulang)', $items['tidak_wajib']['status_label']);
+
+        $this->withToken($this->token($administrator))
+            ->getJson(route('api.v1.rekap-kegiatan-ibadah.index', [...$parameter, 'status' => 'tidak_wajib']))
+            ->assertOk()
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.siswa.nama', 'Siswa Belum Ibadah');
+    }
+
     public function test_detail_koreksi_input_manual_dan_pembatalan_menyimpan_riwayat(): void
     {
         Carbon::setTestNow('2026-08-13 12:30:00');

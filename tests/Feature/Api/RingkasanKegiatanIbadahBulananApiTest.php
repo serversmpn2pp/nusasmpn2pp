@@ -109,6 +109,46 @@ class RingkasanKegiatanIbadahBulananApiTest extends TestCase
         $this->assertSame(0, $belum['persentase']);
     }
 
+    public function test_ringkasan_bulanan_sholat_jumat_hanya_memuat_siswa_laki_laki(): void
+    {
+        Carbon::setTestNow('2026-08-14 15:00:00');
+        $data = $this->dataDasar();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $kegiatanJumat = KegiatanIbadah::create([
+            'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
+            'nama' => 'Sholat Jumat',
+            'aktif' => true,
+        ]);
+        Siswa::whereKey($data['anggota_a1']->siswa_id)->update(['jenis_kelamin' => 'L']);
+        Siswa::whereKey($data['anggota_a2']->siswa_id)->update(['jenis_kelamin' => 'P']);
+        $data['kegiatan'] = $kegiatanJumat;
+        $data['jadwal']->update([
+            'kegiatan_ibadah_id' => $kegiatanJumat->id,
+            'hari' => 'jumat',
+            'urutan_hari' => 5,
+        ]);
+        $this->buatPresensi($data, $data['anggota_a1'], $administrator, '2026-08-07');
+        $this->buatPresensi($data, $data['anggota_a1'], $administrator, '2026-08-14');
+
+        $this->withToken($this->token($administrator))
+            ->getJson(route('api.v1.ringkasan-kegiatan-ibadah-bulanan', [
+                'bulan' => '2026-08',
+                'kegiatan_ibadah_id' => $kegiatanJumat->id,
+                'kelas_id' => $data['kelas_a']->id,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.kegiatan_dipilih.khusus_laki_laki', true)
+            ->assertJsonPath('data.kegiatan_dipilih.cakupan_peserta', 'Khusus siswa laki-laki')
+            ->assertJsonPath('data.ringkasan.siswa', 1)
+            ->assertJsonPath('data.ringkasan.target', 2)
+            ->assertJsonPath('data.ringkasan.tercatat', 2)
+            ->assertJsonPath('data.ringkasan.belum', 0)
+            ->assertJsonPath('data.ringkasan.persentase', 100)
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.siswa.nama', 'Siswa A Hadir')
+            ->assertJsonPath('data.catatan_perhitungan', fn ($value) => str_contains($value, 'hanya menghitung siswa laki-laki'));
+    }
+
     public function test_ringkasan_bulanan_menolak_bulan_masa_depan(): void
     {
         Carbon::setTestNow('2026-08-13 15:00:00');

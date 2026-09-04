@@ -128,6 +128,8 @@ class WorshipScanSchedule {
   final String scanRange;
   final bool scanOpen;
   final String? notes;
+
+  bool get maleOnly => activityCode == 'sholat_jumat';
 }
 
 class WorshipScanAttendance {

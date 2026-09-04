@@ -275,6 +275,57 @@
                 font-weight: 900;
             }
 
+            .friday-dismissal-list {
+                display: grid;
+                gap: 8px;
+                margin-top: 8px;
+            }
+
+            .friday-dismissal-row {
+                display: grid;
+                min-width: 0;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 4px 10px;
+                align-items: center;
+                border-top: 1px solid rgba(255, 255, 255, .16);
+                padding-top: 8px;
+            }
+
+            .friday-dismissal-row:first-child {
+                border-top: 0;
+                padding-top: 0;
+            }
+
+            .friday-dismissal-group,
+            .friday-dismissal-time,
+            .friday-dismissal-window {
+                margin: 0;
+            }
+
+            .friday-dismissal-group {
+                color: var(--muted);
+                font-size: .78rem;
+                font-weight: 900;
+            }
+
+            .friday-dismissal-time {
+                color: #fff;
+                font-feature-settings: "tnum" 1;
+                font-size: 1.35rem;
+                font-variant-numeric: tabular-nums;
+                font-weight: 950;
+                line-height: 1;
+                white-space: nowrap;
+            }
+
+            .friday-dismissal-window {
+                grid-column: 1 / -1;
+                color: var(--muted);
+                font-size: .72rem;
+                font-weight: 750;
+                overflow-wrap: anywhere;
+            }
+
             .scanner-panel {
                 display: grid;
                 grid-template-rows: auto auto minmax(0, 1fr) auto;
@@ -643,6 +694,24 @@
                     line-height: 1.35;
                 }
 
+                .friday-dismissal-list {
+                    gap: 6px;
+                    margin-top: 6px;
+                }
+
+                .friday-dismissal-row {
+                    gap: 3px 8px;
+                    padding-top: 6px;
+                }
+
+                .friday-dismissal-time {
+                    font-size: 1.15rem;
+                }
+
+                .friday-dismissal-window {
+                    font-size: .66rem;
+                }
+
                 .scanner-panel {
                     grid-template-rows: auto auto minmax(0, 1fr) minmax(88px, 126px);
                     gap: 10px;
@@ -809,9 +878,25 @@
                                 </div>
 
                                 <div class="schedule-item" id="jadwalPulang">
-                                    <p class="schedule-label">Jam Pulang Resmi</p>
-                                    <p class="schedule-time">{{ $jadwal['jam_pulang'] }}</p>
-                                    <p class="schedule-note"><strong>Waktu scan pulang:</strong> {{ $jadwal['jam_scan_pulang_mulai'] }} - {{ $jadwal['jam_scan_pulang_selesai'] }}</p>
+                                    @if ($jadwal['pulang_jumat_dibedakan'])
+                                        <p class="schedule-label">Jam Pulang Jumat</p>
+                                        <div class="friday-dismissal-list">
+                                            <div class="friday-dismissal-row">
+                                                <p class="friday-dismissal-group">Siswi</p>
+                                                <p class="friday-dismissal-time">{{ $jadwal['jam_pulang_perempuan'] }}</p>
+                                                <p class="friday-dismissal-window">Scan {{ $jadwal['jam_scan_pulang_perempuan_mulai'] }} - {{ $jadwal['jam_scan_pulang_perempuan_selesai'] }}</p>
+                                            </div>
+                                            <div class="friday-dismissal-row">
+                                                <p class="friday-dismissal-group">Siswa laki-laki</p>
+                                                <p class="friday-dismissal-time">{{ $jadwal['jam_pulang'] }}</p>
+                                                <p class="friday-dismissal-window">Scan {{ $jadwal['jam_scan_pulang_mulai'] }} - {{ $jadwal['jam_scan_pulang_selesai'] }}</p>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <p class="schedule-label">Jam Pulang Resmi</p>
+                                        <p class="schedule-time">{{ $jadwal['jam_pulang'] }}</p>
+                                        <p class="schedule-note"><strong>Waktu scan pulang:</strong> {{ $jadwal['jam_scan_pulang_mulai'] }} - {{ $jadwal['jam_scan_pulang_selesai'] }}</p>
+                                    @endif
                                 </div>
                             </div>
                         @else
@@ -946,7 +1031,24 @@
                     return { label: 'Masuk', aktif: 'masuk' };
                 }
 
-                if (menit >= pulangMulai && menit <= pulangSelesai) {
+                if (jadwal.pulang_jumat_dibedakan) {
+                    const perempuanMulai = menitDariJam(jadwal.jam_scan_pulang_perempuan_mulai);
+                    const perempuanSelesai = menitDariJam(jadwal.jam_scan_pulang_perempuan_selesai);
+                    const perempuanAktif = menit >= perempuanMulai && menit <= perempuanSelesai;
+                    const lakiLakiAktif = menit >= pulangMulai && menit <= pulangSelesai;
+
+                    if (perempuanAktif && lakiLakiAktif) {
+                        return { label: 'Pulang semua siswa', aktif: 'pulang' };
+                    }
+
+                    if (perempuanAktif) {
+                        return { label: 'Pulang siswi', aktif: 'pulang' };
+                    }
+
+                    if (lakiLakiAktif) {
+                        return { label: 'Pulang siswa laki-laki', aktif: 'pulang' };
+                    }
+                } else if (menit >= pulangMulai && menit <= pulangSelesai) {
                     return { label: 'Pulang', aktif: 'pulang' };
                 }
 
@@ -1052,7 +1154,9 @@
                     return 'recorded';
                 }
 
-                if (payload.status === 'jadwal_absensi_tidak_ada' || payload.status?.startsWith('di_luar_jadwal')) {
+                if (payload.status === 'jadwal_absensi_tidak_ada'
+                    || payload.status === 'pulang_jumat_belum_dibuka'
+                    || payload.status?.startsWith('di_luar_jadwal')) {
                     return 'warning';
                 }
 
@@ -1069,7 +1173,9 @@
                 }
 
                 if (kategori === 'warning') {
-                    return payload.status?.startsWith('di_luar_jadwal')
+                    return payload.status === 'pulang_jumat_belum_dibuka'
+                        ? 'Belum waktunya pulang'
+                        : payload.status?.startsWith('di_luar_jadwal')
                         ? 'Belum waktunya scan'
                         : 'Jadwal belum aktif';
                 }

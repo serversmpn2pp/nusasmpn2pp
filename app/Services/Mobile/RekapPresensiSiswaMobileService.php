@@ -99,7 +99,7 @@ class RekapPresensiSiswaMobileService
         $tanggal = Carbon::parse($tanggal)->toDateString();
         $this->koreksi->pastikanTanggalDiizinkan($pengguna, $tanggal);
         abort_unless($pengguna->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id), 403);
-        $anggotaKelas->load(['tahunPelajaran:id,nama,aktif', 'kelas:id,nama,tingkat', 'siswa:id,nama_lengkap,nis,nisn,foto']);
+        $anggotaKelas->load(['tahunPelajaran:id,nama,aktif', 'kelas:id,nama,tingkat', 'siswa:id,nama_lengkap,nis,nisn,jenis_kelamin,foto']);
         $absensi = $this->koreksi->ambilAbsensi($tanggal, $anggotaKelas);
         $akses = $this->koreksi->evaluasiAkses($pengguna, $anggotaKelas, $tanggal, $absensi);
         $hari = array_keys(PengaturanAbsensi::DAFTAR_HARI)[Carbon::parse($tanggal)->isoWeekday() - 1];
@@ -111,6 +111,8 @@ class RekapPresensiSiswaMobileService
             ->latest('id')
             ->get();
 
+        $jadwalPulang = $pengaturan?->jadwalPulangUntuk($anggotaKelas->siswa?->jenis_kelamin);
+
         return [
             'tanggal' => $tanggal,
             'tanggal_label' => Carbon::parse($tanggal)->locale('id')->translatedFormat('l, d F Y'),
@@ -118,7 +120,7 @@ class RekapPresensiSiswaMobileService
             'jadwal_presensi' => $pengaturan ? [
                 'tersedia' => true,
                 'jam_masuk' => $pengaturan->formatJam($pengaturan->jam_masuk),
-                'jam_pulang' => $pengaturan->formatJam($pengaturan->jam_pulang),
+                'jam_pulang' => $pengaturan->formatJam($jadwalPulang['jam_pulang']),
             ] : ['tersedia' => false, 'jam_masuk' => null, 'jam_pulang' => null],
             'riwayat' => $riwayat->map(fn (RiwayatPerubahanAbsensiSiswa $item) => [
                 'id' => (int) $item->id,

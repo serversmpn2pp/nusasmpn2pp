@@ -62,6 +62,10 @@ class PengaturanPresensiSiswaController extends Controller
             'jam_scan_pulang_mulai' => ['required', 'date_format:H:i'],
             'jam_pulang' => ['required', 'date_format:H:i'],
             'jam_scan_pulang_selesai' => ['required', 'date_format:H:i'],
+            'pulang_jumat_dibedakan' => ['nullable', 'boolean'],
+            'jam_scan_pulang_perempuan_mulai' => ['nullable', 'date_format:H:i'],
+            'jam_pulang_perempuan' => ['nullable', 'date_format:H:i'],
+            'jam_scan_pulang_perempuan_selesai' => ['nullable', 'date_format:H:i'],
             'aktif' => ['required', 'boolean'],
             'keterangan' => ['nullable', 'string', 'max:2000'],
         ];

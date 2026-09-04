@@ -30,7 +30,15 @@
             <div class="detail-profile">
                 <div class="avatar avatar-lg">JA</div>
                 <h2>{{ $pengaturanAbsensi->labelHari() }}</h2>
-                <p>Masuk {{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_masuk) }} - Pulang {{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang) }}</p>
+                <p>
+                    Masuk {{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_masuk) }} -
+                    @if ($pengaturanAbsensi->pulangJumatDibedakan())
+                        Pulang siswi {{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang_perempuan) }},
+                        laki-laki {{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang) }}
+                    @else
+                        Pulang {{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang) }}
+                    @endif
+                </p>
 
                 <div style="margin-top: 16px;">
                     @if ($pengaturanAbsensi->aktif)
@@ -73,19 +81,36 @@
 
             <section class="panel panel-pad">
                 <h2 class="panel-title">Jam Pulang</h2>
+                @if ($pengaturanAbsensi->pulangJumatDibedakan())
+                    <p class="help-text" style="margin-bottom: 16px;">Jadwal Jumat dibedakan. Data jenis kelamin yang belum lengkap mengikuti jadwal siswa laki-laki.</p>
+                @endif
                 <dl class="detail-grid">
                     <div class="detail-item">
-                        <dt>Mulai scan</dt>
+                        <dt>{{ $pengaturanAbsensi->pulangJumatDibedakan() ? 'Mulai scan laki-laki' : 'Mulai scan' }}</dt>
                         <dd>{{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_mulai) }}</dd>
                     </div>
                     <div class="detail-item">
-                        <dt>Jam pulang resmi</dt>
+                        <dt>{{ $pengaturanAbsensi->pulangJumatDibedakan() ? 'Pulang resmi laki-laki' : 'Jam pulang resmi' }}</dt>
                         <dd>{{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang) }}</dd>
                     </div>
                     <div class="detail-item">
-                        <dt>Tutup scan</dt>
+                        <dt>{{ $pengaturanAbsensi->pulangJumatDibedakan() ? 'Tutup scan laki-laki' : 'Tutup scan' }}</dt>
                         <dd>{{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_selesai) }}</dd>
                     </div>
+                    @if ($pengaturanAbsensi->pulangJumatDibedakan())
+                        <div class="detail-item">
+                            <dt>Mulai scan siswi</dt>
+                            <dd>{{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_perempuan_mulai) }}</dd>
+                        </div>
+                        <div class="detail-item">
+                            <dt>Pulang resmi siswi</dt>
+                            <dd>{{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang_perempuan) }}</dd>
+                        </div>
+                        <div class="detail-item">
+                            <dt>Tutup scan siswi</dt>
+                            <dd>{{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_perempuan_selesai) }}</dd>
+                        </div>
+                    @endif
                     <div class="detail-item span-2">
                         <dt>Keterangan</dt>
                         <dd style="white-space: pre-line;">{{ $teks($pengaturanAbsensi->keterangan) }}</dd>

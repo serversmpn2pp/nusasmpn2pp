@@ -50,15 +50,17 @@ class PengaturanPresensiSiswaMobileService
 
     public function tambah(array $data): PengaturanAbsensi
     {
-        $this->pastikanUrutanWaktuBenar($data);
+        $dataSimpan = $this->dataSimpan($data);
+        $this->pastikanUrutanWaktuBenar($dataSimpan);
 
-        return PengaturanAbsensi::create($this->dataSimpan($data));
+        return PengaturanAbsensi::create($dataSimpan);
     }
 
     public function ubah(PengaturanAbsensi $pengaturanAbsensi, array $data): void
     {
-        $this->pastikanUrutanWaktuBenar($data);
-        $pengaturanAbsensi->update($this->dataSimpan($data));
+        $dataSimpan = $this->dataSimpan($data, $pengaturanAbsensi);
+        $this->pastikanUrutanWaktuBenar($dataSimpan);
+        $pengaturanAbsensi->update($dataSimpan);
     }
 
     private function ringkas(PengaturanAbsensi $item): array
@@ -74,13 +76,25 @@ class PengaturanPresensiSiswaMobileService
             'jam_scan_pulang_mulai' => $item->formatJam($item->jam_scan_pulang_mulai),
             'jam_pulang' => $item->formatJam($item->jam_pulang),
             'jam_scan_pulang_selesai' => $item->formatJam($item->jam_scan_pulang_selesai),
+            'pulang_jumat_dibedakan' => $item->pulangJumatDibedakan(),
+            'jam_scan_pulang_perempuan_mulai' => $item->pulangJumatDibedakan()
+                ? $item->formatJam($item->jam_scan_pulang_perempuan_mulai) : null,
+            'jam_pulang_perempuan' => $item->pulangJumatDibedakan()
+                ? $item->formatJam($item->jam_pulang_perempuan) : null,
+            'jam_scan_pulang_perempuan_selesai' => $item->pulangJumatDibedakan()
+                ? $item->formatJam($item->jam_scan_pulang_perempuan_selesai) : null,
             'aktif' => (bool) $item->aktif,
             'keterangan' => $item->keterangan,
         ];
     }
 
-    private function dataSimpan(array $data): array
+    private function dataSimpan(array $data, ?PengaturanAbsensi $pengaturanAbsensi = null): array
     {
+        $dibedakan = $data['hari'] === 'jumat'
+            && (array_key_exists('pulang_jumat_dibedakan', $data)
+                ? (bool) $data['pulang_jumat_dibedakan']
+                : (bool) $pengaturanAbsensi?->pulang_jumat_dibedakan);
+
         return [
             'hari' => $data['hari'],
             'urutan_hari' => PengaturanAbsensi::DAFTAR_HARI[$data['hari']]['urutan'],
@@ -90,6 +104,13 @@ class PengaturanPresensiSiswaMobileService
             'jam_scan_pulang_mulai' => $data['jam_scan_pulang_mulai'],
             'jam_pulang' => $data['jam_pulang'],
             'jam_scan_pulang_selesai' => $data['jam_scan_pulang_selesai'],
+            'pulang_jumat_dibedakan' => $dibedakan,
+            'jam_scan_pulang_perempuan_mulai' => $dibedakan
+                ? ($data['jam_scan_pulang_perempuan_mulai'] ?? $pengaturanAbsensi?->jam_scan_pulang_perempuan_mulai) : null,
+            'jam_pulang_perempuan' => $dibedakan
+                ? ($data['jam_pulang_perempuan'] ?? $pengaturanAbsensi?->jam_pulang_perempuan) : null,
+            'jam_scan_pulang_perempuan_selesai' => $dibedakan
+                ? ($data['jam_scan_pulang_perempuan_selesai'] ?? $pengaturanAbsensi?->jam_scan_pulang_perempuan_selesai) : null,
             'aktif' => (bool) $data['aktif'],
             'keterangan' => filled($data['keterangan'] ?? null)
                 ? trim($data['keterangan'])
@@ -116,6 +137,39 @@ class PengaturanPresensiSiswaMobileService
         )) {
             throw ValidationException::withMessages([
                 'jam_pulang' => 'Jam pulang resmi harus berada di antara waktu mulai dan tutup scan pulang.',
+            ]);
+        }
+
+        if (! $data['pulang_jumat_dibedakan']) {
+            return;
+        }
+
+        $kolomPerempuan = [
+            'jam_scan_pulang_perempuan_mulai' => 'Waktu mulai scan pulang siswi wajib diisi.',
+            'jam_pulang_perempuan' => 'Jam pulang resmi siswi wajib diisi.',
+            'jam_scan_pulang_perempuan_selesai' => 'Waktu tutup scan pulang siswi wajib diisi.',
+        ];
+
+        foreach ($kolomPerempuan as $kolom => $pesan) {
+            if (blank($data[$kolom] ?? null)) {
+                throw ValidationException::withMessages([$kolom => $pesan]);
+            }
+        }
+
+        if (! $this->berurutan(
+            $data['jam_scan_pulang_perempuan_mulai'],
+            $data['jam_pulang_perempuan'],
+            $data['jam_scan_pulang_perempuan_selesai'],
+        )) {
+            throw ValidationException::withMessages([
+                'jam_pulang_perempuan' => 'Jam pulang resmi siswi harus berada di antara waktu mulai dan tutup scan.',
+            ]);
+        }
+
+        if ($this->menit($data['jam_scan_pulang_perempuan_mulai']) > $this->menit($data['jam_scan_pulang_mulai'])
+            || $this->menit($data['jam_pulang_perempuan']) > $this->menit($data['jam_pulang'])) {
+            throw ValidationException::withMessages([
+                'jam_pulang_perempuan' => 'Jadwal pulang siswi harus sama atau lebih awal daripada jadwal siswa laki-laki.',
             ]);
         }
     }

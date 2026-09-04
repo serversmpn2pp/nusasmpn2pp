@@ -65,7 +65,7 @@ class RingkasanKegiatanIbadahBulananMobileService
 
         $anggotaKelas = $tahunPelajaran
             ? AnggotaKelas::query()
-                ->with('siswa:id,nama_lengkap,nis,nisn,foto,aktif')
+                ->with('siswa:id,nama_lengkap,nis,nisn,foto,aktif,jenis_kelamin')
                 ->where('tahun_pelajaran_id', $tahunPelajaran->id)
                 ->where('status_keanggotaan', 'aktif')
                 ->whereIn('kelas_id', $daftarKelas->pluck('id'))
@@ -76,6 +76,12 @@ class RingkasanKegiatanIbadahBulananMobileService
                 ->orderBy('id')
                 ->get()
             : collect();
+
+        if ($kegiatanDipilih?->khususLakiLaki()) {
+            $anggotaKelas = $anggotaKelas
+                ->reject(fn (AnggotaKelas $anggota) => $anggota->siswa?->jenis_kelamin === 'P')
+                ->values();
+        }
 
         [$tanggalMulai, $tanggalSelesai] = $this->batasPeriode($bulan, $tahunPelajaran);
         $tanggalKegiatan = $this->tanggalKegiatan(
@@ -174,12 +180,15 @@ class RingkasanKegiatanIbadahBulananMobileService
                 'nama' => $kegiatanDipilih->nama,
                 'kode' => $kegiatanDipilih->kode,
                 'aktif' => (bool) $kegiatanDipilih->aktif,
+                'khusus_laki_laki' => $kegiatanDipilih->khususLakiLaki(),
+                'cakupan_peserta' => $kegiatanDipilih->labelCakupanPeserta(),
             ] : null,
             'kelas_dipilih' => $kelasDipilih ? $this->dataKelas($kelasDipilih) : null,
             'referensi' => [
                 'kegiatan' => $daftarKegiatan->map(fn (KegiatanIbadah $item) => [
                     'id' => (int) $item->id,
                     'nama' => $item->nama,
+                    'kode' => $item->kode,
                     'aktif' => (bool) $item->aktif,
                 ])->values(),
                 'kelas' => $daftarKelas->map(fn (Kelas $item) => $this->dataKelas($item))->values(),
@@ -191,7 +200,9 @@ class RingkasanKegiatanIbadahBulananMobileService
             'ringkasan' => $ringkasan,
             'ringkasan_kelas' => $ringkasanKelas->values(),
             'items' => $detailSiswa,
-            'catatan_perhitungan' => 'Tanggal kegiatan dihitung sampai hari ini. Tanggal libur belum dikecualikan karena kalender akademik libur belum tersedia.',
+            'catatan_perhitungan' => ($kegiatanDipilih?->khususLakiLaki()
+                ? 'Sholat Jumat hanya menghitung siswa laki-laki. Siswi yang langsung pulang tidak menjadi target dan tidak dihitung belum tercatat. '
+                : '').'Tanggal kegiatan dihitung sampai hari ini. Tanggal libur belum dikecualikan karena kalender akademik libur belum tersedia.',
             'pesan_privasi' => 'Status dan catatan berhalangan tidak ditampilkan pada ringkasan umum dan tetap dikelola melalui ruang privat pendamping.',
         ];
     }

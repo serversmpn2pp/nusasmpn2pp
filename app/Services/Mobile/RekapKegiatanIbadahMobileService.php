@@ -134,6 +134,8 @@ class RekapKegiatanIbadahMobileService
                 'nama' => $kegiatanDipilih->nama,
                 'kode' => $kegiatanDipilih->kode,
                 'aktif' => (bool) $kegiatanDipilih->aktif,
+                'khusus_laki_laki' => $kegiatanDipilih->khususLakiLaki(),
+                'cakupan_peserta' => $kegiatanDipilih->labelCakupanPeserta(),
             ] : null,
             'kelas_dipilih_id' => $kelasId,
             'filter' => [
@@ -144,6 +146,7 @@ class RekapKegiatanIbadahMobileService
                 'kegiatan' => $daftarKegiatan->map(fn (KegiatanIbadah $item) => [
                     'id' => (int) $item->id,
                     'nama' => $item->nama,
+                    'kode' => $item->kode,
                     'aktif' => (bool) $item->aktif,
                 ])->values(),
                 'kelas' => $daftarKelas->map(fn (Kelas $item) => [
@@ -159,6 +162,7 @@ class RekapKegiatanIbadahMobileService
                 'hadir' => (int) ($ringkasan['hadir'] ?? 0),
                 'tidak_hadir' => (int) ($ringkasan['tidak_hadir'] ?? 0),
                 'berhalangan' => (int) ($ringkasan['berhalangan'] ?? 0),
+                'tidak_wajib' => (int) ($ringkasan['tidak_wajib'] ?? 0),
                 'wajib' => (int) ($ringkasan['wajib'] ?? 0),
                 'sudah' => (int) ($ringkasan['sudah'] ?? 0),
                 'belum' => (int) ($ringkasan['belum'] ?? 0),
@@ -463,6 +467,12 @@ class RekapKegiatanIbadahMobileService
             'Wali kelas hanya dapat mengoreksi presensi ibadah siswa di kelas yang diampunya.',
         );
         $kegiatan = KegiatanIbadah::query()->findOrFail($kegiatanId);
+        if ($kegiatan->khususLakiLaki()
+            && $anggota->siswa()->where('jenis_kelamin', 'P')->exists()) {
+            throw ValidationException::withMessages([
+                'anggota_kelas_id' => 'Siswi tidak wajib mengikuti Sholat Jumat dan tidak memerlukan koreksi presensi ibadah.',
+            ]);
+        }
 
         return [$tahun, $kegiatan, $this->jadwalPada($tahun, $kegiatanId, $tanggal)];
     }

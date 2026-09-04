@@ -17,12 +17,17 @@ class PengaturanAbsensi extends Model
         'jam_scan_pulang_mulai',
         'jam_pulang',
         'jam_scan_pulang_selesai',
+        'pulang_jumat_dibedakan',
+        'jam_scan_pulang_perempuan_mulai',
+        'jam_pulang_perempuan',
+        'jam_scan_pulang_perempuan_selesai',
         'aktif',
         'keterangan',
     ];
 
     protected $casts = [
         'urutan_hari' => 'integer',
+        'pulang_jumat_dibedakan' => 'boolean',
         'aktif' => 'boolean',
     ];
 
@@ -44,15 +49,48 @@ class PengaturanAbsensi extends Model
     public function rentangMasuk(): string
     {
         return $this->formatJam($this->jam_scan_masuk_mulai)
-            . ' - '
-            . $this->formatJam($this->jam_scan_masuk_selesai);
+            .' - '
+            .$this->formatJam($this->jam_scan_masuk_selesai);
     }
 
-    public function rentangPulang(): string
+    public function pulangJumatDibedakan(): bool
     {
-        return $this->formatJam($this->jam_scan_pulang_mulai)
-            . ' - '
-            . $this->formatJam($this->jam_scan_pulang_selesai);
+        return $this->hari === 'jumat'
+            && $this->pulang_jumat_dibedakan
+            && filled($this->jam_scan_pulang_perempuan_mulai)
+            && filled($this->jam_pulang_perempuan)
+            && filled($this->jam_scan_pulang_perempuan_selesai);
+    }
+
+    /** @return array{kelompok: string, jam_scan_pulang_mulai: string|null, jam_pulang: string|null, jam_scan_pulang_selesai: string|null} */
+    public function jadwalPulangUntuk(?string $jenisKelamin = null): array
+    {
+        $jadwalPerempuan = $this->pulangJumatDibedakan()
+            && mb_strtoupper(trim((string) $jenisKelamin)) === 'P';
+
+        return [
+            'kelompok' => $jadwalPerempuan
+                ? 'perempuan'
+                : ($this->pulangJumatDibedakan() ? 'laki_laki' : 'semua'),
+            'jam_scan_pulang_mulai' => $jadwalPerempuan
+                ? $this->jam_scan_pulang_perempuan_mulai
+                : $this->jam_scan_pulang_mulai,
+            'jam_pulang' => $jadwalPerempuan
+                ? $this->jam_pulang_perempuan
+                : $this->jam_pulang,
+            'jam_scan_pulang_selesai' => $jadwalPerempuan
+                ? $this->jam_scan_pulang_perempuan_selesai
+                : $this->jam_scan_pulang_selesai,
+        ];
+    }
+
+    public function rentangPulang(?string $jenisKelamin = null): string
+    {
+        $jadwal = $this->jadwalPulangUntuk($jenisKelamin);
+
+        return $this->formatJam($jadwal['jam_scan_pulang_mulai'])
+            .' - '
+            .$this->formatJam($jadwal['jam_scan_pulang_selesai']);
     }
 
     public function formatJam(?string $jam): string

@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AnggotaKelas;
 use App\Models\JadwalKegiatanIbadah;
-use App\Models\Kelas;
 use App\Models\KegiatanIbadah;
+use App\Models\Kelas;
 use App\Models\PresensiKegiatanIbadah;
 use App\Models\TahunPelajaran;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
@@ -60,7 +60,7 @@ class RingkasanKegiatanIbadahBulananController extends Controller
 
         $anggotaKelas = $tahunPelajaran
             ? AnggotaKelas::query()
-                ->with('siswa:id,nama_lengkap,nis,nisn,foto,aktif')
+                ->with('siswa:id,nama_lengkap,nis,nisn,foto,aktif,jenis_kelamin')
                 ->where('tahun_pelajaran_id', $tahunPelajaran->id)
                 ->where('status_keanggotaan', 'aktif')
                 ->whereIn('kelas_id', $daftarKelas->pluck('id'))
@@ -71,6 +71,12 @@ class RingkasanKegiatanIbadahBulananController extends Controller
                 ->orderBy('id')
                 ->get()
             : collect();
+
+        if ($kegiatanDipilih?->khususLakiLaki()) {
+            $anggotaKelas = $anggotaKelas
+                ->reject(fn (AnggotaKelas $anggota) => $anggota->siswa?->jenis_kelamin === 'P')
+                ->values();
+        }
 
         [$tanggalMulai, $tanggalSelesai] = $this->batasPeriode($bulan, $tahunPelajaran);
         $tanggalKegiatan = $this->tanggalKegiatan(
@@ -219,8 +225,7 @@ class RingkasanKegiatanIbadahBulananController extends Controller
         $tanggalMasuk = $anggota->tanggal_masuk?->toDateString();
         $tanggalKeluar = $anggota->tanggal_keluar?->toDateString();
 
-        return $tanggalKegiatan->filter(fn (string $tanggal) =>
-            (! $tanggalMasuk || $tanggal >= $tanggalMasuk)
+        return $tanggalKegiatan->filter(fn (string $tanggal) => (! $tanggalMasuk || $tanggal >= $tanggalMasuk)
             && (! $tanggalKeluar || $tanggal <= $tanggalKeluar)
         )->count();
     }

@@ -478,6 +478,11 @@ class _ActivityCard extends StatelessWidget {
                           '${item.activeScheduleCount}/${item.scheduleCount} jadwal aktif',
                       color: NusaColors.primary,
                     ),
+                    if (item.maleOnly)
+                      const _Badge(
+                        label: 'Khusus siswa laki-laki',
+                        color: Color(0xFFB57900),
+                      ),
                   ],
                 ),
               ],

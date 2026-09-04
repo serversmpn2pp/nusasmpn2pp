@@ -84,8 +84,22 @@
                             </td>
                             <td>{{ $item->rentangMasuk() }}</td>
                             <td>{{ $item->formatJam($item->jam_masuk) }}</td>
-                            <td>{{ $item->rentangPulang() }}</td>
-                            <td>{{ $item->formatJam($item->jam_pulang) }}</td>
+                            <td>
+                                @if ($item->pulangJumatDibedakan())
+                                    <p class="person-name">Siswi: {{ $item->rentangPulang('P') }}</p>
+                                    <p class="person-meta">Laki-laki: {{ $item->rentangPulang('L') }}</p>
+                                @else
+                                    {{ $item->rentangPulang() }}
+                                @endif
+                            </td>
+                            <td>
+                                @if ($item->pulangJumatDibedakan())
+                                    <p class="person-name">Siswi: {{ $item->formatJam($item->jam_pulang_perempuan) }}</p>
+                                    <p class="person-meta">Laki-laki: {{ $item->formatJam($item->jam_pulang) }}</p>
+                                @else
+                                    {{ $item->formatJam($item->jam_pulang) }}
+                                @endif
+                            </td>
                             <td>
                                 @if ($item->aktif)
                                     <span class="badge badge-active">Aktif</span>
@@ -117,7 +131,14 @@
                     <div class="mobile-card-head">
                         <div>
                             <p class="person-name">{{ $item->labelHari() }}</p>
-                            <p class="person-meta">Masuk {{ $item->formatJam($item->jam_masuk) }} - Pulang {{ $item->formatJam($item->jam_pulang) }}</p>
+                            <p class="person-meta">
+                                Masuk {{ $item->formatJam($item->jam_masuk) }} -
+                                @if ($item->pulangJumatDibedakan())
+                                    Pulang siswi {{ $item->formatJam($item->jam_pulang_perempuan) }}, laki-laki {{ $item->formatJam($item->jam_pulang) }}
+                                @else
+                                    Pulang {{ $item->formatJam($item->jam_pulang) }}
+                                @endif
+                            </p>
                         </div>
 
                         @if ($item->aktif)
@@ -134,7 +155,14 @@
                         </div>
                         <div>
                             <dt>Scan pulang</dt>
-                            <dd>{{ $item->rentangPulang() }}</dd>
+                            <dd>
+                                @if ($item->pulangJumatDibedakan())
+                                    Siswi {{ $item->rentangPulang('P') }}<br>
+                                    Laki-laki {{ $item->rentangPulang('L') }}
+                                @else
+                                    {{ $item->rentangPulang() }}
+                                @endif
+                            </dd>
                         </div>
                     </dl>
 

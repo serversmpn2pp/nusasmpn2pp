@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\JadwalKegiatanIbadah;
+use App\Models\KegiatanIbadah;
 use App\Models\PresensiBerhalanganIbadah;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
@@ -31,7 +32,9 @@ class ScanBerhalanganIbadahController extends Controller
                 ->where('tahun_pelajaran_id', $tahunPelajaran->id)
                 ->where('hari', $hari)
                 ->where('aktif', true)
-                ->whereHas('kegiatanIbadah', fn ($query) => $query->where('aktif', true))
+                ->whereHas('kegiatanIbadah', fn ($query) => $query
+                    ->where('aktif', true)
+                    ->where('kode', '!=', KegiatanIbadah::KODE_SHOLAT_JUMAT))
                 ->orderBy('jam_pelaksanaan')
                 ->get();
         }

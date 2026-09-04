@@ -12,10 +12,11 @@ void main() {
   test('domain rekap membaca ringkasan tanpa data privat', () {
     final page = WorshipRecapPage.fromJson(_pageJson(classId: 1));
 
-    expect(page.summary.total, 4);
-    expect(page.summary.atSchool, 3);
+    expect(page.summary.total, 5);
+    expect(page.summary.atSchool, 4);
     expect(page.summary.notAtSchool, 1);
     expect(page.summary.excused, 1);
+    expect(page.summary.notRequired, 1);
     expect(page.summary.requiredToPray, 2);
     expect(page.summary.present, 1);
     expect(page.classSummaries.single.percentage, 50);
@@ -23,6 +24,7 @@ void main() {
       'sudah',
       'belum',
       'berhalangan',
+      'tidak_wajib',
       'tidak_hadir',
     ]);
     expect(page.records[2].canBeCorrected, isFalse);
@@ -77,7 +79,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('filter rekap menyediakan empat status sesuai desktop', (
+  testWidgets('rekap Sholat Jumat menjelaskan siswi tidak wajib', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          worshipRecapRemoteDataSourceProvider.overrideWithValue(
+            _FakeWorshipRecapRemoteDataSource(fridayPrayer: true),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const WorshipRecapView(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('worship-recap-friday-notice')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('tidak masuk perhitungan capaian'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('filter rekap menyediakan lima status sesuai desktop', (
     tester,
   ) async {
     final remote = _FakeWorshipRecapRemoteDataSource();
@@ -111,6 +147,7 @@ void main() {
     expect(find.text('Sudah salat'), findsWidgets);
     expect(find.text('Belum salat'), findsWidgets);
     expect(find.text('Berhalangan'), findsWidgets);
+    expect(find.text('Tidak wajib (pulang)'), findsWidgets);
     expect(find.text('Tidak hadir sekolah'), findsWidgets);
     await tester.tap(find.text('Berhalangan').last);
     await tester.pumpAndSettle();
@@ -201,15 +238,19 @@ Future<void> _dragUntilBuilt(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-Map<String, dynamic> _pageJson({int? classId, String status = 'semua'}) => {
+Map<String, dynamic> _pageJson({
+  int? classId,
+  String status = 'semua',
+  bool fridayPrayer = false,
+}) => {
   'tersedia': true,
   'tanggal': '2026-08-13',
   'tanggal_label': 'Kamis, 13 Agustus 2026',
   'tahun_pelajaran': {'id': 1, 'nama': '2026/2027'},
   'kegiatan_dipilih': {
     'id': 1,
-    'nama': 'Sholat Duhur Berjamaah',
-    'kode': 'sholat_duhur',
+    'nama': fridayPrayer ? 'Sholat Jumat' : 'Sholat Duhur Berjamaah',
+    'kode': fridayPrayer ? 'sholat_jumat' : 'sholat_duhur',
     'aktif': true,
   },
   'kelas_dipilih_id': classId,
@@ -219,7 +260,7 @@ Map<String, dynamic> _pageJson({int? classId, String status = 'semua'}) => {
       {'id': 1, 'nama': 'Sholat Duhur Berjamaah', 'aktif': true},
     ],
     'kelas': [
-      {'id': 1, 'nama': 'VII.A', 'tingkat': 7, 'jumlah_siswa': 4},
+      {'id': 1, 'nama': 'VII.A', 'tingkat': 7, 'jumlah_siswa': 5},
     ],
   },
   'jadwal': {
@@ -232,10 +273,11 @@ Map<String, dynamic> _pageJson({int? classId, String status = 'semua'}) => {
     'keterangan': null,
   },
   'ringkasan': {
-    'total': 4,
-    'hadir': 3,
+    'total': 5,
+    'hadir': 4,
     'tidak_hadir': 1,
     'berhalangan': 1,
+    'tidak_wajib': 1,
     'wajib': 2,
     'sudah': 1,
     'belum': 1,
@@ -244,10 +286,11 @@ Map<String, dynamic> _pageJson({int? classId, String status = 'semua'}) => {
   'ringkasan_kelas': [
     {
       'kelas': {'id': 1, 'nama': 'VII.A', 'tingkat': 7},
-      'total': 4,
-      'hadir': 3,
+      'total': 5,
+      'hadir': 4,
       'tidak_hadir': 1,
       'berhalangan': 1,
+      'tidak_wajib': 1,
       'wajib': 2,
       'sudah': 1,
       'belum': 1,
@@ -320,6 +363,24 @@ Map<String, dynamic> _pageJson({int? classId, String status = 'semua'}) => {
               'status_kehadiran_label': 'Hadir di sekolah',
               'presensi': null,
             },
+          if (status == 'semua' || status == 'tidak_wajib')
+            {
+              'anggota_kelas_id': 5,
+              'nomor_absen': 5,
+              'siswa': {
+                'id': 5,
+                'nama': 'Siswi Tidak Wajib Jumat',
+                'nis': '26005',
+                'nisn': '0131201154',
+                'foto_url': null,
+              },
+              'kelas': {'id': 1, 'nama': 'VII.A'},
+              'status': 'tidak_wajib',
+              'status_label': 'Tidak wajib (pulang)',
+              'status_kehadiran': 'hadir',
+              'status_kehadiran_label': 'Hadir di sekolah',
+              'presensi': null,
+            },
           if (status == 'semua' || status == 'tidak_hadir')
             {
               'anggota_kelas_id': 4,
@@ -346,7 +407,7 @@ Map<String, dynamic> _pageJson({int? classId, String status = 'semua'}) => {
     'total': classId == null
         ? 0
         : status == 'semua'
-        ? 4
+        ? 5
         : 1,
     'ada_halaman_berikutnya': false,
   },
@@ -398,6 +459,9 @@ Map<String, dynamic> _correctionJson({bool present = false}) => {
 
 final class _FakeWorshipRecapRemoteDataSource
     implements WorshipRecapRemoteDataSource {
+  _FakeWorshipRecapRemoteDataSource({this.fridayPrayer = false});
+
+  final bool fridayPrayer;
   int updateCalls = 0;
   String? lastFetchStatus;
   String? lastStatus;
@@ -415,7 +479,7 @@ final class _FakeWorshipRecapRemoteDataSource
   }) async {
     lastFetchStatus = status;
     return WorshipRecapPage.fromJson(
-      _pageJson(classId: classId, status: status),
+      _pageJson(classId: classId, status: status, fridayPrayer: fridayPrayer),
     );
   }
 

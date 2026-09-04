@@ -110,8 +110,7 @@ class _WorshipActivityFormSheetState extends State<WorshipActivityFormSheet> {
                     labelText: 'Kode',
                     hintText: 'Contoh: sholat_duhur',
                     prefixIcon: Icon(Icons.qr_code_2_rounded),
-                    helperText:
-                        'Spasi dan tanda hubung otomatis menjadi garis bawah.',
+                    helperText: 'Gunakan sholat_jumat agar peserta otomatis khusus siswa laki-laki.',
                   ),
                 ),
                 const SizedBox(height: 8),

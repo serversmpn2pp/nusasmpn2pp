@@ -86,6 +86,10 @@ class _WorshipRecapViewState extends ConsumerState<WorshipRecapView> {
                 ),
                 const SizedBox(height: 12),
                 _ScheduleCard(page: page),
+                if (page.selectedActivity?.maleOnly ?? false) ...[
+                  const SizedBox(height: 12),
+                  const _FridayPrayerNotice(),
+                ],
                 const SizedBox(height: 12),
                 _SummaryStrip(summary: page.summary),
                 const SizedBox(height: 17),
@@ -491,11 +495,6 @@ class _SummaryStrip extends StatelessWidget {
               label: 'Tidak hadir',
               color: NusaColors.textSecondary,
             ),
-            _SummaryItem(
-              value: summary.excused,
-              label: 'Berhalangan',
-              color: const Color(0xFF7657A6),
-            ),
           ],
         ),
         const Padding(
@@ -505,10 +504,28 @@ class _SummaryStrip extends StatelessWidget {
         Row(
           children: [
             _SummaryItem(
+              value: summary.excused,
+              label: 'Berhalangan',
+              color: const Color(0xFF7657A6),
+            ),
+            _SummaryItem(
+              value: summary.notRequired,
+              label: 'Tidak wajib',
+              color: NusaColors.primaryLight,
+            ),
+            _SummaryItem(
               value: summary.requiredToPray,
               label: 'Wajib salat',
               color: NusaColors.primary,
             ),
+          ],
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 7, vertical: 10),
+          child: Divider(height: 1, color: NusaColors.outline),
+        ),
+        Row(
+          children: [
             _SummaryItem(
               value: summary.present,
               label: 'Sudah salat',
@@ -525,6 +542,34 @@ class _SummaryStrip extends StatelessWidget {
               color: NusaColors.primaryLight,
             ),
           ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _FridayPrayerNotice extends StatelessWidget {
+  const _FridayPrayerNotice();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('worship-recap-friday-notice'),
+    padding: const EdgeInsets.all(13),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFF7DA),
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(color: NusaColors.accent.withValues(alpha: 0.5)),
+    ),
+    child: const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.mosque_rounded, color: NusaColors.primary, size: 21),
+        SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            'Sholat Jumat khusus siswa laki-laki. Siswi yang hadir dicatat Tidak wajib (pulang) dan tidak masuk perhitungan capaian.',
+            style: TextStyle(fontSize: 11, height: 1.4),
+          ),
         ),
       ],
     ),
@@ -664,7 +709,7 @@ class _ClassCard extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                '${item.notAtSchool} tidak hadir · ${item.excused} berhalangan',
+                '${item.notAtSchool} tidak hadir · ${item.excused} berhalangan · ${item.notRequired} tidak wajib',
                 style: const TextStyle(
                   color: NusaColors.textSecondary,
                   fontSize: 9.5,
@@ -765,6 +810,10 @@ class _StudentFilters extends StatelessWidget {
           NusaDropdownOption(value: 'belum', label: 'Belum salat'),
           NusaDropdownOption(value: 'berhalangan', label: 'Berhalangan'),
           NusaDropdownOption(
+            value: 'tidak_wajib',
+            label: 'Tidak wajib (pulang)',
+          ),
+          NusaDropdownOption(
             value: 'tidak_hadir',
             label: 'Tidak hadir sekolah',
           ),
@@ -826,6 +875,7 @@ class _StudentCard extends StatelessWidget {
       'sudah' => NusaColors.success,
       'belum' => const Color(0xFFB57900),
       'berhalangan' => const Color(0xFF7657A6),
+      'tidak_wajib' => NusaColors.primaryLight,
       'tidak_hadir' => NusaColors.textSecondary,
       _ => NusaColors.primary,
     };
@@ -833,6 +883,7 @@ class _StudentCard extends StatelessWidget {
       'sudah' => Icons.check_circle_rounded,
       'belum' => Icons.schedule_rounded,
       'berhalangan' => Icons.privacy_tip_outlined,
+      'tidak_wajib' => Icons.home_outlined,
       'tidak_hadir' => Icons.event_busy_rounded,
       _ => Icons.info_outline_rounded,
     };

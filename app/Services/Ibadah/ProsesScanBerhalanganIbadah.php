@@ -47,6 +47,21 @@ class ProsesScanBerhalanganIbadah
             return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'jadwal_tidak_aktif', 'Jadwal kegiatan tidak aktif untuk tahun pelajaran ini.', null, null, $ipAddress, $userAgent);
         }
 
+        if ($jadwal->kegiatanIbadah->khususLakiLaki()) {
+            return $this->gagal(
+                $jadwal,
+                $isiScan,
+                $waktuScan,
+                $petugas,
+                'kegiatan_tidak_memerlukan_berhalangan',
+                'Sholat Jumat tidak memerlukan scan berhalangan karena siswi dicatat sebagai tidak wajib (pulang).',
+                null,
+                null,
+                $ipAddress,
+                $userAgent,
+            );
+        }
+
         if ($jadwal->hari !== $this->hariDariTanggal($waktuScan)) {
             return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'hari_tidak_sesuai', 'Jadwal kegiatan ini tidak berlaku hari ini.', null, null, $ipAddress, $userAgent);
         }

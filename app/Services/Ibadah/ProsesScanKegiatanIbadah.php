@@ -77,6 +77,21 @@ class ProsesScanKegiatanIbadah
             return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'siswa_nonaktif', 'Siswa ditemukan, tetapi statusnya tidak aktif.', $nisn, $siswa, $ipAddress, $userAgent);
         }
 
+        if ($jadwal->kegiatanIbadah->khususLakiLaki() && $siswa->jenis_kelamin === 'P') {
+            return $this->gagal(
+                $jadwal,
+                $isiScan,
+                $waktuScan,
+                $petugas,
+                'peserta_tidak_wajib',
+                'Sholat Jumat khusus siswa laki-laki. Siswi tidak perlu melakukan scan dan dicatat sebagai tidak wajib (pulang).',
+                $nisn,
+                $siswa,
+                $ipAddress,
+                $userAgent,
+            );
+        }
+
         $anggotaKelas = AnggotaKelas::query()
             ->with('kelas:id,nama')
             ->where('tahun_pelajaran_id', $tahunPelajaran->id)

@@ -68,6 +68,13 @@ class ScanAbsensiController extends Controller
             'jam_scan_pulang_mulai' => $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_mulai),
             'jam_pulang' => $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang),
             'jam_scan_pulang_selesai' => $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_selesai),
+            'pulang_jumat_dibedakan' => $pengaturanAbsensi->pulangJumatDibedakan(),
+            'jam_scan_pulang_perempuan_mulai' => $pengaturanAbsensi->pulangJumatDibedakan()
+                ? $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_perempuan_mulai) : null,
+            'jam_pulang_perempuan' => $pengaturanAbsensi->pulangJumatDibedakan()
+                ? $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang_perempuan) : null,
+            'jam_scan_pulang_perempuan_selesai' => $pengaturanAbsensi->pulangJumatDibedakan()
+                ? $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_perempuan_selesai) : null,
         ];
     }
 
@@ -80,8 +87,9 @@ class ScanAbsensiController extends Controller
         return [
             'nama_lengkap' => $siswa->nama_lengkap,
             'nisn' => $siswa->nisn,
+            'jenis_kelamin' => $siswa->jenis_kelamin,
             'foto_url' => $siswa->foto && Storage::disk('public')->exists($siswa->foto)
-                ? asset('storage/' . $siswa->foto)
+                ? asset('storage/'.$siswa->foto)
                 : null,
             'inisial' => $this->inisial($siswa->nama_lengkap),
         ];

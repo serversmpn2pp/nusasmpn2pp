@@ -24,7 +24,7 @@
         <div>
             <p class="eyebrow">Kehadiran Siswa</p>
             <h1 class="page-title">Rekap Kegiatan Ibadah</h1>
-            <p class="page-subtitle">Pantau siswa yang sudah salat, belum salat, berhalangan, atau tidak hadir berdasarkan kelas.</p>
+            <p class="page-subtitle">Pantau siswa yang sudah salat, belum salat, berhalangan, tidak wajib, atau tidak hadir berdasarkan kelas.</p>
         </div>
         <div class="actions">
             <a href="{{ route('rekap-kegiatan-ibadah.bulanan') }}" class="button button-muted">Ringkasan bulanan</a>
@@ -57,11 +57,16 @@
             <div class="alert">Tidak ada jadwal {{ $kegiatanDipilih->nama }} pada {{ $tanggalLabel }}. Rekap tetap menampilkan data jika pernah ada presensi.</div>
         @endif
 
+        @if($kegiatanDipilih->khususLakiLaki())
+            <div class="alert" style="margin-bottom:18px;">Sholat Jumat khusus siswa laki-laki. Siswi yang hadir di sekolah dicatat sebagai <strong>Tidak wajib (pulang)</strong> dan tidak masuk perhitungan capaian.</div>
+        @endif
+
         <div class="stats-grid worship-stats-grid">
             <div class="panel stat"><p class="stat-label">{{ $kelasDipilih ? 'Siswa kelas '.$kelasDipilih->nama : 'Seluruh siswa' }}</p><p class="stat-value">{{ $ringkasan['total'] }}</p></div>
             <div class="panel stat"><p class="stat-label">Hadir di sekolah</p><p class="stat-value">{{ $ringkasan['hadir'] }}</p></div>
             <div class="panel stat inactive"><p class="stat-label">Tidak hadir</p><p class="stat-value">{{ $ringkasan['tidak_hadir'] }}</p></div>
             <div class="panel stat"><p class="stat-label">Berhalangan</p><p class="stat-value">{{ $ringkasan['berhalangan'] }}</p></div>
+            <div class="panel stat"><p class="stat-label">Tidak wajib (pulang)</p><p class="stat-value">{{ $ringkasan['tidak_wajib'] }}</p></div>
             <div class="panel stat"><p class="stat-label">Wajib salat</p><p class="stat-value">{{ $ringkasan['wajib'] }}</p></div>
             <div class="panel stat active"><p class="stat-label">Sudah salat</p><p class="stat-value">{{ $ringkasan['sudah'] }}</p></div>
             <div class="panel stat inactive"><p class="stat-label">Belum salat</p><p class="stat-value">{{ $ringkasan['belum'] }}</p></div>
@@ -78,7 +83,7 @@
                     <div class="worship-class-main">
                         <div class="worship-class-head"><strong>{{ $item['kelas']->nama }}</strong><span class="worship-percent">{{ $item['persentase'] }}%</span></div>
                         <div class="worship-class-count"><strong>{{ $item['sudah'] }}</strong><span>dari {{ $item['wajib'] }} siswa wajib salat</span></div>
-                        <p class="help-text" style="margin-top:8px;">{{ $item['tidak_hadir'] }} tidak hadir &middot; {{ $item['berhalangan'] }} berhalangan</p>
+                        <p class="help-text" style="margin-top:8px;">{{ $item['tidak_hadir'] }} tidak hadir &middot; {{ $item['berhalangan'] }} berhalangan &middot; {{ $item['tidak_wajib'] }} tidak wajib</p>
                     </div>
                     <div class="worship-progress"><span style="width:{{ $item['persentase'] }}%"></span></div>
                 </a>
@@ -90,11 +95,11 @@
         @if($kelasDipilih)
             <form method="GET" action="{{ route('rekap-kegiatan-ibadah.index') }}" class="panel panel-pad" style="margin-bottom:16px;">
                 <input type="hidden" name="tanggal" value="{{ $tanggal }}"><input type="hidden" name="kegiatan_ibadah_id" value="{{ $kegiatanId }}"><input type="hidden" name="kelas_id" value="{{ $kelasId }}">
-                <div class="worship-status-layout"><div class="filter-grid"><div class="field"><label for="cari">Cari siswa</label><input id="cari" name="cari" value="{{ $cari }}" class="input" placeholder="Nama, NIS, atau NISN"></div><div class="field"><label for="status">Status ibadah</label><select id="status" name="status" class="select" onchange="this.form.submit()"><option value="semua" @selected($status==='semua')>Semua status</option><option value="sudah" @selected($status==='sudah')>Sudah salat</option><option value="belum" @selected($status==='belum')>Belum salat</option><option value="berhalangan" @selected($status==='berhalangan')>Berhalangan</option><option value="tidak_hadir" @selected($status==='tidak_hadir')>Tidak hadir sekolah</option></select></div></div><div class="actions"><button class="button button-dark" type="submit">Cari</button><a href="{{ route('rekap-kegiatan-ibadah.index',['tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId,'kelas_id'=>$kelasId]) }}" class="button button-muted">Reset</a></div></div>
+                <div class="worship-status-layout"><div class="filter-grid"><div class="field"><label for="cari">Cari siswa</label><input id="cari" name="cari" value="{{ $cari }}" class="input" placeholder="Nama, NIS, atau NISN"></div><div class="field"><label for="status">Status ibadah</label><select id="status" name="status" class="select" onchange="this.form.submit()"><option value="semua" @selected($status==='semua')>Semua status</option><option value="sudah" @selected($status==='sudah')>Sudah salat</option><option value="belum" @selected($status==='belum')>Belum salat</option><option value="berhalangan" @selected($status==='berhalangan')>Berhalangan</option><option value="tidak_wajib" @selected($status==='tidak_wajib')>Tidak wajib (pulang)</option><option value="tidak_hadir" @selected($status==='tidak_hadir')>Tidak hadir sekolah</option></select></div></div><div class="actions"><button class="button button-dark" type="submit">Cari</button><a href="{{ route('rekap-kegiatan-ibadah.index',['tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId,'kelas_id'=>$kelasId]) }}" class="button button-muted">Reset</a></div></div>
             </form>
 
             <section class="panel">
-                <div class="panel-pad" style="border-bottom:1px solid var(--line);"><h2 class="panel-title">Siswa Kelas {{ $kelasDipilih->nama }}</h2><p class="help-text" style="margin-top:5px;">Belum salat hanya berlaku untuk siswa yang hadir di sekolah, tidak berhalangan, dan belum melakukan scan ibadah. Catatan privat berhalangan tidak ditampilkan di rekap umum.</p></div>
+                <div class="panel-pad" style="border-bottom:1px solid var(--line);"><h2 class="panel-title">Siswa Kelas {{ $kelasDipilih->nama }}</h2><p class="help-text" style="margin-top:5px;">Belum salat hanya berlaku untuk siswa yang hadir di sekolah, wajib mengikuti kegiatan, tidak berhalangan, dan belum melakukan scan ibadah. Pada Sholat Jumat, siswi berstatus tidak wajib (pulang). Catatan privat berhalangan tidak ditampilkan di rekap umum.</p></div>
                 <div class="desktop-only table-wrap"><table class="employee-table"><thead><tr><th>No.</th><th>Siswa</th><th>Status ibadah</th><th>Kehadiran sekolah</th><th>Waktu</th><th>Dicatat oleh</th>@if($dapatKoreksi)<th>Aksi</th>@endif</tr></thead><tbody>
                     @forelse($anggotaKelas as $anggota)
                         @php
@@ -105,6 +110,7 @@
                                 'sudah' => 'badge-active',
                                 'belum' => 'badge-warning',
                                 'berhalangan' => 'badge-muted',
+                                'tidak_wajib' => 'badge-muted',
                                 default => 'badge-inactive',
                             };
                             $dapatDikoreksiSiswa = in_array($statusKode, ['sudah', 'belum'], true);
@@ -124,6 +130,7 @@
                                 'sudah' => 'badge-active',
                                 'belum' => 'badge-warning',
                                 'berhalangan' => 'badge-muted',
+                                'tidak_wajib' => 'badge-muted',
                                 default => 'badge-inactive',
                             };
                             $dapatDikoreksiSiswa = in_array($statusKode, ['sudah', 'belum'], true);

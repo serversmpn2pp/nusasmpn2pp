@@ -129,6 +129,45 @@ class PengaturanPresensiSiswaApiTest extends TestCase
             ->assertJsonValidationErrors('jam_masuk');
     }
 
+    public function test_api_menyimpan_dan_memvalidasi_jadwal_pulang_jumat_perempuan(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $token = $this->token($administrator);
+        $data = [
+            'hari' => 'jumat',
+            'jam_scan_masuk_mulai' => '05:30',
+            'jam_masuk' => '06:25',
+            'jam_scan_masuk_selesai' => '07:00',
+            'jam_scan_pulang_mulai' => '12:50',
+            'jam_pulang' => '12:50',
+            'jam_scan_pulang_selesai' => '14:00',
+            'pulang_jumat_dibedakan' => true,
+            'jam_scan_pulang_perempuan_mulai' => '11:50',
+            'jam_pulang_perempuan' => '11:50',
+            'jam_scan_pulang_perempuan_selesai' => '14:00',
+            'aktif' => true,
+        ];
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.pengaturan-presensi-siswa.store'), $data)
+            ->assertCreated();
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.pengaturan-presensi-siswa.index', ['hari' => 'jumat']))
+            ->assertOk()
+            ->assertJsonPath('data.items.0.pulang_jumat_dibedakan', true)
+            ->assertJsonPath('data.items.0.jam_scan_pulang_perempuan_mulai', '11:50')
+            ->assertJsonPath('data.items.0.jam_pulang_perempuan', '11:50');
+
+        PengaturanAbsensi::query()->delete();
+        unset($data['jam_pulang_perempuan']);
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.pengaturan-presensi-siswa.store'), $data)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('jam_pulang_perempuan');
+    }
+
     private function pengaturan(string $hari, bool $aktif = true): PengaturanAbsensi
     {
         return PengaturanAbsensi::create([

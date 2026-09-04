@@ -18,7 +18,7 @@ class RekapKegiatanIbadahController extends Controller
             'tanggal' => ['nullable', 'date', 'before_or_equal:today'],
             'kegiatan_ibadah_id' => ['nullable', 'integer', 'exists:kegiatan_ibadah,id'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
-            'status' => ['nullable', Rule::in(['semua', 'sudah', 'belum', 'berhalangan', 'tidak_hadir'])],
+            'status' => ['nullable', Rule::in(['semua', 'sudah', 'belum', 'berhalangan', 'tidak_hadir', 'tidak_wajib'])],
             'cari' => ['nullable', 'string', 'max:100'],
             'halaman' => ['nullable', 'integer', 'min:1'],
         ]);

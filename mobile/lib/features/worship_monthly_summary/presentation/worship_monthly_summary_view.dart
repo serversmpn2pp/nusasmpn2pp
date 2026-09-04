@@ -73,7 +73,10 @@ class WorshipMonthlySummaryView extends ConsumerWidget {
                     message: 'Pastikan tahun pelajaran aktif dan kegiatan ibadah sudah dibuat.',
                   )
                 else ...[
-                  _OverviewCard(summary: page.summary),
+                  _OverviewCard(
+                    summary: page.summary,
+                    maleOnly: page.selectedActivity?.maleOnly ?? false,
+                  ),
                   const SizedBox(height: 12),
                   _ActivityDatesCard(page: page),
                   const SizedBox(height: 17),
@@ -394,9 +397,10 @@ class _FilterCard extends StatelessWidget {
 }
 
 class _OverviewCard extends StatelessWidget {
-  const _OverviewCard({required this.summary});
+  const _OverviewCard({required this.summary, required this.maleOnly});
 
   final WorshipMonthlySummary summary;
+  final bool maleOnly;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -461,7 +465,10 @@ class _OverviewCard extends StatelessWidget {
         Row(
           children: [
             _SummaryFact(value: summary.activityDays, label: 'Hari kegiatan'),
-            _SummaryFact(value: summary.studentCount, label: 'Siswa'),
+            _SummaryFact(
+              value: summary.studentCount,
+              label: maleOnly ? 'Siswa wajib' : 'Siswa',
+            ),
             _SummaryFact(value: summary.recorded, label: 'Tercatat'),
             _SummaryFact(value: summary.missing, label: 'Belum'),
           ],

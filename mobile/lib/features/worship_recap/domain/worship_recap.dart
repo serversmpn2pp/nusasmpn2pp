@@ -119,6 +119,8 @@ class WorshipRecapActivity {
   final String name;
   final String? code;
   final bool active;
+
+  bool get maleOnly => code == 'sholat_jumat';
 }
 
 class WorshipRecapClass {
@@ -193,6 +195,7 @@ class WorshipRecapSummary {
     required this.atSchool,
     required this.notAtSchool,
     required this.excused,
+    required this.notRequired,
     required this.requiredToPray,
     required this.present,
     required this.notPresent,
@@ -205,6 +208,7 @@ class WorshipRecapSummary {
         atSchool: _integer(json['hadir']),
         notAtSchool: _integer(json['tidak_hadir']),
         excused: _integer(json['berhalangan']),
+        notRequired: _integer(json['tidak_wajib']),
         requiredToPray: _integer(json['wajib']),
         present: _integer(json['sudah']),
         notPresent: _integer(json['belum']),
@@ -215,6 +219,7 @@ class WorshipRecapSummary {
   final int atSchool;
   final int notAtSchool;
   final int excused;
+  final int notRequired;
   final int requiredToPray;
   final int present;
   final int notPresent;
@@ -228,6 +233,7 @@ class WorshipRecapClassSummary {
     required this.atSchool,
     required this.notAtSchool,
     required this.excused,
+    required this.notRequired,
     required this.requiredToPray,
     required this.present,
     required this.notPresent,
@@ -241,6 +247,7 @@ class WorshipRecapClassSummary {
         atSchool: _integer(json['hadir']),
         notAtSchool: _integer(json['tidak_hadir']),
         excused: _integer(json['berhalangan']),
+        notRequired: _integer(json['tidak_wajib']),
         requiredToPray: _integer(json['wajib']),
         present: _integer(json['sudah']),
         notPresent: _integer(json['belum']),
@@ -252,6 +259,7 @@ class WorshipRecapClassSummary {
   final int atSchool;
   final int notAtSchool;
   final int excused;
+  final int notRequired;
   final int requiredToPray;
   final int present;
   final int notPresent;

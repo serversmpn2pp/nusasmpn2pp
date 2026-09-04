@@ -157,6 +157,36 @@ class ScanBerhalanganIbadahApiTest extends TestCase
         $this->assertDatabaseCount('presensi_berhalangan_ibadah', 0);
     }
 
+    public function test_sholat_jumat_tidak_tersedia_pada_scan_berhalangan_privat(): void
+    {
+        Carbon::setTestNow('2026-08-10 12:10:00');
+        $data = $this->dataDasar();
+        $kegiatanJumat = KegiatanIbadah::create([
+            'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
+            'nama' => 'Sholat Jumat',
+            'aktif' => true,
+        ]);
+        $data['jadwal']->update(['kegiatan_ibadah_id' => $kegiatanJumat->id]);
+        $token = $this->token($data['pendamping']);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.scan-berhalangan-ibadah.index'))
+            ->assertOk()
+            ->assertJsonCount(0, 'data.jadwal')
+            ->assertJsonPath('data.scan_dibuka', false);
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.scan-berhalangan-ibadah.store'), [
+                'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
+                'isi_scan' => $data['siswi']->nisn,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('data.berhasil', false)
+            ->assertJsonPath('data.status', 'kegiatan_tidak_memerlukan_berhalangan');
+
+        $this->assertDatabaseCount('presensi_berhalangan_ibadah', 0);
+    }
+
     private function dataDasar(): array
     {
         $tahun = TahunPelajaran::create([

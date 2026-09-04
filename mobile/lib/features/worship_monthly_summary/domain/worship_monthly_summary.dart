@@ -106,6 +106,8 @@ class WorshipMonthlyActivity {
   final String name;
   final String? code;
   final bool active;
+
+  bool get maleOnly => code == 'sholat_jumat';
 }
 
 class WorshipMonthlyClass {

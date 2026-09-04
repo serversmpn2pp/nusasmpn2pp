@@ -92,7 +92,11 @@ class KoreksiPresensiSiswaService
 
             if ($status === 'hadir') {
                 [$statusMasuk, $menitTerlambat] = $this->hitungStatusMasuk($jamMasuk, $pengaturan);
-                [$statusPulang, $menitPulangCepat] = $this->hitungStatusPulang($jamPulang, $pengaturan);
+                [$statusPulang, $menitPulangCepat] = $this->hitungStatusPulang(
+                    $jamPulang,
+                    $pengaturan,
+                    $anggotaKelas->siswa?->jenis_kelamin,
+                );
             }
 
             $absensi = AbsensiSiswa::query()
@@ -176,15 +180,19 @@ class KoreksiPresensiSiswaService
         return [$terlambat > 0 ? 'terlambat' : 'tepat_waktu', $terlambat];
     }
 
-    private function hitungStatusPulang(?string $jam, ?PengaturanAbsensi $pengaturan): array
-    {
+    private function hitungStatusPulang(
+        ?string $jam,
+        ?PengaturanAbsensi $pengaturan,
+        ?string $jenisKelamin,
+    ): array {
         if (! $jam) {
             return [null, 0];
         }
         if (! $pengaturan) {
             return ['manual', 0];
         }
-        $cepat = max(0, $this->menit($pengaturan->formatJam($pengaturan->jam_pulang)) - $this->menit($jam));
+        $jadwalPulang = $pengaturan->jadwalPulangUntuk($jenisKelamin);
+        $cepat = max(0, $this->menit($pengaturan->formatJam($jadwalPulang['jam_pulang'])) - $this->menit($jam));
 
         return [$cepat > 0 ? 'pulang_cepat' : 'normal', $cepat];
     }

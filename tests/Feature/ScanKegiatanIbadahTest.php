@@ -82,6 +82,25 @@ class ScanKegiatanIbadahTest extends TestCase
         $this->assertDatabaseCount('log_scan_kegiatan_ibadah', 2);
     }
 
+    public function test_halaman_scan_sholat_jumat_menjelaskan_peserta_khusus_laki_laki(): void
+    {
+        Carbon::setTestNow('2026-08-14 12:10:00');
+        $data = $this->dataDasar('jumat');
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $kegiatanJumat = KegiatanIbadah::create([
+            'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
+            'nama' => 'Sholat Jumat',
+            'aktif' => true,
+        ]);
+        $data['jadwal']->update(['kegiatan_ibadah_id' => $kegiatanJumat->id]);
+
+        $this->actingAs($administrator)
+            ->get(route('scan-kegiatan-ibadah.index'))
+            ->assertOk()
+            ->assertSee('Sholat Jumat khusus siswa laki-laki')
+            ->assertSee('tidak wajib (pulang)');
+    }
+
     public function test_scan_ibadah_biasa_otomatis_menyelesaikan_periode_berhalangan(): void
     {
         $data = $this->dataDasar('senin');

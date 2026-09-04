@@ -27,9 +27,7 @@ class ProsesScanAbsensi
         7 => 'minggu',
     ];
 
-    public function __construct(private NotifikasiAbsensiSiswaService $notifikasiAbsensiSiswaService)
-    {
-    }
+    public function __construct(private NotifikasiAbsensiSiswaService $notifikasiAbsensiSiswaService) {}
 
     public function proses(
         string $isiScan,
@@ -174,9 +172,24 @@ class ProsesScanAbsensi
             );
         }
 
-        $jenisScan = $jenisScanDiminta ?: $this->tentukanJenisScan($waktuScan, $pengaturanAbsensi);
+        $jenisScan = $jenisScanDiminta ?: $this->tentukanJenisScan($waktuScan, $pengaturanAbsensi, $siswa);
 
         if (! $jenisScan) {
+            if ($pesanJumat = $this->pesanPulangJumatBelumDibuka($waktuScan, $pengaturanAbsensi, $siswa)) {
+                return $this->gagal(
+                    isiScan: $isiScan,
+                    waktuScan: $waktuScan,
+                    statusScan: 'pulang_jumat_belum_dibuka',
+                    pesan: $pesanJumat,
+                    scannerId: $parsed['scanner_id'],
+                    nisn: $parsed['nisn'],
+                    jenisScan: 'pulang',
+                    siswa: $siswa,
+                    ipAddress: $ipAddress,
+                    userAgent: $userAgent,
+                );
+            }
+
             return $this->gagal(
                 isiScan: $isiScan,
                 waktuScan: $waktuScan,
@@ -191,12 +204,28 @@ class ProsesScanAbsensi
             );
         }
 
-        if (! $this->beradaDalamJendelaScan($jenisScan, $waktuScan, $pengaturanAbsensi)) {
+        if (! $this->beradaDalamJendelaScan($jenisScan, $waktuScan, $pengaturanAbsensi, $siswa)) {
+            if ($jenisScan === 'pulang'
+                && ($pesanJumat = $this->pesanPulangJumatBelumDibuka($waktuScan, $pengaturanAbsensi, $siswa))) {
+                return $this->gagal(
+                    isiScan: $isiScan,
+                    waktuScan: $waktuScan,
+                    statusScan: 'pulang_jumat_belum_dibuka',
+                    pesan: $pesanJumat,
+                    scannerId: $parsed['scanner_id'],
+                    nisn: $parsed['nisn'],
+                    jenisScan: 'pulang',
+                    siswa: $siswa,
+                    ipAddress: $ipAddress,
+                    userAgent: $userAgent,
+                );
+            }
+
             return $this->gagal(
                 isiScan: $isiScan,
                 waktuScan: $waktuScan,
-                statusScan: 'di_luar_jadwal_' . $jenisScan,
-                pesan: 'Scan ' . $jenisScan . ' berada di luar jadwal yang ditentukan.',
+                statusScan: 'di_luar_jadwal_'.$jenisScan,
+                pesan: 'Scan '.$jenisScan.' berada di luar jadwal yang ditentukan.',
                 scannerId: $parsed['scanner_id'],
                 nisn: $parsed['nisn'],
                 jenisScan: $jenisScan,
@@ -271,7 +300,7 @@ class ProsesScanAbsensi
             ]);
 
             $pesan = $statusMasuk === 'terlambat'
-                ? 'Scan masuk berhasil. Siswa terlambat ' . $menitTerlambat . ' menit.'
+                ? 'Scan masuk berhasil. Siswa terlambat '.$menitTerlambat.' menit.'
                 : 'Scan masuk berhasil. Siswa hadir tepat waktu.';
 
             $log = $this->catatLog(
@@ -347,8 +376,9 @@ class ProsesScanAbsensi
                 );
             }
 
+            $jadwalPulang = $pengaturanAbsensi->jadwalPulangUntuk($siswa->jenis_kelamin);
             $menitScan = $this->menitDariJam($waktuScan->format('H:i'));
-            $menitPulang = $this->menitDariJam($pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang));
+            $menitPulang = $this->menitDariJam($pengaturanAbsensi->formatJam($jadwalPulang['jam_pulang']));
             $menitPulangCepat = max(0, $menitPulang - $menitScan);
             $statusPulang = $menitPulangCepat > 0 ? 'pulang_cepat' : 'normal';
 
@@ -361,7 +391,7 @@ class ProsesScanAbsensi
             ]);
 
             $pesan = $statusPulang === 'pulang_cepat'
-                ? 'Scan pulang berhasil. Siswa pulang cepat ' . $menitPulangCepat . ' menit.'
+                ? 'Scan pulang berhasil. Siswa pulang cepat '.$menitPulangCepat.' menit.'
                 : 'Scan pulang berhasil.';
 
             $log = $this->catatLog(
@@ -540,21 +570,28 @@ class ProsesScanAbsensi
         return in_array($jenisScan, ['masuk', 'pulang'], true) ? $jenisScan : null;
     }
 
-    private function tentukanJenisScan(CarbonInterface $waktuScan, PengaturanAbsensi $pengaturanAbsensi): ?string
-    {
-        if ($this->beradaDalamJendelaScan('masuk', $waktuScan, $pengaturanAbsensi)) {
+    private function tentukanJenisScan(
+        CarbonInterface $waktuScan,
+        PengaturanAbsensi $pengaturanAbsensi,
+        Siswa $siswa,
+    ): ?string {
+        if ($this->beradaDalamJendelaScan('masuk', $waktuScan, $pengaturanAbsensi, $siswa)) {
             return 'masuk';
         }
 
-        if ($this->beradaDalamJendelaScan('pulang', $waktuScan, $pengaturanAbsensi)) {
+        if ($this->beradaDalamJendelaScan('pulang', $waktuScan, $pengaturanAbsensi, $siswa)) {
             return 'pulang';
         }
 
         return null;
     }
 
-    private function beradaDalamJendelaScan(string $jenisScan, CarbonInterface $waktuScan, PengaturanAbsensi $pengaturanAbsensi): bool
-    {
+    private function beradaDalamJendelaScan(
+        string $jenisScan,
+        CarbonInterface $waktuScan,
+        PengaturanAbsensi $pengaturanAbsensi,
+        Siswa $siswa,
+    ): bool {
         $menitScan = $this->menitDariJam($waktuScan->format('H:i'));
 
         if ($jenisScan === 'masuk') {
@@ -562,8 +599,41 @@ class ProsesScanAbsensi
                 && $menitScan <= $this->menitDariJam($pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_masuk_selesai));
         }
 
-        return $menitScan >= $this->menitDariJam($pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_mulai))
-            && $menitScan <= $this->menitDariJam($pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_scan_pulang_selesai));
+        $jadwalPulang = $pengaturanAbsensi->jadwalPulangUntuk($siswa->jenis_kelamin);
+
+        return $menitScan >= $this->menitDariJam($pengaturanAbsensi->formatJam($jadwalPulang['jam_scan_pulang_mulai']))
+            && $menitScan <= $this->menitDariJam($pengaturanAbsensi->formatJam($jadwalPulang['jam_scan_pulang_selesai']));
+    }
+
+    private function pesanPulangJumatBelumDibuka(
+        CarbonInterface $waktuScan,
+        PengaturanAbsensi $pengaturanAbsensi,
+        Siswa $siswa,
+    ): ?string {
+        if (! $pengaturanAbsensi->pulangJumatDibedakan()
+            || mb_strtoupper(trim((string) $siswa->jenis_kelamin)) === 'P') {
+            return null;
+        }
+
+        $jadwalPerempuan = $pengaturanAbsensi->jadwalPulangUntuk('P');
+        $jadwalLakiLaki = $pengaturanAbsensi->jadwalPulangUntuk('L');
+        $menitScan = $this->menitDariJam($waktuScan->format('H:i'));
+        $mulaiPerempuan = $this->menitDariJam($pengaturanAbsensi->formatJam($jadwalPerempuan['jam_scan_pulang_mulai']));
+        $mulaiLakiLaki = $this->menitDariJam($pengaturanAbsensi->formatJam($jadwalLakiLaki['jam_scan_pulang_mulai']));
+
+        if ($menitScan < $mulaiPerempuan || $menitScan >= $mulaiLakiLaki) {
+            return null;
+        }
+
+        $jamMulai = $pengaturanAbsensi->formatJam($jadwalLakiLaki['jam_scan_pulang_mulai']);
+
+        if (mb_strtoupper(trim((string) $siswa->jenis_kelamin)) === 'L') {
+            return 'Scan pulang siswa laki-laki belum dibuka. Silakan scan mulai pukul '
+                .$jamMulai.' setelah salat Jumat.';
+        }
+
+        return 'Jenis kelamin siswa belum dilengkapi. Untuk keamanan, jadwal pulang mengikuti siswa laki-laki dan baru dibuka pukul '
+            .$jamMulai.'.';
     }
 
     private function scanBerhasilTerbaru(string $nisn, CarbonInterface $waktuScan): ?LogScanAbsensi
@@ -582,10 +652,10 @@ class ProsesScanAbsensi
 
     private function pesanSudahTercatat(?string $jenisScan, ?string $jam): string
     {
-        $jenis = $jenisScan ? ' ' . $jenisScan : '';
-        $waktu = $jam ? ' pukul ' . substr($jam, 0, 5) : '';
+        $jenis = $jenisScan ? ' '.$jenisScan : '';
+        $waktu = $jam ? ' pukul '.substr($jam, 0, 5) : '';
 
-        return 'Presensi' . $jenis . ' sudah tercatat' . $waktu . '. Tidak perlu scan ulang.';
+        return 'Presensi'.$jenis.' sudah tercatat'.$waktu.'. Tidak perlu scan ulang.';
     }
 
     private function hariDariTanggal(CarbonInterface $tanggal): string

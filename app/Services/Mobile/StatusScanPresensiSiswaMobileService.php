@@ -248,13 +248,29 @@ class StatusScanPresensiSiswaMobileService
         $sekarang = now()->hour * 60 + now()->minute;
         $mulaiMasuk = $this->menit($pengaturan->jam_scan_masuk_mulai);
         $selesaiMasuk = $this->menit($pengaturan->jam_scan_masuk_selesai);
-        $mulaiPulang = $this->menit($pengaturan->jam_scan_pulang_mulai);
-        $selesaiPulang = $this->menit($pengaturan->jam_scan_pulang_selesai);
+        $jadwalLakiLaki = $pengaturan->jadwalPulangUntuk('L');
+        $jadwalPerempuan = $pengaturan->jadwalPulangUntuk('P');
+        $mulaiPulangLakiLaki = $this->menit($jadwalLakiLaki['jam_scan_pulang_mulai']);
+        $selesaiPulangLakiLaki = $this->menit($jadwalLakiLaki['jam_scan_pulang_selesai']);
+        $mulaiPulangPerempuan = $this->menit($jadwalPerempuan['jam_scan_pulang_mulai']);
+        $selesaiPulangPerempuan = $this->menit($jadwalPerempuan['jam_scan_pulang_selesai']);
+        $mulaiPulang = min($mulaiPulangLakiLaki, $mulaiPulangPerempuan);
+        $selesaiPulang = max($selesaiPulangLakiLaki, $selesaiPulangPerempuan);
+        $perempuanAktif = $sekarang >= $mulaiPulangPerempuan && $sekarang <= $selesaiPulangPerempuan;
+        $lakiLakiAktif = $sekarang >= $mulaiPulangLakiLaki && $sekarang <= $selesaiPulangLakiLaki;
+        $labelPulang = match (true) {
+            $pengaturan->pulangJumatDibedakan() && $perempuanAktif && $lakiLakiAktif => 'Scan pulang semua siswa berlangsung',
+            $pengaturan->pulangJumatDibedakan() && $perempuanAktif => 'Scan pulang siswi berlangsung',
+            $pengaturan->pulangJumatDibedakan() && $lakiLakiAktif => 'Scan pulang siswa laki-laki berlangsung',
+            default => 'Scan pulang berlangsung',
+        };
         [$fase, $label] = match (true) {
             $sekarang < $mulaiMasuk => ['belum_dibuka', 'Menunggu scan masuk'],
             $sekarang <= $selesaiMasuk => ['scan_masuk', 'Scan masuk berlangsung'],
             $sekarang < $mulaiPulang => ['menunggu_pulang', 'Menunggu scan pulang'],
-            $sekarang <= $selesaiPulang => ['scan_pulang', 'Scan pulang berlangsung'],
+            $perempuanAktif || $lakiLakiAktif => ['scan_pulang', $labelPulang],
+            $pengaturan->pulangJumatDibedakan() && $sekarang < $mulaiPulangLakiLaki => ['menunggu_pulang', 'Menunggu scan pulang siswa laki-laki'],
+            $sekarang <= $selesaiPulang => ['menunggu_pulang', 'Menunggu jadwal scan berikutnya'],
             default => ['selesai', 'Jadwal scan selesai'],
         };
 
@@ -270,6 +286,13 @@ class StatusScanPresensiSiswaMobileService
             'jam_scan_pulang_mulai' => $pengaturan->formatJam($pengaturan->jam_scan_pulang_mulai),
             'jam_pulang' => $pengaturan->formatJam($pengaturan->jam_pulang),
             'jam_scan_pulang_selesai' => $pengaturan->formatJam($pengaturan->jam_scan_pulang_selesai),
+            'pulang_jumat_dibedakan' => $pengaturan->pulangJumatDibedakan(),
+            'jam_scan_pulang_perempuan_mulai' => $pengaturan->pulangJumatDibedakan()
+                ? $pengaturan->formatJam($pengaturan->jam_scan_pulang_perempuan_mulai) : null,
+            'jam_pulang_perempuan' => $pengaturan->pulangJumatDibedakan()
+                ? $pengaturan->formatJam($pengaturan->jam_pulang_perempuan) : null,
+            'jam_scan_pulang_perempuan_selesai' => $pengaturan->pulangJumatDibedakan()
+                ? $pengaturan->formatJam($pengaturan->jam_scan_pulang_perempuan_selesai) : null,
         ];
     }
 
@@ -284,6 +307,7 @@ class StatusScanPresensiSiswaMobileService
             'siswa_nonaktif' => 'Siswa nonaktif',
             'anggota_kelas_tidak_ada' => 'Siswa belum ditempatkan',
             'jadwal_absensi_tidak_ada' => 'Jadwal belum tersedia',
+            'pulang_jumat_belum_dibuka' => 'Jadwal pulang laki-laki belum dibuka',
             'di_luar_jadwal', 'di_luar_jadwal_masuk', 'di_luar_jadwal_pulang' => 'Di luar jadwal',
             'kehadiran_manual_aktif' => 'Kehadiran manual sudah tercatat',
             default => str($status)->replace('_', ' ')->title()->toString(),

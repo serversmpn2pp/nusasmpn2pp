@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KegiatanIbadah extends Model
 {
+    public const KODE_SHOLAT_JUMAT = 'sholat_jumat';
+
     protected $table = 'kegiatan_ibadah';
 
     protected $fillable = [
@@ -43,5 +45,15 @@ class KegiatanIbadah extends Model
     public function logScanBerhalangan(): HasMany
     {
         return $this->hasMany(LogScanBerhalanganIbadah::class);
+    }
+
+    public function khususLakiLaki(): bool
+    {
+        return $this->kode === self::KODE_SHOLAT_JUMAT;
+    }
+
+    public function labelCakupanPeserta(): string
+    {
+        return $this->khususLakiLaki() ? 'Khusus siswa laki-laki' : 'Semua siswa';
     }
 }

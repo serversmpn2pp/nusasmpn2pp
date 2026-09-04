@@ -183,6 +183,12 @@ class KoreksiKegiatanIbadahController extends Controller
         );
 
         $kegiatan = KegiatanIbadah::query()->findOrFail($kegiatanId);
+        if ($kegiatan->khususLakiLaki()
+            && $anggotaKelas->siswa()->where('jenis_kelamin', 'P')->exists()) {
+            throw ValidationException::withMessages([
+                'anggota_kelas_id' => 'Siswi tidak wajib mengikuti Sholat Jumat dan tidak memerlukan koreksi presensi ibadah.',
+            ]);
+        }
         $hari = array_keys(JadwalKegiatanIbadah::DAFTAR_HARI)[$tanggal->dayOfWeekIso - 1] ?? 'minggu';
         $jadwal = $hari === 'minggu' ? null : JadwalKegiatanIbadah::query()
             ->where('tahun_pelajaran_id', $tahunPelajaran->id)

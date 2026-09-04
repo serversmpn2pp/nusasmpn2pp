@@ -47,6 +47,8 @@ class WorshipActivity {
     required this.scheduleCount,
     required this.activeScheduleCount,
     this.notes,
+    this.audience,
+    this.maleOnly = false,
   });
 
   factory WorshipActivity.fromJson(Map<String, dynamic> json) =>
@@ -56,6 +58,9 @@ class WorshipActivity {
         name: json['nama'] as String? ?? '-',
         active: json['aktif'] as bool? ?? false,
         notes: json['keterangan'] as String?,
+        audience: json['cakupan_peserta'] as String?,
+        maleOnly:
+            json['khusus_laki_laki'] as bool? ?? json['kode'] == 'sholat_jumat',
         scheduleCount: _integer(json['jumlah_jadwal']),
         activeScheduleCount: _integer(json['jumlah_jadwal_aktif']),
       );
@@ -65,6 +70,8 @@ class WorshipActivity {
   final String name;
   final bool active;
   final String? notes;
+  final String? audience;
+  final bool maleOnly;
   final int scheduleCount;
   final int activeScheduleCount;
 }

@@ -176,6 +176,132 @@ class RekapKegiatanIbadahTest extends TestCase
             ->assertDontSee('Siswa Belum Presensi');
     }
 
+    public function test_rekap_sholat_jumat_hanya_menghitung_siswa_laki_laki(): void
+    {
+        Carbon::setTestNow('2026-08-14 12:30:00');
+        $data = $this->dataDasar();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $kegiatanJumat = KegiatanIbadah::create([
+            'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
+            'nama' => 'Sholat Jumat',
+            'aktif' => true,
+        ]);
+        Siswa::whereKey($data['anggota_a1']->siswa_id)->update(['jenis_kelamin' => 'L']);
+        Siswa::whereKey($data['anggota_a2']->siswa_id)->update(['jenis_kelamin' => 'P']);
+        $data['jadwal']->update([
+            'kegiatan_ibadah_id' => $kegiatanJumat->id,
+            'hari' => 'jumat',
+            'urutan_hari' => 5,
+        ]);
+
+        foreach ([$data['anggota_a1'], $data['anggota_a2']] as $anggota) {
+            AbsensiSiswa::create([
+                'tanggal' => '2026-08-14',
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'kelas_id' => $anggota->kelas_id,
+                'anggota_kelas_id' => $anggota->id,
+                'siswa_id' => $anggota->siswa_id,
+                'jam_masuk' => '06:30:00',
+                'status_masuk' => 'tepat_waktu',
+                'status_kehadiran' => 'hadir',
+                'sumber' => 'scan',
+            ]);
+        }
+        PresensiKegiatanIbadah::create([
+            'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
+            'kegiatan_ibadah_id' => $kegiatanJumat->id,
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas_a']->id,
+            'anggota_kelas_id' => $data['anggota_a1']->id,
+            'siswa_id' => $data['anggota_a1']->siswa_id,
+            'dipindai_oleh_pengguna_id' => $administrator->id,
+            'tanggal' => '2026-08-14',
+            'waktu_scan' => '12:05:00',
+            'sumber' => 'kamera',
+        ]);
+
+        $parameter = [
+            'tanggal' => '2026-08-14',
+            'kegiatan_ibadah_id' => $kegiatanJumat->id,
+            'kelas_id' => $data['kelas_a']->id,
+        ];
+        $response = $this->actingAs($administrator)
+            ->get(route('rekap-kegiatan-ibadah.index', $parameter))
+            ->assertOk()
+            ->assertSee('Tidak wajib (pulang)')
+            ->assertSee('khusus siswa laki-laki');
+
+        $response->assertViewHas('ringkasan', fn (array $ringkasan) => $ringkasan['total'] === 2
+            && $ringkasan['hadir'] === 2
+            && $ringkasan['tidak_wajib'] === 1
+            && $ringkasan['wajib'] === 1
+            && $ringkasan['sudah'] === 1
+            && $ringkasan['belum'] === 0
+            && $ringkasan['persentase'] === 100
+        );
+        $response->assertViewHas('statusPerSiswa', fn ($status) => $status->get($data['anggota_a1']->siswa_id)['status'] === 'sudah'
+            && $status->get($data['anggota_a2']->siswa_id)['status'] === 'tidak_wajib'
+        );
+
+        $this->get(route('rekap-kegiatan-ibadah.index', [...$parameter, 'status' => 'tidak_wajib']))
+            ->assertOk()
+            ->assertViewHas('anggotaKelas', fn ($anggota) => $anggota->total() === 1
+                && (int) $anggota->first()->id === (int) $data['anggota_a2']->id
+            );
+    }
+
+    public function test_ringkasan_bulanan_sholat_jumat_tidak_menjadikan_siswi_sebagai_target(): void
+    {
+        Carbon::setTestNow('2026-08-14 15:00:00');
+        $data = $this->dataDasar();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $kegiatanJumat = KegiatanIbadah::create([
+            'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
+            'nama' => 'Sholat Jumat',
+            'aktif' => true,
+        ]);
+        Siswa::whereKey($data['anggota_a1']->siswa_id)->update(['jenis_kelamin' => 'L']);
+        Siswa::whereKey($data['anggota_a2']->siswa_id)->update(['jenis_kelamin' => 'P']);
+        $data['jadwal']->update([
+            'kegiatan_ibadah_id' => $kegiatanJumat->id,
+            'hari' => 'jumat',
+            'urutan_hari' => 5,
+        ]);
+
+        foreach (['2026-08-07', '2026-08-14'] as $tanggal) {
+            PresensiKegiatanIbadah::create([
+                'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
+                'kegiatan_ibadah_id' => $kegiatanJumat->id,
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'kelas_id' => $data['kelas_a']->id,
+                'anggota_kelas_id' => $data['anggota_a1']->id,
+                'siswa_id' => $data['anggota_a1']->siswa_id,
+                'dipindai_oleh_pengguna_id' => $administrator->id,
+                'tanggal' => $tanggal,
+                'waktu_scan' => '12:05:00',
+                'sumber' => 'kamera',
+            ]);
+        }
+
+        $this->actingAs($administrator)
+            ->get(route('rekap-kegiatan-ibadah.bulanan', [
+                'bulan' => '2026-08',
+                'kegiatan_ibadah_id' => $kegiatanJumat->id,
+                'kelas_id' => $data['kelas_a']->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Siswi yang langsung pulang tidak menjadi target')
+            ->assertViewHas('ringkasan', fn (array $ringkasan) => $ringkasan['siswa'] === 1
+                && $ringkasan['target'] === 2
+                && $ringkasan['tercatat'] === 2
+                && $ringkasan['belum'] === 0
+                && (float) $ringkasan['persentase'] === 100.0
+            )
+            ->assertViewHas('detailSiswa', fn ($items) => $items->count() === 1
+                && (int) $items->first()['anggota']->id === (int) $data['anggota_a1']->id
+            );
+    }
+
     public function test_guru_pai_dan_guru_piket_pada_hari_terkait_dapat_melihat_rekap(): void
     {
         Carbon::setTestNow('2026-08-13 12:30:00');

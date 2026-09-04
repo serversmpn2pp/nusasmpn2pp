@@ -300,6 +300,37 @@ class _ScheduleCard extends StatelessWidget {
               ),
             ],
           ),
+          if (selected?.maleOnly ?? false) ...[
+            const SizedBox(height: 13),
+            Container(
+              key: const Key('worship-scan-friday-notice'),
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7DA),
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(
+                  color: NusaColors.accent.withValues(alpha: 0.5),
+                ),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.mosque_rounded,
+                    size: 19,
+                    color: NusaColors.primary,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Khusus siswa laki-laki. Siswi tidak perlu scan dan dicatat sebagai tidak wajib (pulang).',
+                      style: TextStyle(fontSize: 11, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

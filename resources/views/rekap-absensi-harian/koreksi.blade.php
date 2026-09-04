@@ -12,6 +12,7 @@
             ->map(fn ($kata) => mb_substr($kata, 0, 1))
             ->join('');
         $statusSaatIni = old('status_kehadiran', $absensi?->status_kehadiran ?? 'alfa');
+        $jadwalPulang = $pengaturanAbsensi?->jadwalPulangUntuk($anggotaKelas->siswa?->jenis_kelamin);
     @endphp
 
     <div class="page-header">
@@ -78,7 +79,7 @@
             @if ($pengaturanAbsensi)
                 <div class="alert" style="margin: 20px 0 0;">
                     Masuk {{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_masuk) }},
-                    pulang {{ $pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_pulang) }}.
+                    pulang {{ $pengaturanAbsensi->formatJam($jadwalPulang['jam_pulang']) }}.
                 </div>
             @else
                 <div class="alert alert-danger" style="margin: 20px 0 0;">

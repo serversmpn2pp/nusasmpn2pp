@@ -83,6 +83,8 @@ class KegiatanIbadahMobileService
             'nama' => $item->nama,
             'aktif' => (bool) $item->aktif,
             'keterangan' => $item->keterangan,
+            'khusus_laki_laki' => $item->khususLakiLaki(),
+            'cakupan_peserta' => $item->labelCakupanPeserta(),
             'jumlah_jadwal' => (int) ($item->jadwal_count ?? $item->jadwal()->count()),
             'jumlah_jadwal_aktif' => (int) ($item->jumlah_jadwal_aktif ?? $item->jadwal()->where('aktif', true)->count()),
         ];

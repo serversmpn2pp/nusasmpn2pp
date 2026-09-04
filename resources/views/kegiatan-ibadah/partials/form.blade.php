@@ -16,7 +16,7 @@
             <h2 class="panel-title">Identitas Kegiatan</h2>
             <div class="form-grid">
                 <div class="field"><label for="nama">Nama kegiatan</label><input id="nama" name="nama" class="input @error('nama') is-invalid @enderror" value="{{ $nilai('nama') }}" placeholder="Contoh: Sholat Duhur Berjamaah" required autofocus>@error('nama')<p class="error-text">{{ $message }}</p>@enderror</div>
-                <div class="field"><label for="kode">Kode kegiatan</label><input id="kode" name="kode" class="input @error('kode') is-invalid @enderror" value="{{ $nilai('kode') }}" placeholder="Contoh: sholat_duhur" required>@error('kode')<p class="error-text">{{ $message }}</p>@enderror<p class="help-text">Digunakan sistem sebagai penanda unik.</p></div>
+                <div class="field"><label for="kode">Kode kegiatan</label><input id="kode" name="kode" class="input @error('kode') is-invalid @enderror" value="{{ $nilai('kode') }}" placeholder="Contoh: sholat_duhur" required>@error('kode')<p class="error-text">{{ $message }}</p>@enderror<p class="help-text">Digunakan sistem sebagai penanda unik. Kode <strong>sholat_jumat</strong> otomatis menerapkan peserta khusus siswa laki-laki.</p></div>
                 <div class="field span-2"><label for="keterangan">Keterangan</label><textarea id="keterangan" name="keterangan" class="textarea @error('keterangan') is-invalid @enderror" rows="4" placeholder="Tujuan atau ketentuan kegiatan">{{ $nilai('keterangan') }}</textarea>@error('keterangan')<p class="error-text">{{ $message }}</p>@enderror</div>
             </div>
         </section>
