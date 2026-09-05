@@ -18,6 +18,11 @@ class UjianCbt extends Model
         'nonaktif' => 'Nonaktif',
     ];
 
+    public const DAFTAR_TINDAKAN_PINDAH_APLIKASI = [
+        'catat' => 'Catat dan peringatkan',
+        'tahan' => 'Tahan setelah melewati batas',
+    ];
+
     protected $fillable = [
         'alur',
         'jenis_ujian_cbt_id',
@@ -38,6 +43,10 @@ class UjianCbt extends Model
         'batasi_satu_perangkat',
         'deteksi_pindah_tab',
         'wajib_fullscreen',
+        'blokir_tangkapan_layar',
+        'toleransi_pindah_aplikasi_detik',
+        'batas_pindah_aplikasi',
+        'tindakan_pindah_aplikasi',
         'tampilkan_hasil',
         'status',
         'petunjuk',
@@ -57,6 +66,9 @@ class UjianCbt extends Model
         'batasi_satu_perangkat' => 'boolean',
         'deteksi_pindah_tab' => 'boolean',
         'wajib_fullscreen' => 'boolean',
+        'blokir_tangkapan_layar' => 'boolean',
+        'toleransi_pindah_aplikasi_detik' => 'integer',
+        'batas_pindah_aplikasi' => 'integer',
         'tampilkan_hasil' => 'boolean',
     ];
 

@@ -346,7 +346,7 @@ class _ManagementSection extends StatelessWidget {
         ),
       const SizedBox(height: 11),
       const _ScopeNotice(
-        message: 'Bank Soal dan Paket Soal sudah dapat dikelola secara native. Alat CBT lainnya dibangun bertahap berikutnya.',
+        message: 'Bank Soal, Paket Soal, Asesmen Kelas, dan Pelaksanaan Ujian Terpusat sudah terhubung secara native.',
       ),
     ],
   );
@@ -562,7 +562,13 @@ class _SupervisorSection extends StatelessWidget {
         ...data.tasks.map(
           (task) => Padding(
             padding: const EdgeInsets.only(bottom: 9),
-            child: _SupervisorTaskCard(task: task),
+            child: _SupervisorTaskCard(
+              task: task,
+              onTap:
+                  data.nativeOperations && task.canOpen && task.roomId != null
+                  ? () => context.push('/tugas-pengawas-ujian/${task.roomId}')
+                  : null,
+            ),
           ),
         ),
       if (!data.nativeOperations) ...[
@@ -576,77 +582,91 @@ class _SupervisorSection extends StatelessWidget {
 }
 
 class _SupervisorTaskCard extends StatelessWidget {
-  const _SupervisorTaskCard({required this.task});
+  const _SupervisorTaskCard({required this.task, required this.onTap});
   final CbtSupervisorTask task;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  task.activity,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _StatusPill(label: task.role, tone: 'biru'),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            task.subject,
-            style: const TextStyle(
-              color: NusaColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 12,
-            runSpacing: 7,
-            children: [
-              _InlineInfo(
-                icon: Icons.calendar_today_rounded,
-                text: _dateLabel(task.date),
-              ),
-              _InlineInfo(icon: Icons.schedule_rounded, text: task.time ?? '-'),
-              _InlineInfo(icon: Icons.meeting_room_rounded, text: task.room),
-              _InlineInfo(
-                icon: Icons.groups_rounded,
-                text: '${task.studentCount} peserta',
-              ),
-            ],
-          ),
-          const Divider(height: 20),
-          Row(
-            children: [
-              const Icon(
-                Icons.attachment_rounded,
-                size: 16,
-                color: NusaColors.textSecondary,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  task.evidenceLabel,
-                  style: const TextStyle(
-                    color: NusaColors.textSecondary,
-                    fontSize: 10.5,
+    child: InkWell(
+      key: Key('supervisor-task-${task.id}'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    task.activity,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
+                const SizedBox(width: 8),
+                _StatusPill(label: task.role, tone: 'biru'),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              task.subject,
+              style: const TextStyle(
+                color: NusaColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 7,
+              children: [
+                _InlineInfo(
+                  icon: Icons.calendar_today_rounded,
+                  text: _dateLabel(task.date),
+                ),
+                _InlineInfo(
+                  icon: Icons.schedule_rounded,
+                  text: task.time ?? '-',
+                ),
+                _InlineInfo(icon: Icons.meeting_room_rounded, text: task.room),
+                _InlineInfo(
+                  icon: Icons.groups_rounded,
+                  text: '${task.studentCount} peserta',
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            Row(
+              children: [
+                const Icon(
+                  Icons.attachment_rounded,
+                  size: 16,
+                  color: NusaColors.textSecondary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    task.evidenceLabel,
+                    style: const TextStyle(
+                      color: NusaColors.textSecondary,
+                      fontSize: 10.5,
+                    ),
+                  ),
+                ),
+                if (onTap != null)
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: NusaColors.primary,
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -683,7 +703,10 @@ class _StudentSection extends StatelessWidget {
         ...data.exams.map(
           (exam) => Padding(
             padding: const EdgeInsets.only(bottom: 9),
-            child: _StudentExamCard(exam: exam),
+            child: _StudentExamCard(
+              exam: exam,
+              onTap: () => context.push('/ujian-saya/${exam.id}'),
+            ),
           ),
         ),
       if (!data.nativeExamRunner) ...[
@@ -697,77 +720,91 @@ class _StudentSection extends StatelessWidget {
 }
 
 class _StudentExamCard extends StatelessWidget {
-  const _StudentExamCard({required this.exam});
+  const _StudentExamCard({required this.exam, required this.onTap});
   final CbtStudentExam exam;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = _toneColor(exam.statusTone);
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(13),
+      child: InkWell(
+        key: Key('student-exam-${exam.id}'),
+        onTap: exam.canOpen ? onTap : null,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(Icons.quiz_rounded, color: color),
               ),
-              child: Icon(Icons.quiz_rounded, color: color),
-            ),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    exam.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    exam.subject,
-                    style: const TextStyle(
-                      color: NusaColors.primary,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exam.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 9,
-                    runSpacing: 6,
-                    children: [
-                      _StatusPill(
-                        label: exam.statusLabel,
-                        tone: exam.statusTone,
+                    const SizedBox(height: 3),
+                    Text(
+                      exam.subject,
+                      style: const TextStyle(
+                        color: NusaColors.primary,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
                       ),
-                      if (exam.date != null)
-                        _InlineInfo(
-                          icon: Icons.calendar_today_rounded,
-                          text: _dateLabel(exam.date),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 9,
+                      runSpacing: 6,
+                      children: [
+                        _StatusPill(
+                          label: exam.statusLabel,
+                          tone: exam.statusTone,
                         ),
-                      if (exam.time != null)
-                        _InlineInfo(
-                          icon: Icons.schedule_rounded,
-                          text: exam.time!,
-                        ),
-                      if (exam.durationMinutes > 0)
-                        _InlineInfo(
-                          icon: Icons.timer_outlined,
-                          text: '${exam.durationMinutes} menit',
-                        ),
-                    ],
-                  ),
-                ],
+                        if (exam.date != null)
+                          _InlineInfo(
+                            icon: Icons.calendar_today_rounded,
+                            text: _dateLabel(exam.date),
+                          ),
+                        if (exam.time != null)
+                          _InlineInfo(
+                            icon: Icons.schedule_rounded,
+                            text: exam.time!,
+                          ),
+                        if (exam.durationMinutes > 0)
+                          _InlineInfo(
+                            icon: Icons.timer_outlined,
+                            text: '${exam.durationMinutes} menit',
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 5),
+              const Padding(
+                padding: EdgeInsets.only(top: 10),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  color: NusaColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -986,6 +1023,7 @@ IconData _toolIcon(String code) => switch (code) {
   'asesmen-kelas' => Icons.class_rounded,
   'bank-soal' => Icons.library_books_rounded,
   'ujian-terpusat' => Icons.account_tree_rounded,
+  'hasil-ujian-terpusat' => Icons.fact_check_outlined,
   'paket-soal' => Icons.inventory_rounded,
   'presensi-ujian' => Icons.fact_check_rounded,
   _ => Icons.quiz_rounded,

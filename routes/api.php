@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\BankSoalController;
 use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\FotoIdentitasController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
+use App\Http\Controllers\Api\V1\HasilUjianTerpusatController;
 use App\Http\Controllers\Api\V1\InputNilaiController;
 use App\Http\Controllers\Api\V1\JadwalGuruPiketController;
 use App\Http\Controllers\Api\V1\JadwalKegiatanIbadahController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
 use App\Http\Controllers\Api\V1\KartuPegawaiController;
 use App\Http\Controllers\Api\V1\KartuPelajarController;
 use App\Http\Controllers\Api\V1\KategoriPembinaanSiswaController;
+use App\Http\Controllers\Api\V1\KeamananUjianController;
 use App\Http\Controllers\Api\V1\KegiatanIbadahController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
@@ -33,11 +35,14 @@ use App\Http\Controllers\Api\V1\LaporanSiswaWaliController;
 use App\Http\Controllers\Api\V1\LaporkanKejadianController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
+use App\Http\Controllers\Api\V1\MonitoringHasilAsesmenKelasController;
 use App\Http\Controllers\Api\V1\MonitoringSurveiController;
 use App\Http\Controllers\Api\V1\NilaiSayaController;
+use App\Http\Controllers\Api\V1\OperasionalHasilAsesmenKelasController;
 use App\Http\Controllers\Api\V1\PaketSoalController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PelaksanaanSanksiSiswaController;
+use App\Http\Controllers\Api\V1\PelaksanaanUjianTerpusatController;
 use App\Http\Controllers\Api\V1\PemeriksaanPengesahanController;
 use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\Api\V1\PendampinganSiswaController;
@@ -71,6 +76,8 @@ use App\Http\Controllers\Api\V1\StatusScanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\StatusScanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\SurveiPembelajaranController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
+use App\Http\Controllers\Api\V1\TugasPengawasUjianController;
+use App\Http\Controllers\Api\V1\UjianSayaController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use Illuminate\Support\Facades\Route;
 
@@ -107,6 +114,74 @@ Route::prefix('v1')
 
         Route::get('/pusat-cbt', PusatCbtController::class)
             ->name('pusat-cbt');
+
+        Route::get('/pelaksanaan-ujian-terpusat', [PelaksanaanUjianTerpusatController::class, 'index'])
+            ->middleware('izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('pelaksanaan-ujian-terpusat.index');
+        Route::get('/pelaksanaan-ujian-terpusat/{kegiatanUjianCbt}', [PelaksanaanUjianTerpusatController::class, 'show'])
+            ->middleware('izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('pelaksanaan-ujian-terpusat.show');
+        Route::patch('/pelaksanaan-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/ruang/{ruangKegiatanUjianCbt}/pengawas', [PelaksanaanUjianTerpusatController::class, 'aturPengawas'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('pelaksanaan-ujian-terpusat.pengawas.update');
+
+        Route::get('/hasil-ujian-terpusat', [HasilUjianTerpusatController::class, 'index'])
+            ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('hasil-ujian-terpusat.index');
+        Route::get('/hasil-ujian-terpusat/{kegiatanUjianCbt}', [HasilUjianTerpusatController::class, 'show'])
+            ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('hasil-ujian-terpusat.show');
+        Route::post('/hasil-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/terapkan-nilai', [HasilUjianTerpusatController::class, 'terapkanNilai'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola')
+            ->name('hasil-ujian-terpusat.terapkan-nilai');
+
+        Route::get('/tugas-pengawas-ujian', [TugasPengawasUjianController::class, 'index'])
+            ->middleware('akun_pegawai')
+            ->name('tugas-pengawas-ujian.index');
+        Route::get('/tugas-pengawas-ujian/{ruangUjianCbt}', [TugasPengawasUjianController::class, 'show'])
+            ->middleware('akun_pegawai')
+            ->name('tugas-pengawas-ujian.show');
+        Route::patch('/tugas-pengawas-ujian/{ruangUjianCbt}/status', [TugasPengawasUjianController::class, 'status'])
+            ->middleware('akun_pegawai')
+            ->name('tugas-pengawas-ujian.status');
+        Route::patch('/tugas-pengawas-ujian/{ruangUjianCbt}/catatan', [TugasPengawasUjianController::class, 'catatan'])
+            ->middleware('akun_pegawai')
+            ->name('tugas-pengawas-ujian.catatan');
+        Route::patch('/tugas-pengawas-ujian/{ruangUjianCbt}/peserta/{pesertaUjianCbt}/kehadiran', [TugasPengawasUjianController::class, 'kehadiran'])
+            ->middleware('akun_pegawai')
+            ->name('tugas-pengawas-ujian.kehadiran');
+        Route::post('/tugas-pengawas-ujian/{ruangUjianCbt}/peserta/{pesertaUjianCbt}/reset-perangkat', [TugasPengawasUjianController::class, 'resetPerangkat'])
+            ->middleware(['akun_pegawai', 'throttle:30,1'])
+            ->name('tugas-pengawas-ujian.reset-perangkat');
+        Route::post('/tugas-pengawas-ujian/{ruangUjianCbt}/bukti', [TugasPengawasUjianController::class, 'storeBukti'])
+            ->middleware(['akun_pegawai', 'throttle:20,1'])
+            ->name('tugas-pengawas-ujian.bukti.store');
+        Route::delete('/tugas-pengawas-ujian/{ruangUjianCbt}/bukti/{buktiRuangUjianCbt}', [TugasPengawasUjianController::class, 'destroyBukti'])
+            ->middleware('akun_pegawai')
+            ->name('tugas-pengawas-ujian.bukti.destroy');
+        Route::patch('/tugas-pengawas-ujian/{ruangUjianCbt}/kirim-bukti', [TugasPengawasUjianController::class, 'kirimBukti'])
+            ->middleware('akun_pegawai')
+            ->name('tugas-pengawas-ujian.bukti.kirim');
+
+        Route::get('/ujian-saya', [UjianSayaController::class, 'index'])
+            ->name('ujian-saya.index');
+        Route::get('/ujian-saya/{pesertaUjianCbt}', [UjianSayaController::class, 'show'])
+            ->name('ujian-saya.show');
+        Route::post('/ujian-saya/{pesertaUjianCbt}/mulai', [UjianSayaController::class, 'mulai'])
+            ->middleware('throttle:10,1')
+            ->name('ujian-saya.mulai');
+        Route::get('/ujian-saya/{pesertaUjianCbt}/kerjakan', [UjianSayaController::class, 'kerjakan'])
+            ->name('ujian-saya.kerjakan');
+        Route::put('/ujian-saya/{pesertaUjianCbt}/jawaban', [UjianSayaController::class, 'simpanJawaban'])
+            ->name('ujian-saya.jawaban.update');
+        Route::post('/ujian-saya/{pesertaUjianCbt}/selesai', [UjianSayaController::class, 'selesai'])
+            ->name('ujian-saya.selesai');
+        Route::post('/ujian-saya/{pesertaUjianCbt}/aktivitas-keamanan', [UjianSayaController::class, 'aktivitasKeamanan'])
+            ->middleware('throttle:120,1')
+            ->name('ujian-saya.aktivitas-keamanan');
+        Route::post('/keamanan-ujian/peserta/{pesertaUjianCbt}/buka', [KeamananUjianController::class, 'buka'])
+            ->middleware('throttle:30,1')
+            ->name('keamanan-ujian.buka');
 
         Route::get('/bank-soal', [BankSoalController::class, 'index'])
             ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola')
@@ -155,6 +230,21 @@ Route::prefix('v1')
         Route::put('/asesmen-kelas/{ujianCbt}/soal', [AsesmenKelasController::class, 'updateQuestions'])
             ->middleware('izin:cbt.asesmen_kelola,cbt.kelola')
             ->name('asesmen-kelas.soal.update');
+        Route::get('/asesmen-kelas/{ujianCbt}/monitoring', [MonitoringHasilAsesmenKelasController::class, 'monitoring'])
+            ->middleware(['izin:cbt.asesmen_kelola,cbt.kelola', 'akses_ujian_cbt'])
+            ->name('asesmen-kelas.monitoring');
+        Route::get('/asesmen-kelas/{ujianCbt}/hasil', [MonitoringHasilAsesmenKelasController::class, 'hasil'])
+            ->middleware(['izin:cbt.asesmen_kelola,cbt.kelola', 'akses_ujian_cbt'])
+            ->name('asesmen-kelas.hasil');
+        Route::get('/asesmen-kelas/{ujianCbt}/koreksi-uraian', [OperasionalHasilAsesmenKelasController::class, 'koreksiUraian'])
+            ->middleware(['izin:cbt.asesmen_kelola,cbt.kelola', 'akses_ujian_cbt'])
+            ->name('asesmen-kelas.koreksi-uraian');
+        Route::put('/asesmen-kelas/{ujianCbt}/koreksi-uraian', [OperasionalHasilAsesmenKelasController::class, 'simpanKoreksiUraian'])
+            ->middleware(['izin:cbt.asesmen_kelola,cbt.kelola', 'akses_ujian_cbt'])
+            ->name('asesmen-kelas.koreksi-uraian.update');
+        Route::post('/asesmen-kelas/{ujianCbt}/terapkan-nilai', [OperasionalHasilAsesmenKelasController::class, 'terapkanNilai'])
+            ->middleware(['izin:cbt.asesmen_kelola,cbt.kelola', 'akses_ujian_cbt'])
+            ->name('asesmen-kelas.terapkan-nilai');
 
         Route::get('/laporkan-kejadian/referensi', [LaporkanKejadianController::class, 'referensi'])
             ->middleware(['akun_pegawai', 'izin:poin_siswa.lapor'])

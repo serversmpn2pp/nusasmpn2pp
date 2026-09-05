@@ -7,6 +7,31 @@ import 'package:nusa/features/student_attendance_settings/domain/student_attenda
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
 
 void main() {
+  test('respons jadwal Jumat memetakan dua jam pulang', () {
+    final setting = StudentAttendanceSetting.fromJson(const {
+      'id': 5,
+      'hari': 'jumat',
+      'hari_label': 'Jumat',
+      'urutan_hari': 5,
+      'jam_scan_masuk_mulai': '05:30',
+      'jam_masuk': '06:25',
+      'jam_scan_masuk_selesai': '07:00',
+      'jam_scan_pulang_mulai': '12:50',
+      'jam_pulang': '12:50',
+      'jam_scan_pulang_selesai': '14:00',
+      'pulang_jumat_dibedakan': true,
+      'jam_scan_pulang_perempuan_mulai': '11:50',
+      'jam_pulang_perempuan': '11:50',
+      'jam_scan_pulang_perempuan_selesai': '14:00',
+      'aktif': true,
+    });
+
+    expect(setting.separateFridayCheckOut, isTrue);
+    expect(setting.femaleCheckOutTime, '11:50');
+    expect(setting.femaleCheckOutWindow, '11:50–14:00');
+    expect(setting.checkOutTime, '12:50');
+  });
+
   testWidgets('pengaturan presensi siswa rapi pada layar Android sempit', (
     tester,
   ) async {
@@ -69,6 +94,32 @@ void main() {
     expect(find.text('Nonaktif'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('form Jumat menampilkan jadwal pulang siswi dan laki-laki', (
+    tester,
+  ) async {
+    final remote = _FakeAttendanceSettingsRemoteDataSource(withFriday: true);
+    await _pumpView(tester, remote);
+
+    final fridayCard = find.byKey(const Key('student-attendance-setting-5'));
+    await tester.ensureVisible(fridayCard);
+    await tester.tap(fridayCard);
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('student-attendance-setting-form-scroll')),
+      const Offset(0, -520),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('separate-friday-check-out')), findsOneWidget);
+    expect(find.text('Jam Pulang Siswa Laki-laki'), findsOneWidget);
+    expect(find.text('Jadwal Pulang Siswi'), findsOneWidget);
+    expect(
+      find.byKey(const Key('attendance-female-check-out-time')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpView(
@@ -93,6 +144,31 @@ Future<void> _pumpView(
 
 final class _FakeAttendanceSettingsRemoteDataSource
     implements StudentAttendanceSettingsRemoteDataSource {
+  _FakeAttendanceSettingsRemoteDataSource({bool withFriday = false}) {
+    if (withFriday) {
+      _items.add(
+        const StudentAttendanceSetting(
+          id: 5,
+          day: 'jumat',
+          dayLabel: 'Jumat',
+          dayOrder: 5,
+          checkInScanStart: '05:30',
+          checkInTime: '06:25',
+          checkInScanEnd: '07:00',
+          checkOutScanStart: '12:50',
+          checkOutTime: '12:50',
+          checkOutScanEnd: '14:00',
+          separateFridayCheckOut: true,
+          femaleCheckOutScanStart: '11:50',
+          femaleCheckOutTime: '11:50',
+          femaleCheckOutScanEnd: '14:00',
+          active: true,
+          notes: 'Jadwal pulang khusus Jumat',
+        ),
+      );
+    }
+  }
+
   final List<StudentAttendanceSetting> _items = [
     const StudentAttendanceSetting(
       id: 1,
@@ -191,6 +267,10 @@ final class _FakeAttendanceSettingsRemoteDataSource
     checkOutScanStart: value.checkOutScanStart,
     checkOutTime: value.checkOutTime,
     checkOutScanEnd: value.checkOutScanEnd,
+    separateFridayCheckOut: value.separateFridayCheckOut,
+    femaleCheckOutScanStart: value.femaleCheckOutScanStart,
+    femaleCheckOutTime: value.femaleCheckOutTime,
+    femaleCheckOutScanEnd: value.femaleCheckOutScanEnd,
     active: value.active,
     notes: value.notes,
   );

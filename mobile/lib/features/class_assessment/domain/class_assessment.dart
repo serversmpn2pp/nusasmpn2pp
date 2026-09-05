@@ -120,6 +120,11 @@ class ClassAssessmentDetail {
     required this.shuffleAnswers,
     required this.singleDevice,
     required this.detectTabChange,
+    required this.requireFullscreen,
+    required this.secureScreen,
+    required this.appSwitchGraceSeconds,
+    required this.appSwitchLimit,
+    required this.appSwitchAction,
     required this.showResult,
     required this.classes,
     required this.references,
@@ -138,6 +143,14 @@ class ClassAssessmentDetail {
         shuffleAnswers: json['acak_jawaban'] as bool? ?? false,
         singleDevice: json['batasi_satu_perangkat'] as bool? ?? false,
         detectTabChange: json['deteksi_pindah_tab'] as bool? ?? false,
+        requireFullscreen: json['wajib_fullscreen'] as bool? ?? false,
+        secureScreen: json['blokir_tangkapan_layar'] as bool? ?? true,
+        appSwitchGraceSeconds: _positiveInteger(
+          json['toleransi_pindah_aplikasi_detik'],
+          3,
+        ),
+        appSwitchLimit: _positiveInteger(json['batas_pindah_aplikasi'], 3),
+        appSwitchAction: json['tindakan_pindah_aplikasi'] as String? ?? 'catat',
         showResult: json['tampilkan_hasil'] as bool? ?? false,
         instructions: json['petunjuk'] as String?,
         creator: json['dibuat_oleh'] as String?,
@@ -154,6 +167,11 @@ class ClassAssessmentDetail {
   final bool shuffleAnswers;
   final bool singleDevice;
   final bool detectTabChange;
+  final bool requireFullscreen;
+  final bool secureScreen;
+  final int appSwitchGraceSeconds;
+  final int appSwitchLimit;
+  final String appSwitchAction;
   final bool showResult;
   final String? instructions;
   final String? creator;
@@ -355,6 +373,11 @@ class ClassAssessmentPayload {
     required this.shuffleAnswers,
     required this.singleDevice,
     required this.detectTabChange,
+    required this.requireFullscreen,
+    required this.secureScreen,
+    required this.appSwitchGraceSeconds,
+    required this.appSwitchLimit,
+    required this.appSwitchAction,
     required this.showResult,
     required this.classes,
     this.instructions,
@@ -371,6 +394,11 @@ class ClassAssessmentPayload {
   final bool shuffleAnswers;
   final bool singleDevice;
   final bool detectTabChange;
+  final bool requireFullscreen;
+  final bool secureScreen;
+  final int appSwitchGraceSeconds;
+  final int appSwitchLimit;
+  final String appSwitchAction;
   final bool showResult;
   final String? instructions;
   final List<AssessmentClassPayload> classes;
@@ -388,6 +416,11 @@ class ClassAssessmentPayload {
     'acak_jawaban': shuffleAnswers,
     'batasi_satu_perangkat': singleDevice,
     'deteksi_pindah_tab': detectTabChange,
+    'wajib_fullscreen': requireFullscreen,
+    'blokir_tangkapan_layar': secureScreen,
+    'toleransi_pindah_aplikasi_detik': appSwitchGraceSeconds,
+    'batas_pindah_aplikasi': appSwitchLimit,
+    'tindakan_pindah_aplikasi': appSwitchAction,
     'tampilkan_hasil': showResult,
     'petunjuk': instructions,
     'kelas_peserta': classes.map((item) => item.toJson()).toList(),
@@ -508,6 +541,11 @@ int _integer(Object? value) => switch (value) {
   String text => int.tryParse(text) ?? 0,
   _ => 0,
 };
+int _positiveInteger(Object? value, int fallback) {
+  final parsed = _integer(value);
+  return parsed > 0 ? parsed : fallback;
+}
+
 int? _nullableInteger(Object? value) => value == null ? null : _integer(value);
 double _decimal(Object? value) => switch (value) {
   num number => number.toDouble(),

@@ -361,7 +361,9 @@ class PaketSoalMobileService
             'kkm' => $pengaturan?->kkm ?? $jadwal->mataPelajaran?->kkm,
             'token' => $kegiatan->jenisUjianCbt?->memerlukan_token ? $token : null,
             'acak_soal' => $acakSoal, 'acak_jawaban' => $acakJawaban, 'batasi_satu_perangkat' => true,
-            'deteksi_pindah_tab' => false, 'wajib_fullscreen' => false, 'tampilkan_hasil' => false,
+            'deteksi_pindah_tab' => true, 'wajib_fullscreen' => true, 'blokir_tangkapan_layar' => true,
+            'toleransi_pindah_aplikasi_detik' => 3, 'batas_pindah_aplikasi' => 3,
+            'tindakan_pindah_aplikasi' => 'tahan', 'tampilkan_hasil' => false,
             'status' => $status, 'petunjuk' => 'Baca setiap soal dengan teliti. Pastikan jawaban tersimpan sebelum mengakhiri ujian.',
             'keterangan' => 'Dibuat otomatis dari Jadwal Ujian Terpusat.',
         ];

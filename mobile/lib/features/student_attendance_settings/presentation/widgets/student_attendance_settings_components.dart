@@ -313,16 +313,82 @@ class AttendanceSettingCard extends StatelessWidget {
                 Expanded(
                   child: _TimeSummary(
                     icon: Icons.logout_rounded,
-                    title: 'Pulang ${setting.checkOutTime}',
+                    title: setting.separateFridayCheckOut
+                        ? 'Laki-laki ${setting.checkOutTime}'
+                        : 'Pulang ${setting.checkOutTime}',
                     subtitle: 'Scan ${setting.checkOutWindow}',
                     color: NusaColors.primary,
                   ),
                 ),
               ],
             ),
+            if (setting.separateFridayCheckOut) ...[
+              const SizedBox(height: 9),
+              _FridayCheckOutSummary(setting: setting),
+            ],
           ],
         ),
       ),
+    ),
+  );
+}
+
+class _FridayCheckOutSummary extends StatelessWidget {
+  const _FridayCheckOutSummary({required this.setting});
+
+  final StudentAttendanceSetting setting;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    decoration: BoxDecoration(
+      color: NusaColors.accent.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: NusaColors.accent.withValues(alpha: 0.28)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.woman_rounded, size: 18, color: Color(0xFF9A7600)),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Siswi pulang ${setting.femaleCheckOutTime ?? '-'}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                'Scan ${setting.femaleCheckOutWindow} · khusus Jumat',
+                style: const TextStyle(
+                  color: NusaColors.textSecondary,
+                  fontSize: 9,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            color: NusaColors.accent.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'Jumat',
+            style: TextStyle(
+              color: Color(0xFF7A5E00),
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }

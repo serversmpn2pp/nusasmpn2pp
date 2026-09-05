@@ -68,6 +68,16 @@ class PusatCbtApiTest extends TestCase
                 'status' => 'tersedia',
                 'rute' => '/paket-soal',
             ])
+            ->assertJsonFragment([
+                'kode' => 'ujian-terpusat',
+                'status' => 'tersedia',
+                'rute' => '/pelaksanaan-ujian-terpusat',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'hasil-ujian-terpusat',
+                'status' => 'tersedia',
+                'rute' => '/hasil-ujian-terpusat',
+            ])
             ->assertJsonPath('data.pengawas', null)
             ->assertJsonPath('data.siswa', null);
 
@@ -158,7 +168,7 @@ class PusatCbtApiTest extends TestCase
             ->assertJsonPath('data.siswa.items.0.nama', 'Asesmen Matematika Bab 1')
             ->assertJsonPath('data.siswa.items.0.mata_pelajaran', 'Matematika')
             ->assertJsonPath('data.siswa.items.0.label_status', 'Siap dimulai')
-            ->assertJsonPath('data.siswa.pengerjaan_native', false)
+            ->assertJsonPath('data.siswa.pengerjaan_native', true)
             ->assertJsonPath('data.pengawas', null)
             ->assertJsonPath('data.pengelolaan', null);
     }
@@ -200,7 +210,7 @@ class PusatCbtApiTest extends TestCase
             ->assertJsonPath('data.pengawas.ringkasan.hari_ini', 1)
             ->assertJsonPath('data.pengawas.items.0.ruang', 'Labor Komputer 1')
             ->assertJsonPath('data.pengawas.items.0.peran', 'Pengawas utama')
-            ->assertJsonPath('data.pengawas.operasional_native', false)
+            ->assertJsonPath('data.pengawas.operasional_native', true)
             ->assertJsonPath('data.pengelolaan', null);
 
         $this->withToken($token)

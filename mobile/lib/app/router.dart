@@ -8,11 +8,18 @@ import 'package:nusa/features/auth/presentation/startup_view.dart';
 import 'package:nusa/features/academic_year/presentation/academic_year_view.dart';
 import 'package:nusa/features/class_promotion/presentation/class_promotion_view.dart';
 import 'package:nusa/features/class_assessment/presentation/class_assessment_detail_view.dart';
+import 'package:nusa/features/class_assessment/presentation/class_assessment_correction_view.dart';
 import 'package:nusa/features/class_assessment/presentation/class_assessment_form_view.dart';
 import 'package:nusa/features/class_assessment/presentation/class_assessment_list_view.dart';
+import 'package:nusa/features/class_assessment/presentation/class_assessment_monitoring_view.dart';
 import 'package:nusa/features/class_assessment/presentation/class_assessment_questions_view.dart';
+import 'package:nusa/features/class_assessment/presentation/class_assessment_results_view.dart';
 import 'package:nusa/features/cbt_center/domain/cbt_center.dart';
 import 'package:nusa/features/cbt_center/presentation/cbt_center_view.dart';
+import 'package:nusa/features/central_exam_execution/presentation/central_exam_execution_detail_view.dart';
+import 'package:nusa/features/central_exam_execution/presentation/central_exam_execution_list_view.dart';
+import 'package:nusa/features/central_exam_results/presentation/central_exam_results_detail_view.dart';
+import 'package:nusa/features/central_exam_results/presentation/central_exam_results_list_view.dart';
 import 'package:nusa/features/employee/presentation/employee_detail_view.dart';
 import 'package:nusa/features/employee/presentation/employee_list_view.dart';
 import 'package:nusa/features/employee_card/presentation/employee_card_view.dart';
@@ -20,6 +27,7 @@ import 'package:nusa/features/employee_attendance_settings/presentation/employee
 import 'package:nusa/features/employee_attendance_recap/presentation/employee_attendance_recap_view.dart';
 import 'package:nusa/features/employee_attendance_report/presentation/employee_attendance_report_view.dart';
 import 'package:nusa/features/employee_scan_status/presentation/employee_scan_status_view.dart';
+import 'package:nusa/features/exam_supervision/presentation/exam_supervision_detail_view.dart';
 import 'package:nusa/features/early_warning_setting/presentation/early_warning_setting_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_detail_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_list_view.dart';
@@ -69,6 +77,7 @@ import 'package:nusa/features/student_assistance/presentation/student_assistance
 import 'package:nusa/features/student_assistance/presentation/student_assistance_list_view.dart';
 import 'package:nusa/features/student_early_warning/presentation/student_early_warning_detail_view.dart';
 import 'package:nusa/features/student_early_warning/presentation/student_early_warning_list_view.dart';
+import 'package:nusa/features/student_exam/presentation/student_exam_view.dart';
 import 'package:nusa/features/student_point_recap/presentation/student_point_recap_detail_view.dart';
 import 'package:nusa/features/student_point_recap/presentation/student_point_recap_list_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_detail_view.dart';
@@ -113,8 +122,14 @@ abstract final class AppRoutes {
   static const gantiKataSandi = '/ganti-kata-sandi';
   static const home = '/beranda';
   static const cbtCenter = '/pusat-cbt';
+  static const centralExamExecution = '/pelaksanaan-ujian-terpusat';
+  static const centralExamExecutionDetail = '/pelaksanaan-ujian-terpusat/:id';
+  static const centralExamResults = '/hasil-ujian-terpusat';
+  static const centralExamResultsDetail = '/hasil-ujian-terpusat/:id';
   static const myExamSupervision = '/tugas-pengawas-ujian';
+  static const myExamSupervisionDetail = '/tugas-pengawas-ujian/:id';
   static const myExams = '/ujian-saya';
+  static const studentExam = '/ujian-saya/:id';
   static const questionBank = '/bank-soal';
   static const questionBankCreate = '/bank-soal/tambah';
   static const questionBankDetail = '/bank-soal/:id';
@@ -126,6 +141,9 @@ abstract final class AppRoutes {
   static const classAssessmentDetail = '/asesmen-kelas/:id';
   static const classAssessmentEdit = '/asesmen-kelas/:id/ubah';
   static const classAssessmentQuestions = '/asesmen-kelas/:id/soal';
+  static const classAssessmentMonitoring = '/asesmen-kelas/:id/monitoring';
+  static const classAssessmentResults = '/asesmen-kelas/:id/hasil';
+  static const classAssessmentCorrection = '/asesmen-kelas/:id/koreksi-uraian';
   static const incidentReporting = '/laporkan-kejadian';
   static const studentReports = '/daftar-laporan-siswa';
   static const studentReportDetail = '/daftar-laporan-siswa/:id';
@@ -274,16 +292,54 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             const CbtCenterView(focus: CbtCenterFocus.management),
       ),
       GoRoute(
+        path: AppRoutes.centralExamExecution,
+        name: 'central-exam-execution',
+        builder: (context, state) => const CentralExamExecutionListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.centralExamExecutionDetail,
+        name: 'central-exam-execution-detail',
+        builder: (context, state) => CentralExamExecutionDetailView(
+          eventId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.centralExamResults,
+        name: 'central-exam-results',
+        builder: (context, state) => const CentralExamResultsListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.centralExamResultsDetail,
+        name: 'central-exam-results-detail',
+        builder: (context, state) => CentralExamResultsDetailView(
+          eventId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.myExamSupervision,
         name: 'my-exam-supervision',
         builder: (context, state) =>
             const CbtCenterView(focus: CbtCenterFocus.supervisor),
       ),
       GoRoute(
+        path: AppRoutes.myExamSupervisionDetail,
+        name: 'my-exam-supervision-detail',
+        builder: (context, state) => ExamSupervisionDetailView(
+          roomId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.myExams,
         name: 'my-exams',
         builder: (context, state) =>
             const CbtCenterView(focus: CbtCenterFocus.student),
+      ),
+      GoRoute(
+        path: AppRoutes.studentExam,
+        name: 'student-exam',
+        builder: (context, state) => StudentExamView(
+          participantId: int.parse(state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: AppRoutes.questionBank,
@@ -342,6 +398,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.classAssessmentQuestions,
         name: 'class-assessment-questions',
         builder: (context, state) => ClassAssessmentQuestionsView(
+          assessmentId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.classAssessmentMonitoring,
+        name: 'class-assessment-monitoring',
+        builder: (context, state) => ClassAssessmentMonitoringView(
+          assessmentId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.classAssessmentResults,
+        name: 'class-assessment-results',
+        builder: (context, state) => ClassAssessmentResultsView(
+          assessmentId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.classAssessmentCorrection,
+        name: 'class-assessment-correction',
+        builder: (context, state) => ClassAssessmentCorrectionView(
           assessmentId: int.parse(state.pathParameters['id']!),
         ),
       ),

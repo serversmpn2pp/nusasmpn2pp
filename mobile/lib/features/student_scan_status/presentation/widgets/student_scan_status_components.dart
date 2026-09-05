@@ -120,15 +120,36 @@ class ScanServerStatusCard extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.09),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                'Masuk ${schedule.checkInWindow} · batas ${schedule.checkInTime}  |  '
-                'Pulang ${schedule.checkOutWindow} · resmi ${schedule.checkOutTime}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  height: 1.35,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ScheduleLine(
+                    icon: Icons.login_rounded,
+                    label:
+                        'Masuk ${schedule.checkInWindow} · batas ${schedule.checkInTime}',
+                  ),
+                  const SizedBox(height: 5),
+                  if (schedule.separateFridayCheckOut) ...[
+                    _ScheduleLine(
+                      key: const Key('friday-female-check-out-schedule'),
+                      icon: Icons.woman_rounded,
+                      label:
+                          'Siswi ${schedule.femaleCheckOutWindow} · resmi ${schedule.femaleCheckOutTime}',
+                    ),
+                    const SizedBox(height: 5),
+                    _ScheduleLine(
+                      key: const Key('friday-male-check-out-schedule'),
+                      icon: Icons.man_rounded,
+                      label:
+                          'Siswa laki-laki ${schedule.checkOutWindow} · resmi ${schedule.checkOutTime}',
+                    ),
+                  ] else
+                    _ScheduleLine(
+                      icon: Icons.logout_rounded,
+                      label:
+                          'Pulang ${schedule.checkOutWindow} · resmi ${schedule.checkOutTime}',
+                    ),
+                ],
               ),
             ),
           ],
@@ -136,6 +157,33 @@ class ScanServerStatusCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ScheduleLine extends StatelessWidget {
+  const _ScheduleLine({required this.icon, required this.label, super.key});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 14, color: NusaColors.accent),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            height: 1.35,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 class _ServerTag extends StatelessWidget {
@@ -480,13 +528,15 @@ class StudentScanActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = activity.successful
         ? NusaColors.success
-        : activity.alreadyRecorded
+        : activity.alreadyRecorded || activity.scheduleWarning
         ? _warningColor
         : _errorColor;
     final icon = activity.successful
         ? Icons.check_circle_rounded
         : activity.alreadyRecorded
         ? Icons.info_rounded
+        : activity.scheduleWarning
+        ? Icons.schedule_rounded
         : Icons.error_rounded;
     final student = activity.student;
 

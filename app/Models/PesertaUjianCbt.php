@@ -53,6 +53,12 @@ class PesertaUjianCbt extends Model
         'waktu_mulai',
         'waktu_selesai',
         'menit_tersisa',
+        'jumlah_pindah_aplikasi',
+        'durasi_di_luar_aplikasi_detik',
+        'heartbeat_terakhir_pada',
+        'ditahan_mode_aman_pada',
+        'dibuka_mode_aman_pada',
+        'dibuka_mode_aman_oleh_pengguna_id',
         'ip_terakhir',
         'perangkat_terakhir',
         'user_agent_terakhir',
@@ -68,6 +74,11 @@ class PesertaUjianCbt extends Model
         'waktu_mulai' => 'datetime',
         'waktu_selesai' => 'datetime',
         'menit_tersisa' => 'integer',
+        'jumlah_pindah_aplikasi' => 'integer',
+        'durasi_di_luar_aplikasi_detik' => 'integer',
+        'heartbeat_terakhir_pada' => 'datetime',
+        'ditahan_mode_aman_pada' => 'datetime',
+        'dibuka_mode_aman_pada' => 'datetime',
         'nomor_meja' => 'integer',
         'absen_ujian_pada' => 'datetime',
         'nilai_diterapkan_pada' => 'datetime',
@@ -121,6 +132,16 @@ class PesertaUjianCbt extends Model
     public function jawabanPesertaUjianCbt(): HasMany
     {
         return $this->hasMany(JawabanPesertaUjianCbt::class);
+    }
+
+    public function aktivitasKeamananUjianCbt(): HasMany
+    {
+        return $this->hasMany(AktivitasKeamananUjianCbt::class);
+    }
+
+    public function dibukaModeAmanOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'dibuka_mode_aman_oleh_pengguna_id');
     }
 
     public function labelStatus(): string

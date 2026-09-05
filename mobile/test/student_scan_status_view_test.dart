@@ -7,6 +7,26 @@ import 'package:nusa/features/student_scan_status/domain/student_scan_status.dar
 import 'package:nusa/features/student_scan_status/presentation/student_scan_status_view.dart';
 
 void main() {
+  test('status scan memetakan jadwal pulang khusus Jumat', () {
+    final schedule = ScanScheduleStatus.fromJson(const {
+      'tersedia': true,
+      'hari': 'jumat',
+      'hari_label': 'Jumat',
+      'fase': 'scan_pulang',
+      'fase_label': 'Scan pulang siswi berlangsung',
+      'jam_scan_pulang_mulai': '12:50',
+      'jam_pulang': '12:50',
+      'jam_scan_pulang_selesai': '14:00',
+      'pulang_jumat_dibedakan': true,
+      'jam_scan_pulang_perempuan_mulai': '11:50',
+      'jam_pulang_perempuan': '11:50',
+      'jam_scan_pulang_perempuan_selesai': '14:00',
+    });
+
+    expect(schedule.separateFridayCheckOut, isTrue);
+    expect(schedule.femaleCheckOutWindow, '11:50–14:00');
+  });
+
   testWidgets('status scan siswa rapi pada layar Android sempit', (
     tester,
   ) async {
@@ -21,6 +41,14 @@ void main() {
     expect(find.text('Status Scan Presensi Siswa'), findsOneWidget);
     expect(find.text('Monitoring dari server sekolah'), findsOneWidget);
     expect(find.text('Hanya monitoring'), findsOneWidget);
+    expect(
+      find.byKey(const Key('friday-female-check-out-schedule')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('friday-male-check-out-schedule')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const Key('student-scan-status-class-filter')),
       findsOneWidget,
@@ -103,23 +131,27 @@ final class _FakeStudentScanStatusRemoteDataSource
     lastQuery = query;
 
     return StudentScanStatusDashboard(
-      date: '2026-08-27',
-      dateLabel: 'Kamis, 27 Agustus 2026',
-      serverTime: DateTime(2026, 8, 27, 6, 35),
+      date: '2026-08-28',
+      dateLabel: 'Jumat, 28 Agustus 2026',
+      serverTime: DateTime(2026, 8, 28, 11, 55),
       nextRefreshSeconds: 15,
       academicYear: const ScanAcademicYear(id: 1, name: '2026/2027'),
       schedule: const ScanScheduleStatus(
         available: true,
-        day: 'kamis',
-        dayLabel: 'Kamis',
-        phase: 'scan_masuk',
-        phaseLabel: 'Scan masuk berlangsung',
+        day: 'jumat',
+        dayLabel: 'Jumat',
+        phase: 'scan_pulang',
+        phaseLabel: 'Scan pulang siswi berlangsung',
         checkInScanStart: '06:00',
         checkInTime: '07:00',
         checkInScanEnd: '07:30',
-        checkOutScanStart: '14:00',
-        checkOutTime: '14:10',
-        checkOutScanEnd: '15:00',
+        checkOutScanStart: '12:50',
+        checkOutTime: '12:50',
+        checkOutScanEnd: '14:00',
+        separateFridayCheckOut: true,
+        femaleCheckOutScanStart: '11:50',
+        femaleCheckOutTime: '11:50',
+        femaleCheckOutScanEnd: '14:00',
       ),
       summary: const StudentScanSummary(
         studentCount: 32,

@@ -161,6 +161,7 @@ class CbtSupervisorSummary {
 class CbtSupervisorTask {
   const CbtSupervisorTask({
     required this.id,
+    required this.canOpen,
     required this.activity,
     required this.subject,
     required this.room,
@@ -171,11 +172,16 @@ class CbtSupervisorTask {
     this.date,
     this.time,
     this.evidenceStatus,
+    this.roomId,
+    this.status,
+    this.statusLabel,
   });
 
   factory CbtSupervisorTask.fromJson(Map<String, dynamic> json) =>
       CbtSupervisorTask(
         id: _integer(json['id']),
+        roomId: _nullableInteger(json['ruang_id']),
+        canOpen: json['dapat_dibuka'] as bool? ?? false,
         activity: json['kegiatan'] as String? ?? 'Ujian Terpusat',
         examType: json['jenis_ujian'] as String?,
         subject: json['mata_pelajaran'] as String? ?? '-',
@@ -186,9 +192,13 @@ class CbtSupervisorTask {
         evidenceStatus: json['status_bukti'] as String?,
         evidenceLabel: json['label_status_bukti'] as String? ?? '-',
         studentCount: _integer(json['jumlah_peserta']),
+        status: json['status'] as String?,
+        statusLabel: json['label_status'] as String?,
       );
 
   final int id;
+  final int? roomId;
+  final bool canOpen;
   final String activity;
   final String? examType;
   final String subject;
@@ -199,6 +209,8 @@ class CbtSupervisorTask {
   final String? evidenceStatus;
   final String evidenceLabel;
   final int studentCount;
+  final String? status;
+  final String? statusLabel;
 }
 
 class CbtStudent {
@@ -251,6 +263,8 @@ class CbtStudentExam {
     required this.statusLabel,
     required this.statusTone,
     required this.durationMinutes,
+    required this.requiresToken,
+    required this.canOpen,
     this.code,
     this.examType,
     this.startAt,
@@ -275,6 +289,8 @@ class CbtStudentExam {
     date: json['tanggal'] as String?,
     time: json['waktu'] as String?,
     durationMinutes: _integer(json['durasi_menit']),
+    requiresToken: json['memerlukan_token'] as bool? ?? false,
+    canOpen: json['dapat_dibuka'] as bool? ?? true,
     participantNumber: json['nomor_peserta'] as String?,
   );
 
@@ -292,6 +308,8 @@ class CbtStudentExam {
   final String? date;
   final String? time;
   final int durationMinutes;
+  final bool requiresToken;
+  final bool canOpen;
   final String? participantNumber;
 }
 
@@ -312,6 +330,8 @@ int _integer(Object? value) => switch (value) {
   String text => int.tryParse(text) ?? 0,
   _ => 0,
 };
+
+int? _nullableInteger(Object? value) => value == null ? null : _integer(value);
 
 DateTime? _date(Object? value) =>
     value is String ? DateTime.tryParse(value)?.toLocal() : null;

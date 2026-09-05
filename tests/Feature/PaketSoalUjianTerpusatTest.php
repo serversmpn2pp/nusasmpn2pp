@@ -84,6 +84,12 @@ class PaketSoalUjianTerpusatTest extends TestCase
         $this->assertTrue($paket->acak_soal);
         $this->assertTrue($paket->acak_jawaban);
         $this->assertTrue($paket->batasi_satu_perangkat);
+        $this->assertTrue($paket->deteksi_pindah_tab);
+        $this->assertTrue($paket->wajib_fullscreen);
+        $this->assertTrue($paket->blokir_tangkapan_layar);
+        $this->assertSame(3, $paket->toleransi_pindah_aplikasi_detik);
+        $this->assertSame(3, $paket->batas_pindah_aplikasi);
+        $this->assertSame('tahan', $paket->tindakan_pindah_aplikasi);
         $this->assertMatchesRegularExpression('/^\d{6}$/', $paket->token);
         $this->assertSame([1, 2], $paket->soalUjianCbt()->orderBy('nomor_urut')->pluck('nomor_urut')->all());
         $this->assertDatabaseHas('jadwal_ujian_cbt', ['id' => $data['jadwal']->id, 'ujian_cbt_id' => $paket->id, 'status' => 'siap']);

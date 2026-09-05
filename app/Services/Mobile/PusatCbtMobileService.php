@@ -80,7 +80,8 @@ class PusatCbtMobileService
             'alat' => collect([
                 ['kode' => 'asesmen-kelas', 'label' => 'Asesmen Kelas', 'izin' => ['cbt.asesmen_kelola', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/asesmen-kelas'],
                 ['kode' => 'bank-soal', 'label' => 'Bank Soal', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola'], 'status' => 'tersedia', 'rute' => '/bank-soal'],
-                ['kode' => 'ujian-terpusat', 'label' => 'Ujian Terpusat', 'izin' => ['cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola']],
+                ['kode' => 'ujian-terpusat', 'label' => 'Ujian Terpusat', 'izin' => ['cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/pelaksanaan-ujian-terpusat'],
+                ['kode' => 'hasil-ujian-terpusat', 'label' => 'Nilai & Hasil', 'izin' => ['cbt.soal_kelola', 'cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/hasil-ujian-terpusat'],
                 ['kode' => 'paket-soal', 'label' => 'Paket Soal', 'izin' => ['cbt.soal_kelola', 'cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/paket-soal'],
                 ['kode' => 'presensi-ujian', 'label' => 'Presensi Ujian', 'izin' => ['cbt.presensi', 'cbt.kelola']],
             ])->filter(fn (array $alat) => $pengguna->memilikiIzin($alat['izin']))
@@ -140,6 +141,8 @@ class PusatCbtMobileService
 
             return [
                 'id' => (int) $tugas->id,
+                'ruang_id' => $ruang ? (int) $ruang->id : null,
+                'dapat_dibuka' => (bool) $ruang,
                 'kegiatan' => $jadwal?->kegiatanUjianCbt?->nama ?? 'Ujian Terpusat',
                 'jenis_ujian' => $jadwal?->kegiatanUjianCbt?->jenisUjianCbt?->nama,
                 'mata_pelajaran' => $jadwal?->mataPelajaran?->nama ?? 'Mata pelajaran belum ditentukan',
@@ -152,6 +155,8 @@ class PusatCbtMobileService
                 'status_bukti' => $ruang?->status_bukti,
                 'label_status_bukti' => $ruang?->labelStatusBukti() ?? 'Ruang belum disiapkan',
                 'jumlah_peserta' => (int) ($ruang?->peserta_ujian_cbt_count ?? 0),
+                'status' => $ruang?->status,
+                'label_status' => $ruang?->labelStatus() ?? 'Paket belum diterbitkan',
             ];
         });
 
@@ -163,8 +168,8 @@ class PusatCbtMobileService
                 'hari_ini' => $items->where('tanggal', now()->toDateString())->count(),
                 'perlu_bukti' => $items->whereIn('status_bukti', $perluBukti)->count(),
             ],
-            'items' => $items->take(8)->values(),
-            'operasional_native' => false,
+            'items' => $items->values(),
+            'operasional_native' => true,
         ];
     }
 
@@ -179,7 +184,7 @@ class PusatCbtMobileService
                 'selesai' => (int) $data['ringkasanUjian']['selesai'],
                 'total' => (int) $data['ringkasanUjian']['total'],
             ],
-            'items' => collect($data['daftarUjian'])->take(8)->map(function (array $item) {
+            'items' => collect($data['daftarUjian'])->map(function (array $item) {
                 $peserta = $item['peserta'];
                 $ujian = $item['ujian'];
                 $jadwal = $item['jadwal'];
@@ -200,9 +205,12 @@ class PusatCbtMobileService
                     'tanggal' => $jadwal?->tanggal?->toDateString(),
                     'durasi_menit' => (int) $ujian->durasi_menit,
                     'nomor_peserta' => $peserta->nomor_peserta,
+                    'memerlukan_token' => (bool) $ujian->jenisUjianCbt?->memerlukan_token
+                        && $peserta->status !== 'sedang_mengerjakan',
+                    'dapat_dibuka' => in_array($peserta->status, ['aktif', 'sedang_mengerjakan', 'selesai'], true),
                 ];
             })->values(),
-            'pengerjaan_native' => false,
+            'pengerjaan_native' => true,
         ];
     }
 }

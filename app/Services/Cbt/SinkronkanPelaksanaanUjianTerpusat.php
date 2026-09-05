@@ -108,6 +108,11 @@ class SinkronkanPelaksanaanUjianTerpusat
                         ->whereNull('ruang_kegiatan_ujian_cbt_id')
                         ->first()
                     ?? new RuangUjianCbt(['ujian_cbt_id' => $paket->id]);
+                $statusRuang = $paket->status === 'selesai'
+                    ? 'selesai'
+                    : ($ruang->exists && in_array($ruang->status, ['berlangsung', 'selesai'], true)
+                        ? $ruang->status
+                        : 'siap');
                 $ruang->fill([
                     'ruang_kegiatan_ujian_cbt_id' => $ruangSumber->id,
                     'sesi_ujian_cbt_id' => $sesi->id,
@@ -118,7 +123,8 @@ class SinkronkanPelaksanaanUjianTerpusat
                     'kapasitas' => $ruangSumber->kapasitas,
                     'pengawas_utama_pegawai_id' => $penugasan?->pengawas_utama_pegawai_id,
                     'pengawas_pendamping_pegawai_id' => $penugasan?->pengawas_pendamping_pegawai_id,
-                    'status' => $paket->status === 'selesai' ? 'selesai' : 'siap',
+                    // Sinkronisasi peserta/pengawas tidak boleh memundurkan ruang yang sedang berjalan.
+                    'status' => $statusRuang,
                 ]);
                 $ruang->save();
                 $ruangOperasional->put($ruangSumber->id, $ruang);

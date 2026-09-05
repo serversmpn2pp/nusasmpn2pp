@@ -20,6 +20,8 @@ class KoreksiOtomatisCbtService
         'numerik',
     ];
 
+    public function __construct(private readonly PengacakPenyajianCbt $pengacakPenyajianCbt) {}
+
     public function koreksiUjian(UjianCbt $ujianCbt): array
     {
         $ringkasan = $this->ringkasanKosong();
@@ -43,7 +45,7 @@ class KoreksiOtomatisCbtService
     public function koreksiPeserta(PesertaUjianCbt $peserta): array
     {
         $peserta->loadMissing('ujianCbt');
-        $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt);
+        $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt, $peserta);
         $jawabanTersimpan = $peserta->jawabanPesertaUjianCbt()
             ->whereIn('soal_ujian_cbt_id', $soalUjian->pluck('id'))
             ->get()
@@ -57,6 +59,7 @@ class KoreksiOtomatisCbtService
 
                 if (! $soal || ! in_array($soal->jenis_soal, self::JENIS_OTOMATIS, true)) {
                     $ringkasan['manual']++;
+
                     continue;
                 }
 
@@ -195,13 +198,14 @@ class KoreksiOtomatisCbtService
         return ['skor' => $bobot, 'benar' => true];
     }
 
-    private function ambilSoalUjian(UjianCbt $ujianCbt)
+    private function ambilSoalUjian(UjianCbt $ujianCbt, PesertaUjianCbt $peserta)
     {
-        return $ujianCbt->soalUjianCbt()
+        $soal = $ujianCbt->soalUjianCbt()
             ->with('soalCbt')
-            ->get()
-            ->sortBy(fn (SoalUjianCbt $item) => sprintf('%05d|%08d', $item->nomor_urut ?? 9999, $item->id))
-            ->values()
+            ->get();
+
+        return $this->pengacakPenyajianCbt
+            ->urutkanSoal($ujianCbt, $peserta, $soal)
             ->take($ujianCbt->jumlah_soal);
     }
 

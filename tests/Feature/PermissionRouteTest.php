@@ -222,6 +222,12 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('api.v1.paket-soal.index', 'izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat');
         $this->assertRouteMemakaiMiddleware('api.v1.paket-soal.show', 'izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat');
         $this->assertRouteMemakaiMiddleware('api.v1.paket-soal.update', 'izin:cbt.soal_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-ujian-terpusat.index', 'izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-ujian-terpusat.show', 'izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pelaksanaan-ujian-terpusat.pengawas.update', 'izin:cbt.panitia,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.hasil-ujian-terpusat.index', 'izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.hasil-ujian-terpusat.show', 'izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.hasil-ujian-terpusat.terapkan-nilai', 'izin:cbt.soal_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.index', 'izin:cbt.asesmen_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.store', 'izin:cbt.asesmen_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.show', 'izin:cbt.asesmen_kelola,cbt.kelola');
@@ -229,6 +235,11 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.destroy', 'izin:cbt.asesmen_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.soal', 'izin:cbt.asesmen_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.soal.update', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.monitoring', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.hasil', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.koreksi-uraian', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.koreksi-uraian.update', 'izin:cbt.asesmen_kelola,cbt.kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.asesmen-kelas.terapkan-nilai', 'izin:cbt.asesmen_kelola,cbt.kelola');
         $this->assertRouteMemakaiMiddleware('pusat-cbt.index', 'izin:cbt.lihat,cbt.kelola,cbt.soal_kelola,cbt.presensi,cbt.asesmen_kelola,cbt.panitia,cbt.terpusat_lihat');
         $this->assertRouteMemakaiMiddleware('paket-soal-terpusat.index', 'izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat');
         $this->assertRouteMemakaiMiddleware('paket-soal-terpusat.show', 'izin:cbt.soal_kelola,cbt.kelola,cbt.panitia,cbt.terpusat_lihat');

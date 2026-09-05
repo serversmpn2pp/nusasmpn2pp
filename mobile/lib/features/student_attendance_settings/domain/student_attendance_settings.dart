@@ -90,24 +90,33 @@ class StudentAttendanceSetting {
     required this.checkOutTime,
     required this.checkOutScanEnd,
     required this.active,
+    this.separateFridayCheckOut = false,
+    this.femaleCheckOutScanStart,
+    this.femaleCheckOutTime,
+    this.femaleCheckOutScanEnd,
     this.notes,
   });
 
-  factory StudentAttendanceSetting.fromJson(Map<String, dynamic> json) =>
-      StudentAttendanceSetting(
-        id: _integer(json['id']),
-        day: json['hari'] as String? ?? '',
-        dayLabel: json['hari_label'] as String? ?? '-',
-        dayOrder: _integer(json['urutan_hari']),
-        checkInScanStart: json['jam_scan_masuk_mulai'] as String? ?? '-',
-        checkInTime: json['jam_masuk'] as String? ?? '-',
-        checkInScanEnd: json['jam_scan_masuk_selesai'] as String? ?? '-',
-        checkOutScanStart: json['jam_scan_pulang_mulai'] as String? ?? '-',
-        checkOutTime: json['jam_pulang'] as String? ?? '-',
-        checkOutScanEnd: json['jam_scan_pulang_selesai'] as String? ?? '-',
-        active: json['aktif'] as bool? ?? false,
-        notes: json['keterangan'] as String?,
-      );
+  factory StudentAttendanceSetting.fromJson(
+    Map<String, dynamic> json,
+  ) => StudentAttendanceSetting(
+    id: _integer(json['id']),
+    day: json['hari'] as String? ?? '',
+    dayLabel: json['hari_label'] as String? ?? '-',
+    dayOrder: _integer(json['urutan_hari']),
+    checkInScanStart: json['jam_scan_masuk_mulai'] as String? ?? '-',
+    checkInTime: json['jam_masuk'] as String? ?? '-',
+    checkInScanEnd: json['jam_scan_masuk_selesai'] as String? ?? '-',
+    checkOutScanStart: json['jam_scan_pulang_mulai'] as String? ?? '-',
+    checkOutTime: json['jam_pulang'] as String? ?? '-',
+    checkOutScanEnd: json['jam_scan_pulang_selesai'] as String? ?? '-',
+    separateFridayCheckOut: json['pulang_jumat_dibedakan'] as bool? ?? false,
+    femaleCheckOutScanStart: json['jam_scan_pulang_perempuan_mulai'] as String?,
+    femaleCheckOutTime: json['jam_pulang_perempuan'] as String?,
+    femaleCheckOutScanEnd: json['jam_scan_pulang_perempuan_selesai'] as String?,
+    active: json['aktif'] as bool? ?? false,
+    notes: json['keterangan'] as String?,
+  );
 
   final int id;
   final String day;
@@ -119,11 +128,17 @@ class StudentAttendanceSetting {
   final String checkOutScanStart;
   final String checkOutTime;
   final String checkOutScanEnd;
+  final bool separateFridayCheckOut;
+  final String? femaleCheckOutScanStart;
+  final String? femaleCheckOutTime;
+  final String? femaleCheckOutScanEnd;
   final bool active;
   final String? notes;
 
   String get checkInWindow => '$checkInScanStart–$checkInScanEnd';
   String get checkOutWindow => '$checkOutScanStart–$checkOutScanEnd';
+  String get femaleCheckOutWindow =>
+      '${femaleCheckOutScanStart ?? '-'}–${femaleCheckOutScanEnd ?? '-'}';
 }
 
 class StudentAttendanceSettingsFormValue {
@@ -136,6 +151,10 @@ class StudentAttendanceSettingsFormValue {
     required this.checkOutTime,
     required this.checkOutScanEnd,
     required this.active,
+    this.separateFridayCheckOut = false,
+    this.femaleCheckOutScanStart,
+    this.femaleCheckOutTime,
+    this.femaleCheckOutScanEnd,
     this.notes,
   });
 
@@ -146,6 +165,10 @@ class StudentAttendanceSettingsFormValue {
   final String checkOutScanStart;
   final String checkOutTime;
   final String checkOutScanEnd;
+  final bool separateFridayCheckOut;
+  final String? femaleCheckOutScanStart;
+  final String? femaleCheckOutTime;
+  final String? femaleCheckOutScanEnd;
   final bool active;
   final String? notes;
 }

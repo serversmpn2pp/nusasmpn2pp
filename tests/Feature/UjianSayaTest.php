@@ -179,7 +179,7 @@ class UjianSayaTest extends TestCase
             ->assertSee('Matematika Akan Datang')
             ->assertSee('Matematika Selesai')
             ->assertSee('Ruang 01')
-            ->assertSee('Nomor meja')
+            ->assertSee('Kode meja')
             ->assertSee('Sesi Pagi')
             ->assertSee('Token dari pengawas')
             ->assertSee('Masuk Ujian')

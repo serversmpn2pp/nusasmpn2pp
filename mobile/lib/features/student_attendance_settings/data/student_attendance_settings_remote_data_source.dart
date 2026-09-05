@@ -72,6 +72,16 @@ final class DioStudentAttendanceSettingsRemoteDataSource
           'jam_scan_pulang_mulai': value.checkOutScanStart,
           'jam_pulang': value.checkOutTime,
           'jam_scan_pulang_selesai': value.checkOutScanEnd,
+          'pulang_jumat_dibedakan': value.separateFridayCheckOut,
+          'jam_scan_pulang_perempuan_mulai': value.separateFridayCheckOut
+              ? value.femaleCheckOutScanStart
+              : null,
+          'jam_pulang_perempuan': value.separateFridayCheckOut
+              ? value.femaleCheckOutTime
+              : null,
+          'jam_scan_pulang_perempuan_selesai': value.separateFridayCheckOut
+              ? value.femaleCheckOutScanEnd
+              : null,
           'aktif': value.active,
           'keterangan': _text(value.notes),
         },

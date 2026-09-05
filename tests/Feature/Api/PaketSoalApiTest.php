@@ -61,6 +61,11 @@ class PaketSoalApiTest extends TestCase
         $paket = UjianCbt::where('alur', 'terpusat')->firstOrFail();
         $this->assertFalse($paket->acak_soal);
         $this->assertTrue($paket->acak_jawaban);
+        $this->assertTrue($paket->batasi_satu_perangkat);
+        $this->assertTrue($paket->deteksi_pindah_tab);
+        $this->assertTrue($paket->wajib_fullscreen);
+        $this->assertTrue($paket->blokir_tangkapan_layar);
+        $this->assertSame('tahan', $paket->tindakan_pindah_aplikasi);
         $this->assertSame([$dua->id, $satu->id], $paket->soalUjianCbt()->orderBy('nomor_urut')->pluck('soal_cbt_id')->all());
         $this->assertDatabaseHas('jadwal_ujian_cbt', ['id' => $data['jadwal']->id, 'status' => 'siap']);
     }

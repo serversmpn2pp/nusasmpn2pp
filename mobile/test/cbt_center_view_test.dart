@@ -44,6 +44,12 @@ void main() {
               body: Center(child: Text('Asesmen Kelas Native')),
             ),
           ),
+          GoRoute(
+            path: '/tugas-pengawas-ujian/:id',
+            builder: (context, state) => const Scaffold(
+              body: Center(child: Text('Detail Pengawas Native')),
+            ),
+          ),
         ],
       );
       addTearDown(router.dispose);
@@ -78,6 +84,9 @@ void main() {
       await tester.drag(find.byType(ListView), const Offset(0, -700));
       await tester.pumpAndSettle();
       expect(find.text('Labor Komputer 1'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('supervisor-task-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Detail Pengawas Native'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -169,6 +178,8 @@ Map<String, dynamic> _response() => {
     'items': [
       {
         'id': 1,
+        'ruang_id': 11,
+        'dapat_dibuka': true,
         'kegiatan': 'Simulasi Ujian Sekolah',
         'jenis_ujian': 'Simulasi',
         'mata_pelajaran': 'Matematika',
@@ -179,9 +190,11 @@ Map<String, dynamic> _response() => {
         'status_bukti': 'belum_diunggah',
         'label_status_bukti': 'Belum diunggah',
         'jumlah_peserta': 30,
+        'status': 'siap',
+        'label_status': 'Siap',
       },
     ],
-    'operasional_native': false,
+    'operasional_native': true,
   },
   'siswa': {
     'ringkasan': {'aktif': 1, 'akan_datang': 0, 'selesai': 0, 'total': 1},
@@ -204,6 +217,6 @@ Map<String, dynamic> _response() => {
         'nomor_peserta': '26001',
       },
     ],
-    'pengerjaan_native': false,
+    'pengerjaan_native': true,
   },
 };

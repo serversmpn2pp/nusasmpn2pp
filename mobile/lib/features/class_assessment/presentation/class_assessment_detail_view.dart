@@ -158,6 +158,21 @@ class _Content extends ConsumerWidget {
                   enabled: detail.detectTabChange,
                 ),
                 _SettingChip(
+                  label: 'Blokir screenshot',
+                  enabled: detail.secureScreen,
+                ),
+                _SettingChip(
+                  label: 'Layar penuh',
+                  enabled: detail.requireFullscreen,
+                ),
+                if (detail.detectTabChange)
+                  _SettingChip(
+                    label: detail.appSwitchAction == 'tahan'
+                        ? 'Tahan pada kejadian ke-${detail.appSwitchLimit}'
+                        : 'Hanya catat pelanggaran',
+                    enabled: true,
+                  ),
+                _SettingChip(
                   label: 'Tampilkan hasil',
                   enabled: detail.showResult,
                 ),
@@ -175,23 +190,61 @@ class _Content extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 11),
-          Container(
-            padding: const EdgeInsets.all(13),
-            decoration: BoxDecoration(
-              color: NusaColors.surfaceBlue,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: NusaColors.outline),
-            ),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          _Section(
+            title: 'Pelaksanaan dan hasil',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(Icons.info_outline_rounded, color: NusaColors.primary),
-                SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    'Monitoring pengerjaan, koreksi uraian, dan penerapan hasil ke nilai akan dibangun pada modul operasional CBT berikutnya.',
-                    style: TextStyle(fontSize: 10.5, height: 1.4),
+                const Text(
+                  'Pantau pengerjaan siswa secara langsung dan lihat hasil asesmen per kelas.',
+                  style: TextStyle(
+                    color: NusaColors.textSecondary,
+                    fontSize: 10.5,
+                    height: 1.4,
                   ),
+                ),
+                const SizedBox(height: 11),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        key: const Key('class-assessment-monitoring'),
+                        onPressed: () => context.push(
+                          '/asesmen-kelas/${item.id}/monitoring',
+                        ),
+                        icon: const Icon(Icons.monitor_heart_outlined),
+                        label: const Text('Monitoring'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const Key('class-assessment-results'),
+                        onPressed: () =>
+                            context.push('/asesmen-kelas/${item.id}/hasil'),
+                        icon: const Icon(Icons.assessment_outlined),
+                        label: const Text('Hasil'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 9),
+                const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: NusaColors.primary,
+                    ),
+                    SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        'Koreksi uraian dan penerapan hasil ke komponen nilai tersedia dari halaman Hasil.',
+                        style: TextStyle(fontSize: 9.5, height: 1.4),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

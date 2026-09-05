@@ -28,10 +28,16 @@ class _StudentAttendanceSettingsFormSheetState
   late TimeOfDay _checkOutScanStart;
   late TimeOfDay _checkOutTime;
   late TimeOfDay _checkOutScanEnd;
+  late bool _separateFridayCheckOut;
+  late TimeOfDay _femaleCheckOutScanStart;
+  late TimeOfDay _femaleCheckOutTime;
+  late TimeOfDay _femaleCheckOutScanEnd;
   late bool _active;
   String? _error;
 
   bool get _editing => widget.existing != null;
+  bool get _isFriday => _day == 'jumat';
+  bool get _usesSeparateFridayCheckOut => _isFriday && _separateFridayCheckOut;
 
   @override
   void initState() {
@@ -49,6 +55,14 @@ class _StudentAttendanceSettingsFormSheetState
     _checkOutScanStart = _parseTime(existing?.checkOutScanStart ?? '14:00');
     _checkOutTime = _parseTime(existing?.checkOutTime ?? '14:10');
     _checkOutScanEnd = _parseTime(existing?.checkOutScanEnd ?? '15:00');
+    _separateFridayCheckOut = existing?.separateFridayCheckOut ?? false;
+    _femaleCheckOutScanStart = _parseTime(
+      existing?.femaleCheckOutScanStart ?? '11:50',
+    );
+    _femaleCheckOutTime = _parseTime(existing?.femaleCheckOutTime ?? '11:50');
+    _femaleCheckOutScanEnd = _parseTime(
+      existing?.femaleCheckOutScanEnd ?? '14:00',
+    );
     _active = existing?.active ?? true;
   }
 
@@ -163,30 +177,101 @@ class _StudentAttendanceSettingsFormSheetState
                 ),
                 const SizedBox(height: 14),
                 _TimeSection(
-                  title: 'Jam Pulang',
+                  title: _usesSeparateFridayCheckOut
+                      ? 'Jam Pulang Siswa Laki-laki'
+                      : 'Jam Pulang',
                   icon: Icons.logout_rounded,
                   color: NusaColors.primary,
                   fields: [
                     _TimeFieldData(
                       key: const Key('attendance-check-out-scan-start'),
-                      label: 'Mulai scan pulang',
+                      label: _usesSeparateFridayCheckOut
+                          ? 'Mulai scan siswa laki-laki'
+                          : 'Mulai scan pulang',
                       value: _checkOutScanStart,
                       onTap: () => _pickTime(_TimeTarget.checkOutScanStart),
                     ),
                     _TimeFieldData(
                       key: const Key('attendance-check-out-time'),
-                      label: 'Jam pulang resmi',
+                      label: _usesSeparateFridayCheckOut
+                          ? 'Jam pulang resmi siswa laki-laki'
+                          : 'Jam pulang resmi',
                       value: _checkOutTime,
                       onTap: () => _pickTime(_TimeTarget.checkOutTime),
                     ),
                     _TimeFieldData(
                       key: const Key('attendance-check-out-scan-end'),
-                      label: 'Tutup scan pulang',
+                      label: _usesSeparateFridayCheckOut
+                          ? 'Tutup scan siswa laki-laki'
+                          : 'Tutup scan pulang',
                       value: _checkOutScanEnd,
                       onTap: () => _pickTime(_TimeTarget.checkOutScanEnd),
                     ),
                   ],
                 ),
+                if (_isFriday) ...[
+                  const SizedBox(height: 10),
+                  Material(
+                    color: NusaColors.surfaceBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: NusaColors.primary.withValues(alpha: 0.13),
+                      ),
+                    ),
+                    child: SwitchListTile.adaptive(
+                      key: const Key('separate-friday-check-out'),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 3,
+                      ),
+                      title: const Text(
+                        'Bedakan jam pulang Jumat',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: const Text(
+                        'Siswi dapat scan lebih awal. Siswa laki-laki menunggu jadwal setelah salat Jumat.',
+                        style: TextStyle(fontSize: 10.5, height: 1.35),
+                      ),
+                      value: _separateFridayCheckOut,
+                      onChanged: (value) =>
+                          setState(() => _separateFridayCheckOut = value),
+                    ),
+                  ),
+                ],
+                if (_usesSeparateFridayCheckOut) ...[
+                  const SizedBox(height: 10),
+                  _TimeSection(
+                    title: 'Jadwal Pulang Siswi',
+                    icon: Icons.woman_rounded,
+                    color: const Color(0xFF9A7600),
+                    description: 'Khusus hari Jumat. Data jenis kelamin yang belum lengkap mengikuti jadwal siswa laki-laki.',
+                    fields: [
+                      _TimeFieldData(
+                        key: const Key(
+                          'attendance-female-check-out-scan-start',
+                        ),
+                        label: 'Mulai scan siswi',
+                        value: _femaleCheckOutScanStart,
+                        onTap: () =>
+                            _pickTime(_TimeTarget.femaleCheckOutScanStart),
+                      ),
+                      _TimeFieldData(
+                        key: const Key('attendance-female-check-out-time'),
+                        label: 'Jam pulang resmi siswi',
+                        value: _femaleCheckOutTime,
+                        onTap: () => _pickTime(_TimeTarget.femaleCheckOutTime),
+                      ),
+                      _TimeFieldData(
+                        key: const Key('attendance-female-check-out-scan-end'),
+                        label: 'Tutup scan siswi',
+                        value: _femaleCheckOutScanEnd,
+                        onTap: () =>
+                            _pickTime(_TimeTarget.femaleCheckOutScanEnd),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 10),
                 SwitchListTile.adaptive(
                   key: const Key('student-attendance-setting-active'),
@@ -269,6 +354,12 @@ class _StudentAttendanceSettingsFormSheetState
           _checkOutTime = value;
         case _TimeTarget.checkOutScanEnd:
           _checkOutScanEnd = value;
+        case _TimeTarget.femaleCheckOutScanStart:
+          _femaleCheckOutScanStart = value;
+        case _TimeTarget.femaleCheckOutTime:
+          _femaleCheckOutTime = value;
+        case _TimeTarget.femaleCheckOutScanEnd:
+          _femaleCheckOutScanEnd = value;
       }
     });
   }
@@ -280,6 +371,9 @@ class _StudentAttendanceSettingsFormSheetState
     _TimeTarget.checkOutScanStart => _checkOutScanStart,
     _TimeTarget.checkOutTime => _checkOutTime,
     _TimeTarget.checkOutScanEnd => _checkOutScanEnd,
+    _TimeTarget.femaleCheckOutScanStart => _femaleCheckOutScanStart,
+    _TimeTarget.femaleCheckOutTime => _femaleCheckOutTime,
+    _TimeTarget.femaleCheckOutScanEnd => _femaleCheckOutScanEnd,
   };
 
   String _labelFor(_TimeTarget target) => switch (target) {
@@ -289,6 +383,10 @@ class _StudentAttendanceSettingsFormSheetState
     _TimeTarget.checkOutScanStart => 'Pilih waktu mulai scan pulang',
     _TimeTarget.checkOutTime => 'Pilih jam pulang resmi',
     _TimeTarget.checkOutScanEnd => 'Pilih waktu tutup scan pulang',
+    _TimeTarget.femaleCheckOutScanStart =>
+      'Pilih waktu mulai scan pulang siswi',
+    _TimeTarget.femaleCheckOutTime => 'Pilih jam pulang resmi siswi',
+    _TimeTarget.femaleCheckOutScanEnd => 'Pilih waktu tutup scan pulang siswi',
   };
 
   void _submit() {
@@ -308,7 +406,27 @@ class _StudentAttendanceSettingsFormSheetState
       );
       return;
     }
+    if (_usesSeparateFridayCheckOut &&
+        !_ordered(
+          _femaleCheckOutScanStart,
+          _femaleCheckOutTime,
+          _femaleCheckOutScanEnd,
+        )) {
+      setState(
+        () => _error = 'Jam pulang resmi siswi harus berada di antara mulai dan tutup scan.',
+      );
+      return;
+    }
+    if (_usesSeparateFridayCheckOut &&
+        (_minutes(_femaleCheckOutScanStart) > _minutes(_checkOutScanStart) ||
+            _minutes(_femaleCheckOutTime) > _minutes(_checkOutTime))) {
+      setState(
+        () => _error = 'Jadwal pulang siswi harus sama atau lebih awal daripada jadwal siswa laki-laki.',
+      );
+      return;
+    }
 
+    final separateFridayCheckOut = _usesSeparateFridayCheckOut;
     Navigator.pop(
       context,
       StudentAttendanceSettingsFormValue(
@@ -319,6 +437,16 @@ class _StudentAttendanceSettingsFormSheetState
         checkOutScanStart: _formatTime(_checkOutScanStart),
         checkOutTime: _formatTime(_checkOutTime),
         checkOutScanEnd: _formatTime(_checkOutScanEnd),
+        separateFridayCheckOut: separateFridayCheckOut,
+        femaleCheckOutScanStart: separateFridayCheckOut
+            ? _formatTime(_femaleCheckOutScanStart)
+            : null,
+        femaleCheckOutTime: separateFridayCheckOut
+            ? _formatTime(_femaleCheckOutTime)
+            : null,
+        femaleCheckOutScanEnd: separateFridayCheckOut
+            ? _formatTime(_femaleCheckOutScanEnd)
+            : null,
         active: _active,
         notes: _notesController.text.trim().isEmpty
             ? null
@@ -334,12 +462,14 @@ class _TimeSection extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.fields,
+    this.description,
   });
 
   final String title;
   final IconData icon;
   final Color color;
   final List<_TimeFieldData> fields;
+  final String? description;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -359,6 +489,17 @@ class _TimeSection extends StatelessWidget {
             Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
           ],
         ),
+        if (description != null) ...[
+          const SizedBox(height: 5),
+          Text(
+            description!,
+            style: const TextStyle(
+              color: NusaColors.textSecondary,
+              fontSize: 10.5,
+              height: 1.35,
+            ),
+          ),
+        ],
         const SizedBox(height: 11),
         for (var index = 0; index < fields.length; index++) ...[
           _TimePickerField(data: fields[index]),
@@ -417,6 +558,9 @@ enum _TimeTarget {
   checkOutScanStart,
   checkOutTime,
   checkOutScanEnd,
+  femaleCheckOutScanStart,
+  femaleCheckOutTime,
+  femaleCheckOutScanEnd,
 }
 
 bool _ordered(TimeOfDay start, TimeOfDay official, TimeOfDay end) =>
