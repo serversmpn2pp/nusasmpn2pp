@@ -18,6 +18,7 @@ use App\Http\Controllers\CadanganDatabaseController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenPoinSiswaController;
 use App\Http\Controllers\FotoIdentitasController;
+use App\Http\Controllers\FinalisasiHasilUjianTerpusatController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\HasilSurveiSayaController;
 use App\Http\Controllers\ImportPenerimaanBarangController;
@@ -467,6 +468,12 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('ujian-cbt/{ujianCbt}/koreksi-manual', [KoreksiManualUjianCbtController::class, 'index'])->name('ujian-cbt.koreksi-manual.index');
             Route::put('ujian-cbt/{ujianCbt}/koreksi-manual', [KoreksiManualUjianCbtController::class, 'update'])->name('ujian-cbt.koreksi-manual.update');
             Route::post('ujian-cbt/{ujianCbt}/terapkan-nilai', [TerapkanNilaiCbtController::class, 'store'])->name('ujian-cbt.terapkan-nilai.store');
+        });
+        Route::middleware(['izin:cbt.soal_kelola,cbt.kelola', 'akses_ujian_cbt'])->group(function () {
+            Route::patch('ujian-cbt/{ujianCbt}/hasil/finalisasi', [FinalisasiHasilUjianTerpusatController::class, 'finalisasi'])->name('ujian-cbt.hasil.finalisasi');
+            Route::delete('ujian-cbt/{ujianCbt}/hasil/finalisasi', [FinalisasiHasilUjianTerpusatController::class, 'batalkanFinalisasi'])->name('ujian-cbt.hasil.finalisasi.destroy');
+            Route::patch('ujian-cbt/{ujianCbt}/hasil/publikasi', [FinalisasiHasilUjianTerpusatController::class, 'publikasikan'])->name('ujian-cbt.hasil.publikasi');
+            Route::delete('ujian-cbt/{ujianCbt}/hasil/publikasi', [FinalisasiHasilUjianTerpusatController::class, 'batalkanPublikasi'])->name('ujian-cbt.hasil.publikasi.destroy');
         });
         Route::middleware(['izin:cbt.kelola', 'ujian_terpusat'])->group(function () {
             Route::get('ujian-cbt/{ujianCbt}/peserta', [PesertaUjianCbtController::class, 'index'])->name('ujian-cbt.peserta.index');

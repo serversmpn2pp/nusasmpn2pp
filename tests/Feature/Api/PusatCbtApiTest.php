@@ -71,12 +71,17 @@ class PusatCbtApiTest extends TestCase
             ->assertJsonFragment([
                 'kode' => 'ujian-terpusat',
                 'status' => 'tersedia',
-                'rute' => '/pelaksanaan-ujian-terpusat',
+                'rute' => '/ujian-terpusat',
             ])
             ->assertJsonFragment([
                 'kode' => 'hasil-ujian-terpusat',
                 'status' => 'tersedia',
                 'rute' => '/hasil-ujian-terpusat',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'presensi-ujian',
+                'status' => 'tersedia',
+                'rute' => '/presensi-ujian',
             ])
             ->assertJsonPath('data.pengawas', null)
             ->assertJsonPath('data.siswa', null);

@@ -14,6 +14,8 @@ void main() {
     expect(data.results.summary.average, 82.5);
     expect(data.results.items.single.status, 'tuntas');
     expect(data.canApply, isTrue);
+    expect(data.finalization.status, 'final');
+    expect(data.finalization.canPublish, isTrue);
   });
 
   testWidgets('hasil ujian terpusat rapi pada layar Android sempit', (
@@ -45,7 +47,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('STS Semester Ganjil'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('central-results-publish')),
+      180,
+    );
+    expect(find.byKey(const Key('central-results-publish')), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('central-results-publish')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('central-results-publish')));
+    await tester.pumpAndSettle();
+    expect(find.text('Publikasikan hasil?'), findsOneWidget);
+    await tester.tap(find.text('Batal'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('central-results-apply')),
+      180,
+    );
     expect(find.byKey(const Key('central-results-apply')), findsOneWidget);
+    expect(find.byKey(const Key('central-results-correction')), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.ensureVisible(find.byKey(const Key('central-results-apply')));
@@ -84,11 +105,36 @@ Map<String, dynamic> _payload() => {
       'tingkat': 8,
       'jumlah_peserta': 1,
       'dapat_menerapkan_nilai': true,
+      'status_hasil': 'final',
       'paket_tersedia': true,
     },
   ],
   'jadwal_terpilih_id': 11,
   'dapat_menerapkan_nilai': true,
+  'finalisasi': {
+    'status': 'final',
+    'label_status': 'Final',
+    'dapat_mengelola': true,
+    'siap_difinalisasi': true,
+    'dapat_finalisasi': false,
+    'dapat_batalkan_finalisasi': true,
+    'dapat_publikasi': true,
+    'dapat_batalkan_publikasi': false,
+    'difinalisasi_pada': '2026-09-10T10:00:00+07:00',
+    'difinalisasi_oleh': 'Administrator NUSA',
+    'dipublikasikan_pada': null,
+    'dipublikasikan_oleh': null,
+    'kesiapan': {
+      'siap': true,
+      'total_peserta': 1,
+      'peserta_wajib_selesai': 1,
+      'peserta_selesai': 1,
+      'peserta_belum_selesai': 0,
+      'peserta_tidak_hadir': 0,
+      'perlu_koreksi_manual': 0,
+      'jumlah_soal': 40,
+    },
+  },
   'hasil': {
     'asesmen': {
       'id': 21,

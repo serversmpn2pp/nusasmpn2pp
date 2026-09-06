@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/central_exam_results/application/central_exam_results_controller.dart';
@@ -23,6 +24,7 @@ class _CentralExamResultsDetailViewState
   int? _classId;
   String _status = 'semua';
   bool _applying = false;
+  CentralExamResultLifecycleAction? _lifecycleAction;
 
   CentralExamResultsRequest get _request => (
     eventId: widget.eventId,
@@ -89,10 +91,19 @@ class _CentralExamResultsDetailViewState
                     eyebrow: 'HASIL PAKET TERPILIH',
                   ),
                   const SizedBox(height: 11),
+                  _FinalizationCard(
+                    finalization: data.finalization,
+                    busyAction: _lifecycleAction,
+                    onAction: (action) => _confirmLifecycle(data, action),
+                  ),
+                  const SizedBox(height: 11),
                   _TargetAndAction(
                     data: data,
                     applying: _applying,
                     onApply: () => _confirmApply(data),
+                    onCorrection: () => context.push(
+                      '/hasil-ujian-terpusat/${widget.eventId}/jadwal/${data.selectedScheduleId}/koreksi-uraian',
+                    ),
                   ),
                   const SizedBox(height: 11),
                   AssessmentMetricsGrid(
@@ -244,7 +255,81 @@ class _CentralExamResultsDetailViewState
       if (mounted) setState(() => _applying = false);
     }
   }
+
+  Future<void> _confirmLifecycle(
+    CentralExamResultsDetail data,
+    CentralExamResultLifecycleAction action,
+  ) async {
+    final scheduleId = data.selectedScheduleId;
+    if (scheduleId == null || _lifecycleAction != null) return;
+    final copy = _lifecycleCopy(action);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(copy.title),
+        content: Text(copy.description),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            key: Key('central-results-confirm-${action.name}'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(copy.confirmLabel),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _lifecycleAction = action);
+    try {
+      final result = await ref.read(centralExamResultsLifecycleProvider)(
+        eventId: widget.eventId,
+        scheduleId: scheduleId,
+        action: action,
+      );
+      await _refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(result.message)));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(_message(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _lifecycleAction = null);
+    }
+  }
 }
+
+({String title, String description, String confirmLabel}) _lifecycleCopy(
+  CentralExamResultLifecycleAction action,
+) => switch (action) {
+  CentralExamResultLifecycleAction.finalize => (
+    title: 'Finalisasi hasil?',
+    description: 'Koreksi otomatis akan dijalankan. Setelah final, skor dikunci sampai finalisasi dibatalkan.',
+    confirmLabel: 'Finalisasi',
+  ),
+  CentralExamResultLifecycleAction.cancelFinalization => (
+    title: 'Batalkan finalisasi?',
+    description: 'Hasil kembali menjadi draf dan skor dapat dikoreksi kembali.',
+    confirmLabel: 'Buka Kembali',
+  ),
+  CentralExamResultLifecycleAction.publish => (
+    title: 'Publikasikan hasil?',
+    description: 'Siswa yang telah menyelesaikan ujian dapat melihat nilainya di menu Ujian Saya.',
+    confirmLabel: 'Publikasikan',
+  ),
+  CentralExamResultLifecycleAction.unpublish => (
+    title: 'Batalkan publikasi?',
+    description: 'Hasil tidak lagi terlihat oleh siswa, tetapi skor tetap dalam keadaan final.',
+    confirmLabel: 'Batalkan Publikasi',
+  ),
+};
 
 class _EventHero extends StatelessWidget {
   const _EventHero({required this.event});
@@ -340,15 +425,333 @@ class _SchedulePicker extends StatelessWidget {
   );
 }
 
+class _FinalizationCard extends StatelessWidget {
+  const _FinalizationCard({
+    required this.finalization,
+    required this.busyAction,
+    required this.onAction,
+  });
+
+  final CentralExamResultFinalization finalization;
+  final CentralExamResultLifecycleAction? busyAction;
+  final ValueChanged<CentralExamResultLifecycleAction> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final readiness = finalization.readiness;
+    final statusColor = switch (finalization.status) {
+      'dipublikasikan' => NusaColors.success,
+      'final' => NusaColors.primary,
+      _ => const Color(0xFF9A7000),
+    };
+    final blockers = <String>[
+      if (readiness.questionCount == 0) 'Paket belum memiliki soal.',
+      if (readiness.totalParticipants == 0) 'Belum ada peserta.',
+      if (readiness.unfinishedParticipants > 0)
+        '${readiness.unfinishedParticipants} peserta wajib belum selesai.',
+      if (readiness.pendingManualCorrections > 0)
+        '${readiness.pendingManualCorrections} jawaban uraian belum dikoreksi.',
+    ];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(
+                    finalization.isPublished
+                        ? Icons.campaign_rounded
+                        : finalization.isFinal
+                        ? Icons.lock_rounded
+                        : Icons.edit_note_rounded,
+                    color: statusColor,
+                    size: 19,
+                  ),
+                ),
+                const SizedBox(width: 9),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Finalisasi & Publikasi',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        'Tahapan hasil ujian terpusat',
+                        style: TextStyle(
+                          color: NusaColors.textSecondary,
+                          fontSize: 9.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    finalization.statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _LifecycleMetric(
+                    label: 'Wajib selesai',
+                    value:
+                        '${readiness.finishedParticipants}/${readiness.requiredParticipants}',
+                  ),
+                ),
+                Expanded(
+                  child: _LifecycleMetric(
+                    label: 'Tidak hadir',
+                    value: '${readiness.absentParticipants}',
+                  ),
+                ),
+                Expanded(
+                  child: _LifecycleMetric(
+                    label: 'Uraian tertunda',
+                    value: '${readiness.pendingManualCorrections}',
+                  ),
+                ),
+              ],
+            ),
+            if (finalization.finalizedAt != null) ...[
+              const SizedBox(height: 9),
+              _LifecycleAudit(
+                icon: Icons.lock_clock_outlined,
+                label:
+                    'Final ${_formatLifecycleTime(finalization.finalizedAt!)}${_actorSuffix(finalization.finalizedBy)}',
+              ),
+            ],
+            if (finalization.publishedAt != null) ...[
+              const SizedBox(height: 5),
+              _LifecycleAudit(
+                icon: Icons.visibility_outlined,
+                label:
+                    'Dipublikasikan ${_formatLifecycleTime(finalization.publishedAt!)}${_actorSuffix(finalization.publishedBy)}',
+              ),
+            ],
+            if (!finalization.isFinal && blockers.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  blockers.join('\n'),
+                  style: const TextStyle(
+                    color: Color(0xFF795800),
+                    fontSize: 10,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            ],
+            if (finalization.canManage) ...[
+              const SizedBox(height: 11),
+              if (finalization.canFinalize)
+                _LifecycleButton(
+                  key: const Key('central-results-finalize'),
+                  label: 'Finalisasi Hasil',
+                  icon: Icons.lock_rounded,
+                  busy: busyAction == CentralExamResultLifecycleAction.finalize,
+                  onPressed: busyAction == null
+                      ? () =>
+                            onAction(CentralExamResultLifecycleAction.finalize)
+                      : null,
+                ),
+              if (finalization.canPublish)
+                _LifecycleButton(
+                  key: const Key('central-results-publish'),
+                  label: 'Publikasikan ke Siswa',
+                  icon: Icons.campaign_rounded,
+                  busy: busyAction == CentralExamResultLifecycleAction.publish,
+                  onPressed: busyAction == null
+                      ? () => onAction(CentralExamResultLifecycleAction.publish)
+                      : null,
+                ),
+              if (finalization.canUnpublish)
+                _LifecycleButton(
+                  key: const Key('central-results-unpublish'),
+                  label: 'Batalkan Publikasi',
+                  icon: Icons.visibility_off_outlined,
+                  busy:
+                      busyAction == CentralExamResultLifecycleAction.unpublish,
+                  outlined: true,
+                  onPressed: busyAction == null
+                      ? () =>
+                            onAction(CentralExamResultLifecycleAction.unpublish)
+                      : null,
+                ),
+              if (finalization.canCancelFinalization)
+                _LifecycleButton(
+                  key: const Key('central-results-cancel-finalization'),
+                  label: 'Buka Kembali Hasil',
+                  icon: Icons.lock_open_rounded,
+                  busy:
+                      busyAction ==
+                      CentralExamResultLifecycleAction.cancelFinalization,
+                  outlined: true,
+                  onPressed: busyAction == null
+                      ? () => onAction(
+                          CentralExamResultLifecycleAction.cancelFinalization,
+                        )
+                      : null,
+                ),
+            ] else ...[
+              const SizedBox(height: 9),
+              const Text(
+                'Akun ini memiliki akses lihat. Perubahan status hasil hanya tersedia bagi pengelola paket atau guru mata pelajaran terkait.',
+                style: TextStyle(
+                  color: NusaColors.textSecondary,
+                  fontSize: 10,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LifecycleMetric extends StatelessWidget {
+  const _LifecycleMetric({required this.label, required this.value});
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Text(
+        value,
+        style: const TextStyle(
+          color: NusaColors.primary,
+          fontSize: 16,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      const SizedBox(height: 2),
+      Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: NusaColors.textSecondary, fontSize: 8.5),
+      ),
+    ],
+  );
+}
+
+class _LifecycleAudit extends StatelessWidget {
+  const _LifecycleAudit({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, size: 13, color: NusaColors.textSecondary),
+      const SizedBox(width: 5),
+      Expanded(
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: NusaColors.textSecondary,
+            fontSize: 9.5,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class _LifecycleButton extends StatelessWidget {
+  const _LifecycleButton({
+    required this.label,
+    required this.icon,
+    required this.busy,
+    required this.onPressed,
+    this.outlined = false,
+    super.key,
+  });
+  final String label;
+  final IconData icon;
+  final bool busy;
+  final VoidCallback? onPressed;
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = busy
+        ? const SizedBox.square(
+            dimension: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Icon(icon);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: outlined
+          ? OutlinedButton.icon(
+              onPressed: onPressed,
+              icon: iconWidget,
+              label: Text(busy ? 'Memproses...' : label),
+            )
+          : FilledButton.icon(
+              onPressed: onPressed,
+              icon: iconWidget,
+              label: Text(busy ? 'Memproses...' : label),
+            ),
+    );
+  }
+}
+
+String _actorSuffix(String? actor) =>
+    actor == null || actor.trim().isEmpty ? '' : ' · oleh $actor';
+
+String _formatLifecycleTime(DateTime value) {
+  final local = value.toLocal();
+  String two(int number) => number.toString().padLeft(2, '0');
+  return '${two(local.day)}-${two(local.month)}-${local.year} ${two(local.hour)}:${two(local.minute)}';
+}
+
 class _TargetAndAction extends StatelessWidget {
   const _TargetAndAction({
     required this.data,
     required this.applying,
     required this.onApply,
+    required this.onCorrection,
   });
   final CentralExamResultsDetail data;
   final bool applying;
   final VoidCallback onApply;
+  final VoidCallback onCorrection;
   @override
   Widget build(BuildContext context) => Card(
     child: Padding(
@@ -388,7 +791,9 @@ class _TargetAndAction extends StatelessWidget {
           if (data.canApply)
             FilledButton.icon(
               key: const Key('central-results-apply'),
-              onPressed: applying ? null : onApply,
+              onPressed: applying || !data.finalization.isFinal
+                  ? null
+                  : onApply,
               icon: applying
                   ? const SizedBox.square(
                       dimension: 17,
@@ -409,11 +814,31 @@ class _TargetAndAction extends StatelessWidget {
                 height: 1.4,
               ),
             ),
-          if (data.results.summary.needsCorrection > 0) ...[
-            const SizedBox(height: 8),
+          if (data.canApply && !data.finalization.isFinal) ...[
+            const SizedBox(height: 6),
             const Text(
-              'Jawaban uraian yang belum final perlu diselesaikan sebelum nilai diterapkan. Koreksi uraian terpusat akan dilanjutkan pada tahap berikutnya.',
+              'Finalisasi hasil terlebih dahulu sebelum menerapkannya ke komponen nilai.',
               style: TextStyle(
+                color: Color(0xFF9A7000),
+                fontSize: 10,
+                height: 1.4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const Key('central-results-correction'),
+            onPressed: onCorrection,
+            icon: const Icon(Icons.rate_review_outlined),
+            label: Text(
+              data.canApply ? 'Koreksi Uraian' : 'Lihat Koreksi Uraian',
+            ),
+          ),
+          if (data.results.summary.needsCorrection > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${data.results.summary.needsCorrection} peserta masih memerlukan koreksi sebelum hasil menjadi final.',
+              style: const TextStyle(
                 color: Color(0xFF9A7000),
                 fontSize: 10,
                 height: 1.4,

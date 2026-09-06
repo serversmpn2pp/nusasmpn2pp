@@ -41,8 +41,22 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Ujian Sekolah'), findsOneWidget);
-      expect(find.text('Hadir / Total'), findsOneWidget);
       expect(find.byKey(const Key('supervision-start-room')), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Hadir / Total'),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Hadir / Total'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('supervision-start-room')),
+        -120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('supervision-start-room')));
       await tester.pumpAndSettle();

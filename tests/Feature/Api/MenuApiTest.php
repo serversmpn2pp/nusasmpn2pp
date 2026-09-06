@@ -35,8 +35,69 @@ class MenuApiTest extends TestCase
             ->assertJsonPath('data.kelompok.6.items.5.kode', 'backup-restore')
             ->assertJsonFragment([
                 'kode' => 'pusat-cbt',
+                'label' => 'Ujian & Asesmen',
                 'status' => 'tersedia',
                 'rute' => '/pusat-cbt',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'dashboard-sarpras',
+                'status' => 'tersedia',
+                'rute' => '/dashboard-sarpras',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'inventaris-barang',
+                'status' => 'tersedia',
+                'rute' => '/barang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'unit-aset',
+                'status' => 'tersedia',
+                'rute' => '/unit-aset',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'label-inventaris',
+                'status' => 'tersedia',
+                'rute' => '/label-inventaris',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'barang-datang',
+                'status' => 'tersedia',
+                'rute' => '/barang-datang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'saldo-stok',
+                'status' => 'tersedia',
+                'rute' => '/saldo-stok',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'mutasi-stok',
+                'status' => 'tersedia',
+                'rute' => '/mutasi-stok',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'kategori-barang',
+                'status' => 'tersedia',
+                'rute' => '/kategori-barang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'satuan-barang',
+                'status' => 'tersedia',
+                'rute' => '/satuan-barang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'lokasi-barang',
+                'status' => 'tersedia',
+                'rute' => '/lokasi-barang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'sumber-perolehan',
+                'status' => 'tersedia',
+                'rute' => '/sumber-perolehan',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'pengaturan-inventaris',
+                'status' => 'tersedia',
+                'rute' => '/pengaturan-inventaris',
             ])
             ->assertJsonFragment([
                 'kode' => 'siswa',

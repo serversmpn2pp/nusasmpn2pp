@@ -102,3 +102,25 @@ final centralExamResultsApplyProvider = Provider(
     }
   },
 );
+
+final centralExamResultsLifecycleProvider = Provider(
+  (ref) =>
+      ({
+        required int eventId,
+        required int scheduleId,
+        required CentralExamResultLifecycleAction action,
+      }) async {
+        try {
+          return await ref
+              .read(centralExamResultsRepositoryProvider)
+              .changeLifecycle(
+                eventId: eventId,
+                scheduleId: scheduleId,
+                action: action,
+              );
+        } on UnauthorizedException {
+          await ref.read(authControllerProvider.notifier).logout();
+          rethrow;
+        }
+      },
+);

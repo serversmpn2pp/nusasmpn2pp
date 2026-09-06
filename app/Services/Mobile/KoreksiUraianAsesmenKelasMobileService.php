@@ -2,7 +2,9 @@
 
 namespace App\Services\Mobile;
 
+use App\Models\JadwalUjianCbt;
 use App\Models\JawabanPesertaUjianCbt;
+use App\Models\KegiatanUjianCbt;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
@@ -18,6 +20,46 @@ class KoreksiUraianAsesmenKelasMobileService
     public function daftar(Pengguna $pengguna, UjianCbt $asesmen, array $filter): array
     {
         $this->pastikanDapatDiakses($pengguna, $asesmen);
+
+        return $this->susunDaftar($asesmen, $filter, true);
+    }
+
+    public function daftarUjianTerpusat(
+        Pengguna $pengguna,
+        KegiatanUjianCbt $kegiatan,
+        JadwalUjianCbt $jadwal,
+        array $filter,
+    ): array {
+        $asesmen = $this->paketUjianTerpusat($kegiatan, $jadwal);
+        $dapatMengelola = $asesmen->dapatDikelolaOleh($pengguna);
+        $dapatMengoreksi = $dapatMengelola && ! $asesmen->hasil_difinalisasi_pada;
+        abort_unless($kegiatan->dapatDiaksesOleh($pengguna) || $dapatMengelola, 403);
+
+        return $this->susunDaftar($asesmen, $filter, $dapatMengoreksi);
+    }
+
+    public function simpanUjianTerpusat(
+        Pengguna $pengguna,
+        KegiatanUjianCbt $kegiatan,
+        JadwalUjianCbt $jadwal,
+        array $daftarSkor,
+    ): int {
+        $asesmen = $this->paketUjianTerpusat($kegiatan, $jadwal);
+        abort_unless($asesmen->dapatDikelolaOleh($pengguna), 403);
+        abort_if(
+            $asesmen->hasil_difinalisasi_pada,
+            422,
+            'Hasil ujian sudah difinalisasi. Batalkan finalisasi untuk mengubah skor.',
+        );
+
+        return $this->simpanSkor($asesmen, $daftarSkor);
+    }
+
+    private function susunDaftar(
+        UjianCbt $asesmen,
+        array $filter,
+        bool $dapatMengoreksi,
+    ): array {
         $asesmen->loadMissing([
             'tahunPelajaran:id,nama',
             'mataPelajaran:id,nama',
@@ -62,6 +104,7 @@ class KoreksiUraianAsesmenKelasMobileService
 
         return [
             'dihasilkan_pada' => now()->toISOString(),
+            'dapat_mengoreksi' => $dapatMengoreksi,
             'asesmen' => $this->asesmen($asesmen),
             'jumlah_soal_manual' => $soalManual->count(),
             'ringkasan' => $this->ringkasan($semuaBaris),
@@ -87,6 +130,12 @@ class KoreksiUraianAsesmenKelasMobileService
     public function simpan(Pengguna $pengguna, UjianCbt $asesmen, array $daftarSkor): int
     {
         $this->pastikanDapatDiakses($pengguna, $asesmen);
+
+        return $this->simpanSkor($asesmen, $daftarSkor);
+    }
+
+    private function simpanSkor(UjianCbt $asesmen, array $daftarSkor): int
+    {
         $nilaiSkor = collect($daftarSkor)->keyBy(fn (array $item) => (int) $item['jawaban_id']);
         $soalManual = $this->soalManual($asesmen)->keyBy('id');
         $jawaban = JawabanPesertaUjianCbt::query()
@@ -266,5 +315,16 @@ class KoreksiUraianAsesmenKelasMobileService
     private function pastikanDapatDiakses(Pengguna $pengguna, UjianCbt $asesmen): void
     {
         abort_unless($asesmen->asesmenKelas() && $asesmen->dapatDikelolaOleh($pengguna), 403);
+    }
+
+    private function paketUjianTerpusat(
+        KegiatanUjianCbt $kegiatan,
+        JadwalUjianCbt $jadwal,
+    ): UjianCbt {
+        abort_unless((int) $jadwal->kegiatan_ujian_cbt_id === (int) $kegiatan->id, 404);
+        $jadwal->loadMissing('ujianCbt');
+        abort_unless($jadwal->ujianCbt?->ujianTerpusat(), 404);
+
+        return $jadwal->ujianCbt;
     }
 }

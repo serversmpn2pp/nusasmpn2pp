@@ -6,14 +6,18 @@ use App\Models\PesertaUjianCbt;
 use App\Models\SesiUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
+use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class RekapHasilUjianCbtController extends Controller
 {
-    public function index(Request $request, UjianCbt $ujianCbt)
-    {
+    public function index(
+        Request $request,
+        UjianCbt $ujianCbt,
+        FinalisasiHasilUjianTerpusatService $finalisasiHasil,
+    ) {
         $data = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'sesi_ujian_cbt_id' => ['nullable', 'integer', 'exists:sesi_ujian_cbt,id'],
@@ -113,6 +117,10 @@ class RekapHasilUjianCbtController extends Controller
             'jumlahSoalOtomatis' => count($soalOtomatisIds),
             'jumlahSoalManual' => count($soalManualIds),
             'bobotTotal' => $bobotTotal,
+            'finalisasiHasil' => $ujianCbt->ujianTerpusat()
+                && $ujianCbt->jadwalUjianCbt->contains(fn ($item) => $item->kegiatanUjianCbt)
+                ? $finalisasiHasil->ringkasan($request->user(), $ujianCbt)
+                : null,
         ];
 
         if ($ujianCbt->asesmenKelas()) {

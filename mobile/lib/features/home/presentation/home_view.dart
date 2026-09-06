@@ -83,7 +83,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
   }
 
   void _openMenuGroup(MenuGroup group) {
-    context.push('/menu/${group.code}');
+    context.push(nusaMenuGroupDestination(group));
   }
 
   @override
@@ -172,4 +172,13 @@ class _HomeViewState extends ConsumerState<HomeView> {
       ),
     );
   }
+}
+
+String nusaMenuGroupDestination(MenuGroup group) {
+  if (group.code == 'ujian-asesmen') return '/pusat-cbt';
+  if (group.code == 'sarana-prasarana' &&
+      group.items.any((item) => item.code == 'dashboard-sarpras')) {
+    return '/dashboard-sarpras';
+  }
+  return '/menu/${group.code}';
 }

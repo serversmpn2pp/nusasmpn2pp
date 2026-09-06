@@ -93,15 +93,49 @@
 
         <div class="actions">
             @if ($ujianCbt->dapatDikelolaOleh(auth()->user()))
-                <form action="{{ route('ujian-cbt.koreksi-otomatis.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Jalankan koreksi otomatis untuk jawaban objektif pada paket ini?')">
-                    @csrf
-                    <button type="submit" class="button button-dark">Koreksi otomatis</button>
-                </form>
-                <a href="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" class="button button-muted">Koreksi manual</a>
-                <form action="{{ route('ujian-cbt.terapkan-nilai.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Terapkan nilai CBT ke nilai siswa? Koreksi otomatis akan dijalankan dahulu, dan peserta yang masih perlu koreksi manual akan dilewati.')">
-                    @csrf
-                    <button type="submit" class="button button-primary">Terapkan nilai</button>
-                </form>
+                @if (! $finalisasiHasil || $finalisasiHasil['status'] === 'draf')
+                    <form action="{{ route('ujian-cbt.koreksi-otomatis.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Jalankan koreksi otomatis untuk jawaban objektif pada paket ini?')">
+                        @csrf
+                        <button type="submit" class="button button-dark">Koreksi otomatis</button>
+                    </form>
+                    <a href="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" class="button button-muted">Koreksi manual</a>
+                @endif
+                @if ($finalisasiHasil)
+                    @if ($finalisasiHasil['dapat_finalisasi'])
+                        <form action="{{ route('ujian-cbt.hasil.finalisasi', $ujianCbt) }}" method="POST" onsubmit="return confirm('Finalisasi hasil dan kunci seluruh skor ujian?')">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="button button-dark">Finalisasi hasil</button>
+                        </form>
+                    @endif
+                    @if ($finalisasiHasil['dapat_publikasi'])
+                        <form action="{{ route('ujian-cbt.hasil.publikasi', $ujianCbt) }}" method="POST" onsubmit="return confirm('Publikasikan hasil agar dapat dilihat siswa?')">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="button button-primary">Publikasikan</button>
+                        </form>
+                    @endif
+                    @if ($finalisasiHasil['dapat_batalkan_publikasi'])
+                        <form action="{{ route('ujian-cbt.hasil.publikasi.destroy', $ujianCbt) }}" method="POST" onsubmit="return confirm('Sembunyikan kembali hasil dari siswa?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="button button-muted">Batalkan publikasi</button>
+                        </form>
+                    @endif
+                    @if ($finalisasiHasil['dapat_batalkan_finalisasi'])
+                        <form action="{{ route('ujian-cbt.hasil.finalisasi.destroy', $ujianCbt) }}" method="POST" onsubmit="return confirm('Buka kembali hasil agar skor dapat dikoreksi?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="button button-muted">Buka kembali</button>
+                        </form>
+                    @endif
+                @endif
+                @if (! $finalisasiHasil || in_array($finalisasiHasil['status'], ['final', 'dipublikasikan'], true))
+                    <form action="{{ route('ujian-cbt.terapkan-nilai.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Terapkan nilai CBT ke nilai siswa? Koreksi otomatis akan dijalankan dahulu, dan peserta yang masih perlu koreksi manual akan dilewati.')">
+                        @csrf
+                        <button type="submit" class="button button-primary">Terapkan nilai</button>
+                    </form>
+                @endif
             @endif
             <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Monitoring</a>
             @if ($kegiatanTerpusat)
@@ -115,6 +149,43 @@
     @endif
     @if (session('gagal'))
         <div class="alert alert-danger">{{ session('gagal') }}</div>
+    @endif
+    @if ($errors->any())
+        <div class="alert alert-danger">{{ $errors->first() }}</div>
+    @endif
+
+    @if ($finalisasiHasil)
+        @php
+            $kesiapan = $finalisasiHasil['kesiapan'];
+        @endphp
+        <section class="panel panel-pad" style="margin-bottom: 24px;">
+            <div style="display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
+                <div>
+                    <h2 class="panel-title">Finalisasi & publikasi</h2>
+                    <p class="help-text" style="margin-top: 6px;">Finalisasi mengunci skor. Publikasi membuka hasil pada menu Ujian Saya milik siswa.</p>
+                </div>
+                <span class="badge {{ $finalisasiHasil['status'] === 'dipublikasikan' ? 'badge-active' : ($finalisasiHasil['status'] === 'final' ? 'badge-warning' : 'badge-muted') }}">
+                    {{ $finalisasiHasil['label_status'] }}
+                </span>
+            </div>
+            <dl class="quick-facts" style="margin-top: 18px;">
+                <div><dt>Peserta wajib selesai</dt><dd>{{ $kesiapan['peserta_selesai'] }} / {{ $kesiapan['peserta_wajib_selesai'] }}</dd></div>
+                <div><dt>Tidak hadir</dt><dd>{{ $kesiapan['peserta_tidak_hadir'] }}</dd></div>
+                <div><dt>Uraian belum dikoreksi</dt><dd>{{ $kesiapan['perlu_koreksi_manual'] }}</dd></div>
+                <div><dt>Jumlah soal</dt><dd>{{ $kesiapan['jumlah_soal'] }}</dd></div>
+            </dl>
+            @if ($finalisasiHasil['status'] === 'draf' && ! $finalisasiHasil['siap_difinalisasi'])
+                <p class="help-text" style="margin-top: 14px; color: #9a7000;">
+                    Hasil belum dapat difinalisasi. Pastikan seluruh peserta wajib selesai dan semua jawaban uraian telah dikoreksi.
+                </p>
+            @endif
+            @if ($finalisasiHasil['difinalisasi_pada'])
+                <p class="help-text" style="margin-top: 12px;">Difinalisasi {{ \Illuminate\Support\Carbon::parse($finalisasiHasil['difinalisasi_pada'])->timezone(config('app.timezone'))->format('d-m-Y H:i') }}{{ $finalisasiHasil['difinalisasi_oleh'] ? ' oleh '.$finalisasiHasil['difinalisasi_oleh'] : '' }}.</p>
+            @endif
+            @if ($finalisasiHasil['dipublikasikan_pada'])
+                <p class="help-text" style="margin-top: 4px;">Dipublikasikan {{ \Illuminate\Support\Carbon::parse($finalisasiHasil['dipublikasikan_pada'])->timezone(config('app.timezone'))->format('d-m-Y H:i') }}{{ $finalisasiHasil['dipublikasikan_oleh'] ? ' oleh '.$finalisasiHasil['dipublikasikan_oleh'] : '' }}.</p>
+            @endif
+        </section>
     @endif
 
     <section class="panel panel-pad" style="margin-bottom: 24px;">

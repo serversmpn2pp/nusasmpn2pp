@@ -9,6 +9,12 @@ class KoreksiOtomatisUjianCbtController extends Controller
 {
     public function store(UjianCbt $ujianCbt, KoreksiOtomatisCbtService $koreksiOtomatisCbtService)
     {
+        abort_if(
+            $ujianCbt->ujianTerpusat() && $ujianCbt->hasil_difinalisasi_pada,
+            422,
+            'Hasil ujian sudah difinalisasi. Batalkan finalisasi untuk menjalankan koreksi ulang.',
+        );
+
         $hasil = $koreksiOtomatisCbtService->koreksiUjian($ujianCbt);
 
         return back()->with(

@@ -65,6 +65,25 @@ class CentralExamResultsRepository {
     }
   }
 
+  Future<CentralExamResultLifecycleResult> changeLifecycle({
+    required int eventId,
+    required int scheduleId,
+    required CentralExamResultLifecycleAction action,
+  }) async {
+    try {
+      final path =
+          'hasil-ujian-terpusat/$eventId/jadwal/$scheduleId/${action.path}';
+      final response = action.isDelete
+          ? await _dio.delete<Map<String, dynamic>>(path)
+          : await _dio.patch<Map<String, dynamic>>(path);
+      return CentralExamResultLifecycleResult.fromJson(
+        response.data ?? <String, dynamic>{},
+      );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
   Map<String, dynamic> _data(Response<Map<String, dynamic>> response) =>
       response.data?['data'] as Map<String, dynamic>? ?? <String, dynamic>{};
 }

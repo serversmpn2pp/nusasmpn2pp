@@ -48,6 +48,10 @@ class UjianCbt extends Model
         'batas_pindah_aplikasi',
         'tindakan_pindah_aplikasi',
         'tampilkan_hasil',
+        'hasil_difinalisasi_pada',
+        'hasil_difinalisasi_oleh_pengguna_id',
+        'hasil_dipublikasikan_pada',
+        'hasil_dipublikasikan_oleh_pengguna_id',
         'status',
         'petunjuk',
         'keterangan',
@@ -70,6 +74,8 @@ class UjianCbt extends Model
         'toleransi_pindah_aplikasi_detik' => 'integer',
         'batas_pindah_aplikasi' => 'integer',
         'tampilkan_hasil' => 'boolean',
+        'hasil_difinalisasi_pada' => 'datetime',
+        'hasil_dipublikasikan_pada' => 'datetime',
     ];
 
     public function jenisUjianCbt(): BelongsTo
@@ -120,6 +126,16 @@ class UjianCbt extends Model
     public function dibuatOleh(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'dibuat_oleh_pengguna_id');
+    }
+
+    public function hasilDifinalisasiOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'hasil_difinalisasi_oleh_pengguna_id');
+    }
+
+    public function hasilDipublikasikanOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'hasil_dipublikasikan_oleh_pengguna_id');
     }
 
     public function labelStatus(): string

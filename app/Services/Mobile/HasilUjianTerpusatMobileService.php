@@ -6,6 +6,7 @@ use App\Models\JadwalUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
+use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
 use App\Services\Cbt\SinkronkanPelaksanaanUjianTerpusat;
 use App\Services\Cbt\TerapkanNilaiCbtService;
 use Illuminate\Support\Collection;
@@ -16,6 +17,7 @@ class HasilUjianTerpusatMobileService
         private readonly SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
         private readonly MonitoringHasilAsesmenKelasMobileService $perhitungan,
         private readonly TerapkanNilaiCbtService $penerapanNilai,
+        private readonly FinalisasiHasilUjianTerpusatService $finalisasiHasil,
     ) {}
 
     public function daftar(Pengguna $pengguna, array $filter): array
@@ -138,10 +140,16 @@ class HasilUjianTerpusatMobileService
                 'tingkat' => (int) $item->tingkat,
                 'jumlah_peserta' => $item->ujianCbt?->pesertaUjianCbt()->count() ?? 0,
                 'dapat_menerapkan_nilai' => $item->ujianCbt?->dapatDikelolaOleh($pengguna) ?? false,
+                'status_hasil' => $item->ujianCbt?->tampilkan_hasil
+                    ? 'dipublikasikan'
+                    : ($item->ujianCbt?->hasil_difinalisasi_pada ? 'final' : 'draf'),
                 'paket_tersedia' => (bool) $item->ujianCbt,
             ])->values(),
             'jadwal_terpilih_id' => $terpilih ? (int) $terpilih->id : null,
             'dapat_menerapkan_nilai' => $terpilih?->ujianCbt?->dapatDikelolaOleh($pengguna) ?? false,
+            'finalisasi' => $terpilih?->ujianCbt
+                ? $this->finalisasiHasil->ringkasan($pengguna, $terpilih->ujianCbt)
+                : $this->finalisasiKosong(),
             'hasil' => $hasil,
         ];
     }
@@ -155,8 +163,35 @@ class HasilUjianTerpusatMobileService
         $jadwal->loadMissing('ujianCbt');
         abort_unless($jadwal->ujianCbt?->ujianTerpusat(), 404);
         abort_unless($jadwal->ujianCbt->dapatDikelolaOleh($pengguna), 403);
+        abort_unless(
+            $jadwal->ujianCbt->hasil_difinalisasi_pada,
+            422,
+            'Finalisasi hasil ujian terlebih dahulu sebelum menerapkannya ke nilai siswa.',
+        );
 
         return $this->penerapanNilai->terapkan($jadwal->ujianCbt, $pengguna->id);
+    }
+
+    public function ubahFinalisasi(
+        Pengguna $pengguna,
+        KegiatanUjianCbt $kegiatan,
+        JadwalUjianCbt $jadwal,
+        bool $final,
+    ): array {
+        return $final
+            ? $this->finalisasiHasil->finalisasi($pengguna, $kegiatan, $jadwal)
+            : $this->finalisasiHasil->batalkanFinalisasi($pengguna, $kegiatan, $jadwal);
+    }
+
+    public function ubahPublikasi(
+        Pengguna $pengguna,
+        KegiatanUjianCbt $kegiatan,
+        JadwalUjianCbt $jadwal,
+        bool $dipublikasikan,
+    ): array {
+        return $dipublikasikan
+            ? $this->finalisasiHasil->publikasikan($pengguna, $kegiatan, $jadwal)
+            : $this->finalisasiHasil->batalkanPublikasi($pengguna, $kegiatan, $jadwal);
     }
 
     private function jadwalDalamCakupan(Pengguna $pengguna, KegiatanUjianCbt $kegiatan): Collection
@@ -181,6 +216,24 @@ class HasilUjianTerpusatMobileService
             ],
             'referensi' => ['kelas' => [], 'status' => []],
             'filter' => ['kelas_id' => null, 'status' => 'semua'], 'items' => [],
+        ];
+    }
+
+    private function finalisasiKosong(): array
+    {
+        return [
+            'status' => 'draf', 'label_status' => 'Draf hasil',
+            'dapat_mengelola' => false, 'siap_difinalisasi' => false,
+            'dapat_finalisasi' => false, 'dapat_batalkan_finalisasi' => false,
+            'dapat_publikasi' => false, 'dapat_batalkan_publikasi' => false,
+            'difinalisasi_pada' => null, 'difinalisasi_oleh' => null,
+            'dipublikasikan_pada' => null, 'dipublikasikan_oleh' => null,
+            'kesiapan' => [
+                'siap' => false, 'total_peserta' => 0, 'peserta_wajib_selesai' => 0,
+                'peserta_selesai' => 0, 'peserta_belum_selesai' => 0,
+                'peserta_tidak_hadir' => 0, 'perlu_koreksi_manual' => 0,
+                'jumlah_soal' => 0,
+            ],
         ];
     }
 }

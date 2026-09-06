@@ -10,6 +10,14 @@ class TerapkanNilaiCbtController extends Controller
 {
     public function store(Request $request, UjianCbt $ujianCbt, TerapkanNilaiCbtService $service)
     {
+        abort_if(
+            $ujianCbt->ujianTerpusat()
+                && $ujianCbt->jadwalUjianCbt()->whereNotNull('kegiatan_ujian_cbt_id')->exists()
+                && ! $ujianCbt->hasil_difinalisasi_pada,
+            422,
+            'Finalisasi hasil ujian terlebih dahulu sebelum menerapkannya ke nilai siswa.',
+        );
+
         $hasil = $service->terapkan($ujianCbt, $request->user()?->id);
 
         return redirect()

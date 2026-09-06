@@ -80,10 +80,10 @@ class PusatCbtMobileService
             'alat' => collect([
                 ['kode' => 'asesmen-kelas', 'label' => 'Asesmen Kelas', 'izin' => ['cbt.asesmen_kelola', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/asesmen-kelas'],
                 ['kode' => 'bank-soal', 'label' => 'Bank Soal', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola'], 'status' => 'tersedia', 'rute' => '/bank-soal'],
-                ['kode' => 'ujian-terpusat', 'label' => 'Ujian Terpusat', 'izin' => ['cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/pelaksanaan-ujian-terpusat'],
+                ['kode' => 'ujian-terpusat', 'label' => 'Ujian Terpusat', 'izin' => ['cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/ujian-terpusat'],
                 ['kode' => 'hasil-ujian-terpusat', 'label' => 'Nilai & Hasil', 'izin' => ['cbt.soal_kelola', 'cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/hasil-ujian-terpusat'],
                 ['kode' => 'paket-soal', 'label' => 'Paket Soal', 'izin' => ['cbt.soal_kelola', 'cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/paket-soal'],
-                ['kode' => 'presensi-ujian', 'label' => 'Presensi Ujian', 'izin' => ['cbt.presensi', 'cbt.kelola']],
+                ['kode' => 'presensi-ujian', 'label' => 'Presensi Ujian', 'izin' => ['cbt.presensi', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/presensi-ujian'],
             ])->filter(fn (array $alat) => $pengguna->memilikiIzin($alat['izin']))
                 ->map(fn (array $alat) => [
                     'kode' => $alat['kode'],

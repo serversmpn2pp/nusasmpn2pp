@@ -5,6 +5,7 @@ import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/auth/presentation/ganti_kata_sandi_view.dart';
 import 'package:nusa/features/auth/presentation/login_view.dart';
 import 'package:nusa/features/auth/presentation/startup_view.dart';
+import 'package:nusa/features/asset_unit/presentation/asset_unit_view.dart';
 import 'package:nusa/features/academic_year/presentation/academic_year_view.dart';
 import 'package:nusa/features/class_promotion/presentation/class_promotion_view.dart';
 import 'package:nusa/features/class_assessment/presentation/class_assessment_detail_view.dart';
@@ -18,8 +19,14 @@ import 'package:nusa/features/cbt_center/domain/cbt_center.dart';
 import 'package:nusa/features/cbt_center/presentation/cbt_center_view.dart';
 import 'package:nusa/features/central_exam_execution/presentation/central_exam_execution_detail_view.dart';
 import 'package:nusa/features/central_exam_execution/presentation/central_exam_execution_list_view.dart';
+import 'package:nusa/features/central_exam_correction/presentation/central_exam_correction_view.dart';
 import 'package:nusa/features/central_exam_results/presentation/central_exam_results_detail_view.dart';
 import 'package:nusa/features/central_exam_results/presentation/central_exam_results_list_view.dart';
+import 'package:nusa/features/central_exam_preparation/domain/central_exam_preparation.dart';
+import 'package:nusa/features/central_exam_preparation/presentation/central_exam_distribution_detail_view.dart';
+import 'package:nusa/features/central_exam_preparation/presentation/central_exam_event_form_view.dart';
+import 'package:nusa/features/central_exam_preparation/presentation/central_exam_preparation_detail_view.dart';
+import 'package:nusa/features/central_exam_preparation/presentation/central_exam_preparation_list_view.dart';
 import 'package:nusa/features/employee/presentation/employee_detail_view.dart';
 import 'package:nusa/features/employee/presentation/employee_list_view.dart';
 import 'package:nusa/features/employee_card/presentation/employee_card_view.dart';
@@ -28,6 +35,9 @@ import 'package:nusa/features/employee_attendance_recap/presentation/employee_at
 import 'package:nusa/features/employee_attendance_report/presentation/employee_attendance_report_view.dart';
 import 'package:nusa/features/employee_scan_status/presentation/employee_scan_status_view.dart';
 import 'package:nusa/features/exam_supervision/presentation/exam_supervision_detail_view.dart';
+import 'package:nusa/features/exam_attendance/presentation/exam_attendance_detail_view.dart';
+import 'package:nusa/features/exam_attendance/presentation/exam_attendance_list_view.dart';
+import 'package:nusa/features/facility_dashboard/presentation/facility_dashboard_view.dart';
 import 'package:nusa/features/early_warning_setting/presentation/early_warning_setting_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_detail_view.dart';
 import 'package:nusa/features/employee_account/presentation/employee_account_list_view.dart';
@@ -35,10 +45,18 @@ import 'package:nusa/features/grade_weight_scheme/presentation/grade_weight_sche
 import 'package:nusa/features/grade_component/presentation/grade_component_view.dart';
 import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
 import 'package:nusa/features/grade_recap/presentation/grade_recap_view.dart';
+import 'package:nusa/features/goods_receipt/presentation/goods_receipt_view.dart';
 import 'package:nusa/features/guardian_assignment/presentation/guardian_assignment_create_view.dart';
 import 'package:nusa/features/guardian_assignment/presentation/guardian_assignment_list_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
 import 'package:nusa/features/identity_photo/presentation/identity_photo_view.dart';
+import 'package:nusa/features/inventory_acquisition_source/presentation/inventory_acquisition_source_view.dart';
+import 'package:nusa/features/inventory_category/presentation/inventory_category_view.dart';
+import 'package:nusa/features/inventory_goods/presentation/inventory_goods_view.dart';
+import 'package:nusa/features/inventory_location/presentation/inventory_location_view.dart';
+import 'package:nusa/features/inventory_label/presentation/inventory_label_view.dart';
+import 'package:nusa/features/inventory_settings/presentation/inventory_settings_view.dart';
+import 'package:nusa/features/inventory_unit/presentation/inventory_unit_view.dart';
 import 'package:nusa/features/incident_reporting/presentation/incident_reporting_view.dart';
 import 'package:nusa/features/lesson_period/presentation/lesson_period_view.dart';
 import 'package:nusa/features/learning_survey/presentation/learning_survey_view.dart';
@@ -93,6 +111,8 @@ import 'package:nusa/features/student_report/presentation/student_report_detail_
 import 'package:nusa/features/student_report/presentation/student_report_list_view.dart';
 import 'package:nusa/features/student_report/domain/student_report.dart';
 import 'package:nusa/features/student_violation_type/presentation/student_violation_type_view.dart';
+import 'package:nusa/features/stock/presentation/stock_balance_view.dart';
+import 'package:nusa/features/stock/presentation/stock_movement_view.dart';
 import 'package:nusa/features/subject/presentation/subject_view.dart';
 import 'package:nusa/features/survey_statement/presentation/survey_statement_view.dart';
 import 'package:nusa/features/survey_monitoring/presentation/survey_monitoring_detail_view.dart';
@@ -122,12 +142,34 @@ abstract final class AppRoutes {
   static const gantiKataSandi = '/ganti-kata-sandi';
   static const home = '/beranda';
   static const cbtCenter = '/pusat-cbt';
+  static const facilityDashboard = '/dashboard-sarpras';
+  static const inventoryGoods = '/barang';
+  static const inventoryCategories = '/kategori-barang';
+  static const inventoryLocations = '/lokasi-barang';
+  static const inventoryAcquisitionSources = '/sumber-perolehan';
+  static const inventorySettings = '/pengaturan-inventaris';
+  static const inventoryUnits = '/satuan-barang';
+  static const assetUnits = '/unit-aset';
+  static const inventoryLabels = '/label-inventaris';
+  static const goodsReceipts = '/barang-datang';
+  static const stockBalances = '/saldo-stok';
+  static const stockMovements = '/mutasi-stok';
   static const centralExamExecution = '/pelaksanaan-ujian-terpusat';
   static const centralExamExecutionDetail = '/pelaksanaan-ujian-terpusat/:id';
+  static const centralExamPreparation = '/ujian-terpusat';
+  static const centralExamPreparationCreate = '/ujian-terpusat/tambah';
+  static const centralExamPreparationEdit = '/ujian-terpusat/:id/ubah';
+  static const centralExamDistributionDetail =
+      '/ujian-terpusat/:eventId/pembagian/:groupId';
+  static const centralExamPreparationDetail = '/ujian-terpusat/:id';
   static const centralExamResults = '/hasil-ujian-terpusat';
   static const centralExamResultsDetail = '/hasil-ujian-terpusat/:id';
+  static const centralExamCorrection =
+      '/hasil-ujian-terpusat/:eventId/jadwal/:scheduleId/koreksi-uraian';
   static const myExamSupervision = '/tugas-pengawas-ujian';
   static const myExamSupervisionDetail = '/tugas-pengawas-ujian/:id';
+  static const examAttendance = '/presensi-ujian';
+  static const examAttendanceDetail = '/presensi-ujian/:id';
   static const myExams = '/ujian-saya';
   static const studentExam = '/ujian-saya/:id';
   static const questionBank = '/bank-soal';
@@ -292,6 +334,78 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             const CbtCenterView(focus: CbtCenterFocus.management),
       ),
       GoRoute(
+        path: AppRoutes.facilityDashboard,
+        name: 'facility-dashboard',
+        builder: (context, state) => const FacilityDashboardView(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventoryGoods,
+        name: 'inventory-goods',
+        builder: (context, state) => const InventoryGoodsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventoryCategories,
+        name: 'inventory-categories',
+        builder: (context, state) => const InventoryCategoryView(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventoryUnits,
+        name: 'inventory-units',
+        builder: (context, state) => const InventoryUnitView(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventoryLocations,
+        name: 'inventory-locations',
+        builder: (context, state) => const InventoryLocationView(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventoryAcquisitionSources,
+        name: 'inventory-acquisition-sources',
+        builder: (context, state) => const InventoryAcquisitionSourceView(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventorySettings,
+        name: 'inventory-settings',
+        builder: (context, state) => const InventorySettingsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.assetUnits,
+        name: 'asset-units',
+        builder: (context, state) => const AssetUnitView(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventoryLabels,
+        name: 'inventory-labels',
+        builder: (context, state) => InventoryLabelView(
+          initialReceiptId: int.tryParse(
+            state.uri.queryParameters['penerimaan_barang_id'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsReceipts,
+        name: 'goods-receipts',
+        builder: (context, state) => const GoodsReceiptView(),
+      ),
+      GoRoute(
+        path: AppRoutes.stockBalances,
+        name: 'stock-balances',
+        builder: (context, state) => const StockBalanceView(),
+      ),
+      GoRoute(
+        path: AppRoutes.stockMovements,
+        name: 'stock-movements',
+        builder: (context, state) => StockMovementView(
+          initialGoodsId: int.tryParse(
+            state.uri.queryParameters['barang_id'] ?? '',
+          ),
+          initialLocationId: int.tryParse(
+            state.uri.queryParameters['lokasi_barang_id'] ?? '',
+          ),
+          openForm: state.uri.queryParameters['tambah'] == '1',
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.centralExamExecution,
         name: 'central-exam-execution',
         builder: (context, state) => const CentralExamExecutionListView(),
@@ -304,9 +418,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: AppRoutes.centralExamPreparation,
+        name: 'central-exam-preparation',
+        builder: (context, state) => const CentralExamPreparationListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.centralExamPreparationCreate,
+        name: 'central-exam-preparation-create',
+        builder: (context, state) => CentralExamEventFormView(
+          initialReferences: state.extra as CentralExamPreparationReferences?,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.centralExamPreparationEdit,
+        name: 'central-exam-preparation-edit',
+        builder: (context, state) => CentralExamEventFormView(
+          eventId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.centralExamDistributionDetail,
+        name: 'central-exam-distribution-detail',
+        builder: (context, state) => CentralExamDistributionDetailView(
+          eventId: int.parse(state.pathParameters['eventId']!),
+          groupId: int.parse(state.pathParameters['groupId']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.centralExamPreparationDetail,
+        name: 'central-exam-preparation-detail',
+        builder: (context, state) => CentralExamPreparationDetailView(
+          eventId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.centralExamResults,
         name: 'central-exam-results',
         builder: (context, state) => const CentralExamResultsListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.centralExamCorrection,
+        name: 'central-exam-correction',
+        builder: (context, state) => CentralExamCorrectionView(
+          eventId: int.parse(state.pathParameters['eventId']!),
+          scheduleId: int.parse(state.pathParameters['scheduleId']!),
+        ),
       ),
       GoRoute(
         path: AppRoutes.centralExamResultsDetail,
@@ -325,6 +481,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.myExamSupervisionDetail,
         name: 'my-exam-supervision-detail',
         builder: (context, state) => ExamSupervisionDetailView(
+          roomId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.examAttendance,
+        name: 'exam-attendance',
+        builder: (context, state) => const ExamAttendanceListView(),
+      ),
+      GoRoute(
+        path: AppRoutes.examAttendanceDetail,
+        name: 'exam-attendance-detail',
+        builder: (context, state) => ExamAttendanceDetailView(
           roomId: int.parse(state.pathParameters['id']!),
         ),
       ),

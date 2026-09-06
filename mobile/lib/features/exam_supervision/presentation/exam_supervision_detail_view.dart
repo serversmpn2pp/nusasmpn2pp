@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/exam_supervision/application/exam_supervision_controller.dart';
@@ -656,6 +657,15 @@ class _RoomActions extends StatelessWidget {
                 icon: const Icon(Icons.description_outlined),
                 label: const Text('Catatan Ruang'),
               ),
+              if (capabilities.changeAttendance)
+                OutlinedButton.icon(
+                  key: const Key('supervision-open-attendance'),
+                  onPressed: busy
+                      ? null
+                      : () => context.push('/presensi-ujian/${room.id}'),
+                  icon: const Icon(Icons.qr_code_scanner_rounded),
+                  label: const Text('Scan Presensi'),
+                ),
             ],
           ),
         ],

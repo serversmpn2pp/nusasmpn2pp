@@ -3,6 +3,7 @@ import 'package:nusa/features/class_assessment/domain/class_assessment_monitorin
 class AssessmentCorrectionData {
   const AssessmentCorrectionData({
     required this.generatedAt,
+    required this.canCorrect,
     required this.assessment,
     required this.manualQuestionCount,
     required this.summary,
@@ -18,6 +19,7 @@ class AssessmentCorrectionData {
     final filter = _map(json['filter']);
     return AssessmentCorrectionData(
       generatedAt: _date(json['dihasilkan_pada']),
+      canCorrect: json['dapat_mengoreksi'] as bool? ?? true,
       assessment: AssessmentOperationHeader.fromJson(_map(json['asesmen'])),
       manualQuestionCount: _integer(json['jumlah_soal_manual']),
       summary: AssessmentCorrectionSummary.fromJson(_map(json['ringkasan'])),
@@ -30,6 +32,7 @@ class AssessmentCorrectionData {
   }
 
   final DateTime? generatedAt;
+  final bool canCorrect;
   final AssessmentOperationHeader assessment;
   final int manualQuestionCount;
   final AssessmentCorrectionSummary summary;

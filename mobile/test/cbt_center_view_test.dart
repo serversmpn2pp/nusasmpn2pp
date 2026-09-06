@@ -69,7 +69,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Pusat CBT'), findsOneWidget);
+      expect(find.text('Ujian & Asesmen'), findsOneWidget);
       expect(find.text('Ringkasan Pengelolaan'), findsOneWidget);
       expect(find.text('48'), findsOneWidget);
 

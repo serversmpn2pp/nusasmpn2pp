@@ -86,6 +86,12 @@ class KoreksiManualUjianCbtController extends Controller
 
     public function update(Request $request, UjianCbt $ujianCbt)
     {
+        abort_if(
+            $ujianCbt->ujianTerpusat() && $ujianCbt->hasil_difinalisasi_pada,
+            422,
+            'Hasil ujian sudah difinalisasi. Batalkan finalisasi untuk mengubah skor.',
+        );
+
         $data = $request->validate([
             'skor' => ['nullable', 'array'],
             'skor.*' => ['nullable', 'numeric', 'min:0'],

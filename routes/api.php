@@ -8,7 +8,9 @@ use App\Http\Controllers\Api\V1\AsesmenKelasController;
 use App\Http\Controllers\Api\V1\AturanSanksiPoinController;
 use App\Http\Controllers\Api\V1\AutentikasiController;
 use App\Http\Controllers\Api\V1\BankSoalController;
+use App\Http\Controllers\Api\V1\BarangController;
 use App\Http\Controllers\Api\V1\BerandaController;
+use App\Http\Controllers\Api\V1\DashboardSarprasController;
 use App\Http\Controllers\Api\V1\FotoIdentitasController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
 use App\Http\Controllers\Api\V1\HasilUjianTerpusatController;
@@ -21,6 +23,8 @@ use App\Http\Controllers\Api\V1\JenisPelanggaranSiswaController;
 use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
 use App\Http\Controllers\Api\V1\KartuPegawaiController;
 use App\Http\Controllers\Api\V1\KartuPelajarController;
+use App\Http\Controllers\Api\V1\KategoriBarangController;
+use App\Http\Controllers\Api\V1\LabelInventarisController;
 use App\Http\Controllers\Api\V1\KategoriPembinaanSiswaController;
 use App\Http\Controllers\Api\V1\KeamananUjianController;
 use App\Http\Controllers\Api\V1\KegiatanIbadahController;
@@ -33,13 +37,16 @@ use App\Http\Controllers\Api\V1\LaporanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\LaporanSiswaController;
 use App\Http\Controllers\Api\V1\LaporanSiswaWaliController;
 use App\Http\Controllers\Api\V1\LaporkanKejadianController;
+use App\Http\Controllers\Api\V1\LokasiBarangController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\MonitoringHasilAsesmenKelasController;
 use App\Http\Controllers\Api\V1\MonitoringSurveiController;
+use App\Http\Controllers\Api\V1\MutasiStokBarangController;
 use App\Http\Controllers\Api\V1\NilaiSayaController;
 use App\Http\Controllers\Api\V1\OperasionalHasilAsesmenKelasController;
 use App\Http\Controllers\Api\V1\PaketSoalController;
+use App\Http\Controllers\Api\V1\PenerimaanBarangController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PelaksanaanSanksiSiswaController;
 use App\Http\Controllers\Api\V1\PelaksanaanUjianTerpusatController;
@@ -49,6 +56,7 @@ use App\Http\Controllers\Api\V1\PendampinganSiswaController;
 use App\Http\Controllers\Api\V1\PenempatanSiswaController;
 use App\Http\Controllers\Api\V1\PengaturanBatasProsesPelanggaranController;
 use App\Http\Controllers\Api\V1\PengaturanBerhalanganIbadahController;
+use App\Http\Controllers\Api\V1\PengaturanInventarisController;
 use App\Http\Controllers\Api\V1\PengaturanPeringatanDiniPoinController;
 use App\Http\Controllers\Api\V1\PengaturanPoinKeterlambatanController;
 use App\Http\Controllers\Api\V1\PengaturanPresensiPegawaiController;
@@ -59,7 +67,9 @@ use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
 use App\Http\Controllers\Api\V1\PeringatanDiniSiswaController;
 use App\Http\Controllers\Api\V1\PernyataanSurveiController;
+use App\Http\Controllers\Api\V1\PersiapanUjianTerpusatController;
 use App\Http\Controllers\Api\V1\PiketSayaController;
+use App\Http\Controllers\Api\V1\PresensiUjianController;
 use App\Http\Controllers\Api\V1\PusatCbtController;
 use App\Http\Controllers\Api\V1\RekapKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
@@ -67,6 +77,8 @@ use App\Http\Controllers\Api\V1\RekapPoinSiswaController;
 use App\Http\Controllers\Api\V1\RekapPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\RekapPresensiSiswaController;
 use App\Http\Controllers\Api\V1\RingkasanKegiatanIbadahBulananController;
+use App\Http\Controllers\Api\V1\SatuanBarangController;
+use App\Http\Controllers\Api\V1\SaldoStokBarangController;
 use App\Http\Controllers\Api\V1\ScanBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\ScanKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\SiswaController;
@@ -74,10 +86,12 @@ use App\Http\Controllers\Api\V1\SiswaWaliSayaController;
 use App\Http\Controllers\Api\V1\SkemaBobotNilaiController;
 use App\Http\Controllers\Api\V1\StatusScanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\StatusScanPresensiSiswaController;
+use App\Http\Controllers\Api\V1\SumberPerolehanBarangController;
 use App\Http\Controllers\Api\V1\SurveiPembelajaranController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
 use App\Http\Controllers\Api\V1\TugasPengawasUjianController;
 use App\Http\Controllers\Api\V1\UjianSayaController;
+use App\Http\Controllers\Api\V1\UnitBarangController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use Illuminate\Support\Facades\Route;
 
@@ -109,11 +123,198 @@ Route::prefix('v1')
             ->middleware('izin:beranda.akses')
             ->name('beranda');
 
+        Route::get('/dashboard-sarpras', DashboardSarprasController::class)
+            ->middleware('izin:barang.lihat,barang.kelola,barang.peminjaman_kelola')
+            ->name('dashboard-sarpras');
+
+        Route::get('/barang', [BarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('barang.index');
+        Route::post('/barang', [BarangController::class, 'store'])
+            ->middleware('izin:barang.kelola')
+            ->name('barang.store');
+        Route::get('/barang/{barang}', [BarangController::class, 'show'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('barang.show');
+        Route::patch('/barang/{barang}', [BarangController::class, 'update'])
+            ->middleware('izin:barang.kelola')
+            ->name('barang.update');
+        Route::delete('/barang/{barang}', [BarangController::class, 'destroy'])
+            ->middleware('izin:barang.kelola')
+            ->name('barang.destroy');
+
+        Route::get('/unit-aset', [UnitBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('unit-aset.index');
+        Route::post('/unit-aset', [UnitBarangController::class, 'store'])
+            ->middleware('izin:barang.kelola')
+            ->name('unit-aset.store');
+        Route::get('/unit-aset/{unitBarang}', [UnitBarangController::class, 'show'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('unit-aset.show');
+        Route::patch('/unit-aset/{unitBarang}', [UnitBarangController::class, 'update'])
+            ->middleware('izin:barang.kelola')
+            ->name('unit-aset.update');
+        Route::delete('/unit-aset/{unitBarang}', [UnitBarangController::class, 'destroy'])
+            ->middleware('izin:barang.kelola')
+            ->name('unit-aset.destroy');
+
+        Route::get('/label-inventaris', LabelInventarisController::class)
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('label-inventaris');
+
+        Route::get('/barang-datang', [PenerimaanBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('barang-datang.index');
+        Route::post('/barang-datang', [PenerimaanBarangController::class, 'store'])
+            ->middleware('izin:barang.kelola')
+            ->name('barang-datang.store');
+        Route::get('/barang-datang/{penerimaanBarang}', [PenerimaanBarangController::class, 'show'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('barang-datang.show');
+        Route::patch('/barang-datang/{penerimaanBarang}/batalkan', [PenerimaanBarangController::class, 'batalkan'])
+            ->middleware('izin:barang.kelola')
+            ->name('barang-datang.batalkan');
+
+        Route::get('/saldo-stok', SaldoStokBarangController::class)
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('saldo-stok');
+
+        Route::get('/mutasi-stok', [MutasiStokBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('mutasi-stok.index');
+        Route::post('/mutasi-stok', [MutasiStokBarangController::class, 'store'])
+            ->middleware('izin:barang.kelola')
+            ->name('mutasi-stok.store');
+        Route::get('/mutasi-stok/{mutasiStokBarang}', [MutasiStokBarangController::class, 'show'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('mutasi-stok.show');
+
+        Route::get('/kategori-barang', [KategoriBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('kategori-barang.index');
+        Route::post('/kategori-barang', [KategoriBarangController::class, 'store'])
+            ->middleware('izin:barang.kelola')
+            ->name('kategori-barang.store');
+        Route::patch('/kategori-barang/{kategoriBarang}', [KategoriBarangController::class, 'update'])
+            ->middleware('izin:barang.kelola')
+            ->name('kategori-barang.update');
+        Route::delete('/kategori-barang/{kategoriBarang}', [KategoriBarangController::class, 'destroy'])
+            ->middleware('izin:barang.kelola')
+            ->name('kategori-barang.destroy');
+
+        Route::get('/satuan-barang', [SatuanBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('satuan-barang.index');
+        Route::post('/satuan-barang', [SatuanBarangController::class, 'store'])
+            ->middleware('izin:barang.kelola')
+            ->name('satuan-barang.store');
+        Route::patch('/satuan-barang/{satuanBarang}', [SatuanBarangController::class, 'update'])
+            ->middleware('izin:barang.kelola')
+            ->name('satuan-barang.update');
+        Route::delete('/satuan-barang/{satuanBarang}', [SatuanBarangController::class, 'destroy'])
+            ->middleware('izin:barang.kelola')
+            ->name('satuan-barang.destroy');
+
+        Route::get('/lokasi-barang', [LokasiBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('lokasi-barang.index');
+        Route::post('/lokasi-barang', [LokasiBarangController::class, 'store'])
+            ->middleware('izin:barang.kelola')
+            ->name('lokasi-barang.store');
+        Route::patch('/lokasi-barang/{lokasiBarang}', [LokasiBarangController::class, 'update'])
+            ->middleware('izin:barang.kelola')
+            ->name('lokasi-barang.update');
+        Route::delete('/lokasi-barang/{lokasiBarang}', [LokasiBarangController::class, 'destroy'])
+            ->middleware('izin:barang.kelola')
+            ->name('lokasi-barang.destroy');
+
+        Route::get('/sumber-perolehan', [SumberPerolehanBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('sumber-perolehan.index');
+        Route::post('/sumber-perolehan', [SumberPerolehanBarangController::class, 'store'])
+            ->middleware('izin:barang.kelola')
+            ->name('sumber-perolehan.store');
+        Route::patch('/sumber-perolehan/{sumberPerolehanBarang}', [SumberPerolehanBarangController::class, 'update'])
+            ->middleware('izin:barang.kelola')
+            ->name('sumber-perolehan.update');
+        Route::delete('/sumber-perolehan/{sumberPerolehanBarang}', [SumberPerolehanBarangController::class, 'destroy'])
+            ->middleware('izin:barang.kelola')
+            ->name('sumber-perolehan.destroy');
+
+        Route::get('/pengaturan-inventaris', [PengaturanInventarisController::class, 'show'])
+            ->middleware('izin:barang.kelola')
+            ->name('pengaturan-inventaris.show');
+        Route::patch('/pengaturan-inventaris', [PengaturanInventarisController::class, 'update'])
+            ->middleware('izin:barang.kelola')
+            ->name('pengaturan-inventaris.update');
+
         Route::get('/menu', MenuController::class)
             ->name('menu');
 
         Route::get('/pusat-cbt', PusatCbtController::class)
             ->name('pusat-cbt');
+
+        Route::get('/ujian-terpusat', [PersiapanUjianTerpusatController::class, 'index'])
+            ->middleware('izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('ujian-terpusat.index');
+        Route::post('/ujian-terpusat', [PersiapanUjianTerpusatController::class, 'store'])
+            ->middleware('izin:cbt.kelola')
+            ->name('ujian-terpusat.store');
+        Route::get('/ujian-terpusat/{kegiatanUjianCbt}', [PersiapanUjianTerpusatController::class, 'show'])
+            ->middleware('izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('ujian-terpusat.show');
+        Route::patch('/ujian-terpusat/{kegiatanUjianCbt}', [PersiapanUjianTerpusatController::class, 'update'])
+            ->middleware('izin:cbt.kelola')
+            ->name('ujian-terpusat.update');
+        Route::delete('/ujian-terpusat/{kegiatanUjianCbt}', [PersiapanUjianTerpusatController::class, 'destroy'])
+            ->middleware('izin:cbt.kelola')
+            ->name('ujian-terpusat.destroy');
+        Route::post('/ujian-terpusat/{kegiatanUjianCbt}/panitia', [PersiapanUjianTerpusatController::class, 'storePanitia'])
+            ->middleware('izin:cbt.kelola')
+            ->name('ujian-terpusat.panitia.store');
+        Route::delete('/ujian-terpusat/{kegiatanUjianCbt}/panitia/{panitiaUjianCbt}', [PersiapanUjianTerpusatController::class, 'destroyPanitia'])
+            ->middleware('izin:cbt.kelola')
+            ->name('ujian-terpusat.panitia.destroy');
+        Route::post('/ujian-terpusat/{kegiatanUjianCbt}/sesi', [PersiapanUjianTerpusatController::class, 'storeSesi'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.sesi.store');
+        Route::patch('/ujian-terpusat/{kegiatanUjianCbt}/sesi/{sesiKegiatanUjianCbt}', [PersiapanUjianTerpusatController::class, 'updateSesi'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.sesi.update');
+        Route::delete('/ujian-terpusat/{kegiatanUjianCbt}/sesi/{sesiKegiatanUjianCbt}', [PersiapanUjianTerpusatController::class, 'destroySesi'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.sesi.destroy');
+        Route::post('/ujian-terpusat/{kegiatanUjianCbt}/ruang', [PersiapanUjianTerpusatController::class, 'storeRuang'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.ruang.store');
+        Route::patch('/ujian-terpusat/{kegiatanUjianCbt}/ruang/{ruangKegiatanUjianCbt}', [PersiapanUjianTerpusatController::class, 'updateRuang'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.ruang.update');
+        Route::delete('/ujian-terpusat/{kegiatanUjianCbt}/ruang/{ruangKegiatanUjianCbt}', [PersiapanUjianTerpusatController::class, 'destroyRuang'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.ruang.destroy');
+        Route::post('/ujian-terpusat/{kegiatanUjianCbt}/penetapan-ruang', [PersiapanUjianTerpusatController::class, 'aturPenetapan'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.penetapan-ruang.store');
+        Route::get('/ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}', [PersiapanUjianTerpusatController::class, 'showPembagian'])
+            ->middleware('izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('ujian-terpusat.pembagian-peserta.show');
+        Route::post('/ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}/bangkitkan', [PersiapanUjianTerpusatController::class, 'bangkitkanPembagian'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.pembagian-peserta.generate');
+        Route::delete('/ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}', [PersiapanUjianTerpusatController::class, 'destroyPenetapan'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.pembagian-peserta.destroy');
+        Route::post('/ujian-terpusat/{kegiatanUjianCbt}/jadwal', [PersiapanUjianTerpusatController::class, 'storeJadwal'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.jadwal.store');
+        Route::patch('/ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}', [PersiapanUjianTerpusatController::class, 'updateJadwal'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.jadwal.update');
+        Route::delete('/ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}', [PersiapanUjianTerpusatController::class, 'destroyJadwal'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('ujian-terpusat.jadwal.destroy');
 
         Route::get('/pelaksanaan-ujian-terpusat', [PelaksanaanUjianTerpusatController::class, 'index'])
             ->middleware('izin:cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
@@ -131,6 +332,24 @@ Route::prefix('v1')
         Route::get('/hasil-ujian-terpusat/{kegiatanUjianCbt}', [HasilUjianTerpusatController::class, 'show'])
             ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
             ->name('hasil-ujian-terpusat.show');
+        Route::get('/hasil-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/koreksi-uraian', [HasilUjianTerpusatController::class, 'koreksiUraian'])
+            ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
+            ->name('hasil-ujian-terpusat.koreksi-uraian');
+        Route::put('/hasil-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/koreksi-uraian', [HasilUjianTerpusatController::class, 'simpanKoreksiUraian'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola')
+            ->name('hasil-ujian-terpusat.koreksi-uraian.update');
+        Route::patch('/hasil-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/finalisasi', [HasilUjianTerpusatController::class, 'finalisasi'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola')
+            ->name('hasil-ujian-terpusat.finalisasi');
+        Route::delete('/hasil-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/finalisasi', [HasilUjianTerpusatController::class, 'batalkanFinalisasi'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola')
+            ->name('hasil-ujian-terpusat.finalisasi.destroy');
+        Route::patch('/hasil-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/publikasi', [HasilUjianTerpusatController::class, 'publikasikan'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola')
+            ->name('hasil-ujian-terpusat.publikasi');
+        Route::delete('/hasil-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/publikasi', [HasilUjianTerpusatController::class, 'batalkanPublikasi'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola')
+            ->name('hasil-ujian-terpusat.publikasi.destroy');
         Route::post('/hasil-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/terapkan-nilai', [HasilUjianTerpusatController::class, 'terapkanNilai'])
             ->middleware('izin:cbt.soal_kelola,cbt.kelola')
             ->name('hasil-ujian-terpusat.terapkan-nilai');
@@ -162,6 +381,19 @@ Route::prefix('v1')
         Route::patch('/tugas-pengawas-ujian/{ruangUjianCbt}/kirim-bukti', [TugasPengawasUjianController::class, 'kirimBukti'])
             ->middleware('akun_pegawai')
             ->name('tugas-pengawas-ujian.bukti.kirim');
+
+        Route::get('/presensi-ujian', [PresensiUjianController::class, 'index'])
+            ->middleware('izin:cbt.presensi,cbt.kelola')
+            ->name('presensi-ujian.index');
+        Route::get('/presensi-ujian/{ruangUjianCbt}', [PresensiUjianController::class, 'show'])
+            ->middleware('izin:cbt.presensi,cbt.kelola')
+            ->name('presensi-ujian.show');
+        Route::post('/presensi-ujian/{ruangUjianCbt}/scan', [PresensiUjianController::class, 'scan'])
+            ->middleware(['izin:cbt.presensi,cbt.kelola', 'throttle:120,1'])
+            ->name('presensi-ujian.scan');
+        Route::patch('/presensi-ujian/{ruangUjianCbt}/peserta/{pesertaUjianCbt}/kehadiran', [PresensiUjianController::class, 'updateManual'])
+            ->middleware('izin:cbt.presensi,cbt.kelola')
+            ->name('presensi-ujian.manual');
 
         Route::get('/ujian-saya', [UjianSayaController::class, 'index'])
             ->name('ujian-saya.index');

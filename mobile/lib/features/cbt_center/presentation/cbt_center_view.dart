@@ -35,7 +35,7 @@ class CbtCenterView extends ConsumerWidget {
           error: (error, stackTrace) => _ErrorState(
             message: error is AppException
                 ? error.message
-                : 'Pusat CBT belum dapat dimuat.',
+                : 'Ujian & Asesmen belum dapat dimuat.',
             onRetry: ref.read(cbtCenterControllerProvider.notifier).refresh,
           ),
           data: (data) => RefreshIndicator(
@@ -53,7 +53,7 @@ class CbtCenterView extends ConsumerWidget {
   }
 
   String get _title => switch (focus) {
-    CbtCenterFocus.management => 'Pusat CBT',
+    CbtCenterFocus.management => 'Ujian & Asesmen',
     CbtCenterFocus.supervisor => 'Tugas Pengawas Saya',
     CbtCenterFocus.student => 'Ujian Saya',
   };
@@ -346,7 +346,7 @@ class _ManagementSection extends StatelessWidget {
         ),
       const SizedBox(height: 11),
       const _ScopeNotice(
-        message: 'Bank Soal, Paket Soal, Asesmen Kelas, dan Pelaksanaan Ujian Terpusat sudah terhubung secara native.',
+        message: 'Bank Soal, Paket Soal, Asesmen Kelas, Persiapan, Pelaksanaan, Hasil, dan Presensi Ujian sudah terhubung secara native.',
       ),
     ],
   );

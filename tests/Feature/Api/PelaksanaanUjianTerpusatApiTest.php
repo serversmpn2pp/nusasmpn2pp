@@ -4,21 +4,25 @@ namespace Tests\Feature\Api;
 
 use App\Models\AnggotaKelas;
 use App\Models\JadwalUjianCbt;
+use App\Models\JawabanPesertaUjianCbt;
 use App\Models\JenisUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
 use App\Models\KelasUjianCbt;
 use App\Models\KelompokPesertaKegiatanUjianCbt;
 use App\Models\MataPelajaran;
+use App\Models\PanitiaUjianCbt;
 use App\Models\Pegawai;
 use App\Models\PenempatanPesertaUjianCbt;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
+use App\Models\Peran;
 use App\Models\PesertaUjianCbt;
 use App\Models\RuangKegiatanUjianCbt;
 use App\Models\RuangUjianCbt;
 use App\Models\SesiKegiatanUjianCbt;
 use App\Models\Siswa;
+use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -130,16 +134,197 @@ class PelaksanaanUjianTerpusatApiTest extends TestCase
             ->assertJsonPath('data.hasil.asesmen.mata_pelajaran', 'Matematika')
             ->assertJsonPath('data.hasil.ringkasan.total_peserta', 1)
             ->assertJsonPath('data.hasil.items.0.siswa.nama', 'Siswa Ujian Native')
-            ->assertJsonPath('data.hasil.items.0.status', 'belum_selesai');
+            ->assertJsonPath('data.hasil.items.0.status', 'belum_selesai')
+            ->assertJsonPath('data.finalisasi.status', 'draf')
+            ->assertJsonPath('data.finalisasi.siap_difinalisasi', false);
 
         $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
 
+        $data['ujian']->forceFill(['hasil_difinalisasi_pada' => now()])->save();
         $this->withToken($token)
             ->postJson(route('api.v1.hasil-ujian-terpusat.terapkan-nilai', [
                 $data['kegiatan'], $data['jadwal'],
             ]))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('nilai');
+    }
+
+    public function test_koreksi_uraian_terpusat_memakai_rubrik_autosave_dan_hak_akses_yang_tepat(): void
+    {
+        $data = $this->fondasi();
+        $data['ujian']->update(['jumlah_soal' => 1]);
+        $soal = SoalCbt::create([
+            'tahun_pelajaran_id' => $data['ujian']->tahun_pelajaran_id,
+            'mata_pelajaran_id' => $data['ujian']->mata_pelajaran_id,
+            'tingkat' => 9,
+            'kode' => 'URAIAN-UT-NATIVE-001',
+            'jenis_soal' => 'uraian',
+            'tingkat_kesulitan' => 'sedang',
+            'kategori' => 'umum',
+            'pertanyaan' => 'Jelaskan langkah penyelesaian persamaan.',
+            'rubrik' => ['catatan' => 'Langkah dan hasil akhir harus benar.'],
+            'skor_maksimal' => 10,
+            'status' => 'siap',
+            'aktif' => true,
+            'dibuat_oleh_pengguna_id' => $data['admin']->id,
+        ]);
+        $relasi = $data['ujian']->soalUjianCbt()->create([
+            'soal_cbt_id' => $soal->id,
+            'nomor_urut' => 1,
+            'bobot' => 10,
+        ]);
+        $jawaban = JawabanPesertaUjianCbt::create([
+            'peserta_ujian_cbt_id' => $data['peserta']->id,
+            'soal_ujian_cbt_id' => $relasi->id,
+            'soal_cbt_id' => $soal->id,
+            'jawaban' => ['teks' => 'Pindahkan ruas lalu bagi koefisien.'],
+            'ragu' => false,
+            'skor' => null,
+            'benar' => null,
+        ]);
+        $tokenAdmin = $data['admin']->createToken('Koreksi Android', ['mobile'])->plainTextToken;
+
+        $this->withToken($tokenAdmin)
+            ->getJson(route('api.v1.hasil-ujian-terpusat.koreksi-uraian', [
+                $data['kegiatan'], $data['jadwal'], 'status' => 'belum_dikoreksi',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.dapat_mengoreksi', true)
+            ->assertJsonPath('data.ringkasan.belum_dikoreksi', 1)
+            ->assertJsonPath('data.items.0.jawaban_id', $jawaban->id)
+            ->assertJsonPath('data.items.0.soal.rubrik', 'Langkah dan hasil akhir harus benar.')
+            ->assertJsonPath('data.items.0.jawaban', 'Pindahkan ruas lalu bagi koefisien.');
+
+        $this->withToken($tokenAdmin)
+            ->putJson(route('api.v1.hasil-ujian-terpusat.koreksi-uraian.update', [
+                $data['kegiatan'], $data['jadwal'],
+            ]), ['skor' => [['jawaban_id' => $jawaban->id, 'nilai' => 11]]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('skor.0.nilai');
+
+        $this->withToken($tokenAdmin)
+            ->putJson(route('api.v1.hasil-ujian-terpusat.koreksi-uraian.update', [
+                $data['kegiatan'], $data['jadwal'],
+            ]), ['skor' => [['jawaban_id' => $jawaban->id, 'nilai' => 8]]])
+            ->assertOk()
+            ->assertJsonPath('data.ringkasan.belum_dikoreksi', 0)
+            ->assertJsonPath('data.items.0.skor', 8);
+        $this->assertDatabaseHas('jawaban_peserta_ujian_cbt', [
+            'id' => $jawaban->id,
+            'skor' => 8,
+            'benar' => false,
+        ]);
+
+        $this->withToken($tokenAdmin)
+            ->patchJson(route('api.v1.hasil-ujian-terpusat.finalisasi', [
+                $data['kegiatan'], $data['jadwal'],
+            ]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('finalisasi');
+
+        $data['peserta']->update([
+            'status' => 'selesai',
+            'waktu_selesai' => now(),
+        ]);
+        $this->withToken($tokenAdmin)
+            ->patchJson(route('api.v1.hasil-ujian-terpusat.finalisasi', [
+                $data['kegiatan'], $data['jadwal'],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.status', 'final')
+            ->assertJsonPath('data.dapat_publikasi', true);
+        $this->assertDatabaseHas('ujian_cbt', [
+            'id' => $data['ujian']->id,
+            'status' => 'selesai',
+            'tampilkan_hasil' => false,
+            'hasil_difinalisasi_oleh_pengguna_id' => $data['admin']->id,
+        ]);
+
+        $this->withToken($tokenAdmin)
+            ->putJson(route('api.v1.hasil-ujian-terpusat.koreksi-uraian.update', [
+                $data['kegiatan'], $data['jadwal'],
+            ]), ['skor' => [['jawaban_id' => $jawaban->id, 'nilai' => 10]]])
+            ->assertUnprocessable();
+
+        Pengguna::create([
+            'siswa_id' => $data['siswa']->id,
+            'nama' => 'Siswa Ujian Native',
+            'username' => 'siswa-ujian-native',
+            'kata_sandi' => 'rahasia123',
+            'wajib_ganti_kata_sandi' => false,
+            'peran' => 'siswa',
+            'aktif' => true,
+        ]);
+        $this->withToken($tokenAdmin)
+            ->patchJson(route('api.v1.hasil-ujian-terpusat.publikasi', [
+                $data['kegiatan'], $data['jadwal'],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.status', 'dipublikasikan')
+            ->assertJsonPath('data.dapat_batalkan_publikasi', true);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'judul' => 'Hasil ujian telah tersedia',
+            'tautan' => '/ujian-saya',
+        ]);
+
+        $this->withToken($tokenAdmin)
+            ->deleteJson(route('api.v1.hasil-ujian-terpusat.finalisasi.destroy', [
+                $data['kegiatan'], $data['jadwal'],
+            ]))
+            ->assertUnprocessable();
+        $this->withToken($tokenAdmin)
+            ->deleteJson(route('api.v1.hasil-ujian-terpusat.publikasi.destroy', [
+                $data['kegiatan'], $data['jadwal'],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.status', 'final');
+        $this->withToken($tokenAdmin)
+            ->deleteJson(route('api.v1.hasil-ujian-terpusat.finalisasi.destroy', [
+                $data['kegiatan'], $data['jadwal'],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.status', 'draf');
+
+        $pegawaiPanitia = Pegawai::create([
+            'nama_lengkap' => 'Panitia Lihat Koreksi',
+            'nip' => '198801012026091099',
+            'jenis_kelamin' => 'L',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $akunPanitia = Pengguna::create([
+            'pegawai_id' => $pegawaiPanitia->id,
+            'nama' => $pegawaiPanitia->nama_lengkap,
+            'username' => $pegawaiPanitia->nip,
+            'kata_sandi' => 'rahasia123',
+            'wajib_ganti_kata_sandi' => false,
+            'peran' => 'pegawai',
+            'aktif' => true,
+        ]);
+        $akunPanitia->daftarPeran()->sync([
+            Peran::where('kode', 'panitia_ujian')->value('id'),
+        ]);
+        PanitiaUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+            'pegawai_id' => $pegawaiPanitia->id,
+            'jabatan' => 'anggota',
+            'aktif' => true,
+        ]);
+        $this->app['auth']->forgetGuards();
+        $tokenPanitia = $akunPanitia->createToken('Lihat Koreksi Android', ['mobile'])->plainTextToken;
+
+        $this->withToken($tokenPanitia)
+            ->getJson(route('api.v1.hasil-ujian-terpusat.koreksi-uraian', [
+                $data['kegiatan'], $data['jadwal'],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.dapat_mengoreksi', false)
+            ->assertJsonPath('data.items.0.skor', 8);
+        $this->withToken($tokenPanitia)
+            ->putJson(route('api.v1.hasil-ujian-terpusat.koreksi-uraian.update', [
+                $data['kegiatan'], $data['jadwal'],
+            ]), ['skor' => [['jawaban_id' => $jawaban->id, 'nilai' => 10]]])
+            ->assertForbidden();
     }
 
     private function fondasi(): array
@@ -318,7 +503,7 @@ class PelaksanaanUjianTerpusatApiTest extends TestCase
 
         return compact(
             'admin', 'kegiatan', 'jadwal', 'ujian', 'ruangSumber', 'ruangOperasional',
-            'peserta', 'pengawasLama', 'pengawasBaru',
+            'peserta', 'siswa', 'anggota', 'pengawasLama', 'pengawasBaru',
         ) + [
             'ruang_sumber' => $ruangSumber,
             'ruang_operasional' => $ruangOperasional,
