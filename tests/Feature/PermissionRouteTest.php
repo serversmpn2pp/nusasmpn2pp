@@ -438,11 +438,30 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('peminjaman-barang.index', 'izin:barang.lihat,barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('peminjaman-barang.show', 'izin:barang.lihat,barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('peminjaman-barang.store', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.peminjaman-barang.index', 'izin:barang.lihat,barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.peminjaman-barang.show', 'izin:barang.lihat,barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.peminjaman-barang.store', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.peminjaman-barang.identifikasi-peminjam', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.peminjaman-barang.identifikasi-barang', 'izin:barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('pengembalian-barang.index', 'izin:barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('pengembalian-barang.identifikasi', 'izin:barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('pengembalian-barang.store', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengembalian-barang.index', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengembalian-barang.identifikasi', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengembalian-barang.store', 'izin:barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('rekap-peminjaman-barang.index', 'izin:barang.lihat,barang.peminjaman_kelola');
         $this->assertRouteMemakaiMiddleware('rekap-peminjaman-barang.cetak', 'izin:barang.lihat,barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.rekap-peminjaman-barang.index', 'izin:barang.lihat,barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.rekap-peminjaman-barang.document', 'izin:barang.lihat,barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-barang.index', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-barang.show', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-barang.penuhi', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-barang.tolak', 'izin:barang.peminjaman_kelola');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-saya.katalog', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-saya.index', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-saya.store', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-saya.show', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-saya.batalkan', 'akun_pegawai');
     }
 
     private function assertRouteMemakaiMiddleware(string $namaRoute, string $middleware): void

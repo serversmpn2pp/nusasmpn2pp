@@ -24,7 +24,6 @@ use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
 use App\Http\Controllers\Api\V1\KartuPegawaiController;
 use App\Http\Controllers\Api\V1\KartuPelajarController;
 use App\Http\Controllers\Api\V1\KategoriBarangController;
-use App\Http\Controllers\Api\V1\LabelInventarisController;
 use App\Http\Controllers\Api\V1\KategoriPembinaanSiswaController;
 use App\Http\Controllers\Api\V1\KeamananUjianController;
 use App\Http\Controllers\Api\V1\KegiatanIbadahController;
@@ -32,6 +31,7 @@ use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
 use App\Http\Controllers\Api\V1\KonfirmasiBerhalanganIbadahController;
+use App\Http\Controllers\Api\V1\LabelInventarisController;
 use App\Http\Controllers\Api\V1\LaporanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\LaporanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\LaporanSiswaController;
@@ -46,14 +46,17 @@ use App\Http\Controllers\Api\V1\MutasiStokBarangController;
 use App\Http\Controllers\Api\V1\NilaiSayaController;
 use App\Http\Controllers\Api\V1\OperasionalHasilAsesmenKelasController;
 use App\Http\Controllers\Api\V1\PaketSoalController;
-use App\Http\Controllers\Api\V1\PenerimaanBarangController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PelaksanaanSanksiSiswaController;
 use App\Http\Controllers\Api\V1\PelaksanaanUjianTerpusatController;
 use App\Http\Controllers\Api\V1\PemeriksaanPengesahanController;
 use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
+use App\Http\Controllers\Api\V1\PeminjamanBarangController;
 use App\Http\Controllers\Api\V1\PendampinganSiswaController;
 use App\Http\Controllers\Api\V1\PenempatanSiswaController;
+use App\Http\Controllers\Api\V1\PenerimaanBarangController;
+use App\Http\Controllers\Api\V1\PengajuanBarangController;
+use App\Http\Controllers\Api\V1\PengajuanBarangSayaController;
 use App\Http\Controllers\Api\V1\PengaturanBatasProsesPelanggaranController;
 use App\Http\Controllers\Api\V1\PengaturanBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\PengaturanInventarisController;
@@ -61,6 +64,7 @@ use App\Http\Controllers\Api\V1\PengaturanPeringatanDiniPoinController;
 use App\Http\Controllers\Api\V1\PengaturanPoinKeterlambatanController;
 use App\Http\Controllers\Api\V1\PengaturanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\PengaturanPresensiSiswaController;
+use App\Http\Controllers\Api\V1\PengembalianBarangController;
 use App\Http\Controllers\Api\V1\PenguranganPoinSiswaController;
 use App\Http\Controllers\Api\V1\PenugasanGuruWaliController;
 use App\Http\Controllers\Api\V1\PeranController;
@@ -73,12 +77,13 @@ use App\Http\Controllers\Api\V1\PresensiUjianController;
 use App\Http\Controllers\Api\V1\PusatCbtController;
 use App\Http\Controllers\Api\V1\RekapKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
+use App\Http\Controllers\Api\V1\RekapPeminjamanBarangController;
 use App\Http\Controllers\Api\V1\RekapPoinSiswaController;
 use App\Http\Controllers\Api\V1\RekapPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\RekapPresensiSiswaController;
 use App\Http\Controllers\Api\V1\RingkasanKegiatanIbadahBulananController;
-use App\Http\Controllers\Api\V1\SatuanBarangController;
 use App\Http\Controllers\Api\V1\SaldoStokBarangController;
+use App\Http\Controllers\Api\V1\SatuanBarangController;
 use App\Http\Controllers\Api\V1\ScanBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\ScanKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\SiswaController;
@@ -189,6 +194,68 @@ Route::prefix('v1')
         Route::get('/mutasi-stok/{mutasiStokBarang}', [MutasiStokBarangController::class, 'show'])
             ->middleware('izin:barang.lihat,barang.kelola')
             ->name('mutasi-stok.show');
+
+        Route::get('/peminjaman-barang/identifikasi-peminjam', [PeminjamanBarangController::class, 'identifikasiPeminjam'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('peminjaman-barang.identifikasi-peminjam');
+        Route::get('/peminjaman-barang/identifikasi-barang', [PeminjamanBarangController::class, 'identifikasiBarang'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('peminjaman-barang.identifikasi-barang');
+        Route::get('/peminjaman-barang', [PeminjamanBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.peminjaman_kelola')
+            ->name('peminjaman-barang.index');
+        Route::post('/peminjaman-barang', [PeminjamanBarangController::class, 'store'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('peminjaman-barang.store');
+        Route::get('/peminjaman-barang/{peminjamanBarang}', [PeminjamanBarangController::class, 'show'])
+            ->middleware('izin:barang.lihat,barang.peminjaman_kelola')
+            ->name('peminjaman-barang.show');
+
+        Route::get('/pengembalian-barang/identifikasi', [PengembalianBarangController::class, 'identifikasi'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('pengembalian-barang.identifikasi');
+        Route::get('/pengembalian-barang', [PengembalianBarangController::class, 'index'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('pengembalian-barang.index');
+        Route::post('/peminjaman-barang/{peminjamanBarang}/pengembalian', [PengembalianBarangController::class, 'store'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('pengembalian-barang.store');
+
+        Route::get('/rekap-peminjaman-barang/dokumen', [RekapPeminjamanBarangController::class, 'document'])
+            ->middleware('izin:barang.lihat,barang.peminjaman_kelola')
+            ->name('rekap-peminjaman-barang.document');
+        Route::get('/rekap-peminjaman-barang', [RekapPeminjamanBarangController::class, 'index'])
+            ->middleware('izin:barang.lihat,barang.peminjaman_kelola')
+            ->name('rekap-peminjaman-barang.index');
+
+        Route::get('/pengajuan-barang', [PengajuanBarangController::class, 'index'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('pengajuan-barang.index');
+        Route::get('/pengajuan-barang/{pengajuanBarang}', [PengajuanBarangController::class, 'show'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('pengajuan-barang.show');
+        Route::patch('/pengajuan-barang/{pengajuanBarang}/penuhi', [PengajuanBarangController::class, 'penuhi'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('pengajuan-barang.penuhi');
+        Route::patch('/pengajuan-barang/{pengajuanBarang}/tolak', [PengajuanBarangController::class, 'tolak'])
+            ->middleware('izin:barang.peminjaman_kelola')
+            ->name('pengajuan-barang.tolak');
+
+        Route::get('/pengajuan-saya/katalog', [PengajuanBarangSayaController::class, 'katalog'])
+            ->middleware('akun_pegawai')
+            ->name('pengajuan-saya.katalog');
+        Route::get('/pengajuan-saya', [PengajuanBarangSayaController::class, 'index'])
+            ->middleware('akun_pegawai')
+            ->name('pengajuan-saya.index');
+        Route::post('/pengajuan-saya', [PengajuanBarangSayaController::class, 'store'])
+            ->middleware('akun_pegawai')
+            ->name('pengajuan-saya.store');
+        Route::get('/pengajuan-saya/{pengajuanBarang}', [PengajuanBarangSayaController::class, 'show'])
+            ->middleware('akun_pegawai')
+            ->name('pengajuan-saya.show');
+        Route::patch('/pengajuan-saya/{pengajuanBarang}/batalkan', [PengajuanBarangSayaController::class, 'batalkan'])
+            ->middleware('akun_pegawai')
+            ->name('pengajuan-saya.batalkan');
 
         Route::get('/kategori-barang', [KategoriBarangController::class, 'index'])
             ->middleware('izin:barang.lihat,barang.kelola')

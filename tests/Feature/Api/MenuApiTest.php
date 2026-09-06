@@ -75,6 +75,26 @@ class MenuApiTest extends TestCase
                 'rute' => '/mutasi-stok',
             ])
             ->assertJsonFragment([
+                'kode' => 'peminjaman-barang',
+                'status' => 'tersedia',
+                'rute' => '/peminjaman-barang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'pengajuan-barang',
+                'status' => 'tersedia',
+                'rute' => '/pengajuan-barang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'pengembalian-barang',
+                'status' => 'tersedia',
+                'rute' => '/pengembalian-barang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'rekap-peminjaman',
+                'status' => 'tersedia',
+                'rute' => '/rekap-peminjaman-barang',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'kategori-barang',
                 'status' => 'tersedia',
                 'rute' => '/kategori-barang',
@@ -455,6 +475,11 @@ class MenuApiTest extends TestCase
                 'kode' => 'perangkat-ajar-saya',
                 'status' => 'tersedia',
                 'rute' => '/perangkat-ajar-saya',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'pengajuan-saya',
+                'status' => 'tersedia',
+                'rute' => '/pengajuan-saya',
             ]);
     }
 

@@ -46,6 +46,12 @@ import 'package:nusa/features/grade_component/presentation/grade_component_view.
 import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
 import 'package:nusa/features/grade_recap/presentation/grade_recap_view.dart';
 import 'package:nusa/features/goods_receipt/presentation/goods_receipt_view.dart';
+import 'package:nusa/features/goods_loan/presentation/goods_loan_detail_view.dart';
+import 'package:nusa/features/goods_loan/presentation/goods_loan_view.dart';
+import 'package:nusa/features/goods_loan/presentation/goods_return_view.dart';
+import 'package:nusa/features/goods_loan_recap/presentation/goods_loan_recap_view.dart';
+import 'package:nusa/features/goods_request/presentation/goods_request_detail_view.dart';
+import 'package:nusa/features/goods_request/presentation/goods_request_view.dart';
 import 'package:nusa/features/guardian_assignment/presentation/guardian_assignment_create_view.dart';
 import 'package:nusa/features/guardian_assignment/presentation/guardian_assignment_list_view.dart';
 import 'package:nusa/features/home/presentation/home_view.dart';
@@ -66,6 +72,9 @@ import 'package:nusa/features/login_activity/presentation/login_attempt_detail_v
 import 'package:nusa/features/menu/presentation/menu_group_view.dart';
 import 'package:nusa/features/my_teaching_schedule/presentation/my_teaching_schedule_view.dart';
 import 'package:nusa/features/my_grades/presentation/my_grades_view.dart';
+import 'package:nusa/features/my_goods_request/presentation/my_goods_request_create_view.dart';
+import 'package:nusa/features/my_goods_request/presentation/my_goods_request_detail_view.dart';
+import 'package:nusa/features/my_goods_request/presentation/my_goods_request_view.dart';
 import 'package:nusa/features/my_guardian_students/presentation/my_guardian_student_detail_view.dart';
 import 'package:nusa/features/my_guardian_students/presentation/my_guardian_student_list_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_detail_view.dart';
@@ -154,6 +163,15 @@ abstract final class AppRoutes {
   static const goodsReceipts = '/barang-datang';
   static const stockBalances = '/saldo-stok';
   static const stockMovements = '/mutasi-stok';
+  static const goodsLoans = '/peminjaman-barang';
+  static const goodsLoanDetail = '/peminjaman-barang/:id';
+  static const goodsReturns = '/pengembalian-barang';
+  static const goodsLoanRecap = '/rekap-peminjaman-barang';
+  static const goodsRequests = '/pengajuan-barang';
+  static const goodsRequestDetail = '/pengajuan-barang/:id';
+  static const myGoodsRequests = '/pengajuan-saya';
+  static const myGoodsRequestCreate = '/pengajuan-saya/tambah';
+  static const myGoodsRequestDetail = '/pengajuan-saya/:id';
   static const centralExamExecution = '/pelaksanaan-ujian-terpusat';
   static const centralExamExecutionDetail = '/pelaksanaan-ujian-terpusat/:id';
   static const centralExamPreparation = '/ujian-terpusat';
@@ -403,6 +421,61 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             state.uri.queryParameters['lokasi_barang_id'] ?? '',
           ),
           openForm: state.uri.queryParameters['tambah'] == '1',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsLoans,
+        name: 'goods-loans',
+        builder: (context, state) => const GoodsLoanView(),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsLoanDetail,
+        name: 'goods-loan-detail',
+        builder: (context, state) => GoodsLoanDetailView(
+          loanId: int.parse(state.pathParameters['id']!),
+          openReturn: state.uri.queryParameters['kembalikan'] == '1',
+          initialDetailId: int.tryParse(
+            state.uri.queryParameters['detail_id'] ?? '',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsReturns,
+        name: 'goods-returns',
+        builder: (context, state) => const GoodsReturnView(),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsLoanRecap,
+        name: 'goods-loan-recap',
+        builder: (context, state) => const GoodsLoanRecapView(),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsRequests,
+        name: 'goods-requests',
+        builder: (context, state) => const GoodsRequestView(),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsRequestDetail,
+        name: 'goods-request-detail',
+        builder: (context, state) => GoodsRequestDetailView(
+          requestId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.myGoodsRequests,
+        name: 'my-goods-requests',
+        builder: (context, state) => const MyGoodsRequestView(),
+      ),
+      GoRoute(
+        path: AppRoutes.myGoodsRequestCreate,
+        name: 'my-goods-request-create',
+        builder: (context, state) => const MyGoodsRequestCreateView(),
+      ),
+      GoRoute(
+        path: AppRoutes.myGoodsRequestDetail,
+        name: 'my-goods-request-detail',
+        builder: (context, state) => MyGoodsRequestDetailView(
+          requestId: int.parse(state.pathParameters['id']!),
         ),
       ),
       GoRoute(
