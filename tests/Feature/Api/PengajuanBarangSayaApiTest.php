@@ -43,6 +43,13 @@ class PengajuanBarangSayaApiTest extends TestCase
             ->assertJsonPath('data.items.0.satuan', 'Buah')
             ->assertJsonPath('data.items.0.jenis_layanan', 'permintaan');
 
+        $this->withToken($token)
+            ->getJson(route('api.v1.pengajuan-saya.katalog', ['barang_id' => $aset->id]))
+            ->assertOk()
+            ->assertJsonPath('data.filter.barang_id', $aset->id)
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.id', $aset->id);
+
         $response = $this->withToken($token)
             ->postJson(route('api.v1.pengajuan-saya.store'), [
                 'barang_id' => $aset->id,

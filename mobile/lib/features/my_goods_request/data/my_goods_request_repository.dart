@@ -12,7 +12,8 @@ class MyGoodsRequestRepository {
   Future<MyGoodsCatalogPage> catalog({
     required String query,
     required int page,
-  }) => _remote.catalog(query: query, page: page);
+    int? goodsId,
+  }) => _remote.catalog(query: query, page: page, goodsId: goodsId);
   Future<MyGoodsRequestDetail> detail(int id) => _remote.detail(id);
   Future<MyGoodsRequestDetail> create(MyGoodsRequestFormValue value) =>
       _remote.create(value);

@@ -28,6 +28,7 @@ class PengajuanBarangSayaController extends Controller
         $this->pegawaiId($request);
         $filter = $request->validate([
             'kata_kunci' => ['nullable', 'string', 'max:100'],
+            'barang_id' => ['nullable', 'integer', 'exists:barang,id'],
             'halaman' => ['nullable', 'integer', 'min:1'],
             'per_halaman' => ['nullable', 'integer', 'min:5', 'max:50'],
         ]);

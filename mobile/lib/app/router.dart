@@ -45,6 +45,8 @@ import 'package:nusa/features/grade_weight_scheme/presentation/grade_weight_sche
 import 'package:nusa/features/grade_component/presentation/grade_component_view.dart';
 import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
 import 'package:nusa/features/grade_recap/presentation/grade_recap_view.dart';
+import 'package:nusa/features/goods_catalog/presentation/goods_catalog_detail_view.dart';
+import 'package:nusa/features/goods_catalog/presentation/goods_catalog_view.dart';
 import 'package:nusa/features/goods_receipt/presentation/goods_receipt_view.dart';
 import 'package:nusa/features/goods_loan/presentation/goods_loan_detail_view.dart';
 import 'package:nusa/features/goods_loan/presentation/goods_loan_view.dart';
@@ -61,6 +63,7 @@ import 'package:nusa/features/inventory_category/presentation/inventory_category
 import 'package:nusa/features/inventory_goods/presentation/inventory_goods_view.dart';
 import 'package:nusa/features/inventory_location/presentation/inventory_location_view.dart';
 import 'package:nusa/features/inventory_label/presentation/inventory_label_view.dart';
+import 'package:nusa/features/inventory_monthly_report/presentation/inventory_monthly_report_view.dart';
 import 'package:nusa/features/inventory_settings/presentation/inventory_settings_view.dart';
 import 'package:nusa/features/inventory_unit/presentation/inventory_unit_view.dart';
 import 'package:nusa/features/incident_reporting/presentation/incident_reporting_view.dart';
@@ -167,6 +170,9 @@ abstract final class AppRoutes {
   static const goodsLoanDetail = '/peminjaman-barang/:id';
   static const goodsReturns = '/pengembalian-barang';
   static const goodsLoanRecap = '/rekap-peminjaman-barang';
+  static const inventoryMonthlyReport = '/laporan-inventaris';
+  static const goodsCatalog = '/katalog-barang';
+  static const goodsCatalogDetail = '/katalog-barang/:id';
   static const goodsRequests = '/pengajuan-barang';
   static const goodsRequestDetail = '/pengajuan-barang/:id';
   static const myGoodsRequests = '/pengajuan-saya';
@@ -450,6 +456,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const GoodsLoanRecapView(),
       ),
       GoRoute(
+        path: AppRoutes.inventoryMonthlyReport,
+        name: 'inventory-monthly-report',
+        builder: (context, state) => const InventoryMonthlyReportView(),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsCatalog,
+        name: 'goods-catalog',
+        builder: (context, state) => const GoodsCatalogView(),
+      ),
+      GoRoute(
+        path: AppRoutes.goodsCatalogDetail,
+        name: 'goods-catalog-detail',
+        builder: (context, state) => GoodsCatalogDetailView(
+          goodsId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.goodsRequests,
         name: 'goods-requests',
         builder: (context, state) => const GoodsRequestView(),
@@ -469,7 +492,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.myGoodsRequestCreate,
         name: 'my-goods-request-create',
-        builder: (context, state) => const MyGoodsRequestCreateView(),
+        builder: (context, state) => MyGoodsRequestCreateView(
+          initialGoodsId: int.tryParse(
+            state.uri.queryParameters['barang_id'] ?? '',
+          ),
+        ),
       ),
       GoRoute(
         path: AppRoutes.myGoodsRequestDetail,

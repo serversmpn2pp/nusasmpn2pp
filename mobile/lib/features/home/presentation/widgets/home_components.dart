@@ -344,6 +344,9 @@ class ScheduleCard extends StatelessWidget {
     required this.subject,
     required this.className,
     required this.color,
+    this.icon = Icons.menu_book_rounded,
+    this.inProgress = false,
+    this.onTap,
     super.key,
   });
 
@@ -351,11 +354,15 @@ class ScheduleCard extends StatelessWidget {
   final String subject;
   final String className;
   final Color color;
+  final IconData icon;
+  final bool inProgress;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(minHeight: 92),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -368,68 +375,103 @@ class ScheduleCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 5,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(14),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 11),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(Icons.menu_book_rounded, color: color, size: 21),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 12, 10, 12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    time,
-                    style: const TextStyle(
-                      color: NusaColors.textPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 5,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(14),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subject,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: NusaColors.textPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 11),
+                  child: Align(
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Icon(icon, color: color, size: 21),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    className,
-                    style: const TextStyle(
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 12, 10, 12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          time,
+                          style: TextStyle(
+                            color: inProgress
+                                ? NusaColors.success
+                                : NusaColors.textPrimary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (inProgress) ...[
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Sedang berlangsung',
+                            style: TextStyle(
+                              color: NusaColors.success,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 4),
+                        Text(
+                          subject,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: NusaColors.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          className,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: NusaColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (onTap != null)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 7),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
                       color: NusaColors.textSecondary,
-                      fontSize: 11,
+                      size: 20,
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

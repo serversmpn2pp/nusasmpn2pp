@@ -10,6 +10,7 @@ class HomeDashboard {
     required this.attendance,
     required this.duty,
     required this.guardianship,
+    required this.todaySchedule,
     required this.notifications,
   });
 
@@ -40,6 +41,9 @@ class HomeDashboard {
         final data? => GuardianshipSummary.fromJson(data),
         _ => null,
       },
+      todaySchedule: TodayScheduleSection.fromJson(
+        _map(json['jadwal_hari_ini']) ?? const {},
+      ),
       notifications: NotificationSummary.fromJson(
         _map(json['notifikasi']) ?? const {},
       ),
@@ -56,6 +60,7 @@ class HomeDashboard {
   final AttendanceSummary? attendance;
   final DutySummary? duty;
   final GuardianshipSummary? guardianship;
+  final TodayScheduleSection todaySchedule;
   final NotificationSummary notifications;
 }
 
@@ -229,6 +234,90 @@ class GuardianClass {
   final int studentCount;
 }
 
+class TodayScheduleSection {
+  const TodayScheduleSection({
+    required this.mode,
+    required this.title,
+    required this.emptyMessage,
+    required this.items,
+    required this.allItems,
+    this.actionLabel,
+    this.actionRoute,
+  });
+
+  factory TodayScheduleSection.fromJson(Map<String, dynamic> json) {
+    final items = _todayScheduleItems(json['items']);
+    final allItems = _todayScheduleItems(json['semua_items']);
+
+    return TodayScheduleSection(
+      mode: json['mode'] as String? ?? 'belum_tersedia',
+      title: json['judul'] as String? ?? 'Jadwal Hari Ini',
+      emptyMessage:
+          json['pesan_kosong'] as String? ?? 'Jadwal hari ini belum tersedia.',
+      actionLabel: json['label_aksi'] as String?,
+      actionRoute: json['rute_aksi'] as String?,
+      items: items,
+      allItems: allItems.isEmpty ? items : allItems,
+    );
+  }
+
+  final String mode;
+  final String title;
+  final String emptyMessage;
+  final String? actionLabel;
+  final String? actionRoute;
+  final List<TodayScheduleItem> items;
+  final List<TodayScheduleItem> allItems;
+}
+
+class TodayScheduleItem {
+  const TodayScheduleItem({
+    required this.id,
+    required this.time,
+    required this.title,
+    required this.subtitle,
+    required this.type,
+    required this.inProgress,
+    this.mobileDestination,
+  });
+
+  factory TodayScheduleItem.fromJson(Map<String, dynamic> json) {
+    return TodayScheduleItem(
+      id: json['id'].toString(),
+      time: json['waktu'] as String? ?? '-',
+      title: json['judul'] as String? ?? '-',
+      subtitle: json['subjudul'] as String? ?? '-',
+      type: json['jenis'] as String? ?? 'pelajaran',
+      inProgress: json['sedang_berlangsung'] as bool? ?? false,
+      mobileDestination: switch (json['tautan_mobile']) {
+        final String value when value.trim().isNotEmpty => value,
+        _ => null,
+      },
+    );
+  }
+
+  final String id;
+  final String time;
+  final String title;
+  final String subtitle;
+  final String type;
+  final bool inProgress;
+  final String? mobileDestination;
+}
+
+List<TodayScheduleItem> _todayScheduleItems(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+
+  return List.unmodifiable(
+    value
+        .map(_map)
+        .whereType<Map<String, dynamic>>()
+        .map(TodayScheduleItem.fromJson),
+  );
+}
+
 class NotificationSummary {
   const NotificationSummary({required this.unreadCount, required this.items});
 
@@ -260,6 +349,7 @@ class AppNotification {
     required this.unread,
     required this.createdAt,
     required this.relativeTime,
+    this.mobileDestination,
   });
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
@@ -272,6 +362,10 @@ class AppNotification {
       unread: json['belum_dibaca'] as bool? ?? false,
       createdAt: DateTime.parse(json['dibuat_pada'] as String),
       relativeTime: json['waktu_relatif'] as String,
+      mobileDestination: switch (json['tautan_mobile']) {
+        final String value when value.trim().isNotEmpty => value,
+        _ => null,
+      },
     );
   }
 
@@ -283,6 +377,7 @@ class AppNotification {
   final bool unread;
   final DateTime createdAt;
   final String relativeTime;
+  final String? mobileDestination;
 }
 
 Map<String, dynamic>? _map(Object? value) {

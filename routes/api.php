@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\JenisPelanggaranSiswaController;
 use App\Http\Controllers\Api\V1\JenisPerangkatAjarController;
 use App\Http\Controllers\Api\V1\KartuPegawaiController;
 use App\Http\Controllers\Api\V1\KartuPelajarController;
+use App\Http\Controllers\Api\V1\KatalogBarangController;
 use App\Http\Controllers\Api\V1\KategoriBarangController;
 use App\Http\Controllers\Api\V1\KategoriPembinaanSiswaController;
 use App\Http\Controllers\Api\V1\KeamananUjianController;
@@ -32,6 +33,7 @@ use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
 use App\Http\Controllers\Api\V1\KonfirmasiBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\LabelInventarisController;
+use App\Http\Controllers\Api\V1\LaporanInventarisBulananController;
 use App\Http\Controllers\Api\V1\LaporanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\LaporanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\LaporanSiswaController;
@@ -44,6 +46,7 @@ use App\Http\Controllers\Api\V1\MonitoringHasilAsesmenKelasController;
 use App\Http\Controllers\Api\V1\MonitoringSurveiController;
 use App\Http\Controllers\Api\V1\MutasiStokBarangController;
 use App\Http\Controllers\Api\V1\NilaiSayaController;
+use App\Http\Controllers\Api\V1\NotifikasiController;
 use App\Http\Controllers\Api\V1\OperasionalHasilAsesmenKelasController;
 use App\Http\Controllers\Api\V1\PaketSoalController;
 use App\Http\Controllers\Api\V1\PegawaiController;
@@ -74,6 +77,7 @@ use App\Http\Controllers\Api\V1\PernyataanSurveiController;
 use App\Http\Controllers\Api\V1\PersiapanUjianTerpusatController;
 use App\Http\Controllers\Api\V1\PiketSayaController;
 use App\Http\Controllers\Api\V1\PresensiUjianController;
+use App\Http\Controllers\Api\V1\ProfilSayaController;
 use App\Http\Controllers\Api\V1\PusatCbtController;
 use App\Http\Controllers\Api\V1\RekapKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
@@ -115,6 +119,16 @@ Route::prefix('v1/auth')
         });
     });
 
+Route::prefix('v1/profil-saya')
+    ->name('api.v1.profil-saya.')
+    ->middleware(['auth:sanctum', 'abilities:mobile', 'akun_api_aktif', 'kata_sandi_api_bukan_default'])
+    ->controller(ProfilSayaController::class)
+    ->group(function () {
+        Route::get('/', 'show')->name('show');
+        Route::put('/', 'update')->name('update');
+        Route::post('/foto', 'updateFoto')->name('foto.update');
+    });
+
 Route::prefix('v1')
     ->name('api.v1.')
     ->middleware([
@@ -128,9 +142,25 @@ Route::prefix('v1')
             ->middleware('izin:beranda.akses')
             ->name('beranda');
 
+        Route::patch('/notifikasi/baca-semua', [NotifikasiController::class, 'bacaSemua'])
+            ->name('notifikasi.baca-semua');
+        Route::patch('/notifikasi/{notifikasiPengguna}/baca', [NotifikasiController::class, 'baca'])
+            ->name('notifikasi.baca');
+
         Route::get('/dashboard-sarpras', DashboardSarprasController::class)
             ->middleware('izin:barang.lihat,barang.kelola,barang.peminjaman_kelola')
             ->name('dashboard-sarpras');
+
+        Route::get('/laporan-inventaris-bulanan', LaporanInventarisBulananController::class)
+            ->middleware('izin:barang.lihat,barang.kelola')
+            ->name('laporan-inventaris-bulanan');
+
+        Route::get('/katalog-barang', [KatalogBarangController::class, 'index'])
+            ->middleware('akun_pegawai')
+            ->name('katalog-barang.index');
+        Route::get('/katalog-barang/{barang}', [KatalogBarangController::class, 'show'])
+            ->middleware('akun_pegawai')
+            ->name('katalog-barang.show');
 
         Route::get('/barang', [BarangController::class, 'index'])
             ->middleware('izin:barang.lihat,barang.kelola')

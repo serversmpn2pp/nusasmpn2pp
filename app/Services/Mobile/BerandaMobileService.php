@@ -13,6 +13,11 @@ use Illuminate\Support\Carbon;
 
 class BerandaMobileService
 {
+    public function __construct(
+        private readonly TujuanNotifikasiMobileService $tujuanNotifikasi,
+        private readonly JadwalHariIniMobileService $jadwalHariIni,
+    ) {}
+
     public function siapkan(Pengguna $pengguna): array
     {
         $hariIni = now();
@@ -31,6 +36,9 @@ class BerandaMobileService
                 'jenis_pegawai',
                 'jabatan_utama',
             ]);
+        $presensi = $this->presensiPegawai($pegawai, $hariIni);
+        $piket = $this->piketHariIni($pegawai, $tahunPelajaran, $hariIni);
+        $perwalian = $this->ringkasanPerwalian($pegawai, $tahunPelajaran, $hariIni);
 
         return [
             'dihasilkan_pada' => $hariIni->toISOString(),
@@ -46,9 +54,18 @@ class BerandaMobileService
                 'nama' => $tahunPelajaran->nama,
             ] : null,
             'pegawai' => $this->profilPegawai($pegawai),
-            'presensi' => $this->presensiPegawai($pegawai, $hariIni),
-            'piket_hari_ini' => $this->piketHariIni($pegawai, $tahunPelajaran, $hariIni),
-            'perwalian' => $this->ringkasanPerwalian($pegawai, $tahunPelajaran, $hariIni),
+            'presensi' => $presensi,
+            'piket_hari_ini' => $piket,
+            'perwalian' => $perwalian,
+            'jadwal_hari_ini' => $this->jadwalHariIni->siapkan(
+                $pengguna,
+                $pegawai,
+                $tahunPelajaran,
+                $hariIni,
+                $presensi,
+                $piket,
+                $perwalian,
+            ),
             'notifikasi' => $this->notifikasi($pengguna),
         ];
     }
@@ -217,6 +234,7 @@ class BerandaMobileService
                     'belum_dibaca' => $item->masihBelumDibaca(),
                     'dibuat_pada' => $item->created_at->toISOString(),
                     'waktu_relatif' => $item->created_at->locale('id')->diffForHumans(),
+                    'tautan_mobile' => $this->tujuanNotifikasi->untuk($item),
                 ])
                 ->values(),
         ];

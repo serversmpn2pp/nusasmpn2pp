@@ -462,6 +462,9 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-saya.store', 'akun_pegawai');
         $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-saya.show', 'akun_pegawai');
         $this->assertRouteMemakaiMiddleware('api.v1.pengajuan-saya.batalkan', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.katalog-barang.index', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.katalog-barang.show', 'akun_pegawai');
+        $this->assertRouteMemakaiMiddleware('api.v1.laporan-inventaris-bulanan', 'izin:barang.lihat,barang.kelola');
     }
 
     private function assertRouteMemakaiMiddleware(string $namaRoute, string $middleware): void

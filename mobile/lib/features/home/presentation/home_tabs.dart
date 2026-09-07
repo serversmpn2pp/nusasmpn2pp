@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
-import 'package:nusa/features/auth/domain/pengguna.dart';
+import 'package:nusa/features/home/application/home_controller.dart';
 import 'package:nusa/features/home/domain/home_dashboard.dart';
 import 'package:nusa/features/home/presentation/home_dashboard_view.dart';
 import 'package:nusa/features/home/presentation/widgets/home_components.dart';
@@ -153,7 +155,7 @@ class ActivityPage extends StatelessWidget {
   }
 }
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({
     required this.dashboard,
     required this.onRefresh,
@@ -164,24 +166,123 @@ class NotificationsPage extends StatelessWidget {
   final Future<void> Function() onRefresh;
 
   @override
+  ConsumerState<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends ConsumerState<NotificationsPage> {
+  int? _openingNotificationId;
+  bool _markingAllRead = false;
+
+  Future<void> _openNotification(AppNotification notification) async {
+    if (_openingNotificationId != null || _markingAllRead) return;
+
+    setState(() => _openingNotificationId = notification.id);
+
+    try {
+      if (notification.unread) {
+        await ref
+            .read(homeControllerProvider.notifier)
+            .markNotificationRead(notification.id);
+      }
+
+      if (!mounted) return;
+
+      setState(() => _openingNotificationId = null);
+      final destination = notification.mobileDestination;
+      if (destination == null) {
+        _showMessage(
+          notification.unread
+              ? 'Notifikasi ditandai sudah dibaca. Halaman tujuannya belum tersedia di aplikasi mobile.'
+              : 'Halaman tujuan notifikasi ini belum tersedia di aplikasi mobile.',
+        );
+        return;
+      }
+
+      context.push(destination);
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(_errorMessage(error));
+    } finally {
+      if (mounted && _openingNotificationId == notification.id) {
+        setState(() => _openingNotificationId = null);
+      }
+    }
+  }
+
+  Future<void> _markAllRead() async {
+    if (_markingAllRead || _openingNotificationId != null) return;
+
+    setState(() => _markingAllRead = true);
+    try {
+      await ref
+          .read(homeControllerProvider.notifier)
+          .markAllNotificationsRead();
+      if (mounted) {
+        _showMessage('Semua notifikasi telah ditandai sudah dibaca.');
+      }
+    } catch (error) {
+      if (mounted) _showMessage(_errorMessage(error));
+    } finally {
+      if (mounted) setState(() => _markingAllRead = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _errorMessage(Object error) {
+    return error is AppException
+        ? error.message
+        : 'Notifikasi belum dapat diperbarui. Silakan coba lagi.';
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return dashboard.when(
+    return widget.dashboard.when(
       loading: () => const NusaLoadingState(),
       error: (error, stackTrace) =>
-          NusaErrorState(error: error, onRetry: onRefresh),
+          NusaErrorState(error: error, onRetry: widget.onRefresh),
       data: (data) => RefreshIndicator(
-        onRefresh: onRefresh,
+        onRefresh: widget.onRefresh,
         child: ListView(
           key: const PageStorageKey<String>('notifications-scroll'),
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
           children: [
-            Text(
-              '${data.notifications.unreadCount} belum dibaca',
-              style: const TextStyle(
-                color: NusaColors.textSecondary,
-                fontSize: 13,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${data.notifications.unreadCount} belum dibaca',
+                    style: const TextStyle(
+                      color: NusaColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                if (data.notifications.unreadCount > 0)
+                  TextButton.icon(
+                    key: const Key('mark-all-notifications-read'),
+                    onPressed: _markingAllRead || _openingNotificationId != null
+                        ? null
+                        : _markAllRead,
+                    icon: _markingAllRead
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.done_all_rounded, size: 18),
+                    label: const Text('Tandai semua dibaca'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Ketuk notifikasi untuk membuka halaman terkait.',
+              style: TextStyle(color: NusaColors.textSecondary, fontSize: 12),
             ),
             const SizedBox(height: 12),
             if (data.notifications.items.isEmpty)
@@ -191,7 +292,12 @@ class NotificationsPage extends StatelessWidget {
               )
             else
               for (final item in data.notifications.items) ...[
-                NotificationCard(notification: item),
+                NotificationCard(
+                  key: Key('notification-${item.id}'),
+                  notification: item,
+                  isOpening: _openingNotificationId == item.id,
+                  onTap: () => _openNotification(item),
+                ),
                 const SizedBox(height: 9),
               ],
           ],
@@ -202,9 +308,16 @@ class NotificationsPage extends StatelessWidget {
 }
 
 class NotificationCard extends StatelessWidget {
-  const NotificationCard({required this.notification, super.key});
+  const NotificationCard({
+    required this.notification,
+    required this.onTap,
+    this.isOpening = false,
+    super.key,
+  });
 
   final AppNotification notification;
+  final VoidCallback onTap;
+  final bool isOpening;
 
   @override
   Widget build(BuildContext context) {
@@ -215,211 +328,99 @@ class NotificationCard extends StatelessWidget {
       _ => NusaColors.primary,
     };
 
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: notification.unread
-            ? color.withValues(alpha: 0.055)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: NusaColors.outline),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(Icons.notifications_outlined, color: color, size: 21),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notification.title,
-                  style: TextStyle(
-                    fontWeight: notification.unread
-                        ? FontWeight.w800
-                        : FontWeight.w600,
-                  ),
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(15),
+      side: const BorderSide(color: NusaColors.outline),
+    );
+
+    return Material(
+      color: notification.unread
+          ? color.withValues(alpha: 0.055)
+          : Colors.white,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: isOpening ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  notification.message,
-                  style: const TextStyle(
-                    color: NusaColors.textSecondary,
-                    fontSize: 13,
-                  ),
+                child: Icon(
+                  Icons.notifications_outlined,
+                  color: color,
+                  size: 21,
                 ),
-                const SizedBox(height: 7),
-                Text(
-                  '${notification.typeLabel} · ${notification.relativeTime}',
-                  style: TextStyle(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notification.title,
+                      style: TextStyle(
+                        fontWeight: notification.unread
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      notification.message,
+                      style: const TextStyle(
+                        color: NusaColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      '${notification.typeLabel} · ${notification.relativeTime}',
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isOpening)
+                SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(
                     color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    strokeWidth: 2,
                   ),
+                )
+              else
+                Column(
+                  children: [
+                    if (notification.unread) ...[
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    Icon(Icons.chevron_right_rounded, color: color, size: 21),
+                  ],
                 ),
-              ],
-            ),
+            ],
           ),
-          if (notification.unread)
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({
-    required this.pengguna,
-    required this.employee,
-    required this.onRefresh,
-    required this.onLogout,
-    required this.isLoggingOut,
-    super.key,
-  });
-
-  final Pengguna pengguna;
-  final EmployeeSummary? employee;
-  final Future<void> Function() onRefresh;
-  final Future<void> Function() onLogout;
-  final bool isLoggingOut;
-
-  @override
-  Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: ListView(
-        key: const PageStorageKey<String>('profile-scroll'),
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(18, 20, 18, 28),
-        children: [
-          Center(
-            child: Container(
-              width: 86,
-              height: 86,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [NusaColors.primary, NusaColors.primaryLight],
-                ),
-                shape: BoxShape.circle,
-                border: Border.all(color: NusaColors.accent, width: 3),
-              ),
-              child: Text(
-                pengguna.nama.trim().isEmpty
-                    ? 'N'
-                    : pengguna.nama.trim()[0].toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            pengguna.nama,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: NusaColors.textPrimary,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          Text(
-            pengguna.jenisAkun,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: NusaColors.textSecondary),
-          ),
-          const SizedBox(height: 22),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(17),
-              child: Column(
-                children: [
-                  ProfileRow(label: 'Username', value: pengguna.username),
-                  if (employee?.nip case final nip?)
-                    ProfileRow(label: 'NIP', value: nip),
-                  if (employee?.position case final position?)
-                    ProfileRow(label: 'Jabatan', value: position),
-                  if (employee?.email case final email?)
-                    ProfileRow(label: 'Email', value: email),
-                  if (employee?.phone case final phone?)
-                    ProfileRow(label: 'Nomor HP', value: phone),
-                ],
-              ),
-            ),
-          ),
-          if (pengguna.peran.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            const NusaSectionTitle(title: 'Peran'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: pengguna.peran
-                  .map((role) => Chip(label: Text(labelCode(role))))
-                  .toList(),
-            ),
-          ],
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: isLoggingOut ? null : onLogout,
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('Keluar dari NUSA'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ProfileRow extends StatelessWidget {
-  const ProfileRow({required this.label, required this.value, super.key});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 88,
-            child: Text(
-              label,
-              style: const TextStyle(color: NusaColors.textSecondary),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -449,15 +450,4 @@ class NusaEmptyCard extends StatelessWidget {
       ),
     );
   }
-}
-
-String labelCode(String value) {
-  return value
-      .split('_')
-      .map(
-        (part) => part.isEmpty
-            ? part
-            : '${part[0].toUpperCase()}${part.substring(1)}',
-      )
-      .join(' ');
 }

@@ -9,6 +9,7 @@ import 'package:nusa/features/home/presentation/home_tabs.dart';
 import 'package:nusa/features/menu/application/menu_controller.dart';
 import 'package:nusa/features/menu/domain/menu_catalog.dart';
 import 'package:nusa/features/menu/presentation/menu_view.dart';
+import 'package:nusa/features/profile/presentation/profile_page.dart';
 import 'package:nusa/shared/widgets/nusa_bottom_navigation.dart';
 
 class HomeView extends ConsumerStatefulWidget {
@@ -156,9 +157,9 @@ class _HomeViewState extends ConsumerState<HomeView> {
           NusaPageFrame(
             title: 'Profil',
             child: ProfilePage(
-              pengguna: pengguna,
-              employee: dashboard.value?.employee,
-              onRefresh: _refreshDashboard,
+              user: pengguna,
+              onRefreshRelatedData: _refreshDashboard,
+              onChangePassword: () => context.push('/ganti-kata-sandi'),
               onLogout: _confirmLogout,
               isLoggingOut: auth?.isSubmitting ?? false,
             ),

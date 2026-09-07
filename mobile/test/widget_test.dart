@@ -40,6 +40,8 @@ import 'package:nusa/features/my_teaching_schedule/domain/my_teaching_schedule.d
 import 'package:nusa/features/parent_account/data/parent_account_remote_data_source.dart';
 import 'package:nusa/features/parent_account/domain/parent_account.dart'
     as parent_account;
+import 'package:nusa/features/profile/data/my_profile_remote_data_source.dart';
+import 'package:nusa/features/profile/domain/my_profile.dart';
 import 'package:nusa/features/role_access/data/role_access_remote_data_source.dart';
 import 'package:nusa/features/role_access/domain/role_access.dart'
     as role_access;
@@ -207,6 +209,68 @@ void main() {
     expect(find.text('Guru Mata Pelajaran'), findsOneWidget);
   });
 
+  testWidgets('notifikasi dibaca lalu membuka halaman native terkait', (
+    tester,
+  ) async {
+    final homeRemote = _FakeHomeRemoteDataSource(
+      notificationDestination: '/pegawai',
+    );
+    await _pumpApp(
+      tester,
+      remote: _FakeAuthRemoteDataSource(),
+      homeRemote: homeRemote,
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('login-username')),
+      'mobile.uji',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'RahasiaNusa123',
+    );
+    await tester.tap(find.byKey(const Key('login-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bottom-nav-3')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notification-1')));
+    await tester.pumpAndSettle();
+
+    expect(homeRemote.markedNotificationIds, [1]);
+    expect(find.text('Data Pegawai'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('semua notifikasi dapat ditandai sudah dibaca', (tester) async {
+    final homeRemote = _FakeHomeRemoteDataSource();
+    await _pumpApp(
+      tester,
+      remote: _FakeAuthRemoteDataSource(),
+      homeRemote: homeRemote,
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('login-username')),
+      'mobile.uji',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'RahasiaNusa123',
+    );
+    await tester.tap(find.byKey(const Key('login-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bottom-nav-3')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('mark-all-notifications-read')));
+    await tester.pumpAndSettle();
+
+    expect(homeRemote.markAllReadCalls, 1);
+    expect(find.text('0 belum dibaca'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('kelompok menu membuka halaman ikon dan tetap dapat dicari', (
     tester,
   ) async {
@@ -334,6 +398,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Jadwal Hari Ini'), findsOneWidget);
+    expect(find.byKey(const Key('today-schedule-jadwal-1')), findsOneWidget);
+    expect(find.text('Bahasa Indonesia'), findsOneWidget);
+    expect(find.text('VIII.A'), findsNWidgets(2));
+    expect(find.text('Sedang berlangsung'), findsOneWidget);
+    expect(find.text('Upacara'), findsNothing);
+
+    await tester.tap(find.text('Lihat Semua'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Semua Jadwal Hari Ini'), findsOneWidget);
+    expect(
+      find.byKey(const Key('all-today-schedule-jadwal-0')),
+      findsOneWidget,
+    );
+    expect(find.text('Upacara'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1711,8 +1790,11 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   required AuthRemoteDataSource remote,
   _MemoryTokenStorage? storage,
+  HomeRemoteDataSource? homeRemote,
 }) async {
-  await tester.pumpWidget(_buildTestApp(remote: remote, storage: storage));
+  await tester.pumpWidget(
+    _buildTestApp(remote: remote, storage: storage, homeRemote: homeRemote),
+  );
 
   await tester.pumpAndSettle();
 }
@@ -1720,6 +1802,7 @@ Future<void> _pumpApp(
 Widget _buildTestApp({
   required AuthRemoteDataSource remote,
   _MemoryTokenStorage? storage,
+  HomeRemoteDataSource? homeRemote,
 }) {
   return ProviderScope(
     overrides: [
@@ -1733,10 +1816,13 @@ Widget _buildTestApp({
       deviceIdentityProvider.overrideWithValue(_FakeDeviceIdentity()),
       authRemoteDataSourceProvider.overrideWithValue(remote),
       homeRemoteDataSourceProvider.overrideWithValue(
-        _FakeHomeRemoteDataSource(),
+        homeRemote ?? _FakeHomeRemoteDataSource(),
       ),
       menuRemoteDataSourceProvider.overrideWithValue(
         _FakeMenuRemoteDataSource(),
+      ),
+      myProfileRemoteDataSourceProvider.overrideWithValue(
+        _FakeMyProfileRemoteDataSource(),
       ),
       studentRemoteDataSourceProvider.overrideWithValue(
         _FakeStudentRemoteDataSource(),
@@ -1792,6 +1878,13 @@ Widget _buildTestApp({
 }
 
 final class _FakeHomeRemoteDataSource implements HomeRemoteDataSource {
+  _FakeHomeRemoteDataSource({this.notificationDestination});
+
+  final String? notificationDestination;
+  final List<int> markedNotificationIds = [];
+  int markAllReadCalls = 0;
+  bool _notificationRead = false;
+
   @override
   Future<HomeDashboard> fetchDashboard() async {
     return HomeDashboard(
@@ -1834,8 +1927,59 @@ final class _FakeHomeRemoteDataSource implements HomeRemoteDataSource {
         menteeCount: 0,
         classes: [],
       ),
+      todaySchedule: const TodayScheduleSection(
+        mode: 'guru',
+        title: 'Jadwal Hari Ini',
+        emptyMessage: 'Tidak ada jadwal mengajar hari ini.',
+        actionLabel: 'Lihat Semua',
+        actionRoute: '/jadwal-mengajar-saya',
+        items: [
+          TodayScheduleItem(
+            id: 'jadwal-1',
+            time: '07:30 - 08:15',
+            title: 'Bahasa Indonesia',
+            subtitle: 'VIII.A',
+            type: 'pelajaran',
+            inProgress: true,
+          ),
+          TodayScheduleItem(
+            id: 'jadwal-2',
+            time: '08:20 - 09:05',
+            title: 'Matematika',
+            subtitle: 'VIII.A',
+            type: 'pelajaran',
+            inProgress: false,
+          ),
+        ],
+        allItems: [
+          TodayScheduleItem(
+            id: 'jadwal-0',
+            time: '06:45 - 07:25',
+            title: 'Upacara',
+            subtitle: 'Lapangan sekolah',
+            type: 'pelajaran',
+            inProgress: false,
+          ),
+          TodayScheduleItem(
+            id: 'jadwal-1',
+            time: '07:30 - 08:15',
+            title: 'Bahasa Indonesia',
+            subtitle: 'VIII.A',
+            type: 'pelajaran',
+            inProgress: true,
+          ),
+          TodayScheduleItem(
+            id: 'jadwal-2',
+            time: '08:20 - 09:05',
+            title: 'Matematika',
+            subtitle: 'VIII.A',
+            type: 'pelajaran',
+            inProgress: false,
+          ),
+        ],
+      ),
       notifications: NotificationSummary(
-        unreadCount: 1,
+        unreadCount: _notificationRead ? 0 : 1,
         items: [
           AppNotification(
             id: 1,
@@ -1843,14 +1987,68 @@ final class _FakeHomeRemoteDataSource implements HomeRemoteDataSource {
             typeLabel: 'Informasi',
             title: 'Informasi pengujian',
             message: 'App shell NUSA berhasil dimuat.',
-            unread: true,
+            unread: !_notificationRead,
             createdAt: DateTime(2026, 8, 24, 8),
             relativeTime: '15 menit yang lalu',
+            mobileDestination: notificationDestination,
           ),
         ],
       ),
     );
   }
+
+  @override
+  Future<void> markAllNotificationsRead() async {
+    markAllReadCalls++;
+    _notificationRead = true;
+  }
+
+  @override
+  Future<void> markNotificationRead(int notificationId) async {
+    markedNotificationIds.add(notificationId);
+    _notificationRead = true;
+  }
+}
+
+final class _FakeMyProfileRemoteDataSource
+    implements MyProfileRemoteDataSource {
+  final MyProfile _profile = const MyProfile(
+    kind: MyProfileKind.employee,
+    name: 'Pengguna Mobile Uji',
+    username: 'mobile.uji',
+    canChangePhoto: false,
+    details: MyProfileDetails(
+      fullName: 'Pengguna Mobile Uji',
+      nip: '198808242026081001',
+      position: 'Guru Mata Pelajaran',
+      email: 'guru.mobile@example.test',
+    ),
+    children: [],
+  );
+
+  @override
+  Future<MyProfile> fetch() async => _profile;
+
+  @override
+  Future<MyProfileUpdateResult> update(Map<String, dynamic> payload) async {
+    return MyProfileUpdateResult(
+      message: 'Profil berhasil diperbarui.',
+      profile: _profile,
+      user: Pengguna(
+        id: 2,
+        nama: _profile.name,
+        username: _profile.username,
+        jenisAkun: 'Pegawai',
+        administrator: false,
+        wajibGantiKataSandi: false,
+        peran: const ['pegawai'],
+        izin: const ['beranda.akses'],
+      ),
+    );
+  }
+
+  @override
+  Future<MyProfile> updatePhoto(MyProfilePhotoFile file) async => _profile;
 }
 
 final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {

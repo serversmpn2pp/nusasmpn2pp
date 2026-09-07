@@ -11,7 +11,9 @@ import 'package:nusa/features/my_goods_request/domain/my_goods_request.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
 class MyGoodsRequestCreateView extends ConsumerStatefulWidget {
-  const MyGoodsRequestCreateView({super.key});
+  const MyGoodsRequestCreateView({super.key, this.initialGoodsId});
+
+  final int? initialGoodsId;
   @override
   ConsumerState<MyGoodsRequestCreateView> createState() =>
       _MyGoodsRequestCreateViewState();
@@ -36,7 +38,14 @@ class _MyGoodsRequestCreateViewState
   @override
   void initState() {
     super.initState();
-    _future = _loadCatalog();
+    _future = _loadCatalog(goodsId: widget.initialGoodsId);
+    if (widget.initialGoodsId != null) {
+      _future.then((page) {
+        if (mounted && page.items.isNotEmpty) {
+          setState(() => _selected = page.items.first);
+        }
+      });
+    }
   }
 
   @override
@@ -48,8 +57,13 @@ class _MyGoodsRequestCreateViewState
     super.dispose();
   }
 
-  Future<MyGoodsCatalogPage> _loadCatalog({String query = '', int page = 1}) =>
-      ref.read(myGoodsRequestActionsProvider).catalog(query: query, page: page);
+  Future<MyGoodsCatalogPage> _loadCatalog({
+    String query = '',
+    int page = 1,
+    int? goodsId,
+  }) => ref
+      .read(myGoodsRequestActionsProvider)
+      .catalog(query: query, page: page, goodsId: goodsId);
 
   @override
   Widget build(BuildContext context) => Scaffold(

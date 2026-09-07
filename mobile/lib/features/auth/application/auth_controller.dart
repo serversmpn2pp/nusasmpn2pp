@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/features/auth/data/auth_repository.dart';
 import 'package:nusa/features/auth/domain/auth_session.dart';
+import 'package:nusa/features/auth/domain/pengguna.dart';
 
 class AuthState {
   const AuthState({
@@ -100,6 +101,14 @@ class AuthController extends AsyncNotifier<AuthState> {
 
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncData(AuthState());
+  }
+
+  void syncUser(Pengguna pengguna) {
+    final current = state.value;
+    final session = current?.session;
+    if (current == null || session == null) return;
+
+    state = AsyncData(AuthState(session: session.copyWith(pengguna: pengguna)));
   }
 }
 

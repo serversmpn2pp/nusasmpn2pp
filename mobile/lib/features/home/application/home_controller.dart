@@ -13,6 +13,28 @@ class HomeController extends AsyncNotifier<HomeDashboard> {
     state = await AsyncValue.guard(_fetch);
   }
 
+  Future<void> markNotificationRead(int notificationId) async {
+    try {
+      await ref
+          .read(homeRepositoryProvider)
+          .markNotificationRead(notificationId);
+      await refresh();
+    } on UnauthorizedException {
+      await ref.read(authControllerProvider.notifier).logout();
+      rethrow;
+    }
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    try {
+      await ref.read(homeRepositoryProvider).markAllNotificationsRead();
+      await refresh();
+    } on UnauthorizedException {
+      await ref.read(authControllerProvider.notifier).logout();
+      rethrow;
+    }
+  }
+
   Future<HomeDashboard> _fetch() async {
     try {
       return await ref.read(homeRepositoryProvider).fetchDashboard();

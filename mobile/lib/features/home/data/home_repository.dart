@@ -8,6 +8,11 @@ final class HomeRepository {
   final HomeRemoteDataSource _remote;
 
   Future<HomeDashboard> fetchDashboard() => _remote.fetchDashboard();
+
+  Future<void> markNotificationRead(int notificationId) =>
+      _remote.markNotificationRead(notificationId);
+
+  Future<void> markAllNotificationsRead() => _remote.markAllNotificationsRead();
 }
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {

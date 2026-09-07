@@ -68,11 +68,11 @@ void main() {
       );
       tester.testTextInput.hide();
       await tester.pumpAndSettle();
-    await tester.drag(
-      find.byKey(const Key('asset-unit-form-scroll')),
-      const Offset(0, -260),
-    );
-    await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(const Key('asset-unit-form-scroll')),
+        const Offset(0, -260),
+      );
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('asset-unit-form-brand')),
         'Epson',

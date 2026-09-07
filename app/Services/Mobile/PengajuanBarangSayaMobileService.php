@@ -45,6 +45,7 @@ class PengajuanBarangSayaMobileService
     public function katalog(array $filter): array
     {
         $kataKunci = trim((string) ($filter['kata_kunci'] ?? ''));
+        $barangId = isset($filter['barang_id']) ? (int) $filter['barang_id'] : null;
         $halaman = (int) ($filter['halaman'] ?? 1);
         $perHalaman = (int) ($filter['per_halaman'] ?? 20);
 
@@ -55,6 +56,7 @@ class PengajuanBarangSayaMobileService
                 ->where('aktif', true)
                 ->where('status_unit', 'tersedia')])
             ->withSum('saldoStokBarang as jumlah_stok', 'jumlah')
+            ->when($barangId, fn (Builder $query) => $query->whereKey($barangId))
             ->when($kataKunci !== '', function (Builder $query) use ($kataKunci) {
                 $pola = '%'.mb_strtolower($kataKunci).'%';
                 $query->where(function (Builder $query) use ($pola) {
@@ -67,7 +69,7 @@ class PengajuanBarangSayaMobileService
             ->paginate($perHalaman, ['*'], 'halaman', $halaman);
 
         return [
-            'filter' => ['kata_kunci' => $kataKunci],
+            'filter' => ['kata_kunci' => $kataKunci, 'barang_id' => $barangId],
             'items' => collect($paginator->items())->map(function (Barang $barang) {
                 $aset = $barang->tipe_pengelolaan === 'aset_individual';
                 $tersedia = $aset

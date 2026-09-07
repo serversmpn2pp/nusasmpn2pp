@@ -13,6 +13,7 @@ abstract interface class MyGoodsRequestRemoteDataSource {
   Future<MyGoodsCatalogPage> catalog({
     required String query,
     required int page,
+    int? goodsId,
     int perPage = 20,
   });
   Future<MyGoodsRequestDetail> detail(int id);
@@ -51,6 +52,7 @@ final class DioMyGoodsRequestRemoteDataSource
   Future<MyGoodsCatalogPage> catalog({
     required String query,
     required int page,
+    int? goodsId,
     int perPage = 20,
   }) async {
     try {
@@ -58,6 +60,7 @@ final class DioMyGoodsRequestRemoteDataSource
         'pengajuan-saya/katalog',
         queryParameters: {
           if (query.trim().isNotEmpty) 'kata_kunci': query.trim(),
+          'barang_id': ?goodsId,
           'halaman': page,
           'per_halaman': perPage,
         },

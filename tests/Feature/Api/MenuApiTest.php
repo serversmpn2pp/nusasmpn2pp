@@ -45,6 +45,11 @@ class MenuApiTest extends TestCase
                 'rute' => '/dashboard-sarpras',
             ])
             ->assertJsonFragment([
+                'kode' => 'katalog-barang',
+                'status' => 'tersedia',
+                'rute' => '/katalog-barang',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'inventaris-barang',
                 'status' => 'tersedia',
                 'rute' => '/barang',
@@ -93,6 +98,11 @@ class MenuApiTest extends TestCase
                 'kode' => 'rekap-peminjaman',
                 'status' => 'tersedia',
                 'rute' => '/rekap-peminjaman-barang',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'laporan-inventaris',
+                'status' => 'tersedia',
+                'rute' => '/laporan-inventaris',
             ])
             ->assertJsonFragment([
                 'kode' => 'kategori-barang',
@@ -386,10 +396,10 @@ class MenuApiTest extends TestCase
         $this->withToken($this->token($pengguna))
             ->getJson(route('api.v1.menu'))
             ->assertOk()
-            ->assertJsonPath('data.jumlah_menu', 3)
+            ->assertJsonPath('data.jumlah_menu', 2)
             ->assertJsonFragment(['kode' => 'pegawai'])
             ->assertJsonFragment(['kode' => 'kartu-pegawai'])
-            ->assertJsonFragment(['kode' => 'katalog-barang'])
+            ->assertJsonMissing(['kode' => 'katalog-barang'])
             ->assertJsonMissing(['kode' => 'siswa'])
             ->assertJsonMissing(['kode' => 'akun-pegawai']);
     }
@@ -475,6 +485,11 @@ class MenuApiTest extends TestCase
                 'kode' => 'perangkat-ajar-saya',
                 'status' => 'tersedia',
                 'rute' => '/perangkat-ajar-saya',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'katalog-barang',
+                'status' => 'tersedia',
+                'rute' => '/katalog-barang',
             ])
             ->assertJsonFragment([
                 'kode' => 'pengajuan-saya',

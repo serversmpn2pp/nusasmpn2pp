@@ -89,6 +89,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('barang dari katalog utama langsung terpilih di formulir', (
+    tester,
+  ) async {
+    _smallScreen(tester);
+    final remote = _FakeMyGoodsRequestRemoteDataSource();
+    await tester.pumpWidget(
+      _app(remote, const MyGoodsRequestCreateView(initialGoodsId: 10)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(remote.catalogGoodsId, 10);
+    expect(find.widgetWithText(AppBar, 'Buat Pengajuan'), findsOneWidget);
+    expect(find.text('Laptop Chromebook'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('pengajuan menunggu dapat dibatalkan dengan konfirmasi', (
     tester,
   ) async {
@@ -139,6 +155,7 @@ class _FakeMyGoodsRequestRemoteDataSource
     implements MyGoodsRequestRemoteDataSource {
   MyGoodsRequestFormValue? created;
   int? cancelledId;
+  int? catalogGoodsId;
 
   @override
   Future<MyGoodsRequestPage> fetch({
@@ -151,8 +168,12 @@ class _FakeMyGoodsRequestRemoteDataSource
   Future<MyGoodsCatalogPage> catalog({
     required String query,
     required int page,
+    int? goodsId,
     int perPage = 20,
-  }) async => MyGoodsCatalogPage.fromJson(_catalog());
+  }) async {
+    catalogGoodsId = goodsId;
+    return MyGoodsCatalogPage.fromJson(_catalog());
+  }
 
   @override
   Future<MyGoodsRequestDetail> detail(int id) async =>

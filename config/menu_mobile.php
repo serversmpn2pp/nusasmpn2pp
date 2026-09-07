@@ -110,7 +110,7 @@ return [
         'deskripsi' => 'Inventaris, stok, peminjaman, pengajuan, dan laporan barang.',
         'ikon' => 'inventory',
         'items' => [
-            ['kode' => 'katalog-barang', 'label' => 'Katalog Barang', 'inisial' => 'KB', 'subkelompok' => 'Layanan Pegawai', 'izin' => null],
+            ['kode' => 'katalog-barang', 'label' => 'Katalog Barang', 'inisial' => 'KB', 'subkelompok' => 'Layanan Pegawai', 'izin' => null, 'pegawai_only' => true, 'administrator_allowed' => true, 'status' => 'tersedia', 'rute' => '/katalog-barang'],
             ['kode' => 'pengajuan-saya', 'label' => 'Pengajuan Saya', 'inisial' => 'PS', 'subkelompok' => 'Layanan Pegawai', 'izin' => null, 'pegawai_only' => true, 'status' => 'tersedia', 'rute' => '/pengajuan-saya'],
             ['kode' => 'dashboard-sarpras', 'label' => 'Dashboard Sarpras', 'inisial' => 'DS', 'subkelompok' => 'Ringkasan', 'izin' => ['barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola'], 'status' => 'tersedia', 'rute' => '/dashboard-sarpras'],
             ['kode' => 'inventaris-barang', 'label' => 'Inventaris Barang', 'inisial' => 'IB', 'subkelompok' => 'Inventaris', 'izin' => ['barang.lihat', 'barang.kelola'], 'status' => 'tersedia', 'rute' => '/barang'],
@@ -123,7 +123,7 @@ return [
             ['kode' => 'pengajuan-barang', 'label' => 'Pengajuan Barang', 'inisial' => 'PJ', 'subkelompok' => 'Peminjaman', 'izin' => 'barang.peminjaman_kelola', 'status' => 'tersedia', 'rute' => '/pengajuan-barang'],
             ['kode' => 'pengembalian-barang', 'label' => 'Pengembalian Barang', 'inisial' => 'KM', 'subkelompok' => 'Peminjaman', 'izin' => 'barang.peminjaman_kelola', 'status' => 'tersedia', 'rute' => '/pengembalian-barang'],
             ['kode' => 'rekap-peminjaman', 'label' => 'Rekap Peminjaman', 'inisial' => 'RP', 'subkelompok' => 'Peminjaman', 'izin' => ['barang.lihat', 'barang.peminjaman_kelola'], 'status' => 'tersedia', 'rute' => '/rekap-peminjaman-barang'],
-            ['kode' => 'laporan-inventaris', 'label' => 'Laporan Inventaris', 'inisial' => 'LI', 'subkelompok' => 'Laporan', 'izin' => ['barang.lihat', 'barang.kelola']],
+            ['kode' => 'laporan-inventaris', 'label' => 'Laporan Inventaris', 'inisial' => 'LI', 'subkelompok' => 'Laporan', 'izin' => ['barang.lihat', 'barang.kelola'], 'status' => 'tersedia', 'rute' => '/laporan-inventaris'],
             ['kode' => 'kategori-barang', 'label' => 'Kategori Barang', 'inisial' => 'KB', 'subkelompok' => 'Pengaturan', 'izin' => ['barang.lihat', 'barang.kelola'], 'status' => 'tersedia', 'rute' => '/kategori-barang'],
             ['kode' => 'satuan-barang', 'label' => 'Satuan Barang', 'inisial' => 'SB', 'subkelompok' => 'Pengaturan', 'izin' => ['barang.lihat', 'barang.kelola'], 'status' => 'tersedia', 'rute' => '/satuan-barang'],
             ['kode' => 'lokasi-barang', 'label' => 'Lokasi Barang', 'inisial' => 'LK', 'subkelompok' => 'Pengaturan', 'izin' => ['barang.lihat', 'barang.kelola'], 'status' => 'tersedia', 'rute' => '/lokasi-barang'],

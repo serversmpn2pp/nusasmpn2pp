@@ -51,12 +51,15 @@ class MyGoodsRequestController extends AsyncNotifier<MyGoodsRequestPage> {
 class MyGoodsRequestActions {
   MyGoodsRequestActions(this._ref);
   final Ref _ref;
-  Future<MyGoodsCatalogPage> catalog({String query = '', int page = 1}) =>
-      _guard(
-        () => _ref
-            .read(myGoodsRequestRepositoryProvider)
-            .catalog(query: query, page: page),
-      );
+  Future<MyGoodsCatalogPage> catalog({
+    String query = '',
+    int page = 1,
+    int? goodsId,
+  }) => _guard(
+    () => _ref
+        .read(myGoodsRequestRepositoryProvider)
+        .catalog(query: query, page: page, goodsId: goodsId),
+  );
   Future<MyGoodsRequestDetail> detail(int id) =>
       _guard(() => _ref.read(myGoodsRequestRepositoryProvider).detail(id));
   Future<MyGoodsRequestDetail> create(MyGoodsRequestFormValue value) =>

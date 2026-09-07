@@ -6,6 +6,10 @@ import 'package:nusa/features/home/domain/home_dashboard.dart';
 
 abstract interface class HomeRemoteDataSource {
   Future<HomeDashboard> fetchDashboard();
+
+  Future<void> markNotificationRead(int notificationId);
+
+  Future<void> markAllNotificationsRead();
 }
 
 final class DioHomeRemoteDataSource implements HomeRemoteDataSource {
@@ -21,6 +25,24 @@ final class DioHomeRemoteDataSource implements HomeRemoteDataSource {
       return HomeDashboard.fromJson(
         response.data!['data'] as Map<String, dynamic>,
       );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<void> markNotificationRead(int notificationId) async {
+    try {
+      await _dio.patch<void>('notifikasi/$notificationId/baca');
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<void> markAllNotificationsRead() async {
+    try {
+      await _dio.patch<void>('notifikasi/baca-semua');
     } on DioException catch (exception) {
       throw mapDioException(exception);
     }

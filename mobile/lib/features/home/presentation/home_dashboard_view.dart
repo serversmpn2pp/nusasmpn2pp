@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/domain/pengguna.dart';
@@ -91,45 +92,7 @@ class HomeDashboardView extends StatelessWidget {
                 else
                   _AllMenuGrid(actions: allActions),
                 const SizedBox(height: 18),
-                NusaSectionTitle(
-                  title: 'Jadwal Hari Ini',
-                  actionLabel: 'Lihat Semua',
-                  onAction: () => onUnavailable('Jadwal'),
-                ),
-                const SizedBox(height: 8),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final twoColumns = constraints.maxWidth >= 350;
-                    final cardWidth = twoColumns
-                        ? (constraints.maxWidth - 10) / 2
-                        : constraints.maxWidth;
-
-                    return Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        SizedBox(
-                          width: cardWidth,
-                          child: const ScheduleCard(
-                            time: '07.30 - 08.15',
-                            subject: 'Bahasa Indonesia',
-                            className: 'Kelas 8A',
-                            color: Color(0xFF2676C8),
-                          ),
-                        ),
-                        SizedBox(
-                          width: cardWidth,
-                          child: const ScheduleCard(
-                            time: '08.20 - 09.05',
-                            subject: 'Matematika',
-                            className: 'Kelas 8A',
-                            color: Color(0xFFF0B20B),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                _TodaySchedulePanel(section: data.todaySchedule),
                 if (data.attendance case final attendance?) ...[
                   const SizedBox(height: 20),
                   NusaSectionTitle(title: 'Ringkasan ${data.monthLabel}'),
@@ -277,6 +240,252 @@ class HomeDashboardView extends StatelessWidget {
             )
             .toList(growable: false) ??
         const [];
+  }
+}
+
+class _TodaySchedulePanel extends StatelessWidget {
+  const _TodaySchedulePanel({required this.section});
+
+  final TodayScheduleSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    final actionRoute = section.actionRoute;
+    final canShowAll =
+        section.allItems.isNotEmpty &&
+        const {'guru', 'siswa', 'orang_tua'}.contains(section.mode);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        NusaSectionTitle(
+          title: section.title,
+          actionLabel: canShowAll ? section.actionLabel ?? 'Lihat Semua' : null,
+          onAction: canShowAll
+              ? () => _showAllSchedules(context, actionRoute)
+              : null,
+        ),
+        const SizedBox(height: 8),
+        if (section.items.isEmpty)
+          _TodayScheduleEmpty(message: section.emptyMessage)
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final twoColumns = constraints.maxWidth >= 350;
+              final cardWidth = twoColumns
+                  ? (constraints.maxWidth - 10) / 2
+                  : constraints.maxWidth;
+
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (
+                    var index = 0;
+                    index < section.items.length && index < 2;
+                    index++
+                  )
+                    SizedBox(
+                      width: cardWidth,
+                      child: ScheduleCard(
+                        key: Key('today-schedule-${section.items[index].id}'),
+                        time: section.items[index].time,
+                        subject: section.items[index].title,
+                        className: section.items[index].subtitle,
+                        color: _itemColor(section.items[index].type, index),
+                        icon: _itemIcon(section.items[index].type),
+                        inProgress: section.items[index].inProgress,
+                        onTap: section.items[index].mobileDestination == null
+                            ? null
+                            : () => context.push(
+                                section.items[index].mobileDestination!,
+                              ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Future<void> _showAllSchedules(BuildContext context, String? weeklyRoute) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          _AllTodaySchedulesSheet(section: section, weeklyRoute: weeklyRoute),
+    );
+  }
+
+  Color _itemColor(String type, int index) {
+    return switch (type) {
+      'presensi_siswa' => NusaColors.success,
+      'presensi_pegawai' => const Color(0xFF2676C8),
+      'piket' => const Color(0xFFF0B20B),
+      'perwalian' => const Color(0xFF6C55B5),
+      _ => index.isEven ? const Color(0xFF2676C8) : const Color(0xFFF0B20B),
+    };
+  }
+
+  IconData _itemIcon(String type) {
+    return switch (type) {
+      'presensi_siswa' => Icons.fact_check_rounded,
+      'presensi_pegawai' => Icons.badge_outlined,
+      'piket' => Icons.shield_outlined,
+      'perwalian' => Icons.groups_rounded,
+      _ => Icons.menu_book_rounded,
+    };
+  }
+}
+
+class _AllTodaySchedulesSheet extends StatelessWidget {
+  const _AllTodaySchedulesSheet({
+    required this.section,
+    required this.weeklyRoute,
+  });
+
+  final TodayScheduleSection section;
+  final String? weeklyRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final contentHeight =
+        132.0 +
+        (section.allItems.length * 104.0) +
+        (weeklyRoute == null ? 0 : 62.0);
+    final height = contentHeight.clamp(260.0, screenHeight * 0.82).toDouble();
+
+    return Container(
+      height: height,
+      decoration: const BoxDecoration(
+        color: NusaColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 42,
+            height: 4,
+            decoration: BoxDecoration(
+              color: NusaColors.outline,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 8, 10),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Semua Jadwal Hari Ini',
+                        style: TextStyle(
+                          color: NusaColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Diurutkan berdasarkan jam pelajaran',
+                        style: TextStyle(
+                          color: NusaColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(18, 2, 18, 18),
+              itemCount: section.allItems.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 9),
+              itemBuilder: (context, index) {
+                final item = section.allItems[index];
+
+                return ScheduleCard(
+                  key: Key('all-today-schedule-${item.id}'),
+                  time: item.time,
+                  subject: item.title,
+                  className: item.subtitle,
+                  color: index.isEven
+                      ? const Color(0xFF2676C8)
+                      : const Color(0xFFF0B20B),
+                  inProgress: item.inProgress,
+                );
+              },
+            ),
+          ),
+          if (weeklyRoute != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    final router = GoRouter.of(context);
+                    Navigator.of(context).pop();
+                    router.push(weeklyRoute!);
+                  },
+                  icon: const Icon(Icons.calendar_view_week_rounded),
+                  label: const Text('Buka Jadwal Mingguan'),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodayScheduleEmpty extends StatelessWidget {
+  const _TodayScheduleEmpty({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: NusaColors.surfaceBlue,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: NusaColors.outline),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.event_available_rounded, color: NusaColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: NusaColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
