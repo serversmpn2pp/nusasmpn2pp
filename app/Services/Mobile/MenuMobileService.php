@@ -64,6 +64,14 @@ class MenuMobileService
             return false;
         }
 
+        if (($item['siswa_or_parent_only'] ?? false)
+            && ! ($pengguna->akunSiswa()
+                || $pengguna->memilikiPeran('siswa')
+                || $pengguna->akunOrangTua()
+                || $pengguna->memilikiPeran('orang_tua'))) {
+            return false;
+        }
+
         if (filled($item['peran_only'] ?? null)
             && ! $pengguna->memilikiPeran((array) $item['peran_only'])
             && ! (($item['administrator_allowed'] ?? false) && $pengguna->administrator())) {

@@ -46,6 +46,7 @@ class HomeDashboardView extends StatelessWidget {
         final catalog = menu.value;
         final quickActions = _quickActions(catalog);
         final allActions = _groupActions(catalog);
+        final myAttendance = catalog?.entryByCode('kehadiran-saya');
 
         return RefreshIndicator(
           onRefresh: onRefresh,
@@ -69,7 +70,9 @@ class HomeDashboardView extends StatelessWidget {
                 ),
                 AttendanceCard(
                   attendance: data.attendance?.today,
-                  onTap: onOpenActivity,
+                  onTap: myAttendance?.isAvailable == true
+                      ? () => onOpenMenuEntry(myAttendance!)
+                      : onOpenActivity,
                 ),
                 const SizedBox(height: 18),
                 const NusaSectionTitle(title: 'Akses Cepat'),
@@ -168,6 +171,7 @@ class HomeDashboardView extends StatelessWidget {
     final kehadiran = catalog.groupByCode('kehadiran');
     final akademik = catalog.groupByCode('akademik');
     final nilaiSaya = catalog.entryByCode('nilai-saya');
+    final myAttendance = catalog.entryByCode('kehadiran-saya');
 
     if (siswa?.isAvailable == true) {
       actions.add(
@@ -182,10 +186,12 @@ class HomeDashboardView extends StatelessWidget {
     if (kehadiran != null) {
       actions.add(
         NusaMenuAction(
-          label: 'Presensi',
+          label: myAttendance?.isAvailable == true ? 'Kehadiran' : 'Presensi',
           icon: Icons.fact_check_rounded,
           color: NusaColors.success,
-          onTap: onOpenActivity,
+          onTap: myAttendance?.isAvailable == true
+              ? () => onOpenMenuEntry(myAttendance!)
+              : onOpenActivity,
         ),
       );
     }

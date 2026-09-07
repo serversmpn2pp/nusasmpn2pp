@@ -16,6 +16,7 @@ class BerandaMobileService
     public function __construct(
         private readonly TujuanNotifikasiMobileService $tujuanNotifikasi,
         private readonly JadwalHariIniMobileService $jadwalHariIni,
+        private readonly KehadiranSayaMobileService $kehadiranSaya,
     ) {}
 
     public function siapkan(Pengguna $pengguna): array
@@ -37,6 +38,9 @@ class BerandaMobileService
                 'jabatan_utama',
             ]);
         $presensi = $this->presensiPegawai($pegawai, $hariIni);
+        if (! $presensi && ($pengguna->akunSiswa() || $pengguna->akunOrangTua())) {
+            $presensi = $this->kehadiranSaya->ringkasanBeranda($pengguna, $hariIni);
+        }
         $piket = $this->piketHariIni($pegawai, $tahunPelajaran, $hariIni);
         $perwalian = $this->ringkasanPerwalian($pegawai, $tahunPelajaran, $hariIni);
 

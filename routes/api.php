@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\KategoriBarangController;
 use App\Http\Controllers\Api\V1\KategoriPembinaanSiswaController;
 use App\Http\Controllers\Api\V1\KeamananUjianController;
 use App\Http\Controllers\Api\V1\KegiatanIbadahController;
+use App\Http\Controllers\Api\V1\KehadiranSayaController;
 use App\Http\Controllers\Api\V1\KelasController;
 use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
@@ -884,6 +885,9 @@ Route::prefix('v1')
         Route::get('/status-scan-presensi-siswa', StatusScanPresensiSiswaController::class)
             ->middleware('izin:absensi.scan,absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
             ->name('status-scan-presensi-siswa.index');
+
+        Route::get('/kehadiran-saya', KehadiranSayaController::class)
+            ->name('kehadiran-saya');
 
         Route::get('/status-scan-presensi-pegawai', StatusScanPresensiPegawaiController::class)
             ->middleware('izin:absensi.scan,absensi.lihat,absensi.koreksi,absensi.laporan')

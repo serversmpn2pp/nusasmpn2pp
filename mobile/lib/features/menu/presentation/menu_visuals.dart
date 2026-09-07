@@ -58,6 +58,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'ujian-saya' => Icons.fact_check_rounded,
     'jadwal-guru-piket' => Icons.shield_rounded,
     'piket-saya' => Icons.how_to_reg_rounded,
+    'kehadiran-saya' => Icons.event_available_rounded,
     'kegiatan-ibadah' => Icons.self_improvement_rounded,
     'jadwal-ibadah' => Icons.event_available_rounded,
     'pengaturan-berhalangan' => Icons.tune_rounded,

@@ -75,6 +75,7 @@ import 'package:nusa/features/login_activity/presentation/login_attempt_detail_v
 import 'package:nusa/features/menu/presentation/menu_group_view.dart';
 import 'package:nusa/features/my_teaching_schedule/presentation/my_teaching_schedule_view.dart';
 import 'package:nusa/features/my_grades/presentation/my_grades_view.dart';
+import 'package:nusa/features/my_attendance/presentation/my_attendance_view.dart';
 import 'package:nusa/features/my_goods_request/presentation/my_goods_request_create_view.dart';
 import 'package:nusa/features/my_goods_request/presentation/my_goods_request_detail_view.dart';
 import 'package:nusa/features/my_goods_request/presentation/my_goods_request_view.dart';
@@ -263,6 +264,7 @@ abstract final class AppRoutes {
   static const gradeEntry = '/input-nilai';
   static const gradeRecap = '/rekap-nilai-rapor';
   static const myGrades = '/nilai-saya';
+  static const myAttendance = '/kehadiran-saya';
   static const learningSurvey = '/survei-pembelajaran/:assignmentId/:semester';
   static const surveyStatements = '/pernyataan-survei';
   static const surveyMonitoring = '/monitoring-survei';
@@ -987,6 +989,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.studentAttendanceSettings,
         name: 'student-attendance-settings',
         builder: (context, state) => const StudentAttendanceSettingsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.myAttendance,
+        name: 'my-attendance',
+        builder: (context, state) => const MyAttendanceView(),
       ),
       GoRoute(
         path: AppRoutes.employeeAttendanceSettings,
