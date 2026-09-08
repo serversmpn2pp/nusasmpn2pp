@@ -21,10 +21,6 @@ class AksesScanKegiatanIbadah
             return false;
         }
 
-        if ($pengguna->administrator() || $pengguna->memilikiPeran('wakil_pimpinan_kesiswaan')) {
-            return true;
-        }
-
         if (! $pengguna->pegawai_id) {
             return false;
         }
@@ -40,10 +36,6 @@ class AksesScanKegiatanIbadah
 
         if (! $tahunPelajaran) {
             return false;
-        }
-
-        if ($this->guruPendidikanAgamaIslam($pengguna, $tahunPelajaran)) {
-            return true;
         }
 
         $waktu = $waktu ? Carbon::instance($waktu) : now();

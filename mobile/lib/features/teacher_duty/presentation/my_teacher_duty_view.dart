@@ -558,7 +558,7 @@ class _NotOnDuty extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Presensi tetap diproses oleh mesin scanner di sekolah. Menu ini hanya untuk mencatat siswa sakit atau izin.',
+          'Presensi tetap diproses oleh mesin scanner di sekolah. Pada hari piket, Anda dapat mencatat siswa hadir tanpa scan, sakit, atau izin.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: NusaColors.textSecondary),
         ),

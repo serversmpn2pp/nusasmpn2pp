@@ -460,7 +460,7 @@ class _ReportSection extends StatelessWidget {
               _ReportRow(
                 report: report,
                 onTap: detail.access.canViewPointRecap
-                    ? () => context.push('/daftar-laporan-siswa/${report.id}')
+                    ? () => context.push('/laporan-siswa-wali/${report.id}')
                     : null,
               ),
         ],

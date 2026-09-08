@@ -25,6 +25,7 @@ class SanksiPoinSiswaController extends Controller
 
     public function index(Request $request)
     {
+        $this->akses->pastikanDapatMembuka($request->user());
         $tahunPelajaranId = $this->inputId($request, 'tahun_pelajaran_id')
             ?? TahunPelajaran::where('aktif', true)->latest('tanggal_mulai')->value('id');
         $kelasId = $this->inputId($request, 'kelas_id');
@@ -97,7 +98,7 @@ class SanksiPoinSiswaController extends Controller
         ]);
 
         $bolehKelola = $this->akses->bolehKelola($request->user(), $sanksiPoinSiswa);
-        $daftarPetugas = $bolehKelola ? $this->daftarPetugas() : collect();
+        $daftarPetugas = $bolehKelola ? $this->daftarPetugas($request->user()) : collect();
 
         return view('sanksi-poin-siswa.show', compact('sanksiPoinSiswa', 'bolehKelola', 'daftarPetugas'));
     }
@@ -181,8 +182,15 @@ class SanksiPoinSiswaController extends Controller
             ->with('berhasil', 'Pelaksanaan sanksi berhasil diperbarui.');
     }
 
-    private function daftarPetugas()
+    private function daftarPetugas(Pengguna $pengguna)
     {
+        if (! $pengguna->administrator() && ! $pengguna->memilikiIzin('poin_siswa.sanksi_kelola')) {
+            return Pegawai::query()
+                ->whereKey($pengguna->pegawai_id)
+                ->where('aktif', true)
+                ->get(['id', 'nama_lengkap', 'nip']);
+        }
+
         return Pegawai::query()
             ->where('aktif', true)
             ->whereHas('pengguna', fn ($query) => $query

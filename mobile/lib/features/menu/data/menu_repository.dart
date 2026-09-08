@@ -8,6 +8,11 @@ final class MenuRepository {
   final MenuRemoteDataSource _remote;
 
   Future<MenuCatalog> fetchCatalog() => _remote.fetchCatalog();
+
+  Future<MenuCatalog> saveQuickAccess(List<String> menuCodes) =>
+      _remote.saveQuickAccess(menuCodes);
+
+  Future<MenuCatalog> resetQuickAccess() => _remote.resetQuickAccess();
 }
 
 final menuRepositoryProvider = Provider<MenuRepository>((ref) {

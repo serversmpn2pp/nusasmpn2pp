@@ -20,6 +20,8 @@ class PeringatanDiniSiswaMobileService
 
     public function daftar(Pengguna $pengguna, array $filter): array
     {
+        abort_unless($this->akses->dapatMembuka($pengguna), 403);
+
         $tahunId = isset($filter['tahun_pelajaran_id'])
             ? (int) $filter['tahun_pelajaran_id']
             : TahunPelajaran::where('aktif', true)->latest('tanggal_mulai')->value('id');

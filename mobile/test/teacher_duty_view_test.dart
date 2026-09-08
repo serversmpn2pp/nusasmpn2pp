@@ -36,8 +36,15 @@ void main() {
     await tester.tap(find.text('Siswa Piket NUSA'));
     await tester.pumpAndSettle();
     expect(find.text('Catat Kehadiran'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SegmentedButton<String>),
+        matching: find.text('Sakit'),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.enterText(
-      find.widgetWithText(TextField, 'Alasan / keterangan'),
+      find.widgetWithText(TextField, 'Keterangan'),
       'Demam, informasi dari orang tua.',
     );
     await tester.ensureVisible(find.text('Simpan Kehadiran'));
@@ -47,6 +54,35 @@ void main() {
     expect(remote.recordCalls, 1);
     expect(remote.lastAttendanceStatus, 'sakit');
     expect(find.text('Sakit'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('guru piket mencatat siswa belum scan sebagai hadir', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final remote = _FakeTeacherDutyRemoteDataSource();
+
+    await _pump(tester, remote, const MyTeacherDutyView());
+    await tester.tap(find.text('Siswa Piket NUSA'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Catat Kehadiran'), findsOneWidget);
+    expect(find.text('Hadir'), findsWidgets);
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Keterangan'),
+      'Lupa membawa kartu, dikonfirmasi hadir oleh guru piket.',
+    );
+    await tester.ensureVisible(find.text('Simpan Kehadiran'));
+    await tester.tap(find.text('Simpan Kehadiran'));
+    await tester.pumpAndSettle();
+
+    expect(remote.recordCalls, 1);
+    expect(remote.lastAttendanceStatus, 'hadir');
+    expect(find.text('Hadir'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }
@@ -139,18 +175,28 @@ final class _FakeTeacherDutyRemoteDataSource
         initials: 'SP',
         schoolClass: 'VII.A',
         status: lastAttendanceStatus,
-        statusLabel: lastAttendanceStatus == 'sakit' ? 'Sakit' : 'Belum scan',
+        statusLabel: switch (lastAttendanceStatus) {
+          'hadir' => 'Hadir',
+          'sakit' => 'Sakit',
+          'izin' => 'Izin',
+          _ => 'Belum scan',
+        },
         canRecord: true,
         studentNumber: '26001',
-        notes: lastAttendanceStatus == 'sakit' ? 'Demam' : null,
+        notes: switch (lastAttendanceStatus) {
+          'hadir' => 'Lupa membawa kartu',
+          'sakit' => 'Demam',
+          'izin' => 'Izin dari orang tua',
+          _ => null,
+        },
       ),
     ],
     summary: MyDutySummary(
       total: 1,
-      present: 0,
+      present: lastAttendanceStatus == 'hadir' ? 1 : 0,
       sick: lastAttendanceStatus == 'sakit' ? 1 : 0,
-      permitted: 0,
-      notScanned: lastAttendanceStatus == 'sakit' ? 0 : 1,
+      permitted: lastAttendanceStatus == 'izin' ? 1 : 0,
+      notScanned: lastAttendanceStatus == 'belum_scan' ? 1 : 0,
     ),
     classes: const [DutyClass(id: 2, name: 'VII.A')],
     status: status,

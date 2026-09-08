@@ -79,6 +79,12 @@ class Pengguna extends Authenticatable
             ->withTimestamps();
     }
 
+    public function aksesCepat(): HasMany
+    {
+        return $this->hasMany(AksesCepatPengguna::class)
+            ->orderBy('urutan');
+    }
+
     public function laporanPembinaanSiswaDibuat(): HasMany
     {
         return $this->hasMany(LaporanPembinaanSiswa::class, 'dibuat_oleh_pengguna_id');

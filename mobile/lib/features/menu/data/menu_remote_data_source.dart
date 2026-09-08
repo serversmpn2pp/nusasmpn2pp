@@ -6,6 +6,10 @@ import 'package:nusa/features/menu/domain/menu_catalog.dart';
 
 abstract interface class MenuRemoteDataSource {
   Future<MenuCatalog> fetchCatalog();
+
+  Future<MenuCatalog> saveQuickAccess(List<String> menuCodes);
+
+  Future<MenuCatalog> resetQuickAccess();
 }
 
 final class DioMenuRemoteDataSource implements MenuRemoteDataSource {
@@ -18,6 +22,35 @@ final class DioMenuRemoteDataSource implements MenuRemoteDataSource {
     try {
       final response = await _dio.get<Map<String, dynamic>>('menu');
 
+      return MenuCatalog.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<MenuCatalog> saveQuickAccess(List<String> menuCodes) async {
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        'menu/akses-cepat',
+        data: {'kode_menu': menuCodes},
+      );
+      return MenuCatalog.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<MenuCatalog> resetQuickAccess() async {
+    try {
+      final response = await _dio.delete<Map<String, dynamic>>(
+        'menu/akses-cepat',
+      );
       return MenuCatalog.fromJson(
         response.data!['data'] as Map<String, dynamic>,
       );

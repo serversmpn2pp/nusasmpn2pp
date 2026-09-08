@@ -61,13 +61,7 @@ class LaporanKejadianPegawaiTest extends TestCase
         ]);
 
         $this->get(route('laporan-pembinaan-siswa.index'))
-            ->assertOk()
-            ->assertSee($data['siswa']->nama_lengkap)
-            ->assertSee('Laporkan kejadian')
-            ->assertSee('class="report-header-actions"', false);
-
-        $this->get(route('laporan-pembinaan-siswa.show', $laporan))
-            ->assertOk();
+            ->assertForbidden();
 
         $this->get(route('laporan-saya.index'))
             ->assertOk()
@@ -219,7 +213,7 @@ class LaporanKejadianPegawaiTest extends TestCase
             'tahun_pelajaran_id' => $data['tahun']->id,
             'kelas_id' => $data['kelas']->id,
             'kronologi' => 'Dua siswa terlibat dalam kejadian yang sama pada waktu dan tempat yang sama.',
-        ])->assertRedirect(route('laporan-pembinaan-siswa.index'))
+        ])->assertRedirect(route('laporan-saya.index'))
             ->assertSessionHasNoErrors()
             ->assertSessionHas('berhasil', '2 laporan siswa berhasil dibuat dari satu kejadian dan dikirim untuk diperiksa.');
 
@@ -245,6 +239,74 @@ class LaporanKejadianPegawaiTest extends TestCase
             'judul' => 'Laporan kolektif menunggu pemeriksaan BK',
             'kunci_unik' => "laporan-kolektif-baru:{$daftarLaporan->first()->id}:{$daftarLaporan->last()->id}",
         ]);
+    }
+
+    public function test_wali_kelas_memantau_hanya_laporan_siswa_kelasnya(): void
+    {
+        $data = $this->dataDasar();
+        $data['akun_pegawai']->daftarPeran()->attach(Peran::where('kode', 'wali_kelas')->firstOrFail());
+        $data['kelas']->update(['wali_kelas_id' => $data['pegawai']->id]);
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $laporanKelas = LaporanPembinaanSiswa::create([
+            'nomor_laporan' => 'PB-WEB-KELAS-001',
+            'jenis_laporan' => 'kejadian',
+            'tanggal_kejadian' => now()->toDateString(),
+            'siswa_id' => $data['siswa']->id,
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $data['kelas']->id,
+            'anggota_kelas_id' => $data['anggota']->id,
+            'wali_kelas_pegawai_id' => $data['pegawai']->id,
+            'tingkat' => 'ringan',
+            'status' => 'baru',
+            'status_verifikasi' => 'diajukan',
+            'total_poin' => 0,
+            'kronologi' => 'Laporan yang berada di kelas wali.',
+            'dibuat_oleh_pengguna_id' => $administrator->id,
+        ]);
+        $kelasLain = Kelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'nama' => 'VII.B',
+            'tingkat' => 7,
+            'aktif' => true,
+        ]);
+        $siswaLain = Siswa::create([
+            'nama_lengkap' => 'Siswa Kelas Lain Web',
+            'nisn' => '0099000013',
+            'aktif' => true,
+        ]);
+        $anggotaLain = AnggotaKelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $kelasLain->id,
+            'siswa_id' => $siswaLain->id,
+            'status_keanggotaan' => 'aktif',
+        ]);
+        $laporanLain = LaporanPembinaanSiswa::create([
+            'nomor_laporan' => 'PB-WEB-KELAS-002',
+            'jenis_laporan' => 'kejadian',
+            'tanggal_kejadian' => now()->toDateString(),
+            'siswa_id' => $siswaLain->id,
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $kelasLain->id,
+            'anggota_kelas_id' => $anggotaLain->id,
+            'tingkat' => 'ringan',
+            'status' => 'baru',
+            'status_verifikasi' => 'diajukan',
+            'total_poin' => 0,
+            'kronologi' => 'Laporan dari kelas lain.',
+            'dibuat_oleh_pengguna_id' => $administrator->id,
+        ]);
+
+        $this->actingAs($data['akun_pegawai'])
+            ->get(route('beranda'))
+            ->assertOk()
+            ->assertSee('Laporan Siswa Kelas Saya');
+
+        $this->get(route('laporan-siswa-kelas.index'))
+            ->assertOk()
+            ->assertSee($laporanKelas->nomor_laporan)
+            ->assertDontSee($laporanLain->nomor_laporan);
+        $this->get(route('laporan-siswa-kelas.show', $laporanKelas))->assertOk();
+        $this->get(route('laporan-siswa-kelas.show', $laporanLain))->assertForbidden();
     }
 
     private function dataDasar(): array

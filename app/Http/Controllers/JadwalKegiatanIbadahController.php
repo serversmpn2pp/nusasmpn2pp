@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\JadwalKegiatanIbadah;
 use App\Models\KegiatanIbadah;
 use App\Models\TahunPelajaran;
+use App\Services\Ibadah\AksesScanKegiatanIbadah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -12,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class JadwalKegiatanIbadahController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AksesScanKegiatanIbadah $aksesScan)
     {
         $data = $request->validate([
             'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
@@ -40,6 +41,7 @@ class JadwalKegiatanIbadahController extends Controller
             'jadwalPerHari' => $jadwal->keyBy('hari'),
             'jumlahAktif' => $jadwal->where('aktif', true)->count(),
             'daftarHari' => JadwalKegiatanIbadah::DAFTAR_HARI,
+            'dapatScanIbadah' => $aksesScan->dapatMemindai($request->user()),
         ]);
     }
 

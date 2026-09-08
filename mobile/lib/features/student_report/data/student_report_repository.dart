@@ -48,3 +48,16 @@ final guardianStudentReportRepositoryProvider =
         ref.watch(guardianStudentReportRemoteDataSourceProvider),
       ),
     );
+
+final myStudentReportRepositoryProvider = Provider<StudentReportRepository>(
+  (ref) => StudentReportRepository(
+    ref.watch(myStudentReportRemoteDataSourceProvider),
+  ),
+);
+
+final homeroomStudentReportRepositoryProvider =
+    Provider<StudentReportRepository>(
+      (ref) => StudentReportRepository(
+        ref.watch(homeroomStudentReportRemoteDataSourceProvider),
+      ),
+    );

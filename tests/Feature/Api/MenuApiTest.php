@@ -27,7 +27,7 @@ class MenuApiTest extends TestCase
         $response = $this->withToken($this->token($administrator))
             ->getJson(route('api.v1.menu'))
             ->assertOk()
-            ->assertJsonPath('data.jumlah_menu', 78)
+            ->assertJsonPath('data.jumlah_menu', 77)
             ->assertJsonCount(7, 'data.kelompok')
             ->assertJsonPath('data.kelompok.0.kode', 'data-sekolah')
             ->assertJsonPath('data.kelompok.0.items.0.kode', 'tahun-pelajaran')
@@ -225,11 +225,6 @@ class MenuApiTest extends TestCase
                 'rute' => '/pengaturan-berhalangan-ibadah',
             ])
             ->assertJsonFragment([
-                'kode' => 'scan-ibadah-siswa',
-                'status' => 'tersedia',
-                'rute' => '/scan-kegiatan-ibadah',
-            ])
-            ->assertJsonFragment([
                 'kode' => 'scan-berhalangan-ibadah',
                 'status' => 'tersedia',
                 'rute' => '/scan-berhalangan-ibadah',
@@ -339,6 +334,7 @@ class MenuApiTest extends TestCase
                 'status' => 'tersedia',
                 'rute' => '/role-hak-akses',
             ])
+            ->assertJsonMissing(['kode' => 'scan-ibadah-siswa'])
             ->assertJsonMissing(['kode' => 'nilai-saya'])
             ->assertJsonMissing(['kode' => 'perangkat-ajar-saya'])
             ->assertJsonMissingPath('data.kelompok.0.items.0.izin')
@@ -396,6 +392,7 @@ class MenuApiTest extends TestCase
         $this->withToken($this->token($pengguna))
             ->getJson(route('api.v1.menu'))
             ->assertOk()
+            ->assertJsonPath('data.akses_cepat.dapat_diatur', false)
             ->assertJsonPath('data.jumlah_menu', 2)
             ->assertJsonFragment(['kode' => 'pegawai'])
             ->assertJsonFragment(['kode' => 'kartu-pegawai'])
@@ -460,6 +457,12 @@ class MenuApiTest extends TestCase
                 'status' => 'tersedia',
                 'rute' => '/ujian-saya',
             ]);
+
+        $this->withToken($this->token($pengguna))
+            ->putJson(route('api.v1.menu.akses-cepat.update'), [
+                'kode_menu' => ['nilai-saya'],
+            ])
+            ->assertForbidden();
     }
 
     public function test_akun_guru_menerima_menu_perangkat_ajar_saya(): void
@@ -483,9 +486,15 @@ class MenuApiTest extends TestCase
         $peran = Peran::where('kode', 'guru_mapel')->firstOrFail();
         $pengguna->daftarPeran()->attach($peran);
 
-        $this->withToken($this->token($pengguna))
+        $token = $this->token($pengguna);
+
+        $this->withToken($token)
             ->getJson(route('api.v1.menu'))
             ->assertOk()
+            ->assertJsonPath('data.akses_cepat.dapat_diatur', true)
+            ->assertJsonPath('data.akses_cepat.dikustomisasi', false)
+            ->assertJsonPath('data.akses_cepat.sumber', 'rekomendasi_peran')
+            ->assertJsonPath('data.akses_cepat.kode_menu.0', 'jadwal-mengajar-saya')
             ->assertJsonFragment([
                 'kode' => 'perangkat-ajar-saya',
                 'status' => 'tersedia',
@@ -501,6 +510,42 @@ class MenuApiTest extends TestCase
                 'status' => 'tersedia',
                 'rute' => '/pengajuan-saya',
             ]);
+
+        $this->withToken($token)
+            ->putJson(route('api.v1.menu.akses-cepat.update'), [
+                'kode_menu' => [
+                    'input-nilai',
+                    'perangkat-ajar-saya',
+                    'jadwal-mengajar-saya',
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.akses_cepat.dikustomisasi', true)
+            ->assertJsonPath('data.akses_cepat.kode_menu.0', 'input-nilai')
+            ->assertJsonPath('data.akses_cepat.kode_menu.1', 'perangkat-ajar-saya')
+            ->assertJsonPath('data.akses_cepat.kode_menu.2', 'jadwal-mengajar-saya');
+
+        $this->assertDatabaseHas('akses_cepat_pengguna', [
+            'pengguna_id' => $pengguna->id,
+            'kode_menu' => 'input-nilai',
+            'urutan' => 1,
+        ]);
+
+        $this->withToken($token)
+            ->putJson(route('api.v1.menu.akses-cepat.update'), [
+                'kode_menu' => ['akun-pegawai'],
+            ])
+            ->assertUnprocessable();
+
+        $this->withToken($token)
+            ->deleteJson(route('api.v1.menu.akses-cepat.reset'))
+            ->assertOk()
+            ->assertJsonPath('data.akses_cepat.dikustomisasi', false)
+            ->assertJsonPath('data.akses_cepat.kode_menu.0', 'jadwal-mengajar-saya');
+
+        $this->assertDatabaseMissing('akses_cepat_pengguna', [
+            'pengguna_id' => $pengguna->id,
+        ]);
     }
 
     private function token(Pengguna $pengguna): string

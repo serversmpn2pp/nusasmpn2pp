@@ -86,7 +86,7 @@ class JadwalGuruPiketTest extends TestCase
         $this->get(route('piket-kehadiran-siswa.index'))
             ->assertOk()
             ->assertSee($data['siswa']->nama_lengkap)
-            ->assertSee('Catat sakit/izin');
+            ->assertSee('Catat hadir/sakit/izin');
 
         $this->put(route('piket-kehadiran-siswa.update', $data['anggota']), [
             'status_kehadiran' => 'sakit',
@@ -102,6 +102,63 @@ class JadwalGuruPiketTest extends TestCase
             'status_sesudah' => 'sakit',
             'sumber' => 'guru_piket',
             'dibuat_oleh_pengguna_id' => $data['akun']->id,
+        ]);
+    }
+
+    public function test_guru_piket_dapat_mencatat_hadir_tanpa_mengarang_jam_masuk(): void
+    {
+        Carbon::setTestNow('2026-08-13 08:00:00');
+        $data = $this->dataDasar();
+        JadwalPiketGuru::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'pegawai_id' => $data['pegawai']->id,
+            'hari' => 'kamis',
+            'aktif' => true,
+        ]);
+
+        $this->actingAs($data['akun'])
+            ->get(route('piket-kehadiran-siswa.index'))
+            ->assertOk()
+            ->assertSee('Catat hadir/sakit/izin');
+
+        $this->put(route('piket-kehadiran-siswa.update', $data['anggota']), [
+            'status_kehadiran' => 'hadir',
+            'catatan' => 'Lupa membawa kartu dan kehadirannya dikonfirmasi guru piket.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('absensi_siswa', [
+            'siswa_id' => $data['siswa']->id,
+            'status_kehadiran' => 'hadir',
+            'status_masuk' => 'manual',
+            'jam_masuk' => null,
+            'sumber' => 'guru_piket',
+        ]);
+
+        PengaturanAbsensi::create([
+            'hari' => 'kamis',
+            'urutan_hari' => 4,
+            'jam_scan_masuk_mulai' => '06:00',
+            'jam_masuk' => '07:00',
+            'jam_scan_masuk_selesai' => '07:30',
+            'jam_scan_pulang_mulai' => '14:00',
+            'jam_pulang' => '14:10',
+            'jam_scan_pulang_selesai' => '15:00',
+            'aktif' => true,
+        ]);
+        $hasilScan = app(ProsesScanAbsensi::class)->proses(
+            $data['siswa']->nisn,
+            Carbon::parse('2026-08-13 06:30:00'),
+            'masuk',
+        );
+
+        $this->assertTrue($hasilScan['berhasil']);
+        $this->assertSame('berhasil_masuk', $hasilScan['status']);
+        $this->assertDatabaseHas('absensi_siswa', [
+            'siswa_id' => $data['siswa']->id,
+            'status_kehadiran' => 'hadir',
+            'status_masuk' => 'tepat_waktu',
+            'jam_masuk' => '06:30:00',
+            'sumber' => 'scan',
         ]);
     }
 

@@ -14,31 +14,13 @@ class AksesSanksiPoinService
             return $query;
         }
 
-        $kelasIds = $pengguna->kelasWaliIds();
-        $siswaIds = $pengguna->siswaWaliIds();
         $pegawaiId = (int) ($pengguna->pegawai_id ?? 0);
 
-        if ($kelasIds === [] && $siswaIds === [] && $pegawaiId <= 0) {
+        if ($pegawaiId <= 0) {
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->where(function (Builder $query) use ($kelasIds, $siswaIds, $pegawaiId) {
-            if ($pegawaiId > 0) {
-                $query->where('petugas_pegawai_id', $pegawaiId);
-            }
-
-            if ($siswaIds !== []) {
-                $metode = $pegawaiId > 0 ? 'orWhereIn' : 'whereIn';
-                $query->{$metode}('siswa_id', $siswaIds);
-            }
-
-            if ($kelasIds !== []) {
-                $metode = $pegawaiId > 0 || $siswaIds !== [] ? 'orWhereHas' : 'whereHas';
-                $query->{$metode}('siswa.anggotaKelas', fn (Builder $query) => $query
-                    ->whereIn('kelas_id', $kelasIds)
-                    ->whereColumn('anggota_kelas.tahun_pelajaran_id', 'sanksi_poin_siswa.tahun_pelajaran_id'));
-            }
-        });
+        return $query->where('petugas_pegawai_id', $pegawaiId);
     }
 
     public function bolehLihat(?Pengguna $pengguna, SanksiPoinSiswa $sanksi): bool
@@ -51,11 +33,8 @@ class AksesSanksiPoinService
             return true;
         }
 
-        return (int) $sanksi->petugas_pegawai_id === (int) $pengguna->pegawai_id
-            || in_array((int) $sanksi->siswa_id, $pengguna->siswaWaliIds(), true)
-            || $sanksi->siswa()->whereHas('anggotaKelas', fn (Builder $query) => $query
-                ->where('tahun_pelajaran_id', $sanksi->tahun_pelajaran_id)
-                ->whereIn('kelas_id', $pengguna->kelasWaliIds()))->exists();
+        return (int) $pengguna->pegawai_id > 0
+            && (int) $sanksi->petugas_pegawai_id === (int) $pengguna->pegawai_id;
     }
 
     public function bolehKelola(?Pengguna $pengguna, SanksiPoinSiswa $sanksi): bool
@@ -71,5 +50,22 @@ class AksesSanksiPoinService
         return $pengguna->administrator()
             || $pengguna->memilikiPeran(['pimpinan', 'wakil_pimpinan_kesiswaan', 'bk'])
             || $pengguna->memilikiIzin('poin_siswa.sanksi_kelola');
+    }
+
+    public function dapatMembuka(Pengguna $pengguna): bool
+    {
+        if ($this->aksesLuas($pengguna)) {
+            return true;
+        }
+
+        return (int) $pengguna->pegawai_id > 0
+            && SanksiPoinSiswa::query()
+                ->where('petugas_pegawai_id', $pengguna->pegawai_id)
+                ->exists();
+    }
+
+    public function pastikanDapatMembuka(Pengguna $pengguna): void
+    {
+        abort_unless($this->dapatMembuka($pengguna), 403);
     }
 }

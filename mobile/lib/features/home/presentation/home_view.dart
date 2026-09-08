@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/home/application/home_controller.dart';
 import 'package:nusa/features/home/presentation/home_dashboard_view.dart';
 import 'package:nusa/features/home/presentation/home_tabs.dart';
+import 'package:nusa/features/home/presentation/widgets/quick_access_editor_sheet.dart';
 import 'package:nusa/features/menu/application/menu_controller.dart';
 import 'package:nusa/features/menu/domain/menu_catalog.dart';
 import 'package:nusa/features/menu/presentation/menu_view.dart';
@@ -87,6 +89,46 @@ class _HomeViewState extends ConsumerState<HomeView> {
     context.push(nusaMenuGroupDestination(group));
   }
 
+  Future<void> _configureQuickAccess(MenuCatalog catalog) async {
+    final result = await showQuickAccessEditor(context, catalog);
+    if (result == null || !mounted) return;
+
+    try {
+      if (result.reset) {
+        await ref.read(menuControllerProvider.notifier).resetQuickAccess();
+      } else {
+        await ref
+            .read(menuControllerProvider.notifier)
+            .saveQuickAccess(result.menuCodes);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              result.reset
+                  ? 'Akses cepat dikembalikan ke rekomendasi.'
+                  : 'Akses cepat berhasil disimpan.',
+            ),
+          ),
+        );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              error is AppException
+                  ? error.message
+                  : 'Akses cepat belum dapat disimpan.',
+            ),
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider).value;
@@ -114,6 +156,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
             onOpenNotifications: () => setState(() => _selectedIndex = 3),
             onOpenMenuGroup: _openMenuGroup,
             onOpenMenuEntry: _openMenuEntry,
+            onConfigureQuickAccess: _configureQuickAccess,
             onUnavailable: _showUnavailable,
           ),
           NusaPageFrame(

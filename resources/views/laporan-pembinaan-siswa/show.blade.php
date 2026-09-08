@@ -17,8 +17,8 @@
         $butirKeputusan = collect(old('jenis_pelanggaran_ids', $laporanPembinaanSiswa->butirPelanggaranLaporan->pluck('jenis_pelanggaran_siswa_id')->all()))->map(fn($id)=>(int)$id)->all();
         $badgeVerifikasi = fn(string $status) => match($status){'disahkan','ditetapkan_pembinaan'=>'badge badge-active','tidak_terbukti','dibatalkan'=>'badge badge-inactive','perlu_klarifikasi','dikembalikan_bk'=>'badge badge-danger',default=>'badge badge-warning'};
         $labelTahapBatas = $menungguPengesahanWakil ? 'Pengesahan Wakil Kesiswaan' : 'Keputusan BK';
-        $ruteKembali = $konteksGuruWali ? 'pembinaan-siswa-wali.index' : ($konteksLaporanSaya ? 'laporan-saya.index' : 'laporan-pembinaan-siswa.index');
-        $ruteShow = $konteksGuruWali ? 'pembinaan-siswa-wali.show' : ($konteksLaporanSaya ? 'laporan-saya.show' : 'laporan-pembinaan-siswa.show');
+        $ruteKembali = $konteksGuruWali ? 'pembinaan-siswa-wali.index' : ($konteksWaliKelas ? 'laporan-siswa-kelas.index' : ($konteksLaporanSaya ? 'laporan-saya.index' : 'laporan-pembinaan-siswa.index'));
+        $ruteShow = $konteksGuruWali ? 'pembinaan-siswa-wali.show' : ($konteksWaliKelas ? 'laporan-siswa-kelas.show' : ($konteksLaporanSaya ? 'laporan-saya.show' : 'laporan-pembinaan-siswa.show'));
     @endphp
 
     <style>
@@ -55,10 +55,10 @@
     </style>
 
     <div class="page-header">
-        <div><p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : ($konteksLaporanSaya ? 'Laporan Saya' : 'Kesiswaan & BK') }}</p><h1 class="page-title">Detail {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1><p class="page-subtitle">{{ $laporanPembinaanSiswa->nomor_laporan }}</p></div>
+        <div><p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : ($konteksWaliKelas ? 'Wali Kelas' : ($konteksLaporanSaya ? 'Laporan Saya' : 'Kesiswaan & BK')) }}</p><h1 class="page-title">Detail {{ mb_strtolower($laporanPembinaanSiswa->labelJenisLaporan()) }}</h1><p class="page-subtitle">{{ $laporanPembinaanSiswa->nomor_laporan }}</p></div>
         <div class="actions">
             <a href="{{ route($ruteKembali) }}" class="button button-muted">Kembali</a>
-            @unless($konteksGuruWali)
+            @unless($konteksGuruWali || $konteksWaliKelas)
                 @izin('poin_siswa.lihat','poin_siswa.verifikasi_bk','poin_siswa.sahkan_wakil')
                     <a href="{{ route('pusat-verifikasi-pelanggaran.index') }}" class="button button-muted">Pemeriksaan & Pengesahan</a>
                 @endizin

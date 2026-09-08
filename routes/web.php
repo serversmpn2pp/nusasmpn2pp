@@ -799,6 +799,12 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('laporan-saya/{laporanPembinaanSiswa}', [LaporanPembinaanSiswaController::class, 'show'])
             ->middleware('izin:poin_siswa.lapor')
             ->name('laporan-saya.show');
+        Route::get('laporan-siswa-kelas', [LaporanPembinaanSiswaController::class, 'index'])
+            ->middleware('izin:poin_siswa.lihat')
+            ->name('laporan-siswa-kelas.index');
+        Route::get('laporan-siswa-kelas/{laporanPembinaanSiswa}', [LaporanPembinaanSiswaController::class, 'show'])
+            ->middleware('izin:poin_siswa.lihat')
+            ->name('laporan-siswa-kelas.show');
         Route::get('pembinaan-siswa-wali', [LaporanPembinaanSiswaController::class, 'index'])
             ->middleware('izin:guru_wali.lihat,poin_siswa.lihat')
             ->name('pembinaan-siswa-wali.index');
@@ -910,22 +916,22 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('pengurangan-poin-siswa', [PenguranganPoinSiswaController::class, 'store'])->name('pengurangan-poin-siswa.store');
         });
         Route::get('sanksi-poin-siswa', [SanksiPoinSiswaController::class, 'index'])
-            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->middleware('akun_pegawai')
             ->name('sanksi-poin-siswa.index');
         Route::get('sanksi-poin-siswa/{sanksiPoinSiswa}', [SanksiPoinSiswaController::class, 'show'])
-            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->middleware('akun_pegawai')
             ->name('sanksi-poin-siswa.show');
         Route::put('sanksi-poin-siswa/{sanksiPoinSiswa}', [SanksiPoinSiswaController::class, 'update'])
-            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->middleware('akun_pegawai')
             ->name('sanksi-poin-siswa.update');
         Route::post('sanksi-poin-siswa/{sanksiPoinSiswa}/bukti', [BuktiPelaksanaanSanksiController::class, 'store'])
-            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->middleware('akun_pegawai')
             ->name('bukti-pelaksanaan-sanksi.store');
         Route::get('bukti-pelaksanaan-sanksi/{buktiPelaksanaanSanksi}/unduh', [BuktiPelaksanaanSanksiController::class, 'download'])
-            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->middleware('akun_pegawai')
             ->name('bukti-pelaksanaan-sanksi.download');
         Route::delete('bukti-pelaksanaan-sanksi/{buktiPelaksanaanSanksi}', [BuktiPelaksanaanSanksiController::class, 'destroy'])
-            ->middleware('izin:poin_siswa.lihat,poin_siswa.sanksi_kelola')
+            ->middleware('akun_pegawai')
             ->name('bukti-pelaksanaan-sanksi.destroy');
         Route::patch('pengurangan-poin-siswa/{penguranganPoinSiswa}/putusan', [PenguranganPoinSiswaController::class, 'putuskan'])
             ->middleware('izin:poin_siswa.putus_konflik')

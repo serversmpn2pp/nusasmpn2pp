@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\BuktiLaporanPembinaanSiswa;
 use App\Models\LaporanPembinaanSiswa;
 use App\Services\Mobile\LaporanSiswaMobileService;
-use App\Services\Pembinaan\AksesLaporanPembinaanService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +16,12 @@ class LaporanSiswaController extends Controller
 {
     public function index(Request $request, LaporanSiswaMobileService $service): JsonResponse
     {
-        $filter = $request->validate([
+        return $this->tanpaCache(['data' => $service->daftar($request->user(), $this->validasiFilter($request))]);
+    }
+
+    protected function validasiFilter(Request $request): array
+    {
+        return $request->validate([
             'kata_kunci' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::in(['semua', ...array_keys(LaporanPembinaanSiswa::DAFTAR_STATUS)])],
             'tingkat' => ['nullable', Rule::in(['semua', ...array_keys(LaporanPembinaanSiswa::DAFTAR_TINGKAT)])],
@@ -28,8 +32,6 @@ class LaporanSiswaController extends Controller
             'halaman' => ['nullable', 'integer', 'min:1'],
             'per_halaman' => ['nullable', 'integer', 'min:5', 'max:30'],
         ]);
-
-        return $this->tanpaCache(['data' => $service->daftar($request->user(), $filter)]);
     }
 
     public function show(
@@ -38,19 +40,16 @@ class LaporanSiswaController extends Controller
         LaporanSiswaMobileService $service,
     ): JsonResponse {
         return $this->tanpaCache([
-            'data' => $service->rincian($request->user(), $laporanPembinaanSiswa),
+            'data' => $service->rincianSemua($request->user(), $laporanPembinaanSiswa),
         ]);
     }
 
     public function evidence(
         Request $request,
         BuktiLaporanPembinaanSiswa $buktiLaporanPembinaanSiswa,
-        AksesLaporanPembinaanService $akses,
+        LaporanSiswaMobileService $service,
     ): StreamedResponse {
-        $akses->pastikanBolehLihat(
-            $request->user(),
-            $buktiLaporanPembinaanSiswa->laporanPembinaanSiswa,
-        );
+        $service->pastikanAksesSemua($request->user());
         abort_unless(Storage::disk('local')->exists($buktiLaporanPembinaanSiswa->lokasi_file), 404);
 
         return Storage::disk('local')->download(
@@ -59,7 +58,7 @@ class LaporanSiswaController extends Controller
         );
     }
 
-    private function tanpaCache(array $data): JsonResponse
+    protected function tanpaCache(array $data): JsonResponse
     {
         return response()->json($data)
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate');

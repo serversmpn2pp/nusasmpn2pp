@@ -188,6 +188,36 @@ class PeringatanDiniSiswaApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_guru_tanpa_penugasan_wali_tidak_menerima_menu_dan_tidak_dapat_membuka_daftar(): void
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Guru Tanpa Penugasan Wali',
+            'nip' => '198909092026089009',
+            'aktif' => true,
+        ]);
+        $akun = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $akun->daftarPeran()->attach(Peran::where('kode', 'guru_wali')->firstOrFail());
+        $token = $this->token($akun);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonMissing(['kode' => 'peringatan-dini-siswa']);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.peringatan-dini-siswa.index'))
+            ->assertForbidden();
+    }
+
     private function buatSiswa(
         string $nama,
         string $nisn,

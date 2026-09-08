@@ -4,6 +4,7 @@ namespace App\Services\Mobile;
 
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
+use App\Models\Pengguna;
 use App\Models\SkemaBobotNilai;
 use App\Services\Nilai\RekapNilaiRaporService;
 use Illuminate\Support\Collection;
@@ -19,10 +20,10 @@ class RekapNilaiRaporMobileService
 
     public function __construct(private readonly RekapNilaiRaporService $rekapNilai) {}
 
-    public function tampilkan(array $filter): array
+    public function tampilkan(Pengguna $pengguna, array $filter): array
     {
         $semester = $filter['semester'] ?? 'ganjil';
-        $daftarPenugasan = $this->rekapNilai->ambilDaftarGuruMataPelajaran();
+        $daftarPenugasan = $this->rekapNilai->ambilDaftarGuruMataPelajaran($pengguna);
         $penugasanId = isset($filter['guru_mata_pelajaran_id'])
             ? (int) $filter['guru_mata_pelajaran_id']
             : $daftarPenugasan->first()?->id;
@@ -31,7 +32,7 @@ class RekapNilaiRaporMobileService
             abort(404);
         }
 
-        $hasil = $this->rekapNilai->hitung($penugasanId, $semester);
+        $hasil = $this->rekapNilai->hitung($penugasanId, $semester, $pengguna);
         $penugasanDipilih = $hasil['guruMataPelajaranDipilih'];
         $skema = $hasil['skemaBobotNilai'];
 

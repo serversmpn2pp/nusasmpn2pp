@@ -13,10 +13,19 @@ use Illuminate\Database\Eloquent\Builder;
 
 class LaporanSiswaMobileService
 {
+    public const CAKUPAN_SEMUA = 'semua';
+
+    public const CAKUPAN_SAYA = 'saya';
+
+    public const CAKUPAN_KELAS = 'kelas';
+
+    public const CAKUPAN_GURU_WALI = 'guru_wali';
+
     public function __construct(private AksesLaporanPembinaanService $akses) {}
 
-    public function daftar(Pengguna $pengguna, array $filter, bool $khususGuruWali = false): array
+    public function daftar(Pengguna $pengguna, array $filter, string $cakupan = self::CAKUPAN_SEMUA): array
     {
+        $this->pastikanCakupan($pengguna, $cakupan);
         $kataKunci = trim((string) ($filter['kata_kunci'] ?? ''));
         $status = $filter['status'] ?? 'semua';
         $tingkat = $filter['tingkat'] ?? 'semua';
@@ -26,21 +35,19 @@ class LaporanSiswaMobileService
         $kelasId = isset($filter['kelas_id']) ? (int) $filter['kelas_id'] : null;
         $halaman = max(1, (int) ($filter['halaman'] ?? 1));
         $perHalaman = min(30, max(5, (int) ($filter['per_halaman'] ?? 15)));
-        $cakupan = $khususGuruWali
-            ? $this->queryCakupanGuruWali($pengguna)
-            : $this->queryCakupan($pengguna);
+        $queryCakupan = $this->queryCakupan($pengguna, $cakupan);
 
         $ringkasan = [
-            'total' => (clone $cakupan)->count(),
-            'kejadian' => (clone $cakupan)->where('jenis_laporan', 'kejadian')->count(),
-            'pembinaan' => (clone $cakupan)->where('jenis_laporan', 'pembinaan')->count(),
-            'pelanggaran' => (clone $cakupan)->where('jenis_laporan', 'pelanggaran')->count(),
-            'menunggu_bk' => (clone $cakupan)->whereIn('status_verifikasi', AntreanVerifikasiPelanggaranService::STATUS_BK)->count(),
-            'menunggu_wakil' => (clone $cakupan)->whereIn('status_verifikasi', AntreanVerifikasiPelanggaranService::STATUS_WAKIL)->count(),
-            'disahkan' => (clone $cakupan)->where('status_verifikasi', 'disahkan')->count(),
+            'total' => (clone $queryCakupan)->count(),
+            'kejadian' => (clone $queryCakupan)->where('jenis_laporan', 'kejadian')->count(),
+            'pembinaan' => (clone $queryCakupan)->where('jenis_laporan', 'pembinaan')->count(),
+            'pelanggaran' => (clone $queryCakupan)->where('jenis_laporan', 'pelanggaran')->count(),
+            'menunggu_bk' => (clone $queryCakupan)->whereIn('status_verifikasi', AntreanVerifikasiPelanggaranService::STATUS_BK)->count(),
+            'menunggu_wakil' => (clone $queryCakupan)->whereIn('status_verifikasi', AntreanVerifikasiPelanggaranService::STATUS_WAKIL)->count(),
+            'disahkan' => (clone $queryCakupan)->where('status_verifikasi', 'disahkan')->count(),
         ];
 
-        $query = (clone $cakupan)
+        $query = (clone $queryCakupan)
             ->with([
                 'siswa:id,nama_lengkap,nis,nisn',
                 'kelas:id,nama,tingkat',
@@ -81,7 +88,7 @@ class LaporanSiswaMobileService
             ->orderByDesc('id');
 
         $paginasi = $query->paginate($perHalaman, ['*'], 'halaman', $halaman);
-        $kelasCakupan = (clone $cakupan)->whereNotNull('kelas_id')->distinct()->pluck('kelas_id');
+        $kelasCakupan = (clone $queryCakupan)->whereNotNull('kelas_id')->distinct()->pluck('kelas_id');
 
         return [
             'items' => collect($paginasi->items())->map(fn (LaporanPembinaanSiswa $laporan) => $this->ringkas($laporan))->values(),
@@ -99,7 +106,7 @@ class LaporanSiswaMobileService
                         'aktif' => (bool) $tahun->aktif,
                     ])->values(),
                 'kelas' => Kelas::query()
-                    ->when($khususGuruWali || ! $this->akses->aksesLuas($pengguna), fn (Builder $query) => $query->whereIn('id', $kelasCakupan))
+                    ->when($cakupan !== self::CAKUPAN_SEMUA, fn (Builder $query) => $query->whereIn('id', $kelasCakupan))
                     ->orderBy('tingkat')->orderBy('nama')->get(['id', 'tahun_pelajaran_id', 'nama', 'tingkat'])
                     ->map(fn (Kelas $kelas) => [
                         'id' => (int) $kelas->id,
@@ -124,18 +131,29 @@ class LaporanSiswaMobileService
                 'ada_halaman_berikutnya' => $paginasi->hasMorePages(),
             ],
             'hak_akses' => [
-                'cakupan_luas' => ! $khususGuruWali && $this->akses->aksesLuas($pengguna),
+                'cakupan_luas' => $cakupan === self::CAKUPAN_SEMUA,
                 'dapat_melaporkan' => $pengguna->memilikiIzin('poin_siswa.lapor'),
-                'konteks_guru_wali' => $khususGuruWali,
+                'cakupan' => $cakupan,
+                'konteks_guru_wali' => $cakupan === self::CAKUPAN_GURU_WALI,
+                'konteks_wali_kelas' => $cakupan === self::CAKUPAN_KELAS,
+                'konteks_laporan_saya' => $cakupan === self::CAKUPAN_SAYA,
             ],
         ];
     }
 
+    public function daftarSaya(Pengguna $pengguna, array $filter): array
+    {
+        return $this->daftar($pengguna, $filter, self::CAKUPAN_SAYA);
+    }
+
+    public function daftarKelasSaya(Pengguna $pengguna, array $filter): array
+    {
+        return $this->daftar($pengguna, $filter, self::CAKUPAN_KELAS);
+    }
+
     public function daftarGuruWali(Pengguna $pengguna, array $filter): array
     {
-        $this->pastikanGuruWali($pengguna);
-
-        return $this->daftar($pengguna, $filter, true);
+        return $this->daftar($pengguna, $filter, self::CAKUPAN_GURU_WALI);
     }
 
     public function rincian(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): array
@@ -253,9 +271,35 @@ class LaporanSiswaMobileService
         ];
     }
 
+    public function rincianSemua(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): array
+    {
+        $this->pastikanAksesSemua($pengguna);
+
+        return $this->rincian($pengguna, $laporan);
+    }
+
+    public function pastikanAksesSemua(Pengguna $pengguna): void
+    {
+        abort_unless($this->akses->aksesLuas($pengguna), 403);
+    }
+
     public function rincianGuruWali(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): array
     {
         $this->pastikanLaporanGuruWali($pengguna, $laporan);
+
+        return $this->rincian($pengguna, $laporan);
+    }
+
+    public function rincianSaya(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): array
+    {
+        $this->pastikanLaporanSaya($pengguna, $laporan);
+
+        return $this->rincian($pengguna, $laporan);
+    }
+
+    public function rincianKelasSaya(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): array
+    {
+        $this->pastikanLaporanKelasSaya($pengguna, $laporan);
 
         return $this->rincian($pengguna, $laporan);
     }
@@ -266,39 +310,77 @@ class LaporanSiswaMobileService
         abort_unless(in_array((int) $laporan->siswa_id, $pengguna->siswaWaliIds(), true), 403);
     }
 
-    private function queryCakupan(Pengguna $pengguna): Builder
+    public function pastikanLaporanSaya(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): void
     {
-        $query = LaporanPembinaanSiswa::query();
-        if ($this->akses->aksesLuas($pengguna)) {
-            return $query;
-        }
-
-        $kelasWaliIds = $pengguna->kelasWaliIds();
-        $siswaWaliIds = $pengguna->siswaWaliIds();
-
-        return $query->where(function (Builder $query) use ($pengguna, $kelasWaliIds, $siswaWaliIds): void {
-            $query->where('dibuat_oleh_pengguna_id', $pengguna->id)
-                ->when($pengguna->pegawai_id, fn (Builder $query) => $query->orWhere('pelapor_pegawai_id', $pengguna->pegawai_id))
-                ->when($kelasWaliIds !== [], fn (Builder $query) => $query->orWhereIn('kelas_id', $kelasWaliIds))
-                ->when($siswaWaliIds !== [], fn (Builder $query) => $query->orWhereIn('siswa_id', $siswaWaliIds));
-        });
+        $this->pastikanPegawaiPelapor($pengguna);
+        abort_unless(
+            (int) $laporan->dibuat_oleh_pengguna_id === (int) $pengguna->id
+                || ((int) $pengguna->pegawai_id > 0
+                    && (int) $laporan->pelapor_pegawai_id === (int) $pengguna->pegawai_id),
+            403,
+        );
     }
 
-    private function queryCakupanGuruWali(Pengguna $pengguna): Builder
+    public function pastikanLaporanKelasSaya(Pengguna $pengguna, LaporanPembinaanSiswa $laporan): void
     {
-        $siswaWaliIds = $pengguna->siswaWaliIds();
+        $this->pastikanWaliKelas($pengguna);
+        abort_unless(in_array((int) $laporan->kelas_id, $pengguna->kelasWaliIds(), true), 403);
+    }
 
-        return LaporanPembinaanSiswa::query()
-            ->when(
-                $siswaWaliIds === [],
-                fn (Builder $query) => $query->whereRaw('1 = 0'),
-                fn (Builder $query) => $query->whereIn('siswa_id', $siswaWaliIds),
-            );
+    private function queryCakupan(Pengguna $pengguna, string $cakupan): Builder
+    {
+        return match ($cakupan) {
+            self::CAKUPAN_SEMUA => LaporanPembinaanSiswa::query(),
+            self::CAKUPAN_SAYA => LaporanPembinaanSiswa::query()
+                ->where(function (Builder $query) use ($pengguna): void {
+                    $query->where('dibuat_oleh_pengguna_id', $pengguna->id)
+                        ->when($pengguna->pegawai_id, fn (Builder $query) => $query
+                            ->orWhere('pelapor_pegawai_id', $pengguna->pegawai_id));
+                }),
+            self::CAKUPAN_KELAS => $this->queryDalamDaftar('kelas_id', $pengguna->kelasWaliIds()),
+            self::CAKUPAN_GURU_WALI => $this->queryDalamDaftar('siswa_id', $pengguna->siswaWaliIds()),
+            default => abort(404),
+        };
+    }
+
+    private function queryDalamDaftar(string $kolom, array $daftarId): Builder
+    {
+        return LaporanPembinaanSiswa::query()->when(
+            $daftarId === [],
+            fn (Builder $query) => $query->whereRaw('1 = 0'),
+            fn (Builder $query) => $query->whereIn($kolom, $daftarId),
+        );
+    }
+
+    private function pastikanCakupan(Pengguna $pengguna, string $cakupan): void
+    {
+        match ($cakupan) {
+            self::CAKUPAN_SEMUA => abort_unless($this->akses->aksesLuas($pengguna), 403),
+            self::CAKUPAN_SAYA => $this->pastikanPegawaiPelapor($pengguna),
+            self::CAKUPAN_KELAS => $this->pastikanWaliKelas($pengguna),
+            self::CAKUPAN_GURU_WALI => $this->pastikanGuruWali($pengguna),
+            default => abort(404),
+        };
     }
 
     private function pastikanGuruWali(Pengguna $pengguna): void
     {
         abort_unless($pengguna->pegawai_id && $pengguna->memilikiPeran('guru_wali'), 403);
+    }
+
+    private function pastikanWaliKelas(Pengguna $pengguna): void
+    {
+        abort_unless(
+            $pengguna->pegawai_id
+                && $pengguna->memilikiPeran('wali_kelas')
+                && $pengguna->kelasWaliIds() !== [],
+            403,
+        );
+    }
+
+    private function pastikanPegawaiPelapor(Pengguna $pengguna): void
+    {
+        abort_unless($pengguna->pegawai_id && $pengguna->memilikiIzin('poin_siswa.lapor'), 403);
     }
 
     public function ringkas(LaporanPembinaanSiswa $laporan): array

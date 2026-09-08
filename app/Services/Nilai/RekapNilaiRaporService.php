@@ -5,18 +5,23 @@ namespace App\Services\Nilai;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\KomponenNilai;
+use App\Models\Pengguna;
 use App\Models\SkemaBobotNilai;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class RekapNilaiRaporService
 {
-    public function hitung(int|string|null $guruMataPelajaranId, string $semester = 'ganjil'): array
-    {
+    public function hitung(
+        int|string|null $guruMataPelajaranId,
+        string $semester = 'ganjil',
+        ?Pengguna $pengguna = null,
+    ): array {
         if (! in_array($semester, ['ganjil', 'genap'], true)) {
             $semester = 'ganjil';
         }
 
-        $daftarGuruMataPelajaran = $this->ambilDaftarGuruMataPelajaran();
+        $daftarGuruMataPelajaran = $this->ambilDaftarGuruMataPelajaran($pengguna);
         $guruMataPelajaranDipilih = null;
         $skemaBobotNilai = null;
         $komponenNilai = collect();
@@ -25,7 +30,10 @@ class RekapNilaiRaporService
         $labelNilaiAkhir = 'SAS/SAJ';
 
         if ($guruMataPelajaranId) {
-            $guruMataPelajaranDipilih = $this->ambilGuruMataPelajaranDipilih($guruMataPelajaranId);
+            $guruMataPelajaranDipilih = $this->ambilGuruMataPelajaranDipilih(
+                $guruMataPelajaranId,
+                $pengguna,
+            );
             $kelas = $guruMataPelajaranDipilih->kelas;
             $labelNilaiAkhir = $this->labelNilaiAkhir($kelas?->tingkat);
             $skemaBobotNilai = $this->ambilSkemaBobotNilai(
@@ -71,9 +79,9 @@ class RekapNilaiRaporService
         ];
     }
 
-    public function ambilDaftarGuruMataPelajaran(): Collection
+    public function ambilDaftarGuruMataPelajaran(?Pengguna $pengguna = null): Collection
     {
-        return GuruMataPelajaran::query()
+        return $this->queryGuruMataPelajaranDalamCakupan($pengguna)
             ->with(['tahunPelajaran', 'kelas', 'mataPelajaran', 'pegawai'])
             ->where('aktif', true)
             ->orderBy('tahun_pelajaran_id')
@@ -82,13 +90,53 @@ class RekapNilaiRaporService
             ->get();
     }
 
-    private function ambilGuruMataPelajaranDipilih(int|string $guruMataPelajaranId): GuruMataPelajaran
-    {
-        return GuruMataPelajaran::query()
+    private function ambilGuruMataPelajaranDipilih(
+        int|string $guruMataPelajaranId,
+        ?Pengguna $pengguna,
+    ): GuruMataPelajaran {
+        return $this->queryGuruMataPelajaranDalamCakupan($pengguna)
             ->with(['tahunPelajaran', 'kelas', 'mataPelajaran', 'pegawai'])
             ->where('aktif', true)
             ->whereKey($guruMataPelajaranId)
             ->firstOrFail();
+    }
+
+    private function queryGuruMataPelajaranDalamCakupan(?Pengguna $pengguna): Builder
+    {
+        $query = GuruMataPelajaran::query();
+
+        if (! $pengguna || $this->dapatMelihatSemua($pengguna)) {
+            return $query;
+        }
+
+        $sebagaiGuruMapel = $pengguna->memilikiPeran('guru_mapel')
+            && filled($pengguna->pegawai_id);
+        $sebagaiWaliKelas = $pengguna->memilikiPeran('wali_kelas')
+            && filled($pengguna->pegawai_id);
+
+        if (! $sebagaiGuruMapel && ! $sebagaiWaliKelas) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $query) use ($pengguna, $sebagaiGuruMapel, $sebagaiWaliKelas) {
+            if ($sebagaiGuruMapel) {
+                $query->where('pegawai_id', $pengguna->pegawai_id);
+            }
+
+            if ($sebagaiWaliKelas) {
+                $metode = $sebagaiGuruMapel ? 'orWhereHas' : 'whereHas';
+                $query->{$metode}('kelas', fn (Builder $query) => $query->where(
+                    'wali_kelas_id',
+                    $pengguna->pegawai_id,
+                ));
+            }
+        });
+    }
+
+    private function dapatMelihatSemua(Pengguna $pengguna): bool
+    {
+        return $pengguna->administrator()
+            || $pengguna->memilikiPeran(['pimpinan', 'wakil_pimpinan_kurikulum']);
     }
 
     private function ambilSkemaBobotNilai(int $tahunPelajaranId, string $semester, ?int $tingkat): ?SkemaBobotNilai

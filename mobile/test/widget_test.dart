@@ -351,6 +351,88 @@ void main() {
     expect(find.byKey(const Key('menu-item-pegawai')), findsOneWidget);
     expect(find.byKey(const Key('menu-item-siswa')), findsOneWidget);
     expect(find.byKey(const Key('menu-item-kelas')), findsOneWidget);
+    expect(find.text('Buka'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('pegawai dapat memilih, mengurutkan, dan mereset akses cepat', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final menuRemote = _FakeMenuRemoteDataSource();
+
+    await _pumpApp(
+      tester,
+      remote: _FakeAuthRemoteDataSource(),
+      menuRemote: menuRemote,
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-username')),
+      'mobile.uji',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'RahasiaNusa123',
+    );
+    await tester.ensureVisible(find.byKey(const Key('login-submit')));
+    await tester.tap(find.byKey(const Key('login-submit')));
+    await tester.pumpAndSettle();
+
+    final configure = find.byKey(const Key('quick-access-configure'));
+    await tester.ensureVisible(configure);
+    await tester.tap(configure);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Atur Akses Cepat'), findsOneWidget);
+    expect(find.text('4/4'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('quick-access-remove-pegawai')));
+    await tester.pumpAndSettle();
+    expect(find.text('3/4'), findsOneWidget);
+
+    final search = find.byKey(const Key('quick-access-search'));
+    await tester.ensureVisible(search);
+    await tester.enterText(search, 'Mata Pelajaran');
+    await tester.pumpAndSettle();
+
+    final subjectOption = find.byKey(
+      const Key('quick-access-option-mata-pelajaran'),
+    );
+    await tester.ensureVisible(subjectOption);
+    await tester.tap(subjectOption);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('quick-access-up-mata-pelajaran')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('quick-access-save')));
+    await tester.pumpAndSettle();
+
+    expect(
+      menuRemote.savedCodes,
+      equals([
+        'jadwal-mengajar-saya',
+        'komponen-nilai',
+        'mata-pelajaran',
+        'kelas',
+      ]),
+    );
+    expect(find.text('Akses cepat berhasil disimpan.'), findsOneWidget);
+
+    await tester.ensureVisible(configure);
+    await tester.tap(configure);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('quick-access-reset')));
+    await tester.pumpAndSettle();
+
+    expect(menuRemote.resetCount, 1);
+    expect(menuRemote.savedCodes, isNull);
+    expect(
+      find.text('Akses cepat dikembalikan ke rekomendasi.'),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -1791,9 +1873,15 @@ Future<void> _pumpApp(
   required AuthRemoteDataSource remote,
   _MemoryTokenStorage? storage,
   HomeRemoteDataSource? homeRemote,
+  MenuRemoteDataSource? menuRemote,
 }) async {
   await tester.pumpWidget(
-    _buildTestApp(remote: remote, storage: storage, homeRemote: homeRemote),
+    _buildTestApp(
+      remote: remote,
+      storage: storage,
+      homeRemote: homeRemote,
+      menuRemote: menuRemote,
+    ),
   );
 
   await tester.pumpAndSettle();
@@ -1803,6 +1891,7 @@ Widget _buildTestApp({
   required AuthRemoteDataSource remote,
   _MemoryTokenStorage? storage,
   HomeRemoteDataSource? homeRemote,
+  MenuRemoteDataSource? menuRemote,
 }) {
   return ProviderScope(
     overrides: [
@@ -1819,7 +1908,7 @@ Widget _buildTestApp({
         homeRemote ?? _FakeHomeRemoteDataSource(),
       ),
       menuRemoteDataSourceProvider.overrideWithValue(
-        _FakeMenuRemoteDataSource(),
+        menuRemote ?? _FakeMenuRemoteDataSource(),
       ),
       myProfileRemoteDataSourceProvider.overrideWithValue(
         _FakeMyProfileRemoteDataSource(),
@@ -2052,11 +2141,28 @@ final class _FakeMyProfileRemoteDataSource
 }
 
 final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
+  List<String>? savedCodes;
+  int resetCount = 0;
+
   @override
   Future<MenuCatalog> fetchCatalog() async {
     return MenuCatalog(
       generatedAt: DateTime(2026, 8, 24, 8, 15),
       itemCount: 15,
+      quickAccess: QuickAccessConfig(
+        canCustomize: true,
+        customized: savedCodes != null,
+        maximum: 4,
+        source: savedCodes == null ? 'rekomendasi_peran' : 'pilihan_pengguna',
+        menuCodes:
+            savedCodes ??
+            const [
+              'jadwal-mengajar-saya',
+              'komponen-nilai',
+              'kelas',
+              'pegawai',
+            ],
+      ),
       groups: const [
         MenuGroup(
           code: 'data-sekolah',
@@ -2272,6 +2378,19 @@ final class _FakeMenuRemoteDataSource implements MenuRemoteDataSource {
         ),
       ],
     );
+  }
+
+  @override
+  Future<MenuCatalog> resetQuickAccess() async {
+    resetCount++;
+    savedCodes = null;
+    return fetchCatalog();
+  }
+
+  @override
+  Future<MenuCatalog> saveQuickAccess(List<String> menuCodes) async {
+    savedCodes = List<String>.of(menuCodes);
+    return fetchCatalog();
   }
 }
 

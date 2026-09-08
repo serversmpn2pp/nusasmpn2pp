@@ -110,6 +110,49 @@ class GuruPiketApiTest extends TestCase
         ]);
     }
 
+    public function test_guru_piket_dapat_mencatat_siswa_belum_scan_sebagai_hadir(): void
+    {
+        Carbon::setTestNow('2026-08-13 08:05:00');
+        $data = $this->dataDasar();
+        JadwalPiketGuru::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'pegawai_id' => $data['pegawai']->id,
+            'hari' => 'kamis',
+            'aktif' => true,
+        ]);
+
+        $this->withToken($this->token($data['akun']))
+            ->patchJson(route('api.v1.piket-saya.kehadiran.update', $data['anggota']), [
+                'status_kehadiran' => 'hadir',
+                'catatan' => 'Siswa lupa membawa kartu dan dikonfirmasi hadir oleh guru piket.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'hadir');
+
+        $this->assertDatabaseHas('absensi_siswa', [
+            'siswa_id' => $data['siswa']->id,
+            'status_kehadiran' => 'hadir',
+            'status_masuk' => 'manual',
+            'jam_masuk' => null,
+            'sumber' => 'guru_piket',
+        ]);
+        $this->assertDatabaseHas('riwayat_perubahan_absensi_siswa', [
+            'siswa_id' => $data['siswa']->id,
+            'status_sebelum' => null,
+            'status_sesudah' => 'hadir',
+            'sumber' => 'guru_piket',
+            'dibuat_oleh_pengguna_id' => $data['akun']->id,
+        ]);
+
+        $this->withToken($this->token($data['akun']))
+            ->getJson(route('api.v1.piket-saya.index'))
+            ->assertOk()
+            ->assertJsonPath('data.ringkasan.hadir', 1)
+            ->assertJsonPath('data.ringkasan.belum_scan', 0)
+            ->assertJsonPath('data.items.0.presensi.status', 'hadir')
+            ->assertJsonPath('data.items.0.presensi.dapat_dicatat', true);
+    }
+
     public function test_di_luar_jadwal_daftar_tetap_informatif_tetapi_pencatatan_ditolak(): void
     {
         Carbon::setTestNow('2026-08-14 08:00:00');

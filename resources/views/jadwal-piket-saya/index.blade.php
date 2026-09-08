@@ -18,14 +18,14 @@
 
     @if ($dapatMencatatHariIni)
         <section class="today-picket">
-            <div><p class="eyebrow">Tugas Hari Ini</p><h2>Anda bertugas sebagai Guru Piket</h2><p class="help-text">Periksa siswa yang belum scan dan catat keterangan Sakit atau Izin bila diperlukan.</p></div>
+            <div><p class="eyebrow">Tugas Hari Ini</p><h2>Anda bertugas sebagai Guru Piket</h2><p class="help-text">Periksa siswa yang belum scan dan catat sebagai Hadir, Sakit, atau Izin dengan keterangan yang dapat dipertanggungjawabkan.</p></div>
             <a href="{{ route('piket-kehadiran-siswa.index') }}" class="button button-primary">Buka kehadiran siswa</a>
         </section>
     @else
         <section class="panel panel-pad" style="margin-bottom:18px;">
             <p class="eyebrow">Tugas Hari Ini</p>
             <h2 class="panel-title">Tidak ada jadwal piket hari ini</h2>
-            <p class="help-text" style="margin-top:7px;">Halaman pencatatan Sakit/Izin hanya terbuka pada hari Anda bertugas.</p>
+            <p class="help-text" style="margin-top:7px;">Halaman pencatatan Hadir/Sakit/Izin hanya terbuka pada hari Anda bertugas.</p>
         </section>
     @endif
 

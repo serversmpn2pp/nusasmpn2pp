@@ -52,7 +52,9 @@ class LaporanSiswaWaliApiTest extends TestCase
                 'status' => 'tersedia',
                 'rute' => '/laporan-siswa-wali',
             ])
-            ->assertJsonMissing(['kode' => 'pemeriksaan-pengesahan']);
+            ->assertJsonMissing(['kode' => 'pemeriksaan-pengesahan'])
+            ->assertJsonMissing(['kode' => 'daftar-laporan-siswa'])
+            ->assertJsonMissing(['kode' => 'pelaksanaan-sanksi-siswa']);
 
         $this->withToken($token)
             ->getJson(route('api.v1.pemeriksaan-pengesahan.index'))

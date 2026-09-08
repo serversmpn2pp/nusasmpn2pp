@@ -182,7 +182,7 @@ class PelaksanaanSanksiSiswaApiTest extends TestCase
         Storage::disk('local')->assertMissing($bukti->lokasi_file);
     }
 
-    public function test_wali_kelas_hanya_melihat_sanksi_siswa_di_kelasnya_dan_tidak_mengelola(): void
+    public function test_pegawai_hanya_melihat_dan_mengelola_sanksi_yang_ditugaskan_kepadanya(): void
     {
         [, $tahun, $kelas, $siswaDalam, $sanksiDalam] = $this->dataDasar();
         [$wali, $akunWali] = $this->buatAkunPegawai('Wali Kelas Native', '198904042026084004', 'wali_kelas');
@@ -201,16 +201,35 @@ class PelaksanaanSanksiSiswaApiTest extends TestCase
 
         $this->withToken($token)
             ->getJson(route('api.v1.pelaksanaan-sanksi-siswa.index', ['tahun_pelajaran_id' => $tahun->id]))
+            ->assertForbidden();
+        $this->withToken($token)
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonMissing(['kode' => 'pelaksanaan-sanksi-siswa']);
+        $this->withToken($token)
+            ->getJson(route('api.v1.pelaksanaan-sanksi-siswa.show', $sanksiDalam))
+            ->assertForbidden();
+
+        $sanksiDalam->update(['petugas_pegawai_id' => $wali->id]);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.pelaksanaan-sanksi-siswa.index', ['tahun_pelajaran_id' => $tahun->id]))
             ->assertOk()
             ->assertJsonCount(1, 'data.items')
             ->assertJsonPath('data.items.0.siswa.id', $siswaDalam->id);
+        $this->withToken($token)
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonFragment(['kode' => 'pelaksanaan-sanksi-siswa']);
         $this->withToken($token)
             ->getJson(route('api.v1.pelaksanaan-sanksi-siswa.show', $sanksiLuar))
             ->assertForbidden();
         $this->withToken($token)
             ->getJson(route('api.v1.pelaksanaan-sanksi-siswa.show', $sanksiDalam))
             ->assertOk()
-            ->assertJsonPath('data.hak_akses.dapat_kelola', false);
+            ->assertJsonPath('data.hak_akses.dapat_kelola', true)
+            ->assertJsonCount(1, 'data.pegawai')
+            ->assertJsonPath('data.pegawai.0.id', $wali->id);
     }
 
     private function dataDasar(): array

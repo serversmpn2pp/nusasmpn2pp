@@ -77,6 +77,8 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'laporan-presensi-pegawai' => Icons.summarize_rounded,
     'pemeriksaan-pengesahan' => Icons.verified_rounded,
     'daftar-laporan-siswa' => Icons.assignment_rounded,
+    'laporan-saya' => Icons.history_edu_rounded,
+    'laporan-siswa-kelas' => Icons.groups_2_rounded,
     'pendampingan-siswa' => Icons.support_agent_rounded,
     'pelaksanaan-sanksi-siswa' => Icons.gavel_rounded,
     'peringatan-dini-siswa' => Icons.warning_amber_rounded,

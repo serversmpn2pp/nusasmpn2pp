@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', ($konteksGuruWali ? 'Laporan Siswa Wali' : ($konteksLaporanSaya ? 'Laporan Saya' : 'Daftar Laporan Siswa')).' - NUSA')
+@section('title', ($konteksGuruWali ? 'Laporan Siswa Wali' : ($konteksWaliKelas ? 'Laporan Siswa Kelas Saya' : ($konteksLaporanSaya ? 'Laporan Saya' : 'Daftar Laporan Siswa'))).' - NUSA')
 
 @section('content')
     @php
@@ -10,14 +10,16 @@
         $bolehPusatVerifikasi=(auth()->user()?->administrator()??false)
             || (auth()->user()?->memilikiPeran(['bk','pimpinan','wakil_pimpinan_kesiswaan'])??false)
             || (auth()->user()?->memilikiIzin('poin_siswa.verifikasi_bk')??false);
-        $ruteIndex=$konteksGuruWali?'pembinaan-siswa-wali.index':($konteksLaporanSaya?'laporan-saya.index':'laporan-pembinaan-siswa.index');
-        $ruteShow=$konteksGuruWali?'pembinaan-siswa-wali.show':($konteksLaporanSaya?'laporan-saya.show':'laporan-pembinaan-siswa.show');
-        $judulHalaman=$konteksGuruWali?'Laporan Siswa Wali':($konteksLaporanSaya?'Laporan Saya':'Daftar Laporan Siswa');
+        $ruteIndex=$konteksGuruWali?'pembinaan-siswa-wali.index':($konteksWaliKelas?'laporan-siswa-kelas.index':($konteksLaporanSaya?'laporan-saya.index':'laporan-pembinaan-siswa.index'));
+        $ruteShow=$konteksGuruWali?'pembinaan-siswa-wali.show':($konteksWaliKelas?'laporan-siswa-kelas.show':($konteksLaporanSaya?'laporan-saya.show':'laporan-pembinaan-siswa.show'));
+        $judulHalaman=$konteksGuruWali?'Laporan Siswa Wali':($konteksWaliKelas?'Laporan Siswa Kelas Saya':($konteksLaporanSaya?'Laporan Saya':'Daftar Laporan Siswa'));
         $deskripsiHalaman=$konteksGuruWali
             ? 'Riwayat laporan dan keputusan BK untuk siswa yang menjadi tanggung jawab pendampingan Anda.'
-            : ($konteksLaporanSaya
+            : ($konteksWaliKelas
+                ? 'Pantau laporan siswa yang tercatat pada kelas wali Anda tanpa membuka laporan kelas lain.'
+                : ($konteksLaporanSaya
                 ? 'Pantau pemeriksaan BK, keputusan, poin, dan tindak lanjut dari laporan yang Anda kirim.'
-                : 'Arsip seluruh laporan kejadian, pembinaan, keputusan BK, dan poin siswa.');
+                : 'Arsip seluruh laporan kejadian, pembinaan, keputusan BK, dan poin siswa.'));
     @endphp
     <style>
         .report-page-header {
@@ -93,7 +95,7 @@
 
     <div class="page-header report-page-header">
         <div class="report-page-header-copy">
-            <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : ($konteksLaporanSaya ? 'Pelaporan Saya' : 'Kesiswaan & BK') }}</p>
+            <p class="eyebrow">{{ $konteksGuruWali ? 'Guru Wali' : ($konteksWaliKelas ? 'Wali Kelas' : ($konteksLaporanSaya ? 'Pelaporan Saya' : 'Kesiswaan & BK')) }}</p>
             <h1 class="page-title">{{ $judulHalaman }}</h1>
             <p class="page-subtitle">{{ $deskripsiHalaman }}</p>
         </div>

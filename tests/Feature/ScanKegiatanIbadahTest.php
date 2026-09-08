@@ -33,13 +33,13 @@ class ScanKegiatanIbadahTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_administrator_dapat_membuka_halaman_kamera_dan_mencatat_presensi(): void
+    public function test_guru_pl_dapat_membuka_halaman_kamera_dan_mencatat_presensi(): void
     {
         Carbon::setTestNow('2026-08-13 12:10:00');
         $data = $this->dataDasar('kamis');
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruPl = $this->buatGuruPl()['akun'];
 
-        $this->actingAs($administrator)
+        $this->actingAs($guruPl)
             ->get(route('scan-kegiatan-ibadah.index'))
             ->assertOk()
             ->assertSee('Scan QR Kartu Pelajar')
@@ -59,19 +59,19 @@ class ScanKegiatanIbadahTest extends TestCase
             ->where('kegiatan_ibadah_id', $data['kegiatan']->id)
             ->where('siswa_id', $data['siswa']->id)
             ->whereDate('tanggal', '2026-08-13')
-            ->where('dipindai_oleh_pengguna_id', $administrator->id)
+            ->where('dipindai_oleh_pengguna_id', $guruPl->id)
             ->exists());
     }
 
     public function test_scan_qr_yang_sama_tetap_hanya_membuat_satu_presensi(): void
     {
         $data = $this->dataDasar('senin');
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruPl = $this->buatGuruPl()['akun'];
         $proses = app(ProsesScanKegiatanIbadah::class);
         $waktu = Carbon::parse('2026-08-10 12:10:00');
 
-        $pertama = $proses->proses($data['jadwal'], $data['siswa']->nisn, $administrator, $waktu);
-        $kedua = $proses->proses($data['jadwal'], $data['siswa']->nisn, $administrator, $waktu->copy()->addSeconds(2));
+        $pertama = $proses->proses($data['jadwal'], $data['siswa']->nisn, $guruPl, $waktu);
+        $kedua = $proses->proses($data['jadwal'], $data['siswa']->nisn, $guruPl, $waktu->copy()->addSeconds(2));
 
         $this->assertTrue($pertama['berhasil']);
         $this->assertTrue($pertama['baru']);
@@ -86,7 +86,7 @@ class ScanKegiatanIbadahTest extends TestCase
     {
         Carbon::setTestNow('2026-08-14 12:10:00');
         $data = $this->dataDasar('jumat');
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruPl = $this->buatGuruPl()['akun'];
         $kegiatanJumat = KegiatanIbadah::create([
             'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
             'nama' => 'Sholat Jumat',
@@ -94,7 +94,7 @@ class ScanKegiatanIbadahTest extends TestCase
         ]);
         $data['jadwal']->update(['kegiatan_ibadah_id' => $kegiatanJumat->id]);
 
-        $this->actingAs($administrator)
+        $this->actingAs($guruPl)
             ->get(route('scan-kegiatan-ibadah.index'))
             ->assertOk()
             ->assertSee('Sholat Jumat khusus siswa laki-laki')
@@ -106,6 +106,7 @@ class ScanKegiatanIbadahTest extends TestCase
         $data = $this->dataDasar('senin');
         $data['siswa']->update(['jenis_kelamin' => 'P']);
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruPl = $this->buatGuruPl()['akun'];
         $periode = PeriodeBerhalanganIbadah::create([
             'tahun_pelajaran_id' => $data['tahun']->id,
             'siswa_id' => $data['siswa']->id,
@@ -134,7 +135,7 @@ class ScanKegiatanIbadahTest extends TestCase
         $hasil = app(ProsesScanKegiatanIbadah::class)->proses(
             $data['jadwal'],
             $data['siswa']->nisn,
-            $administrator,
+            $guruPl,
             Carbon::parse('2026-08-10 12:10:00'),
         );
 
@@ -146,7 +147,7 @@ class ScanKegiatanIbadahTest extends TestCase
             'id' => $periode->id,
             'status' => PeriodeBerhalanganIbadah::STATUS_SELESAI,
             'cara_selesai' => 'scan_ibadah',
-            'diselesaikan_oleh_pengguna_id' => $administrator->id,
+            'diselesaikan_oleh_pengguna_id' => $guruPl->id,
         ]);
         $this->assertSame('2026-08-10', $periode->fresh()->tanggal_selesai->toDateString());
         $this->assertDatabaseCount('presensi_berhalangan_ibadah', 0);
@@ -156,19 +157,19 @@ class ScanKegiatanIbadahTest extends TestCase
     public function test_scan_di_luar_jadwal_dan_qr_tidak_valid_tidak_membuat_presensi(): void
     {
         $data = $this->dataDasar('senin');
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruPl = $this->buatGuruPl()['akun'];
         $proses = app(ProsesScanKegiatanIbadah::class);
 
         $diLuarJadwal = $proses->proses(
             $data['jadwal'],
             $data['siswa']->nisn,
-            $administrator,
+            $guruPl,
             Carbon::parse('2026-08-10 14:00:00'),
         );
         $qrTidakValid = $proses->proses(
             $data['jadwal'],
             'BUKAN-NISN',
-            $administrator,
+            $guruPl,
             Carbon::parse('2026-08-10 12:00:00'),
         );
 
@@ -180,7 +181,7 @@ class ScanKegiatanIbadahTest extends TestCase
         $this->assertDatabaseCount('log_scan_kegiatan_ibadah', 2);
     }
 
-    public function test_halaman_scan_dapat_diakses_guru_pai_dan_guru_yang_sedang_piket(): void
+    public function test_halaman_scan_hanya_dapat_diakses_guru_pl_dan_guru_yang_sedang_piket(): void
     {
         Carbon::setTestNow('2026-08-10 12:00:00');
         $data = $this->dataDasar('senin');
@@ -198,10 +199,22 @@ class ScanKegiatanIbadahTest extends TestCase
             'aktif' => true,
         ]);
         $guruPiket = $this->buatGuru($data['tahun'], $data['kelas'], $matematika, 'Guru Piket Uji', '197801012008011002');
+        $guruPl = $this->buatGuruPl();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
         $akses = app(AksesScanKegiatanIbadah::class);
 
-        $this->assertTrue($akses->dapatMemindai($guruPai['akun'], $data['tahun'], now()));
+        $this->assertFalse($akses->dapatMemindai($administrator, $data['tahun'], now()));
+        $this->assertFalse($akses->dapatMemindai($guruPai['akun'], $data['tahun'], now()));
+        $this->assertTrue($akses->dapatMemindai($guruPl['akun'], $data['tahun'], now()));
         $this->assertFalse($akses->dapatMemindai($guruPiket['akun'], $data['tahun'], now()));
+
+        $this->actingAs($administrator)
+            ->get(route('scan-kegiatan-ibadah.index'))
+            ->assertForbidden();
+
+        $this->actingAs($guruPai['akun'])
+            ->get(route('scan-kegiatan-ibadah.index'))
+            ->assertForbidden();
 
         JadwalPiketGuru::create([
             'tahun_pelajaran_id' => $data['tahun']->id,
@@ -211,6 +224,11 @@ class ScanKegiatanIbadahTest extends TestCase
         ]);
 
         $this->assertTrue($akses->dapatMemindai($guruPiket['akun'], $data['tahun'], now()));
+        $this->assertFalse($akses->dapatMemindai(
+            $guruPiket['akun'],
+            $data['tahun'],
+            Carbon::parse('2026-08-11 12:00:00'),
+        ));
         $this->actingAs($guruPiket['akun'])
             ->get(route('scan-kegiatan-ibadah.index'))
             ->assertOk();
@@ -285,6 +303,29 @@ class ScanKegiatanIbadahTest extends TestCase
             'akun_sistem' => false,
         ]);
         $akun->daftarPeran()->attach(Peran::whereIn('kode', ['pegawai', 'guru_mapel'])->pluck('id'));
+
+        return compact('pegawai', 'akun');
+    }
+
+    private function buatGuruPl(): array
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Guru PL Scan Ibadah',
+            'nip' => 'PL-SCAN-IBADAH',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $akun = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => 'KataSandi-Uji-2026',
+            'wajib_ganti_kata_sandi' => false,
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+        $akun->daftarPeran()->attach(Peran::whereIn('kode', ['pegawai', 'guru_pl'])->pluck('id'));
 
         return compact('pegawai', 'akun');
     }

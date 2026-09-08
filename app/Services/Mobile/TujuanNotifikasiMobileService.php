@@ -117,7 +117,12 @@ class TujuanNotifikasiMobileService
         $kunci = (string) $notifikasi->kunci_unik;
 
         if (str_starts_with($kunci, 'laporan-pembinaan-wali-kelas:')) {
-            return '/laporan-siswa-wali/'.$laporanId;
+            return '/laporan-siswa-kelas/'.$laporanId;
+        }
+
+        if (str_starts_with($kunci, 'keputusan-bk:')
+            || str_starts_with($kunci, 'keputusan-wakil:')) {
+            return '/laporan-saya/'.$laporanId;
         }
 
         if (str_starts_with($kunci, 'batas-proses:')

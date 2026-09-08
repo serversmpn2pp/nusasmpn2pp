@@ -32,9 +32,9 @@ class CatatKehadiranSiswaPiketService
                 ->lockForUpdate()
                 ->first();
 
-            if ($absensi?->jam_masuk || $absensi?->status_kehadiran === 'hadir') {
+            if ($absensi?->jam_masuk) {
                 throw ValidationException::withMessages([
-                    'status_kehadiran' => 'Siswa sudah melakukan scan masuk sehingga tidak dapat dicatat sakit atau izin.',
+                    'status_kehadiran' => 'Siswa sudah melakukan scan masuk sehingga tidak dapat dikoreksi dari menu guru piket.',
                 ]);
             }
 
@@ -54,7 +54,7 @@ class CatatKehadiranSiswaPiketService
                 'kelas_id' => $anggotaKelas->kelas_id,
                 'anggota_kelas_id' => $anggotaKelas->id,
                 'jam_masuk' => null,
-                'status_masuk' => null,
+                'status_masuk' => $status === 'hadir' ? 'manual' : null,
                 'menit_terlambat' => 0,
                 'jam_pulang' => null,
                 'status_pulang' => null,

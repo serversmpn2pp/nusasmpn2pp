@@ -13,6 +13,28 @@ class MenuController extends AsyncNotifier<MenuCatalog> {
     state = await AsyncValue.guard(_fetch);
   }
 
+  Future<void> saveQuickAccess(List<String> menuCodes) async {
+    try {
+      final catalog = await ref
+          .read(menuRepositoryProvider)
+          .saveQuickAccess(menuCodes);
+      state = AsyncData(catalog);
+    } on UnauthorizedException {
+      await ref.read(authControllerProvider.notifier).logout();
+      rethrow;
+    }
+  }
+
+  Future<void> resetQuickAccess() async {
+    try {
+      final catalog = await ref.read(menuRepositoryProvider).resetQuickAccess();
+      state = AsyncData(catalog);
+    } on UnauthorizedException {
+      await ref.read(authControllerProvider.notifier).logout();
+      rethrow;
+    }
+  }
+
   Future<MenuCatalog> _fetch() async {
     try {
       return await ref.read(menuRepositoryProvider).fetchCatalog();

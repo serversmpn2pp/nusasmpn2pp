@@ -27,9 +27,7 @@ class _StudentReportDetailViewState
 
   @override
   Widget build(BuildContext context) {
-    final detail = widget.scope == StudentReportScope.guardianStudents
-        ? ref.watch(guardianStudentReportDetailProvider(widget.reportId))
-        : ref.watch(studentReportDetailProvider(widget.reportId));
+    final detail = _watchDetail();
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
@@ -61,13 +59,7 @@ class _StudentReportDetailViewState
     return RefreshIndicator(
       onRefresh: () async {
         _invalidateDetail();
-        if (widget.scope == StudentReportScope.guardianStudents) {
-          await ref.read(
-            guardianStudentReportDetailProvider(widget.reportId).future,
-          );
-        } else {
-          await ref.read(studentReportDetailProvider(widget.reportId).future);
-        }
+        await _readDetail();
       },
       child: ListView(
         key: const Key('student-report-detail-scroll'),
@@ -327,12 +319,51 @@ class _StudentReportDetailViewState
   }
 
   void _invalidateDetail() {
-    if (widget.scope == StudentReportScope.guardianStudents) {
-      ref.invalidate(guardianStudentReportDetailProvider(widget.reportId));
-    } else {
-      ref.invalidate(studentReportDetailProvider(widget.reportId));
+    switch (widget.scope) {
+      case StudentReportScope.all:
+        ref.invalidate(studentReportDetailProvider(widget.reportId));
+        break;
+      case StudentReportScope.myReports:
+        ref.invalidate(myStudentReportDetailProvider(widget.reportId));
+        break;
+      case StudentReportScope.homeroomClass:
+        ref.invalidate(homeroomStudentReportDetailProvider(widget.reportId));
+        break;
+      case StudentReportScope.guardianStudents:
+        ref.invalidate(guardianStudentReportDetailProvider(widget.reportId));
+        break;
     }
   }
+
+  AsyncValue<StudentReportDetail> _watchDetail() => switch (widget.scope) {
+    StudentReportScope.all => ref.watch(
+      studentReportDetailProvider(widget.reportId),
+    ),
+    StudentReportScope.myReports => ref.watch(
+      myStudentReportDetailProvider(widget.reportId),
+    ),
+    StudentReportScope.homeroomClass => ref.watch(
+      homeroomStudentReportDetailProvider(widget.reportId),
+    ),
+    StudentReportScope.guardianStudents => ref.watch(
+      guardianStudentReportDetailProvider(widget.reportId),
+    ),
+  };
+
+  Future<StudentReportDetail> _readDetail() => switch (widget.scope) {
+    StudentReportScope.all => ref.read(
+      studentReportDetailProvider(widget.reportId).future,
+    ),
+    StudentReportScope.myReports => ref.read(
+      myStudentReportDetailProvider(widget.reportId).future,
+    ),
+    StudentReportScope.homeroomClass => ref.read(
+      homeroomStudentReportDetailProvider(widget.reportId).future,
+    ),
+    StudentReportScope.guardianStudents => ref.read(
+      guardianStudentReportDetailProvider(widget.reportId).future,
+    ),
+  };
 }
 
 class _DetailHero extends StatelessWidget {

@@ -120,3 +120,19 @@ final guardianStudentReportRemoteDataSourceProvider =
         endpoint: 'laporan-siswa-wali',
       ),
     );
+
+final myStudentReportRemoteDataSourceProvider =
+    Provider<StudentReportRemoteDataSource>(
+      (ref) => DioStudentReportRemoteDataSource(
+        ref.watch(dioProvider),
+        endpoint: 'laporan-saya',
+      ),
+    );
+
+final homeroomStudentReportRemoteDataSourceProvider =
+    Provider<StudentReportRemoteDataSource>(
+      (ref) => DioStudentReportRemoteDataSource(
+        ref.watch(dioProvider),
+        endpoint: 'laporan-siswa-kelas',
+      ),
+    );

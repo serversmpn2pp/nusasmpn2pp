@@ -1837,6 +1837,9 @@
                     })
                     ->exists()
                 : false;
+            $dapatMelaksanakanSanksi = $penggunaAktif
+                ? app(\App\Services\Pembinaan\AksesSanksiPoinService::class)->dapatMembuka($penggunaAktif)
+                : false;
 
             $peranMenuLengkap = [
                 'pimpinan',
@@ -1917,7 +1920,7 @@
                         ['label' => 'Kegiatan Ibadah', 'route' => 'kegiatan-ibadah.index', 'active' => ['kegiatan-ibadah.*'], 'initial' => 'KI', 'izin' => 'ibadah.pengaturan_kelola', 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Jadwal Ibadah', 'route' => 'jadwal-kegiatan-ibadah.index', 'active' => ['jadwal-kegiatan-ibadah.*'], 'initial' => 'JI', 'izin' => 'ibadah.pengaturan_kelola', 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Pengaturan Berhalangan', 'route' => 'pengaturan-berhalangan-ibadah.index', 'active' => ['pengaturan-berhalangan-ibadah.*'], 'initial' => 'PB', 'izin' => 'ibadah.pengaturan_kelola', 'subgroup' => 'Ibadah Siswa'],
-                        ['label' => 'Scan Ibadah Siswa', 'route' => 'scan-kegiatan-ibadah.index', 'active' => ['scan-kegiatan-ibadah.*'], 'initial' => 'SI', 'izin' => 'ibadah.scan', 'blank' => true, 'subgroup' => 'Ibadah Siswa'],
+                        ['label' => 'Scan Ibadah Siswa', 'route' => 'scan-kegiatan-ibadah.index', 'active' => ['scan-kegiatan-ibadah.*'], 'initial' => 'SI', 'izin' => 'ibadah.scan', 'blank' => true, 'scan_ibadah_only' => true, 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Scan Berhalangan', 'route' => 'scan-berhalangan-ibadah.index', 'active' => ['scan-berhalangan-ibadah.*'], 'initial' => 'SB', 'izin' => null, 'blank' => true, 'scan_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Konfirmasi Privat', 'route' => 'konfirmasi-berhalangan-ibadah.index', 'active' => ['konfirmasi-berhalangan-ibadah.*'], 'initial' => 'KP', 'izin' => null, 'konfirmasi_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Rekap Berhalangan', 'route' => 'rekap-berhalangan-ibadah.index', 'active' => ['rekap-berhalangan-ibadah.*'], 'initial' => 'RB', 'izin' => null, 'konfirmasi_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
@@ -1938,9 +1941,9 @@
                     'title' => 'Kesiswaan & BK',
                     'items' => [
                         ['label' => 'Pemeriksaan & Pengesahan', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'VP', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.sahkan_wakil'], 'subgroup' => 'Operasional'],
-                        ['label' => 'Daftar Laporan Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'LS', 'izin' => ['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Daftar Laporan Siswa', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.index', 'laporan-pembinaan-siswa.show', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'LS', 'izin' => ['bk.lihat', 'bk.kelola', 'poin_siswa.lihat', 'poin_siswa.verifikasi_bk'], 'peran' => ['bk', 'pimpinan', 'wakil_pimpinan_kesiswaan'], 'administrator_allowed' => true, 'subgroup' => 'Operasional'],
                         ['label' => 'Pendampingan Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Operasional'],
-                        ['label' => 'Pelaksanaan Sanksi Siswa', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola'], 'subgroup' => 'Operasional'],
+                        ['label' => 'Pelaksanaan Sanksi Siswa', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => null, 'pelaksanaan_sanksi_only' => true, 'subgroup' => 'Operasional'],
                         ['label' => 'Peringatan Dini Siswa', 'route' => 'peringatan-dini-siswa.index', 'active' => ['peringatan-dini-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Monitoring'],
                         ['label' => 'Rekap Poin Siswa', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'subgroup' => 'Monitoring'],
                         ['label' => 'Penghargaan & Pengurangan Poin', 'route' => 'pengurangan-poin-siswa.index', 'active' => ['pengurangan-poin-siswa.*'], 'initial' => 'PH', 'izin' => ['poin_siswa.reward_kelola', 'poin_siswa.putus_konflik'], 'subgroup' => 'Operasional'],
@@ -2008,7 +2011,7 @@
                     'title' => 'Tugas Pembinaan',
                     'items' => [
                         ['label' => 'Pemeriksaan & Pengesahan', 'route' => 'pusat-verifikasi-pelanggaran.index', 'active' => ['pusat-verifikasi-pelanggaran.*'], 'initial' => 'VP', 'izin' => ['poin_siswa.lihat', 'poin_siswa.verifikasi_bk', 'poin_siswa.sahkan_wakil'], 'peran' => ['bk', 'pimpinan', 'wakil_pimpinan_kesiswaan']],
-                        ['label' => 'Pelaksanaan Sanksi Siswa', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.sanksi_kelola']],
+                        ['label' => 'Pelaksanaan Sanksi Siswa', 'route' => 'sanksi-poin-siswa.index', 'active' => ['sanksi-poin-siswa.*', 'bukti-pelaksanaan-sanksi.*'], 'initial' => 'PS', 'izin' => null, 'pelaksanaan_sanksi_only' => true],
                         ['label' => 'Peringatan Dini Siswa', 'route' => 'peringatan-dini-siswa.index', 'active' => ['peringatan-dini-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
                         ['label' => 'Pendampingan Siswa', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat'],
                         ['label' => 'Batas Proses Pelanggaran', 'route' => 'pengaturan-batas-proses-pelanggaran.index', 'active' => ['pengaturan-batas-proses-pelanggaran.*'], 'initial' => 'BP', 'izin' => 'poin_siswa.pengaturan'],
@@ -2064,7 +2067,7 @@
                         ['label' => 'Akun Orang Tua Kelas', 'route' => 'akun-orang-tua.index', 'active' => ['akun-orang-tua.*'], 'initial' => 'AO', 'izin' => ['akun_orang_tua.lihat', 'akun_orang_tua.cetak'], 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Presensi Siswa', 'route' => 'rekap-absensi-harian.index', 'active' => ['rekap-absensi-harian.*'], 'initial' => 'RA', 'izin' => ['absensi.lihat', 'absensi.koreksi'], 'peran' => 'wali_kelas'],
                         ['label' => 'Laporan Presensi Siswa', 'route' => 'laporan-absensi.index', 'active' => ['laporan-absensi.*'], 'initial' => 'LA', 'izin' => 'absensi.laporan', 'peran' => 'wali_kelas'],
-                        ['label' => 'Laporan Siswa Kelas', 'route' => 'laporan-pembinaan-siswa.index', 'active' => ['laporan-pembinaan-siswa.*', 'tindak-lanjut-pembinaan-siswa.*'], 'initial' => 'LS', 'izin' => ['poin_siswa.lihat', 'poin_siswa.lapor'], 'peran' => 'wali_kelas'],
+                        ['label' => 'Laporan Siswa Kelas Saya', 'route' => 'laporan-siswa-kelas.index', 'active' => ['laporan-siswa-kelas.*'], 'initial' => 'LS', 'izin' => 'poin_siswa.lihat', 'peran' => 'wali_kelas'],
                         ['label' => 'Pendampingan Siswa Kelas', 'route' => 'pendampingan-siswa.index', 'active' => ['pendampingan-siswa.*'], 'initial' => 'PD', 'izin' => 'poin_siswa.lihat', 'peran' => 'wali_kelas'],
                         ['label' => 'Rekap Poin Kelas', 'route' => 'rekap-poin-siswa.index', 'active' => ['rekap-poin-siswa.*'], 'initial' => 'RP', 'izin' => 'poin_siswa.lihat', 'peran' => 'wali_kelas'],
                     ],
@@ -2175,9 +2178,9 @@
             }
 
             $sidebarSections = collect($semuaSidebarSections)
-                ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah, $dapatMengawasiUjian) {
+                ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah, $dapatMengawasiUjian, $dapatMelaksanakanSanksi) {
                     $section['items'] = collect($section['items'])
-                        ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah, $dapatMengawasiUjian) {
+                        ->filter(function (array $item) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah, $dapatMengawasiUjian, $dapatMelaksanakanSanksi) {
                             if (($item['pegawai_only'] ?? false) && ! $penggunaAktif?->pegawai_id) {
                                 return false;
                             }
@@ -2186,7 +2189,9 @@
                                 return false;
                             }
 
-                            if (isset($item['peran']) && ! $penggunaAktif?->memilikiPeran($item['peran'])) {
+                            if (isset($item['peran'])
+                                && ! $penggunaAktif?->memilikiPeran($item['peran'])
+                                && ! (($item['administrator_allowed'] ?? false) && $penggunaAktif?->administrator())) {
                                 return false;
                             }
 
@@ -2211,6 +2216,10 @@
                             }
 
                             if (($item['pengawas_ujian_only'] ?? false) && ! $dapatMengawasiUjian) {
+                                return false;
+                            }
+
+                            if (($item['pelaksanaan_sanksi_only'] ?? false) && ! $dapatMelaksanakanSanksi) {
                                 return false;
                             }
 

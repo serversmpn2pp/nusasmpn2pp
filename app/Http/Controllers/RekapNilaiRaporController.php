@@ -12,6 +12,7 @@ class RekapNilaiRaporController extends Controller
         return view('rekap-nilai-rapor.index', $service->hitung(
             $request->input('guru_mata_pelajaran_id'),
             $request->input('semester', 'ganjil'),
+            $request->user(),
         ));
     }
 }

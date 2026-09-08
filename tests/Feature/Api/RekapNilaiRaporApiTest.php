@@ -10,6 +10,7 @@ use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
+use App\Models\Peran;
 use App\Models\Siswa;
 use App\Models\SkemaBobotNilai;
 use App\Models\TahunPelajaran;
@@ -84,6 +85,7 @@ class RekapNilaiRaporApiTest extends TestCase
                 'semester' => 'ganjil',
             ]))
             ->assertOk()
+            ->assertJsonCount(2, 'data.guru_mata_pelajaran')
             ->assertJsonPath('data.filter.guru_mata_pelajaran_id', $data['penugasan']->id)
             ->assertJsonPath('data.guru_mata_pelajaran_dipilih.kelas.nama', 'VIII.REKAP')
             ->assertJsonPath('data.label_nilai_akhir', 'SAS')
@@ -118,6 +120,101 @@ class RekapNilaiRaporApiTest extends TestCase
             ->assertJsonCount(2, 'data.peringatan');
     }
 
+    public function test_guru_mapel_hanya_melihat_rekap_mata_pelajaran_yang_diampunya(): void
+    {
+        $data = $this->dataAkademik();
+        $akunGuru = Pengguna::create([
+            'pegawai_id' => $data['guru']->id,
+            'nama' => $data['guru']->nama_lengkap,
+            'username' => 'guru.informatika.rekap',
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $akunGuru->daftarPeran()->attach(
+            Peran::whereIn('kode', ['pegawai', 'guru_mapel'])->pluck('id'),
+        );
+        $token = $this->token($akunGuru);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.rekap-nilai-rapor.index'))
+            ->assertOk()
+            ->assertJsonCount(1, 'data.guru_mata_pelajaran')
+            ->assertJsonPath(
+                'data.guru_mata_pelajaran.0.mata_pelajaran.nama',
+                'Informatika Rekap',
+            )
+            ->assertJsonPath('data.guru_mata_pelajaran.0.pegawai.id', $data['guru']->id)
+            ->assertJsonPath('data.filter.guru_mata_pelajaran_id', $data['penugasan']->id);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.rekap-nilai-rapor.index', [
+                'guru_mata_pelajaran_id' => $data['penugasan_lain']->id,
+            ]))
+            ->assertNotFound();
+
+        $this->actingAs($akunGuru)
+            ->get(route('rekap-nilai-rapor.index'))
+            ->assertOk()
+            ->assertSee('Informatika Rekap')
+            ->assertDontSee('Matematika Rekap Lain');
+
+        $this->actingAs($akunGuru)
+            ->get(route('rekap-nilai-rapor.index', [
+                'guru_mata_pelajaran_id' => $data['penugasan_lain']->id,
+            ]))
+            ->assertNotFound();
+    }
+
+    public function test_wali_kelas_melihat_seluruh_mapel_di_kelas_walinya_saja(): void
+    {
+        $data = $this->dataAkademik();
+        $data['kelas']->update(['wali_kelas_id' => $data['guru_lain']->id]);
+        $kelasLain = Kelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'nama' => 'VIII.REKAP.LAIN',
+            'tingkat' => 8,
+            'aktif' => true,
+        ]);
+        $penugasanDiLuarKelasWali = GuruMataPelajaran::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $kelasLain->id,
+            'mata_pelajaran_id' => $data['penugasan']->mata_pelajaran_id,
+            'pegawai_id' => $data['guru']->id,
+            'jenis_penugasan' => 'pengampu',
+            'aktif' => true,
+        ]);
+        $akunWali = Pengguna::create([
+            'pegawai_id' => $data['guru_lain']->id,
+            'nama' => $data['guru_lain']->nama_lengkap,
+            'username' => 'wali.kelas.rekap',
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $akunWali->daftarPeran()->attach(
+            Peran::whereIn('kode', ['pegawai', 'wali_kelas'])->pluck('id'),
+        );
+        $token = $this->token($akunWali);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.rekap-nilai-rapor.index'))
+            ->assertOk()
+            ->assertJsonCount(2, 'data.guru_mata_pelajaran')
+            ->assertJsonPath('data.guru_mata_pelajaran.0.kelas.id', $data['kelas']->id)
+            ->assertJsonPath('data.guru_mata_pelajaran.1.kelas.id', $data['kelas']->id);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.rekap-nilai-rapor.index', [
+                'guru_mata_pelajaran_id' => $penugasanDiLuarKelasWali->id,
+            ]))
+            ->assertNotFound();
+    }
+
     private function dataAkademik(): array
     {
         $tahun = TahunPelajaran::create(['nama' => '2026/2027 Rekap', 'aktif' => true]);
@@ -134,8 +231,8 @@ class RekapNilaiRaporApiTest extends TestCase
             'aktif' => true,
         ]);
         $mataPelajaran = MataPelajaran::create([
-            'kode' => 'MTK-REKAP',
-            'nama' => 'Matematika Rekap',
+            'kode' => 'INF-REKAP',
+            'nama' => 'Informatika Rekap',
             'kelompok' => 'Wajib',
             'aktif' => true,
         ]);
@@ -144,6 +241,26 @@ class RekapNilaiRaporApiTest extends TestCase
             'kelas_id' => $kelas->id,
             'mata_pelajaran_id' => $mataPelajaran->id,
             'pegawai_id' => $guru->id,
+            'jenis_penugasan' => 'pengampu',
+            'aktif' => true,
+        ]);
+        $guruLain = Pegawai::create([
+            'nama_lengkap' => 'Guru Matematika Rekap Lain',
+            'nip' => '198101012026081082',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $mataPelajaranLain = MataPelajaran::create([
+            'kode' => 'MTK-REKAP-LAIN',
+            'nama' => 'Matematika Rekap Lain',
+            'kelompok' => 'Wajib',
+            'aktif' => true,
+        ]);
+        $penugasanLain = GuruMataPelajaran::create([
+            'tahun_pelajaran_id' => $tahun->id,
+            'kelas_id' => $kelas->id,
+            'mata_pelajaran_id' => $mataPelajaranLain->id,
+            'pegawai_id' => $guruLain->id,
             'jenis_penugasan' => 'pengampu',
             'aktif' => true,
         ]);
@@ -163,6 +280,8 @@ class RekapNilaiRaporApiTest extends TestCase
         return compact('tahun', 'kelas', 'guru', 'penugasan') + [
             'siswa_1' => $siswa1,
             'siswa_2' => $siswa2,
+            'guru_lain' => $guruLain,
+            'penugasan_lain' => $penugasanLain,
         ];
     }
 

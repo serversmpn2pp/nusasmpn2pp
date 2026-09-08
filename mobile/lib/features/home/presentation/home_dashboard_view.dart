@@ -21,6 +21,7 @@ class HomeDashboardView extends StatelessWidget {
     required this.onOpenNotifications,
     required this.onOpenMenuGroup,
     required this.onOpenMenuEntry,
+    required this.onConfigureQuickAccess,
     required this.onUnavailable,
     super.key,
   });
@@ -34,6 +35,7 @@ class HomeDashboardView extends StatelessWidget {
   final VoidCallback onOpenNotifications;
   final ValueChanged<MenuGroup> onOpenMenuGroup;
   final ValueChanged<MenuEntry> onOpenMenuEntry;
+  final ValueChanged<MenuCatalog> onConfigureQuickAccess;
   final ValueChanged<String> onUnavailable;
 
   @override
@@ -75,7 +77,20 @@ class HomeDashboardView extends StatelessWidget {
                       : onOpenActivity,
                 ),
                 const SizedBox(height: 18),
-                const NusaSectionTitle(title: 'Akses Cepat'),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: NusaSectionTitle(title: 'Akses Cepat'),
+                    ),
+                    if (catalog?.quickAccess.canCustomize == true)
+                      TextButton.icon(
+                        key: const Key('quick-access-configure'),
+                        onPressed: () => onConfigureQuickAccess(catalog!),
+                        icon: const Icon(Icons.tune_rounded, size: 17),
+                        label: const Text('Atur'),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 10),
                 if (menu.isLoading)
                   const _MenuLoadingPlaceholder()
@@ -162,6 +177,24 @@ class HomeDashboardView extends StatelessWidget {
   List<NusaMenuAction> _quickActions(MenuCatalog? catalog) {
     if (catalog == null) {
       return const [];
+    }
+
+    final configuredEntries = catalog.quickAccessEntries;
+    if (configuredEntries.isNotEmpty) {
+      return configuredEntries
+          .map((item) {
+            final group = catalog.groupForEntry(item.code);
+            return NusaMenuAction(
+              label: item.label,
+              icon: nusaMenuEntryIcon(item),
+              color: group == null
+                  ? NusaColors.primary
+                  : nusaMenuGroupColor(group.code),
+              onTap: () => onOpenMenuEntry(item),
+            );
+          })
+          .take(catalog.quickAccess.maximum)
+          .toList(growable: false);
     }
 
     final actions = <NusaMenuAction>[];

@@ -121,6 +121,18 @@ class GuardianStudentReportController extends BaseStudentReportController {
       ref.read(guardianStudentReportRepositoryProvider);
 }
 
+class MyStudentReportController extends BaseStudentReportController {
+  @override
+  StudentReportRepository readRepository() =>
+      ref.read(myStudentReportRepositoryProvider);
+}
+
+class HomeroomStudentReportController extends BaseStudentReportController {
+  @override
+  StudentReportRepository readRepository() =>
+      ref.read(homeroomStudentReportRepositoryProvider);
+}
+
 final studentReportControllerProvider =
     AsyncNotifierProvider.autoDispose<
       StudentReportController,
@@ -132,6 +144,18 @@ final guardianStudentReportControllerProvider =
       GuardianStudentReportController,
       StudentReportPage
     >(GuardianStudentReportController.new);
+
+final myStudentReportControllerProvider =
+    AsyncNotifierProvider.autoDispose<
+      MyStudentReportController,
+      StudentReportPage
+    >(MyStudentReportController.new);
+
+final homeroomStudentReportControllerProvider =
+    AsyncNotifierProvider.autoDispose<
+      HomeroomStudentReportController,
+      StudentReportPage
+    >(HomeroomStudentReportController.new);
 
 final studentReportDetailProvider = FutureProvider.autoDispose
     .family<StudentReportDetail, int>((ref, id) async {
@@ -155,6 +179,30 @@ final guardianStudentReportDetailProvider = FutureProvider.autoDispose
       }
     });
 
+final myStudentReportDetailProvider = FutureProvider.autoDispose
+    .family<StudentReportDetail, int>((ref, id) async {
+      try {
+        return await ref
+            .read(myStudentReportRepositoryProvider)
+            .fetchDetail(id);
+      } on UnauthorizedException {
+        await ref.read(authControllerProvider.notifier).logout();
+        rethrow;
+      }
+    });
+
+final homeroomStudentReportDetailProvider = FutureProvider.autoDispose
+    .family<StudentReportDetail, int>((ref, id) async {
+      try {
+        return await ref
+            .read(homeroomStudentReportRepositoryProvider)
+            .fetchDetail(id);
+      } on UnauthorizedException {
+        await ref.read(authControllerProvider.notifier).logout();
+        rethrow;
+      }
+    });
+
 final studentReportActionsProvider = Provider<StudentReportActions>(
   StudentReportActions.new,
 );
@@ -170,11 +218,14 @@ class StudentReportActions {
   }) async {
     try {
       return await _ref
-          .read(
-            scope == StudentReportScope.guardianStudents
-                ? guardianStudentReportRepositoryProvider
-                : studentReportRepositoryProvider,
-          )
+          .read(switch (scope) {
+            StudentReportScope.all => studentReportRepositoryProvider,
+            StudentReportScope.myReports => myStudentReportRepositoryProvider,
+            StudentReportScope.homeroomClass =>
+              homeroomStudentReportRepositoryProvider,
+            StudentReportScope.guardianStudents =>
+              guardianStudentReportRepositoryProvider,
+          })
           .downloadEvidence(
             id: evidence.id,
             fileName: evidence.fileName,

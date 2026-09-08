@@ -3,6 +3,7 @@ class MenuCatalog {
     required this.generatedAt,
     required this.itemCount,
     required this.groups,
+    this.quickAccess = const QuickAccessConfig(),
   });
 
   factory MenuCatalog.fromJson(Map<String, dynamic> json) {
@@ -17,12 +18,18 @@ class MenuCatalog {
           json['jumlah_menu'] as int? ??
           groups.fold(0, (total, group) => total + group.items.length),
       groups: groups,
+      quickAccess: QuickAccessConfig.fromJson(
+        json['akses_cepat'] is Map
+            ? Map<String, dynamic>.from(json['akses_cepat'] as Map)
+            : const {},
+      ),
     );
   }
 
   final DateTime generatedAt;
   final int itemCount;
   final List<MenuGroup> groups;
+  final QuickAccessConfig quickAccess;
 
   MenuGroup? groupByCode(String code) {
     for (final group in groups) {
@@ -45,7 +52,60 @@ class MenuCatalog {
 
     return null;
   }
+
+  MenuGroup? groupForEntry(String code) {
+    for (final group in groups) {
+      if (group.items.any((item) => item.code == code)) return group;
+    }
+
+    return null;
+  }
+
+  List<MenuEntry> get availableEntries => groups
+      .expand((group) => group.items)
+      .where((item) => item.isAvailable)
+      .toList(growable: false);
+
+  List<MenuEntry> get quickAccessEntries => quickAccess.menuCodes
+      .map(entryByCode)
+      .whereType<MenuEntry>()
+      .where((item) => item.isAvailable)
+      .toList(growable: false);
 }
+
+class QuickAccessConfig {
+  const QuickAccessConfig({
+    this.canCustomize = false,
+    this.customized = false,
+    this.maximum = 4,
+    this.source = 'bawaan',
+    this.menuCodes = const [],
+  });
+
+  factory QuickAccessConfig.fromJson(Map<String, dynamic> json) =>
+      QuickAccessConfig(
+        canCustomize: json['dapat_diatur'] as bool? ?? false,
+        customized: json['dikustomisasi'] as bool? ?? false,
+        maximum: _integer(json['maksimal'], fallback: 4),
+        source: json['sumber'] as String? ?? 'bawaan',
+        menuCodes: (json['kode_menu'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(growable: false),
+      );
+
+  final bool canCustomize;
+  final bool customized;
+  final int maximum;
+  final String source;
+  final List<String> menuCodes;
+}
+
+int _integer(Object? value, {required int fallback}) => switch (value) {
+  int number => number,
+  num number => number.toInt(),
+  String text => int.tryParse(text) ?? fallback,
+  _ => fallback,
+};
 
 class MenuGroup {
   const MenuGroup({

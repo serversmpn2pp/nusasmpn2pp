@@ -87,7 +87,7 @@ class DaftarLaporanSiswaApiTest extends TestCase
         $this->assertSame('PB-20260830-0002', $laporanAdmin->nomor_laporan);
     }
 
-    public function test_pelapor_hanya_melihat_laporan_dalam_cakupannya(): void
+    public function test_pelapor_memakai_laporan_saya_dan_tidak_dapat_membuka_daftar_umum(): void
     {
         $data = $this->dataDasar();
         $laporanSaya = $this->buatLaporan($data, $data['akun'], 'PB-20260830-0011', 'diajukan');
@@ -96,16 +96,28 @@ class DaftarLaporanSiswaApiTest extends TestCase
         $token = $this->token($data['akun']);
 
         $this->withToken($token)
-            ->getJson(route('api.v1.laporan-siswa.index'))
+            ->getJson(route('api.v1.laporan-saya.index'))
             ->assertOk()
             ->assertJsonPath('data.ringkasan.total', 1)
             ->assertJsonPath('data.paginasi.total', 1)
             ->assertJsonPath('data.items.0.id', $laporanSaya->id)
-            ->assertJsonPath('data.hak_akses.cakupan_luas', false);
+            ->assertJsonPath('data.hak_akses.cakupan_luas', false)
+            ->assertJsonPath('data.hak_akses.cakupan', 'saya')
+            ->assertJsonPath('data.hak_akses.konteks_laporan_saya', true);
 
         $this->withToken($token)
-            ->getJson(route('api.v1.laporan-siswa.show', $laporanLain))
+            ->getJson(route('api.v1.laporan-saya.show', $laporanLain))
             ->assertForbidden();
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.laporan-siswa.index'))
+            ->assertForbidden();
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonFragment(['kode' => 'laporan-saya', 'rute' => '/laporan-saya'])
+            ->assertJsonMissing(['kode' => 'daftar-laporan-siswa']);
     }
 
     public function test_endpoint_memerlukan_token_dan_izin_laporan(): void
@@ -131,6 +143,64 @@ class DaftarLaporanSiswaApiTest extends TestCase
         $this->withToken($this->token($akun))
             ->getJson(route('api.v1.laporan-siswa.index'))
             ->assertForbidden();
+    }
+
+    public function test_wali_kelas_hanya_melihat_laporan_siswa_di_kelas_walinya(): void
+    {
+        $data = $this->dataDasar();
+        $data['akun']->daftarPeran()->attach(Peran::where('kode', 'wali_kelas')->firstOrFail());
+        $data['kelas']->update(['wali_kelas_id' => $data['pegawai']->id]);
+        $laporanKelas = $this->buatLaporan($data, $data['akun'], 'PB-KELAS-0001', 'diajukan');
+
+        $kelasLain = Kelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'nama' => 'VII.B',
+            'tingkat' => 7,
+            'aktif' => true,
+        ]);
+        $siswaLain = Siswa::create([
+            'nama_lengkap' => 'Siswa Kelas Lain',
+            'nis' => 'LAP-002',
+            'nisn' => '0088550002',
+            'aktif' => true,
+        ]);
+        AnggotaKelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $kelasLain->id,
+            'siswa_id' => $siswaLain->id,
+            'status_keanggotaan' => 'aktif',
+        ]);
+        $dataLain = $data + [];
+        $dataLain['kelas'] = $kelasLain;
+        $dataLain['siswa'] = $siswaLain;
+        $laporanLain = $this->buatLaporan(
+            $dataLain,
+            Pengguna::where('username', 'administrator')->firstOrFail(),
+            'PB-KELAS-0002',
+            'diajukan',
+        );
+        $token = $this->token($data['akun']);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.laporan-siswa-kelas.index'))
+            ->assertOk()
+            ->assertJsonPath('data.paginasi.total', 1)
+            ->assertJsonPath('data.items.0.id', $laporanKelas->id)
+            ->assertJsonPath('data.hak_akses.cakupan', 'kelas')
+            ->assertJsonPath('data.hak_akses.konteks_wali_kelas', true);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.laporan-siswa-kelas.show', $laporanLain))
+            ->assertForbidden();
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'kode' => 'laporan-siswa-kelas',
+                'rute' => '/laporan-siswa-kelas',
+            ])
+            ->assertJsonMissing(['kode' => 'daftar-laporan-siswa']);
     }
 
     private function dataDasar(): array

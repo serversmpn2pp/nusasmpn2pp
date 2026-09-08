@@ -18,7 +18,7 @@ class RekapNilaiRaporController extends Controller
         ]);
 
         return response()->json([
-            'data' => $service->tampilkan($filter),
+            'data' => $service->tampilkan($request->user(), $filter),
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 }

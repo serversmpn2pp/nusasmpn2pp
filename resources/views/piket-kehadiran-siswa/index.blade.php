@@ -46,7 +46,7 @@
                     $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
                     $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
                     $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
-                    $bolehDicatat = ! $absensi || (in_array($statusHariIni, ['sakit','izin'], true) && $absensi->sumber === 'guru_piket');
+                    $bolehDicatat = ! $absensi || ($absensi->sumber === 'guru_piket' && ! $absensi->jam_masuk);
                 @endphp
                 <tr>
                     <td>{{ $anggotaKelas->firstItem() + $loop->index }}</td>
@@ -56,7 +56,7 @@
                     <td>{{ $absensi?->catatan ?: '-' }}</td>
                     <td>
                         @if ($bolehDicatat)
-                            <details class="attendance-form"><summary>{{ $absensi ? 'Ubah catatan' : 'Catat sakit/izin' }}</summary><form action="{{ route('piket-kehadiran-siswa.update', $anggota) }}" method="POST" class="attendance-form-fields">@csrf @method('PUT')<select name="status_kehadiran" class="select" required><option value="sakit" @selected($statusHariIni === 'sakit')>Sakit</option><option value="izin" @selected($statusHariIni === 'izin')>Izin</option></select><textarea name="catatan" class="textarea" required placeholder="Alasan atau sumber keterangan">{{ $absensi?->catatan }}</textarea><button class="button button-primary button-sm" type="submit">Simpan</button></form></details>
+                            <details class="attendance-form"><summary>{{ $absensi ? 'Ubah catatan' : 'Catat hadir/sakit/izin' }}</summary><form action="{{ route('piket-kehadiran-siswa.update', $anggota) }}" method="POST" class="attendance-form-fields">@csrf @method('PUT')<select name="status_kehadiran" class="select" required><option value="hadir" @selected($statusHariIni === 'hadir' || $statusHariIni === 'belum_scan')>Hadir</option><option value="sakit" @selected($statusHariIni === 'sakit')>Sakit</option><option value="izin" @selected($statusHariIni === 'izin')>Izin</option></select><textarea name="catatan" class="textarea" required placeholder="Contoh: lupa membawa kartu dan dikonfirmasi hadir">{{ $absensi?->catatan }}</textarea><button class="button button-primary button-sm" type="submit">Simpan</button></form></details>
                         @else
                             <span class="person-meta">Tidak dapat diubah dari piket</span>
                         @endif
@@ -75,9 +75,9 @@
                 $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
                 $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
                 $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
-                $bolehDicatat = ! $absensi || (in_array($statusHariIni, ['sakit','izin'], true) && $absensi->sumber === 'guru_piket');
+                $bolehDicatat = ! $absensi || ($absensi->sumber === 'guru_piket' && ! $absensi->jam_masuk);
             @endphp
-            <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $anggota->kelas?->nama }} &middot; NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></div>@if($absensi?->catatan)<p class="help-text" style="margin-top:10px;">{{ $absensi->catatan }}</p>@endif @if($bolehDicatat)<details class="attendance-form" style="margin-top:12px;"><summary>{{ $absensi ? 'Ubah catatan' : 'Catat sakit/izin' }}</summary><form action="{{ route('piket-kehadiran-siswa.update', $anggota) }}" method="POST" class="attendance-form-fields">@csrf @method('PUT')<select name="status_kehadiran" class="select" required><option value="sakit" @selected($statusHariIni === 'sakit')>Sakit</option><option value="izin" @selected($statusHariIni === 'izin')>Izin</option></select><textarea name="catatan" class="textarea" required placeholder="Alasan atau sumber keterangan">{{ $absensi?->catatan }}</textarea><button class="button button-primary" type="submit">Simpan</button></form></details>@endif</article>
+            <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $anggota->kelas?->nama }} &middot; NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></div>@if($absensi?->catatan)<p class="help-text" style="margin-top:10px;">{{ $absensi->catatan }}</p>@endif @if($bolehDicatat)<details class="attendance-form" style="margin-top:12px;"><summary>{{ $absensi ? 'Ubah catatan' : 'Catat hadir/sakit/izin' }}</summary><form action="{{ route('piket-kehadiran-siswa.update', $anggota) }}" method="POST" class="attendance-form-fields">@csrf @method('PUT')<select name="status_kehadiran" class="select" required><option value="hadir" @selected($statusHariIni === 'hadir' || $statusHariIni === 'belum_scan')>Hadir</option><option value="sakit" @selected($statusHariIni === 'sakit')>Sakit</option><option value="izin" @selected($statusHariIni === 'izin')>Izin</option></select><textarea name="catatan" class="textarea" required placeholder="Contoh: lupa membawa kartu dan dikonfirmasi hadir">{{ $absensi?->catatan }}</textarea><button class="button button-primary" type="submit">Simpan</button></form></details>@endif</article>
         @empty
             <div class="panel empty-state">Tidak ada siswa sesuai filter.</div>
         @endforelse

@@ -72,8 +72,9 @@ class NotifikasiApiTest extends TestCase
             ['/nilai-saya?tahun_pelajaran_id=1', null, '/nilai-saya'],
             ['/hasil-survei-saya#rincian-survei', null, '/monitoring-survei'],
             ['/sanksi-poin-siswa/18', null, '/pelaksanaan-sanksi-siswa/18'],
-            ['/laporan-pembinaan-siswa/19', 'laporan-pembinaan-wali-kelas:19', '/laporan-siswa-wali/19'],
+            ['/laporan-pembinaan-siswa/19', 'laporan-pembinaan-wali-kelas:19', '/laporan-siswa-kelas/19'],
             ['/laporan-pembinaan-siswa/20', 'batas-proses:20:bk:202609070800:peringatan', '/pemeriksaan-pengesahan/20'],
+            ['/laporan-pembinaan-siswa/21', 'keputusan-bk:21:pembinaan', '/laporan-saya/21'],
             ['/fitur-web-yang-belum-native/99', null, null],
             ['https://contoh.test/fitur-web-yang-belum-native/99', null, null],
         ];

@@ -20,7 +20,7 @@
 
     <div class="page-header">
         <div><p class="eyebrow">Kehadiran Siswa</p><h1 class="page-title">Jadwal Kegiatan Ibadah</h1><p class="page-subtitle">Atur waktu pemindaian dan pelaksanaan kegiatan untuk setiap hari.</p></div>
-        <div class="actions"><a href="{{ route('kegiatan-ibadah.index') }}" class="button button-muted">Daftar kegiatan</a><a href="{{ route('rekap-kegiatan-ibadah.index') }}" class="button button-muted">Rekap harian</a><a href="{{ route('scan-kegiatan-ibadah.index') }}" target="_blank" rel="noopener" class="button button-dark">Buka scanner</a>@if($kegiatanIbadahId)<a href="{{ route('jadwal-kegiatan-ibadah.create',['tahun_pelajaran_id'=>$tahunPelajaranId,'kegiatan_ibadah_id'=>$kegiatanIbadahId]) }}" class="button button-primary">Atur jadwal</a>@endif</div>
+        <div class="actions"><a href="{{ route('kegiatan-ibadah.index') }}" class="button button-muted">Daftar kegiatan</a><a href="{{ route('rekap-kegiatan-ibadah.index') }}" class="button button-muted">Rekap harian</a>@if($dapatScanIbadah)<a href="{{ route('scan-kegiatan-ibadah.index') }}" target="_blank" rel="noopener" class="button button-dark">Buka scanner</a>@endif @if($kegiatanIbadahId)<a href="{{ route('jadwal-kegiatan-ibadah.create',['tahun_pelajaran_id'=>$tahunPelajaranId,'kegiatan_ibadah_id'=>$kegiatanIbadahId]) }}" class="button button-primary">Atur jadwal</a>@endif</div>
     </div>
 
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif

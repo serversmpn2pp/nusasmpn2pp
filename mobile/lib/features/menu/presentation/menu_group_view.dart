@@ -167,7 +167,7 @@ class _MenuGroupHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '${group.items.length} sub-menu · $availableCount siap dibuka',
+                  '${group.items.length} sub-menu · $availableCount tersedia',
                   style: const TextStyle(
                     color: NusaColors.accent,
                     fontSize: 11,
@@ -198,16 +198,19 @@ class _SubmenuGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth < 310 ? 2 : 3;
+        final columns = constraints.maxWidth < 280 ? 2 : 3;
+        const spacing = 10.0;
+        final cardWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
 
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: columns == 2 ? 0.98 : 0.72,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            childAspectRatio: cardWidth / 116,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {

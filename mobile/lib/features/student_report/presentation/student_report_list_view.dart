@@ -34,11 +34,7 @@ class _StudentReportListViewState extends ConsumerState<StudentReportListView> {
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: Text(
-          widget.scope == StudentReportScope.guardianStudents
-              ? 'Laporan Siswa Wali'
-              : 'Daftar Laporan Siswa',
-        ),
+        title: Text(_pageTitle),
         actions: [
           IconButton(
             tooltip: 'Perbarui',
@@ -200,21 +196,50 @@ class _StudentReportListViewState extends ConsumerState<StudentReportListView> {
   }
 
   void _openReport(StudentReportItem report) {
-    final basePath = widget.scope == StudentReportScope.guardianStudents
-        ? '/laporan-siswa-wali'
-        : '/daftar-laporan-siswa';
-    context.push('$basePath/${report.id}');
+    context.push('$_basePath/${report.id}');
   }
 
-  AsyncValue<StudentReportPage> _watchReports() =>
-      widget.scope == StudentReportScope.guardianStudents
-      ? ref.watch(guardianStudentReportControllerProvider)
-      : ref.watch(studentReportControllerProvider);
+  String get _pageTitle => switch (widget.scope) {
+    StudentReportScope.all => 'Daftar Laporan Siswa',
+    StudentReportScope.myReports => 'Laporan Saya',
+    StudentReportScope.homeroomClass => 'Laporan Siswa Kelas Saya',
+    StudentReportScope.guardianStudents => 'Laporan Siswa Wali',
+  };
 
-  BaseStudentReportController _controller() =>
-      widget.scope == StudentReportScope.guardianStudents
-      ? ref.read(guardianStudentReportControllerProvider.notifier)
-      : ref.read(studentReportControllerProvider.notifier);
+  String get _basePath => switch (widget.scope) {
+    StudentReportScope.all => '/daftar-laporan-siswa',
+    StudentReportScope.myReports => '/laporan-saya',
+    StudentReportScope.homeroomClass => '/laporan-siswa-kelas',
+    StudentReportScope.guardianStudents => '/laporan-siswa-wali',
+  };
+
+  AsyncValue<StudentReportPage> _watchReports() => switch (widget.scope) {
+    StudentReportScope.all => ref.watch(studentReportControllerProvider),
+    StudentReportScope.myReports => ref.watch(
+      myStudentReportControllerProvider,
+    ),
+    StudentReportScope.homeroomClass => ref.watch(
+      homeroomStudentReportControllerProvider,
+    ),
+    StudentReportScope.guardianStudents => ref.watch(
+      guardianStudentReportControllerProvider,
+    ),
+  };
+
+  BaseStudentReportController _controller() => switch (widget.scope) {
+    StudentReportScope.all => ref.read(
+      studentReportControllerProvider.notifier,
+    ),
+    StudentReportScope.myReports => ref.read(
+      myStudentReportControllerProvider.notifier,
+    ),
+    StudentReportScope.homeroomClass => ref.read(
+      homeroomStudentReportControllerProvider.notifier,
+    ),
+    StudentReportScope.guardianStudents => ref.read(
+      guardianStudentReportControllerProvider.notifier,
+    ),
+  };
 }
 
 class _ReportSummary extends StatelessWidget {

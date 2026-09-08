@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-enum StudentReportScope { all, guardianStudents }
+enum StudentReportScope { all, myReports, homeroomClass, guardianStudents }
 
 class StudentReportPage {
   const StudentReportPage({

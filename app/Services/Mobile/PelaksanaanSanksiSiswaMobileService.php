@@ -24,6 +24,7 @@ class PelaksanaanSanksiSiswaMobileService
 
     public function daftar(Pengguna $pengguna, array $filter): array
     {
+        $this->akses->pastikanDapatMembuka($pengguna);
         $tahunId = isset($filter['tahun_pelajaran_id'])
             ? (int) $filter['tahun_pelajaran_id']
             : TahunPelajaran::where('aktif', true)->latest('tanggal_mulai')->value('id');
@@ -164,7 +165,7 @@ class PelaksanaanSanksiSiswaMobileService
             'pilihan_status' => collect($this->statusDiizinkan($sanksi->status))
                 ->map(fn (string $kode) => ['kode' => $kode, 'label' => SanksiPoinSiswa::DAFTAR_STATUS[$kode]])
                 ->values(),
-            'pegawai' => $this->akses->bolehKelola($pengguna, $sanksi) ? $this->daftarPetugas() : [],
+            'pegawai' => $this->akses->bolehKelola($pengguna, $sanksi) ? $this->daftarPetugas($pengguna) : [],
             'hak_akses' => [
                 'dapat_kelola' => $this->akses->bolehKelola($pengguna, $sanksi),
                 'dapat_unduh_bukti' => true,
@@ -299,8 +300,16 @@ class PelaksanaanSanksiSiswaMobileService
             ])->values()->all();
     }
 
-    private function daftarPetugas(): array
+    private function daftarPetugas(Pengguna $pengguna): array
     {
+        if (! $pengguna->administrator() && ! $pengguna->memilikiIzin('poin_siswa.sanksi_kelola')) {
+            return Pegawai::query()
+                ->whereKey($pengguna->pegawai_id)
+                ->where('aktif', true)
+                ->get(['id', 'nama_lengkap', 'nip'])
+                ->map(fn (Pegawai $pegawai) => $this->pegawai($pegawai))->values()->all();
+        }
+
         return Pegawai::query()
             ->where('aktif', true)
             ->whereHas('pengguna', fn (Builder $query) => $query

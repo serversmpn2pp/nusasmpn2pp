@@ -214,6 +214,10 @@ abstract final class AppRoutes {
   static const incidentReporting = '/laporkan-kejadian';
   static const studentReports = '/daftar-laporan-siswa';
   static const studentReportDetail = '/daftar-laporan-siswa/:id';
+  static const myStudentReports = '/laporan-saya';
+  static const myStudentReportDetail = '/laporan-saya/:id';
+  static const homeroomStudentReports = '/laporan-siswa-kelas';
+  static const homeroomStudentReportDetail = '/laporan-siswa-kelas/:id';
   static const guardianStudentReports = '/laporan-siswa-wali';
   static const guardianStudentReportDetail = '/laporan-siswa-wali/:id';
   static const reportVerification = '/pemeriksaan-pengesahan';
@@ -714,6 +718,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'student-report-detail',
             builder: (context, state) => StudentReportDetailView(
               reportId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.myStudentReports,
+        name: 'my-student-reports',
+        builder: (context, state) =>
+            const StudentReportListView(scope: StudentReportScope.myReports),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'my-student-report-detail',
+            builder: (context, state) => StudentReportDetailView(
+              reportId: int.parse(state.pathParameters['id']!),
+              scope: StudentReportScope.myReports,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.homeroomStudentReports,
+        name: 'homeroom-student-reports',
+        builder: (context, state) => const StudentReportListView(
+          scope: StudentReportScope.homeroomClass,
+        ),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'homeroom-student-report-detail',
+            builder: (context, state) => StudentReportDetailView(
+              reportId: int.parse(state.pathParameters['id']!),
+              scope: StudentReportScope.homeroomClass,
             ),
           ),
         ],

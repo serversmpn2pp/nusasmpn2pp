@@ -105,7 +105,7 @@ class PiketKehadiranSiswaController extends Controller
         CatatKehadiranSiswaPiketService $service,
     ) {
         $data = $request->validate([
-            'status_kehadiran' => ['required', Rule::in(['sakit', 'izin'])],
+            'status_kehadiran' => ['required', Rule::in(['hadir', 'sakit', 'izin'])],
             'catatan' => ['required', 'string', 'min:3', 'max:500'],
         ]);
         $service->catat($request->user(), $anggotaKelas, $data['status_kehadiran'], $data['catatan']);

@@ -265,7 +265,9 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
   @override
   void initState() {
     super.initState();
-    _status = widget.student.status == 'izin' ? 'izin' : 'sakit';
+    _status = const {'hadir', 'sakit', 'izin'}.contains(widget.student.status)
+        ? widget.student.status
+        : 'hadir';
     _notes = TextEditingController(text: widget.student.notes);
   }
 
@@ -296,7 +298,13 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
             ),
             const SizedBox(height: 16),
             SegmentedButton<String>(
+              showSelectedIcon: false,
               segments: const [
+                ButtonSegment(
+                  value: 'hadir',
+                  label: Text('Hadir'),
+                  icon: Icon(Icons.check_circle_outline_rounded),
+                ),
                 ButtonSegment(
                   value: 'sakit',
                   label: Text('Sakit'),
@@ -318,15 +326,24 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
               minLines: 3,
               maxLines: 5,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Alasan / keterangan',
-                hintText: 'Contoh: Demam, informasi dari orang tua',
+              decoration: InputDecoration(
+                labelText: 'Keterangan',
+                hintText: switch (_status) {
+                  'hadir' => 'Contoh: Lupa membawa kartu, dikonfirmasi hadir',
+                  'sakit' => 'Contoh: Demam, informasi dari orang tua',
+                  _ => 'Contoh: Izin keluarga, informasi dari orang tua',
+                },
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Keterangan wajib diisi dan akan disimpan sebagai riwayat perubahan presensi.',
-              style: TextStyle(fontSize: 11, color: NusaColors.textSecondary),
+            Text(
+              _status == 'hadir'
+                  ? 'Kehadiran manual tidak menetapkan jam masuk. Keterangan dan perubahan tetap disimpan dalam riwayat.'
+                  : 'Keterangan wajib diisi dan akan disimpan dalam riwayat perubahan presensi.',
+              style: const TextStyle(
+                fontSize: 11,
+                color: NusaColors.textSecondary,
+              ),
             ),
             const SizedBox(height: 18),
             NusaPrimaryButton(label: 'Simpan Kehadiran', onPressed: _submit),

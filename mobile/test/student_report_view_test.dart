@@ -90,6 +90,58 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('konteks laporan saya memakai sumber data pribadi', (
+    tester,
+  ) async {
+    final remote = _FakeStudentReportRemoteDataSource();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          myStudentReportRemoteDataSourceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const StudentReportListView(
+            scope: StudentReportScope.myReports,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Laporan Saya'), findsOneWidget);
+    expect(find.text('Siswa Laporan Native'), findsOneWidget);
+    expect(remote.fetchCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('konteks wali kelas memakai sumber data kelas sendiri', (
+    tester,
+  ) async {
+    final remote = _FakeStudentReportRemoteDataSource();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeroomStudentReportRemoteDataSourceProvider.overrideWithValue(
+            remote,
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const StudentReportListView(
+            scope: StudentReportScope.homeroomClass,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Laporan Siswa Kelas Saya'), findsOneWidget);
+    expect(find.text('Siswa Laporan Native'), findsOneWidget);
+    expect(remote.fetchCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('detail menampilkan fakta dan mengunduh bukti privat', (
     tester,
   ) async {

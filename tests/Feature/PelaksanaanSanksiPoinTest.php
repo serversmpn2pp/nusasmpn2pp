@@ -129,7 +129,7 @@ class PelaksanaanSanksiPoinTest extends TestCase
         $this->assertDatabaseMissing('bukti_pelaksanaan_sanksi', ['id' => $bukti->id]);
     }
 
-    public function test_wali_kelas_hanya_melihat_sanksi_siswa_di_kelasnya(): void
+    public function test_pegawai_hanya_membuka_sanksi_yang_ditugaskan_kepadanya(): void
     {
         [, $tahun, $siswaDalam, $sanksiDalam] = $this->dataDasar();
         [$wali, $akunWali] = $this->buatAkunPegawai('Wali Kelas Cakupan', '198901012019011003', 'wali_kelas');
@@ -162,11 +162,19 @@ class PelaksanaanSanksiPoinTest extends TestCase
 
         $this->actingAs($akunWali)
             ->get(route('sanksi-poin-siswa.index', ['tahun_pelajaran_id' => $tahun->id]))
+            ->assertForbidden();
+
+        $sanksiDalam->update(['petugas_pegawai_id' => $wali->id]);
+
+        $this->get(route('sanksi-poin-siswa.index', ['tahun_pelajaran_id' => $tahun->id]))
             ->assertOk()
             ->assertSee($siswaDalam->nama_lengkap)
             ->assertDontSee($siswaLuar->nama_lengkap);
 
         $this->get(route('sanksi-poin-siswa.show', $sanksiLuar))->assertForbidden();
+        $this->get(route('sanksi-poin-siswa.show', $sanksiDalam))
+            ->assertOk()
+            ->assertSee('Simpan pelaksanaan');
     }
 
     private function dataDasar(): array

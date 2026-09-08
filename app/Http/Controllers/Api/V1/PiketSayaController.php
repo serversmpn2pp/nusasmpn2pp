@@ -31,7 +31,7 @@ class PiketSayaController extends Controller
         CatatKehadiranSiswaPiketService $service,
     ): JsonResponse {
         $data = $request->validate([
-            'status_kehadiran' => ['required', Rule::in(['sakit', 'izin'])],
+            'status_kehadiran' => ['required', Rule::in(['hadir', 'sakit', 'izin'])],
             'catatan' => ['required', 'string', 'min:3', 'max:500'],
         ]);
         $absensi = $service->catat(

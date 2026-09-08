@@ -109,19 +109,20 @@ class NusaMenuEntryCard extends StatelessWidget {
         key: Key('menu-item-${item.code}'),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.11),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(nusaMenuEntryIcon(item), color: color, size: 24),
+                child: Icon(nusaMenuEntryIcon(item), color: color, size: 25),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 9),
               Expanded(
                 child: Center(
                   child: Text(
@@ -138,8 +139,10 @@ class NusaMenuEntryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              _AvailabilityLabel(isAvailable: item.isAvailable),
+              if (!item.isAvailable) ...[
+                const SizedBox(height: 5),
+                const _ComingSoonLabel(),
+              ],
             ],
           ),
         ),
@@ -148,36 +151,27 @@ class NusaMenuEntryCard extends StatelessWidget {
   }
 }
 
-class _AvailabilityLabel extends StatelessWidget {
-  const _AvailabilityLabel({required this.isAvailable});
-
-  final bool isAvailable;
+class _ComingSoonLabel extends StatelessWidget {
+  const _ComingSoonLabel();
 
   @override
   Widget build(BuildContext context) {
-    final color = isAvailable ? NusaColors.success : NusaColors.textSecondary;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 5,
-          height: 5,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: NusaColors.textSecondary.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Text(
+        'Segera hadir',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: NusaColors.textSecondary,
+          fontSize: 8.5,
+          fontWeight: FontWeight.w700,
         ),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            isAvailable ? 'Buka' : 'Segera',
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: color,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

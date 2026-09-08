@@ -4,9 +4,12 @@ namespace Tests\Feature\Api;
 
 use App\Models\AnggotaKelas;
 use App\Models\JadwalKegiatanIbadah;
+use App\Models\JadwalPiketGuru;
 use App\Models\KegiatanIbadah;
 use App\Models\Kelas;
+use App\Models\Pegawai;
 use App\Models\Pengguna;
+use App\Models\Peran;
 use App\Models\PresensiKegiatanIbadah;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
@@ -44,11 +47,70 @@ class ScanKegiatanIbadahApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_menu_dan_endpoint_scan_hanya_tersedia_untuk_guru_pl_atau_piket_hari_ini(): void
+    {
+        Carbon::setTestNow('2026-08-10 12:10:00');
+        $this->dataDasar('senin');
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $this->withToken($this->token($administrator))
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonMissing(['kode' => 'scan-ibadah-siswa']);
+
+        $this->withToken($this->token($administrator))
+            ->getJson(route('api.v1.scan-kegiatan-ibadah.index'))
+            ->assertForbidden()
+            ->assertJsonPath(
+                'message',
+                'Scan ibadah hanya dapat digunakan oleh Guru PL atau guru piket yang bertugas hari ini.',
+            );
+
+        $this->app['auth']->forgetGuards();
+        $guruPl = $this->guruPl();
+
+        $this->withToken($this->token($guruPl))
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'kode' => 'scan-ibadah-siswa',
+                'rute' => '/scan-kegiatan-ibadah',
+            ]);
+
+        $this->withToken($this->token($guruPl))
+            ->getJson(route('api.v1.scan-kegiatan-ibadah.index'))
+            ->assertOk();
+    }
+
+    public function test_menu_scan_guru_piket_hanya_muncul_pada_hari_tugasnya(): void
+    {
+        Carbon::setTestNow('2026-08-10 12:10:00');
+        $data = $this->dataDasar('senin');
+        $guruPiket = $this->guruPiket($data['tahun'], 'senin');
+        $token = $this->token($guruPiket);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonFragment(['kode' => 'scan-ibadah-siswa']);
+
+        Carbon::setTestNow('2026-08-11 12:10:00');
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonMissing(['kode' => 'scan-ibadah-siswa']);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.scan-kegiatan-ibadah.index'))
+            ->assertForbidden();
+    }
+
     public function test_dashboard_memilih_jadwal_aktif_dan_menyediakan_presensi_terbaru(): void
     {
         Carbon::setTestNow('2026-08-10 12:10:00');
         $data = $this->dataDasar('senin');
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruPl = $this->guruPl();
         PresensiKegiatanIbadah::create([
             'kegiatan_ibadah_id' => $data['kegiatan']->id,
             'siswa_id' => $data['siswa']->id,
@@ -57,12 +119,12 @@ class ScanKegiatanIbadahApiTest extends TestCase
             'tahun_pelajaran_id' => $data['tahun']->id,
             'kelas_id' => $data['kelas']->id,
             'anggota_kelas_id' => $data['anggota']->id,
-            'dipindai_oleh_pengguna_id' => $administrator->id,
+            'dipindai_oleh_pengguna_id' => $guruPl->id,
             'waktu_scan' => '12:05:00',
             'sumber' => 'kamera',
         ]);
 
-        $this->withToken($this->token($administrator))
+        $this->withToken($this->token($guruPl))
             ->getJson(route('api.v1.scan-kegiatan-ibadah.index'))
             ->assertOk()
             ->assertHeader('Cache-Control', 'must-revalidate, no-cache, no-store, private')
@@ -80,8 +142,8 @@ class ScanKegiatanIbadahApiTest extends TestCase
     {
         Carbon::setTestNow('2026-08-10 12:10:00');
         $data = $this->dataDasar('senin');
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
-        $token = $this->token($administrator);
+        $guruPl = $this->guruPl();
+        $token = $this->token($guruPl);
         $payload = [
             'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
             'isi_scan' => $data['siswa']->nisn,
@@ -114,7 +176,7 @@ class ScanKegiatanIbadahApiTest extends TestCase
     {
         Carbon::setTestNow('2026-08-14 12:10:00');
         $data = $this->dataDasar('jumat');
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruPl = $this->guruPl();
         $kegiatanJumat = KegiatanIbadah::create([
             'kode' => KegiatanIbadah::KODE_SHOLAT_JUMAT,
             'nama' => 'Sholat Jumat',
@@ -123,7 +185,7 @@ class ScanKegiatanIbadahApiTest extends TestCase
         $data['siswa']->update(['jenis_kelamin' => 'P']);
         $data['jadwal']->update(['kegiatan_ibadah_id' => $kegiatanJumat->id]);
 
-        $this->withToken($this->token($administrator))
+        $this->withToken($this->token($guruPl))
             ->postJson(route('api.v1.scan-kegiatan-ibadah.store'), [
                 'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
                 'isi_scan' => $data['siswa']->nisn,
@@ -142,9 +204,9 @@ class ScanKegiatanIbadahApiTest extends TestCase
     {
         Carbon::setTestNow('2026-08-10 12:10:00');
         $data = $this->dataDasar('senin');
-        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $guruPl = $this->guruPl();
 
-        $this->withToken($this->token($administrator))
+        $this->withToken($this->token($guruPl))
             ->postJson(route('api.v1.scan-kegiatan-ibadah.store'), [
                 'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
                 'isi_scan' => 'BUKAN-NISN',
@@ -205,5 +267,61 @@ class ScanKegiatanIbadahApiTest extends TestCase
     private function token(Pengguna $pengguna): string
     {
         return $pengguna->createToken('Perangkat Scan Ibadah', ['mobile'])->plainTextToken;
+    }
+
+    private function guruPl(): Pengguna
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Guru PL Scan Ibadah',
+            'nip' => 'PL-SCAN-IBADAH',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $pengguna = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $pengguna->daftarPeran()->attach(
+            Peran::whereIn('kode', ['pegawai', 'guru_pl'])->pluck('id'),
+        );
+
+        return $pengguna;
+    }
+
+    private function guruPiket(TahunPelajaran $tahunPelajaran, string $hari): Pengguna
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Guru Piket Scan Ibadah',
+            'nip' => 'PIKET-SCAN-IBADAH',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $pengguna = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $pengguna->daftarPeran()->attach(
+            Peran::whereIn('kode', ['pegawai', 'guru_mapel'])->pluck('id'),
+        );
+        JadwalPiketGuru::create([
+            'tahun_pelajaran_id' => $tahunPelajaran->id,
+            'pegawai_id' => $pegawai->id,
+            'hari' => $hari,
+            'aktif' => true,
+        ]);
+
+        return $pengguna;
     }
 }

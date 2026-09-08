@@ -44,6 +44,12 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $konteksGuruWali = $request->routeIs('pembinaan-siswa-wali.*');
         $konteksLaporanSaya = $request->routeIs('laporan-saya.*');
+        $konteksWaliKelas = $request->routeIs('laporan-siswa-kelas.*');
+        if ($konteksWaliKelas) {
+            abort_unless($request->user()?->memilikiPeran('wali_kelas') && $request->user()->kelasWaliIds() !== [], 403);
+        } elseif (! $konteksGuruWali && ! $konteksLaporanSaya) {
+            abort_unless($this->aksesPembinaanLuas($request), 403);
+        }
         $kataKunci = trim((string) $request->input('kata_kunci', ''));
         $status = (string) $request->input('status', 'semua');
         $tingkat = (string) $request->input('tingkat', 'semua');
@@ -127,6 +133,7 @@ class LaporanPembinaanSiswaController extends Controller
             'ringkasan',
             'konteksGuruWali',
             'konteksLaporanSaya',
+            'konteksWaliKelas',
         ), $this->pilihanFilter($request)));
     }
 
@@ -215,9 +222,12 @@ class LaporanPembinaanSiswaController extends Controller
 
         if ($laporan->count() === 1) {
             $this->kirimNotifikasiLaporanBaru($request, $laporan->first());
+            $ruteRincian = $this->aksesPembinaanLuas($request)
+                ? 'laporan-pembinaan-siswa.show'
+                : 'laporan-saya.show';
 
             return redirect()
-                ->route('laporan-pembinaan-siswa.show', $laporan->first())
+                ->route($ruteRincian, $laporan->first())
                 ->with('berhasil', $laporan->first()->jenis_laporan === 'kejadian'
                     ? 'Laporan kejadian berhasil dikirim ke BK untuk diperiksa.'
                     : 'Catatan pembinaan siswa berhasil ditambahkan.');
@@ -226,7 +236,11 @@ class LaporanPembinaanSiswaController extends Controller
         $this->kirimNotifikasiLaporanKolektif($request, $laporan);
         $laporan->each(fn (LaporanPembinaanSiswa $item) => $this->kirimNotifikasiWaliKelas($request, $item));
 
-        return redirect()->route('laporan-pembinaan-siswa.index')
+        $ruteDaftar = $this->aksesPembinaanLuas($request)
+            ? 'laporan-pembinaan-siswa.index'
+            : 'laporan-saya.index';
+
+        return redirect()->route($ruteDaftar)
             ->with('berhasil', $laporan->count().' laporan siswa berhasil dibuat dari satu kejadian dan dikirim untuk diperiksa.');
     }
 
@@ -234,6 +248,7 @@ class LaporanPembinaanSiswaController extends Controller
     {
         $konteksGuruWali = $request->routeIs('pembinaan-siswa-wali.*');
         $konteksLaporanSaya = $request->routeIs('laporan-saya.*');
+        $konteksWaliKelas = $request->routeIs('laporan-siswa-kelas.*');
         if ($konteksGuruWali) {
             abort_unless(in_array(
                 (int) $laporanPembinaanSiswa->siswa_id,
@@ -248,6 +263,13 @@ class LaporanPembinaanSiswaController extends Controller
                     filled($request->user()?->pegawai_id)
                     && (int) $laporanPembinaanSiswa->pelapor_pegawai_id === (int) $request->user()->pegawai_id
                 ),
+                403,
+            );
+        }
+        if ($konteksWaliKelas) {
+            abort_unless(
+                $request->user()?->memilikiPeran('wali_kelas')
+                    && in_array((int) $laporanPembinaanSiswa->kelas_id, $request->user()->kelasWaliIds(), true),
                 403,
             );
         }
@@ -296,7 +318,7 @@ class LaporanPembinaanSiswaController extends Controller
             'laporanPembinaanSiswa', 'bolehKelolaFakta', 'bolehMencatatKlarifikasi',
             'bolehMemprosesBk', 'modeBacaBk', 'bolehMengubahLaporan',
             'daftarSiswaSaksi', 'daftarPegawaiSaksi', 'daftarJenisPelanggaranKeputusan', 'laporanMirip',
-            'konteksGuruWali', 'konteksLaporanSaya',
+            'konteksGuruWali', 'konteksLaporanSaya', 'konteksWaliKelas',
         ));
     }
 
@@ -362,7 +384,11 @@ class LaporanPembinaanSiswaController extends Controller
             );
         });
 
-        return redirect()->route('laporan-pembinaan-siswa.show', $laporanPembinaanSiswa)
+        $ruteRincian = $this->aksesPembinaanLuas($request)
+            ? 'laporan-pembinaan-siswa.show'
+            : 'laporan-saya.show';
+
+        return redirect()->route($ruteRincian, $laporanPembinaanSiswa)
             ->with('berhasil', 'Laporan berhasil diperbarui dan proses verifikasi dimulai kembali.');
     }
 
@@ -377,7 +403,11 @@ class LaporanPembinaanSiswaController extends Controller
         );
         $this->prosesPoinSiswaService->batalkanPoinLaporan($laporanPembinaanSiswa);
 
-        return redirect()->route('laporan-pembinaan-siswa.index')->with('berhasil', 'Laporan dibatalkan dan poin dikoreksi jika sebelumnya sudah ditetapkan.');
+        $ruteDaftar = $this->aksesPembinaanLuas($request)
+            ? 'laporan-pembinaan-siswa.index'
+            : 'laporan-saya.index';
+
+        return redirect()->route($ruteDaftar)->with('berhasil', 'Laporan dibatalkan dan poin dikoreksi jika sebelumnya sudah ditetapkan.');
     }
 
     private function aturanValidasi(bool $kolektif = false): array
@@ -623,6 +653,14 @@ class LaporanPembinaanSiswaController extends Controller
             return $siswaWaliIds === []
                 ? $query->whereRaw('1 = 0')
                 : $query->whereIn('siswa_id', $siswaWaliIds);
+        }
+
+        if ($request->routeIs('laporan-siswa-kelas.*')) {
+            $kelasWaliIds = $pengguna?->kelasWaliIds() ?? [];
+
+            return $kelasWaliIds === []
+                ? $query->whereRaw('1 = 0')
+                : $query->whereIn('kelas_id', $kelasWaliIds);
         }
 
         if ($this->aksesPembinaanLuas($request)) {

@@ -13,8 +13,7 @@ class AksesRekapPoinSiswaService
         Pengguna $pengguna,
         ?int $tahunPelajaranId = null,
         ?string $cakupan = null,
-    ): Builder
-    {
+    ): Builder {
         if ($cakupan === 'guru_wali') {
             $siswaWaliIds = $pengguna->siswaWaliIds();
 
@@ -54,8 +53,7 @@ class AksesRekapPoinSiswaService
         Siswa $siswa,
         ?int $tahunPelajaranId = null,
         ?string $cakupan = null,
-    ): bool
-    {
+    ): bool {
         if (! $pengguna) {
             return false;
         }
@@ -89,5 +87,15 @@ class AksesRekapPoinSiswaService
         return $pengguna->administrator()
             || $pengguna->memilikiPeran(['pimpinan', 'wakil_pimpinan_kesiswaan', 'bk'])
             || $pengguna->memilikiIzin(['poin_siswa.verifikasi_bk', 'poin_siswa.sanksi_kelola']);
+    }
+
+    public function dapatMembuka(Pengguna $pengguna): bool
+    {
+        if ($this->aksesLuas($pengguna)) {
+            return true;
+        }
+
+        return $pengguna->kelasWaliIds() !== []
+            || $pengguna->siswaWaliIds() !== [];
     }
 }
