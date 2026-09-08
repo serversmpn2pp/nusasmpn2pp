@@ -21,7 +21,7 @@ class QuestionPackageController extends AsyncNotifier<QuestionPackagePage> {
 
   void search(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       if (_query == value.trim()) return;
       _query = value.trim();
       unawaited(refresh());

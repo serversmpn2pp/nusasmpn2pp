@@ -165,7 +165,7 @@ class _GoodsCatalogViewState extends ConsumerState<GoodsCatalogView> {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(
-      const Duration(milliseconds: 450),
+      const Duration(milliseconds: 700),
       () => ref.read(goodsCatalogControllerProvider.notifier).search(value),
     );
   }

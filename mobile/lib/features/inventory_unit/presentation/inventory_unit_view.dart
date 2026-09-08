@@ -144,7 +144,7 @@ class _InventoryUnitViewState extends ConsumerState<InventoryUnitView> {
   void _search(String value) {
     setState(() {});
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 450), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       if (mounted) {
         ref.read(inventoryUnitControllerProvider.notifier).search(value);
       }

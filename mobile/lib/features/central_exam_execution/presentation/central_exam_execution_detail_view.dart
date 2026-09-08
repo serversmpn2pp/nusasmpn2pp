@@ -230,7 +230,7 @@ class _CentralExamExecutionDetailViewState
 
   void _searchParticipants(String value) {
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 700), () {
       if (!mounted || _query == value.trim()) return;
       setState(() {
         _query = value.trim();

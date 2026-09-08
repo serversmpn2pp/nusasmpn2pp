@@ -1312,7 +1312,7 @@ class _CandidatePickerSheetState extends State<_CandidatePickerSheet> {
 
   void _search(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       if (!mounted) return;
       setState(() => _request = widget.loadCandidates(value));
     });

@@ -165,7 +165,7 @@ class _GoodsRequestViewState extends ConsumerState<GoodsRequestView> {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(
-      const Duration(milliseconds: 450),
+      const Duration(milliseconds: 700),
       () => ref.read(goodsRequestControllerProvider.notifier).search(value),
     );
   }

@@ -35,7 +35,7 @@ class _SchoolClassListViewState extends ConsumerState<SchoolClassListView> {
   void _onSearchChanged(String value) {
     setState(() {});
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 700), () {
       if (mounted) {
         ref.read(schoolClassListControllerProvider.notifier).search(value);
       }

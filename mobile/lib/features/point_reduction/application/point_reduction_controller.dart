@@ -22,7 +22,7 @@ class PointReductionController extends AsyncNotifier<PointReductionPage> {
 
   void search(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       final next = value.trim();
       if (next == _query) return;
       _query = next;

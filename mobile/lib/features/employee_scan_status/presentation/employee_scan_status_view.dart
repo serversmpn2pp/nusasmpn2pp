@@ -148,7 +148,7 @@ class _EmployeeScanStatusViewState
   void _search(String value) {
     setState(() {});
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 700), () {
       if (!mounted) return;
       ref.read(employeeScanStatusControllerProvider.notifier).search(value);
     });

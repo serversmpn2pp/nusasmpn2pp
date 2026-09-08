@@ -28,7 +28,7 @@ abstract class BaseStudentReportController
 
   void search(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       final next = value.trim();
       if (_query == next) return;
       _query = next;

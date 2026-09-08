@@ -182,7 +182,7 @@ class _RoleAccessListViewState extends ConsumerState<RoleAccessListView> {
   void _search(String value) {
     setState(() {});
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 420), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       ref.read(roleAccessControllerProvider.notifier).search(value);
     });
   }

@@ -231,7 +231,7 @@ class _GoodsLoanRecapViewState extends ConsumerState<GoodsLoanRecapView> {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(
-      const Duration(milliseconds: 450),
+      const Duration(milliseconds: 700),
       () => ref.read(goodsLoanRecapControllerProvider.notifier).search(value),
     );
   }

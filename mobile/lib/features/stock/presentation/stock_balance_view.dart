@@ -182,7 +182,7 @@ class _StockBalanceViewState extends ConsumerState<StockBalanceView> {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(
-      const Duration(milliseconds: 450),
+      const Duration(milliseconds: 700),
       () => ref.read(stockBalanceControllerProvider.notifier).search(value),
     );
   }

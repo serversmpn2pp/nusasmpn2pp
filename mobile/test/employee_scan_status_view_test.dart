@@ -121,7 +121,7 @@ void main() {
       find.byKey(const Key('employee-scan-status-search')),
       'Antonius',
     );
-    await tester.pump(const Duration(milliseconds: 451));
+    await tester.pump(const Duration(milliseconds: 701));
     await tester.pumpAndSettle();
 
     expect(remote.lastQuery, 'Antonius');

@@ -219,7 +219,7 @@ class _StockMovementViewState extends ConsumerState<StockMovementView> {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(
-      const Duration(milliseconds: 450),
+      const Duration(milliseconds: 700),
       () => ref.read(stockMovementControllerProvider.notifier).search(value),
     );
   }

@@ -20,7 +20,7 @@ class CentralExamResultsController
 
   void search(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       _query = value.trim();
       unawaited(refresh());
     });

@@ -325,7 +325,7 @@ class _MyGoodsRequestCreateViewState
   void _onSearch(String value) {
     setState(() {});
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 450), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       if (mounted) setState(() => _future = _loadCatalog(query: value.trim()));
     });
   }

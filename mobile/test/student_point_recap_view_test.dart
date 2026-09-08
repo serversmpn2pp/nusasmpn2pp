@@ -53,6 +53,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('pencarian rekap poin menunggu ketikan selesai', (tester) async {
+    final remote = _FakeStudentPointRecapRemoteDataSource();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          studentPointRecapRemoteDataSourceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const StudentPointRecapListView(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(remote.fetchCalls, 1);
+
+    final search = find.byKey(const Key('point-recap-search'));
+    await tester.enterText(search, 'Siswa');
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(remote.fetchCalls, 1);
+
+    await tester.enterText(search, 'Siswa Rekap');
+    await tester.pump(const Duration(milliseconds: 699));
+    expect(remote.fetchCalls, 1);
+
+    await tester.pump(const Duration(milliseconds: 2));
+    await tester.pumpAndSettle();
+    expect(remote.fetchCalls, 2);
+    expect(remote.lastQuery, 'Siswa Rekap');
+  });
+
   testWidgets('profil disiplin membuka pendampingan dengan siswa terpilih', (
     tester,
   ) async {
@@ -113,6 +145,9 @@ void main() {
 
 class _FakeStudentPointRecapRemoteDataSource
     implements StudentPointRecapRemoteDataSource {
+  int fetchCalls = 0;
+  String lastQuery = '';
+
   @override
   Future<StudentPointRecapPage> fetch({
     required String query,
@@ -120,7 +155,11 @@ class _FakeStudentPointRecapRemoteDataSource
     required int? academicYearId,
     required int? classId,
     required int page,
-  }) async => StudentPointRecapPage.fromJson(_pageJson());
+  }) async {
+    fetchCalls++;
+    lastQuery = query;
+    return StudentPointRecapPage.fromJson(_pageJson());
+  }
 
   @override
   Future<StudentPointRecapDetail> fetchDetail(

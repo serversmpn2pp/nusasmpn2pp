@@ -143,7 +143,7 @@ class _StudentScanStatusViewState extends ConsumerState<StudentScanStatusView> {
   void _search(String value) {
     setState(() {});
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 700), () {
       if (!mounted) return;
       ref.read(studentScanStatusControllerProvider.notifier).search(value);
     });

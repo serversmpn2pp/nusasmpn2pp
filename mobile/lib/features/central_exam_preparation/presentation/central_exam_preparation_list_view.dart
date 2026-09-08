@@ -160,7 +160,7 @@ class _CentralExamPreparationListViewState
   void _searchChanged(String value) {
     setState(() {});
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 450), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       if (mounted) {
         ref
             .read(centralExamPreparationControllerProvider.notifier)

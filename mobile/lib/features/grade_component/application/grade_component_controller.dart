@@ -23,7 +23,7 @@ class GradeComponentController extends AsyncNotifier<GradeComponentPage> {
 
   void search(String value) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       if (_search == value.trim()) return;
       _search = value.trim();
       unawaited(refresh());

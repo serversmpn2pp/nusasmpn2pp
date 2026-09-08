@@ -161,7 +161,7 @@ class _InventoryAcquisitionSourceViewState
   void _search(String value) {
     setState(() {});
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 450), () {
+    _debounce = Timer(const Duration(milliseconds: 700), () {
       if (mounted) {
         ref
             .read(inventoryAcquisitionSourceControllerProvider.notifier)

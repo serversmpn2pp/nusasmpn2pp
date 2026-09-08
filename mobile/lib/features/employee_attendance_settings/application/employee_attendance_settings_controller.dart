@@ -24,7 +24,7 @@ class EmployeeAttendanceSettingsController
   void search(String value) {
     _query = value;
     _searchTimer?.cancel();
-    _searchTimer = Timer(const Duration(milliseconds: 350), refresh);
+    _searchTimer = Timer(const Duration(milliseconds: 700), refresh);
   }
 
   Future<void> filterDay(String value) async {
