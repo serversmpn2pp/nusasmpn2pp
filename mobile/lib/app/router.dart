@@ -6,6 +6,7 @@ import 'package:nusa/features/auth/presentation/ganti_kata_sandi_view.dart';
 import 'package:nusa/features/auth/presentation/login_view.dart';
 import 'package:nusa/features/auth/presentation/startup_view.dart';
 import 'package:nusa/features/asset_unit/presentation/asset_unit_view.dart';
+import 'package:nusa/features/bk_grade_assignment/presentation/bk_grade_assignment_view.dart';
 import 'package:nusa/features/academic_year/presentation/academic_year_view.dart';
 import 'package:nusa/features/class_promotion/presentation/class_promotion_view.dart';
 import 'package:nusa/features/class_assessment/presentation/class_assessment_detail_view.dart';
@@ -118,6 +119,8 @@ import 'package:nusa/features/student_attendance_recap/presentation/student_atte
 import 'package:nusa/features/student_attendance_report/presentation/student_attendance_report_view.dart';
 import 'package:nusa/features/student_scan_status/presentation/student_scan_status_view.dart';
 import 'package:nusa/features/student_card/presentation/student_card_view.dart';
+import 'package:nusa/features/student_case_progress/presentation/student_case_detail_view.dart';
+import 'package:nusa/features/student_case_progress/presentation/student_case_progress_view.dart';
 import 'package:nusa/features/student_guidance_category/presentation/student_guidance_category_view.dart';
 import 'package:nusa/features/student_placement/presentation/student_placement_view.dart';
 import 'package:nusa/features/student_report/presentation/student_report_detail_view.dart';
@@ -212,6 +215,7 @@ abstract final class AppRoutes {
   static const classAssessmentResults = '/asesmen-kelas/:id/hasil';
   static const classAssessmentCorrection = '/asesmen-kelas/:id/koreksi-uraian';
   static const incidentReporting = '/laporkan-kejadian';
+  static const studentCaseProgress = '/progress-kasus-saya';
   static const studentReports = '/daftar-laporan-siswa';
   static const studentReportDetail = '/daftar-laporan-siswa/:id';
   static const myStudentReports = '/laporan-saya';
@@ -227,6 +231,7 @@ abstract final class AppRoutes {
   static const studentPointRecaps = '/rekap-poin-siswa';
   static const pointReductions = '/pengurangan-poin-siswa';
   static const guardianAssignments = '/penugasan-guru-wali';
+  static const bkGradeAssignments = '/penugasan-guru-bk-tingkat';
   static const myGuardianStudents = '/siswa-wali-saya';
   static const studentSanctions = '/pelaksanaan-sanksi-siswa';
   static const employees = '/pegawai';
@@ -271,6 +276,7 @@ abstract final class AppRoutes {
   static const myAttendance = '/kehadiran-saya';
   static const learningSurvey = '/survei-pembelajaran/:assignmentId/:semester';
   static const surveyStatements = '/pernyataan-survei';
+  static const mySurveyResults = '/hasil-survei-saya';
   static const surveyMonitoring = '/monitoring-survei';
   static const teachingDocuments = '/perangkat-ajar-saya';
   static const teachingDocumentReviews = '/pemeriksaan-perangkat-ajar';
@@ -723,6 +729,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: AppRoutes.studentCaseProgress,
+        name: 'student-case-progress',
+        builder: (context, state) => const StudentCaseProgressView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'student-case-progress-detail',
+            builder: (context, state) => StudentCaseDetailView(
+              reportId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
         path: AppRoutes.myStudentReports,
         name: 'my-student-reports',
         builder: (context, state) =>
@@ -862,6 +882,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const GuardianAssignmentCreateView(),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.bkGradeAssignments,
+        name: 'bk-grade-assignments',
+        builder: (context, state) => const BkGradeAssignmentView(),
       ),
       GoRoute(
         path: AppRoutes.myGuardianStudents,
@@ -1134,6 +1159,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.surveyStatements,
         name: 'survey-statements',
         builder: (context, state) => const SurveyStatementView(),
+      ),
+      GoRoute(
+        path: AppRoutes.mySurveyResults,
+        name: 'my-survey-results',
+        builder: (context, state) => const SurveyMonitoringView(personal: true),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'my-survey-results-detail',
+            builder: (context, state) => SurveyMonitoringDetailView(
+              assignmentId: int.parse(state.pathParameters['id']!),
+              semester: state.uri.queryParameters['semester'] ?? 'ganjil',
+              personal: true,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.surveyMonitoring,

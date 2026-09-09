@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
+import 'package:nusa/features/my_survey_results/application/my_survey_results_controller.dart';
 import 'package:nusa/features/survey_monitoring/application/survey_monitoring_controller.dart';
 import 'package:nusa/features/survey_monitoring/domain/survey_monitoring.dart';
 
@@ -9,27 +10,41 @@ class SurveyMonitoringDetailView extends ConsumerWidget {
   const SurveyMonitoringDetailView({
     required this.assignmentId,
     required this.semester,
+    this.personal = false,
     super.key,
   });
 
   final int assignmentId;
   final String semester;
+  final bool personal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final query = (assignmentId: assignmentId, semester: semester);
-    final detail = ref.watch(surveyMonitoringDetailProvider(query));
+    final detail = personal
+        ? ref.watch(mySurveyResultDetailProvider(query))
+        : ref.watch(surveyMonitoringDetailProvider(query));
+
+    void invalidateDetail() {
+      if (personal) {
+        ref.invalidate(mySurveyResultDetailProvider(query));
+      } else {
+        ref.invalidate(surveyMonitoringDetailProvider(query));
+      }
+    }
+
+    Future<void> refreshDetail() => personal
+        ? ref.refresh(mySurveyResultDetailProvider(query).future)
+        : ref.refresh(surveyMonitoringDetailProvider(query).future);
 
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: const Text('Rincian Survei'),
+        title: Text(personal ? 'Rincian Hasil Survei' : 'Rincian Survei'),
         actions: [
           IconButton(
             tooltip: 'Perbarui',
-            onPressed: detail.isLoading
-                ? null
-                : () => ref.invalidate(surveyMonitoringDetailProvider(query)),
+            onPressed: detail.isLoading ? null : invalidateDetail,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -40,12 +55,10 @@ class SurveyMonitoringDetailView extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => _DetailError(
             message: _errorMessage(error),
-            onRetry: () =>
-                ref.invalidate(surveyMonitoringDetailProvider(query)),
+            onRetry: invalidateDetail,
           ),
           data: (data) => RefreshIndicator(
-            onRefresh: () =>
-                ref.refresh(surveyMonitoringDetailProvider(query).future),
+            onRefresh: refreshDetail,
             child: ListView(
               key: const PageStorageKey<String>(
                 'survey-monitoring-detail-scroll',

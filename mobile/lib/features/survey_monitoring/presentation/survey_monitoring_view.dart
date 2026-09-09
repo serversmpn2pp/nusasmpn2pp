@@ -5,12 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
+import 'package:nusa/features/my_survey_results/application/my_survey_results_controller.dart';
 import 'package:nusa/features/survey_monitoring/application/survey_monitoring_controller.dart';
 import 'package:nusa/features/survey_monitoring/domain/survey_monitoring.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
 class SurveyMonitoringView extends ConsumerStatefulWidget {
-  const SurveyMonitoringView({super.key});
+  const SurveyMonitoringView({this.personal = false, super.key});
+
+  final bool personal;
 
   @override
   ConsumerState<SurveyMonitoringView> createState() =>
@@ -31,19 +34,21 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
 
   @override
   Widget build(BuildContext context) {
-    final monitoring = ref.watch(surveyMonitoringControllerProvider);
+    final monitoring = widget.personal
+        ? ref.watch(mySurveyResultsControllerProvider)
+        : ref.watch(surveyMonitoringControllerProvider);
     final current = monitoring.value;
 
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: const Text('Monitoring Survei'),
+        title: Text(
+          widget.personal ? 'Hasil Survei Saya' : 'Monitoring Survei',
+        ),
         actions: [
           IconButton(
             tooltip: 'Perbarui',
-            onPressed: monitoring.isLoading
-                ? null
-                : ref.read(surveyMonitoringControllerProvider.notifier).refresh,
+            onPressed: monitoring.isLoading ? null : _refresh,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -57,7 +62,10 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Column(
                   children: [
-                    _MonitoringSummary(summary: current.summary),
+                    _MonitoringSummary(
+                      summary: current.summary,
+                      personal: widget.personal,
+                    ),
                     const SizedBox(height: 9),
                     NusaDropdownField<int>(
                       fieldKey: const Key('survey-monitoring-year-filter'),
@@ -75,9 +83,7 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
                                 '${year.name}${year.active ? ' · Aktif' : ''}',
                           ),
                       ],
-                      onChanged: (value) => ref
-                          .read(surveyMonitoringControllerProvider.notifier)
-                          .filterAcademicYear(value),
+                      onChanged: _filterAcademicYear,
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -104,12 +110,7 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
                             ],
                             onChanged: (value) {
                               if (value != null) {
-                                ref
-                                    .read(
-                                      surveyMonitoringControllerProvider
-                                          .notifier,
-                                    )
-                                    .filterSemester(value);
+                                _filterSemester(value);
                               }
                             },
                           ),
@@ -145,12 +146,7 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
                             ],
                             onChanged: (value) {
                               if (value != null) {
-                                ref
-                                    .read(
-                                      surveyMonitoringControllerProvider
-                                          .notifier,
-                                    )
-                                    .filterStatus(value);
+                                _filterStatus(value);
                               }
                             },
                           ),
@@ -161,7 +157,9 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
                     NusaTextField(
                       fieldKey: const Key('survey-monitoring-search'),
                       controller: _searchController,
-                      hintText: 'Cari guru, NIP, mapel, atau kelas',
+                      hintText: widget.personal
+                          ? 'Cari mata pelajaran atau kelas'
+                          : 'Cari guru, NIP, mapel, atau kelas',
                       prefixIcon: Icons.search_rounded,
                       enabled: !monitoring.isLoading,
                       onChanged: _search,
@@ -180,19 +178,16 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stackTrace) => _MonitoringError(
                   message: _errorMessage(error),
-                  onRetry: ref
-                      .read(surveyMonitoringControllerProvider.notifier)
-                      .refresh,
+                  onRetry: _refresh,
                 ),
                 data: (page) => _MonitoringResults(
                   page: page,
+                  personal: widget.personal,
                   loadingMore: _loadingMore,
-                  onRefresh: ref
-                      .read(surveyMonitoringControllerProvider.notifier)
-                      .refresh,
+                  onRefresh: _refresh,
                   onLoadMore: _loadMore,
                   onOpen: (item) => context.push(
-                    '/monitoring-survei/${item.id}'
+                    '${widget.personal ? '/hasil-survei-saya' : '/monitoring-survei'}/${item.id}'
                     '?semester=${page.filter.semester}',
                   ),
                 ),
@@ -209,7 +204,7 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 700), () {
       if (mounted) {
-        ref.read(surveyMonitoringControllerProvider.notifier).search(value);
+        _searchValue(value);
       }
     });
   }
@@ -218,14 +213,18 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
     _debounce?.cancel();
     _searchController.clear();
     setState(() {});
-    ref.read(surveyMonitoringControllerProvider.notifier).search('');
+    _searchValue('');
   }
 
   Future<void> _loadMore() async {
     if (_loadingMore) return;
     setState(() => _loadingMore = true);
     try {
-      await ref.read(surveyMonitoringControllerProvider.notifier).loadMore();
+      if (widget.personal) {
+        await ref.read(mySurveyResultsControllerProvider.notifier).loadMore();
+      } else {
+        await ref.read(surveyMonitoringControllerProvider.notifier).loadMore();
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -235,12 +234,43 @@ class _SurveyMonitoringViewState extends ConsumerState<SurveyMonitoringView> {
       if (mounted) setState(() => _loadingMore = false);
     }
   }
+
+  Future<void> _refresh() => widget.personal
+      ? ref.read(mySurveyResultsControllerProvider.notifier).refresh()
+      : ref.read(surveyMonitoringControllerProvider.notifier).refresh();
+
+  Future<void> _filterAcademicYear(int? value) => widget.personal
+      ? ref
+            .read(mySurveyResultsControllerProvider.notifier)
+            .filterAcademicYear(value)
+      : ref
+            .read(surveyMonitoringControllerProvider.notifier)
+            .filterAcademicYear(value);
+
+  Future<void> _filterSemester(String value) => widget.personal
+      ? ref
+            .read(mySurveyResultsControllerProvider.notifier)
+            .filterSemester(value)
+      : ref
+            .read(surveyMonitoringControllerProvider.notifier)
+            .filterSemester(value);
+
+  Future<void> _filterStatus(String value) => widget.personal
+      ? ref.read(mySurveyResultsControllerProvider.notifier).filterStatus(value)
+      : ref
+            .read(surveyMonitoringControllerProvider.notifier)
+            .filterStatus(value);
+
+  Future<void> _searchValue(String value) => widget.personal
+      ? ref.read(mySurveyResultsControllerProvider.notifier).search(value)
+      : ref.read(surveyMonitoringControllerProvider.notifier).search(value);
 }
 
 class _MonitoringSummary extends StatelessWidget {
-  const _MonitoringSummary({required this.summary});
+  const _MonitoringSummary({required this.summary, required this.personal});
 
   final SurveyMonitoringSummary summary;
+  final bool personal;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -253,7 +283,10 @@ class _MonitoringSummary extends StatelessWidget {
     ),
     child: Row(
       children: [
-        _SummaryItem(label: 'Penugasan', value: summary.assignments),
+        _SummaryItem(
+          label: personal ? 'Kelas' : 'Penugasan',
+          value: summary.assignments,
+        ),
         _SummaryItem(label: 'Target', value: summary.responseTarget),
         _SummaryItem(label: 'Respons', value: summary.responses),
         _SummaryItem(label: 'Terbuka', value: summary.openResults),
@@ -296,6 +329,7 @@ class _SummaryItem extends StatelessWidget {
 class _MonitoringResults extends StatelessWidget {
   const _MonitoringResults({
     required this.page,
+    required this.personal,
     required this.loadingMore,
     required this.onRefresh,
     required this.onLoadMore,
@@ -303,6 +337,7 @@ class _MonitoringResults extends StatelessWidget {
   });
 
   final SurveyMonitoringPage page;
+  final bool personal;
   final bool loadingMore;
   final Future<void> Function() onRefresh;
   final VoidCallback onLoadMore;
@@ -365,6 +400,7 @@ class _MonitoringResults extends StatelessWidget {
           final item = page.items[index];
           return _AssignmentCard(
             item: item,
+            personal: personal,
             minimumRespondents: page.minimumRespondents,
             onTap: () => onOpen(item),
           );
@@ -377,11 +413,13 @@ class _MonitoringResults extends StatelessWidget {
 class _AssignmentCard extends StatelessWidget {
   const _AssignmentCard({
     required this.item,
+    required this.personal,
     required this.minimumRespondents,
     required this.onTap,
   });
 
   final SurveyMonitoringAssignment item;
+  final bool personal;
   final int minimumRespondents;
   final VoidCallback onTap;
 
@@ -407,7 +445,7 @@ class _AssignmentCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
-                    Icons.person_search_rounded,
+                    Icons.poll_rounded,
                     color: NusaColors.primary,
                   ),
                 ),
@@ -417,7 +455,9 @@ class _AssignmentCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.teacherName,
+                        personal
+                            ? '${item.subjectName} · ${item.className}'
+                            : item.teacherName,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -426,7 +466,9 @@ class _AssignmentCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${item.subjectName} · ${item.className}',
+                        personal
+                            ? item.academicYearName
+                            : '${item.subjectName} · ${item.className}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

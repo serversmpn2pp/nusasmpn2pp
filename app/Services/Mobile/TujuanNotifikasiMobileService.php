@@ -27,7 +27,7 @@ class TujuanNotifikasiMobileService
         }
 
         if ($path === '/hasil-survei-saya') {
-            return '/monitoring-survei';
+            return '/hasil-survei-saya';
         }
 
         if ($path === '/peringatan-dini-siswa') {
@@ -67,6 +67,10 @@ class TujuanNotifikasiMobileService
         }
 
         if ($tujuan = $this->denganId($path, '/sanksi-poin-siswa', '/pelaksanaan-sanksi-siswa')) {
+            return $tujuan;
+        }
+
+        if ($tujuan = $this->denganId($path, '/progress-kasus-saya', '/progress-kasus-saya')) {
             return $tujuan;
         }
 

@@ -14,10 +14,11 @@ class MonitoringSurveiMobileService
 {
     public function __construct(private RekapSurveiPembelajaranService $rekapSurvei) {}
 
-    public function daftar(array $filter): array
+    public function daftar(array $filter, ?int $pegawaiId = null): array
     {
         $daftarTahun = TahunPelajaran::query()
-            ->whereHas('guruMataPelajaran')
+            ->whereHas('guruMataPelajaran', fn (Builder $query) => $query
+                ->when($pegawaiId !== null, fn (Builder $query) => $query->where('pegawai_id', $pegawaiId)))
             ->orderByDesc('aktif')
             ->orderByDesc('tanggal_mulai')
             ->get(['id', 'nama', 'aktif']);
@@ -36,6 +37,7 @@ class MonitoringSurveiMobileService
                 'pegawai:id,nama_lengkap,nip',
                 'tahunPelajaran:id,nama,aktif',
             ])
+            ->when($pegawaiId !== null, fn (Builder $query) => $query->where('pegawai_id', $pegawaiId))
             ->when(
                 $tahunDipilih,
                 fn (Builder $query) => $query->where('tahun_pelajaran_id', $tahunDipilih->id),

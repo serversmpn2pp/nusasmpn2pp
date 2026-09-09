@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\BerandaController;
 use App\Http\Controllers\Api\V1\DashboardSarprasController;
 use App\Http\Controllers\Api\V1\FotoIdentitasController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
+use App\Http\Controllers\Api\V1\HasilSurveiSayaController;
 use App\Http\Controllers\Api\V1\HasilUjianTerpusatController;
 use App\Http\Controllers\Api\V1\InputNilaiController;
 use App\Http\Controllers\Api\V1\JadwalGuruPiketController;
@@ -72,6 +73,7 @@ use App\Http\Controllers\Api\V1\PengaturanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\PengaturanPresensiSiswaController;
 use App\Http\Controllers\Api\V1\PengembalianBarangController;
 use App\Http\Controllers\Api\V1\PenguranganPoinSiswaController;
+use App\Http\Controllers\Api\V1\PenugasanGuruBkTingkatController;
 use App\Http\Controllers\Api\V1\PenugasanGuruWaliController;
 use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
@@ -81,6 +83,7 @@ use App\Http\Controllers\Api\V1\PersiapanUjianTerpusatController;
 use App\Http\Controllers\Api\V1\PiketSayaController;
 use App\Http\Controllers\Api\V1\PresensiUjianController;
 use App\Http\Controllers\Api\V1\ProfilSayaController;
+use App\Http\Controllers\Api\V1\ProgressKasusSiswaController;
 use App\Http\Controllers\Api\V1\PusatCbtController;
 use App\Http\Controllers\Api\V1\RekapKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
@@ -629,6 +632,11 @@ Route::prefix('v1')
             ->middleware(['akun_pegawai', 'izin:guru_wali.lihat,poin_siswa.lihat'])
             ->name('laporan-siswa-wali.bukti');
 
+        Route::get('/progress-kasus-saya', [ProgressKasusSiswaController::class, 'index'])
+            ->name('progress-kasus-siswa.index');
+        Route::get('/progress-kasus-saya/{laporanPembinaanSiswa}', [ProgressKasusSiswaController::class, 'show'])
+            ->name('progress-kasus-siswa.show');
+
         Route::get('/pemeriksaan-pengesahan', [PemeriksaanPengesahanController::class, 'index'])
             ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
             ->name('pemeriksaan-pengesahan.index');
@@ -691,6 +699,16 @@ Route::prefix('v1')
         Route::delete('/penugasan-guru-wali/{penugasanGuruWali}', [PenugasanGuruWaliController::class, 'destroy'])
             ->middleware('izin:guru_wali.kelola')
             ->name('penugasan-guru-wali.destroy');
+
+        Route::get('/penugasan-guru-bk-tingkat', [PenugasanGuruBkTingkatController::class, 'index'])
+            ->middleware('izin:bk.penugasan_tingkat_kelola')
+            ->name('penugasan-guru-bk-tingkat.index');
+        Route::post('/penugasan-guru-bk-tingkat', [PenugasanGuruBkTingkatController::class, 'store'])
+            ->middleware('izin:bk.penugasan_tingkat_kelola')
+            ->name('penugasan-guru-bk-tingkat.store');
+        Route::delete('/penugasan-guru-bk-tingkat/{penugasanGuruBkTingkat}', [PenugasanGuruBkTingkatController::class, 'destroy'])
+            ->middleware('izin:bk.penugasan_tingkat_kelola')
+            ->name('penugasan-guru-bk-tingkat.destroy');
 
         Route::get('/siswa-wali-saya', [SiswaWaliSayaController::class, 'index'])
             ->middleware(['akun_pegawai', 'izin:guru_wali.lihat'])
@@ -1018,6 +1036,13 @@ Route::prefix('v1')
         Route::patch('/pernyataan-survei/{pertanyaanSurveiPembelajaran}/status', [PernyataanSurveiController::class, 'updateStatus'])
             ->middleware('izin:survei.pertanyaan_kelola')
             ->name('pernyataan-survei.status');
+
+        Route::get('/hasil-survei-saya', [HasilSurveiSayaController::class, 'index'])
+            ->middleware('izin:survei.hasil_pribadi')
+            ->name('hasil-survei-saya.index');
+        Route::get('/hasil-survei-saya/{guruMataPelajaran}', [HasilSurveiSayaController::class, 'show'])
+            ->middleware('izin:survei.hasil_pribadi')
+            ->name('hasil-survei-saya.show');
 
         Route::get('/monitoring-survei', [MonitoringSurveiController::class, 'index'])
             ->middleware('izin:survei.monitor')
