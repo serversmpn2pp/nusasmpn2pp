@@ -25,6 +25,7 @@ use App\Models\Siswa;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use App\Services\AkunOrangTuaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -255,6 +256,8 @@ class PelaksanaanUjianTerpusatApiTest extends TestCase
             'peran' => 'siswa',
             'aktif' => true,
         ]);
+        $akunOrangTua = app(AkunOrangTuaService::class)->buat($data['siswa']);
+        $akunOrangTua->update(['wajib_ganti_kata_sandi' => false]);
         $this->withToken($tokenAdmin)
             ->patchJson(route('api.v1.hasil-ujian-terpusat.publikasi', [
                 $data['kegiatan'], $data['jadwal'],
@@ -265,6 +268,11 @@ class PelaksanaanUjianTerpusatApiTest extends TestCase
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'judul' => 'Hasil ujian Anda telah tersedia',
             'tautan' => '/ujian-saya',
+        ]);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunOrangTua->id,
+            'judul' => 'Hasil ujian anak Anda telah tersedia',
+            'tautan' => '/ujian-anak-saya',
         ]);
 
         $this->withToken($tokenAdmin)

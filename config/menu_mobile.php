@@ -53,6 +53,7 @@ return [
             ['kode' => 'tugas-pengawas-saya', 'label' => 'Tugas Pengawas Saya', 'inisial' => 'TP', 'subkelompok' => 'CBT', 'pengawas_ujian_only' => true, 'status' => 'tersedia', 'rute' => '/tugas-pengawas-ujian'],
             ['kode' => 'pusat-cbt', 'label' => 'Ujian & Asesmen', 'deskripsi' => 'Buka seluruh pengelolaan asesmen dan ujian CBT.', 'inisial' => 'UA', 'subkelompok' => 'CBT', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat'], 'status' => 'tersedia', 'rute' => '/pusat-cbt'],
             ['kode' => 'ujian-saya', 'label' => 'Ujian Saya', 'inisial' => 'US', 'subkelompok' => 'CBT', 'siswa_only' => true, 'status' => 'tersedia', 'rute' => '/ujian-saya'],
+            ['kode' => 'ujian-anak-saya', 'label' => 'Ujian Anak Saya', 'inisial' => 'UA', 'subkelompok' => 'Pemantauan Anak', 'parent_only' => true, 'status' => 'tersedia', 'rute' => '/ujian-anak-saya', 'deskripsi' => 'Pantau jadwal, status pengerjaan, dan hasil ujian anak yang telah dipublikasikan.'],
         ],
     ],
     [

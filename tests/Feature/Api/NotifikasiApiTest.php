@@ -70,6 +70,7 @@ class NotifikasiApiTest extends TestCase
             ['/pemeriksaan-perangkat-ajar/guru/16?semester=1', null, '/pemeriksaan-perangkat-ajar/guru/16'],
             ['/perangkat-ajar-saya/17', null, '/perangkat-ajar-saya/17'],
             ['/nilai-saya?tahun_pelajaran_id=1', null, '/nilai-saya'],
+            ['/ujian-anak-saya', null, '/ujian-anak-saya'],
             ['/akademik-anak?tab=nilai&semester=genap&tahun_pelajaran_id=1', null, '/nilai-anak-saya?semester=genap'],
             ['/akademik-anak?tab=jadwal', null, '/jadwal-pelajaran-anak'],
             ['/hasil-survei-saya#rincian-survei', null, '/hasil-survei-saya'],

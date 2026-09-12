@@ -22,6 +22,10 @@ class TujuanNotifikasiMobileService
             return '/ujian-saya';
         }
 
+        if ($path === '/ujian-anak-saya') {
+            return '/ujian-anak-saya';
+        }
+
         if ($path === '/nilai-saya') {
             return '/nilai-saya';
         }

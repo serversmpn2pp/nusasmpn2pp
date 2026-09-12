@@ -58,6 +58,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'pusat-cbt' => Icons.quiz_rounded,
     'tugas-pengawas-saya' => Icons.assignment_ind_rounded,
     'ujian-saya' => Icons.fact_check_rounded,
+    'ujian-anak-saya' => Icons.family_restroom_rounded,
     'jadwal-guru-piket' => Icons.shield_rounded,
     'piket-saya' => Icons.how_to_reg_rounded,
     'kehadiran-saya' => Icons.event_available_rounded,

@@ -254,5 +254,23 @@ class FinalisasiHasilUjianTerpusatService
                 'ujian_cbt_id' => $ujian->id,
             ],
         );
+
+        $this->notifikasi->kirimKeBanyak(
+            $this->notifikasi->penggunaOrangTuaUntukDaftarSiswa($siswaIds),
+            'berhasil',
+            'Hasil ujian anak Anda telah tersedia',
+            sprintf(
+                'Hasil %s anak Anda untuk %s telah dipublikasikan. Buka Ujian Anak Saya untuk melihat nilai.',
+                $kegiatan->nama,
+                $jadwal->mataPelajaran?->nama ?? $ujian->mataPelajaran?->nama ?? 'mata pelajaran',
+            ),
+            '/ujian-anak-saya',
+            "hasil-ujian-anak-dipublikasikan:{$ujian->id}:{$waktu}",
+            [
+                'kegiatan_ujian_cbt_id' => $kegiatan->id,
+                'jadwal_ujian_cbt_id' => $jadwal->id,
+                'ujian_cbt_id' => $ujian->id,
+            ],
+        );
     }
 }

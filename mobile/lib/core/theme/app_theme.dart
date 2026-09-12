@@ -13,6 +13,8 @@ abstract final class NusaColors {
   static const outline = Color(0xFFDCE5EF);
   static const success = Color(0xFF2FA552);
   static const successSurface = Color(0xFFF0FAF3);
+  static const danger = Color(0xFFC43D4F);
+  static const dangerSurface = Color(0xFFFFF2F4);
 }
 
 abstract final class AppColors {

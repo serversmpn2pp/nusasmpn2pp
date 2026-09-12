@@ -109,6 +109,7 @@ use App\Http\Controllers\Api\V1\SumberPerolehanBarangController;
 use App\Http\Controllers\Api\V1\SurveiPembelajaranController;
 use App\Http\Controllers\Api\V1\TahunPelajaranController;
 use App\Http\Controllers\Api\V1\TugasPengawasUjianController;
+use App\Http\Controllers\Api\V1\UjianAnakController;
 use App\Http\Controllers\Api\V1\UjianSayaController;
 use App\Http\Controllers\Api\V1\UnitBarangController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
@@ -522,6 +523,8 @@ Route::prefix('v1')
         Route::post('/ujian-saya/{pesertaUjianCbt}/aktivitas-keamanan', [UjianSayaController::class, 'aktivitasKeamanan'])
             ->middleware('throttle:120,1')
             ->name('ujian-saya.aktivitas-keamanan');
+        Route::get('/ujian-anak-saya', UjianAnakController::class)
+            ->name('ujian-anak-saya.index');
         Route::post('/keamanan-ujian/peserta/{pesertaUjianCbt}/buka', [KeamananUjianController::class, 'buka'])
             ->middleware('throttle:30,1')
             ->name('keamanan-ujian.buka');

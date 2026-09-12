@@ -89,6 +89,7 @@ import 'package:nusa/features/parent_child_academics/domain/parent_child_academi
 import 'package:nusa/features/parent_child_academics/presentation/parent_child_academics_view.dart';
 import 'package:nusa/features/parent_child_guidance/domain/parent_child_guidance.dart';
 import 'package:nusa/features/parent_child_guidance/presentation/parent_child_guidance_view.dart';
+import 'package:nusa/features/parent_child_exams/presentation/parent_child_exams_view.dart';
 import 'package:nusa/features/personal_worship/presentation/personal_worship_view.dart';
 import 'package:nusa/features/point_sanction_rule/presentation/point_sanction_rule_view.dart';
 import 'package:nusa/features/point_reduction/presentation/point_reduction_view.dart';
@@ -207,6 +208,7 @@ abstract final class AppRoutes {
   static const examAttendanceDetail = '/presensi-ujian/:id';
   static const myExams = '/ujian-saya';
   static const studentExam = '/ujian-saya/:id';
+  static const parentChildExams = '/ujian-anak-saya';
   static const questionBank = '/bank-soal';
   static const questionBankCreate = '/bank-soal/tambah';
   static const questionBankDetail = '/bank-soal/:id';
@@ -636,6 +638,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => StudentExamView(
           participantId: int.parse(state.pathParameters['id']!),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.parentChildExams,
+        name: 'parent-child-exams',
+        builder: (context, state) => const ParentChildExamsView(),
       ),
       GoRoute(
         path: AppRoutes.questionBank,
