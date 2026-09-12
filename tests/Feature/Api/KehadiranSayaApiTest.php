@@ -136,10 +136,12 @@ class KehadiranSayaApiTest extends TestCase
             ->getJson(route('api.v1.menu'))
             ->assertOk()
             ->assertJsonFragment([
-                'kode' => 'kehadiran-saya',
+                'kode' => 'kehadiran-anak-saya',
+                'label' => 'Kehadiran Anak Saya',
                 'status' => 'tersedia',
-                'rute' => '/kehadiran-saya',
-            ]);
+                'rute' => '/kehadiran-anak-saya',
+            ])
+            ->assertJsonMissing(['kode' => 'kehadiran-saya']);
 
         $this->withToken($this->token($pengguna))
             ->getJson(route('api.v1.beranda'))

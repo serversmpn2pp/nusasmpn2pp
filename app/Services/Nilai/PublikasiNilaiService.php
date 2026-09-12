@@ -112,9 +112,9 @@ class PublikasiNilaiService
         $this->notifikasi->kirimKeBanyak(
             $this->notifikasi->penggunaUntukDaftarSiswa($siswaIds),
             'berhasil',
-            'Nilai '.$namaMataPelajaran.' telah tersedia',
+            'Nilai '.$namaMataPelajaran.' Anda telah tersedia',
             sprintf(
-                'Nilai %s untuk %s semester %s telah dipublikasikan. Isi survei pembelajaran untuk membuka rincian nilai.',
+                'Nilai %s Anda untuk %s semester %s telah dipublikasikan. Isi survei pembelajaran untuk membuka rincian nilai.',
                 $namaMataPelajaran,
                 $namaKelas,
                 $labelSemester,
@@ -135,9 +135,9 @@ class PublikasiNilaiService
         $this->notifikasi->kirimKeBanyak(
             $this->notifikasi->penggunaOrangTuaUntukDaftarSiswa($siswaIds),
             'berhasil',
-            'Nilai '.$namaMataPelajaran.' anak telah tersedia',
+            'Nilai '.$namaMataPelajaran.' anak Anda telah tersedia',
             sprintf(
-                'Nilai %s untuk %s semester %s telah dipublikasikan. Rincian nilai terbuka setelah anak mengisi survei pembelajaran.',
+                'Nilai %s anak Anda untuk %s semester %s telah dipublikasikan. Rincian nilai dapat dilihat setelah anak mengisi survei pembelajaran.',
                 $namaMataPelajaran,
                 $namaKelas,
                 $labelSemester,

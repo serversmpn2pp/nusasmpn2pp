@@ -191,7 +191,7 @@ class KeamananUjianMobileService
 
     private function pesertaMilikSiswa(Pengguna $pengguna, PesertaUjianCbt $peserta): PesertaUjianCbt
     {
-        abort_unless($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'), 403);
+        abort_unless($pengguna->akunSiswa(), 403);
         $siswa = $pengguna->siswa()->firstOrFail();
 
         return PesertaUjianCbt::query()

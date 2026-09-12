@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/errors/app_exception.dart';
+import 'package:nusa/core/security/password_change_gate.dart';
 import 'package:nusa/features/auth/data/auth_repository.dart';
 import 'package:nusa/features/auth/domain/auth_session.dart';
 import 'package:nusa/features/auth/domain/pengguna.dart';
@@ -38,6 +39,9 @@ class AuthController extends AsyncNotifier<AuthState> {
       final session = await ref
           .read(authRepositoryProvider)
           .login(username: username.trim(), password: password);
+      ref
+          .read(passwordChangeGateProvider.notifier)
+          .setRequired(session.pengguna.wajibGantiKataSandi);
       state = AsyncData(AuthState(session: session));
     } on AppException catch (exception) {
       state = AsyncData(
@@ -73,6 +77,7 @@ class AuthController extends AsyncNotifier<AuthState> {
             kataSandiBaru: kataSandiBaru,
             konfirmasiKataSandiBaru: konfirmasiKataSandiBaru,
           );
+      ref.read(passwordChangeGateProvider.notifier).clear();
       state = AsyncData(
         AuthState(session: currentSession.copyWith(pengguna: pengguna)),
       );
@@ -100,6 +105,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
 
     await ref.read(authRepositoryProvider).logout();
+    ref.read(passwordChangeGateProvider.notifier).clear();
     state = const AsyncData(AuthState());
   }
 
@@ -108,6 +114,9 @@ class AuthController extends AsyncNotifier<AuthState> {
     final session = current?.session;
     if (current == null || session == null) return;
 
+    ref
+        .read(passwordChangeGateProvider.notifier)
+        .setRequired(pengguna.wajibGantiKataSandi);
     state = AsyncData(AuthState(session: session.copyWith(pengguna: pengguna)));
   }
 }

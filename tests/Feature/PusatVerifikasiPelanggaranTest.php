@@ -126,13 +126,13 @@ class PusatVerifikasiPelanggaranTest extends TestCase
 
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $akunSiswa->id,
-            'judul' => 'Pembinaan telah ditetapkan',
+            'judul' => 'Pembinaan Anda telah ditetapkan',
             'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanPembinaan->id.':ditetapkan_pembinaan',
             'tautan' => route('progress-kasus-siswa.show', $laporanPembinaan, false),
         ]);
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $akunOrangTua->id,
-            'judul' => 'Pembinaan anak telah ditetapkan',
+            'judul' => 'Pembinaan anak Anda telah ditetapkan',
             'kunci_unik' => 'perkembangan-kasus-orang-tua:'.$laporanPembinaan->id.':ditetapkan_pembinaan',
             'tautan' => route('pembinaan-poin-anak.show', $laporanPembinaan, false),
         ]);
@@ -144,7 +144,7 @@ class PusatVerifikasiPelanggaranTest extends TestCase
 
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $akunSiswa->id,
-            'judul' => 'Pemeriksaan laporan selesai',
+            'judul' => 'Pemeriksaan laporan Anda selesai',
             'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanTidakTerbukti->id.':tidak_terbukti',
         ]);
 
@@ -169,13 +169,13 @@ class PusatVerifikasiPelanggaranTest extends TestCase
 
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $akunSiswa->id,
-            'judul' => 'Pelanggaran berpoin telah disahkan',
+            'judul' => 'Pelanggaran berpoin Anda telah disahkan',
             'kunci_unik' => 'perkembangan-kasus-siswa:'.$laporanPoin->id.':disahkan',
             'tautan' => route('progress-kasus-siswa.show', $laporanPoin, false),
         ]);
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $akunOrangTua->id,
-            'judul' => 'Pelanggaran berpoin anak telah disahkan',
+            'judul' => 'Pelanggaran berpoin anak Anda telah disahkan',
             'kunci_unik' => 'perkembangan-kasus-orang-tua:'.$laporanPoin->id.':disahkan',
             'tautan' => route('pembinaan-poin-anak.show', $laporanPoin, false),
         ]);

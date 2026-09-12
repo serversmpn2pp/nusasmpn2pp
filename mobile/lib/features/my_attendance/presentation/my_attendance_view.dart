@@ -8,7 +8,9 @@ import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_section_title.dart';
 
 class MyAttendanceView extends ConsumerWidget {
-  const MyAttendanceView({super.key});
+  const MyAttendanceView({this.pageTitle, super.key});
+
+  final String? pageTitle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,7 +18,12 @@ class MyAttendanceView extends ConsumerWidget {
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: const Text('Kehadiranku'),
+        title: Text(
+          pageTitle ??
+              (result.value?.isParent == true
+                  ? 'Kehadiran Anak Saya'
+                  : 'Kehadiranku'),
+        ),
         actions: [
           IconButton(
             tooltip: 'Perbarui',
@@ -187,7 +194,7 @@ class _IdentityCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  page.isParent ? 'Kehadiran Anak' : 'Kehadiran Siswa',
+                  page.isParent ? 'Kehadiran Anak Saya' : 'Kehadiran Siswa',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11,

@@ -240,9 +240,9 @@ class FinalisasiHasilUjianTerpusatService
         $this->notifikasi->kirimKeBanyak(
             $this->notifikasi->penggunaUntukDaftarSiswa($siswaIds),
             'berhasil',
-            'Hasil ujian telah tersedia',
+            'Hasil ujian Anda telah tersedia',
             sprintf(
-                'Hasil %s untuk %s telah dipublikasikan. Buka Ujian Saya untuk melihat nilai.',
+                'Hasil %s Anda untuk %s telah dipublikasikan. Buka Ujian Saya untuk melihat nilai.',
                 $kegiatan->nama,
                 $jadwal->mataPelajaran?->nama ?? $ujian->mataPelajaran?->nama ?? 'mata pelajaran',
             ),

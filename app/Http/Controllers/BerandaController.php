@@ -47,7 +47,7 @@ class BerandaController extends Controller
         $awalBulan = $hariIni->copy()->startOfMonth();
         $akhirBulan = $hariIni->copy()->endOfMonth();
 
-        if ($pengguna?->akunSiswa() || $pengguna?->memilikiPeran('siswa')) {
+        if ($pengguna?->akunSiswa()) {
             return view('beranda.siswa', $this->dataDashboardSiswa(
                 pengguna: $pengguna,
                 hariIni: $hariIni,
@@ -57,7 +57,7 @@ class BerandaController extends Controller
             ));
         }
 
-        if ($pengguna?->akunOrangTua() || $pengguna?->memilikiPeran('orang_tua')) {
+        if ($pengguna?->akunOrangTua()) {
             $orangTua = $pengguna->orangTuaWali()
                 ->with(['siswa' => fn ($query) => $query->orderBy('nama_lengkap')])
                 ->first();
@@ -79,6 +79,8 @@ class BerandaController extends Controller
         }
 
         if (! $pengguna?->administrator()) {
+            abort_unless($pengguna?->akunPegawai(), 403);
+
             return view('beranda.index', $this->dataDashboardPegawai(
                 pengguna: $pengguna,
                 hariIni: $hariIni,

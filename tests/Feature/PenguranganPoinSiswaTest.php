@@ -155,7 +155,7 @@ class PenguranganPoinSiswaTest extends TestCase
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $akunOrangTua->id,
             'jenis' => 'berhasil',
-            'judul' => 'Pengurangan poin anak disetujui',
+            'judul' => 'Pengurangan poin anak Anda disetujui',
             'tautan' => route('pembinaan-poin-anak.index', ['tab' => 'poin'], false),
             'kunci_unik' => "pengurangan-poin-orang-tua:{$pengurangan->id}:disetujui",
         ]);

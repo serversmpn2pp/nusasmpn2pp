@@ -66,7 +66,8 @@ class PublikasiNilaiSiswaTest extends TestCase
         ]);
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $data['akun_siswa']->id,
-            'judul' => 'Nilai Matematika telah tersedia',
+            'judul' => 'Nilai Matematika Anda telah tersedia',
+            'pesan' => 'Nilai Matematika Anda untuk VII.A semester Ganjil telah dipublikasikan. Isi survei pembelajaran untuk membuka rincian nilai.',
             'tautan' => route('nilai-saya.index', [
                 'tahun_pelajaran_id' => $data['tahun']->id,
                 'semester' => 'ganjil',
@@ -74,11 +75,12 @@ class PublikasiNilaiSiswaTest extends TestCase
         ]);
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $data['akun_siswa_lain']->id,
-            'judul' => 'Nilai Matematika telah tersedia',
+            'judul' => 'Nilai Matematika Anda telah tersedia',
         ]);
         $this->assertDatabaseHas('notifikasi_pengguna', [
             'pengguna_id' => $akunOrangTua->id,
-            'judul' => 'Nilai Matematika anak telah tersedia',
+            'judul' => 'Nilai Matematika anak Anda telah tersedia',
+            'pesan' => 'Nilai Matematika anak Anda untuk VII.A semester Ganjil telah dipublikasikan. Rincian nilai dapat dilihat setelah anak mengisi survei pembelajaran.',
             'tautan' => route('akademik-anak.index', [
                 'tab' => 'nilai',
                 'semester' => 'ganjil',
@@ -86,7 +88,7 @@ class PublikasiNilaiSiswaTest extends TestCase
         ]);
         $this->assertDatabaseMissing('notifikasi_pengguna', [
             'pengguna_id' => $akunTanpaNilai->id,
-            'judul' => 'Nilai Matematika telah tersedia',
+            'judul' => 'Nilai Matematika Anda telah tersedia',
         ]);
 
         $this->actingAs($data['akun_guru'])

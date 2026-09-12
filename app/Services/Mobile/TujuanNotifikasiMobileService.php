@@ -26,8 +26,25 @@ class TujuanNotifikasiMobileService
             return '/nilai-saya';
         }
 
+        if ($path === '/akademik-anak') {
+            $tujuan = $this->query($notifikasi->tautan, 'tab') === 'nilai'
+                ? '/nilai-anak-saya'
+                : '/jadwal-pelajaran-anak';
+            $parameter = array_filter([
+                'semester' => $this->query($notifikasi->tautan, 'semester'),
+            ]);
+
+            return $tujuan.($parameter ? '?'.http_build_query($parameter) : '');
+        }
+
         if ($path === '/hasil-survei-saya') {
             return '/hasil-survei-saya';
+        }
+
+        if ($path === '/pembinaan-poin-anak') {
+            return $this->query($notifikasi->tautan, 'tab') === 'poin'
+                ? '/pembinaan-poin-anak?tab=poin'
+                : '/pembinaan-poin-anak';
         }
 
         if ($path === '/peringatan-dini-siswa') {
@@ -74,6 +91,10 @@ class TujuanNotifikasiMobileService
             return $tujuan;
         }
 
+        if ($tujuan = $this->denganId($path, '/pembinaan-poin-anak', '/pembinaan-poin-anak')) {
+            return $tujuan;
+        }
+
         if ($tujuan = $this->denganId($path, '/pemeriksaan-perangkat-ajar/guru', '/pemeriksaan-perangkat-ajar/guru')) {
             return $tujuan;
         }
@@ -98,6 +119,18 @@ class TujuanNotifikasiMobileService
         }
 
         return '/'.trim($path, '/');
+    }
+
+    private function query(?string $tautan, string $nama): ?string
+    {
+        $query = parse_url((string) $tautan, PHP_URL_QUERY);
+        if (! is_string($query)) {
+            return null;
+        }
+
+        parse_str($query, $parameter);
+
+        return is_string($parameter[$nama] ?? null) ? $parameter[$nama] : null;
     }
 
     private function denganId(string $path, string $asal, string $tujuan): ?string

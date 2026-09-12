@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nusa/core/security/password_change_gate.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/auth/presentation/ganti_kata_sandi_view.dart';
 import 'package:nusa/features/auth/presentation/login_view.dart';
@@ -84,6 +85,11 @@ import 'package:nusa/features/my_guardian_students/presentation/my_guardian_stud
 import 'package:nusa/features/my_guardian_students/presentation/my_guardian_student_list_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_detail_view.dart';
 import 'package:nusa/features/parent_account/presentation/parent_account_list_view.dart';
+import 'package:nusa/features/parent_child_academics/domain/parent_child_academics.dart';
+import 'package:nusa/features/parent_child_academics/presentation/parent_child_academics_view.dart';
+import 'package:nusa/features/parent_child_guidance/domain/parent_child_guidance.dart';
+import 'package:nusa/features/parent_child_guidance/presentation/parent_child_guidance_view.dart';
+import 'package:nusa/features/personal_worship/presentation/personal_worship_view.dart';
 import 'package:nusa/features/point_sanction_rule/presentation/point_sanction_rule_view.dart';
 import 'package:nusa/features/point_reduction/presentation/point_reduction_view.dart';
 import 'package:nusa/features/private_worship_scan/presentation/private_worship_scan_view.dart';
@@ -143,6 +149,7 @@ import 'package:nusa/features/teaching_document_type/presentation/teaching_docum
 import 'package:nusa/features/teacher_duty/presentation/my_teacher_duty_view.dart';
 import 'package:nusa/features/teacher_duty/presentation/teacher_duty_schedule_view.dart';
 import 'package:nusa/features/worship_activity/presentation/worship_activity_view.dart';
+import 'package:nusa/features/worship_absence_recap/presentation/worship_absence_recap_view.dart';
 import 'package:nusa/features/worship_absence_settings/presentation/worship_absence_settings_view.dart';
 import 'package:nusa/features/worship_monthly_summary/presentation/worship_monthly_summary_view.dart';
 import 'package:nusa/features/worship_schedule/presentation/worship_schedule_view.dart';
@@ -216,6 +223,10 @@ abstract final class AppRoutes {
   static const classAssessmentCorrection = '/asesmen-kelas/:id/koreksi-uraian';
   static const incidentReporting = '/laporkan-kejadian';
   static const studentCaseProgress = '/progress-kasus-saya';
+  static const parentChildGuidance = '/pembinaan-poin-anak';
+  static const parentChildAcademics = '/akademik-anak';
+  static const parentChildSchedule = '/jadwal-pelajaran-anak';
+  static const parentChildGrades = '/nilai-anak-saya';
   static const studentReports = '/daftar-laporan-siswa';
   static const studentReportDetail = '/daftar-laporan-siswa/:id';
   static const myStudentReports = '/laporan-saya';
@@ -274,6 +285,9 @@ abstract final class AppRoutes {
   static const gradeRecap = '/rekap-nilai-rapor';
   static const myGrades = '/nilai-saya';
   static const myAttendance = '/kehadiran-saya';
+  static const parentChildAttendance = '/kehadiran-anak-saya';
+  static const myWorship = '/ibadah-saya';
+  static const parentChildWorship = '/ibadah-anak-saya';
   static const learningSurvey = '/survei-pembelajaran/:assignmentId/:semester';
   static const surveyStatements = '/pernyataan-survei';
   static const mySurveyResults = '/hasil-survei-saya';
@@ -288,6 +302,7 @@ abstract final class AppRoutes {
   static const privateWorshipScan = '/scan-berhalangan-ibadah';
   static const privateConfirmation = '/konfirmasi-berhalangan-ibadah';
   static const privateConfirmationDetail = '/konfirmasi-berhalangan-ibadah/:id';
+  static const worshipAbsenceRecap = '/rekap-berhalangan-ibadah';
   static const worshipRecap = '/rekap-kegiatan-ibadah';
   static const worshipCorrection = '/rekap-kegiatan-ibadah/koreksi/:id';
   static const worshipMonthlySummary = '/ringkasan-kegiatan-ibadah-bulanan';
@@ -309,6 +324,7 @@ final splashGateProvider = FutureProvider<void>((ref) async {
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authAsync = ref.watch(authControllerProvider);
+  final passwordChangeRequired = ref.watch(passwordChangeGateProvider);
   final splashGate = ref.watch(splashGateProvider);
   final router = GoRouter(
     initialLocation: AppRoutes.startup,
@@ -326,7 +342,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return location == AppRoutes.login ? null : AppRoutes.login;
       }
 
-      if (pengguna.wajibGantiKataSandi) {
+      if (pengguna.wajibGantiKataSandi || passwordChangeRequired) {
         return location == AppRoutes.gantiKataSandi
             ? null
             : AppRoutes.gantiKataSandi;
@@ -743,6 +759,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: AppRoutes.parentChildGuidance,
+        name: 'parent-child-guidance',
+        builder: (context, state) => ParentChildGuidanceView(
+          initialTab: ParentChildGuidanceTab.fromApi(
+            state.uri.queryParameters['tab'],
+          ),
+        ),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'parent-child-guidance-detail',
+            builder: (context, state) => StudentCaseDetailView(
+              reportId: int.parse(state.pathParameters['id']!),
+              parentMode: true,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
         path: AppRoutes.myStudentReports,
         name: 'my-student-reports',
         builder: (context, state) =>
@@ -1058,6 +1093,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MyAttendanceView(),
       ),
       GoRoute(
+        path: AppRoutes.parentChildAttendance,
+        name: 'parent-child-attendance',
+        builder: (context, state) =>
+            const MyAttendanceView(pageTitle: 'Kehadiran Anak Saya'),
+      ),
+      GoRoute(
+        path: AppRoutes.myWorship,
+        name: 'my-worship',
+        builder: (context, state) =>
+            const PersonalWorshipView(pageTitle: 'Ibadah Saya'),
+      ),
+      GoRoute(
+        path: AppRoutes.parentChildWorship,
+        name: 'parent-child-worship',
+        builder: (context, state) =>
+            const PersonalWorshipView(pageTitle: 'Ibadah Anak Saya'),
+      ),
+      GoRoute(
         path: AppRoutes.employeeAttendanceSettings,
         name: 'employee-attendance-settings',
         builder: (context, state) => const EmployeeAttendanceSettingsView(),
@@ -1146,6 +1199,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.myGrades,
         name: 'my-grades',
         builder: (context, state) => const MyGradesView(),
+      ),
+      GoRoute(
+        path: AppRoutes.parentChildAcademics,
+        name: 'parent-child-academics',
+        builder: (context, state) => ParentChildAcademicsView(
+          initialTab: ParentChildAcademicsTab.fromApi(
+            state.uri.queryParameters['tab'],
+          ),
+          initialSemester: state.uri.queryParameters['semester'] == 'genap'
+              ? 'genap'
+              : 'ganjil',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.parentChildSchedule,
+        name: 'parent-child-schedule',
+        builder: (context, state) => const ParentChildAcademicsView(
+          pageTitle: 'Jadwal Pelajaran Anak Saya',
+          showTabs: false,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.parentChildGrades,
+        name: 'parent-child-grades',
+        builder: (context, state) => ParentChildAcademicsView(
+          initialTab: ParentChildAcademicsTab.grades,
+          initialSemester: state.uri.queryParameters['semester'] == 'genap'
+              ? 'genap'
+              : 'ganjil',
+          pageTitle: 'Nilai Anak Saya',
+          showTabs: false,
+        ),
       ),
       GoRoute(
         path: AppRoutes.learningSurvey,
@@ -1275,6 +1360,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.worshipAbsenceRecap,
+        name: 'worship-absence-recap',
+        builder: (context, state) => const WorshipAbsenceRecapView(),
       ),
       GoRoute(
         path: AppRoutes.worshipRecap,

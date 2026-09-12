@@ -180,7 +180,7 @@ class MenuMobileService
     {
         $items = collect($kelompok['items'] ?? [])
             ->filter(fn (array $item) => $this->bolehDilihat($item, $pengguna))
-            ->map(fn (array $item) => $this->siapkanItem($item))
+            ->map(fn (array $item) => $this->siapkanItem($item, $pengguna))
             ->values()
             ->all();
 
@@ -206,15 +206,17 @@ class MenuMobileService
         }
 
         if (($item['siswa_only'] ?? false)
-            && ! ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'))) {
+            && ! $pengguna->akunSiswa()) {
+            return false;
+        }
+
+        if (($item['parent_only'] ?? false)
+            && ! $pengguna->akunOrangTua()) {
             return false;
         }
 
         if (($item['siswa_or_parent_only'] ?? false)
-            && ! ($pengguna->akunSiswa()
-                || $pengguna->memilikiPeran('siswa')
-                || $pengguna->akunOrangTua()
-                || $pengguna->memilikiPeran('orang_tua'))) {
+            && ! ($pengguna->akunSiswa() || $pengguna->akunOrangTua())) {
             return false;
         }
 
@@ -283,8 +285,22 @@ class MenuMobileService
             ->exists();
     }
 
-    private function siapkanItem(array $item): array
+    private function siapkanItem(array $item, Pengguna $pengguna): array
     {
+        if ($pengguna->akunPegawai() && $pengguna->membatasiCakupanAbsensiPegawai()) {
+            $item = match ($item['kode']) {
+                'rekap-presensi-pegawai' => array_replace($item, [
+                    'label' => 'Rekap Presensi Saya',
+                    'deskripsi' => 'Lihat rekap dan rincian presensi pribadi Anda.',
+                ]),
+                'laporan-presensi-pegawai' => array_replace($item, [
+                    'label' => 'Laporan Presensi Saya',
+                    'deskripsi' => 'Lihat laporan presensi bulanan pribadi Anda.',
+                ]),
+                default => $item,
+            };
+        }
+
         return [
             'kode' => $item['kode'],
             'label' => $item['label'],

@@ -30,8 +30,10 @@ class _EmployeeAttendanceReportViewState
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: const Text(
-          'Laporan Presensi Pegawai',
+        title: Text(
+          async.value?.privateScope == true
+              ? 'Laporan Presensi Saya'
+              : 'Laporan Presensi Pegawai',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

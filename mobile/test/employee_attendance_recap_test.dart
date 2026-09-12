@@ -109,6 +109,28 @@ void main() {
     expect(remote.lastStatus, 'sakit');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('judul rekap menjadi personal untuk pegawai biasa', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          employeeAttendanceRecapRemoteDataSourceProvider.overrideWithValue(
+            _FakeEmployeeAttendanceRecapRemoteDataSource(privateScope: true),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const EmployeeAttendanceRecapView(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rekap Presensi Saya'), findsOneWidget);
+    expect(find.text('Rekap Presensi Pegawai'), findsNothing);
+  });
 }
 
 Map<String, dynamic> _recordJson({String status = 'hadir'}) => {
@@ -142,6 +164,9 @@ Map<String, dynamic> _recordJson({String status = 'hadir'}) => {
 
 final class _FakeEmployeeAttendanceRecapRemoteDataSource
     implements EmployeeAttendanceRecapRemoteDataSource {
+  _FakeEmployeeAttendanceRecapRemoteDataSource({this.privateScope = false});
+
+  final bool privateScope;
   int correctCalls = 0;
   String lastStatus = 'hadir';
 
@@ -180,8 +205,8 @@ final class _FakeEmployeeAttendanceRecapRemoteDataSource
     query: query,
     page: page,
     hasMore: false,
-    privateScope: false,
-    canCorrect: true,
+    privateScope: privateScope,
+    canCorrect: !privateScope,
   );
 
   @override
@@ -196,8 +221,8 @@ final class _FakeEmployeeAttendanceRecapRemoteDataSource
     scheduleName: 'Jadwal Guru',
     officialCheckIn: '07:00',
     officialCheckOut: '14:00',
-    privateScope: false,
-    canCorrect: true,
+    privateScope: privateScope,
+    canCorrect: !privateScope,
   );
 
   @override

@@ -263,7 +263,7 @@ class PelaksanaanUjianTerpusatApiTest extends TestCase
             ->assertJsonPath('data.status', 'dipublikasikan')
             ->assertJsonPath('data.dapat_batalkan_publikasi', true);
         $this->assertDatabaseHas('notifikasi_pengguna', [
-            'judul' => 'Hasil ujian telah tersedia',
+            'judul' => 'Hasil ujian Anda telah tersedia',
             'tautan' => '/ujian-saya',
         ]);
 

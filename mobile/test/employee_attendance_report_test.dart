@@ -78,6 +78,34 @@ void main() {
     expect(find.textContaining('Jadwal Guru'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('judul laporan menjadi personal untuk pegawai biasa', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          employeeAttendanceReportRemoteDataSourceProvider.overrideWithValue(
+            _FakeEmployeeAttendanceReportRemoteDataSource(privateScope: true),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const EmployeeAttendanceReportView(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Laporan Presensi Saya'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Laporan Presensi Pegawai'), findsNothing);
+  });
 }
 
 Map<String, dynamic> _summaryJson() => {
@@ -129,6 +157,10 @@ EmployeeAttendanceReportItem _item() => EmployeeAttendanceReportItem(
 
 final class _FakeEmployeeAttendanceReportRemoteDataSource
     implements EmployeeAttendanceReportRemoteDataSource {
+  _FakeEmployeeAttendanceReportRemoteDataSource({this.privateScope = false});
+
+  final bool privateScope;
+
   @override
   Future<EmployeeAttendanceReportPage> fetch(
     Map<String, dynamic> query,
@@ -147,7 +179,7 @@ final class _FakeEmployeeAttendanceReportRemoteDataSource
     query: query['cari'] as String? ?? '',
     page: query['halaman'] as int? ?? 1,
     hasMore: false,
-    privateScope: false,
+    privateScope: privateScope,
   );
 
   @override
@@ -175,6 +207,6 @@ final class _FakeEmployeeAttendanceReportRemoteDataSource
         scheduledCheckOut: '14:00',
       ),
     ],
-    privateScope: false,
+    privateScope: privateScope,
   );
 }

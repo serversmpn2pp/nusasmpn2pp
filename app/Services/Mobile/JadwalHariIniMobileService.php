@@ -26,11 +26,11 @@ class JadwalHariIniMobileService
         ?array $piketHariIni,
         ?array $perwalian,
     ): array {
-        if ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa')) {
+        if ($pengguna->akunSiswa()) {
             return $this->jadwalSiswa($pengguna->siswa, $tahunPelajaran, $hariIni, false);
         }
 
-        if ($pengguna->akunOrangTua() || $pengguna->memilikiPeran('orang_tua')) {
+        if ($pengguna->akunOrangTua()) {
             return $this->jadwalOrangTua($pengguna, $tahunPelajaran, $hariIni);
         }
 

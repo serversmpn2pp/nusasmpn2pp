@@ -126,7 +126,7 @@ class KehadiranSayaMobileService
 
     private function siswaUntukPengguna(Pengguna $pengguna, ?int $siswaId): array
     {
-        if ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa')) {
+        if ($pengguna->akunSiswa()) {
             $siswa = $pengguna->siswa;
             abort_unless($siswa, 403);
             abort_if($siswaId !== null && $siswaId !== (int) $siswa->id, 403);

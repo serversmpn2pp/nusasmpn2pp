@@ -27,7 +27,7 @@ class MenuApiTest extends TestCase
         $response = $this->withToken($this->token($administrator))
             ->getJson(route('api.v1.menu'))
             ->assertOk()
-            ->assertJsonPath('data.jumlah_menu', 78)
+            ->assertJsonPath('data.jumlah_menu', 79)
             ->assertJsonCount(7, 'data.kelompok')
             ->assertJsonPath('data.kelompok.0.kode', 'data-sekolah')
             ->assertJsonPath('data.kelompok.0.items.0.kode', 'tahun-pelajaran')
@@ -38,6 +38,11 @@ class MenuApiTest extends TestCase
                 'label' => 'Ujian & Asesmen',
                 'status' => 'tersedia',
                 'rute' => '/pusat-cbt',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'rekap-berhalangan-ibadah',
+                'status' => 'tersedia',
+                'rute' => '/rekap-berhalangan-ibadah',
             ])
             ->assertJsonFragment([
                 'kode' => 'dashboard-sarpras',
@@ -394,7 +399,9 @@ class MenuApiTest extends TestCase
         ]);
         $pengguna->daftarPeran()->attach($peran);
 
-        $this->withToken($this->token($pengguna))
+        $token = $this->token($pengguna);
+
+        $this->withToken($token)
             ->getJson(route('api.v1.menu'))
             ->assertOk()
             ->assertJsonPath('data.akses_cepat.dapat_diatur', false)
@@ -458,6 +465,11 @@ class MenuApiTest extends TestCase
                 'rute' => '/kehadiran-saya',
             ])
             ->assertJsonFragment([
+                'kode' => 'ibadah-saya',
+                'status' => 'tersedia',
+                'rute' => '/ibadah-saya',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'ujian-saya',
                 'status' => 'tersedia',
                 'rute' => '/ujian-saya',
@@ -473,6 +485,52 @@ class MenuApiTest extends TestCase
                 'kode_menu' => ['nilai-saya'],
             ])
             ->assertForbidden();
+    }
+
+    public function test_role_siswa_dan_orang_tua_tidak_dianggap_sebagai_identitas_akun(): void
+    {
+        $pengguna = Pengguna::create([
+            'nama' => 'Akun Tanpa Identitas',
+            'username' => 'tanpa.identitas',
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $pengguna->daftarPeran()->attach(
+            Peran::whereIn('kode', ['siswa', 'orang_tua'])->pluck('id'),
+        );
+
+        $token = $this->token($pengguna);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonMissing(['kode' => 'nilai-saya'])
+            ->assertJsonMissing(['kode' => 'kehadiran-saya'])
+            ->assertJsonMissing(['kode' => 'ibadah-saya'])
+            ->assertJsonMissing(['kode' => 'ujian-saya'])
+            ->assertJsonMissing(['kode' => 'progress-kasus-saya'])
+            ->assertJsonMissing(['kode' => 'jadwal-pelajaran-anak'])
+            ->assertJsonMissing(['kode' => 'nilai-anak-saya'])
+            ->assertJsonMissing(['kode' => 'kehadiran-anak-saya'])
+            ->assertJsonMissing(['kode' => 'ibadah-anak-saya'])
+            ->assertJsonMissing(['kode' => 'pembinaan-poin-anak']);
+
+        foreach ([
+            'api.v1.nilai-saya.index',
+            'api.v1.kehadiran-saya',
+            'api.v1.ibadah-saya',
+            'api.v1.progress-kasus-siswa.index',
+            'api.v1.ujian-saya.index',
+            'api.v1.akademik-anak.index',
+            'api.v1.pembinaan-poin-anak.index',
+        ] as $namaRute) {
+            $this->withToken($token)
+                ->getJson(route($namaRute))
+                ->assertForbidden();
+        }
     }
 
     public function test_akun_guru_menerima_menu_perangkat_ajar_saya(): void
@@ -561,6 +619,39 @@ class MenuApiTest extends TestCase
         $this->assertDatabaseMissing('akses_cepat_pengguna', [
             'pengguna_id' => $pengguna->id,
         ]);
+    }
+
+    public function test_menu_presensi_pegawai_memakai_label_pribadi_untuk_cakupan_sendiri(): void
+    {
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Pegawai Presensi Pribadi',
+            'nip' => '198601012026081099',
+            'jenis_kelamin' => 'P',
+            'aktif' => true,
+        ]);
+        $pengguna = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $pengguna->daftarPeran()->attach(Peran::where('kode', 'pegawai')->firstOrFail());
+
+        $this->withToken($this->token($pengguna))
+            ->getJson(route('api.v1.menu'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'kode' => 'rekap-presensi-pegawai',
+                'label' => 'Rekap Presensi Saya',
+            ])
+            ->assertJsonFragment([
+                'kode' => 'laporan-presensi-pegawai',
+                'label' => 'Laporan Presensi Saya',
+            ]);
     }
 
     private function token(Pengguna $pengguna): string

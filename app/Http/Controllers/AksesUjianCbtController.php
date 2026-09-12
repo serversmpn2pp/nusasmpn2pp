@@ -21,7 +21,7 @@ class AksesUjianCbtController extends Controller
     {
         $pengguna = $request->user();
 
-        abort_unless($pengguna?->akunSiswa() || $pengguna?->memilikiPeran('siswa'), 403);
+        abort_unless($pengguna?->akunSiswa(), 403);
 
         $siswa = $pengguna->siswa()->firstOrFail();
         $peserta = PesertaUjianCbt::query()
@@ -315,7 +315,7 @@ class AksesUjianCbtController extends Controller
         $penggunaSesiId = (int) $request->session()->get('cbt_pengguna_id');
         $milikSiswaLogin = $pengguna
             && (int) $pengguna->id === $penggunaSesiId
-            && ($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'))
+            && $pengguna->akunSiswa()
             && $peserta->anggotaKelas()
                 ->where('siswa_id', $pengguna->siswa_id)
                 ->exists();

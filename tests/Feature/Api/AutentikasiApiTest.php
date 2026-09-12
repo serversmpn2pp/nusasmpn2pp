@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Pengguna;
+use App\Models\Siswa;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -118,6 +119,38 @@ class AutentikasiApiTest extends TestCase
         $this->withToken($token)
             ->getJson(route('api.v1.auth.saya'))
             ->assertOk();
+    }
+
+    public function test_kata_sandi_awal_siswa_tetap_mengunci_menu_saat_flag_tidak_sinkron(): void
+    {
+        $siswa = Siswa::create([
+            'nama_lengkap' => 'Siswa Kata Sandi Awal',
+            'nis' => '20269981',
+            'nisn' => '0099999981',
+            'jenis_kelamin' => 'L',
+            'aktif' => true,
+        ]);
+        $pengguna = $this->buatPengguna([
+            'siswa_id' => $siswa->id,
+            'nama' => $siswa->nama_lengkap,
+            'username' => $siswa->nisn,
+            'kata_sandi_awal' => 'RahasiaNusa123',
+            'peran' => 'siswa',
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+
+        $response = $this->postJson(route('api.v1.auth.login'), [
+            'username' => $pengguna->username,
+            'password' => 'RahasiaNusa123',
+            'device_name' => 'Android Siswa',
+        ])
+            ->assertOk()
+            ->assertJsonPath('pengguna.wajib_ganti_kata_sandi', true);
+
+        $this->withToken($response->json('token'))
+            ->getJson(route('api.v1.menu'))
+            ->assertStatus(428)
+            ->assertJsonPath('wajib_ganti_kata_sandi', true);
     }
 
     public function test_logout_hanya_mencabut_token_yang_sedang_digunakan(): void

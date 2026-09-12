@@ -15,9 +15,7 @@ class KehadiranSayaController extends Controller
         $pengguna = $request->user();
         abort_unless(
             $pengguna?->akunSiswa()
-                || $pengguna?->memilikiPeran('siswa')
-                || $pengguna?->akunOrangTua()
-                || $pengguna?->memilikiPeran('orang_tua'),
+                || $pengguna?->akunOrangTua(),
             403,
         );
 

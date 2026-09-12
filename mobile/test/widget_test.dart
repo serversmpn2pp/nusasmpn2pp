@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nusa/app/app.dart';
 import 'package:nusa/core/config/app_config.dart';
+import 'package:nusa/core/security/password_change_gate.dart';
 import 'package:nusa/core/storage/device_identity.dart';
 import 'package:nusa/core/storage/token_storage.dart';
 import 'package:nusa/core/theme/app_theme.dart';
@@ -498,6 +499,77 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('beranda menampilkan ringkasan ibadah yang responsif', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpApp(
+      tester,
+      remote: _FakeAuthRemoteDataSource(),
+      homeRemote: _FakeHomeRemoteDataSource(
+        worship: const WorshipDashboardSummary(
+          mode: 'siswa',
+          title: 'Ibadah Saya',
+          studentName: 'Siswa Mobile Uji',
+          monthLabel: 'Agustus 2026',
+          mobileDestination: '/ibadah-saya',
+          today: TodayWorshipSummary(
+            hasSchedule: true,
+            status: 'sudah',
+            statusLabel: 'Sudah tercatat',
+            items: [
+              TodayWorshipItem(
+                id: 1,
+                activity: 'Sholat Duhur',
+                time: '12:00',
+                status: 'sudah',
+                statusLabel: 'Sudah salat',
+                recordedAt: '12:04',
+              ),
+            ],
+          ),
+          month: MonthlyWorshipSummary(
+            total: 12,
+            completed: 8,
+            missed: 2,
+            excused: 1,
+            absentFromSchool: 1,
+            notRequired: 0,
+            requiredCount: 10,
+            percentage: 80,
+          ),
+        ),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-username')),
+      'mobile.uji',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'RahasiaNusa123',
+    );
+    await tester.ensureVisible(find.byKey(const Key('login-submit')));
+    await tester.tap(find.byKey(const Key('login-submit')));
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('home-worship-summary'));
+    await tester.ensureVisible(card);
+    await tester.pumpAndSettle();
+
+    expect(card, findsOneWidget);
+    expect(find.text('Ibadah Saya'), findsOneWidget);
+    expect(find.text('Sudah tercatat'), findsOneWidget);
+    expect(find.text('Sholat Duhur · Sudah salat'), findsOneWidget);
+    expect(find.text('8 dari 10 ibadah wajib terlaksana'), findsOneWidget);
+    expect(find.text('80%'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('akun dengan kata sandi awal diarahkan untuk menggantinya', (
     tester,
   ) async {
@@ -520,6 +592,35 @@ void main() {
 
     expect(find.text('Amankan akun Anda'), findsOneWidget);
     expect(find.text('Simpan kata sandi'), findsOneWidget);
+  });
+
+  testWidgets('respons server wajib ganti kata sandi langsung mengunci menu', (
+    tester,
+  ) async {
+    await _pumpApp(tester, remote: _FakeAuthRemoteDataSource());
+
+    await tester.enterText(
+      find.byKey(const Key('login-username')),
+      'mobile.uji',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'RahasiaNusa123',
+    );
+    await tester.ensureVisible(find.byKey(const Key('login-submit')));
+    await tester.tap(find.byKey(const Key('login-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('bottom-nav-2')), findsOneWidget);
+    final context = tester.element(find.byType(MaterialApp));
+    ProviderScope.containerOf(context)
+        .read(passwordChangeGateProvider.notifier)
+        .requireChange();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Amankan akun Anda'), findsOneWidget);
+    expect(find.text('Simpan kata sandi'), findsOneWidget);
+    expect(find.byKey(const Key('bottom-nav-2')), findsNothing);
   });
 
   testWidgets('menu dinamis membuka daftar dan detail siswa', (tester) async {
@@ -1967,9 +2068,10 @@ Widget _buildTestApp({
 }
 
 final class _FakeHomeRemoteDataSource implements HomeRemoteDataSource {
-  _FakeHomeRemoteDataSource({this.notificationDestination});
+  _FakeHomeRemoteDataSource({this.notificationDestination, this.worship});
 
   final String? notificationDestination;
+  final WorshipDashboardSummary? worship;
   final List<int> markedNotificationIds = [];
   int markAllReadCalls = 0;
   bool _notificationRead = false;
@@ -2009,6 +2111,7 @@ final class _FakeHomeRemoteDataSource implements HomeRemoteDataSource {
           earlyLeave: 0,
         ),
       ),
+      worship: worship,
       duty: null,
       guardianship: const GuardianshipSummary(
         classCount: 0,

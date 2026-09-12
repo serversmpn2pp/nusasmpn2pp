@@ -48,7 +48,9 @@ class HomeDashboardView extends StatelessWidget {
         final catalog = menu.value;
         final quickActions = _quickActions(catalog);
         final allActions = _groupActions(catalog);
-        final myAttendance = catalog?.entryByCode('kehadiran-saya');
+        final myAttendance =
+            catalog?.entryByCode('kehadiran-saya') ??
+            catalog?.entryByCode('kehadiran-anak-saya');
 
         return RefreshIndicator(
           onRefresh: onRefresh,
@@ -76,6 +78,13 @@ class HomeDashboardView extends StatelessWidget {
                       ? () => onOpenMenuEntry(myAttendance!)
                       : onOpenActivity,
                 ),
+                if (data.worship case final worship?) ...[
+                  const SizedBox(height: 10),
+                  _WorshipOverviewCard(
+                    summary: worship,
+                    onTap: () => context.push(worship.mobileDestination),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Row(
                   children: [
@@ -200,11 +209,18 @@ class HomeDashboardView extends StatelessWidget {
     final actions = <NusaMenuAction>[];
     final siswa = catalog.entryByCode('siswa');
     final kelas = catalog.entryByCode('kelas');
-    final jadwalPelajaran = catalog.entryByCode('jadwal-pelajaran');
+    final jadwalPelajaran =
+        catalog.entryByCode('jadwal-pelajaran') ??
+        catalog.entryByCode('jadwal-pelajaran-anak');
     final kehadiran = catalog.groupByCode('kehadiran');
     final akademik = catalog.groupByCode('akademik');
-    final nilaiSaya = catalog.entryByCode('nilai-saya');
-    final myAttendance = catalog.entryByCode('kehadiran-saya');
+    final nilaiSaya =
+        catalog.entryByCode('nilai-saya') ??
+        catalog.entryByCode('nilai-anak-saya');
+    final myAttendance =
+        catalog.entryByCode('kehadiran-saya') ??
+        catalog.entryByCode('kehadiran-anak-saya');
+    final childGuidance = catalog.entryByCode('pembinaan-poin-anak');
 
     if (siswa?.isAvailable == true) {
       actions.add(
@@ -251,7 +267,9 @@ class HomeDashboardView extends StatelessWidget {
       );
     }
     if (actions.length < 4 &&
-        akademik?.items.any((item) => item.subgroup == 'Penilaian') == true) {
+        (nilaiSaya?.isAvailable == true ||
+            akademik?.items.any((item) => item.subgroup == 'Penilaian') ==
+                true)) {
       actions.add(
         NusaMenuAction(
           label: 'Nilai',
@@ -260,6 +278,16 @@ class HomeDashboardView extends StatelessWidget {
           onTap: nilaiSaya?.isAvailable == true
               ? () => onOpenMenuEntry(nilaiSaya!)
               : () => onOpenMenuGroup(akademik!),
+        ),
+      );
+    }
+    if (actions.length < 4 && childGuidance?.isAvailable == true) {
+      actions.add(
+        NusaMenuAction(
+          label: 'Pembinaan',
+          icon: Icons.family_restroom_rounded,
+          color: const Color(0xFF7A56B3),
+          onTap: () => onOpenMenuEntry(childGuidance!),
         ),
       );
     }
@@ -281,6 +309,183 @@ class HomeDashboardView extends StatelessWidget {
         const [];
   }
 }
+
+class _WorshipOverviewCard extends StatelessWidget {
+  const _WorshipOverviewCard({required this.summary, required this.onTap});
+
+  final WorshipDashboardSummary summary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = _worshipStatusColor(summary.today.status);
+    final activities = summary.today.items
+        .take(2)
+        .map((item) => '${item.activity} · ${item.statusLabel}')
+        .join('  •  ');
+    final month = summary.month;
+
+    return Material(
+      key: const Key('home-worship-summary'),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(17),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(17),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(color: NusaColors.outline),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: NusaColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: const Icon(
+                      Icons.self_improvement_rounded,
+                      color: NusaColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          summary.title,
+                          style: const TextStyle(
+                            color: NusaColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          summary.isParent
+                              ? summary.studentName
+                              : 'Ringkasan ${summary.monthLabel}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: NusaColors.textSecondary,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: NusaColors.textSecondary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Text(
+                    'Hari ini',
+                    style: TextStyle(
+                      color: NusaColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    key: const Key('home-worship-today-status'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      summary.today.statusLabel,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (activities.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Text(
+                  activities,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: NusaColors.textPrimary,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${month.completed} dari ${month.requiredCount} ibadah wajib terlaksana',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: NusaColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${month.percentage}%',
+                    style: const TextStyle(
+                      color: NusaColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  minHeight: 6,
+                  value: (month.percentage / 100).clamp(0, 1),
+                  backgroundColor: NusaColors.surfaceBlue,
+                  color: NusaColors.success,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Color _worshipStatusColor(String status) => switch (status) {
+  'sudah' => NusaColors.success,
+  'belum' => const Color(0xFFD34B4B),
+  'berhalangan' => const Color(0xFF7A56B3),
+  'tidak_wajib' => const Color(0xFF2676C8),
+  _ => NusaColors.textSecondary,
+};
 
 class _TodaySchedulePanel extends StatelessWidget {
   const _TodaySchedulePanel({required this.section});

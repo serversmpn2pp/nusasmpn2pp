@@ -49,7 +49,7 @@ class ProgressKasusSiswaMobileService
             'tahun_pelajaran_aktif' => $tahunAktif ? $this->tahun($tahunAktif) : null,
             'ringkasan' => $ringkasan,
             'items' => $paginator->getCollection()
-                ->map(fn (LaporanPembinaanSiswa $laporan) => $this->ringkas($laporan))
+                ->map(fn (LaporanPembinaanSiswa $laporan) => $this->ringkasLaporan($laporan))
                 ->values(),
             'paginasi' => [
                 'halaman' => $paginator->currentPage(),
@@ -64,6 +64,19 @@ class ProgressKasusSiswaMobileService
     {
         $siswa = $this->siswaDariPengguna($pengguna);
         abort_unless($siswa && (int) $laporan->siswa_id === (int) $siswa->id, 404);
+
+        return $this->detailUntukSiswa(
+            $siswa,
+            $laporan,
+            'Rincian pemeriksaan internal dikelola oleh sekolah dan tidak ditampilkan pada akun siswa.',
+        );
+    }
+
+    public function detailUntukSiswa(
+        Siswa $siswa,
+        LaporanPembinaanSiswa $laporan,
+        string $pesanPrivasi,
+    ): array {
 
         $laporan->load([
             'tahunPelajaran:id,nama',
@@ -82,7 +95,7 @@ class ProgressKasusSiswaMobileService
 
         return [
             'siswa' => $this->siswa($siswa),
-            'laporan' => array_merge($this->ringkas($laporan), [
+            'laporan' => array_merge($this->ringkasLaporan($laporan), [
                 'jenis_laporan' => $laporan->jenis_laporan,
                 'label_jenis_laporan' => $laporan->labelJenisLaporan(),
                 'waktu_kejadian' => $laporan->waktuKejadianRingkas(),
@@ -129,13 +142,13 @@ class ProgressKasusSiswaMobileService
                     'tanggal' => $item->tanggal_tindak_lanjut?->toDateString(),
                     'status' => $item->labelStatusLaporan(),
                 ])->values(),
-            'privasi' => 'Rincian pemeriksaan internal dikelola oleh sekolah dan tidak ditampilkan pada akun siswa.',
+            'privasi' => $pesanPrivasi,
         ];
     }
 
     private function siswaDariPengguna(Pengguna $pengguna): ?Siswa
     {
-        abort_unless($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'), 403);
+        abort_unless($pengguna->akunSiswa(), 403);
 
         return $pengguna->siswa()->first();
     }
@@ -185,7 +198,7 @@ class ProgressKasusSiswaMobileService
         ];
     }
 
-    private function ringkas(LaporanPembinaanSiswa $laporan): array
+    public function ringkasLaporan(LaporanPembinaanSiswa $laporan): array
     {
         $status = $this->presentasiProgress->status($laporan);
 

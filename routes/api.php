@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AkademikAnakController;
 use App\Http\Controllers\Api\V1\AktivitasLoginController;
 use App\Http\Controllers\Api\V1\AkunOrangTuaController;
 use App\Http\Controllers\Api\V1\AkunPegawaiController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\V1\FotoIdentitasController;
 use App\Http\Controllers\Api\V1\GuruMataPelajaranController;
 use App\Http\Controllers\Api\V1\HasilSurveiSayaController;
 use App\Http\Controllers\Api\V1\HasilUjianTerpusatController;
+use App\Http\Controllers\Api\V1\IbadahSayaController;
 use App\Http\Controllers\Api\V1\InputNilaiController;
 use App\Http\Controllers\Api\V1\JadwalGuruPiketController;
 use App\Http\Controllers\Api\V1\JadwalKegiatanIbadahController;
@@ -56,6 +58,7 @@ use App\Http\Controllers\Api\V1\PaketSoalController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PelaksanaanSanksiSiswaController;
 use App\Http\Controllers\Api\V1\PelaksanaanUjianTerpusatController;
+use App\Http\Controllers\Api\V1\PembinaanPoinAnakController;
 use App\Http\Controllers\Api\V1\PemeriksaanPengesahanController;
 use App\Http\Controllers\Api\V1\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\Api\V1\PeminjamanBarangController;
@@ -85,6 +88,7 @@ use App\Http\Controllers\Api\V1\PresensiUjianController;
 use App\Http\Controllers\Api\V1\ProfilSayaController;
 use App\Http\Controllers\Api\V1\ProgressKasusSiswaController;
 use App\Http\Controllers\Api\V1\PusatCbtController;
+use App\Http\Controllers\Api\V1\RekapBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\RekapKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
 use App\Http\Controllers\Api\V1\RekapPeminjamanBarangController;
@@ -637,6 +641,11 @@ Route::prefix('v1')
         Route::get('/progress-kasus-saya/{laporanPembinaanSiswa}', [ProgressKasusSiswaController::class, 'show'])
             ->name('progress-kasus-siswa.show');
 
+        Route::get('/pembinaan-poin-anak', [PembinaanPoinAnakController::class, 'index'])
+            ->name('pembinaan-poin-anak.index');
+        Route::get('/pembinaan-poin-anak/{laporanPembinaanSiswa}', [PembinaanPoinAnakController::class, 'show'])
+            ->name('pembinaan-poin-anak.show');
+
         Route::get('/pemeriksaan-pengesahan', [PemeriksaanPengesahanController::class, 'index'])
             ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
             ->name('pemeriksaan-pengesahan.index');
@@ -933,6 +942,9 @@ Route::prefix('v1')
         Route::get('/kehadiran-saya', KehadiranSayaController::class)
             ->name('kehadiran-saya');
 
+        Route::get('/ibadah-saya', IbadahSayaController::class)
+            ->name('ibadah-saya');
+
         Route::get('/status-scan-presensi-pegawai', StatusScanPresensiPegawaiController::class)
             ->middleware('izin:absensi.scan,absensi.lihat,absensi.koreksi,absensi.laporan')
             ->name('status-scan-presensi-pegawai.index');
@@ -1225,8 +1237,15 @@ Route::prefix('v1')
             ->middleware('izin:ibadah.rekap')
             ->name('ringkasan-kegiatan-ibadah-bulanan');
 
+        Route::get('/rekap-berhalangan-ibadah', [RekapBerhalanganIbadahController::class, 'index'])
+            ->name('rekap-berhalangan-ibadah.index');
+        Route::get('/rekap-berhalangan-ibadah/cetak', [RekapBerhalanganIbadahController::class, 'export'])
+            ->name('rekap-berhalangan-ibadah.export');
+
         Route::get('/nilai-saya', NilaiSayaController::class)
             ->name('nilai-saya.index');
+        Route::get('/akademik-anak', AkademikAnakController::class)
+            ->name('akademik-anak.index');
         Route::get('/survei-pembelajaran/{guruMataPelajaran}/{semester}', [SurveiPembelajaranController::class, 'show'])
             ->name('survei-pembelajaran.show');
         Route::post('/survei-pembelajaran/{guruMataPelajaran}/{semester}', [SurveiPembelajaranController::class, 'store'])

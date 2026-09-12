@@ -325,7 +325,7 @@ class UjianSayaMobileService
 
     private function siswa(Pengguna $pengguna)
     {
-        abort_unless($pengguna->akunSiswa() || $pengguna->memilikiPeran('siswa'), 403);
+        abort_unless($pengguna->akunSiswa(), 403);
 
         return $pengguna->siswa()->firstOrFail();
     }

@@ -82,7 +82,7 @@ class AkademikAnakController extends Controller
 
     private function orangTuaDanSiswa(?Pengguna $pengguna): array
     {
-        abort_unless($pengguna?->akunOrangTua() || $pengguna?->memilikiPeran('orang_tua'), 403);
+        abort_unless($pengguna?->akunOrangTua(), 403);
 
         $orangTua = $pengguna->orangTuaWali()
             ->with(['siswa' => fn ($query) => $query->orderBy('nama_lengkap')])

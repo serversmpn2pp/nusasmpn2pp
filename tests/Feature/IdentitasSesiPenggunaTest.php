@@ -2,10 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\AksesUjianCbtController;
+use App\Models\GuruMataPelajaran;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
+use App\Models\PesertaUjianCbt;
+use App\Services\Survei\PengisianSurveiPembelajaranService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class IdentitasSesiPenggunaTest extends TestCase
@@ -95,6 +101,78 @@ class IdentitasSesiPenggunaTest extends TestCase
         $this->assertFalse($akun->akun_sistem);
         $this->assertTrue($akun->daftarPeran->contains('kode', 'pegawai'));
         $this->assertTrue($akun->daftarPeran->contains('kode', 'administrator'));
+    }
+
+    public function test_role_siswa_tidak_mengubah_pegawai_menjadi_identitas_siswa_di_web(): void
+    {
+        $akun = $this->buatAkunPegawai('Pegawai Dengan Role Siswa', '198905052014055005');
+        $akun->daftarPeran()->syncWithoutDetaching([
+            Peran::where('kode', 'siswa')->value('id'),
+        ]);
+
+        $this->assertTrue($akun->memilikiPeran('siswa'));
+        $this->assertTrue($akun->akunPegawai());
+        $this->assertFalse($akun->akunSiswa());
+
+        $this->actingAs($akun)
+            ->get(route('beranda'))
+            ->assertOk()
+            ->assertViewIs('beranda.index')
+            ->assertSee('Dashboard Pegawai');
+
+        foreach ([
+            'profil-siswa.show',
+            'progress-kasus-siswa.index',
+            'nilai-saya.index',
+            'ujian-saya.index',
+        ] as $namaRute) {
+            $this->get(route($namaRute))->assertForbidden();
+        }
+
+        $this->assertForbiddenCall(fn () => app(PengisianSurveiPembelajaranService::class)
+            ->siapkan($akun, new GuruMataPelajaran, 'ganjil'));
+
+        $request = Request::create('/ujian-saya/masuk', 'POST');
+        $request->setUserResolver(fn () => $akun);
+        $this->assertForbiddenCall(fn () => app(AksesUjianCbtController::class)
+            ->masukDariAkunSiswa($request, new PesertaUjianCbt));
+    }
+
+    public function test_role_orang_tua_tidak_mengubah_pegawai_menjadi_identitas_orang_tua_di_web(): void
+    {
+        $akun = $this->buatAkunPegawai('Pegawai Dengan Role Orang Tua', '198906062015066006');
+        $akun->daftarPeran()->syncWithoutDetaching([
+            Peran::where('kode', 'orang_tua')->value('id'),
+        ]);
+
+        $this->assertTrue($akun->memilikiPeran('orang_tua'));
+        $this->assertTrue($akun->akunPegawai());
+        $this->assertFalse($akun->akunOrangTua());
+
+        $this->actingAs($akun)
+            ->get(route('beranda'))
+            ->assertOk()
+            ->assertViewIs('beranda.index')
+            ->assertSee('Dashboard Pegawai');
+
+        foreach ([
+            'presensi-anak.index',
+            'akademik-anak.index',
+            'pembinaan-poin-anak.index',
+            'profil-orang-tua.edit',
+        ] as $namaRute) {
+            $this->get(route($namaRute))->assertForbidden();
+        }
+    }
+
+    private function assertForbiddenCall(callable $callback): void
+    {
+        try {
+            $callback();
+            $this->fail('Aksi seharusnya ditolak dengan status 403.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+        }
     }
 
     private function buatAkunPegawai(string $nama, string $nip): Pengguna

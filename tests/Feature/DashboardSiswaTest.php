@@ -8,8 +8,8 @@ use App\Models\GuruMataPelajaran;
 use App\Models\JadwalKegiatanIbadah;
 use App\Models\JadwalPelajaran;
 use App\Models\JamPelajaran;
-use App\Models\Kelas;
 use App\Models\KegiatanIbadah;
+use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\NotifikasiPengguna;
 use App\Models\Pegawai;
@@ -223,7 +223,7 @@ class DashboardSiswaTest extends TestCase
             ->assertDontSee('Data Saya');
     }
 
-    public function test_akun_dengan_role_siswa_tanpa_relasi_siswa_tetap_mendapat_dashboard_yang_aman(): void
+    public function test_akun_dengan_role_siswa_tanpa_identitas_siswa_ditolak_dari_dashboard(): void
     {
         $akun = Pengguna::create([
             'nama' => 'Akun Siswa Belum Terhubung',
@@ -240,12 +240,7 @@ class DashboardSiswaTest extends TestCase
 
         $this->actingAs($akun)
             ->get(route('beranda'))
-            ->assertOk()
-            ->assertViewIs('beranda.siswa')
-            ->assertViewHas('ringkasanIbadahSaya', fn ($ringkasan) => $ringkasan->isEmpty())
-            ->assertSee('Akun belum terhubung ke data siswa')
-            ->assertDontSee('Dashboard Pegawai')
-            ->assertDontSee('Akun Pegawai');
+            ->assertForbidden();
     }
 
     private function buatKelas(TahunPelajaran $tahun, string $nama, ?Pegawai $waliKelas = null): Kelas

@@ -7,48 +7,48 @@ import 'package:nusa/features/my_attendance/domain/my_attendance.dart';
 import 'package:nusa/features/my_attendance/presentation/my_attendance_view.dart';
 
 void main() {
-  testWidgets('Kehadiranku tampil responsif beserta rekap dan riwayat', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 700));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final remote = _FakeMyAttendanceRemoteDataSource();
+  testWidgets(
+    'Kehadiran Anak Saya tampil responsif beserta rekap dan riwayat',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final remote = _FakeMyAttendanceRemoteDataSource();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          myAttendanceRemoteDataSourceProvider.overrideWithValue(remote),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.light,
-          home: const MyAttendanceView(),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            myAttendanceRemoteDataSourceProvider.overrideWithValue(remote),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const MyAttendanceView(pageTitle: 'Kehadiran Anak Saya'),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Kehadiranku'), findsOneWidget);
-    expect(find.text('Kehadiran Anak'), findsOneWidget);
-    expect(find.text('Alya Kehadiran'), findsWidgets);
-    expect(find.byKey(const Key('my-attendance-today')), findsOneWidget);
-    expect(find.text('Hadir'), findsWidgets);
+      expect(find.text('Kehadiran Anak Saya'), findsWidgets);
+      expect(find.text('Alya Kehadiran'), findsWidgets);
+      expect(find.byKey(const Key('my-attendance-today')), findsOneWidget);
+      expect(find.text('Hadir'), findsWidgets);
 
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('my-attendance-summary')),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('66,7% hadir'), findsOneWidget);
-    expect(find.text('3 hari tercatat'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('my-attendance-summary')),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('66,7% hadir'), findsOneWidget);
+      expect(find.text('3 hari tercatat'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('my-attendance-record-501')),
-      280,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.textContaining('Masuk 06:54'), findsWidgets);
-    expect(tester.takeException(), isNull);
-  });
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('my-attendance-record-501')),
+        280,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('Masuk 06:54'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('orang tua dapat mengganti anak dan bulan rekap', (tester) async {
     final remote = _FakeMyAttendanceRemoteDataSource();

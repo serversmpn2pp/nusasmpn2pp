@@ -8,6 +8,7 @@ class HomeDashboard {
     required this.academicYear,
     required this.employee,
     required this.attendance,
+    this.worship,
     required this.duty,
     required this.guardianship,
     required this.todaySchedule,
@@ -31,6 +32,10 @@ class HomeDashboard {
       },
       attendance: switch (_map(json['presensi'])) {
         final data? => AttendanceSummary.fromJson(data),
+        _ => null,
+      },
+      worship: switch (_map(json['ibadah'])) {
+        final data? => WorshipDashboardSummary.fromJson(data),
         _ => null,
       },
       duty: switch (_map(json['piket_hari_ini'])) {
@@ -58,10 +63,145 @@ class HomeDashboard {
   final String? academicYear;
   final EmployeeSummary? employee;
   final AttendanceSummary? attendance;
+  final WorshipDashboardSummary? worship;
   final DutySummary? duty;
   final GuardianshipSummary? guardianship;
   final TodayScheduleSection todaySchedule;
   final NotificationSummary notifications;
+}
+
+class WorshipDashboardSummary {
+  const WorshipDashboardSummary({
+    required this.mode,
+    required this.title,
+    required this.studentName,
+    required this.monthLabel,
+    required this.mobileDestination,
+    required this.today,
+    required this.month,
+  });
+
+  factory WorshipDashboardSummary.fromJson(Map<String, dynamic> json) {
+    final student = _map(json['siswa']);
+    return WorshipDashboardSummary(
+      mode: json['mode'] as String? ?? 'siswa',
+      title: json['judul'] as String? ?? 'Ibadah Saya',
+      studentName: student?['nama'] as String? ?? '-',
+      monthLabel: json['bulan_label'] as String? ?? '-',
+      mobileDestination: json['rute'] as String? ?? '/ibadah-saya',
+      today: TodayWorshipSummary.fromJson(_map(json['hari_ini']) ?? const {}),
+      month: MonthlyWorshipSummary.fromJson(
+        _map(json['bulan_ini']) ?? const {},
+      ),
+    );
+  }
+
+  final String mode;
+  final String title;
+  final String studentName;
+  final String monthLabel;
+  final String mobileDestination;
+  final TodayWorshipSummary today;
+  final MonthlyWorshipSummary month;
+
+  bool get isParent => mode == 'orang_tua';
+}
+
+class TodayWorshipSummary {
+  const TodayWorshipSummary({
+    required this.hasSchedule,
+    required this.status,
+    required this.statusLabel,
+    required this.items,
+  });
+
+  factory TodayWorshipSummary.fromJson(Map<String, dynamic> json) =>
+      TodayWorshipSummary(
+        hasSchedule: json['ada_jadwal'] as bool? ?? false,
+        status: json['status'] as String? ?? 'tanpa_jadwal',
+        statusLabel: json['label_status'] as String? ?? 'Tidak ada jadwal',
+        items: _worshipItems(json['items']),
+      );
+
+  final bool hasSchedule;
+  final String status;
+  final String statusLabel;
+  final List<TodayWorshipItem> items;
+}
+
+class TodayWorshipItem {
+  const TodayWorshipItem({
+    required this.id,
+    required this.activity,
+    required this.time,
+    required this.status,
+    required this.statusLabel,
+    this.recordedAt,
+  });
+
+  factory TodayWorshipItem.fromJson(Map<String, dynamic> json) =>
+      TodayWorshipItem(
+        id: _integer(json['jadwal_id']),
+        activity: json['kegiatan'] as String? ?? 'Kegiatan ibadah',
+        time: json['jam_pelaksanaan'] as String? ?? '-',
+        status: json['status'] as String? ?? '',
+        statusLabel: json['status_label'] as String? ?? '-',
+        recordedAt: json['waktu_tercatat'] as String?,
+      );
+
+  final int id;
+  final String activity;
+  final String time;
+  final String status;
+  final String statusLabel;
+  final String? recordedAt;
+}
+
+class MonthlyWorshipSummary {
+  const MonthlyWorshipSummary({
+    required this.total,
+    required this.completed,
+    required this.missed,
+    required this.excused,
+    required this.absentFromSchool,
+    required this.notRequired,
+    required this.requiredCount,
+    required this.percentage,
+  });
+
+  factory MonthlyWorshipSummary.fromJson(Map<String, dynamic> json) =>
+      MonthlyWorshipSummary(
+        total: _integer(json['total']),
+        completed: _integer(json['sudah']),
+        missed: _integer(json['belum']),
+        excused: _integer(json['berhalangan']),
+        absentFromSchool: _integer(json['tidak_hadir']),
+        notRequired: _integer(json['tidak_wajib']),
+        requiredCount: _integer(json['wajib']),
+        percentage: _integer(json['persentase']),
+      );
+
+  final int total;
+  final int completed;
+  final int missed;
+  final int excused;
+  final int absentFromSchool;
+  final int notRequired;
+  final int requiredCount;
+  final int percentage;
+}
+
+List<TodayWorshipItem> _worshipItems(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+
+  return List.unmodifiable(
+    value
+        .map(_map)
+        .whereType<Map<String, dynamic>>()
+        .map(TodayWorshipItem.fromJson),
+  );
 }
 
 class EmployeeSummary {

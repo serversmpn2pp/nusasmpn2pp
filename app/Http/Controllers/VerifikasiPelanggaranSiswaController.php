@@ -293,18 +293,18 @@ class VerifikasiPelanggaranSiswaController extends Controller
         $konfigurasi = match ($laporan->status_verifikasi) {
             'ditetapkan_pembinaan' => [
                 'informasi',
-                'Pembinaan telah ditetapkan',
-                sprintf('BK telah menetapkan laporan %s sebagai pembinaan tanpa poin.', $laporan->nomor_laporan),
+                'Pembinaan Anda telah ditetapkan',
+                sprintf('BK telah menetapkan laporan %s untuk Anda sebagai pembinaan tanpa poin.', $laporan->nomor_laporan),
             ],
             'tidak_terbukti' => [
                 'berhasil',
-                'Pemeriksaan laporan selesai',
-                sprintf('Pemeriksaan laporan %s telah selesai dan dinyatakan tidak terbukti.', $laporan->nomor_laporan),
+                'Pemeriksaan laporan Anda selesai',
+                sprintf('Pemeriksaan laporan %s untuk Anda telah selesai dan dinyatakan tidak terbukti.', $laporan->nomor_laporan),
             ],
             'disahkan' => [
                 'peringatan',
-                'Pelanggaran berpoin telah disahkan',
-                sprintf('%d poin pada laporan %s telah disahkan oleh Wakil Kesiswaan.', $laporan->total_poin, $laporan->nomor_laporan),
+                'Pelanggaran berpoin Anda telah disahkan',
+                sprintf('%d poin pada laporan %s untuk Anda telah disahkan oleh Wakil Kesiswaan.', $laporan->total_poin, $laporan->nomor_laporan),
             ],
             default => null,
         };
@@ -327,9 +327,9 @@ class VerifikasiPelanggaranSiswaController extends Controller
         );
 
         $judulOrangTua = match ($laporan->status_verifikasi) {
-            'ditetapkan_pembinaan' => 'Pembinaan anak telah ditetapkan',
-            'tidak_terbukti' => 'Pemeriksaan laporan anak selesai',
-            'disahkan' => 'Pelanggaran berpoin anak telah disahkan',
+            'ditetapkan_pembinaan' => 'Pembinaan anak Anda telah ditetapkan',
+            'tidak_terbukti' => 'Pemeriksaan laporan anak Anda selesai',
+            'disahkan' => 'Pelanggaran berpoin anak Anda telah disahkan',
         };
         $namaSiswa = $laporan->siswa?->nama_lengkap ?? 'Anak Anda';
         $pesanOrangTua = match ($laporan->status_verifikasi) {

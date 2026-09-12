@@ -195,7 +195,7 @@ class PenguranganPoinSiswaController extends Controller
             $this->notifikasiPenggunaService->kirimKeBanyak(
                 $this->notifikasiPenggunaService->penggunaOrangTuaUntukSiswa((int) $penguranganPoinSiswa->siswa_id),
                 'berhasil',
-                'Pengurangan poin anak disetujui',
+                'Pengurangan poin anak Anda disetujui',
                 sprintf(
                     '%d poin untuk %s dikurangi melalui kegiatan %s.',
                     $diterapkan,

@@ -201,7 +201,7 @@ class PenguranganPoinSiswaMobileService
             $this->notifikasi->kirimKeBanyak(
                 $this->notifikasi->penggunaOrangTuaUntukSiswa((int) $pengurangan->siswa_id),
                 'berhasil',
-                'Pengurangan poin anak disetujui',
+                'Pengurangan poin anak Anda disetujui',
                 sprintf(
                     '%d poin untuk %s dikurangi melalui kegiatan %s.',
                     $diterapkan,

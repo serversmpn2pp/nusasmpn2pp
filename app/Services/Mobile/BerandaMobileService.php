@@ -17,6 +17,7 @@ class BerandaMobileService
         private readonly TujuanNotifikasiMobileService $tujuanNotifikasi,
         private readonly JadwalHariIniMobileService $jadwalHariIni,
         private readonly KehadiranSayaMobileService $kehadiranSaya,
+        private readonly IbadahSayaMobileService $ibadahSaya,
     ) {}
 
     public function siapkan(Pengguna $pengguna): array
@@ -59,6 +60,7 @@ class BerandaMobileService
             ] : null,
             'pegawai' => $this->profilPegawai($pegawai),
             'presensi' => $presensi,
+            'ibadah' => $this->ibadahSaya->ringkasanBeranda($pengguna, $hariIni),
             'piket_hari_ini' => $piket,
             'perwalian' => $perwalian,
             'jadwal_hari_ini' => $this->jadwalHariIni->siapkan(

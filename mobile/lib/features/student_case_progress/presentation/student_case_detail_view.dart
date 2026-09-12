@@ -2,28 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
+import 'package:nusa/features/parent_child_guidance/application/parent_child_guidance_controller.dart';
 import 'package:nusa/features/student_case_progress/application/student_case_progress_controller.dart';
 import 'package:nusa/features/student_case_progress/domain/student_case_progress.dart';
 import 'package:nusa/features/student_case_progress/presentation/student_case_style.dart';
 
 class StudentCaseDetailView extends ConsumerWidget {
-  const StudentCaseDetailView({required this.reportId, super.key});
+  const StudentCaseDetailView({
+    required this.reportId,
+    this.parentMode = false,
+    super.key,
+  });
 
   final int reportId;
+  final bool parentMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(studentCaseDetailProvider(reportId));
+    final state = parentMode
+        ? ref.watch(parentChildGuidanceDetailProvider(reportId))
+        : ref.watch(studentCaseDetailProvider(reportId));
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: const Text('Detail Progress Kasus'),
+        title: Text(
+          parentMode ? 'Detail Pembinaan Anak' : 'Detail Progress Kasus',
+        ),
         actions: [
           IconButton(
             tooltip: 'Perbarui',
-            onPressed: state.isLoading
-                ? null
-                : () => ref.invalidate(studentCaseDetailProvider(reportId)),
+            onPressed: state.isLoading ? null : () => _invalidate(ref),
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -34,18 +42,32 @@ class StudentCaseDetailView extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => _ErrorState(
             message: _message(error),
-            onRetry: () => ref.invalidate(studentCaseDetailProvider(reportId)),
+            onRetry: () => _invalidate(ref),
           ),
           data: (detail) => _DetailContent(
             detail: detail,
             onRefresh: () async {
-              ref.invalidate(studentCaseDetailProvider(reportId));
-              await ref.read(studentCaseDetailProvider(reportId).future);
+              _invalidate(ref);
+              if (parentMode) {
+                await ref.read(
+                  parentChildGuidanceDetailProvider(reportId).future,
+                );
+              } else {
+                await ref.read(studentCaseDetailProvider(reportId).future);
+              }
             },
           ),
         ),
       ),
     );
+  }
+
+  void _invalidate(WidgetRef ref) {
+    if (parentMode) {
+      ref.invalidate(parentChildGuidanceDetailProvider(reportId));
+    } else {
+      ref.invalidate(studentCaseDetailProvider(reportId));
+    }
   }
 }
 

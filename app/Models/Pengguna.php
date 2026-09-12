@@ -238,6 +238,10 @@ class Pengguna extends Authenticatable
             return true;
         }
 
+        if ($this->akunSiswa() && filled($this->kata_sandi_awal)) {
+            return true;
+        }
+
         $kataSandiDefault = config('nusa.kata_sandi_default_pegawai');
 
         return $this->akunPegawai()

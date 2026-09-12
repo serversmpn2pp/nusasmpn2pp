@@ -18,6 +18,12 @@ class NilaiSayaMobileService
     {
         /** @var Siswa|null $siswa */
         $siswa = $pengguna->siswa()->first();
+
+        return $this->tampilkanUntukSiswa($siswa, $filter);
+    }
+
+    public function tampilkanUntukSiswa(?Siswa $siswa, array $filter): array
+    {
         $hasil = $this->ringkasanNilai->siapkan(
             $siswa,
             isset($filter['tahun_pelajaran_id']) ? (int) $filter['tahun_pelajaran_id'] : null,

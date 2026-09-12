@@ -32,7 +32,7 @@ class ProfilSiswaController extends Controller
 
     private function akunSiswa(?Pengguna $pengguna): bool
     {
-        return (bool) ($pengguna?->akunSiswa() || $pengguna?->memilikiPeran('siswa'));
+        return (bool) $pengguna?->akunSiswa();
     }
 
     private function anggotaKelasAktif(int $siswaId, ?int $tahunPelajaranId): ?AnggotaKelas

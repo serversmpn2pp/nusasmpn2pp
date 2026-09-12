@@ -3,17 +3,21 @@
 namespace Tests\Feature\Api;
 
 use App\Models\AbsensiPegawai;
+use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
+use App\Models\JadwalKegiatanIbadah;
 use App\Models\JadwalPelajaran;
 use App\Models\JadwalPiketGuru;
 use App\Models\JamPelajaran;
+use App\Models\KegiatanIbadah;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\NotifikasiPengguna;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
+use App\Models\PresensiKegiatanIbadah;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Services\AkunOrangTuaService;
@@ -180,6 +184,7 @@ class BerandaApiTest extends TestCase
                     'tanggal' => ['iso', 'hari', 'label', 'bulan'],
                     'pegawai',
                     'presensi' => ['hari_ini', 'bulan_ini'],
+                    'ibadah',
                     'piket_hari_ini',
                     'perwalian',
                     'jadwal_hari_ini' => [
@@ -236,6 +241,47 @@ class BerandaApiTest extends TestCase
             'nomor_absen' => 1,
             'status_keanggotaan' => 'aktif',
         ]);
+        $anggota = AnggotaKelas::query()
+            ->where('siswa_id', $siswa->id)
+            ->where('tahun_pelajaran_id', $tahun->id)
+            ->firstOrFail();
+        AbsensiSiswa::create([
+            'tanggal' => '2026-08-24',
+            'tahun_pelajaran_id' => $tahun->id,
+            'kelas_id' => $kelas->id,
+            'anggota_kelas_id' => $anggota->id,
+            'siswa_id' => $siswa->id,
+            'jam_masuk' => '06:40:00',
+            'status_masuk' => 'tepat_waktu',
+            'status_kehadiran' => 'hadir',
+            'sumber' => 'scan',
+        ]);
+        $kegiatan = KegiatanIbadah::create([
+            'kode' => 'sholat_duhur_beranda',
+            'nama' => 'Sholat Duhur',
+            'aktif' => true,
+        ]);
+        $jadwalIbadah = JadwalKegiatanIbadah::create([
+            'kegiatan_ibadah_id' => $kegiatan->id,
+            'tahun_pelajaran_id' => $tahun->id,
+            'hari' => 'senin',
+            'urutan_hari' => 1,
+            'jam_scan_mulai' => '11:30',
+            'jam_pelaksanaan' => '12:00',
+            'jam_scan_selesai' => '13:00',
+            'aktif' => true,
+        ]);
+        PresensiKegiatanIbadah::create([
+            'jadwal_kegiatan_ibadah_id' => $jadwalIbadah->id,
+            'kegiatan_ibadah_id' => $kegiatan->id,
+            'tahun_pelajaran_id' => $tahun->id,
+            'kelas_id' => $kelas->id,
+            'anggota_kelas_id' => $anggota->id,
+            'siswa_id' => $siswa->id,
+            'tanggal' => '2026-08-24',
+            'waktu_scan' => '12:04:00',
+            'sumber' => 'kamera',
+        ]);
         $akunSiswa = Pengguna::create([
             'siswa_id' => $siswa->id,
             'nama' => $siswa->nama_lengkap,
@@ -254,7 +300,13 @@ class BerandaApiTest extends TestCase
             ->assertJsonPath('data.jadwal_hari_ini.mode', 'siswa')
             ->assertJsonPath('data.jadwal_hari_ini.judul', 'Jadwal Hari Ini')
             ->assertJsonPath('data.jadwal_hari_ini.items.0.judul', 'Bahasa Indonesia')
-            ->assertJsonPath('data.jadwal_hari_ini.items.0.subjudul', 'VIII B · Guru Bahasa Indonesia');
+            ->assertJsonPath('data.jadwal_hari_ini.items.0.subjudul', 'VIII B · Guru Bahasa Indonesia')
+            ->assertJsonPath('data.ibadah.mode', 'siswa')
+            ->assertJsonPath('data.ibadah.judul', 'Ibadah Saya')
+            ->assertJsonPath('data.ibadah.hari_ini.status', 'sudah')
+            ->assertJsonPath('data.ibadah.hari_ini.items.0.kegiatan', 'Sholat Duhur')
+            ->assertJsonPath('data.ibadah.bulan_ini.persentase', 100)
+            ->assertJsonPath('data.ibadah.rute', '/ibadah-saya');
 
         $akunOrangTua = app(AkunOrangTuaService::class)->buat($siswa);
         $akunOrangTua->update(['wajib_ganti_kata_sandi' => false]);
@@ -265,7 +317,12 @@ class BerandaApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.jadwal_hari_ini.mode', 'orang_tua')
             ->assertJsonPath('data.jadwal_hari_ini.items.0.judul', 'Bahasa Indonesia')
-            ->assertJsonPath('data.jadwal_hari_ini.items.0.subjudul', 'Ananda Mobile · VIII B');
+            ->assertJsonPath('data.jadwal_hari_ini.items.0.subjudul', 'Ananda Mobile · VIII B')
+            ->assertJsonPath('data.ibadah.mode', 'orang_tua')
+            ->assertJsonPath('data.ibadah.judul', 'Ibadah Anak Saya')
+            ->assertJsonPath('data.ibadah.siswa.nama', 'Ananda Mobile')
+            ->assertJsonPath('data.ibadah.hari_ini.label_status', 'Sudah tercatat')
+            ->assertJsonPath('data.ibadah.rute', '/ibadah-anak-saya');
     }
 
     public function test_administrator_tanpa_data_pegawai_tetap_dapat_membuka_beranda_mobile(): void
@@ -277,6 +334,7 @@ class BerandaApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.pegawai', null)
             ->assertJsonPath('data.presensi', null)
+            ->assertJsonPath('data.ibadah', null)
             ->assertJsonPath('data.perwalian', null)
             ->assertJsonPath('data.jadwal_hari_ini.mode', 'administrator')
             ->assertJsonPath('data.jadwal_hari_ini.judul', 'Pantauan Hari Ini')
