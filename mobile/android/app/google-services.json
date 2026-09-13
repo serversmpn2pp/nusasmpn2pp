@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "272597074054",
+    "project_id": "nusa-smpn2-padang-panjang",
+    "storage_bucket": "nusa-smpn2-padang-panjang.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:272597074054:android:613d9fe99fda1649489107",
+        "android_client_info": {
+          "package_name": "id.sch.smpn2padangpanjang.nusa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrkHHfrC5YKS3E-A80xHxtTz-dcTDBokk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
