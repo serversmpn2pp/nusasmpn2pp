@@ -184,6 +184,14 @@ class MenuMobileService
             ->values()
             ->all();
 
+        if ($kelompok['kode'] === 'ujian-asesmen' && $pengguna->akunOrangTua()) {
+            $kelompok = array_replace($kelompok, [
+                'label' => 'Ujian Anak Saya',
+                'deskripsi' => 'Pantau jadwal, status pengerjaan, dan hasil ujian anak.',
+                'ikon' => 'quiz',
+            ]);
+        }
+
         return [
             'kode' => $kelompok['kode'],
             'label' => $kelompok['label'],

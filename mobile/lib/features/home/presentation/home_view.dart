@@ -219,7 +219,15 @@ class _HomeViewState extends ConsumerState<HomeView> {
 }
 
 String nusaMenuGroupDestination(MenuGroup group) {
-  if (group.code == 'ujian-asesmen') return '/pusat-cbt';
+  if (group.code == 'ujian-asesmen') {
+    for (final item in group.items) {
+      if (item.code == 'ujian-anak-saya' && item.isAvailable) {
+        return item.route!;
+      }
+    }
+
+    return '/pusat-cbt';
+  }
   if (group.code == 'sarana-prasarana' &&
       group.items.any((item) => item.code == 'dashboard-sarpras')) {
     return '/dashboard-sarpras';

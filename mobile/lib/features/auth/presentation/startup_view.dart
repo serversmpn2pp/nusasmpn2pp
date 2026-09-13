@@ -104,12 +104,40 @@ class StartupView extends ConsumerWidget {
                         color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Text(
-                        error is AppException
-                            ? error.message
-                            : 'Sesi NUSA belum dapat diperiksa.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white),
+                      child: Column(
+                        children: [
+                          Icon(
+                            error is NetworkException
+                                ? Icons.wifi_off_rounded
+                                : Icons.info_outline_rounded,
+                            color: NusaColors.accent,
+                            size: 26,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            error is NetworkException
+                                ? 'Koneksi belum tersedia'
+                                : 'NUSA belum dapat dibuka',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            error is AppException
+                                ? error.message
+                                : 'Silakan coba lagi. Jika masalah berlanjut, '
+                                      'hubungi admin sekolah.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 12),

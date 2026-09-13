@@ -53,19 +53,43 @@ AppException mapDioException(DioException exception) {
     );
   }
 
+  if (statusCode != null && statusCode >= 500) {
+    return NetworkException(
+      'Layanan NUSA sedang mengalami gangguan. Silakan coba kembali '
+      'beberapa saat lagi. Jika masih belum berhasil, hubungi admin sekolah.',
+      statusCode: statusCode,
+      cause: exception,
+    );
+  }
+
   if (exception.type == DioExceptionType.connectionError ||
       exception.type == DioExceptionType.connectionTimeout ||
       exception.type == DioExceptionType.receiveTimeout ||
-      exception.type == DioExceptionType.sendTimeout) {
+      exception.type == DioExceptionType.sendTimeout ||
+      exception.type == DioExceptionType.badCertificate ||
+      (exception.type == DioExceptionType.unknown &&
+          exception.response == null)) {
     return NetworkException(
-      'Tidak dapat terhubung ke server NUSA. Periksa koneksi dan alamat API.',
+      'Koneksi ke NUSA belum tersedia. Pastikan perangkat terhubung ke '
+      'internet, lalu coba lagi. Jika masih belum berhasil, hubungi admin '
+      'sekolah.',
+      statusCode: statusCode,
+      cause: exception,
+    );
+  }
+
+  if (exception.type == DioExceptionType.cancel) {
+    return NetworkException(
+      'Permintaan dibatalkan. Silakan coba lagi.',
       statusCode: statusCode,
       cause: exception,
     );
   }
 
   return NetworkException(
-    _messageFrom(data) ?? 'Terjadi gangguan saat menghubungi server NUSA.',
+    _messageFrom(data) ??
+        'NUSA belum dapat memproses permintaan Anda. Silakan coba lagi. '
+            'Jika masalah berlanjut, hubungi admin sekolah.',
     statusCode: statusCode,
     cause: exception,
   );
@@ -73,8 +97,26 @@ AppException mapDioException(DioException exception) {
 
 String? _messageFrom(Object? data) {
   if (data is Map && data['message'] is String) {
-    return data['message'] as String;
+    final message = (data['message'] as String).trim();
+    if (message.isEmpty || _looksTechnical(message)) return null;
+
+    return message;
   }
 
   return null;
+}
+
+bool _looksTechnical(String message) {
+  final value = message.toLowerCase();
+
+  return [
+    'sqlstate',
+    'stack trace',
+    'vendor/',
+    'vendor\\',
+    'undefined column',
+    'undefined table',
+    'queryexception',
+    'fatal error',
+  ].any(value.contains);
 }

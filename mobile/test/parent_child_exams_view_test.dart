@@ -5,8 +5,33 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/parent_child_exams/data/parent_child_exams_remote_data_source.dart';
 import 'package:nusa/features/parent_child_exams/domain/parent_child_exams.dart';
 import 'package:nusa/features/parent_child_exams/presentation/parent_child_exams_view.dart';
+import 'package:nusa/features/home/presentation/home_view.dart';
+import 'package:nusa/features/menu/domain/menu_catalog.dart';
 
 void main() {
+  test('kartu ujian orang tua langsung menuju Ujian Anak Saya', () {
+    const group = MenuGroup(
+      code: 'ujian-asesmen',
+      label: 'Ujian Anak Saya',
+      description: 'Pantau ujian anak.',
+      icon: 'quiz',
+      items: [
+        MenuEntry(
+          code: 'ujian-anak-saya',
+          label: 'Ujian Anak Saya',
+          description: 'Pantau ujian anak.',
+          initials: 'UA',
+          subgroup: 'Pemantauan Anak',
+          icon: null,
+          status: 'tersedia',
+          route: '/ujian-anak-saya',
+        ),
+      ],
+    );
+
+    expect(nusaMenuGroupDestination(group), '/ujian-anak-saya');
+  });
+
   testWidgets(
     'orang tua memilih anak dan hanya melihat hasil ujian terpublikasi',
     (tester) async {

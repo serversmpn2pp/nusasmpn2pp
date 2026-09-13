@@ -104,6 +104,10 @@ class UjianAnakApiTest extends TestCase
         $kodeOrangTua = collect($responsOrangTua->json('data.kelompok'))
             ->flatMap(fn (array $kelompok) => collect($kelompok['items'])->pluck('kode'));
         $this->assertNotContains('ujian-saya', $kodeOrangTua);
+        $kelompokUjian = collect($responsOrangTua->json('data.kelompok'))
+            ->firstWhere('kode', 'ujian-asesmen');
+        $this->assertSame('Ujian Anak Saya', $kelompokUjian['label']);
+        $this->assertSame(1, count($kelompokUjian['items']));
 
         $this->app['auth']->forgetGuards();
         $responsAdministrator = $this->withToken($this->token($administrator))
