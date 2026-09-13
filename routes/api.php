@@ -80,6 +80,7 @@ use App\Http\Controllers\Api\V1\PenugasanGuruBkTingkatController;
 use App\Http\Controllers\Api\V1\PenugasanGuruWaliController;
 use App\Http\Controllers\Api\V1\PeranController;
 use App\Http\Controllers\Api\V1\PerangkatAjarSayaController;
+use App\Http\Controllers\Api\V1\PerangkatNotifikasiPushController;
 use App\Http\Controllers\Api\V1\PeringatanDiniSiswaController;
 use App\Http\Controllers\Api\V1\PernyataanSurveiController;
 use App\Http\Controllers\Api\V1\PersiapanUjianTerpusatController;
@@ -157,6 +158,10 @@ Route::prefix('v1')
             ->name('notifikasi.baca-semua');
         Route::patch('/notifikasi/{notifikasiPengguna}/baca', [NotifikasiController::class, 'baca'])
             ->name('notifikasi.baca');
+        Route::post('/notifikasi/perangkat', [PerangkatNotifikasiPushController::class, 'store'])
+            ->name('notifikasi.perangkat.store');
+        Route::delete('/notifikasi/perangkat', [PerangkatNotifikasiPushController::class, 'destroy'])
+            ->name('notifikasi.perangkat.destroy');
 
         Route::get('/dashboard-sarpras', DashboardSarprasController::class)
             ->middleware('izin:barang.lihat,barang.kelola,barang.peminjaman_kelola')

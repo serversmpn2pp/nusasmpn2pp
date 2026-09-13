@@ -1,3 +1,16 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Jangan memuat plugin Firebase sebelum konfigurasi proyek sekolah ada.
+        if (file("app/google-services.json").exists()) {
+            classpath("com.google.gms:google-services:4.4.4")
+        }
+    }
+}
+
 allprojects {
     repositories {
         google()

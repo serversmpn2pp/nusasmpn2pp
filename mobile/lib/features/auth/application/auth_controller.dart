@@ -4,6 +4,7 @@ import 'package:nusa/core/security/password_change_gate.dart';
 import 'package:nusa/features/auth/data/auth_repository.dart';
 import 'package:nusa/features/auth/domain/auth_session.dart';
 import 'package:nusa/features/auth/domain/pengguna.dart';
+import 'package:nusa/features/push_notifications/application/push_device_service.dart';
 
 class AuthState {
   const AuthState({
@@ -104,6 +105,7 @@ class AuthController extends AsyncNotifier<AuthState> {
       state = AsyncData(AuthState(session: currentSession, isSubmitting: true));
     }
 
+    await ref.read(pushDeviceServiceProvider).unregisterCurrentDevice();
     await ref.read(authRepositoryProvider).logout();
     ref.read(passwordChangeGateProvider.notifier).clear();
     state = const AsyncData(AuthState());

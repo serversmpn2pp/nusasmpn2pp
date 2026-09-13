@@ -1107,6 +1107,15 @@
                 transform: rotate(90deg);
             }
 
+            .sidebar-section-direct .sidebar-section-summary {
+                grid-template-columns: minmax(0, 1fr) auto;
+                text-decoration: none;
+            }
+
+            .sidebar-section-direct .sidebar-section-chevron {
+                transform: none;
+            }
+
             .sidebar-section-content {
                 display: grid;
                 gap: 3px;
@@ -1907,10 +1916,9 @@
                 [
                     'id' => 'ujian-asesmen',
                     'title' => 'Ujian & Asesmen',
-                    'items' => [
-                        ['label' => 'Tugas Pengawas Saya', 'route' => 'tugas-pengawas-ujian.index', 'active' => ['tugas-pengawas-ujian.*'], 'initial' => 'TP', 'izin' => null, 'pengawas_ujian_only' => true, 'subgroup' => 'CBT'],
-                        ['label' => 'Pusat CBT', 'route' => 'pusat-cbt.index', 'active' => ['pusat-cbt.*', 'asesmen-kelas-cbt.*', 'soal-cbt.*', 'ujian-cbt.*', 'ujian-terpusat.*', 'paket-soal-terpusat.*', 'presensi-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat'], 'subgroup' => 'CBT'],
-                    ],
+                    'direct' => ['route' => 'pusat-cbt.index', 'active' => ['pusat-cbt.*', 'asesmen-kelas-cbt.*', 'soal-cbt.*', 'ujian-cbt.*', 'ujian-terpusat.*', 'paket-soal-terpusat.*', 'presensi-ujian-cbt.*', 'tugas-pengawas-ujian.*'], 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat']],
+                    'direct_fallback_pengawas' => ['route' => 'tugas-pengawas-ujian.index', 'active' => ['tugas-pengawas-ujian.*']],
+                    'items' => [],
                 ],
                 [
                     'id' => 'kehadiran',
@@ -2095,10 +2103,9 @@
                 [
                     'id' => 'ujian-asesmen',
                     'title' => 'Ujian & Asesmen',
-                    'items' => [
-                        ['label' => 'Tugas Pengawas Saya', 'route' => 'tugas-pengawas-ujian.index', 'active' => ['tugas-pengawas-ujian.*'], 'initial' => 'TP', 'izin' => null, 'pengawas_ujian_only' => true],
-                        ['label' => 'Pusat CBT', 'route' => 'pusat-cbt.index', 'active' => ['pusat-cbt.*', 'asesmen-kelas-cbt.*', 'soal-cbt.*', 'ujian-cbt.*', 'ujian-terpusat.*', 'paket-soal-terpusat.*', 'presensi-ujian-cbt.*'], 'initial' => 'CB', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat']],
-                    ],
+                    'direct' => ['route' => 'pusat-cbt.index', 'active' => ['pusat-cbt.*', 'asesmen-kelas-cbt.*', 'soal-cbt.*', 'ujian-cbt.*', 'ujian-terpusat.*', 'paket-soal-terpusat.*', 'presensi-ujian-cbt.*', 'tugas-pengawas-ujian.*'], 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat']],
+                    'direct_fallback_pengawas' => ['route' => 'tugas-pengawas-ujian.index', 'active' => ['tugas-pengawas-ujian.*']],
+                    'items' => [],
                 ],
                 [
                     'id' => 'kehadiran-saya',
@@ -2233,7 +2240,21 @@
                         })
                         ->values()
                         ->all();
-                    $section['active'] = collect($section['items'])->contains('is_active', true);
+                    $direct = null;
+                    if (isset($section['direct']) && $bolehMelihatMenu($section['direct']['izin'] ?? null)) {
+                        $direct = $section['direct'];
+                    } elseif (isset($section['direct_fallback_pengawas']) && $dapatMengawasiUjian) {
+                        $direct = $section['direct_fallback_pengawas'];
+                    }
+
+                    if ($direct) {
+                        $activePatterns = (array) ($direct['active'] ?? $direct['route']);
+                        $direct['is_active'] = request()->routeIs(...$activePatterns);
+                    }
+
+                    $section['direct'] = $direct;
+                    $section['active'] = ($direct['is_active'] ?? false)
+                        || collect($section['items'])->contains('is_active', true);
                     $section['groups'] = collect($section['items'])
                         ->groupBy(fn (array $item) => $item['subgroup'] ?? '')
                         ->map(fn ($items, $nama) => [
@@ -2245,7 +2266,7 @@
 
                     return $section;
                 })
-                ->filter(fn (array $section) => count($section['items']) > 0)
+                ->filter(fn (array $section) => $section['direct'] || count($section['items']) > 0)
                 ->values()
                 ->all();
         @endphp
@@ -2290,51 +2311,72 @@
 
                 <nav class="sidebar-nav" data-sidebar-nav>
                     @foreach ($sidebarSections as $section)
-                        <details
-                            class="sidebar-section {{ $section['active'] ? 'has-active' : '' }}"
-                            data-sidebar-section
-                            data-sidebar-section-id="{{ $section['id'] }}"
-                            data-sidebar-section-title="{{ str($section['title'])->lower() }}"
-                            @if ($section['active']) open @endif
-                        >
-                            <summary class="sidebar-section-summary">
-                                <span class="sidebar-section-title">{{ $section['title'] }}</span>
-                                <span class="sidebar-section-count">{{ count($section['items']) }}</span>
-                                <svg class="sidebar-section-chevron" aria-hidden="true" viewBox="0 0 24 24">
-                                    <path d="m9 18 6-6-6-6"></path>
-                                </svg>
-                            </summary>
-
-                            <div class="sidebar-section-content">
-                                @foreach ($section['groups'] as $group)
-                                    <div
-                                        class="sidebar-subgroup"
-                                        data-sidebar-subgroup
-                                        data-sidebar-subgroup-title="{{ str($group['name'])->lower() }}"
-                                    >
-                                        @if ($group['name'] !== '')
-                                            <p class="sidebar-subgroup-title">{{ $group['name'] }}</p>
-                                        @endif
-
-                                        <div class="sidebar-links">
-                                            @foreach ($group['items'] as $item)
-                                                <a
-                                                    href="{{ route($item['route']) }}"
-                                                    class="sidebar-link {{ $item['is_active'] ? 'active' : '' }}"
-                                                    data-sidebar-item
-                                                    data-sidebar-search-text="{{ str($section['title'] . ' ' . ($group['name'] ?? '') . ' ' . $item['label'])->lower() }}"
-                                                    @if ($item['is_active']) aria-current="page" @endif
-                                                    @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif
-                                                >
-                                                    <span class="sidebar-link-initial">{{ $item['initial'] }}</span>
-                                                    <span class="sidebar-link-label">{{ $item['label'] }}</span>
-                                                </a>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endforeach
+                        @if ($section['direct'])
+                            <div
+                                class="sidebar-section sidebar-section-direct {{ $section['active'] ? 'has-active' : '' }}"
+                                data-sidebar-section
+                                data-sidebar-direct
+                                data-sidebar-section-id="{{ $section['id'] }}"
+                                data-sidebar-section-title="{{ str($section['title'])->lower() }}"
+                            >
+                                <a
+                                    href="{{ route($section['direct']['route']) }}"
+                                    class="sidebar-section-summary"
+                                    @if ($section['active']) aria-current="page" @endif
+                                >
+                                    <span class="sidebar-section-title">{{ $section['title'] }}</span>
+                                    <svg class="sidebar-section-chevron" aria-hidden="true" viewBox="0 0 24 24">
+                                        <path d="m9 18 6-6-6-6"></path>
+                                    </svg>
+                                </a>
                             </div>
-                        </details>
+                        @else
+                            <details
+                                class="sidebar-section {{ $section['active'] ? 'has-active' : '' }}"
+                                data-sidebar-section
+                                data-sidebar-section-id="{{ $section['id'] }}"
+                                data-sidebar-section-title="{{ str($section['title'])->lower() }}"
+                                @if ($section['active']) open @endif
+                            >
+                                <summary class="sidebar-section-summary">
+                                    <span class="sidebar-section-title">{{ $section['title'] }}</span>
+                                    <span class="sidebar-section-count">{{ count($section['items']) }}</span>
+                                    <svg class="sidebar-section-chevron" aria-hidden="true" viewBox="0 0 24 24">
+                                        <path d="m9 18 6-6-6-6"></path>
+                                    </svg>
+                                </summary>
+
+                                <div class="sidebar-section-content">
+                                    @foreach ($section['groups'] as $group)
+                                        <div
+                                            class="sidebar-subgroup"
+                                            data-sidebar-subgroup
+                                            data-sidebar-subgroup-title="{{ str($group['name'])->lower() }}"
+                                        >
+                                            @if ($group['name'] !== '')
+                                                <p class="sidebar-subgroup-title">{{ $group['name'] }}</p>
+                                            @endif
+
+                                            <div class="sidebar-links">
+                                                @foreach ($group['items'] as $item)
+                                                    <a
+                                                        href="{{ route($item['route']) }}"
+                                                        class="sidebar-link {{ $item['is_active'] ? 'active' : '' }}"
+                                                        data-sidebar-item
+                                                        data-sidebar-search-text="{{ str($section['title'] . ' ' . ($group['name'] ?? '') . ' ' . $item['label'])->lower() }}"
+                                                        @if ($item['is_active']) aria-current="page" @endif
+                                                        @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif
+                                                    >
+                                                        <span class="sidebar-link-initial">{{ $item['initial'] }}</span>
+                                                        <span class="sidebar-link-label">{{ $item['label'] }}</span>
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @endif
                     @endforeach
 
                     <div class="sidebar-search-empty" data-sidebar-search-empty hidden>
@@ -2546,7 +2588,9 @@
                     const bukaSatuBagian = (bagian) => {
                         sedangMengaturSidebar = true;
                         sidebarSections.forEach((item) => {
-                            item.open = item === bagian;
+                            if (item.tagName === 'DETAILS') {
+                                item.open = item === bagian;
+                            }
                         });
                         window.requestAnimationFrame(() => {
                             sedangMengaturSidebar = false;
@@ -2562,6 +2606,8 @@
                         bukaSatuBagian(bagianAwal);
 
                         sidebarSections.forEach((bagian) => {
+                            if (bagian.hasAttribute('data-sidebar-direct')) return;
+
                             bagian.addEventListener('toggle', () => {
                                 if (sedangMencariMenu || sedangMengaturSidebar || !bagian.open) return;
 
@@ -2585,6 +2631,14 @@
                         sidebarSections.forEach((bagian) => {
                             const judulBagianCocok = normalisasiPencarian(bagian.dataset.sidebarSectionTitle || '')
                                 .includes(kataKunci);
+
+                            if (bagian.hasAttribute('data-sidebar-direct')) {
+                                const bagianCocok = kataKunci === '' || judulBagianCocok;
+                                bagian.hidden = !bagianCocok;
+                                if (bagianCocok) jumlahCocok++;
+                                return;
+                            }
+
                             let jumlahCocokBagian = 0;
 
                             bagian.querySelectorAll('[data-sidebar-subgroup]').forEach((subgroup) => {

@@ -121,6 +121,9 @@
             <h1 class="page-title">Pusat CBT</h1>
             <p class="help-text" style="margin-top: 8px; max-width: 720px;">Pilih alur sesuai kegiatan. Siswa mengikuti ujian dari akun NUSA mereka, sehingga tidak ada lagi akun atau kartu peserta CBT terpisah.</p>
         </div>
+        @if ($dapatMengawasiUjian)
+            <a href="{{ route('tugas-pengawas-ujian.index') }}" class="button button-primary">Tugas Pengawas Saya</a>
+        @endif
     </div>
 
     <div class="stats-grid">

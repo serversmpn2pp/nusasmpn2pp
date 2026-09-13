@@ -4,6 +4,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firebase baru diaktifkan setelah konfigurasi resmi proyek sekolah tersedia.
+// Dengan ini build pengembangan lama tetap dapat berjalan tanpa google-services.json.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "id.sch.smpn2padangpanjang.nusa"
     compileSdk = flutter.compileSdkVersion

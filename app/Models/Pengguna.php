@@ -105,6 +105,11 @@ class Pengguna extends Authenticatable
         return $this->hasMany(NotifikasiPengguna::class);
     }
 
+    public function perangkatNotifikasiPush(): HasMany
+    {
+        return $this->hasMany(PerangkatNotifikasiPush::class);
+    }
+
     public function riwayatLogin(): HasMany
     {
         return $this->hasMany(RiwayatLogin::class);

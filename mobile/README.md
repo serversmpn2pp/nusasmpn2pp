@@ -323,3 +323,39 @@ menjaga popup sejajar dan selebar field, memberi radius serta bayangan yang
 konsisten, dan membatasi tinggi daftar panjang agar tetap dapat di-scroll di
 dalam halaman maupun modal. `PopupMenuButton` terpisah hanya digunakan untuk
 menu aksi kontekstual, bukan sebagai input formulir.
+
+## Push notification Android
+
+Push notification menggunakan Firebase Cloud Messaging (FCM) HTTP v1. Aplikasi
+tetap dapat dibangun tanpa Firebase, tetapi push baru aktif setelah konfigurasi
+resmi proyek sekolah dipasang:
+
+1. Buat atau pilih proyek di Firebase Console, lalu daftarkan aplikasi Android
+   dengan package ID `id.sch.smpn2padangpanjang.nusa`.
+2. Unduh `google-services.json` dan simpan sebagai
+   `mobile/android/app/google-services.json`. Berkas konfigurasi klien ini tidak
+   berisi private key; jangan pernah menaruh JSON service account di folder
+   mobile atau repository.
+3. Dari Firebase Console → Project settings → Service accounts, buat private key
+   untuk server. Simpan file itu di luar repository, misalnya
+   `/etc/nusa/firebase-service-account.json` pada server sekolah.
+4. Isi konfigurasi server berikut, kemudian jalankan `php artisan optimize:clear`:
+
+   ```dotenv
+   FIREBASE_PUSH_ENABLED=true
+   FIREBASE_PROJECT_ID=id-project-firebase
+   FIREBASE_CREDENTIALS=/etc/nusa/firebase-service-account.json
+   FIREBASE_DEVICE_STALE_DAYS=45
+   ```
+
+5. Jalankan `php artisan migrate --force` dan pastikan worker antrean Laravel
+   selalu hidup (Supervisor/systemd), kemudian jalankan `php artisan queue:restart`
+   setiap selesai deployment.
+6. Build ulang APK/AAB agar konfigurasi Firebase ikut masuk ke aplikasi. Emulator
+   pengujian harus memakai system image yang menyertakan Google Play.
+
+Setelah pengguna login dan mengganti kata sandi awal, aplikasi meminta izin
+notifikasi (Android 13+), mendaftarkan token perangkat ke Laravel, memperbarui
+token jika berubah, serta menonaktifkannya saat logout. Notifikasi yang diketuk
+akan ditandai sudah dibaca dan diarahkan ke halaman native yang sesuai. Token
+yang dinyatakan `UNREGISTERED` oleh FCM dinonaktifkan otomatis.

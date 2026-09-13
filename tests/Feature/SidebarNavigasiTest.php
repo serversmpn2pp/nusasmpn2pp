@@ -37,7 +37,7 @@ class SidebarNavigasiTest extends TestCase
                 'Jadwal Pelajaran',
             ])
             ->assertSee('Penempatan Siswa')
-            ->assertSee('Pusat CBT')
+            ->assertDontSee('Pusat CBT')
             ->assertDontSee('Jenis Ujian CBT')
             ->assertDontSee('Status Panitia CBT')
             ->assertSee('Pengaturan Presensi Siswa')
@@ -66,7 +66,7 @@ class SidebarNavigasiTest extends TestCase
         );
     }
 
-    public function test_sidebar_guru_mapel_menampilkan_pusat_cbt(): void
+    public function test_sidebar_guru_mapel_membuka_pusat_cbt_dari_menu_ujian_dan_asesmen(): void
     {
         $pegawai = Pegawai::create([
             'nama_lengkap' => 'Guru CBT',
@@ -84,10 +84,15 @@ class SidebarNavigasiTest extends TestCase
         ]);
         $guru->daftarPeran()->sync([Peran::where('kode', 'guru_mapel')->value('id')]);
 
-        $this->actingAs($guru)
+        $response = $this->actingAs($guru)
             ->get(route('beranda'))
             ->assertOk()
             ->assertSee('Ujian &amp; Asesmen', false)
-            ->assertSee('Pusat CBT');
+            ->assertDontSee('Pusat CBT');
+
+        $this->assertMatchesRegularExpression(
+            '/<a\s+(?=[^>]*href="'.preg_quote(route('pusat-cbt.index'), '/').'")(?=[^>]*class="sidebar-section-summary")[^>]*>\s*<span class="sidebar-section-title">Ujian &amp; Asesmen<\/span>/s',
+            $response->getContent(),
+        );
     }
 }

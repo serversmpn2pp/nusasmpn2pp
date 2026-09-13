@@ -15,14 +15,22 @@ import 'package:nusa/features/profile/presentation/profile_page.dart';
 import 'package:nusa/shared/widgets/nusa_bottom_navigation.dart';
 
 class HomeView extends ConsumerStatefulWidget {
-  const HomeView({super.key});
+  const HomeView({this.initialIndex = 0, super.key});
+
+  final int initialIndex;
 
   @override
   ConsumerState<HomeView> createState() => _HomeViewState();
 }
 
 class _HomeViewState extends ConsumerState<HomeView> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex.clamp(0, 4);
+  }
 
   Future<void> _refreshDashboard() {
     return ref.read(homeControllerProvider.notifier).refresh();

@@ -2,10 +2,12 @@
 
 namespace App\Services\Notifikasi;
 
+use App\Jobs\KirimPushNotification;
 use App\Models\NotifikasiPengguna;
 use App\Models\Pengguna;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class NotifikasiPenggunaService
 {
@@ -35,13 +37,20 @@ class NotifikasiPenggunaService
         ];
 
         if ($kunciUnik) {
-            return NotifikasiPengguna::query()->firstOrCreate(
+            $notifikasi = NotifikasiPengguna::query()->firstOrCreate(
                 ['pengguna_id' => $pengguna->id, 'kunci_unik' => $kunciUnik],
                 $data,
             );
+
+            $this->antrekanPushJikaBaru($notifikasi);
+
+            return $notifikasi;
         }
 
-        return $pengguna->notifikasiPengguna()->create($data);
+        $notifikasi = $pengguna->notifikasiPengguna()->create($data);
+        $this->antrekanPushJikaBaru($notifikasi);
+
+        return $notifikasi;
     }
 
     public function kirimKeBanyak(
@@ -184,5 +193,16 @@ class NotifikasiPenggunaService
         $fragment = isset($bagian['fragment']) ? '#'.$bagian['fragment'] : '';
 
         return str_starts_with($path, '/') ? $path.$query.$fragment : '/'.$path.$query.$fragment;
+    }
+
+    private function antrekanPushJikaBaru(NotifikasiPengguna $notifikasi): void
+    {
+        if (! $notifikasi->wasRecentlyCreated || ! config('services.firebase.push_enabled')) {
+            return;
+        }
+
+        DB::afterCommit(
+            fn () => KirimPushNotification::dispatch($notifikasi->id),
+        );
     }
 }

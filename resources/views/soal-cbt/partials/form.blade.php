@@ -227,6 +227,47 @@
     </section>
 
     <section class="panel panel-pad">
+        <details class="question-advanced" @if ($bukaPengaturanTambahan) open @endif>
+            <summary>Pengaturan tambahan (opsional)</summary>
+            <p class="help-text" style="margin-bottom: 14px;">Gunakan bagian ini hanya jika soal memerlukan klasifikasi, stimulus, atau pembahasan khusus.</p>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="tingkat_kesulitan">Tingkat kesulitan</label>
+                    <select id="tingkat_kesulitan" name="tingkat_kesulitan" class="{{ $selectClass('tingkat_kesulitan') }}">
+                        @foreach ($daftarKesulitan as $kode => $label)
+                            <option value="{{ $kode }}" @selected($nilai('tingkat_kesulitan', 'sedang') === $kode)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="kategori">Kategori</label>
+                    <select id="kategori" name="kategori" class="{{ $selectClass('kategori') }}">
+                        @foreach ($daftarKategori as $kode => $label)
+                            <option value="{{ $kode }}" @selected($nilai('kategori', 'umum') === $kode)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="field span-2">
+                    <label for="materi">Rincian materi</label>
+                    <input id="materi" name="materi" type="text" value="{{ $nilai('materi') }}" placeholder="Contoh: Menentukan frekuensi dari jumlah getaran" class="{{ $inputClass('materi') }}">
+                </div>
+                <div class="field span-2">
+                    <label for="tujuan_pembelajaran">Tujuan pembelajaran</label>
+                    <textarea id="tujuan_pembelajaran" name="tujuan_pembelajaran" class="{{ $textareaClass('tujuan_pembelajaran') }}">{{ $nilai('tujuan_pembelajaran') }}</textarea>
+                </div>
+                <div class="field span-2">
+                    <label for="stimulus">Stimulus</label>
+                    <textarea id="stimulus" name="stimulus" class="{{ $textareaClass('stimulus') }}" placeholder="Teks bacaan, kasus, atau data pendukung sebelum pertanyaan.">{{ $nilai('stimulus') }}</textarea>
+                </div>
+                <div class="field span-2">
+                    <label for="pembahasan">Pembahasan</label>
+                    <textarea id="pembahasan" name="pembahasan" class="{{ $textareaClass('pembahasan') }}" placeholder="Pembahasan dapat ditampilkan setelah ujian selesai.">{{ $nilai('pembahasan') }}</textarea>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <section class="panel panel-pad">
         <div class="question-step-head">
             <span class="question-step-number">2</span>
             <div><h2>Tulis soal</h2><p>Materi membantu pencarian. Isi soal adalah bagian yang akan dibaca siswa.</p></div>
@@ -417,47 +458,6 @@
                 </div>
             </div>
         </div>
-    </section>
-
-    <section class="panel panel-pad">
-        <details class="question-advanced" @if ($bukaPengaturanTambahan) open @endif>
-            <summary>Pengaturan tambahan (opsional)</summary>
-            <p class="help-text" style="margin-bottom: 14px;">Gunakan bagian ini hanya jika soal memerlukan klasifikasi, stimulus, atau pembahasan khusus.</p>
-            <div class="form-grid">
-                <div class="field">
-                    <label for="tingkat_kesulitan">Tingkat kesulitan</label>
-                    <select id="tingkat_kesulitan" name="tingkat_kesulitan" class="{{ $selectClass('tingkat_kesulitan') }}">
-                        @foreach ($daftarKesulitan as $kode => $label)
-                            <option value="{{ $kode }}" @selected($nilai('tingkat_kesulitan', 'sedang') === $kode)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field">
-                    <label for="kategori">Kategori</label>
-                    <select id="kategori" name="kategori" class="{{ $selectClass('kategori') }}">
-                        @foreach ($daftarKategori as $kode => $label)
-                            <option value="{{ $kode }}" @selected($nilai('kategori', 'umum') === $kode)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field span-2">
-                    <label for="materi">Rincian materi</label>
-                    <input id="materi" name="materi" type="text" value="{{ $nilai('materi') }}" placeholder="Contoh: Menentukan frekuensi dari jumlah getaran" class="{{ $inputClass('materi') }}">
-                </div>
-                <div class="field span-2">
-                    <label for="tujuan_pembelajaran">Tujuan pembelajaran</label>
-                    <textarea id="tujuan_pembelajaran" name="tujuan_pembelajaran" class="{{ $textareaClass('tujuan_pembelajaran') }}">{{ $nilai('tujuan_pembelajaran') }}</textarea>
-                </div>
-                <div class="field span-2">
-                    <label for="stimulus">Stimulus</label>
-                    <textarea id="stimulus" name="stimulus" class="{{ $textareaClass('stimulus') }}" placeholder="Teks bacaan, kasus, atau data pendukung sebelum pertanyaan.">{{ $nilai('stimulus') }}</textarea>
-                </div>
-                <div class="field span-2">
-                    <label for="pembahasan">Pembahasan</label>
-                    <textarea id="pembahasan" name="pembahasan" class="{{ $textareaClass('pembahasan') }}" placeholder="Pembahasan dapat ditampilkan setelah ujian selesai.">{{ $nilai('pembahasan') }}</textarea>
-                </div>
-            </div>
-        </details>
     </section>
 
     <div class="question-form-actions">

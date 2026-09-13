@@ -378,8 +378,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         name: 'home',
-        pageBuilder: (context, state) =>
-            _fadePage(key: state.pageKey, child: const HomeView()),
+        pageBuilder: (context, state) => _fadePage(
+          key: state.pageKey,
+          child: HomeView(
+            initialIndex: state.uri.queryParameters['tab'] == 'notifikasi'
+                ? 3
+                : 0,
+          ),
+        ),
       ),
       GoRoute(
         path: AppRoutes.cbtCenter,
