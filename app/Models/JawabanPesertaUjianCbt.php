@@ -14,6 +14,10 @@ class JawabanPesertaUjianCbt extends Model
         'soal_ujian_cbt_id',
         'soal_cbt_id',
         'jawaban',
+        'lokasi_file',
+        'nama_file_asli',
+        'tipe_file',
+        'ukuran_file',
         'ragu',
         'skor',
         'benar',
@@ -22,6 +26,7 @@ class JawabanPesertaUjianCbt extends Model
 
     protected $casts = [
         'jawaban' => 'array',
+        'ukuran_file' => 'integer',
         'ragu' => 'boolean',
         'skor' => 'decimal:2',
         'benar' => 'boolean',

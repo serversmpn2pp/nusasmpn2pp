@@ -13,16 +13,17 @@
     $konteksAktif = collect($daftarKonteks ?? [])->firstWhere('kunci', $kunciKonteks) ?? $konteksTerpilih;
 
     $jenisTerpilih = $nilai('jenis_soal', 'pilihan_ganda');
+    $kesulitanTerpilih = (string) $nilai('tingkat_kesulitan');
     $jenisUtama = collect($daftarJenisSoal)->only(['pilihan_ganda', 'pilihan_ganda_kompleks', 'benar_salah', 'isian_singkat']);
     $jenisLainnya = collect($daftarJenisSoal)->except($jenisUtama->keys()->all());
     $deskripsiJenis = [
         'pilihan_ganda' => 'Satu jawaban benar dari pilihan A-D.',
         'pilihan_ganda_kompleks' => 'Lebih dari satu jawaban dapat benar.',
         'benar_salah' => 'Nilai benar atau salah untuk beberapa pernyataan.',
-        'isian_singkat' => 'Jawaban berupa kata atau kalimat pendek.',
+        'isian_singkat' => 'Untuk nama, istilah, atau jawaban pendek. Bisa memakai beberapa alternatif kunci.',
         'menjodohkan' => 'Pasangkan pernyataan dengan jawaban.',
         'uraian' => 'Jawaban diperiksa manual memakai rubrik.',
-        'numerik' => 'Jawaban berupa angka atau hasil perhitungan.',
+        'numerik' => 'Untuk hasil perhitungan. Kunci diisi angka saja; koma dan titik desimal dianggap sama.',
         'upload_file' => 'Unggah hasil tugas pada Asesmen Kelas.',
     ];
 
@@ -52,7 +53,7 @@
     $punyaMedia = filled($gambarSoalUrl) || filled($mediaTabel) || filled(data_get($mediaSoal, 'rumus.latex'));
 
     $bukaPengaturanTambahan = $errors->hasAny([
-        'tingkat_kesulitan', 'kategori', 'materi', 'tujuan_pembelajaran',
+        'kategori', 'materi', 'tujuan_pembelajaran',
         'stimulus', 'pembahasan', 'rubrik_teks',
     ]);
 @endphp
@@ -86,6 +87,17 @@
     .question-other-types, .question-advanced { margin-top: 12px; border-top: 1px solid var(--line); }
     .question-other-types summary, .question-advanced summary { padding: 14px 0 0; color: var(--primary-dark); cursor: pointer; font-size: .82rem; font-weight: 800; }
     .question-other-types[open] summary, .question-advanced[open] summary { margin-bottom: 14px; }
+    .question-difficulty { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+    .question-difficulty-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+    .question-difficulty-head h3 { margin: 0; font-size: .92rem; }
+    .question-difficulty-head p { margin: 3px 0 0; color: var(--muted); font-size: .75rem; }
+    .question-required-badge { flex: 0 0 auto; border-radius: 6px; background: #fff2cc; padding: 6px 8px; color: #805d00; font-size: .68rem; font-weight: 900; }
+    .question-difficulty-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .question-difficulty-option { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 9px; align-items: center; min-height: 62px; border: 1px solid var(--line); border-radius: 7px; background: #fff; padding: 11px 12px; cursor: pointer; }
+    .question-difficulty-option:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary); }
+    .question-difficulty-option strong, .question-difficulty-option span { display: block; }
+    .question-difficulty-option strong { color: var(--dark); font-size: .8rem; }
+    .question-difficulty-option span { margin-top: 3px; color: var(--primary-dark); font-size: .72rem; font-weight: 800; }
     .question-main-grid { display: grid; grid-template-columns: minmax(180px, .4fr) minmax(0, 1.6fr); gap: 14px; }
     .question-main-grid .textarea { min-height: 132px; }
     .question-media-editor { min-width: 0; max-width: 100%; overflow: hidden; margin-top: 14px; border: 1px solid var(--line); border-radius: 7px; background: #f8fafc; padding: 14px; }
@@ -133,6 +145,11 @@
     .question-preview-media th { background: var(--primary-soft); color: var(--primary-dark); }
     .soal-answer-section { display: none; }
     .soal-answer-section.is-active { display: block; }
+    .question-answer-guidance { margin-bottom: 14px; border-left: 4px solid var(--primary); background: var(--primary-soft); padding: 11px 13px; }
+    .question-answer-guidance[hidden] { display: none; }
+    .question-answer-guidance strong, .question-answer-guidance span { display: block; }
+    .question-answer-guidance strong { color: var(--primary-dark); font-size: .82rem; }
+    .question-answer-guidance span { margin-top: 4px; color: var(--muted); font-size: .76rem; line-height: 1.45; }
     .soal-option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .soal-option-row { border: 1px solid var(--line); border-radius: 7px; padding: 12px; background: #fff; }
     .soal-option-label { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; color: var(--primary-dark); font-weight: 800; }
@@ -140,13 +157,13 @@
     .question-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding-bottom: 8px; }
 
     @media (max-width: 920px) {
-        .question-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .question-type-grid, .question-difficulty-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .question-context { grid-template-columns: 1fr; }
         .question-context-fixed { justify-content: flex-start; }
     }
 
     @media (max-width: 680px) {
-        .question-type-grid, .question-main-grid, .soal-option-grid { grid-template-columns: 1fr; }
+        .question-type-grid, .question-difficulty-grid, .question-main-grid, .soal-option-grid { grid-template-columns: 1fr; }
         .question-image-editor { grid-template-columns: 1fr; }
         .question-media-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
         .question-media-toolbar-copy { grid-column: 1 / -1; margin: 0; }
@@ -224,6 +241,28 @@
             </div>
         </details>
         @error('jenis_soal') <p class="error-text">{{ $message }}</p> @enderror
+
+        <div class="question-difficulty">
+            <div class="question-difficulty-head">
+                <div>
+                    <h3>Tingkat kesulitan dan skor</h3>
+                    <p>Pilih tingkat kesulitan setiap soal. Skor ditentukan otomatis dan tidak perlu diisi lagi.</p>
+                </div>
+                <span class="question-required-badge">Wajib dipilih</span>
+            </div>
+            <div class="question-difficulty-grid">
+                @foreach ($daftarKesulitan as $kode => $label)
+                    <label class="question-difficulty-option">
+                        <input type="radio" name="tingkat_kesulitan" value="{{ $kode }}" @checked($kesulitanTerpilih === $kode) required>
+                        <span>
+                            <strong>{{ $label }}</strong>
+                            <span>Skor {{ \App\Models\SoalCbt::skorUntukKesulitan($kode) }}</span>
+                        </span>
+                    </label>
+                @endforeach
+            </div>
+            @error('tingkat_kesulitan') <p class="error-text">{{ $message }}</p> @enderror
+        </div>
     </section>
 
     <section class="panel panel-pad">
@@ -231,14 +270,6 @@
             <summary>Pengaturan tambahan (opsional)</summary>
             <p class="help-text" style="margin-bottom: 14px;">Gunakan bagian ini hanya jika soal memerlukan klasifikasi, stimulus, atau pembahasan khusus.</p>
             <div class="form-grid">
-                <div class="field">
-                    <label for="tingkat_kesulitan">Tingkat kesulitan</label>
-                    <select id="tingkat_kesulitan" name="tingkat_kesulitan" class="{{ $selectClass('tingkat_kesulitan') }}">
-                        @foreach ($daftarKesulitan as $kode => $label)
-                            <option value="{{ $kode }}" @selected($nilai('tingkat_kesulitan', 'sedang') === $kode)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
                 <div class="field">
                     <label for="kategori">Kategori</label>
                     <select id="kategori" name="kategori" class="{{ $selectClass('kategori') }}">
@@ -447,6 +478,14 @@
         </div>
 
         <div class="soal-answer-section" data-answer-section="isian_singkat uraian numerik upload_file">
+            <div class="question-answer-guidance" data-answer-guidance="isian_singkat" hidden>
+                <strong>Cara mengisi Isian Singkat</strong>
+                <span>Isi kunci berupa nama, istilah, atau jawaban pendek. Jika ada beberapa jawaban yang sama-sama benar, pisahkan dengan tanda |. Contoh: Soekarno | Ir. Soekarno.</span>
+            </div>
+            <div class="question-answer-guidance" data-answer-guidance="numerik" hidden>
+                <strong>Cara mengisi Numerik</strong>
+                <span>Isi kunci dengan angka saja tanpa satuan. Koma dan titik desimal dianggap sama. Contoh: kunci 2,5 juga menerima jawaban 2.5.</span>
+            </div>
             <div class="form-grid">
                 <div class="field span-2">
                     <label for="kunci_teks">Kunci jawaban</label>
@@ -489,6 +528,7 @@
         const levelInput = document.querySelector('[data-context-level]');
         const typeInputs = document.querySelectorAll('[data-soal-kind]');
         const sections = document.querySelectorAll('[data-answer-section]');
+        const answerGuidance = document.querySelectorAll('[data-answer-guidance]');
         const pgKeys = document.querySelectorAll('[data-pg-key]');
         const pgkKeys = document.querySelectorAll('[data-pgk-key]');
 
@@ -505,6 +545,10 @@
 
             sections.forEach((section) => {
                 section.classList.toggle('is-active', section.dataset.answerSection.split(' ').includes(value));
+            });
+
+            answerGuidance.forEach((guidance) => {
+                guidance.hidden = guidance.dataset.answerGuidance !== value;
             });
 
             pgKeys.forEach((input) => {

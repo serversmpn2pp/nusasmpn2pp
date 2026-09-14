@@ -36,7 +36,7 @@ class PaketSoalUjianTerpusatTest extends TestCase
     {
         $data = $this->buatFondasi();
         $soalSatu = $this->buatSoal($data['tahun'], $data['mapel'], 'SOAL-UT-001', 'Pertanyaan pertama');
-        $soalDua = $this->buatSoal($data['tahun'], $data['mapel'], 'SOAL-UT-002', 'Pertanyaan kedua', 2);
+        $soalDua = $this->buatSoal($data['tahun'], $data['mapel'], 'SOAL-UT-002', 'Pertanyaan kedua', 'sedang');
 
         $this->actingAs($data['admin'])
             ->get(route('paket-soal-terpusat.index', ['kegiatan' => $data['kegiatan']->id]))
@@ -51,6 +51,7 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ->assertSee('Susun paket soal')
             ->assertSee('Informasi lainnya sudah diambil dari jadwal')
             ->assertSee('Pengacakan untuk siswa')
+            ->assertSee('Skor soal')
             ->assertSee('name="acak_soal"', false)
             ->assertSee('name="acak_jawaban"', false)
             ->assertSee('Pratinjau')
@@ -59,14 +60,15 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ->assertDontSee('name="mata_pelajaran_id"', false)
             ->assertDontSee('name="tingkat"', false)
             ->assertDontSee('name="jumlah_soal"', false)
+            ->assertDontSee('name="soal['.$soalSatu->id.'][bobot]"', false)
             ->assertDontSee('name="token"', false);
 
         $this->actingAs($data['admin'])
             ->put(route('paket-soal-terpusat.update', $data['jadwal']), [
                 'aksi' => 'terbitkan',
                 'soal' => [
-                    $soalSatu->id => ['dipilih' => '1', 'bobot' => 1],
-                    $soalDua->id => ['dipilih' => '1', 'bobot' => 2],
+                    $soalSatu->id => ['dipilih' => '1', 'bobot' => 99],
+                    $soalDua->id => ['dipilih' => '1', 'bobot' => 99],
                 ],
             ])
             ->assertRedirect(route('paket-soal-terpusat.show', $data['jadwal']));
@@ -92,6 +94,7 @@ class PaketSoalUjianTerpusatTest extends TestCase
         $this->assertSame('tahan', $paket->tindakan_pindah_aplikasi);
         $this->assertMatchesRegularExpression('/^\d{6}$/', $paket->token);
         $this->assertSame([1, 2], $paket->soalUjianCbt()->orderBy('nomor_urut')->pluck('nomor_urut')->all());
+        $this->assertSame(['1.00', '2.00'], $paket->soalUjianCbt()->orderBy('nomor_urut')->pluck('bobot')->all());
         $this->assertDatabaseHas('jadwal_ujian_cbt', ['id' => $data['jadwal']->id, 'ujian_cbt_id' => $paket->id, 'status' => 'siap']);
         $this->assertDatabaseHas('kelas_ujian_cbt', ['ujian_cbt_id' => $paket->id, 'kelas_id' => $data['kelas']->id]);
         $this->assertDatabaseHas('komponen_nilai', [
@@ -107,8 +110,8 @@ class PaketSoalUjianTerpusatTest extends TestCase
                 'acak_soal' => '0',
                 'acak_jawaban' => '0',
                 'soal' => [
-                    $soalSatu->id => ['dipilih' => '1', 'bobot' => 1],
-                    $soalDua->id => ['dipilih' => '1', 'bobot' => 2],
+                    $soalSatu->id => ['dipilih' => '1'],
+                    $soalDua->id => ['dipilih' => '1'],
                 ],
             ])
             ->assertRedirect(route('paket-soal-terpusat.show', $data['jadwal']));
@@ -286,7 +289,7 @@ class PaketSoalUjianTerpusatTest extends TestCase
         return [$pegawai, $akun];
     }
 
-    private function buatSoal(TahunPelajaran $tahun, MataPelajaran $mapel, string $kode, string $pertanyaan, float $skor = 1): SoalCbt
+    private function buatSoal(TahunPelajaran $tahun, MataPelajaran $mapel, string $kode, string $pertanyaan, string $tingkatKesulitan = 'mudah'): SoalCbt
     {
         return SoalCbt::create([
             'tahun_pelajaran_id' => $tahun->id,
@@ -294,12 +297,12 @@ class PaketSoalUjianTerpusatTest extends TestCase
             'tingkat' => 8,
             'kode' => $kode,
             'jenis_soal' => 'pilihan_ganda',
-            'tingkat_kesulitan' => 'sedang',
+            'tingkat_kesulitan' => $tingkatKesulitan,
             'kategori' => 'umum',
             'pertanyaan' => $pertanyaan,
             'opsi' => ['pilihan' => ['A' => 'Salah', 'B' => 'Benar']],
             'kunci_jawaban' => ['jawaban' => 'B'],
-            'skor_maksimal' => $skor,
+            'skor_maksimal' => SoalCbt::skorUntukKesulitan($tingkatKesulitan),
             'status' => 'siap',
             'aktif' => true,
         ]);

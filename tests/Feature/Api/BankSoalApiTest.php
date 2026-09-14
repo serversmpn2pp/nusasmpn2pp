@@ -45,6 +45,7 @@ class BankSoalApiTest extends TestCase
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
         $payload = $this->payload($mapel, [
             'tahun_pelajaran_id' => $tahun->id,
+            'skor_maksimal' => 99,
             'tabel' => [['Besaran', 'Nilai'], ['Frekuensi', '2 Hz']],
             'tabel_judul' => 'Hasil pengamatan',
             'rumus_latex' => 'f = \\frac{n}{t}',
@@ -61,6 +62,7 @@ class BankSoalApiTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('data.jenis_soal', 'pilihan_ganda')
+            ->assertJsonPath('data.skor_maksimal', 2)
             ->assertJsonPath('data.jawaban.opsi.1.benar', true)
             ->assertJsonPath('data.media.tabel.judul', 'Hasil pengamatan')
             ->assertJsonPath('data.media.rumus.latex', 'f = \\frac{n}{t}')
@@ -69,6 +71,7 @@ class BankSoalApiTest extends TestCase
         $soalId = (int) $response->json('data.id');
         $soal = SoalCbt::findOrFail($soalId);
         $this->assertMatchesRegularExpression('/^SOAL-CBT-\d{8}-\d{3}$/', $soal->kode);
+        $this->assertSame('2.00', $soal->skor_maksimal);
         Storage::disk('public')->assertExists(data_get($soal->media, 'gambar.path'));
 
         $this->withToken($this->token($administrator))
@@ -147,6 +150,21 @@ class BankSoalApiTest extends TestCase
         $this->assertSame(6, SoalCbt::query()->count());
         $this->assertSame(false, data_get(SoalCbt::where('jenis_soal', 'benar_salah')->firstOrFail()->kunci_jawaban, 'jawaban.2'));
         $this->assertSame('Tokyo', data_get(SoalCbt::where('jenis_soal', 'menjodohkan')->firstOrFail()->kunci_jawaban, 'jawaban.2'));
+    }
+
+    public function test_tingkat_kesulitan_wajib_diisi_pada_api_bank_soal(): void
+    {
+        [, , $mapel] = $this->fondasiAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $payload = $this->payload($mapel);
+        unset($payload['tingkat_kesulitan']);
+
+        $this->withToken($this->token($administrator))
+            ->postJson(route('api.v1.bank-soal.store'), ['payload' => json_encode($payload)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('tingkat_kesulitan');
+
+        $this->assertDatabaseCount('soal_cbt', 0);
     }
 
     public function test_guru_hanya_melihat_dan_mengubah_bank_soal_yang_diajar(): void
@@ -251,7 +269,7 @@ class BankSoalApiTest extends TestCase
             'kategori' => 'umum',
             'topik' => 'Getaran',
             'pertanyaan' => 'Satuan frekuensi adalah ....',
-            'skor_maksimal' => 1,
+            'skor_maksimal' => 99,
             'aksi' => 'simpan_siap',
             'opsi' => ['A' => 'Meter', 'B' => 'Hertz', 'C' => 'Sekon', 'D' => 'Newton'],
             'kunci_pg' => 'B',
@@ -271,7 +289,7 @@ class BankSoalApiTest extends TestCase
             'pertanyaan' => 'Pertanyaan '.$kode,
             'opsi' => ['pilihan' => ['A' => 'Salah', 'B' => 'Benar']],
             'kunci_jawaban' => ['jawaban' => 'B'],
-            'skor_maksimal' => 1,
+            'skor_maksimal' => 2,
             'status' => 'siap',
             'aktif' => true,
         ];

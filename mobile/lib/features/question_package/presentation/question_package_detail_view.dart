@@ -97,7 +97,7 @@ class _QuestionPackageDetailViewState
                 const SizedBox(height: 11),
                 if (detail.access.started)
                   const _Notice(
-                    message: 'Paket sudah dikerjakan peserta sehingga susunan dan bobot dikunci.',
+                    message: 'Paket sudah dikerjakan peserta sehingga susunan dan skor dikunci.',
                     warning: true,
                   )
                 else if (!detail.access.canManage)
@@ -164,7 +164,6 @@ class _QuestionPackageDetailViewState
                         weight: _weights[question.id] ?? question.maximumScore,
                         editable: detail.access.canEdit,
                         onToggle: () => _toggle(question),
-                        onWeight: () => _editWeight(question),
                         onMoveUp: () => _move(question.id, -1),
                         onMoveDown: () => _move(question.id, 1),
                         onPreview: () => _preview(question),
@@ -242,7 +241,12 @@ class _QuestionPackageDetailViewState
         _weights
           ..clear()
           ..addEntries(
-            detail.questions.map((item) => MapEntry(item.id, item.weight)),
+            detail.questions.map(
+              (item) => MapEntry(
+                item.id,
+                detail.access.canEdit ? item.maximumScore : item.weight,
+              ),
+            ),
           );
         _shuffleQuestions = detail.package?.shuffleQuestions ?? true;
         _shuffleAnswers = detail.package?.shuffleAnswers ?? true;
@@ -279,50 +283,6 @@ class _QuestionPackageDetailViewState
       final item = _selected.removeAt(index);
       _selected.insert(target, item);
     });
-  }
-
-  Future<void> _editWeight(PackageQuestion question) async {
-    final controller = TextEditingController(
-      text: _number(_weights[question.id] ?? question.maximumScore),
-    );
-    final value = await showDialog<double>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Bobot ${question.code}'),
-        content: TextField(
-          key: const Key('question-package-weight-input'),
-          controller: controller,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Bobot soal',
-            helperText: 'Nilai 0,25 sampai 100',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            key: const Key('question-package-weight-save'),
-            onPressed: () {
-              final number = double.tryParse(
-                controller.text.trim().replaceAll(',', '.'),
-              );
-              if (number != null && number >= 0.25 && number <= 100) {
-                Navigator.pop(context, number);
-              }
-            },
-            child: const Text('Terapkan'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (value != null && mounted) {
-      setState(() => _weights[question.id] = value);
-    }
   }
 
   void _preview(PackageQuestion question) {
@@ -382,7 +342,7 @@ class _QuestionPackageDetailViewState
         builder: (context) => AlertDialog(
           title: const Text('Terbitkan paket?'),
           content: Text(
-            '${_selected.length} soal dengan total bobot ${_number(_totalWeight)} akan disiapkan untuk jadwal ini.',
+            '${_selected.length} soal dengan total skor ${_number(_totalWeight)} akan disiapkan untuk jadwal ini.',
           ),
           actions: [
             TextButton(
@@ -516,7 +476,7 @@ class _PackageSummary extends StatelessWidget {
       child: Row(
         children: [
           _SummaryItem(label: 'Soal', value: '$selected'),
-          _SummaryItem(label: 'Bobot', value: _number(totalWeight)),
+          _SummaryItem(label: 'Total skor', value: _number(totalWeight)),
           _SummaryItem(
             label: 'Durasi',
             value: '${package?.durationMinutes ?? 0} mnt',
@@ -693,7 +653,6 @@ class _QuestionCard extends StatelessWidget {
     required this.weight,
     required this.editable,
     required this.onToggle,
-    required this.onWeight,
     required this.onMoveUp,
     required this.onMoveDown,
     required this.onPreview,
@@ -704,7 +663,6 @@ class _QuestionCard extends StatelessWidget {
   final double weight;
   final bool editable;
   final VoidCallback onToggle;
-  final VoidCallback onWeight;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
   final VoidCallback onPreview;
@@ -791,14 +749,13 @@ class _QuestionCard extends StatelessWidget {
                   onPressed: onMoveDown,
                   icon: const Icon(Icons.arrow_downward_rounded, size: 18),
                 ),
-                TextButton(
-                  key: Key('question-package-weight-${question.id}'),
-                  onPressed: onWeight,
-                  child: Text('Bobot ${_number(weight)}'),
+                Text(
+                  'Skor ${_number(weight)}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ] else if (selected)
                 Text(
-                  'Bobot ${_number(weight)}',
+                  'Skor ${_number(weight)}',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
             ],

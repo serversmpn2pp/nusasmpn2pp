@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nusa/core/storage/device_identity.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_exam/data/student_exam_remote_data_source.dart';
+import 'package:nusa/features/student_exam/data/student_exam_file_picker.dart';
 import 'package:nusa/features/student_exam/domain/student_exam.dart';
 import 'package:nusa/features/student_exam/presentation/student_exam_view.dart';
 
@@ -131,6 +134,113 @@ void main() {
     expect(find.textContaining('Ujian sudah dibuka'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('soal menjodohkan menampilkan pilihan pasangan', (tester) async {
+    tester.view.physicalSize = const Size(360, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final remote = _FakeStudentExamRemoteDataSource(matching: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          studentExamRemoteDataSourceProvider.overrideWithValue(remote),
+          deviceIdentityProvider.overrideWithValue(_FakeDeviceIdentity()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const StudentExamView(participantId: 31),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('student-exam-token')),
+      'MULAI1',
+    );
+    await tester.drag(
+      find.byKey(const Key('student-exam-confirmation')),
+      const Offset(0, -250),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('student-exam-open')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('student-exam-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('student-exam-next')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pilihan pasangan'), findsOneWidget);
+    expect(find.text('A. Sekon'), findsOneWidget);
+    expect(find.text('B. Hertz'), findsOneWidget);
+    expect(find.textContaining('Frekuensi'), findsOneWidget);
+    expect(find.textContaining('Periode'), findsOneWidget);
+
+    final dropdown = find.byKey(const Key('student-exam-match-103-1'));
+    await tester.ensureVisible(dropdown);
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('B. Hertz').last);
+    await tester.pump(const Duration(milliseconds: 750));
+
+    expect(remote.lastAnswer, {'1': 'Hertz'});
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('soal upload membuka pemilih dan menyimpan berkas', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final remote = _FakeStudentExamRemoteDataSource(upload: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          studentExamRemoteDataSourceProvider.overrideWithValue(remote),
+          studentExamFilePickerProvider.overrideWithValue(
+            _FakeStudentExamFilePicker(),
+          ),
+          deviceIdentityProvider.overrideWithValue(_FakeDeviceIdentity()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const StudentExamView(participantId: 31),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('student-exam-token')),
+      'MULAI1',
+    );
+    await tester.drag(
+      find.byKey(const Key('student-exam-confirmation')),
+      const Offset(0, -250),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('student-exam-open')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('student-exam-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('student-exam-next')));
+    await tester.pumpAndSettle();
+
+    final uploadButton = find.byKey(const Key('student-exam-upload-104'));
+    expect(uploadButton, findsOneWidget);
+    await tester.ensureVisible(uploadButton);
+    await tester.tap(uploadButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('laporan-siswa.pdf'), findsOneWidget);
+    expect(remote.uploadedFileName, 'laporan-siswa.pdf');
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _FakeDeviceIdentity implements DeviceIdentity {
@@ -138,13 +248,28 @@ class _FakeDeviceIdentity implements DeviceIdentity {
   Future<String> readName() async => 'NUSA Android Test';
 }
 
+class _FakeStudentExamFilePicker implements StudentExamFilePicker {
+  @override
+  Future<StudentExamPickedFile?> pick() async => StudentExamPickedFile(
+    name: 'laporan-siswa.pdf',
+    bytes: Uint8List.fromList([1, 2, 3]),
+  );
+}
+
 class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
-  _FakeStudentExamRemoteDataSource({this.locked = false});
+  _FakeStudentExamRemoteDataSource({
+    this.locked = false,
+    this.matching = false,
+    this.upload = false,
+  });
 
   final bool locked;
+  final bool matching;
+  final bool upload;
   String? startToken;
   int finishCalls = 0;
   Object? lastAnswer;
+  String? uploadedFileName;
   final List<int> savedQuestions = [];
 
   @override
@@ -170,14 +295,18 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
     required String device,
   }) async {
     startToken = token;
-    return StudentExamSession.fromJson(_runningJson());
+    return StudentExamSession.fromJson(
+      _runningJson(withMatching: matching, withUpload: upload),
+    );
   }
 
   @override
   Future<StudentExamSession> resume({
     required int participantId,
     required String device,
-  }) async => StudentExamSession.fromJson(_runningJson());
+  }) async => StudentExamSession.fromJson(
+    _runningJson(withMatching: matching, withUpload: upload),
+  );
 
   @override
   Future<StudentExamSaveResult> saveAnswer({
@@ -192,6 +321,21 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
     return StudentExamSaveResult.fromJson({
       'mode': 'tersimpan',
       'sisa_detik': 1790,
+    });
+  }
+
+  @override
+  Future<StudentExamFileSaveResult> uploadAnswerFile({
+    required int participantId,
+    required int questionId,
+    required StudentExamPickedFile file,
+    required bool doubtful,
+    required String device,
+  }) async {
+    uploadedFileName = file.name;
+    return StudentExamFileSaveResult.fromJson({
+      'berkas': {'nama': file.name, 'ukuran_label': '1,0 KB'},
+      'sisa_detik': 1780,
     });
   }
 
@@ -215,14 +359,22 @@ Map<String, dynamic> _confirmationJson() => {
   'dapat_dimulai': true,
 };
 
-Map<String, dynamic> _runningJson() => {
+Map<String, dynamic> _runningJson({
+  bool withMatching = false,
+  bool withUpload = false,
+}) => {
   'mode': 'pengerjaan',
   'waktu_server': '2026-09-05T08:00:00+07:00',
   'berakhir_pada': '2026-09-05T08:30:00+07:00',
   'sisa_detik': 1800,
   'peserta': _participantJson(status: 'sedang_mengerjakan'),
   'ujian': _examJson(),
-  'kemajuan': {'jumlah_soal': 2, 'terjawab': 0, 'belum_dijawab': 2, 'ragu': 0},
+  'kemajuan': {
+    'jumlah_soal': withMatching || withUpload ? 3 : 2,
+    'terjawab': 0,
+    'belum_dijawab': withMatching || withUpload ? 3 : 2,
+    'ragu': 0,
+  },
   'soal': [
     {
       'id': 101,
@@ -255,6 +407,43 @@ Map<String, dynamic> _runningJson() => {
       'jawaban': {},
       'ragu': false,
     },
+    if (withMatching)
+      {
+        'id': 103,
+        'nomor': 3,
+        'jenis': 'menjodohkan',
+        'label_jenis': 'Menjodohkan',
+        'stimulus': null,
+        'pertanyaan': 'Jodohkan besaran dengan satuannya.',
+        'media': {'gambar': null, 'tabel': null, 'rumus': null},
+        'pilihan': [
+          {'kode': 'A', 'teks': 'Sekon'},
+          {'kode': 'B', 'teks': 'Hertz'},
+        ],
+        'pernyataan': [],
+        'pasangan': [
+          {'nomor': '1', 'kiri': 'Frekuensi'},
+          {'nomor': '2', 'kiri': 'Periode'},
+        ],
+        'jawaban': {},
+        'ragu': false,
+      },
+    if (withUpload)
+      {
+        'id': 104,
+        'nomor': 3,
+        'jenis': 'upload_file',
+        'label_jenis': 'Upload File',
+        'stimulus': null,
+        'pertanyaan': 'Unggah laporan praktikum.',
+        'media': {'gambar': null, 'tabel': null, 'rumus': null},
+        'pilihan': [],
+        'pernyataan': [],
+        'pasangan': [],
+        'jawaban': {},
+        'berkas_jawaban': null,
+        'ragu': false,
+      },
   ],
   'keamanan': _securityJson(),
 };

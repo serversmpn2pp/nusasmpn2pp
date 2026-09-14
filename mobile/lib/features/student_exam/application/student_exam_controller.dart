@@ -43,6 +43,21 @@ class StudentExamActions {
         ),
   );
 
+  Future<StudentExamFileSaveResult> uploadAnswerFile({
+    required int participantId,
+    required StudentExamQuestion question,
+    required StudentExamPickedFile file,
+  }) => _guard(
+    () => ref
+        .read(studentExamRepositoryProvider)
+        .uploadAnswerFile(
+          participantId: participantId,
+          questionId: question.id,
+          file: file,
+          doubtful: question.doubtful,
+        ),
+  );
+
   Future<StudentExamSession> finish(int participantId) => _guard(
     () => ref.read(studentExamRepositoryProvider).finish(participantId),
   );

@@ -236,6 +236,9 @@
                                     <div class="manual-answer {{ $item['sudah_dijawab'] ? '' : 'empty' }}">
                                         {{ $item['sudah_dijawab'] ? $item['teks_jawaban'] : 'Belum dijawab' }}
                                     </div>
+                                    @if ($jawaban?->lokasi_file)
+                                        <a href="{{ route('ujian-cbt.koreksi-manual.berkas', [$ujianCbt, $jawaban]) }}" class="button button-muted button-sm" style="margin-top:10px;">Unduh berkas jawaban</a>
+                                    @endif
                                 </td>
                                 <td>
                                     @if (! $item['sudah_dijawab'])
@@ -291,7 +294,7 @@
                         <dl class="quick-facts">
                             <div><dt>Soal</dt><dd>No. {{ $relasiSoal->nomor_urut ?: '-' }}</dd></div>
                             <div><dt>Jenis</dt><dd>{{ $soal?->labelJenis() ?: '-' }}</dd></div>
-                            <div><dt>Bobot</dt><dd>{{ $formatAngka($relasiSoal->bobot) }}</dd></div>
+                            <div><dt>Skor maksimal</dt><dd>{{ $formatAngka($relasiSoal->bobot) }}</dd></div>
                         </dl>
                         <div style="margin-top: 12px;">
                             <p class="person-meta">Pertanyaan</p>
@@ -302,6 +305,9 @@
                             <div class="manual-answer {{ $item['sudah_dijawab'] ? '' : 'empty' }}" style="margin-top: 4px;">
                                 {{ $item['sudah_dijawab'] ? $item['teks_jawaban'] : 'Belum dijawab' }}
                             </div>
+                            @if ($jawaban?->lokasi_file)
+                                <a href="{{ route('ujian-cbt.koreksi-manual.berkas', [$ujianCbt, $jawaban]) }}" class="button button-muted button-sm" style="margin-top:10px;">Unduh berkas jawaban</a>
+                            @endif
                         </div>
                         @if ($jawaban && $item['sudah_dijawab'])
                             <div class="field" style="margin-top: 12px;">

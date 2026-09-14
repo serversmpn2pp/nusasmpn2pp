@@ -155,8 +155,10 @@ class UjianCbtTest extends TestCase
             ->get(route('ujian-cbt.soal.edit', $ujianCbt))
             ->assertOk()
             ->assertSee('Kelola soal paket CBT')
+            ->assertSee('Skor ditentukan otomatis')
             ->assertSee('CBT-MTK-8-001')
             ->assertSee('CBT-MTK-8-002')
+            ->assertDontSee('name="soal['.$soalPertama->id.'][bobot]"', false)
             ->assertDontSee('CBT-IPA-8-001');
 
         $this->actingAs($administrator)
@@ -165,12 +167,12 @@ class UjianCbtTest extends TestCase
                     $soalPertama->id => [
                         'dipilih' => '1',
                         'nomor_urut' => '1',
-                        'bobot' => '2',
+                        'bobot' => '99',
                     ],
                     $soalKedua->id => [
                         'dipilih' => '1',
                         'nomor_urut' => '2',
-                        'bobot' => '1.5',
+                        'bobot' => '99',
                     ],
                 ],
             ])
@@ -186,6 +188,8 @@ class UjianCbtTest extends TestCase
             'soal_cbt_id' => $soalKedua->id,
             'nomor_urut' => 2,
         ]);
+        $this->assertSame(['2.00', '2.00'], $ujianCbt->soalUjianCbt()->orderBy('nomor_urut')->pluck('bobot')->all());
+        $this->assertSame(2, $ujianCbt->fresh()->jumlah_soal);
 
         $this->actingAs($administrator)
             ->get(route('ujian-cbt.show', $ujianCbt))
@@ -867,6 +871,7 @@ class UjianCbtTest extends TestCase
 
     public function test_siswa_dapat_masuk_dari_akun_nusa_dan_mengerjakan_ujian_cbt(): void
     {
+        Storage::fake('local');
         Carbon::setTestNow('2026-08-15 08:30:00');
 
         try {
@@ -879,7 +884,7 @@ class UjianCbtTest extends TestCase
                 ...collect($this->dataUjian($jenisUjian, $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
                     ->except('kelas_peserta')
                     ->all(),
-                'jumlah_soal' => 2,
+                'jumlah_soal' => 4,
                 'status' => 'berlangsung',
                 'token' => 'TOKEN1',
                 'dibuat_oleh_pengguna_id' => $administrator->id,
@@ -901,6 +906,23 @@ class UjianCbtTest extends TestCase
 
             $soalPertama = $this->buatSoalCbt($tahunPelajaran, $mataPelajaran, 'CBT-AKSES-001', 'Berapakah hasil dari 12 + 8?');
             $soalKedua = $this->buatSoalCbt($tahunPelajaran, $mataPelajaran, 'CBT-AKSES-002', 'Berapakah hasil dari 5 x 6?');
+            $soalMenjodohkan = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
+                'kode' => 'CBT-AKSES-MATCH',
+                'jenis_soal' => 'menjodohkan',
+                'pertanyaan' => 'Jodohkan besaran dengan satuannya.',
+                'opsi' => ['pasangan' => [
+                    ['nomor' => 1, 'kiri' => 'Frekuensi', 'kanan' => 'Hertz'],
+                    ['nomor' => 2, 'kiri' => 'Periode', 'kanan' => 'Sekon'],
+                ]],
+                'kunci_jawaban' => ['jawaban' => [1 => 'Hertz', 2 => 'Sekon']],
+            ]);
+            $soalUpload = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
+                'kode' => 'CBT-AKSES-UPLOAD',
+                'jenis_soal' => 'upload_file',
+                'pertanyaan' => 'Unggah laporan praktik.',
+                'opsi' => [],
+                'kunci_jawaban' => [],
+            ]);
             $relasiPertama = $ujianCbt->soalUjianCbt()->create([
                 'soal_cbt_id' => $soalPertama->id,
                 'nomor_urut' => 1,
@@ -909,6 +931,16 @@ class UjianCbtTest extends TestCase
             $relasiKedua = $ujianCbt->soalUjianCbt()->create([
                 'soal_cbt_id' => $soalKedua->id,
                 'nomor_urut' => 2,
+                'bobot' => 1,
+            ]);
+            $relasiMenjodohkan = $ujianCbt->soalUjianCbt()->create([
+                'soal_cbt_id' => $soalMenjodohkan->id,
+                'nomor_urut' => 3,
+                'bobot' => 1,
+            ]);
+            $relasiUpload = $ujianCbt->soalUjianCbt()->create([
+                'soal_cbt_id' => $soalUpload->id,
+                'nomor_urut' => 4,
                 'bobot' => 1,
             ]);
 
@@ -958,12 +990,35 @@ class UjianCbtTest extends TestCase
                 ->assertOk()
                 ->assertSee('Berapakah hasil dari 12 + 8?')
                 ->assertSee('Berapakah hasil dari 5 x 6?')
+                ->assertSee('Jodohkan besaran dengan satuannya.')
+                ->assertSee('Pilihan pasangan')
+                ->assertSee('Hertz')
+                ->assertSee('Sekon')
+                ->assertSee('name="jawaban['.$relasiMenjodohkan->id.'][1]"', false)
+                ->assertSee('Unggah laporan praktik.')
+                ->assertSee('Pilih dan unggah berkas')
+                ->assertSee('data-answer-file-input', false)
                 ->assertSee('Sisa waktu');
+
+            $this->post(route('cbt.ujian.jawaban-berkas'), [
+                'soal_ujian_cbt_id' => $relasiUpload->id,
+                'berkas' => UploadedFile::fake()->create('laporan-praktik.pdf', 100, 'application/pdf'),
+                'ragu' => '0',
+            ], ['Accept' => 'application/json'])
+                ->assertOk()
+                ->assertJsonPath('terjawab', true)
+                ->assertJsonPath('berkas.nama', 'laporan-praktik.pdf');
+
+            $jawabanUpload = $peserta->jawabanPesertaUjianCbt()
+                ->where('soal_ujian_cbt_id', $relasiUpload->id)
+                ->firstOrFail();
+            Storage::disk('local')->assertExists($jawabanUpload->lokasi_file);
 
             $this->post(route('cbt.ujian.simpan'), [
                 'jawaban' => [
                     $relasiPertama->id => 'B',
                     $relasiKedua->id => 'C',
+                    $relasiMenjodohkan->id => [1 => 'Hertz', 2 => 'Sekon'],
                 ],
                 'ragu' => [
                     $relasiKedua->id => '1',
@@ -977,15 +1032,20 @@ class UjianCbtTest extends TestCase
             $jawabanKedua = $peserta->jawabanPesertaUjianCbt()
                 ->where('soal_ujian_cbt_id', $relasiKedua->id)
                 ->firstOrFail();
+            $jawabanMenjodohkan = $peserta->jawabanPesertaUjianCbt()
+                ->where('soal_ujian_cbt_id', $relasiMenjodohkan->id)
+                ->firstOrFail();
 
             $this->assertSame(['B'], $jawabanPertama->jawaban);
             $this->assertSame(['C'], $jawabanKedua->jawaban);
+            $this->assertSame(['1' => 'Hertz', '2' => 'Sekon'], $jawabanMenjodohkan->jawaban);
             $this->assertTrue($jawabanKedua->ragu);
 
             $this->post(route('cbt.ujian.simpan'), [
                 'jawaban' => [
                     $relasiPertama->id => 'B',
                     $relasiKedua->id => 'B',
+                    $relasiMenjodohkan->id => [1 => 'Hertz', 2 => 'Sekon'],
                 ],
                 'aksi' => 'selesai',
             ])->assertRedirect(route('cbt.ujian.selesai'));
@@ -994,15 +1054,27 @@ class UjianCbtTest extends TestCase
 
             $jawabanPertama->refresh();
             $jawabanKedua->refresh();
+            $jawabanMenjodohkan->refresh();
             $this->assertTrue($jawabanPertama->benar);
             $this->assertTrue($jawabanKedua->benar);
+            $this->assertTrue($jawabanMenjodohkan->benar);
             $this->assertEquals(1.0, (float) $jawabanPertama->skor);
             $this->assertEquals(1.0, (float) $jawabanKedua->skor);
+            $this->assertEquals(1.0, (float) $jawabanMenjodohkan->skor);
 
             $this->get(route('cbt.ujian.selesai'))
                 ->assertOk()
                 ->assertSee('Ujian selesai')
-                ->assertSee('2 / 2');
+                ->assertSee('4 / 4');
+
+            $this->actingAs($administrator)
+                ->get(route('ujian-cbt.koreksi-manual.index', $ujianCbt))
+                ->assertOk()
+                ->assertSee('laporan-praktik.pdf')
+                ->assertSee('Unduh berkas jawaban');
+
+            $this->get(route('ujian-cbt.koreksi-manual.berkas', [$ujianCbt, $jawabanUpload]))
+                ->assertOk();
         } finally {
             Carbon::setTestNow();
         }
@@ -1052,8 +1124,10 @@ class UjianCbtTest extends TestCase
             'opsi' => ['pernyataan' => [
                 ['nomor' => 1, 'teks' => 'Dua lebih besar dari satu.'],
                 ['nomor' => 2, 'teks' => 'Tiga lebih kecil dari dua.'],
+                ['nomor' => 3, 'teks' => 'Empat adalah bilangan genap.'],
+                ['nomor' => 4, 'teks' => 'Lima adalah bilangan genap.'],
             ]],
-            'kunci_jawaban' => ['jawaban' => [1 => true, 2 => false]],
+            'kunci_jawaban' => ['jawaban' => [1 => true, 2 => false, 3 => true, 4 => false]],
         ]);
         $soalMenjodohkan = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
             'kode' => 'CBT-KOR-MATCH',
@@ -1062,8 +1136,11 @@ class UjianCbtTest extends TestCase
             'opsi' => ['pasangan' => [
                 ['nomor' => 1, 'kiri' => 'Frekuensi', 'kanan' => 'Hertz'],
                 ['nomor' => 2, 'kiri' => 'Periode', 'kanan' => 'Sekon'],
+                ['nomor' => 3, 'kiri' => 'Panjang', 'kanan' => 'Meter'],
+                ['nomor' => 4, 'kiri' => 'Massa', 'kanan' => 'Kilogram'],
+                ['nomor' => 5, 'kiri' => 'Arus listrik', 'kanan' => 'Ampere'],
             ]],
-            'kunci_jawaban' => ['jawaban' => [1 => 'Hertz', 2 => 'Sekon']],
+            'kunci_jawaban' => ['jawaban' => [1 => 'Hertz', 2 => 'Sekon', 3 => 'Meter', 4 => 'Kilogram', 5 => 'Ampere']],
         ]);
         $soalIsian = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
             'kode' => 'CBT-KOR-ISI',
@@ -1081,8 +1158,8 @@ class UjianCbtTest extends TestCase
         ]);
 
         $relasiPgk = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalPgk->id, 'nomor_urut' => 1, 'bobot' => 2]);
-        $relasiBenarSalah = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalBenarSalah->id, 'nomor_urut' => 2, 'bobot' => 1]);
-        $relasiMenjodohkan = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalMenjodohkan->id, 'nomor_urut' => 3, 'bobot' => 2]);
+        $relasiBenarSalah = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalBenarSalah->id, 'nomor_urut' => 2, 'bobot' => 3]);
+        $relasiMenjodohkan = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalMenjodohkan->id, 'nomor_urut' => 3, 'bobot' => 4]);
         $relasiIsian = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalIsian->id, 'nomor_urut' => 4, 'bobot' => 1]);
         $relasiNumerik = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalNumerik->id, 'nomor_urut' => 5, 'bobot' => 1]);
 
@@ -1105,13 +1182,13 @@ class UjianCbtTest extends TestCase
         $peserta->jawabanPesertaUjianCbt()->create([
             'soal_ujian_cbt_id' => $relasiBenarSalah->id,
             'soal_cbt_id' => $soalBenarSalah->id,
-            'jawaban' => [1 => 'benar', 2 => 'salah'],
+            'jawaban' => [1 => 'benar', 2 => 'salah', 3 => 'benar', 4 => 'benar'],
             'waktu_dijawab' => now(),
         ]);
         $peserta->jawabanPesertaUjianCbt()->create([
             'soal_ujian_cbt_id' => $relasiMenjodohkan->id,
             'soal_cbt_id' => $soalMenjodohkan->id,
-            'jawaban' => [1 => 'hertz', 2 => 'Menit'],
+            'jawaban' => [1 => 'hertz', 2 => 'sekon', 3 => 'meter', 4 => 'kilogram', 5 => 'Volt'],
             'waktu_dijawab' => now(),
         ]);
         $peserta->jawabanPesertaUjianCbt()->create([
@@ -1136,10 +1213,10 @@ class UjianCbtTest extends TestCase
         $hasil = $peserta->jawabanPesertaUjianCbt()->get()->keyBy('soal_ujian_cbt_id');
         $this->assertTrue($hasil[$relasiPgk->id]->benar);
         $this->assertEquals(2.0, (float) $hasil[$relasiPgk->id]->skor);
-        $this->assertTrue($hasil[$relasiBenarSalah->id]->benar);
-        $this->assertEquals(1.0, (float) $hasil[$relasiBenarSalah->id]->skor);
+        $this->assertFalse($hasil[$relasiBenarSalah->id]->benar);
+        $this->assertEquals(2.25, (float) $hasil[$relasiBenarSalah->id]->skor);
         $this->assertFalse($hasil[$relasiMenjodohkan->id]->benar);
-        $this->assertEquals(1.0, (float) $hasil[$relasiMenjodohkan->id]->skor);
+        $this->assertEquals(3.2, (float) $hasil[$relasiMenjodohkan->id]->skor);
         $this->assertTrue($hasil[$relasiIsian->id]->benar);
         $this->assertEquals(1.0, (float) $hasil[$relasiIsian->id]->skor);
         $this->assertTrue($hasil[$relasiNumerik->id]->benar);
@@ -1149,9 +1226,9 @@ class UjianCbtTest extends TestCase
             ->get(route('ujian-cbt.hasil.index', $ujianCbt))
             ->assertOk()
             ->assertSee('Rekap hasil CBT')
-            ->assertSee('85,71')
+            ->assertSee('85,91')
             ->assertSee('Tuntas')
-            ->assertSee('Benar 4, salah 1, kosong 0');
+            ->assertSee('Benar 3, salah 2, kosong 0');
 
         $this->actingAs($administrator)
             ->get(route('ujian-cbt.hasil.index', [
@@ -1538,7 +1615,7 @@ class UjianCbtTest extends TestCase
                 ['kode' => 'D', 'teks' => '40'],
             ],
             'kunci_jawaban' => ['B'],
-            'skor_maksimal' => 1,
+            'skor_maksimal' => 2,
             'status' => 'siap',
             'aktif' => true,
         ]);

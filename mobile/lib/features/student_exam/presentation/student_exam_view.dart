@@ -7,6 +7,7 @@ import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_exam/application/student_exam_controller.dart';
 import 'package:nusa/features/student_exam/data/exam_security_platform.dart';
+import 'package:nusa/features/student_exam/data/student_exam_file_picker.dart';
 import 'package:nusa/features/student_exam/domain/student_exam.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
@@ -28,6 +29,7 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   final Map<int, int> _revisions = {};
   final Set<int> _dirtyQuestions = {};
   final Map<int, _AnswerSaveStatus> _saveStatuses = {};
+  final Set<int> _uploadingQuestions = {};
   late final ExamSecurityPlatform _securityPlatform;
   StudentExamSession? _session;
   Timer? _countdownTimer;
@@ -42,6 +44,7 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   bool _allowPop = false;
   bool _awayReported = false;
   bool _initialLockedSessionScheduled = false;
+  bool _pickingAnswerFile = false;
 
   @override
   void initState() {
@@ -52,6 +55,7 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_pickingAnswerFile) return;
     if (state == AppLifecycleState.resumed) {
       _updateCountdown();
       unawaited(_handleResume());
@@ -228,6 +232,11 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
                   _changeAnswer(session.questions[index], answer),
               onDoubtChanged: (value) =>
                   _changeDoubt(session.questions[index], value),
+              uploadingFile: _uploadingQuestions.contains(
+                session.questions[index].id,
+              ),
+              onUploadFile: () =>
+                  _pickAndUploadAnswerFile(session.questions[index]),
             ),
           ),
         ),
@@ -519,6 +528,73 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   void _changeDoubt(StudentExamQuestion question, bool value) {
     final latest = _questionById(question.id) ?? question;
     _replaceQuestion(latest.copyWith(doubtful: value));
+  }
+
+  Future<void> _pickAndUploadAnswerFile(StudentExamQuestion question) async {
+    if (_uploadingQuestions.contains(question.id)) return;
+
+    StudentExamPickedFile? file;
+    _pickingAnswerFile = true;
+    try {
+      file = await ref.read(studentExamFilePickerProvider).pick();
+    } catch (error) {
+      if (mounted) _showMessage(_message(error), error: true);
+      return;
+    } finally {
+      _pickingAnswerFile = false;
+    }
+    if (file == null || !mounted) return;
+    if (file.bytes.length > 10 * 1024 * 1024) {
+      _showMessage('Ukuran berkas maksimal 10 MB.', error: true);
+      return;
+    }
+
+    setState(() {
+      _uploadingQuestions.add(question.id);
+      _saveStatuses[question.id] = _AnswerSaveStatus.saving;
+    });
+    try {
+      final latest = _questionById(question.id) ?? question;
+      final result = await ref
+          .read(studentExamActionsProvider)
+          .uploadAnswerFile(
+            participantId: widget.participantId,
+            question: latest,
+            file: file,
+          );
+      if (!mounted) return;
+
+      final session = _session;
+      if (session == null) return;
+      final changed = latest.copyWith(answer: {'berkas': result.fileName});
+      final questions = session.questions
+          .map((item) => item.id == changed.id ? changed : item)
+          .toList(growable: false);
+      setState(() {
+        _session = session.copyWith(
+          questions: questions,
+          progress: _progressFor(questions),
+        );
+        _dirtyQuestions.remove(question.id);
+        _saveStatuses[question.id] = _AnswerSaveStatus.saved;
+        if (result.remainingSeconds > 0) {
+          _remainingSeconds = result.remainingSeconds;
+          _localDeadline = DateTime.now().add(
+            Duration(seconds: result.remainingSeconds),
+          );
+        }
+      });
+      _showMessage(
+        '${result.fileName} berhasil diunggah${result.fileSizeLabel.isEmpty ? '.' : ' (${result.fileSizeLabel}).'}',
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _saveStatuses[question.id] = _AnswerSaveStatus.failed);
+        _showMessage(_message(error), error: true);
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingQuestions.remove(question.id));
+    }
   }
 
   void _replaceQuestion(StudentExamQuestion changed) {
@@ -899,6 +975,8 @@ class _QuestionPage extends StatelessWidget {
     required this.controllerFor,
     required this.onAnswerChanged,
     required this.onDoubtChanged,
+    required this.uploadingFile,
+    required this.onUploadFile,
   });
 
   final StudentExamQuestion question;
@@ -907,6 +985,8 @@ class _QuestionPage extends StatelessWidget {
   controllerFor;
   final ValueChanged<Map<String, String>> onAnswerChanged;
   final ValueChanged<bool> onDoubtChanged;
+  final bool uploadingFile;
+  final VoidCallback onUploadFile;
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -1002,8 +1082,80 @@ class _QuestionPage extends StatelessWidget {
     'menjodohkan' => _matching(),
     'isian_singkat' => _textAnswer(lines: 1),
     'numerik' => _textAnswer(lines: 1, numeric: true),
+    'upload_file' => _fileUpload(),
     _ => _textAnswer(lines: 6),
   };
+
+  Widget _fileUpload() {
+    final fileName = question.answer['berkas'];
+    final uploaded = fileName?.trim().isNotEmpty == true;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: NusaColors.surfaceBlue,
+        border: Border.all(color: NusaColors.outline),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                uploaded
+                    ? Icons.insert_drive_file_rounded
+                    : Icons.upload_file_rounded,
+                color: NusaColors.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      uploaded ? fileName! : 'Belum ada berkas jawaban',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const Text(
+                      'PDF, gambar, atau dokumen Office · Maksimal 10 MB',
+                      style: TextStyle(
+                        color: NusaColors.textSecondary,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            key: Key('student-exam-upload-${question.id}'),
+            onPressed: uploadingFile ? null : onUploadFile,
+            icon: uploadingFile
+                ? const SizedBox.square(
+                    dimension: 17,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.folder_open_rounded),
+            label: Text(
+              uploadingFile
+                  ? 'Mengunggah...'
+                  : uploaded
+                  ? 'Ganti Berkas'
+                  : 'Pilih dan Unggah Berkas',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _choiceOptions({required bool multiple}) {
     final selected = question.answer.values.toSet();
@@ -1137,28 +1289,78 @@ class _QuestionPage extends StatelessWidget {
         .toList(growable: false),
   );
 
-  Widget _matching() => Column(
-    children: question.pairs
-        .map((pair) {
-          return Padding(
+  Widget _matching() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F0F8),
+            border: Border.all(color: const Color(0xFFB9CDE2)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pilihan pasangan',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              for (final option in question.options)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '${option.code}. ${option.text}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        for (final pair in question.pairs)
+          Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: TextField(
+            child: DropdownButtonFormField<String>(
               key: Key('student-exam-match-${question.id}-${pair.number}'),
-              controller: controllerFor(question, pair.number),
-              enableInteractiveSelection: false,
+              initialValue:
+                  question.options.any(
+                    (option) => option.text == question.answer[pair.number],
+                  )
+                  ? question.answer[pair.number]
+                  : null,
+              isExpanded: true,
+              items: question.options
+                  .map(
+                    (option) => DropdownMenuItem<String>(
+                      value: option.text,
+                      child: Text(
+                        '${option.code}. ${option.text}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
               onChanged: (value) {
-                final answer = {...question.answer, pair.number: value};
+                final answer = {...question.answer};
+                if (value == null || value.isEmpty) {
+                  answer.remove(pair.number);
+                } else {
+                  answer[pair.number] = value;
+                }
                 onAnswerChanged(answer);
               },
               decoration: InputDecoration(
                 labelText: '${pair.number}. ${pair.left}',
-                hintText: 'Tulis pasangan jawaban',
+                hintText: 'Pilih pasangan',
               ),
             ),
-          );
-        })
-        .toList(growable: false),
-  );
+          ),
+      ],
+    );
+  }
 
   Widget _textAnswer({required int lines, bool numeric = false}) => TextField(
     key: Key('student-exam-answer-${question.id}'),

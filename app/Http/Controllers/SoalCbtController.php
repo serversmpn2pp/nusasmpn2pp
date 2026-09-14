@@ -210,14 +210,13 @@ class SoalCbtController extends Controller
             'tingkat' => ['required', 'integer', Rule::in([7, 8, 9])],
             'kode' => ['nullable', 'string', 'max:60', Rule::unique('soal_cbt', 'kode')->ignore($soalCbt)],
             'jenis_soal' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_JENIS))],
-            'tingkat_kesulitan' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_KESULITAN))],
+            'tingkat_kesulitan' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KESULITAN))],
             'kategori' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_KATEGORI))],
             'topik' => ['nullable', 'string', 'max:160'],
             'materi' => ['nullable', 'string', 'max:180'],
             'tujuan_pembelajaran' => ['nullable', 'string'],
             'stimulus' => ['nullable', 'string'],
             'pertanyaan' => ['required', 'string'],
-            'skor_maksimal' => ['nullable', 'numeric', 'min:0.25', 'max:100'],
             'pembahasan' => ['nullable', 'string'],
             'status' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_STATUS))],
             'aktif' => ['nullable', 'boolean'],
@@ -261,9 +260,8 @@ class SoalCbtController extends Controller
     {
         $data['tahun_pelajaran_id'] = filled($data['tahun_pelajaran_id'] ?? null) ? (int) $data['tahun_pelajaran_id'] : null;
         $data['kode'] = mb_strtoupper(trim((string) ($data['kode'] ?? '')));
-        $data['tingkat_kesulitan'] = $data['tingkat_kesulitan'] ?? 'sedang';
         $data['kategori'] = $data['kategori'] ?? 'umum';
-        $data['skor_maksimal'] = $data['skor_maksimal'] ?? 1;
+        $data['skor_maksimal'] = SoalCbt::skorUntukKesulitan($data['tingkat_kesulitan']);
         $data['status'] = match ($data['aksi'] ?? null) {
             'simpan_siap', 'simpan_lanjut' => 'siap',
             'simpan_draf' => 'draft',
@@ -647,12 +645,11 @@ class SoalCbtController extends Controller
     private function nilaiAwalDariRequest(Request $request): array
     {
         $jenisSoal = (string) $request->query('jenis_soal', 'pilihan_ganda');
-        $kesulitan = (string) $request->query('tingkat_kesulitan', 'sedang');
         $kategori = (string) $request->query('kategori', 'umum');
 
         return [
             'jenis_soal' => array_key_exists($jenisSoal, SoalCbt::DAFTAR_JENIS) ? $jenisSoal : 'pilihan_ganda',
-            'tingkat_kesulitan' => array_key_exists($kesulitan, SoalCbt::DAFTAR_KESULITAN) ? $kesulitan : 'sedang',
+            'tingkat_kesulitan' => '',
             'kategori' => array_key_exists($kategori, SoalCbt::DAFTAR_KATEGORI) ? $kategori : 'umum',
             'topik' => str($request->query('topik', ''))->limit(160, '')->toString(),
             'materi' => str($request->query('materi', ''))->limit(180, '')->toString(),
@@ -665,7 +662,6 @@ class SoalCbtController extends Controller
             'mata_pelajaran_id' => $soalCbt->mata_pelajaran_id,
             'tingkat' => $soalCbt->tingkat,
             'jenis_soal' => $soalCbt->jenis_soal,
-            'tingkat_kesulitan' => $soalCbt->tingkat_kesulitan,
             'kategori' => $soalCbt->kategori,
             'topik' => $soalCbt->topik,
             'materi' => $soalCbt->materi,

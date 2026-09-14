@@ -236,6 +236,54 @@
             font-weight: 750;
         }
 
+        .file-answer-box {
+            display: grid;
+            gap: 12px;
+            margin-top: 14px;
+            border: 1px solid #b9cde2;
+            border-radius: 8px;
+            background: var(--primary-soft);
+            padding: 16px;
+        }
+
+        .file-answer-status {
+            display: grid;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .file-answer-status strong,
+        .file-answer-status span {
+            overflow-wrap: anywhere;
+        }
+
+        .file-answer-status span {
+            color: var(--muted);
+            font-size: .82rem;
+            font-weight: 750;
+        }
+
+        .file-answer-action {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .file-answer-action [aria-disabled="true"] {
+            pointer-events: none;
+            opacity: .6;
+        }
+
+        .file-answer-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+
         @media (max-width: 900px) {
             .exam-side {
                 grid-template-columns: minmax(180px, .7fr) minmax(0, 1.3fr);
@@ -386,9 +434,10 @@
                             $nomor = $index + 1;
                             $jawabanModel = $jawabanTersimpan->get($relasiSoal->id);
                             $jawabanSaatIni = $jawabanModel?->jawaban ?? [];
+                            $berkasTersimpan = $jawabanModel?->lokasi_file ? $jawabanModel : null;
                             $raguSaatIni = (bool) ($jawabanModel?->ragu ?? false);
                             $jawabanAssoc = is_array($jawabanSaatIni) ? $jawabanSaatIni : [];
-                            $terjawabSaatIni = collect((array) $jawabanSaatIni)->contains(fn ($nilai) => filled($nilai));
+                            $terjawabSaatIni = (bool) $berkasTersimpan || collect((array) $jawabanSaatIni)->contains(fn ($nilai) => filled($nilai));
                             $pilihan = $pilihanJawaban->get($relasiSoal->id, collect());
                         @endphp
 
@@ -469,6 +518,14 @@
                                     @endforeach
                                 </div>
                             @elseif ($soal?->jenis_soal === 'menjodohkan')
+                                <div class="matching-answer-bank">
+                                    <strong>Pilihan pasangan</strong>
+                                    <div>
+                                        @foreach ($pilihan as $kodeJawaban => $teks)
+                                            <span><b>{{ $kodeJawaban }}</b>{{ $teks }}</span>
+                                        @endforeach
+                                    </div>
+                                </div>
                                 <div class="option-list">
                                     @foreach (($soal->opsi['pasangan'] ?? []) as $item)
                                         @php
@@ -480,7 +537,12 @@
                                                 <span class="option-code">{{ $nomorPasangan }}</span>
                                                 <span class="option-text">{{ $item['kiri'] ?? '-' }}</span>
                                             </div>
-                                            <input type="text" name="jawaban[{{ $relasiSoal->id }}][{{ $nomorPasangan }}]" value="{{ $nilaiPasangan }}" class="input" placeholder="Tulis pasangan jawaban">
+                                            <select name="jawaban[{{ $relasiSoal->id }}][{{ $nomorPasangan }}]" class="select matching-select" aria-label="Pasangan untuk {{ $item['kiri'] ?? 'pernyataan '.$nomorPasangan }}">
+                                                <option value="">Pilih pasangan</option>
+                                                @foreach ($pilihan as $kodeJawaban => $teks)
+                                                    <option value="{{ $teks }}" @selected(mb_strtolower(trim((string) $nilaiPasangan)) === mb_strtolower(trim((string) $teks)))>{{ $kodeJawaban }}. {{ $teks }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                     @endforeach
                                 </div>
@@ -488,6 +550,24 @@
                                 <div class="field" style="margin-top: 14px;">
                                     <label for="jawaban-{{ $relasiSoal->id }}">Jawaban</label>
                                     <input id="jawaban-{{ $relasiSoal->id }}" type="{{ $soal->jenis_soal === 'numerik' ? 'number' : 'text' }}" name="jawaban[{{ $relasiSoal->id }}]" value="{{ collect((array) $jawabanSaatIni)->first() }}" class="input">
+                                </div>
+                            @elseif ($soal?->jenis_soal === 'upload_file')
+                                <div class="file-answer-box" data-file-answer>
+                                    <div class="file-answer-status">
+                                        <strong data-file-name>{{ $berkasTersimpan?->nama_file_asli ?: 'Belum ada berkas jawaban' }}</strong>
+                                        <span data-file-info>
+                                            @if ($berkasTersimpan)
+                                                {{ number_format(((int) $berkasTersimpan->ukuran_file) / 1024, 1, ',', '.') }} KB · Berkas sudah tersimpan
+                                            @else
+                                                PDF, gambar, Word, Excel, atau PowerPoint · Maksimal 10 MB
+                                            @endif
+                                        </span>
+                                    </div>
+                                    <div class="file-answer-action">
+                                        <input id="berkas-jawaban-{{ $relasiSoal->id }}" type="file" class="file-answer-input" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx" data-answer-file-input>
+                                        <label for="berkas-jawaban-{{ $relasiSoal->id }}" class="button button-primary" data-file-button>{{ $berkasTersimpan ? 'Ganti berkas' : 'Pilih dan unggah berkas' }}</label>
+                                        <span class="help-text" data-file-message>Unggahan tersimpan otomatis setelah berkas dipilih.</span>
+                                    </div>
                                 </div>
                             @else
                                 <div class="field" style="margin-top: 14px;">
@@ -614,10 +694,12 @@
             const finishWarning = document.getElementById('finishWarning');
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             const autosaveUrl = @json(route('cbt.ujian.jawaban'));
+            const fileUploadUrl = @json(route('cbt.ujian.jawaban-berkas'));
             const finishedUrl = @json(route('cbt.ujian.selesai'));
             const targetTime = Date.now() + ({{ (int) $sisaDetik }} * 1000);
             const saveTimers = new Map();
             const saveQueues = new Map();
+            const activeUploads = new Set();
             let currentQuestion = 0;
             let automaticSubmitStarted = false;
             let finalSubmitStarted = false;
@@ -809,6 +891,78 @@
                 scheduleSave(index, delay);
             }
 
+            async function uploadAnswerFile(card, index, input) {
+                if (activeUploads.has(card.dataset.questionId)) {
+                    return;
+                }
+
+                const file = input.files?.[0];
+                if (!file) return;
+
+                const message = card.querySelector('[data-file-message]');
+                const fileName = card.querySelector('[data-file-name]');
+                const fileInfo = card.querySelector('[data-file-info]');
+                const fileButton = card.querySelector('[data-file-button]');
+                const allowed = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+                const extension = file.name.split('.').pop()?.toLowerCase() || '';
+
+                if (!allowed.includes(extension)) {
+                    message.textContent = 'Format berkas belum didukung.';
+                    input.value = '';
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    message.textContent = 'Ukuran berkas melebihi batas 10 MB.';
+                    input.value = '';
+                    return;
+                }
+
+                activeUploads.add(card.dataset.questionId);
+                openFinishDialogButton.disabled = true;
+                fileButton.setAttribute('aria-disabled', 'true');
+                message.textContent = 'Mengunggah berkas...';
+                setSaveStatus('saving', `Mengunggah soal ${index + 1}...`);
+
+                const formData = new FormData();
+                formData.append('soal_ujian_cbt_id', card.dataset.questionId);
+                formData.append('berkas', file, file.name);
+                formData.append('ragu', doubtFromCard(card) ? '1' : '0');
+
+                try {
+                    const response = await fetch(fileUploadUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: formData,
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        const validationMessage = Object.values(result.errors || {}).flat()[0];
+                        throw new Error(validationMessage || result.message || 'Berkas belum dapat diunggah.');
+                    }
+
+                    card.dataset.answered = '1';
+                    card.dataset.dirty = '0';
+                    fileName.textContent = result.berkas?.nama || file.name;
+                    fileInfo.textContent = `${result.berkas?.ukuran_label || ''} · Berkas sudah tersimpan`;
+                    fileButton.textContent = 'Ganti berkas';
+                    message.textContent = 'Berkas berhasil diunggah dan tersimpan.';
+                    setSaveStatus('saved', `Tersimpan ${result.tersimpan_pada}`);
+                    refreshNavigation();
+                } catch (error) {
+                    message.textContent = error.message || 'Unggahan gagal. Periksa koneksi lalu coba lagi.';
+                    setSaveStatus('failed', message.textContent);
+                } finally {
+                    activeUploads.delete(card.dataset.questionId);
+                    openFinishDialogButton.disabled = activeUploads.size > 0;
+                    fileButton.removeAttribute('aria-disabled');
+                    input.value = '';
+                }
+            }
+
             function refreshFinishSummary() {
                 questionCards.forEach((card, index) => refreshCardState(index));
                 const answered = questionCards.filter((card) => card.dataset.answered === '1').length;
@@ -825,10 +979,13 @@
             }
 
             questionCards.forEach((card, index) => {
-                card.querySelectorAll('input, textarea, select').forEach((input) => {
+                card.querySelectorAll('input:not([data-answer-file-input]), textarea, select').forEach((input) => {
                     const delay = ['text', 'number'].includes(input.type) || input.tagName === 'TEXTAREA' ? 850 : 180;
                     const eventName = delay === 850 ? 'input' : 'change';
                     input.addEventListener(eventName, () => markDirty(index, delay));
+                });
+                card.querySelector('[data-answer-file-input]')?.addEventListener('change', (event) => {
+                    uploadAnswerFile(card, index, event.currentTarget);
                 });
             });
 

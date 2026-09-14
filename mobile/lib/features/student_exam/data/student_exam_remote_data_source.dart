@@ -22,6 +22,13 @@ abstract interface class StudentExamRemoteDataSource {
     required bool doubtful,
     required String device,
   });
+  Future<StudentExamFileSaveResult> uploadAnswerFile({
+    required int participantId,
+    required int questionId,
+    required StudentExamPickedFile file,
+    required bool doubtful,
+    required String device,
+  });
   Future<StudentExamSession> finish({
     required int participantId,
     required String device,
@@ -103,6 +110,31 @@ final class DioStudentExamRemoteDataSource
         },
       );
       return StudentExamSaveResult.fromJson(_data(response));
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<StudentExamFileSaveResult> uploadAnswerFile({
+    required int participantId,
+    required int questionId,
+    required StudentExamPickedFile file,
+    required bool doubtful,
+    required String device,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        'ujian-saya/$participantId/jawaban-berkas',
+        data: FormData.fromMap({
+          'soal_ujian_cbt_id': questionId,
+          'berkas': MultipartFile.fromBytes(file.bytes, filename: file.name),
+          'ragu': doubtful ? 1 : 0,
+          'perangkat': device,
+        }),
+        options: Options(sendTimeout: const Duration(seconds: 60)),
+      );
+      return StudentExamFileSaveResult.fromJson(_data(response));
     } on DioException catch (exception) {
       throw mapDioException(exception);
     }

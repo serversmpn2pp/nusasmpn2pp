@@ -19,7 +19,7 @@
         .package-context .quick-facts div { border-color:rgba(255,255,255,.18); background:rgba(255,255,255,.07); }
         .package-context .quick-facts dt { color:rgba(255,255,255,.7); }
         .package-context .quick-facts dd { color:#fff; }
-        .package-auto { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
+        .package-auto { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
         .package-auto-item { padding:13px 14px; border:1px solid var(--line); border-radius:7px; background:#fff; }
         .package-auto-item strong, .package-auto-item span { display:block; }
         .package-auto-item strong { color:var(--primary-dark); font-size:.78rem; }
@@ -139,7 +139,7 @@
             <span class="badge {{ $paketSiap ? 'badge-active' : ($paket ? 'badge-warning' : 'badge-muted') }}">{{ $paketSiap ? 'Paket siap' : ($paket ? 'Masih draf' : 'Belum disusun') }}</span>
             <dl class="quick-facts">
                 <div><dt>Soal terpilih</dt><dd data-selected-count>{{ $jumlahDipilih }}</dd></div>
-                <div><dt>Total bobot</dt><dd data-selected-weight>{{ number_format($totalBobot, 2, ',', '.') }}</dd></div>
+                <div><dt>Total skor maksimal</dt><dd data-selected-weight>{{ number_format($totalBobot, 2, ',', '.') }}</dd></div>
                 @if ($paket?->token)<div><dt>Token otomatis</dt><dd>{{ $paket->token }}</dd></div>@endif
             </dl>
         </div>
@@ -147,6 +147,7 @@
 
     <div class="package-auto" aria-label="Pengaturan otomatis paket">
         <div class="package-auto-item"><strong>Jumlah soal</strong><span>Mengikuti jumlah soal yang dicentang.</span></div>
+        <div class="package-auto-item"><strong>Skor soal</strong><span>Mudah 1 · Sedang 2 · Sulit 3 · Sangat Sulit 4.</span></div>
         <div class="package-auto-item"><strong>Durasi & peserta</strong><span>Mengikuti sesi serta kelas pada jadwal.</span></div>
         <div class="package-auto-item"><strong>Pengacakan</strong><span>Soal: {{ ($paket?->acak_soal ?? true) ? 'diacak' : 'tetap' }} · Pilihan: {{ ($paket?->acak_jawaban ?? true) ? 'diacak' : 'tetap' }}.</span></div>
         <div class="package-auto-item"><strong>Komponen nilai</strong><span>Dibuat otomatis saat paket diterbitkan.</span></div>
@@ -190,10 +191,10 @@
                 @php
                     $relasi = $soalDipilih->get($item->id);
                     $dipilih = filter_var(old("soal.{$item->id}.dipilih", (bool) $relasi), FILTER_VALIDATE_BOOLEAN);
-                    $bobot = old("soal.{$item->id}.bobot", $relasi?->bobot ?? $item->skor_maksimal);
+                    $skor = $bolehKelola ? $item->skor_maksimal : ($relasi?->bobot ?? $item->skor_maksimal);
                     $bisaDipilih = $item->aktif && $item->status === 'siap';
                 @endphp
-                <div class="question-row {{ $dipilih ? 'is-selected' : '' }}" data-question-row data-type="{{ $item->jenis_soal }}" data-difficulty="{{ $item->tingkat_kesulitan }}" data-search="{{ mb_strtolower($item->kode.' '.$item->topik.' '.$item->materi.' '.strip_tags($item->pertanyaan)) }}">
+                <div class="question-row {{ $dipilih ? 'is-selected' : '' }}" data-question-row data-score="{{ (float) $skor }}" data-type="{{ $item->jenis_soal }}" data-difficulty="{{ $item->tingkat_kesulitan }}" data-search="{{ mb_strtolower($item->kode.' '.$item->topik.' '.$item->materi.' '.strip_tags($item->pertanyaan)) }}">
                     @if ($bolehKelola)
                         <input type="hidden" name="soal[{{ $item->id }}][dipilih]" value="0">
                         <input id="soal_{{ $item->id }}" class="question-check" type="checkbox" name="soal[{{ $item->id }}][dipilih]" value="1" @checked($dipilih) @disabled(! $bisaDipilih) data-question-check>
@@ -211,8 +212,8 @@
                         <button type="button" class="button button-muted" data-open-package-preview="{{ $item->id }}" data-preview-code="{{ $item->kode }}">Pratinjau</button>
                     </div>
                     <div class="question-weight">
-                        <label for="bobot_{{ $item->id }}">Bobot</label>
-                        @if ($bolehKelola)<input id="bobot_{{ $item->id }}" name="soal[{{ $item->id }}][bobot]" type="number" min="0.25" max="100" step="0.25" value="{{ $bobot }}" class="input" data-question-weight @disabled(! $dipilih)>@else<strong>{{ number_format((float) $relasi?->bobot, 2, ',', '.') }}</strong>@endif
+                        <label>Skor</label>
+                        <strong>{{ number_format((float) $skor, 0, ',', '.') }}</strong>
                     </div>
                 </div>
                 <template data-package-preview-template="{{ $item->id }}">
@@ -282,7 +283,7 @@
 
     @if ($bolehKelola)
         <div class="package-form-actions">
-            <div class="package-form-summary"><span><b data-selected-count>{{ $jumlahDipilih }}</b> soal dipilih</span><span>Bobot <b data-selected-weight>{{ number_format($totalBobot, 2, ',', '.') }}</b></span></div>
+            <div class="package-form-summary"><span><b data-selected-count>{{ $jumlahDipilih }}</b> soal dipilih</span><span>Total skor <b data-selected-weight>{{ number_format($totalBobot, 2, ',', '.') }}</b></span></div>
             <div class="package-form-buttons">
                 <a href="{{ route('paket-soal-terpusat.index', ['kegiatan' => $jadwal->kegiatan_ujian_cbt_id]) }}" class="button button-muted">Batal</a>
                 @if ($paketSiap)
@@ -344,14 +345,12 @@
 
                 const refreshSummary = () => {
                     const selected = rows.filter((row) => row.querySelector('[data-question-check]')?.checked);
-                    const total = selected.reduce((sum, row) => sum + Number(row.querySelector('[data-question-weight]')?.value || 0), 0);
+                    const total = selected.reduce((sum, row) => sum + Number(row.dataset.score || 0), 0);
                     counters.forEach((item) => item.textContent = selected.length);
                     weights.forEach((item) => item.textContent = total.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
                     rows.forEach((row) => {
                         const check = row.querySelector('[data-question-check]');
-                        const weight = row.querySelector('[data-question-weight]');
                         row.classList.toggle('is-selected', Boolean(check?.checked));
-                        if (weight) weight.disabled = ! check?.checked;
                     });
                 };
 
@@ -365,7 +364,7 @@
                     });
                 };
 
-                document.querySelectorAll('[data-question-check], [data-question-weight]').forEach((input) => input.addEventListener('change', refreshSummary));
+                document.querySelectorAll('[data-question-check]').forEach((input) => input.addEventListener('change', refreshSummary));
                 [search, type, difficulty].forEach((input) => input?.addEventListener(input === search ? 'input' : 'change', applyFilters));
                 document.querySelector('[data-select-visible]')?.addEventListener('click', () => {
                     rows.filter((row) => ! row.classList.contains('is-hidden')).forEach((row) => {

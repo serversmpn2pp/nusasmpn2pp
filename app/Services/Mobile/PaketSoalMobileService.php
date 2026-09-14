@@ -150,7 +150,9 @@ class PaketSoalMobileService
         abort_unless($this->bolehMengelola($pengguna, $jadwal), 403);
         $this->pastikanPaketBelumDikerjakan($jadwal->ujianCbt);
 
-        $soalTerpilih = collect($data['soal'] ?? [])->mapWithKeys(fn (array $item) => [(int) $item['id'] => (float) $item['bobot']]);
+        $soalIds = collect($data['soal'] ?? [])->pluck('id')->map(fn ($id) => (int) $id)->values();
+        $skorSoal = SoalCbt::query()->whereIn('id', $soalIds)->pluck('skor_maksimal', 'id');
+        $soalTerpilih = $soalIds->mapWithKeys(fn ($id) => [$id => (float) $skorSoal->get($id)]);
         $this->pastikanSoalValid($jadwal, $soalTerpilih);
         if ($data['aksi'] === 'terbitkan' && $soalTerpilih->isEmpty()) {
             throw ValidationException::withMessages(['soal' => 'Pilih minimal satu soal sebelum paket diterbitkan.']);

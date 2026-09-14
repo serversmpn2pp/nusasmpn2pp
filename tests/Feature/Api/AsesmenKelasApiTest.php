@@ -81,10 +81,11 @@ class AsesmenKelasApiTest extends TestCase
             ->assertOk()->assertJsonCount(1, 'data.soal')
             ->assertJsonPath('data.soal.0.dipilih', false);
         $this->withToken($token)->putJson(route('api.v1.asesmen-kelas.soal.update', $asesmen), [
-            'soal' => [['id' => $soal->id, 'bobot' => 2.5]],
+            'soal' => [['id' => $soal->id, 'bobot' => 99]],
         ])->assertOk()
             ->assertJsonPath('data.soal.0.dipilih', true)
-            ->assertJsonPath('data.soal.0.bobot', 2.5);
+            ->assertJsonPath('data.soal.0.bobot', 2);
+        $this->assertSame(1, $asesmen->fresh()->jumlah_soal);
 
         $this->withToken($token)->patchJson(route('api.v1.asesmen-kelas.update', $asesmen), [
             ...$this->payload($kelompok, $data['kelas']->id),
@@ -145,17 +146,17 @@ class AsesmenKelasApiTest extends TestCase
             'tingkat' => 8,
             'kode' => 'SOAL-AKM-002',
             'jenis_soal' => 'uraian',
-            'tingkat_kesulitan' => 'sedang',
+            'tingkat_kesulitan' => 'sangat_sulit',
             'kategori' => 'umum',
             'pertanyaan' => 'Jelaskan langkah penyelesaian.',
-            'skor_maksimal' => 50,
+            'skor_maksimal' => 4,
             'status' => 'siap',
             'aktif' => true,
         ]);
         $this->withToken($token)->putJson(route('api.v1.asesmen-kelas.soal.update', $asesmen), [
             'soal' => [
-                ['id' => $soalOtomatis->id, 'bobot' => 50],
-                ['id' => $soalManual->id, 'bobot' => 50],
+                ['id' => $soalOtomatis->id, 'bobot' => 99],
+                ['id' => $soalManual->id, 'bobot' => 99],
             ],
         ])->assertOk();
 
@@ -179,7 +180,7 @@ class AsesmenKelasApiTest extends TestCase
                 'soal_cbt_id' => $soalOtomatis->id,
                 'jawaban' => ['jawaban' => 'B'],
                 'ragu' => false,
-                'skor' => 50,
+                'skor' => 2,
                 'benar' => true,
             ]);
             JawabanPesertaUjianCbt::create([
@@ -188,7 +189,7 @@ class AsesmenKelasApiTest extends TestCase
                 'soal_cbt_id' => $soalManual->id,
                 'jawaban' => ['teks' => 'Langkah jawaban siswa'],
                 'ragu' => $index === 0,
-                'skor' => $index === 1 ? 40 : null,
+                'skor' => $index === 1 ? 3.2 : null,
                 'benar' => $index === 1,
             ]);
         }
@@ -215,7 +216,7 @@ class AsesmenKelasApiTest extends TestCase
             ->assertJsonPath('data.items.0.status', 'perlu_koreksi_manual')
             ->assertJsonPath('data.items.0.status_nilai', 'sementara')
             ->assertJsonPath('data.items.1.status', 'tuntas')
-            ->assertJsonPath('data.items.1.nilai', 90);
+            ->assertJsonPath('data.items.1.nilai', 86.67);
 
         $jawabanUraian = JawabanPesertaUjianCbt::query()
             ->where('peserta_ujian_cbt_id', $peserta[0]->id)
@@ -232,17 +233,17 @@ class AsesmenKelasApiTest extends TestCase
             ->assertJsonCount(1, 'data.items');
 
         $this->withToken($token)->putJson(route('api.v1.asesmen-kelas.koreksi-uraian.update', $asesmen), [
-            'skor' => [['jawaban_id' => $jawabanUraian->id, 'nilai' => 55]],
+            'skor' => [['jawaban_id' => $jawabanUraian->id, 'nilai' => 5]],
         ])->assertUnprocessable()->assertJsonValidationErrors('skor.0.nilai');
         $this->withToken($token)->putJson(route('api.v1.asesmen-kelas.koreksi-uraian.update', $asesmen), [
-            'skor' => [['jawaban_id' => $jawabanUraian->id, 'nilai' => 45]],
+            'skor' => [['jawaban_id' => $jawabanUraian->id, 'nilai' => 3.6]],
             'status' => 'semua',
         ])->assertOk()
             ->assertJsonPath('data.ringkasan.belum_dikoreksi', 0)
             ->assertJsonPath('data.ringkasan.sudah_dikoreksi', 2);
         $this->assertDatabaseHas('jawaban_peserta_ujian_cbt', [
             'id' => $jawabanUraian->id,
-            'skor' => 45,
+            'skor' => 3.6,
             'benar' => false,
         ]);
 
@@ -251,8 +252,8 @@ class AsesmenKelasApiTest extends TestCase
             ->assertJsonPath('data.diterapkan', 2)
             ->assertJsonPath('data.perlu_koreksi_manual', 0);
         $this->assertSame(2, NilaiSiswa::query()->count());
-        $this->assertEquals(95.0, (float) $peserta[0]->fresh()->nilaiSiswa?->nilai);
-        $this->assertEquals(90.0, (float) $peserta[1]->fresh()->nilaiSiswa?->nilai);
+        $this->assertEquals(93.33, (float) $peserta[0]->fresh()->nilaiSiswa?->nilai);
+        $this->assertEquals(86.67, (float) $peserta[1]->fresh()->nilaiSiswa?->nilai);
         $this->assertNotNull($peserta[0]->fresh()->nilai_diterapkan_pada);
     }
 
@@ -334,7 +335,7 @@ class AsesmenKelasApiTest extends TestCase
             'tingkat' => 8, 'kode' => 'SOAL-AKM-001', 'jenis_soal' => 'pilihan_ganda',
             'tingkat_kesulitan' => 'sedang', 'kategori' => 'umum', 'pertanyaan' => 'Nilai x adalah?',
             'opsi' => ['pilihan' => ['A' => '1', 'B' => '2']], 'kunci_jawaban' => ['jawaban' => 'B'],
-            'skor_maksimal' => 2.5, 'status' => 'siap', 'aktif' => true,
+            'skor_maksimal' => 2, 'status' => 'siap', 'aktif' => true,
         ]);
     }
 

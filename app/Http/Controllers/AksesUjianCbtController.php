@@ -6,6 +6,7 @@ use App\Models\JawabanPesertaUjianCbt;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
+use App\Services\Cbt\JawabanBerkasUjianCbtService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -15,7 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class AksesUjianCbtController extends Controller
 {
-    public function __construct(private readonly PengacakPenyajianCbt $pengacakPenyajianCbt) {}
+    public function __construct(
+        private readonly PengacakPenyajianCbt $pengacakPenyajianCbt,
+        private readonly JawabanBerkasUjianCbtService $jawabanBerkas,
+    ) {}
 
     public function masukDariAkunSiswa(Request $request, PesertaUjianCbt $pesertaUjianCbt)
     {
@@ -173,6 +177,18 @@ class AksesUjianCbtController extends Controller
 
         DB::transaction(function () use ($peserta, $soalUjian, $jawaban, $ragu, $data) {
             foreach ($soalUjian as $relasiSoal) {
+                if ($relasiSoal->soalCbt?->jenis_soal === 'upload_file') {
+                    $jawabanBerkas = JawabanPesertaUjianCbt::query()->firstOrNew([
+                        'peserta_ujian_cbt_id' => $peserta->id,
+                        'soal_ujian_cbt_id' => $relasiSoal->id,
+                    ]);
+                    $jawabanBerkas->soal_cbt_id = $relasiSoal->soal_cbt_id;
+                    $jawabanBerkas->ragu = in_array((int) $relasiSoal->id, $ragu, true);
+                    $jawabanBerkas->save();
+
+                    continue;
+                }
+
                 $nilaiJawaban = $this->normalisasiJawaban($jawaban[$relasiSoal->id] ?? null);
 
                 JawabanPesertaUjianCbt::updateOrCreate(
@@ -245,12 +261,19 @@ class AksesUjianCbtController extends Controller
             'ragu' => ['nullable', 'boolean'],
         ]);
         $relasiSoal = $peserta->ujianCbt->soalUjianCbt()
+            ->with('soalCbt')
             ->whereKey((int) $data['soal_ujian_cbt_id'])
             ->first();
 
         abort_unless($relasiSoal, 404);
 
-        $nilaiJawaban = $this->normalisasiJawaban($data['jawaban'] ?? null);
+        $jawabanLama = JawabanPesertaUjianCbt::query()
+            ->where('peserta_ujian_cbt_id', $peserta->id)
+            ->where('soal_ujian_cbt_id', $relasiSoal->id)
+            ->first();
+        $nilaiJawaban = $relasiSoal->soalCbt?->jenis_soal === 'upload_file'
+            ? ($jawabanLama?->lokasi_file ? ['berkas' => $jawabanLama->nama_file_asli] : null)
+            : $this->normalisasiJawaban($data['jawaban'] ?? null);
         $jawaban = JawabanPesertaUjianCbt::updateOrCreate(
             [
                 'peserta_ujian_cbt_id' => $peserta->id,
@@ -270,6 +293,49 @@ class AksesUjianCbtController extends Controller
             'message' => 'Jawaban tersimpan.',
             'terjawab' => $jawaban->jawaban !== null,
             'ragu' => $jawaban->ragu,
+            'tersimpan_pada' => now()->format('H:i:s'),
+        ]);
+    }
+
+    public function simpanBerkasJawaban(Request $request)
+    {
+        $peserta = $this->ambilPesertaDariSesi($request);
+        $peserta->load('ujianCbt');
+
+        abort_unless($peserta->status === 'sedang_mengerjakan', 409, 'Ujian tidak sedang dikerjakan.');
+        abort_if($this->hitungSisaDetik($peserta) <= 0, 409, 'Waktu ujian telah berakhir.');
+
+        $data = $request->validate([
+            'soal_ujian_cbt_id' => ['required', 'integer'],
+            'berkas' => [
+                'required',
+                'file',
+                'mimes:'.implode(',', JawabanBerkasUjianCbtService::EKSTENSI),
+                'max:'.JawabanBerkasUjianCbtService::MAKSIMAL_KILOBYTE,
+            ],
+            'ragu' => ['nullable', 'boolean'],
+        ], [
+            'berkas.required' => 'Pilih berkas jawaban terlebih dahulu.',
+            'berkas.mimes' => 'Format berkas belum didukung. Gunakan PDF, gambar, atau dokumen Office.',
+            'berkas.max' => 'Ukuran berkas maksimal 10 MB.',
+        ]);
+        $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt, $peserta)
+            ->firstWhere('id', (int) $data['soal_ujian_cbt_id']);
+
+        abort_unless($soalUjian, 404);
+
+        $jawaban = $this->jawabanBerkas->simpan(
+            $peserta,
+            $soalUjian,
+            $data['berkas'],
+            (bool) ($data['ragu'] ?? false),
+        );
+
+        return response()->json([
+            'message' => 'Berkas jawaban berhasil diunggah.',
+            'terjawab' => true,
+            'ragu' => (bool) $jawaban->ragu,
+            'berkas' => $this->jawabanBerkas->metadata($jawaban),
             'tersimpan_pada' => now()->format('H:i:s'),
         ]);
     }

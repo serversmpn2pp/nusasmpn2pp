@@ -15,7 +15,9 @@ use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -172,6 +174,157 @@ class UjianSayaApiTest extends TestCase
             ->assertJsonPath('data.hasil.tuntas', true);
 
         $this->assertSame('selesai', $data['peserta']->fresh()->status);
+    }
+
+    public function test_soal_menjodohkan_mengirim_pilihan_pasangan_tanpa_membocorkan_kunci(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $ujian = $data['peserta']->ujianCbt;
+        $soal = SoalCbt::create([
+            'tahun_pelajaran_id' => $ujian->tahun_pelajaran_id,
+            'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
+            'tingkat' => 8,
+            'kode' => 'IPA-NATIVE-MATCH',
+            'jenis_soal' => 'menjodohkan',
+            'tingkat_kesulitan' => 'sedang',
+            'kategori' => 'umum',
+            'pertanyaan' => 'Jodohkan besaran dengan satuannya.',
+            'opsi' => ['pasangan' => [
+                ['nomor' => 1, 'kiri' => 'Frekuensi', 'kanan' => 'Hertz'],
+                ['nomor' => 2, 'kiri' => 'Periode', 'kanan' => 'Sekon'],
+            ]],
+            'kunci_jawaban' => ['jawaban' => [1 => 'Hertz', 2 => 'Sekon']],
+            'skor_maksimal' => 2,
+            'status' => 'siap',
+            'aktif' => true,
+        ]);
+        $relasi = $ujian->soalUjianCbt()->create([
+            'soal_cbt_id' => $soal->id,
+            'nomor_urut' => 3,
+            'bobot' => 2,
+        ]);
+        $ujian->update(['jumlah_soal' => 3]);
+        $token = $this->token($data['pengguna']);
+
+        $response = $this->withToken($token)
+            ->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+                'token' => 'MULAI1',
+                'perangkat' => 'NUSA Android Menjodohkan',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.soal.2.jenis', 'menjodohkan')
+            ->assertJsonPath('data.soal.2.pasangan.0.kiri', 'Frekuensi')
+            ->assertJsonCount(2, 'data.soal.2.pilihan')
+            ->assertJsonMissingPath('data.soal.2.pasangan.0.kanan')
+            ->assertJsonMissingPath('data.soal.2.kunci_jawaban');
+
+        $pilihan = collect($response->json('data.soal.2.pilihan'))->pluck('teks')->sort()->values()->all();
+        $this->assertSame(['Hertz', 'Sekon'], $pilihan);
+
+        $this->withToken($token)
+            ->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
+                'soal_ujian_cbt_id' => $relasi->id,
+                'jawaban' => ['1' => 'Hertz', '2' => 'Sekon'],
+                'ragu' => false,
+                'perangkat' => 'NUSA Android Menjodohkan',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.terjawab', true);
+
+        $this->assertDatabaseHas('jawaban_peserta_ujian_cbt', [
+            'peserta_ujian_cbt_id' => $data['peserta']->id,
+            'soal_ujian_cbt_id' => $relasi->id,
+        ]);
+    }
+
+    public function test_siswa_dapat_mengunggah_berkas_jawaban_dan_menggantinya(): void
+    {
+        Storage::fake('local');
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $ujian = $data['peserta']->ujianCbt;
+        $soal = SoalCbt::create([
+            'tahun_pelajaran_id' => $ujian->tahun_pelajaran_id,
+            'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
+            'tingkat' => 8,
+            'kode' => 'IPA-NATIVE-UPLOAD',
+            'jenis_soal' => 'upload_file',
+            'tingkat_kesulitan' => 'sulit',
+            'kategori' => 'praktik',
+            'pertanyaan' => 'Unggah laporan praktikum.',
+            'opsi' => [],
+            'kunci_jawaban' => [],
+            'skor_maksimal' => 3,
+            'status' => 'siap',
+            'aktif' => true,
+        ]);
+        $relasi = $ujian->soalUjianCbt()->create([
+            'soal_cbt_id' => $soal->id,
+            'nomor_urut' => 3,
+            'bobot' => 3,
+        ]);
+        $ujian->update(['jumlah_soal' => 3]);
+        $token = $this->token($data['pengguna']);
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+                'token' => 'MULAI1',
+                'perangkat' => 'NUSA Android Upload',
+            ])
+            ->assertOk();
+
+        $this->withToken($token)
+            ->post(route('api.v1.ujian-saya.jawaban-berkas.store', $data['peserta']), [
+                'soal_ujian_cbt_id' => $relasi->id,
+                'berkas' => UploadedFile::fake()->create('laporan-praktikum.pdf', 120, 'application/pdf'),
+                'ragu' => '0',
+                'perangkat' => 'NUSA Android Upload',
+            ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.terjawab', true)
+            ->assertJsonPath('data.berkas.nama', 'laporan-praktikum.pdf');
+
+        $jawaban = $data['peserta']->jawabanPesertaUjianCbt()
+            ->where('soal_ujian_cbt_id', $relasi->id)
+            ->firstOrFail();
+        $lokasiPertama = $jawaban->lokasi_file;
+        Storage::disk('local')->assertExists($lokasiPertama);
+
+        $this->withToken($token)
+            ->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
+                'soal_ujian_cbt_id' => $relasi->id,
+                'jawaban' => null,
+                'ragu' => true,
+                'perangkat' => 'NUSA Android Upload',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.terjawab', true)
+            ->assertJsonPath('data.ragu', true);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.ujian-saya.kerjakan', [
+                'pesertaUjianCbt' => $data['peserta'],
+                'perangkat' => 'NUSA Android Upload',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.soal.2.jawaban.berkas', 'laporan-praktikum.pdf')
+            ->assertJsonPath('data.soal.2.berkas_jawaban.nama', 'laporan-praktikum.pdf');
+
+        $this->withToken($token)
+            ->post(route('api.v1.ujian-saya.jawaban-berkas.store', $data['peserta']), [
+                'soal_ujian_cbt_id' => $relasi->id,
+                'berkas' => UploadedFile::fake()->create('laporan-revisi.pdf', 80, 'application/pdf'),
+                'ragu' => '1',
+                'perangkat' => 'NUSA Android Upload',
+            ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.berkas.nama', 'laporan-revisi.pdf');
+
+        $jawaban->refresh();
+        Storage::disk('local')->assertMissing($lokasiPertama);
+        Storage::disk('local')->assertExists($jawaban->lokasi_file);
+        $this->assertSame(['berkas' => 'laporan-revisi.pdf'], $jawaban->jawaban);
     }
 
     public function test_mode_aman_mencatat_keluar_aplikasi_menahan_dan_dapat_dibuka_pengawas(): void

@@ -8,8 +8,10 @@ use App\Models\PesertaUjianCbt;
 use App\Models\SoalCbt;
 use App\Models\SoalUjianCbt;
 use App\Services\Cbt\DaftarUjianSiswaService;
+use App\Services\Cbt\JawabanBerkasUjianCbtService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +24,7 @@ class UjianSayaMobileService
         private readonly PengacakPenyajianCbt $pengacakPenyajianCbt,
         private readonly KoreksiOtomatisCbtService $koreksiOtomatisCbtService,
         private readonly KeamananUjianMobileService $keamananUjian,
+        private readonly JawabanBerkasUjianCbtService $jawabanBerkas,
     ) {}
 
     public function daftar(Pengguna $pengguna): array
@@ -198,7 +201,13 @@ class UjianSayaMobileService
 
         abort_unless($soalUjian, 404);
 
-        $nilaiJawaban = $this->normalisasiJawaban($jawaban);
+        $jawabanLama = JawabanPesertaUjianCbt::query()
+            ->where('peserta_ujian_cbt_id', $peserta->id)
+            ->where('soal_ujian_cbt_id', $soalUjian->id)
+            ->first();
+        $nilaiJawaban = $soalUjian->soalCbt?->jenis_soal === 'upload_file'
+            ? ($jawabanLama?->lokasi_file ? ['berkas' => $jawabanLama->nama_file_asli] : null)
+            : $this->normalisasiJawaban($jawaban);
         $tersimpan = JawabanPesertaUjianCbt::updateOrCreate(
             [
                 'peserta_ujian_cbt_id' => $peserta->id,
@@ -220,6 +229,44 @@ class UjianSayaMobileService
             'soal_ujian_cbt_id' => (int) $soalUjian->id,
             'terjawab' => $tersimpan->jawaban !== null,
             'ragu' => (bool) $tersimpan->ragu,
+            'tersimpan_pada' => now()->toISOString(),
+            'sisa_detik' => $this->hitungSisaDetik($peserta),
+        ];
+    }
+
+    public function simpanBerkasJawaban(
+        Pengguna $pengguna,
+        PesertaUjianCbt $peserta,
+        int $soalUjianId,
+        UploadedFile $berkas,
+        bool $ragu,
+        string $perangkat,
+    ): array {
+        $peserta = $this->pesertaMilikSiswa($pengguna, $peserta);
+
+        if ($peserta->status !== 'sedang_mengerjakan') {
+            throw ValidationException::withMessages(['ujian' => 'Ujian tidak sedang dikerjakan.']);
+        }
+
+        $this->pastikanPerangkatSesuai($peserta, $perangkat);
+
+        if ($this->hitungSisaDetik($peserta) <= 0) {
+            $this->akhiri($peserta);
+
+            return $this->hasil($pengguna, $peserta->fresh());
+        }
+
+        $soalUjian = $this->soalUntukPeserta($peserta)->firstWhere('id', $soalUjianId);
+        abort_unless($soalUjian, 404);
+        $jawaban = $this->jawabanBerkas->simpan($peserta, $soalUjian, $berkas, $ragu);
+
+        return [
+            'mode' => 'tersimpan',
+            'waktu_server' => now()->toISOString(),
+            'soal_ujian_cbt_id' => (int) $soalUjian->id,
+            'terjawab' => true,
+            'ragu' => (bool) $jawaban->ragu,
+            'berkas' => $this->jawabanBerkas->metadata($jawaban),
             'tersimpan_pada' => now()->toISOString(),
             'sisa_detik' => $this->hitungSisaDetik($peserta),
         ];
@@ -442,7 +489,7 @@ class UjianSayaMobileService
                     'stimulus' => $soal?->stimulus,
                     'pertanyaan' => $soal?->pertanyaan ?? 'Soal tidak ditemukan.',
                     'media' => $this->media($soal),
-                    'pilihan' => $soal && in_array($soal->jenis_soal, ['pilihan_ganda', 'pilihan_ganda_kompleks'], true)
+                    'pilihan' => $soal && in_array($soal->jenis_soal, ['pilihan_ganda', 'pilihan_ganda_kompleks', 'menjodohkan'], true)
                         ? $this->pengacakPenyajianCbt->pilihanJawaban($peserta->ujianCbt, $peserta, $relasi)
                             ->map(fn ($teks, $kode) => ['kode' => (string) $kode, 'teks' => (string) $teks])
                             ->values()
@@ -456,6 +503,7 @@ class UjianSayaMobileService
                         'kiri' => (string) ($item['kiri'] ?? '-'),
                     ])->values(),
                     'jawaban' => $this->jawabanUntukApi($tersimpan?->jawaban),
+                    'berkas_jawaban' => $this->jawabanBerkas->metadata($tersimpan),
                     'ragu' => (bool) ($tersimpan?->ragu ?? false),
                 ];
             }),

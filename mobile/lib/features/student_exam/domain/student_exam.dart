@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class StudentExamSession {
   const StudentExamSession({
     required this.mode,
@@ -481,6 +483,34 @@ class StudentExamSaveResult {
   final bool completed;
   final int remainingSeconds;
   final StudentExamSession? session;
+}
+
+class StudentExamPickedFile {
+  const StudentExamPickedFile({required this.name, required this.bytes});
+
+  final String name;
+  final Uint8List bytes;
+}
+
+class StudentExamFileSaveResult {
+  const StudentExamFileSaveResult({
+    required this.fileName,
+    required this.fileSizeLabel,
+    required this.remainingSeconds,
+  });
+
+  factory StudentExamFileSaveResult.fromJson(Map<String, dynamic> json) {
+    final file = _map(json['berkas']);
+    return StudentExamFileSaveResult(
+      fileName: file['nama'] as String? ?? 'Berkas jawaban',
+      fileSizeLabel: file['ukuran_label'] as String? ?? '',
+      remainingSeconds: _integer(json['sisa_detik']),
+    );
+  }
+
+  final String fileName;
+  final String fileSizeLabel;
+  final int remainingSeconds;
 }
 
 Map<String, dynamic> _map(Object? value) => value is Map

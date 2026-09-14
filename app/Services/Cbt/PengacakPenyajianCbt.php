@@ -35,6 +35,12 @@ class PengacakPenyajianCbt
         SoalUjianCbt $relasiSoal,
     ): Collection {
         $opsi = $relasiSoal->soalCbt?->opsi ?? [];
+        $jenisSoal = $relasiSoal->soalCbt?->jenis_soal;
+
+        if ($jenisSoal === 'menjodohkan') {
+            return $this->pilihanMenjodohkan($ujian, $peserta, $relasiSoal, $opsi['pasangan'] ?? []);
+        }
+
         $pilihan = $opsi['pilihan'] ?? $opsi;
         $pilihan = collect($pilihan)
             ->mapWithKeys(function ($item, $key) {
@@ -64,6 +70,40 @@ class PengacakPenyajianCbt
                 (string) $kode,
             ),
         );
+    }
+
+    private function pilihanMenjodohkan(
+        UjianCbt $ujian,
+        PesertaUjianCbt $peserta,
+        SoalUjianCbt $relasiSoal,
+        array $pasangan,
+    ): Collection {
+        $pilihan = collect($pasangan)
+            ->map(fn ($item, $index) => [
+                'identitas' => (string) ($item['nomor'] ?? $index + 1),
+                'teks' => trim((string) ($item['kanan'] ?? '')),
+            ])
+            ->filter(fn ($item) => filled($item['teks']))
+            ->unique(fn ($item) => mb_strtolower($item['teks']))
+            ->values();
+
+        $identitasAwal = $pilihan->pluck('identitas')->all();
+        $identitasPeserta = $ujian->acak_jawaban ? (string) $peserta->id : 'tetap';
+        $pilihan = $pilihan->sortBy(fn ($item) => hash('sha256', implode('|', [
+            'nusa-cbt',
+            $ujian->id,
+            $identitasPeserta,
+            'pasangan:'.$relasiSoal->id,
+            $item['identitas'],
+        ])))->values();
+
+        if ($pilihan->count() > 1 && $pilihan->pluck('identitas')->all() === $identitasAwal) {
+            $pilihan = $pilihan->slice(1)->concat($pilihan->take(1))->values();
+        }
+
+        return $pilihan->mapWithKeys(fn ($item, $index) => [
+            chr(65 + $index) => $item['teks'],
+        ]);
     }
 
     private function kunciAcak(

@@ -37,8 +37,8 @@ class PaketSoalApiTest extends TestCase
     public function test_admin_dapat_menyusun_mengurutkan_dan_menerbitkan_paket_native(): void
     {
         $data = $this->fondasi();
-        $satu = $this->soal($data['tahun'], $data['mapel'], 'SOAL-MOB-1', 1);
-        $dua = $this->soal($data['tahun'], $data['mapel'], 'SOAL-MOB-2', 2);
+        $satu = $this->soal($data['tahun'], $data['mapel'], 'SOAL-MOB-1', 'mudah');
+        $dua = $this->soal($data['tahun'], $data['mapel'], 'SOAL-MOB-2', 'sulit');
         $token = $this->token($data['admin']);
 
         $this->withToken($token)->getJson(route('api.v1.paket-soal.index'))
@@ -51,12 +51,12 @@ class PaketSoalApiTest extends TestCase
         $this->withToken($token)->postJson(route('api.v1.paket-soal.update', $data['jadwal']), [
             'aksi' => 'terbitkan', 'acak_soal' => false, 'acak_jawaban' => true,
             'soal' => [
-                ['id' => $dua->id, 'bobot' => 2.5],
-                ['id' => $satu->id, 'bobot' => 1],
+                ['id' => $dua->id, 'bobot' => 99],
+                ['id' => $satu->id, 'bobot' => 99],
             ],
         ])->assertOk()->assertJsonPath('data.paket.status', 'terjadwal')
             ->assertJsonPath('data.jadwal.jumlah_soal', 2)
-            ->assertJsonPath('data.jadwal.total_bobot', 3.5);
+            ->assertJsonPath('data.jadwal.total_bobot', 4);
 
         $paket = UjianCbt::where('alur', 'terpusat')->firstOrFail();
         $this->assertFalse($paket->acak_soal);
@@ -67,6 +67,7 @@ class PaketSoalApiTest extends TestCase
         $this->assertTrue($paket->blokir_tangkapan_layar);
         $this->assertSame('tahan', $paket->tindakan_pindah_aplikasi);
         $this->assertSame([$dua->id, $satu->id], $paket->soalUjianCbt()->orderBy('nomor_urut')->pluck('soal_cbt_id')->all());
+        $this->assertSame(['3.00', '1.00'], $paket->soalUjianCbt()->orderBy('nomor_urut')->pluck('bobot')->all());
         $this->assertDatabaseHas('jadwal_ujian_cbt', ['id' => $data['jadwal']->id, 'status' => 'siap']);
     }
 
@@ -134,14 +135,16 @@ class PaketSoalApiTest extends TestCase
         return compact('admin', 'tahun', 'mapel', 'guru', 'jadwal');
     }
 
-    private function soal(TahunPelajaran $tahun, MataPelajaran $mapel, string $kode, float $skor): SoalCbt
+    private function soal(TahunPelajaran $tahun, MataPelajaran $mapel, string $kode, string $tingkatKesulitan): SoalCbt
     {
         return SoalCbt::create([
             'tahun_pelajaran_id' => $tahun->id, 'mata_pelajaran_id' => $mapel->id,
             'tingkat' => 8, 'kode' => $kode, 'jenis_soal' => 'pilihan_ganda',
-            'tingkat_kesulitan' => 'sedang', 'kategori' => 'umum', 'pertanyaan' => "Pertanyaan {$kode}",
+            'tingkat_kesulitan' => $tingkatKesulitan, 'kategori' => 'umum', 'pertanyaan' => "Pertanyaan {$kode}",
             'opsi' => ['pilihan' => ['A' => 'Salah', 'B' => 'Benar']],
-            'kunci_jawaban' => ['jawaban' => 'B'], 'skor_maksimal' => $skor, 'status' => 'siap', 'aktif' => true,
+            'kunci_jawaban' => ['jawaban' => 'B'],
+            'skor_maksimal' => SoalCbt::skorUntukKesulitan($tingkatKesulitan),
+            'status' => 'siap', 'aktif' => true,
         ]);
     }
 

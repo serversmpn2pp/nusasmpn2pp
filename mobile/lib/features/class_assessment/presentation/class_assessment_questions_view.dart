@@ -82,7 +82,7 @@ class _ClassAssessmentQuestionsViewState
                   children: [
                     Expanded(
                       child: Text(
-                        '${_selected.length} soal · ${_number(_totalWeight)} bobot',
+                        '${_selected.length} soal · total skor ${_number(_totalWeight)}',
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
@@ -245,7 +245,6 @@ class _ClassAssessmentQuestionsViewState
                   weight: _weights[question.id] ?? question.maximumScore,
                   editable: data.canEdit,
                   onToggle: () => _toggle(question),
-                  onWeight: () => _editWeight(question),
                   onMoveUp: () => _move(question.id, -1),
                   onMoveDown: () => _move(question.id, 1),
                   onPreview: () => _preview(question),
@@ -296,7 +295,12 @@ class _ClassAssessmentQuestionsViewState
         _weights
           ..clear()
           ..addEntries(
-            data.questions.map((item) => MapEntry(item.id, item.weight)),
+            data.questions.map(
+              (item) => MapEntry(
+                item.id,
+                data.canEdit ? item.maximumScore : item.weight,
+              ),
+            ),
           );
       });
     });
@@ -331,50 +335,6 @@ class _ClassAssessmentQuestionsViewState
       final item = _selected.removeAt(index);
       _selected.insert(target, item);
     });
-  }
-
-  Future<void> _editWeight(AssessmentQuestion question) async {
-    final controller = TextEditingController(
-      text: _number(_weights[question.id] ?? question.maximumScore),
-    );
-    final value = await showDialog<double>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Bobot ${question.code}'),
-        content: TextField(
-          key: const Key('class-assessment-weight-input'),
-          controller: controller,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Bobot soal',
-            helperText: 'Nilai 0,25 sampai 100',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            key: const Key('class-assessment-weight-apply'),
-            onPressed: () {
-              final number = double.tryParse(
-                controller.text.trim().replaceAll(',', '.'),
-              );
-              if (number != null && number >= 0.25 && number <= 100) {
-                Navigator.pop(context, number);
-              }
-            },
-            child: const Text('Terapkan'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (value != null && mounted) {
-      setState(() => _weights[question.id] = value);
-    }
   }
 
   void _preview(AssessmentQuestion question) {
@@ -489,7 +449,6 @@ class _QuestionCard extends StatelessWidget {
     required this.weight,
     required this.editable,
     required this.onToggle,
-    required this.onWeight,
     required this.onMoveUp,
     required this.onMoveDown,
     required this.onPreview,
@@ -500,7 +459,6 @@ class _QuestionCard extends StatelessWidget {
   final double weight;
   final bool editable;
   final VoidCallback onToggle;
-  final VoidCallback onWeight;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
   final VoidCallback onPreview;
@@ -584,11 +542,10 @@ class _QuestionCard extends StatelessWidget {
                         ),
                       ),
                       if (selected)
-                        ActionChip(
+                        Chip(
                           visualDensity: VisualDensity.compact,
-                          onPressed: editable ? onWeight : null,
                           avatar: const Icon(Icons.stars_rounded, size: 14),
-                          label: Text('Bobot ${_number(weight)}'),
+                          label: Text('Skor ${_number(weight)}'),
                         ),
                       TextButton(
                         onPressed: onPreview,

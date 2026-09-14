@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\PesertaUjianCbt;
+use App\Services\Cbt\JawabanBerkasUjianCbtService;
 use App\Services\Mobile\KeamananUjianMobileService;
 use App\Services\Mobile\UjianSayaMobileService;
 use Illuminate\Http\JsonResponse;
@@ -83,6 +84,40 @@ class UjianSayaController extends Controller
                 $pesertaUjianCbt,
                 (int) $data['soal_ujian_cbt_id'],
                 $data['jawaban'] ?? null,
+                (bool) $data['ragu'],
+                $data['perangkat'],
+            ),
+        ]);
+    }
+
+    public function simpanBerkasJawaban(
+        Request $request,
+        PesertaUjianCbt $pesertaUjianCbt,
+        UjianSayaMobileService $service,
+    ): JsonResponse {
+        $data = $request->validate([
+            'soal_ujian_cbt_id' => ['required', 'integer'],
+            'berkas' => [
+                'required',
+                'file',
+                'mimes:'.implode(',', JawabanBerkasUjianCbtService::EKSTENSI),
+                'max:'.JawabanBerkasUjianCbtService::MAKSIMAL_KILOBYTE,
+            ],
+            'ragu' => ['required', 'boolean'],
+            'perangkat' => ['required', 'string', 'max:120'],
+        ], [
+            'berkas.required' => 'Pilih berkas jawaban terlebih dahulu.',
+            'berkas.mimes' => 'Format berkas belum didukung. Gunakan PDF, gambar, atau dokumen Office.',
+            'berkas.max' => 'Ukuran berkas maksimal 10 MB.',
+        ]);
+
+        return $this->tanpaCache([
+            'pesan' => 'Berkas jawaban berhasil diunggah.',
+            'data' => $service->simpanBerkasJawaban(
+                $request->user(),
+                $pesertaUjianCbt,
+                (int) $data['soal_ujian_cbt_id'],
+                $data['berkas'],
                 (bool) $data['ragu'],
                 $data['perangkat'],
             ),

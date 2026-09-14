@@ -17,8 +17,8 @@ use App\Http\Controllers\BuktiPelaksanaanSanksiController;
 use App\Http\Controllers\CadanganDatabaseController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenPoinSiswaController;
-use App\Http\Controllers\FotoIdentitasController;
 use App\Http\Controllers\FinalisasiHasilUjianTerpusatController;
+use App\Http\Controllers\FotoIdentitasController;
 use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\HasilSurveiSayaController;
 use App\Http\Controllers\ImportPenerimaanBarangController;
@@ -163,6 +163,9 @@ Route::middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default'])
         Route::post('ujian/mulai', [AksesUjianCbtController::class, 'mulai'])->name('ujian.mulai');
         Route::get('ujian/kerjakan', [AksesUjianCbtController::class, 'kerjakan'])->name('ujian.kerjakan');
         Route::post('ujian/jawaban', [AksesUjianCbtController::class, 'simpanJawaban'])->name('ujian.jawaban');
+        Route::post('ujian/jawaban-berkas', [AksesUjianCbtController::class, 'simpanBerkasJawaban'])
+            ->middleware('throttle:20,1')
+            ->name('ujian.jawaban-berkas');
         Route::post('ujian/simpan', [AksesUjianCbtController::class, 'simpan'])->name('ujian.simpan');
         Route::get('ujian/selesai', [AksesUjianCbtController::class, 'selesai'])->name('ujian.selesai');
     });
@@ -467,6 +470,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('ujian-cbt/{ujianCbt}/koreksi-otomatis', [KoreksiOtomatisUjianCbtController::class, 'store'])->name('ujian-cbt.koreksi-otomatis.store');
             Route::get('ujian-cbt/{ujianCbt}/koreksi-manual', [KoreksiManualUjianCbtController::class, 'index'])->name('ujian-cbt.koreksi-manual.index');
             Route::put('ujian-cbt/{ujianCbt}/koreksi-manual', [KoreksiManualUjianCbtController::class, 'update'])->name('ujian-cbt.koreksi-manual.update');
+            Route::get('ujian-cbt/{ujianCbt}/koreksi-manual/{jawabanPesertaUjianCbt}/berkas', [KoreksiManualUjianCbtController::class, 'downloadBerkas'])->name('ujian-cbt.koreksi-manual.berkas');
             Route::post('ujian-cbt/{ujianCbt}/terapkan-nilai', [TerapkanNilaiCbtController::class, 'store'])->name('ujian-cbt.terapkan-nilai.store');
         });
         Route::middleware(['izin:cbt.soal_kelola,cbt.kelola', 'akses_ujian_cbt'])->group(function () {

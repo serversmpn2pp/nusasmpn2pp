@@ -137,6 +137,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Matematika · Kelas 8').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('question-form-difficulty')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sedang').last);
+    await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView), const Offset(0, -650));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -168,6 +172,8 @@ void main() {
     expect(remote.lastValue?.payload['jenis_soal'], 'pilihan_ganda');
     expect(remote.lastValue?.payload['mata_pelajaran_id'], 3);
     expect(remote.lastValue?.payload['tingkat'], 8);
+    expect(remote.lastValue?.payload['tingkat_kesulitan'], 'sedang');
+    expect(remote.lastValue?.payload.containsKey('skor_maksimal'), isFalse);
     expect(remote.lastValue?.payload['kunci_pg'], 'B');
     expect(remote.lastValue?.payload['aksi'], 'simpan_siap');
     expect(find.text('Soal Tersimpan'), findsOneWidget);
@@ -238,6 +244,7 @@ Map<String, dynamic> _pageJson() => {
       {'kode': 'mudah', 'label': 'Mudah'},
       {'kode': 'sedang', 'label': 'Sedang'},
       {'kode': 'sulit', 'label': 'Sulit'},
+      {'kode': 'sangat_sulit', 'label': 'Sangat Sulit'},
     ],
     'kategori': const [
       {'kode': 'umum', 'label': 'Umum'},

@@ -261,9 +261,9 @@ class BankSoalMobileService
         return [
             ...$data,
             'tahun_pelajaran_id' => filled($data['tahun_pelajaran_id'] ?? null) ? (int) $data['tahun_pelajaran_id'] : null,
-            'tingkat_kesulitan' => $data['tingkat_kesulitan'] ?? 'sedang',
+            'tingkat_kesulitan' => $data['tingkat_kesulitan'],
             'kategori' => $data['kategori'] ?? 'umum',
-            'skor_maksimal' => $data['skor_maksimal'] ?? 1,
+            'skor_maksimal' => SoalCbt::skorUntukKesulitan($data['tingkat_kesulitan']),
             'status' => ($data['aksi'] ?? null) === 'simpan_siap' ? 'siap' : 'draft',
             'aktif' => true,
             'topik' => $this->teksAtauNull($data['topik'] ?? null),

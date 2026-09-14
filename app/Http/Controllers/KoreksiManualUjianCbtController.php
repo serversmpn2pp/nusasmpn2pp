@@ -10,6 +10,7 @@ use App\Models\UjianCbt;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -157,6 +158,26 @@ class KoreksiManualUjianCbtController extends Controller
         });
 
         return back()->with('berhasil', 'Koreksi manual berhasil disimpan.');
+    }
+
+    public function downloadBerkas(UjianCbt $ujianCbt, JawabanPesertaUjianCbt $jawabanPesertaUjianCbt)
+    {
+        abort_unless(
+            (int) $jawabanPesertaUjianCbt->pesertaUjianCbt?->ujian_cbt_id === (int) $ujianCbt->id,
+            404,
+        );
+        abort_unless(
+            $jawabanPesertaUjianCbt->lokasi_file
+                && Storage::disk('local')->exists($jawabanPesertaUjianCbt->lokasi_file),
+            404,
+            'Berkas jawaban tidak ditemukan.',
+        );
+
+        return Storage::disk('local')->download(
+            $jawabanPesertaUjianCbt->lokasi_file,
+            $jawabanPesertaUjianCbt->nama_file_asli ?: 'jawaban-siswa',
+            ['Content-Type' => $jawabanPesertaUjianCbt->tipe_file ?: 'application/octet-stream'],
+        );
     }
 
     private function ambilSoalManual(UjianCbt $ujianCbt)

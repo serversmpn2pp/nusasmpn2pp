@@ -170,7 +170,14 @@ class AsesmenKelasMobileService
     {
         $this->pastikanBolehMengelola($pengguna, $asesmen);
         abort_if($asesmen->status === 'nonaktif', 422, 'Asesmen nonaktif tidak dapat diubah.');
-        $terpilih = collect($soal)->mapWithKeys(fn (array $item) => [(int) $item['id'] => (float) $item['bobot']]);
+        if ($asesmen->pesertaUjianCbt()->whereIn('status', ['sedang_mengerjakan', 'selesai'])->exists()) {
+            throw ValidationException::withMessages([
+                'soal' => 'Pilihan dan skor soal tidak dapat diubah karena asesmen sudah dikerjakan peserta.',
+            ]);
+        }
+        $soalIds = collect($soal)->pluck('id')->map(fn ($id) => (int) $id)->values();
+        $skorSoal = SoalCbt::query()->whereIn('id', $soalIds)->pluck('skor_maksimal', 'id');
+        $terpilih = $soalIds->mapWithKeys(fn ($id) => [$id => (float) $skorSoal->get($id)]);
         if ($terpilih->isNotEmpty()) {
             $jumlahValid = SoalCbt::query()->whereIn('id', $terpilih->keys())
                 ->where('mata_pelajaran_id', $asesmen->mata_pelajaran_id)
@@ -188,6 +195,7 @@ class AsesmenKelasMobileService
                     ['nomor_urut' => $terpilih->keys()->search($soalId) + 1, 'bobot' => $bobot],
                 );
             }
+            $asesmen->update(['jumlah_soal' => $terpilih->count()]);
         });
     }
 

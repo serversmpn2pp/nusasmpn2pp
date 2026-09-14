@@ -129,13 +129,19 @@ class PaketSoalUjianTerpusatController extends Controller
             'aksi' => ['required', Rule::in(['draf', 'simpan', 'terbitkan'])],
             'soal' => ['nullable', 'array'],
             'soal.*.dipilih' => ['nullable', 'boolean'],
-            'soal.*.bobot' => ['nullable', 'numeric', 'min:0.25', 'max:100'],
             'acak_soal' => ['nullable', 'boolean'],
             'acak_jawaban' => ['nullable', 'boolean'],
         ]);
-        $soalTerpilih = collect($data['soal'] ?? [])
+        $soalIdsTerpilih = collect($data['soal'] ?? [])
             ->filter(fn ($item) => filter_var($item['dipilih'] ?? false, FILTER_VALIDATE_BOOLEAN))
-            ->mapWithKeys(fn ($item, $id) => [(int) $id => (float) ($item['bobot'] ?? 1)]);
+            ->keys()
+            ->map(fn ($id) => (int) $id)
+            ->values();
+        $skorSoal = SoalCbt::query()
+            ->whereIn('id', $soalIdsTerpilih)
+            ->pluck('skor_maksimal', 'id');
+        $soalTerpilih = $soalIdsTerpilih
+            ->mapWithKeys(fn ($id) => [$id => (float) $skorSoal->get($id)]);
 
         $this->pastikanPaketBelumDikerjakan($jadwalUjianCbt->ujianCbt);
         $this->pastikanSoalValid($jadwalUjianCbt, $soalTerpilih);

@@ -205,7 +205,7 @@
             <div><dt>Jenis ujian</dt><dd>{{ $ujianCbt->jenisUjianCbt?->nama ?: '-' }}</dd></div>
             <div><dt>Jadwal paket</dt><dd>{{ $ujianCbt->labelWaktu() }}</dd></div>
             <div><dt>Soal tampil</dt><dd>{{ $jumlahSoalTampil }} soal</dd></div>
-            <div><dt>Total bobot</dt><dd>{{ $formatAngka($bobotTotal) }}</dd></div>
+            <div><dt>Total skor maksimal</dt><dd>{{ $formatAngka($bobotTotal) }}</dd></div>
             <div><dt>Soal otomatis</dt><dd>{{ $jumlahSoalOtomatis }}</dd></div>
             <div><dt>Soal manual</dt><dd>{{ $jumlahSoalManual }}</dd></div>
         </dl>

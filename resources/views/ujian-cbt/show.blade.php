@@ -152,7 +152,7 @@
                         <p class="stat-value">{{ $ujianCbt->jumlah_soal }}</p>
                     </div>
                     <div class="panel stat">
-                        <p class="stat-label">Total bobot</p>
+                        <p class="stat-label">Total skor maksimal</p>
                         <p class="stat-value">{{ number_format($totalBobotPaket, 2, ',', '.') }}</p>
                     </div>
                 </div>
@@ -165,7 +165,7 @@
                                 <th>Soal</th>
                                 <th>Jenis</th>
                                 <th>Kesulitan</th>
-                                <th>Bobot</th>
+                                <th>Skor</th>
                             </tr>
                         </thead>
                         <tbody>

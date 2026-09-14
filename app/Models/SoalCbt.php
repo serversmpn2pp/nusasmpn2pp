@@ -25,6 +25,14 @@ class SoalCbt extends Model
         'mudah' => 'Mudah',
         'sedang' => 'Sedang',
         'sulit' => 'Sulit',
+        'sangat_sulit' => 'Sangat Sulit',
+    ];
+
+    public const SKOR_KESULITAN = [
+        'mudah' => 1,
+        'sedang' => 2,
+        'sulit' => 3,
+        'sangat_sulit' => 4,
     ];
 
     public const DAFTAR_KATEGORI = [
@@ -104,6 +112,11 @@ class SoalCbt extends Model
     public function labelKesulitan(): string
     {
         return self::DAFTAR_KESULITAN[$this->tingkat_kesulitan] ?? str($this->tingkat_kesulitan)->headline()->toString();
+    }
+
+    public static function skorUntukKesulitan(?string $tingkatKesulitan): int
+    {
+        return self::SKOR_KESULITAN[$tingkatKesulitan] ?? 0;
     }
 
     public function labelKategori(): string

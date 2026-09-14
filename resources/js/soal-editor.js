@@ -291,10 +291,14 @@ const appendAnswerPreview = (container, type) => {
         });
     } else if (type === 'menjodohkan') {
         document.querySelectorAll('[name="pasangan_kiri[]"]').forEach((input, index) => {
-            if (!input.value.trim()) return;
+            const right = document.querySelectorAll('[name="pasangan_kanan[]"]')[index]?.value.trim() || '';
+            if (!input.value.trim() && !right) return;
             const row = document.createElement('div');
             row.className = 'question-preview-option';
-            row.append(createText('b', String(index + 1)), createText('span', input.value));
+            row.append(
+                createText('b', String(index + 1)),
+                createText('span', `${input.value.trim() || 'Pernyataan belum diisi'} -> ${right || 'Pasangan belum diisi'}`),
+            );
             options.append(row);
         });
     } else {

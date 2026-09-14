@@ -33,9 +33,9 @@
 
         .package-question-controls {
             display: grid;
-            grid-template-columns: 110px 110px;
+            grid-template-columns: 110px;
             gap: 10px;
-            min-width: 230px;
+            min-width: 110px;
         }
 
         .package-question-meta {
@@ -51,7 +51,7 @@
             }
 
             .package-question-controls {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: minmax(0, 1fr);
                 min-width: 0;
                 margin-top: 12px;
             }
@@ -87,12 +87,12 @@
             <p class="stat-value" data-selected-count>{{ $jumlahDipilih }}</p>
         </div>
         <div class="panel stat active">
-            <p class="stat-label">Target tampil</p>
+            <p class="stat-label">Jumlah soal</p>
             <p class="stat-value">{{ $ujianCbt->jumlah_soal }}</p>
         </div>
         <div class="panel stat">
-            <p class="stat-label">Total bobot</p>
-            <p class="stat-value">{{ number_format($totalBobot, 2, ',', '.') }}</p>
+            <p class="stat-label">Total skor maksimal</p>
+            <p class="stat-value" data-selected-score>{{ number_format($totalBobot, 2, ',', '.') }}</p>
         </div>
     </div>
 
@@ -104,7 +104,8 @@
             <div><dt>Jenis</dt><dd>{{ $ujianCbt->jenisUjianCbt?->nama ?: '-' }}</dd></div>
             <div><dt>Pengacakan</dt><dd>{{ $ujianCbt->acak_soal ? 'Soal diacak' : 'Urut nomor' }}</dd></div>
         </dl>
-        <p class="help-text" style="margin-top: 12px;">Jika soal terpilih lebih banyak dari target tampil dan acak soal aktif, NUSA dapat memakai daftar ini sebagai kolam soal saat modul pengerjaan siswa dibuat.</p>
+        <p class="help-text" style="margin-top: 12px;">Jumlah soal ujian mengikuti banyaknya soal yang dipilih pada halaman ini.</p>
+        <p class="help-text" style="margin-top: 6px;">Skor ditentukan otomatis: Mudah 1, Sedang 2, Sulit 3, dan Sangat Sulit 4.</p>
     </section>
 
     <section class="panel panel-pad" style="margin-bottom: 24px;">
@@ -144,7 +145,7 @@
                             <th>Jenis</th>
                             <th>Kesulitan</th>
                             <th>Nomor</th>
-                            <th>Bobot</th>
+                            <th>Skor</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -153,14 +154,13 @@
                                 $relasi = $soalDipilih[$item->id] ?? null;
                                 $dipilih = (bool) $relasi;
                                 $nomorUrut = old("soal.{$item->id}.nomor_urut", $relasi?->nomor_urut);
-                                $bobot = old("soal.{$item->id}.bobot", $relasi?->bobot ?? $item->skor_maksimal);
                                 $bisaDipilih = $item->aktif && $item->status === 'siap';
                             @endphp
                             <tr>
                                 <td>
                                     <input type="hidden" name="soal[{{ $item->id }}][dipilih]" value="0">
                                     <label class="package-question-check" for="soal_{{ $item->id }}">
-                                        <input id="soal_{{ $item->id }}" type="checkbox" name="soal[{{ $item->id }}][dipilih]" value="1" @checked($dipilih) @disabled(! $bisaDipilih) data-question-check data-question-locked="{{ $bisaDipilih ? '0' : '1' }}">
+                                        <input id="soal_{{ $item->id }}" type="checkbox" name="soal[{{ $item->id }}][dipilih]" value="1" @checked($dipilih) @disabled(! $bisaDipilih) data-question-check data-question-score="{{ (float) $item->skor_maksimal }}" data-question-locked="{{ $bisaDipilih ? '0' : '1' }}">
                                         <span>
                                             {{ $item->kode }}
                                             <span class="person-meta" style="display:block; font-weight:500;">{{ str(strip_tags($item->pertanyaan))->limit(100) }}</span>
@@ -176,7 +176,7 @@
                                     <input name="soal[{{ $item->id }}][nomor_urut]" type="number" min="1" max="999" value="{{ $nomorUrut }}" class="input" data-question-input>
                                 </td>
                                 <td>
-                                    <input name="soal[{{ $item->id }}][bobot]" type="number" min="0.25" max="100" step="0.25" value="{{ $bobot }}" class="input" data-question-input>
+                                    <strong>{{ number_format((float) $item->skor_maksimal, 0, ',', '.') }}</strong>
                                 </td>
                             </tr>
                         @empty
@@ -194,14 +194,13 @@
                         $relasi = $soalDipilih[$item->id] ?? null;
                         $dipilih = (bool) $relasi;
                         $nomorUrut = old("soal.{$item->id}.nomor_urut", $relasi?->nomor_urut);
-                        $bobot = old("soal.{$item->id}.bobot", $relasi?->bobot ?? $item->skor_maksimal);
                         $bisaDipilih = $item->aktif && $item->status === 'siap';
                     @endphp
                     <article class="mobile-card">
                         <input type="hidden" name="soal[{{ $item->id }}][dipilih]" value="0">
                         <div class="package-question-head">
                             <label class="package-question-check" for="mobile_soal_{{ $item->id }}">
-                                <input id="mobile_soal_{{ $item->id }}" type="checkbox" name="soal[{{ $item->id }}][dipilih]" value="1" @checked($dipilih) @disabled(! $bisaDipilih) data-question-check data-question-locked="{{ $bisaDipilih ? '0' : '1' }}">
+                                <input id="mobile_soal_{{ $item->id }}" type="checkbox" name="soal[{{ $item->id }}][dipilih]" value="1" @checked($dipilih) @disabled(! $bisaDipilih) data-question-check data-question-score="{{ (float) $item->skor_maksimal }}" data-question-locked="{{ $bisaDipilih ? '0' : '1' }}">
                                 <span>
                                     {{ $item->kode }}
                                     <span class="person-meta" style="display:block; font-weight:500;">{{ str(strip_tags($item->pertanyaan))->limit(120) }}</span>
@@ -212,15 +211,12 @@
                                     <label>Nomor</label>
                                     <input name="soal[{{ $item->id }}][nomor_urut]" type="number" min="1" max="999" value="{{ $nomorUrut }}" class="input" data-question-input>
                                 </div>
-                                <div class="field">
-                                    <label>Bobot</label>
-                                    <input name="soal[{{ $item->id }}][bobot]" type="number" min="0.25" max="100" step="0.25" value="{{ $bobot }}" class="input" data-question-input>
-                                </div>
                             </div>
                         </div>
                         <div class="package-question-meta">
                             <span class="badge badge-muted">{{ $item->labelJenis() }}</span>
                             <span class="badge badge-muted">{{ $item->labelKesulitan() }}</span>
+                            <span class="badge badge-muted">Skor {{ number_format((float) $item->skor_maksimal, 0, ',', '.') }}</span>
                             <span class="badge {{ $bisaDipilih ? 'badge-active' : 'badge-inactive' }}">{{ $item->labelStatus() }}</span>
                         </div>
                     </article>
@@ -240,6 +236,7 @@
         (() => {
             const checks = document.querySelectorAll('[data-question-check]');
             const counter = document.querySelector('[data-selected-count]');
+            const score = document.querySelector('[data-selected-score]');
             const layouts = document.querySelectorAll('[data-form-layout]');
             const media = window.matchMedia('(max-width: 760px)');
 
@@ -253,6 +250,7 @@
 
             const refresh = () => {
                 let total = 0;
+                let totalScore = 0;
 
                 checks.forEach((check) => {
                     const container = check.closest('tr') || check.closest('.mobile-card');
@@ -268,6 +266,7 @@
 
                     if (aktif && check.checked) {
                         total += 1;
+                        totalScore += Number(check.dataset.questionScore || 0);
                     }
 
                     inputs.forEach((input) => {
@@ -277,6 +276,9 @@
 
                 if (counter) {
                     counter.textContent = total;
+                }
+                if (score) {
+                    score.textContent = totalScore.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }
             };
 

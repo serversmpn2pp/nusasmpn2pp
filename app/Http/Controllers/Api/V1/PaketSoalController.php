@@ -35,7 +35,7 @@ class PaketSoalController extends Controller
             'aksi' => ['required', Rule::in(['draf', 'simpan', 'terbitkan'])],
             'soal' => ['nullable', 'array', 'max:200'],
             'soal.*.id' => ['required', 'integer', Rule::exists('soal_cbt', 'id')],
-            'soal.*.bobot' => ['required', 'numeric', 'min:0.25', 'max:100'],
+            'soal.*.bobot' => ['nullable', 'numeric'],
             'acak_soal' => ['required', 'boolean'],
             'acak_jawaban' => ['required', 'boolean'],
         ]);

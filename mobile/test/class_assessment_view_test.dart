@@ -105,7 +105,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('guru menyimpan urutan dan bobot soal asesmen', (tester) async {
+  testWidgets('guru menyimpan urutan dan skor otomatis soal asesmen', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(360, 760);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -134,7 +136,7 @@ void main() {
 
     expect(remote.saveQuestionCalls, 1);
     expect(remote.lastQuestions.single.id, 21);
-    expect(remote.lastQuestions.single.weight, 2.5);
+    expect(remote.lastQuestions.single.weight, 2);
     expect(tester.takeException(), isNull);
   });
 }
@@ -292,7 +294,7 @@ Map<String, dynamic> _questionsJson() => {
       'topik': 'Persamaan',
       'materi': 'Aljabar',
       'pertanyaan': 'Tentukan nilai x.',
-      'skor_maksimal': 2.5,
+      'skor_maksimal': 2,
       'dipilih': true,
       'bobot': 2.5,
       'nomor_urut': 1,

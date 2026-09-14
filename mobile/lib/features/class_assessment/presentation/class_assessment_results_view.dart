@@ -347,7 +347,7 @@ class _TargetCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${data.questionCount} soal · bobot ${assessmentNumber(data.totalWeight)}',
+                '${data.questionCount} soal · total skor ${assessmentNumber(data.totalWeight)}',
                 style: const TextStyle(
                   color: NusaColors.textSecondary,
                   fontSize: 9.5,

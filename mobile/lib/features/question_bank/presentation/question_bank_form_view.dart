@@ -29,7 +29,6 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
   final _learningObjective = TextEditingController();
   final _stimulus = TextEditingController();
   final _question = TextEditingController();
-  final _maximumScore = TextEditingController(text: '1');
   final _explanation = TextEditingController();
   final _textKey = TextEditingController();
   final _rubric = TextEditingController();
@@ -48,7 +47,7 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
 
   String? _contextKey;
   String _type = 'pilihan_ganda';
-  String _difficulty = 'sedang';
+  String? _difficulty;
   String _category = 'umum';
   String? _singleAnswer;
   final Set<String> _multipleAnswers = {};
@@ -78,7 +77,6 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
       _learningObjective,
       _stimulus,
       _question,
-      _maximumScore,
       _explanation,
       _textKey,
       _rubric,
@@ -176,7 +174,7 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
   Widget _buildIdentity(QuestionBankReferences references) => _SectionCard(
     icon: Icons.tune_rounded,
     title: 'Identitas Soal',
-    subtitle: 'Tentukan bank, bentuk, dan bobot soal.',
+    subtitle: 'Tentukan bank, bentuk, dan tingkat kesulitan soal.',
     children: [
       NusaDropdownField<String>(
         fieldKey: const Key('question-form-context'),
@@ -218,7 +216,10 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
           final difficulty = NusaDropdownField<String>(
             fieldKey: const Key('question-form-difficulty'),
             value: _difficulty,
-            decoration: const InputDecoration(labelText: 'Kesulitan'),
+            decoration: const InputDecoration(
+              labelText: 'Tingkat kesulitan *',
+              hintText: 'Wajib dipilih',
+            ),
             options: [
               for (final item in references.difficulties)
                 NusaDropdownOption(value: item.code, label: item.label),
@@ -260,19 +261,17 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
         },
       ),
       const SizedBox(height: 10),
-      _TextInput(
-        fieldKey: const Key('question-form-score'),
-        controller: _maximumScore,
-        label: 'Skor maksimal *',
-        icon: Icons.stars_rounded,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        validator: (value) {
-          final number = double.tryParse((value ?? '').replaceAll(',', '.'));
-          if (number == null || number < 0.25 || number > 100) {
-            return 'Isi skor antara 0,25 dan 100.';
-          }
-          return null;
-        },
+      InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Skor otomatis',
+          prefixIcon: Icon(Icons.stars_rounded),
+        ),
+        child: Text(
+          _difficultyScore == null
+              ? 'Pilih tingkat kesulitan'
+              : '${_difficultyScore!} poin',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
     ],
   );
@@ -658,6 +657,14 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
     _ => 'Lengkapi pengaturan jawaban.',
   };
 
+  int? get _difficultyScore => switch (_difficulty) {
+    'mudah' => 1,
+    'sedang' => 2,
+    'sulit' => 3,
+    'sangat_sulit' => 4,
+    _ => null,
+  };
+
   void _initializeAfterBuild(BankQuestionDetail detail) {
     if (_initialized) return;
     _initialized = true;
@@ -676,7 +683,6 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
         _setText(_learningObjective, detail.learningObjective);
         _setText(_stimulus, detail.stimulus);
         _setText(_question, detail.question);
-        _setText(_maximumScore, _number(detail.maximumScore));
         _setText(_explanation, detail.explanation);
         _setText(_textKey, detail.answer.textKey);
         _setText(_rubric, detail.answer.rubric);
@@ -820,6 +826,10 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
       _showMessage('Pilih mata pelajaran dan tingkat terlebih dahulu.');
       return;
     }
+    if (_difficulty == null) {
+      _showMessage('Pilih tingkat kesulitan soal terlebih dahulu.');
+      return;
+    }
     final answerError = _validateAnswer();
     if (answerError != null) {
       _showMessage(answerError);
@@ -840,9 +850,6 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
         'tujuan_pembelajaran': _nullableText(_learningObjective),
         'stimulus': _nullableText(_stimulus),
         'pertanyaan': _question.text.trim(),
-        'skor_maksimal': double.parse(
-          _maximumScore.text.trim().replaceAll(',', '.'),
-        ),
         'pembahasan': _nullableText(_explanation),
         'aksi': action,
         'opsi': {
@@ -1234,9 +1241,6 @@ String? _nullableText(TextEditingController controller) {
   final value = controller.text.trim();
   return value.isEmpty ? null : value;
 }
-
-String _number(double value) =>
-    value == value.roundToDouble() ? '${value.toInt()}' : '$value';
 
 String _message(Object error) => error is AppException
     ? error.message

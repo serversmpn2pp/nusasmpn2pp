@@ -61,11 +61,12 @@ class SoalUjianCbtController extends Controller
 
     public function update(Request $request, UjianCbt $ujianCbt)
     {
+        $this->pastikanPaketBelumDikerjakan($ujianCbt);
+
         $data = $request->validate([
             'soal' => ['nullable', 'array'],
             'soal.*.dipilih' => ['nullable', 'boolean'],
             'soal.*.nomor_urut' => ['nullable', 'integer', 'min:1', 'max:999'],
-            'soal.*.bobot' => ['nullable', 'numeric', 'min:0.25', 'max:100'],
         ]);
 
         $barisTerpilih = collect($data['soal'] ?? [])
@@ -73,13 +74,15 @@ class SoalUjianCbtController extends Controller
             ->mapWithKeys(fn ($item, $soalId) => [
                 (int) $soalId => [
                     'nomor_urut' => filled($item['nomor_urut'] ?? null) ? (int) $item['nomor_urut'] : null,
-                    'bobot' => filled($item['bobot'] ?? null) ? (float) $item['bobot'] : 1,
                 ],
             ]);
 
         $this->pastikanSoalCocokDenganPaket($ujianCbt, $barisTerpilih->keys()->all());
+        $skorSoal = SoalCbt::query()
+            ->whereIn('id', $barisTerpilih->keys())
+            ->pluck('skor_maksimal', 'id');
 
-        DB::transaction(function () use ($ujianCbt, $barisTerpilih) {
+        DB::transaction(function () use ($ujianCbt, $barisTerpilih, $skorSoal) {
             $ujianCbt->soalUjianCbt()
                 ->whereNotIn('soal_cbt_id', $barisTerpilih->keys())
                 ->delete();
@@ -89,10 +92,12 @@ class SoalUjianCbtController extends Controller
                     ['soal_cbt_id' => $soalId],
                     [
                         'nomor_urut' => $item['nomor_urut'],
-                        'bobot' => $item['bobot'],
+                        'bobot' => (float) $skorSoal->get($soalId),
                     ],
                 );
             }
+
+            $ujianCbt->update(['jumlah_soal' => $barisTerpilih->count()]);
         });
 
         return redirect()
@@ -100,6 +105,15 @@ class SoalUjianCbtController extends Controller
             ->with('berhasil', $ujianCbt->asesmenKelas()
                 ? 'Pilihan soal asesmen berhasil disimpan.'
                 : 'Soal paket CBT berhasil diperbarui.');
+    }
+
+    private function pastikanPaketBelumDikerjakan(UjianCbt $ujianCbt): void
+    {
+        if ($ujianCbt->pesertaUjianCbt()->whereIn('status', ['sedang_mengerjakan', 'selesai'])->exists()) {
+            throw ValidationException::withMessages([
+                'soal' => 'Pilihan dan skor soal tidak dapat diubah karena ujian sudah dikerjakan peserta.',
+            ]);
+        }
     }
 
     private function pastikanSoalCocokDenganPaket(UjianCbt $ujianCbt, array $soalIds): void

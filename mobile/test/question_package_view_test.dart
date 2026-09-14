@@ -8,13 +8,13 @@ import 'package:nusa/features/question_package/presentation/question_package_det
 import 'package:nusa/features/question_package/presentation/question_package_list_view.dart';
 
 void main() {
-  test('domain membaca jadwal paket, urutan, bobot, dan akses', () {
+  test('domain membaca jadwal paket, urutan, skor, dan akses', () {
     final page = QuestionPackagePage.fromJson(_pageJson());
     final detail = QuestionPackageDetail.fromJson(_detailJson());
     expect(page.summary.unbuilt, 1);
     expect(page.items.single.event.name, 'STS Ganjil');
     expect(detail.questions.single.order, 1);
-    expect(detail.questions.single.weight, 2.5);
+    expect(detail.questions.single.weight, 2);
     expect(detail.access.canEdit, isTrue);
   });
 
@@ -81,7 +81,7 @@ void main() {
     expect(remote.saveCalls, 1);
     expect(remote.lastPayload?.action, 'terbitkan');
     expect(remote.lastPayload?.questions.single.id, 21);
-    expect(remote.lastPayload?.questions.single.weight, 2.5);
+    expect(remote.lastPayload?.questions.single.weight, 2);
     expect(tester.takeException(), isNull);
   });
 }
@@ -129,7 +129,7 @@ Map<String, dynamic> _scheduleJson() => {
   'status': 'draft',
   'label_status': 'Masih draf',
   'jumlah_soal': 1,
-  'total_bobot': 2.5,
+  'total_bobot': 2,
   'dapat_kelola': true,
 };
 
@@ -186,9 +186,9 @@ Map<String, dynamic> _detailJson({bool ready = false}) => {
       'topik': 'Bilangan',
       'materi': 'Penjumlahan',
       'pertanyaan': 'Berapakah hasil 2 + 2?',
-      'skor_maksimal': 2.5,
+      'skor_maksimal': 2,
       'dipilih': true,
-      'bobot': 2.5,
+      'bobot': 2,
       'nomor_urut': 1,
       'dapat_dipilih': true,
       'jawaban': 'B',

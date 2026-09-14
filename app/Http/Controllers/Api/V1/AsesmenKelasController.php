@@ -71,7 +71,7 @@ class AsesmenKelasController extends Controller
         $data = $request->validate([
             'soal' => ['nullable', 'array', 'max:200'],
             'soal.*.id' => ['required', 'integer', Rule::exists('soal_cbt', 'id')],
-            'soal.*.bobot' => ['required', 'numeric', 'min:0.25', 'max:100'],
+            'soal.*.bobot' => ['nullable', 'numeric'],
         ]);
         $service->simpanSoal($request->user(), $ujianCbt, $data['soal'] ?? []);
 

@@ -38,6 +38,15 @@ class SoalCbtTest extends TestCase
             ->assertOk()
             ->assertSee('Tambah soal')
             ->assertSee('Isi jawaban dan tentukan kunci')
+            ->assertSee('Untuk nama, istilah, atau jawaban pendek')
+            ->assertSee('Kunci diisi angka saja; koma dan titik desimal dianggap sama')
+            ->assertSee('Cara mengisi Isian Singkat')
+            ->assertSee('Cara mengisi Numerik')
+            ->assertSee('Tingkat kesulitan')
+            ->assertSee('Wajib dipilih')
+            ->assertSee('Sangat Sulit')
+            ->assertSee('Skor 4')
+            ->assertSee('name="tingkat_kesulitan"', false)
             ->assertSee('Tambahkan pendukung soal')
             ->assertSee('Pratinjau soal')
             ->assertSee('name="gambar_soal"', false)
@@ -57,6 +66,7 @@ class SoalCbtTest extends TestCase
         $soalCbt = SoalCbt::where('kode', 'SOAL-CBT-UJI-001')->firstOrFail();
 
         $this->assertSame('pilihan_ganda', $soalCbt->jenis_soal);
+        $this->assertSame('2.00', $soalCbt->skor_maksimal);
         $this->assertSame('B', $soalCbt->kunci_jawaban['jawaban']);
         $this->assertSame('2 Hz', $soalCbt->opsi['pilihan']['B']);
 
@@ -157,21 +167,32 @@ class SoalCbtTest extends TestCase
         [, $mataPelajaran] = $this->buatDataAkademik();
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
 
+        $dataSoal = [
+            'mata_pelajaran_id' => $mataPelajaran->id,
+            'tingkat' => 8,
+            'jenis_soal' => 'pilihan_ganda',
+            'topik' => 'Getaran',
+            'pertanyaan' => 'Satuan frekuensi adalah ....',
+            'opsi' => [
+                'A' => 'Meter',
+                'B' => 'Hertz',
+                'C' => 'Sekon',
+                'D' => 'Newton',
+            ],
+            'kunci_pg' => 'B',
+            'aksi' => 'simpan_lanjut',
+        ];
+
+        $this->actingAs($administrator)
+            ->post(route('soal-cbt.store'), $dataSoal)
+            ->assertSessionHasErrors('tingkat_kesulitan');
+        $this->assertDatabaseMissing('soal_cbt', ['pertanyaan' => 'Satuan frekuensi adalah ....']);
+
         $response = $this->actingAs($administrator)
             ->post(route('soal-cbt.store'), [
-                'mata_pelajaran_id' => $mataPelajaran->id,
-                'tingkat' => 8,
-                'jenis_soal' => 'pilihan_ganda',
-                'topik' => 'Getaran',
-                'pertanyaan' => 'Satuan frekuensi adalah ....',
-                'opsi' => [
-                    'A' => 'Meter',
-                    'B' => 'Hertz',
-                    'C' => 'Sekon',
-                    'D' => 'Newton',
-                ],
-                'kunci_pg' => 'B',
-                'aksi' => 'simpan_lanjut',
+                ...$dataSoal,
+                'tingkat_kesulitan' => 'sedang',
+                'skor_maksimal' => 99,
             ]);
 
         $soal = SoalCbt::where('pertanyaan', 'Satuan frekuensi adalah ....')->firstOrFail();
@@ -180,7 +201,6 @@ class SoalCbtTest extends TestCase
             'mata_pelajaran_id' => $mataPelajaran->id,
             'tingkat' => 8,
             'jenis_soal' => 'pilihan_ganda',
-            'tingkat_kesulitan' => 'sedang',
             'kategori' => 'umum',
             'topik' => 'Getaran',
             'materi' => null,
@@ -189,7 +209,7 @@ class SoalCbtTest extends TestCase
         $this->assertMatchesRegularExpression('/^SOAL-CBT-\d{8}-\d{3}$/', $soal->kode);
         $this->assertNull($soal->tahun_pelajaran_id);
         $this->assertSame('siap', $soal->status);
-        $this->assertSame('1.00', $soal->skor_maksimal);
+        $this->assertSame('2.00', $soal->skor_maksimal);
         $this->assertTrue($soal->aktif);
 
         $this->actingAs($administrator)
@@ -197,6 +217,32 @@ class SoalCbtTest extends TestCase
             ->assertOk()
             ->assertSee('Matematika Kelas VIII')
             ->assertSee('value="Getaran"', false);
+    }
+
+    public function test_skor_soal_ditetapkan_otomatis_dari_tingkat_kesulitan(): void
+    {
+        [$tahunPelajaran, $mataPelajaran] = $this->buatDataAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $daftarSkor = [
+            'mudah' => '1.00',
+            'sedang' => '2.00',
+            'sulit' => '3.00',
+            'sangat_sulit' => '4.00',
+        ];
+
+        foreach ($daftarSkor as $tingkatKesulitan => $skor) {
+            $kode = 'SOAL-SKOR-'.strtoupper(str_replace('_', '-', $tingkatKesulitan));
+
+            $this->actingAs($administrator)
+                ->post(route('soal-cbt.store'), [
+                    ...$this->dataSoal($tahunPelajaran, $mataPelajaran, $kode),
+                    'tingkat_kesulitan' => $tingkatKesulitan,
+                    'skor_maksimal' => 99,
+                ])
+                ->assertRedirect();
+
+            $this->assertSame($skor, SoalCbt::where('kode', $kode)->value('skor_maksimal'));
+        }
     }
 
     public function test_guru_mapel_hanya_dapat_mengelola_soal_mapel_yang_diajar(): void
@@ -295,7 +341,6 @@ class SoalCbtTest extends TestCase
             ],
             'kunci_pg' => 'B',
             'kunci_pgk' => [],
-            'skor_maksimal' => 1,
             'pembahasan' => 'Frekuensi adalah jumlah getaran dibagi waktu.',
             'status' => 'draft',
             'aktif' => '1',

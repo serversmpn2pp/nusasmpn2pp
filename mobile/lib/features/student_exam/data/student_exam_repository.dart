@@ -37,6 +37,19 @@ class StudentExamRepository {
     device: await _deviceIdentity.readName(),
   );
 
+  Future<StudentExamFileSaveResult> uploadAnswerFile({
+    required int participantId,
+    required int questionId,
+    required StudentExamPickedFile file,
+    required bool doubtful,
+  }) async => _remote.uploadAnswerFile(
+    participantId: participantId,
+    questionId: questionId,
+    file: file,
+    doubtful: doubtful,
+    device: await _deviceIdentity.readName(),
+  );
+
   Future<StudentExamSession> finish(int participantId) async => _remote.finish(
     participantId: participantId,
     device: await _deviceIdentity.readName(),
