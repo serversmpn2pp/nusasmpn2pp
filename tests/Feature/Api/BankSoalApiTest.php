@@ -128,6 +128,7 @@ class BankSoalApiTest extends TestCase
                     ['kiri' => 'Indonesia', 'kanan' => 'Jakarta'],
                     ['kiri' => 'Jepang', 'kanan' => 'Tokyo'],
                 ],
+                'pengecoh_menjodohkan' => ['Seoul'],
             ],
             'isian_singkat' => ['kunci_teks' => 'Hertz'],
             'numerik' => ['kunci_teks' => '2'],
@@ -141,15 +142,21 @@ class BankSoalApiTest extends TestCase
                 'pertanyaan' => 'Pertanyaan untuk '.$jenis,
                 ...$tambahan,
             ]);
-            $this->withToken($token)
+            $response = $this->withToken($token)
                 ->postJson(route('api.v1.bank-soal.store'), ['payload' => json_encode($payload)])
                 ->assertCreated()
                 ->assertJsonPath('data.jenis_soal', $jenis);
+
+            if ($jenis === 'menjodohkan') {
+                $response->assertJsonPath('data.jawaban.pengecoh_menjodohkan.0', 'Seoul');
+            }
         }
 
         $this->assertSame(6, SoalCbt::query()->count());
         $this->assertSame(false, data_get(SoalCbt::where('jenis_soal', 'benar_salah')->firstOrFail()->kunci_jawaban, 'jawaban.2'));
-        $this->assertSame('Tokyo', data_get(SoalCbt::where('jenis_soal', 'menjodohkan')->firstOrFail()->kunci_jawaban, 'jawaban.2'));
+        $soalMenjodohkan = SoalCbt::where('jenis_soal', 'menjodohkan')->firstOrFail();
+        $this->assertSame('Tokyo', data_get($soalMenjodohkan->kunci_jawaban, 'jawaban.2'));
+        $this->assertSame(['Seoul'], data_get($soalMenjodohkan->opsi, 'pengecoh'));
     }
 
     public function test_tingkat_kesulitan_wajib_diisi_pada_api_bank_soal(): void

@@ -39,8 +39,12 @@
     $jawabanBs = array_pad(old('jawaban_bs', $jawabanBsAwal), 4, 'benar');
 
     $pasanganAwal = collect($soalCbt?->opsi['pasangan'] ?? []);
-    $pasanganKiri = array_pad(old('pasangan_kiri', $pasanganAwal->pluck('kiri')->all()), 4, '');
-    $pasanganKanan = array_pad(old('pasangan_kanan', $pasanganAwal->pluck('kanan')->all()), 4, '');
+    $pasanganKiriAwal = array_values((array) old('pasangan_kiri', $pasanganAwal->pluck('kiri')->all()));
+    $pasanganKananAwal = array_values((array) old('pasangan_kanan', $pasanganAwal->pluck('kanan')->all()));
+    $jumlahPasangan = min(10, max(4, count($pasanganKiriAwal), count($pasanganKananAwal)));
+    $pasanganKiri = array_pad($pasanganKiriAwal, $jumlahPasangan, '');
+    $pasanganKanan = array_pad($pasanganKananAwal, $jumlahPasangan, '');
+    $pengecohMenjodohkan = array_values((array) old('pengecoh_menjodohkan', $soalCbt?->opsi['pengecoh'] ?? []));
     $kunciTeks = old('kunci_teks', is_string($jawaban) ? $jawaban : '');
     $rubrikTeks = old('rubrik_teks', $soalCbt?->rubrik['catatan'] ?? '');
     $mediaSoal = $soalCbt?->media ?? [];
@@ -154,6 +158,16 @@
     .soal-option-row { border: 1px solid var(--line); border-radius: 7px; padding: 12px; background: #fff; }
     .soal-option-label { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; color: var(--primary-dark); font-weight: 800; }
     .soal-option-label input { flex: 0 0 auto; }
+    .matching-builder { display: grid; gap: 18px; }
+    .matching-group + .matching-group { border-top: 1px solid var(--line); padding-top: 18px; }
+    .matching-group-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 11px; }
+    .matching-group-head h3 { margin: 0; color: var(--dark); font-size: .9rem; }
+    .matching-group-head p { margin: 4px 0 0; color: var(--muted); font-size: .76rem; line-height: 1.45; }
+    .matching-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .matching-row-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .matching-row-head strong { color: var(--primary-dark); font-size: .8rem; }
+    .matching-row-remove { min-height: 32px; padding: 5px 9px; font-size: .72rem; }
+    .matching-summary { margin: 0; border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 10px 12px; color: var(--dark); font-size: .78rem; font-weight: 800; }
     .question-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding-bottom: 8px; }
 
     @media (max-width: 920px) {
@@ -163,7 +177,7 @@
     }
 
     @media (max-width: 680px) {
-        .question-type-grid, .question-difficulty-grid, .question-main-grid, .soal-option-grid { grid-template-columns: 1fr; }
+        .question-type-grid, .question-difficulty-grid, .question-main-grid, .soal-option-grid, .matching-list { grid-template-columns: 1fr; }
         .question-image-editor { grid-template-columns: 1fr; }
         .question-media-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
         .question-media-toolbar-copy { grid-column: 1 / -1; margin: 0; }
@@ -429,7 +443,7 @@
             <div><h2>Isi jawaban dan tentukan kunci</h2><p>Bentuk kolom berikut otomatis mengikuti jenis soal yang dipilih.</p></div>
         </div>
 
-        @foreach (['opsi', 'kunci_pg', 'kunci_pgk', 'pernyataan', 'pasangan_kiri', 'kunci_teks'] as $field)
+        @foreach (['opsi', 'kunci_pg', 'kunci_pgk', 'pernyataan', 'pasangan_kiri', 'pengecoh_menjodohkan', 'kunci_teks'] as $field)
             @error($field) <p class="error-text" style="margin-bottom: 10px;">{{ $message }}</p> @enderror
         @endforeach
 
@@ -465,16 +479,82 @@
         </div>
 
         <div class="soal-answer-section" data-answer-section="menjodohkan">
-            <div class="soal-option-grid">
-                @foreach (range(0, 3) as $index)
-                    <div class="soal-option-row">
-                        <label for="pasangan_kiri_{{ $index }}">Pernyataan {{ $index + 1 }}</label>
-                        <textarea id="pasangan_kiri_{{ $index }}" name="pasangan_kiri[]" class="textarea" rows="2">{{ $pasanganKiri[$index] ?? '' }}</textarea>
-                        <label for="pasangan_kanan_{{ $index }}" style="margin-top: 8px;">Pasangan jawaban</label>
-                        <textarea id="pasangan_kanan_{{ $index }}" name="pasangan_kanan[]" class="textarea" rows="2">{{ $pasanganKanan[$index] ?? '' }}</textarea>
-                    </div>
-                @endforeach
+            <div class="question-answer-guidance">
+                <strong>Cara membuat soal Menjodohkan</strong>
+                <span>Isi pasangan yang benar terlebih dahulu. Jawaban pengecoh boleh ditambahkan agar pilihan jawaban lebih banyak daripada jumlah pernyataan.</span>
             </div>
+            <div class="matching-builder">
+                <section class="matching-group">
+                    <div class="matching-group-head">
+                        <div>
+                            <h3>Pasangan benar</h3>
+                            <p>Setiap baris menjadi satu kunci jawaban dan ikut dihitung dalam skor.</p>
+                        </div>
+                        <button type="button" class="button button-muted" data-add-matching-pair>Tambah pasangan</button>
+                    </div>
+                    <div class="matching-list" data-matching-pairs>
+                        @foreach ($pasanganKiri as $index => $kiri)
+                            <div class="soal-option-row" data-matching-pair>
+                                <div class="matching-row-head">
+                                    <strong data-matching-pair-title>Pasangan {{ $index + 1 }}</strong>
+                                    <button type="button" class="button button-muted matching-row-remove" data-remove-matching-pair>Hapus</button>
+                                </div>
+                                <label for="pasangan_kiri_{{ $index }}">Pernyataan</label>
+                                <textarea id="pasangan_kiri_{{ $index }}" name="pasangan_kiri[]" class="textarea" rows="2">{{ $kiri }}</textarea>
+                                <label for="pasangan_kanan_{{ $index }}" style="margin-top: 8px;">Jawaban yang benar</label>
+                                <textarea id="pasangan_kanan_{{ $index }}" name="pasangan_kanan[]" class="textarea" rows="2">{{ $pasanganKanan[$index] ?? '' }}</textarea>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+
+                <section class="matching-group">
+                    <div class="matching-group-head">
+                        <div>
+                            <h3>Jawaban pengecoh</h3>
+                            <p>Opsional dan tidak menjadi kunci. Contoh: 4 pasangan benar ditambah 1 pengecoh menghasilkan 5 pilihan jawaban.</p>
+                        </div>
+                        <button type="button" class="button button-muted" data-add-matching-distractor>Tambah pengecoh</button>
+                    </div>
+                    <div class="matching-list" data-matching-distractors>
+                        @foreach ($pengecohMenjodohkan as $index => $pengecoh)
+                            <div class="soal-option-row" data-matching-distractor>
+                                <div class="matching-row-head">
+                                    <strong data-matching-distractor-title>Pengecoh {{ $index + 1 }}</strong>
+                                    <button type="button" class="button button-muted matching-row-remove" data-remove-matching-distractor>Hapus</button>
+                                </div>
+                                <label for="pengecoh_menjodohkan_{{ $index }}">Isi jawaban pengecoh</label>
+                                <textarea id="pengecoh_menjodohkan_{{ $index }}" name="pengecoh_menjodohkan[]" class="textarea" rows="2">{{ $pengecoh }}</textarea>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+
+                <p class="matching-summary" data-matching-summary></p>
+            </div>
+
+            <template data-matching-pair-template>
+                <div class="soal-option-row" data-matching-pair>
+                    <div class="matching-row-head">
+                        <strong data-matching-pair-title>Pasangan</strong>
+                        <button type="button" class="button button-muted matching-row-remove" data-remove-matching-pair>Hapus</button>
+                    </div>
+                    <label>Pernyataan</label>
+                    <textarea name="pasangan_kiri[]" class="textarea" rows="2"></textarea>
+                    <label style="margin-top: 8px;">Jawaban yang benar</label>
+                    <textarea name="pasangan_kanan[]" class="textarea" rows="2"></textarea>
+                </div>
+            </template>
+            <template data-matching-distractor-template>
+                <div class="soal-option-row" data-matching-distractor>
+                    <div class="matching-row-head">
+                        <strong data-matching-distractor-title>Pengecoh</strong>
+                        <button type="button" class="button button-muted matching-row-remove" data-remove-matching-distractor>Hapus</button>
+                    </div>
+                    <label>Isi jawaban pengecoh</label>
+                    <textarea name="pengecoh_menjodohkan[]" class="textarea" rows="2"></textarea>
+                </div>
+            </template>
         </div>
 
         <div class="soal-answer-section" data-answer-section="isian_singkat uraian numerik upload_file">
@@ -531,6 +611,13 @@
         const answerGuidance = document.querySelectorAll('[data-answer-guidance]');
         const pgKeys = document.querySelectorAll('[data-pg-key]');
         const pgkKeys = document.querySelectorAll('[data-pgk-key]');
+        const pairList = document.querySelector('[data-matching-pairs]');
+        const distractorList = document.querySelector('[data-matching-distractors]');
+        const pairTemplate = document.querySelector('[data-matching-pair-template]');
+        const distractorTemplate = document.querySelector('[data-matching-distractor-template]');
+        const addPairButton = document.querySelector('[data-add-matching-pair]');
+        const addDistractorButton = document.querySelector('[data-add-matching-distractor]');
+        const matchingSummary = document.querySelector('[data-matching-summary]');
 
         const syncContext = () => {
             if (!contextSelect) return;
@@ -562,9 +649,61 @@
             });
         };
 
+        const syncMatching = () => {
+            const pairRows = [...(pairList?.querySelectorAll('[data-matching-pair]') ?? [])];
+            const distractorRows = [...(distractorList?.querySelectorAll('[data-matching-distractor]') ?? [])];
+
+            pairRows.forEach((row, index) => {
+                row.querySelector('[data-matching-pair-title]').textContent = `Pasangan ${index + 1}`;
+                row.querySelector('[data-remove-matching-pair]').disabled = pairRows.length <= 1;
+            });
+            distractorRows.forEach((row, index) => {
+                row.querySelector('[data-matching-distractor-title]').textContent = `Pengecoh ${index + 1}`;
+            });
+
+            if (addPairButton) addPairButton.disabled = pairRows.length >= 10;
+            if (addDistractorButton) addDistractorButton.disabled = distractorRows.length >= 10;
+            if (!matchingSummary) return;
+
+            const pasanganLengkap = pairRows.filter((row) => (
+                row.querySelector('[name="pasangan_kiri[]"]')?.value.trim()
+                && row.querySelector('[name="pasangan_kanan[]"]')?.value.trim()
+            )).length;
+            const pilihan = new Set([
+                ...pairRows.map((row) => row.querySelector('[name="pasangan_kanan[]"]')?.value.trim().toLocaleLowerCase()),
+                ...distractorRows.map((row) => row.querySelector('[name="pengecoh_menjodohkan[]"]')?.value.trim().toLocaleLowerCase()),
+            ].filter(Boolean));
+            matchingSummary.textContent = `${pasanganLengkap} pasangan lengkap dan ${pilihan.size} pilihan jawaban akan ditampilkan kepada siswa.`;
+        };
+
+        const addMatchingRow = (list, template) => {
+            if (!list || !template || list.children.length >= 10) return;
+            list.append(template.content.cloneNode(true));
+            syncMatching();
+            list.lastElementChild?.querySelector('textarea')?.focus();
+        };
+
+        addPairButton?.addEventListener('click', () => addMatchingRow(pairList, pairTemplate));
+        addDistractorButton?.addEventListener('click', () => addMatchingRow(distractorList, distractorTemplate));
+        pairList?.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-remove-matching-pair]');
+            if (!button || pairList.children.length <= 1) return;
+            button.closest('[data-matching-pair]')?.remove();
+            syncMatching();
+        });
+        distractorList?.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-remove-matching-distractor]');
+            if (!button) return;
+            button.closest('[data-matching-distractor]')?.remove();
+            syncMatching();
+        });
+        pairList?.addEventListener('input', syncMatching);
+        distractorList?.addEventListener('input', syncMatching);
+
         contextSelect?.addEventListener('change', syncContext);
         typeInputs.forEach((input) => input.addEventListener('change', syncType));
         syncContext();
         syncType();
+        syncMatching();
     })();
 </script>

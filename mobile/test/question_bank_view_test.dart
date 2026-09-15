@@ -96,6 +96,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('question-pair-left-0')), findsOneWidget);
     expect(find.byKey(const Key('question-pair-right-0')), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.text('Tambah pengecoh'),
+      find.byType(ListView),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tambah pengecoh'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('question-matching-distractor-0')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -310,6 +322,7 @@ Map<String, dynamic> _detailJson() => {
     ],
     'pernyataan': [],
     'pasangan': [],
+    'pengecoh_menjodohkan': [],
     'kunci_teks': null,
     'rubrik': null,
   },

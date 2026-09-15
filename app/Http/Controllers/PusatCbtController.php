@@ -2,25 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\JadwalUjianCbt;
-use App\Models\KegiatanUjianCbt;
 use App\Models\PengawasRuangUjianTerpusat;
-use App\Models\SoalCbt;
-use App\Models\UjianCbt;
+use App\Services\Cbt\RingkasanPusatCbtService;
+use Illuminate\Http\Request;
 
 class PusatCbtController extends Controller
 {
-    public function index()
+    public function index(Request $request, RingkasanPusatCbtService $ringkasanPusatCbt)
     {
-        $pengguna = auth()->user();
+        $pengguna = $request->user();
+        $ringkasan = $ringkasanPusatCbt->untuk($pengguna);
 
         return view('pusat-cbt.index', [
-            'jumlahSoalSiap' => SoalCbt::query()->where('aktif', true)->where('status', 'siap')->count(),
-            'jumlahKegiatanTerpusat' => KegiatanUjianCbt::query()->where('status', '!=', 'nonaktif')->count(),
-            'jumlahAsesmenKelas' => UjianCbt::query()->where('alur', 'kelas')->where('status', '!=', 'nonaktif')->count(),
-            'jumlahPaketTerpusatSiap' => JadwalUjianCbt::query()
-                ->whereHas('ujianCbt', fn ($query) => $query->whereIn('status', ['terjadwal', 'berlangsung', 'selesai']))
-                ->count(),
+            'jumlahSoalSiap' => $ringkasan['soal_siap'],
+            'jumlahKegiatanTerpusat' => $ringkasan['kegiatan_terpusat'],
+            'jumlahAsesmenKelas' => $ringkasan['asesmen_kelas'],
+            'jumlahPaketTerpusatSiap' => $ringkasan['paket_terjadwal'],
+            'ringkasanCbtTerbatas' => ! $pengguna->memilikiIzin('cbt.kelola'),
             'dapatMengawasiUjian' => $pengguna?->pegawai_id
                 ? PengawasRuangUjianTerpusat::query()
                     ->where(function ($query) use ($pengguna) {

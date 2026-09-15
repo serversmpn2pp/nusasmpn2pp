@@ -101,6 +101,8 @@ class BankSoalController extends Controller
             'pasangan' => ['nullable', 'array', 'max:10'],
             'pasangan.*.kiri' => ['nullable', 'string', 'max:800'],
             'pasangan.*.kanan' => ['nullable', 'string', 'max:800'],
+            'pengecoh_menjodohkan' => ['nullable', 'array', 'max:10'],
+            'pengecoh_menjodohkan.*' => ['nullable', 'string', 'max:800'],
             'kunci_teks' => ['nullable', 'string', 'max:5000'],
             'rubrik_teks' => ['nullable', 'string', 'max:5000'],
             'gambar_soal' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],

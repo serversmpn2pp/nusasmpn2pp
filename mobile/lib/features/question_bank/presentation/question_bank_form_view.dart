@@ -44,6 +44,7 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
   final List<bool> _statementAnswers = [];
   final List<TextEditingController> _pairLeft = [];
   final List<TextEditingController> _pairRight = [];
+  final List<TextEditingController> _matchingDistractors = [];
 
   String? _contextKey;
   String _type = 'pilihan_ganda';
@@ -90,6 +91,7 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
       ..._statements,
       ..._pairLeft,
       ..._pairRight,
+      ..._matchingDistractors,
     ]) {
       controller.dispose();
     }
@@ -499,56 +501,108 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
   );
 
   Widget _buildPairs() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      const Text(
+        'Pasangan benar',
+        style: TextStyle(fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 3),
+      const Text(
+        'Setiap pasangan menjadi kunci jawaban dan ikut dihitung dalam skor.',
+        style: TextStyle(color: NusaColors.textSecondary, fontSize: 11),
+      ),
+      const SizedBox(height: 11),
       for (var index = 0; index < _pairLeft.length; index++) ...[
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Pasangan ${index + 1}',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                if (_pairLeft.length > 1)
+                  IconButton(
+                    tooltip: 'Hapus pasangan',
+                    onPressed: _saving ? null : () => _removePair(index),
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
+              ],
+            ),
+            _TextInput(
+              fieldKey: Key('question-pair-left-$index'),
+              controller: _pairLeft[index],
+              label: 'Pernyataan',
+              maxLines: 3,
+            ),
+            const SizedBox(height: 8),
+            _TextInput(
+              fieldKey: Key('question-pair-right-$index'),
+              controller: _pairRight[index],
+              label: 'Jawaban yang benar',
+              maxLines: 3,
+            ),
+          ],
+        ),
+        if (index < _pairLeft.length - 1) const Divider(height: 24),
+      ],
+      if (_pairLeft.length < 10)
+        TextButton.icon(
+          onPressed: _saving
+              ? null
+              : () => setState(() {
+                  _pairLeft.add(TextEditingController());
+                  _pairRight.add(TextEditingController());
+                }),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Tambah pasangan'),
+        ),
+      const Divider(height: 28),
+      const Text(
+        'Jawaban pengecoh',
+        style: TextStyle(fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 3),
+      const Text(
+        'Opsional. Pengecoh ikut tampil sebagai pilihan, tetapi tidak menjadi kunci.',
+        style: TextStyle(color: NusaColors.textSecondary, fontSize: 11),
+      ),
+      const SizedBox(height: 11),
+      for (var index = 0; index < _matchingDistractors.length; index++) ...[
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: _TextInput(
-                fieldKey: Key('question-pair-left-$index'),
-                controller: _pairLeft[index],
-                label: 'Bagian kiri ${index + 1}',
+                fieldKey: Key('question-matching-distractor-$index'),
+                controller: _matchingDistractors[index],
+                label: 'Pengecoh ${index + 1}',
                 maxLines: 3,
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Icon(Icons.compare_arrows_rounded),
+            IconButton(
+              tooltip: 'Hapus pengecoh',
+              onPressed: _saving ? null : () => _removeDistractor(index),
+              icon: const Icon(Icons.delete_outline_rounded),
             ),
-            Expanded(
-              child: _TextInput(
-                fieldKey: Key('question-pair-right-$index'),
-                controller: _pairRight[index],
-                label: 'Pasangan',
-                maxLines: 3,
-              ),
-            ),
-            if (_pairLeft.length > 1)
-              IconButton(
-                tooltip: 'Hapus pasangan',
-                onPressed: _saving ? null : () => _removePair(index),
-                icon: const Icon(Icons.close_rounded),
-              ),
           ],
         ),
-        if (index < _pairLeft.length - 1) const SizedBox(height: 9),
+        if (index < _matchingDistractors.length - 1) const SizedBox(height: 9),
       ],
-      if (_pairLeft.length < 10) ...[
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: _saving
-                ? null
-                : () => setState(() {
-                    _pairLeft.add(TextEditingController());
-                    _pairRight.add(TextEditingController());
-                  }),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Tambah pasangan'),
-          ),
+      if (_matchingDistractors.length < 10)
+        TextButton.icon(
+          onPressed: _saving
+              ? null
+              : () => setState(
+                  () => _matchingDistractors.add(TextEditingController()),
+                ),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Tambah pengecoh'),
         ),
-      ],
     ],
   );
 
@@ -727,6 +781,11 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
             minimum: 1,
           );
         }
+        _replaceControllers(
+          _matchingDistractors,
+          detail.answer.matchingDistractors,
+          minimum: 0,
+        );
 
         final image = detail.media.image;
         _setText(_imageAlt, image?.alt);
@@ -794,6 +853,10 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
       _pairLeft.removeAt(index).dispose();
       _pairRight.removeAt(index).dispose();
     });
+  }
+
+  void _removeDistractor(int index) {
+    setState(() => _matchingDistractors.removeAt(index).dispose());
   }
 
   Future<void> _pickImage() async {
@@ -872,6 +935,9 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
               'kanan': _pairRight[index].text.trim(),
             },
         ],
+        'pengecoh_menjodohkan': [
+          for (final controller in _matchingDistractors) controller.text.trim(),
+        ],
         'kunci_teks': _nullableText(_textKey),
         'rubrik_teks': _nullableText(_rubric),
         'hapus_gambar_soal': _removeExistingImage,
@@ -923,12 +989,21 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
           return 'Isi minimal satu pernyataan benar-salah.';
         }
       case 'menjodohkan':
-        if (!_pairLeft.indexed.any(
+        final completedPairs = _pairLeft.indexed.where(
           (item) =>
               item.$2.text.trim().isNotEmpty &&
               _pairRight[item.$1].text.trim().isNotEmpty,
-        )) {
+        );
+        if (completedPairs.isEmpty) {
           return 'Isi minimal satu pasangan kiri dan kanan.';
+        }
+        final correctAnswers = completedPairs
+            .map((item) => _pairRight[item.$1].text.trim().toLowerCase())
+            .toSet();
+        if (_matchingDistractors.any(
+          (item) => correctAnswers.contains(item.text.trim().toLowerCase()),
+        )) {
+          return 'Jawaban pengecoh harus berbeda dari jawaban yang benar.';
         }
       case 'isian_singkat':
       case 'numerik':

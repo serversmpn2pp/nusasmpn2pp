@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
@@ -1223,7 +1224,7 @@ class _QuestionPage extends StatelessWidget {
                                 size: multiple ? 19 : 10,
                               )
                             : Text(
-                                option.code,
+                                option.label,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w900,
@@ -1313,7 +1314,7 @@ class _QuestionPage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    '${option.code}. ${option.text}',
+                    '${option.label}. ${option.text}',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -1337,7 +1338,7 @@ class _QuestionPage extends StatelessWidget {
                     (option) => DropdownMenuItem<String>(
                       value: option.text,
                       child: Text(
-                        '${option.code}. ${option.text}',
+                        '${option.label}. ${option.text}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1947,14 +1948,24 @@ class _QuestionMedia extends StatelessWidget {
           child: Table(
             defaultColumnWidth: const IntrinsicColumnWidth(),
             border: TableBorder.all(color: NusaColors.outline),
-            children: table.rows
+            children: table.rows.indexed
                 .map(
-                  (row) => TableRow(
-                    children: row
+                  (entry) => TableRow(
+                    decoration: entry.$1 == 0
+                        ? const BoxDecoration(color: NusaColors.surfaceBlue)
+                        : null,
+                    children: entry.$2
                         .map(
                           (cell) => Padding(
                             padding: const EdgeInsets.all(8),
-                            child: Text(cell),
+                            child: Text(
+                              cell,
+                              style: TextStyle(
+                                fontWeight: entry.$1 == 0
+                                    ? FontWeight.w800
+                                    : FontWeight.normal,
+                              ),
+                            ),
                           ),
                         )
                         .toList(growable: false),
@@ -1964,19 +1975,45 @@ class _QuestionMedia extends StatelessWidget {
           ),
         ),
       ],
-      if (media.formula case final formula? when formula.latex.isNotEmpty)
+      if (media.formula case final formula? when formula.latex.isNotEmpty) ...[
         Container(
+          key: const Key('student-exam-formula'),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: NusaColors.surfaceBlue,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(
-            formula.latex,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'monospace'),
+          child: Center(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Math.tex(
+                formula.latex,
+                mathStyle: MathStyle.display,
+                textStyle: const TextStyle(
+                  color: NusaColors.textPrimary,
+                  fontSize: 18,
+                ),
+                onErrorFallback: (error) => const Text(
+                  'Rumus belum dapat ditampilkan.',
+                  style: TextStyle(color: NusaColors.danger),
+                ),
+              ),
+            ),
           ),
         ),
+        if (formula.caption?.isNotEmpty == true)
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: Text(
+              formula.caption!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: NusaColors.textSecondary,
+                fontSize: 10,
+              ),
+            ),
+          ),
+      ],
     ],
   );
 }

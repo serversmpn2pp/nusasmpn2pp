@@ -290,17 +290,36 @@ const appendAnswerPreview = (container, type) => {
             options.append(row);
         });
     } else if (type === 'menjodohkan') {
-        document.querySelectorAll('[name="pasangan_kiri[]"]').forEach((input, index) => {
-            const right = document.querySelectorAll('[name="pasangan_kanan[]"]')[index]?.value.trim() || '';
-            if (!input.value.trim() && !right) return;
+        const leftInputs = [...document.querySelectorAll('[name="pasangan_kiri[]"]')];
+        const rightInputs = [...document.querySelectorAll('[name="pasangan_kanan[]"]')];
+        leftInputs.forEach((input, index) => {
+            const right = rightInputs[index]?.value.trim() || '';
+            if (!input.value.trim()) return;
             const row = document.createElement('div');
             row.className = 'question-preview-option';
             row.append(
                 createText('b', String(index + 1)),
-                createText('span', `${input.value.trim() || 'Pernyataan belum diisi'} -> ${right || 'Pasangan belum diisi'}`),
+                createText('span', input.value.trim()),
             );
             options.append(row);
         });
+
+        const pilihanJawaban = [
+            ...rightInputs.map((input) => input.value.trim()),
+            ...[...document.querySelectorAll('[name="pengecoh_menjodohkan[]"]')].map((input) => input.value.trim()),
+        ].filter((value, index, values) => (
+            value && values.findIndex((candidate) => candidate.toLocaleLowerCase() === value.toLocaleLowerCase()) === index
+        ));
+
+        if (pilihanJawaban.length) {
+            options.append(createText('strong', 'Pilihan jawaban siswa'));
+            pilihanJawaban.forEach((value, index) => {
+                const row = document.createElement('div');
+                row.className = 'question-preview-option';
+                row.append(createText('b', String.fromCharCode(65 + index)), createText('span', value));
+                options.append(row);
+            });
+        }
     } else {
         options.append(createText('div', type === 'upload_file' ? 'Siswa akan mengunggah berkas jawaban.' : 'Kolom jawaban siswa akan tampil di sini.', 'question-preview-option'));
     }

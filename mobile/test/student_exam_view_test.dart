@@ -21,6 +21,17 @@ void main() {
     expect(session.remainingSeconds, 1800);
   });
 
+  test('label tampilan pilihan dapat berbeda dari kode jawaban internal', () {
+    final option = StudentExamOption.fromJson({
+      'kode': 'D',
+      'label': 'A',
+      'teks': 'Paru-paru',
+    });
+
+    expect(option.label, 'A');
+    expect(option.code, 'D');
+  });
+
   testWidgets('siswa membuka, autosave, dan menyelesaikan ujian native', (
     tester,
   ) async {
@@ -175,6 +186,7 @@ void main() {
     expect(find.text('Pilihan pasangan'), findsOneWidget);
     expect(find.text('A. Sekon'), findsOneWidget);
     expect(find.text('B. Hertz'), findsOneWidget);
+    expect(find.text('C. Newton'), findsOneWidget);
     expect(find.textContaining('Frekuensi'), findsOneWidget);
     expect(find.textContaining('Periode'), findsOneWidget);
 
@@ -241,6 +253,81 @@ void main() {
     expect(remote.uploadedFileName, 'laporan-siswa.pdf');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('semua jenis soal memiliki masukan yang sesuai untuk siswa', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final remote = _FakeStudentExamRemoteDataSource(allTypes: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          studentExamRemoteDataSourceProvider.overrideWithValue(remote),
+          deviceIdentityProvider.overrideWithValue(_FakeDeviceIdentity()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const StudentExamView(participantId: 31),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('student-exam-token')),
+      'MULAI1',
+    );
+    await tester.drag(
+      find.byKey(const Key('student-exam-confirmation')),
+      const Offset(0, -250),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('student-exam-open')));
+    await tester.pumpAndSettle();
+
+    Future<void> next() async {
+      await tester.tap(find.byKey(const Key('student-exam-next')));
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('D'), findsNothing);
+    await tester.tap(find.text('Paru-paru'));
+    await tester.pump(const Duration(milliseconds: 750));
+    expect(remote.lastAnswer, ['D']);
+
+    await next();
+    expect(find.text('Pilihan Ganda Kompleks'), findsOneWidget);
+    expect(find.text('Jantung'), findsOneWidget);
+
+    await next();
+    expect(find.text('Benar'), findsOneWidget);
+    expect(find.text('Salah'), findsOneWidget);
+
+    await next();
+    expect(find.text('Pilihan pasangan'), findsOneWidget);
+    expect(find.byKey(const Key('student-exam-match-204-1')), findsOneWidget);
+
+    await next();
+    expect(find.byKey(const Key('student-exam-answer-205')), findsOneWidget);
+
+    await next();
+    expect(find.byKey(const Key('student-exam-answer-206')), findsOneWidget);
+
+    await next();
+    expect(find.byKey(const Key('student-exam-formula')), findsOneWidget);
+    expect(find.text(r'\frac{1}{2}'), findsNothing);
+    expect(find.text('Tabel nilai'), findsOneWidget);
+    expect(find.byKey(const Key('student-exam-answer-207')), findsOneWidget);
+
+    await next();
+    expect(find.byKey(const Key('student-exam-upload-208')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _FakeDeviceIdentity implements DeviceIdentity {
@@ -261,11 +348,13 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
     this.locked = false,
     this.matching = false,
     this.upload = false,
+    this.allTypes = false,
   });
 
   final bool locked;
   final bool matching;
   final bool upload;
+  final bool allTypes;
   String? startToken;
   int finishCalls = 0;
   Object? lastAnswer;
@@ -296,7 +385,9 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
   }) async {
     startToken = token;
     return StudentExamSession.fromJson(
-      _runningJson(withMatching: matching, withUpload: upload),
+      allTypes
+          ? _allTypesRunningJson()
+          : _runningJson(withMatching: matching, withUpload: upload),
     );
   }
 
@@ -305,7 +396,9 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
     required int participantId,
     required String device,
   }) async => StudentExamSession.fromJson(
-    _runningJson(withMatching: matching, withUpload: upload),
+    allTypes
+        ? _allTypesRunningJson()
+        : _runningJson(withMatching: matching, withUpload: upload),
   );
 
   @override
@@ -419,6 +512,7 @@ Map<String, dynamic> _runningJson({
         'pilihan': [
           {'kode': 'A', 'teks': 'Sekon'},
           {'kode': 'B', 'teks': 'Hertz'},
+          {'kode': 'C', 'teks': 'Newton'},
         ],
         'pernyataan': [],
         'pasangan': [
@@ -444,6 +538,158 @@ Map<String, dynamic> _runningJson({
         'berkas_jawaban': null,
         'ragu': false,
       },
+  ],
+  'keamanan': _securityJson(),
+};
+
+Map<String, dynamic> _allTypesRunningJson() => {
+  'mode': 'pengerjaan',
+  'waktu_server': '2026-09-05T08:00:00+07:00',
+  'berakhir_pada': '2026-09-05T08:30:00+07:00',
+  'sisa_detik': 1800,
+  'peserta': _participantJson(status: 'sedang_mengerjakan'),
+  'ujian': _examJson(),
+  'kemajuan': {'jumlah_soal': 8, 'terjawab': 0, 'belum_dijawab': 8, 'ragu': 0},
+  'soal': [
+    {
+      'id': 201,
+      'nomor': 1,
+      'jenis': 'pilihan_ganda',
+      'label_jenis': 'Pilihan Ganda',
+      'stimulus': null,
+      'pertanyaan': 'Organ pernapasan manusia adalah ....',
+      'media': {'gambar': null, 'tabel': null, 'rumus': null},
+      'pilihan': [
+        {'kode': 'D', 'label': 'A', 'teks': 'Paru-paru'},
+        {'kode': 'B', 'label': 'B', 'teks': 'Lambung'},
+      ],
+      'pernyataan': [],
+      'pasangan': [],
+      'jawaban': {},
+      'ragu': false,
+    },
+    {
+      'id': 202,
+      'nomor': 2,
+      'jenis': 'pilihan_ganda_kompleks',
+      'label_jenis': 'Pilihan Ganda Kompleks',
+      'stimulus': null,
+      'pertanyaan': 'Pilih organ dalam sistem peredaran darah.',
+      'media': {'gambar': null, 'tabel': null, 'rumus': null},
+      'pilihan': [
+        {'kode': 'C', 'label': 'A', 'teks': 'Jantung'},
+        {'kode': 'A', 'label': 'B', 'teks': 'Pembuluh darah'},
+      ],
+      'pernyataan': [],
+      'pasangan': [],
+      'jawaban': {},
+      'ragu': false,
+    },
+    {
+      'id': 203,
+      'nomor': 3,
+      'jenis': 'benar_salah',
+      'label_jenis': 'Benar atau Salah',
+      'stimulus': null,
+      'pertanyaan': 'Tentukan nilai tiap pernyataan.',
+      'media': {'gambar': null, 'tabel': null, 'rumus': null},
+      'pilihan': [],
+      'pernyataan': [
+        {'nomor': '1', 'teks': 'Dua adalah bilangan genap.'},
+      ],
+      'pasangan': [],
+      'jawaban': {},
+      'ragu': false,
+    },
+    {
+      'id': 204,
+      'nomor': 4,
+      'jenis': 'menjodohkan',
+      'label_jenis': 'Menjodohkan',
+      'stimulus': null,
+      'pertanyaan': 'Jodohkan besaran dengan satuannya.',
+      'media': {'gambar': null, 'tabel': null, 'rumus': null},
+      'pilihan': [
+        {'kode': 'B', 'label': 'A', 'teks': 'Hertz'},
+        {'kode': 'A', 'label': 'B', 'teks': 'Sekon'},
+      ],
+      'pernyataan': [],
+      'pasangan': [
+        {'nomor': '1', 'kiri': 'Frekuensi'},
+      ],
+      'jawaban': {},
+      'ragu': false,
+    },
+    {
+      'id': 205,
+      'nomor': 5,
+      'jenis': 'isian_singkat',
+      'label_jenis': 'Isian Singkat',
+      'stimulus': null,
+      'pertanyaan': 'Satuan frekuensi adalah ....',
+      'media': {'gambar': null, 'tabel': null, 'rumus': null},
+      'pilihan': [],
+      'pernyataan': [],
+      'pasangan': [],
+      'jawaban': {},
+      'ragu': false,
+    },
+    {
+      'id': 206,
+      'nomor': 6,
+      'jenis': 'uraian',
+      'label_jenis': 'Uraian',
+      'stimulus': null,
+      'pertanyaan': 'Jelaskan proses pertukaran oksigen.',
+      'media': {'gambar': null, 'tabel': null, 'rumus': null},
+      'pilihan': [],
+      'pernyataan': [],
+      'pasangan': [],
+      'jawaban': {},
+      'ragu': false,
+    },
+    {
+      'id': 207,
+      'nomor': 7,
+      'jenis': 'numerik',
+      'label_jenis': 'Numerik',
+      'stimulus': null,
+      'pertanyaan': 'Tuliskan hasil perhitungan.',
+      'media': {
+        'gambar': null,
+        'tabel': {
+          'judul': 'Tabel nilai',
+          'baris': [
+            ['Besaran', 'Nilai'],
+            ['x', '2'],
+          ],
+        },
+        'rumus': {
+          'latex': r'\frac{1}{2}',
+          'keterangan': 'Pecahan satu per dua',
+        },
+      },
+      'pilihan': [],
+      'pernyataan': [],
+      'pasangan': [],
+      'jawaban': {},
+      'ragu': false,
+    },
+    {
+      'id': 208,
+      'nomor': 8,
+      'jenis': 'upload_file',
+      'label_jenis': 'Upload File',
+      'stimulus': null,
+      'pertanyaan': 'Unggah laporan praktikum.',
+      'media': {'gambar': null, 'tabel': null, 'rumus': null},
+      'pilihan': [],
+      'pernyataan': [],
+      'pasangan': [],
+      'jawaban': {},
+      'berkas_jawaban': null,
+      'ragu': false,
+    },
   ],
   'keamanan': _securityJson(),
 };

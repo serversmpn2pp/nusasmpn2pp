@@ -549,7 +549,7 @@
                             @elseif (in_array($soal?->jenis_soal, ['isian_singkat', 'numerik'], true))
                                 <div class="field" style="margin-top: 14px;">
                                     <label for="jawaban-{{ $relasiSoal->id }}">Jawaban</label>
-                                    <input id="jawaban-{{ $relasiSoal->id }}" type="{{ $soal->jenis_soal === 'numerik' ? 'number' : 'text' }}" name="jawaban[{{ $relasiSoal->id }}]" value="{{ collect((array) $jawabanSaatIni)->first() }}" class="input">
+                                    <input id="jawaban-{{ $relasiSoal->id }}" type="text" @if ($soal->jenis_soal === 'numerik') inputmode="decimal" @endif name="jawaban[{{ $relasiSoal->id }}]" value="{{ collect((array) $jawabanSaatIni)->first() }}" class="input">
                                 </div>
                             @elseif ($soal?->jenis_soal === 'upload_file')
                                 <div class="file-answer-box" data-file-answer>

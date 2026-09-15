@@ -38,7 +38,13 @@ class PengacakPenyajianCbt
         $jenisSoal = $relasiSoal->soalCbt?->jenis_soal;
 
         if ($jenisSoal === 'menjodohkan') {
-            return $this->pilihanMenjodohkan($ujian, $peserta, $relasiSoal, $opsi['pasangan'] ?? []);
+            return $this->pilihanMenjodohkan(
+                $ujian,
+                $peserta,
+                $relasiSoal,
+                $opsi['pasangan'] ?? [],
+                $opsi['pengecoh'] ?? [],
+            );
         }
 
         $pilihan = $opsi['pilihan'] ?? $opsi;
@@ -77,12 +83,20 @@ class PengacakPenyajianCbt
         PesertaUjianCbt $peserta,
         SoalUjianCbt $relasiSoal,
         array $pasangan,
+        array $pengecoh,
     ): Collection {
-        $pilihan = collect($pasangan)
+        $pilihanBenar = collect($pasangan)
             ->map(fn ($item, $index) => [
-                'identitas' => (string) ($item['nomor'] ?? $index + 1),
+                'identitas' => 'pasangan-'.($item['nomor'] ?? $index + 1),
                 'teks' => trim((string) ($item['kanan'] ?? '')),
-            ])
+            ]);
+        $pilihanPengecoh = collect($pengecoh)
+            ->map(fn ($item, $index) => [
+                'identitas' => 'pengecoh-'.($index + 1),
+                'teks' => trim((string) $item),
+            ]);
+        $pilihan = $pilihanBenar
+            ->concat($pilihanPengecoh)
             ->filter(fn ($item) => filled($item['teks']))
             ->unique(fn ($item) => mb_strtolower($item['teks']))
             ->values();

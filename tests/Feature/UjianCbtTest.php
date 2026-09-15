@@ -1091,7 +1091,7 @@ class UjianCbtTest extends TestCase
             ...collect($this->dataUjian($jenisUjian, $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
                 ->except('kelas_peserta')
                 ->all(),
-            'jumlah_soal' => 5,
+            'jumlah_soal' => 6,
             'status' => 'berlangsung',
             'token' => 'AUTO1',
             'dibuat_oleh_pengguna_id' => $administrator->id,
@@ -1110,6 +1110,13 @@ class UjianCbtTest extends TestCase
             'status' => 'aktif',
         ]);
 
+        $soalPg = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
+            'kode' => 'CBT-KOR-PG',
+            'jenis_soal' => 'pilihan_ganda',
+            'pertanyaan' => 'Organ pernapasan manusia adalah ....',
+            'opsi' => ['pilihan' => ['A' => 'Lambung', 'B' => 'Paru-paru']],
+            'kunci_jawaban' => ['jawaban' => 'B'],
+        ]);
         $soalPgk = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
             'kode' => 'CBT-KOR-PGK',
             'jenis_soal' => 'pilihan_ganda_kompleks',
@@ -1133,13 +1140,16 @@ class UjianCbtTest extends TestCase
             'kode' => 'CBT-KOR-MATCH',
             'jenis_soal' => 'menjodohkan',
             'pertanyaan' => 'Jodohkan istilah.',
-            'opsi' => ['pasangan' => [
-                ['nomor' => 1, 'kiri' => 'Frekuensi', 'kanan' => 'Hertz'],
-                ['nomor' => 2, 'kiri' => 'Periode', 'kanan' => 'Sekon'],
-                ['nomor' => 3, 'kiri' => 'Panjang', 'kanan' => 'Meter'],
-                ['nomor' => 4, 'kiri' => 'Massa', 'kanan' => 'Kilogram'],
-                ['nomor' => 5, 'kiri' => 'Arus listrik', 'kanan' => 'Ampere'],
-            ]],
+            'opsi' => [
+                'pasangan' => [
+                    ['nomor' => 1, 'kiri' => 'Frekuensi', 'kanan' => 'Hertz'],
+                    ['nomor' => 2, 'kiri' => 'Periode', 'kanan' => 'Sekon'],
+                    ['nomor' => 3, 'kiri' => 'Panjang', 'kanan' => 'Meter'],
+                    ['nomor' => 4, 'kiri' => 'Massa', 'kanan' => 'Kilogram'],
+                    ['nomor' => 5, 'kiri' => 'Arus listrik', 'kanan' => 'Ampere'],
+                ],
+                'pengecoh' => ['Volt'],
+            ],
             'kunci_jawaban' => ['jawaban' => [1 => 'Hertz', 2 => 'Sekon', 3 => 'Meter', 4 => 'Kilogram', 5 => 'Ampere']],
         ]);
         $soalIsian = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
@@ -1157,11 +1167,12 @@ class UjianCbtTest extends TestCase
             'kunci_jawaban' => ['jawaban' => '3,14'],
         ]);
 
-        $relasiPgk = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalPgk->id, 'nomor_urut' => 1, 'bobot' => 2]);
-        $relasiBenarSalah = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalBenarSalah->id, 'nomor_urut' => 2, 'bobot' => 3]);
-        $relasiMenjodohkan = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalMenjodohkan->id, 'nomor_urut' => 3, 'bobot' => 4]);
-        $relasiIsian = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalIsian->id, 'nomor_urut' => 4, 'bobot' => 1]);
-        $relasiNumerik = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalNumerik->id, 'nomor_urut' => 5, 'bobot' => 1]);
+        $relasiPg = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalPg->id, 'nomor_urut' => 1, 'bobot' => 1]);
+        $relasiPgk = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalPgk->id, 'nomor_urut' => 2, 'bobot' => 2]);
+        $relasiBenarSalah = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalBenarSalah->id, 'nomor_urut' => 3, 'bobot' => 3]);
+        $relasiMenjodohkan = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalMenjodohkan->id, 'nomor_urut' => 4, 'bobot' => 4]);
+        $relasiIsian = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalIsian->id, 'nomor_urut' => 5, 'bobot' => 1]);
+        $relasiNumerik = $ujianCbt->soalUjianCbt()->create(['soal_cbt_id' => $soalNumerik->id, 'nomor_urut' => 6, 'bobot' => 1]);
 
         $this->actingAs($administrator)
             ->post(route('ujian-cbt.peserta.generate', $ujianCbt))
@@ -1172,6 +1183,12 @@ class UjianCbtTest extends TestCase
             'status' => 'selesai',
             'waktu_mulai' => now()->subMinutes(90),
             'waktu_selesai' => now(),
+        ]);
+        $peserta->jawabanPesertaUjianCbt()->create([
+            'soal_ujian_cbt_id' => $relasiPg->id,
+            'soal_cbt_id' => $soalPg->id,
+            'jawaban' => ['B'],
+            'waktu_dijawab' => now(),
         ]);
         $peserta->jawabanPesertaUjianCbt()->create([
             'soal_ujian_cbt_id' => $relasiPgk->id,
@@ -1211,6 +1228,8 @@ class UjianCbtTest extends TestCase
             ->assertSessionHas('berhasil');
 
         $hasil = $peserta->jawabanPesertaUjianCbt()->get()->keyBy('soal_ujian_cbt_id');
+        $this->assertTrue($hasil[$relasiPg->id]->benar);
+        $this->assertEquals(1.0, (float) $hasil[$relasiPg->id]->skor);
         $this->assertTrue($hasil[$relasiPgk->id]->benar);
         $this->assertEquals(2.0, (float) $hasil[$relasiPgk->id]->skor);
         $this->assertFalse($hasil[$relasiBenarSalah->id]->benar);
@@ -1226,9 +1245,9 @@ class UjianCbtTest extends TestCase
             ->get(route('ujian-cbt.hasil.index', $ujianCbt))
             ->assertOk()
             ->assertSee('Rekap hasil CBT')
-            ->assertSee('85,91')
+            ->assertSee('87,08')
             ->assertSee('Tuntas')
-            ->assertSee('Benar 3, salah 2, kosong 0');
+            ->assertSee('Benar 4, salah 2, kosong 0');
 
         $this->actingAs($administrator)
             ->get(route('ujian-cbt.hasil.index', [
@@ -1242,6 +1261,7 @@ class UjianCbtTest extends TestCase
 
     public function test_administrator_dapat_mengoreksi_jawaban_manual_cbt(): void
     {
+        Storage::fake('local');
         [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
         $jenisUjian = JenisUjianCbt::where('kode', 'STS')->firstOrFail();
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
@@ -1251,7 +1271,7 @@ class UjianCbtTest extends TestCase
             ...collect($this->dataUjian($jenisUjian, $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
                 ->except('kelas_peserta')
                 ->all(),
-            'jumlah_soal' => 1,
+            'jumlah_soal' => 2,
             'status' => 'berlangsung',
             'token' => 'MANUAL',
             'dibuat_oleh_pengguna_id' => $administrator->id,
@@ -1283,6 +1303,18 @@ class UjianCbtTest extends TestCase
             'nomor_urut' => 1,
             'bobot' => 2,
         ]);
+        $soalUpload = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
+            'kode' => 'CBT-MANUAL-UPLOAD',
+            'jenis_soal' => 'upload_file',
+            'pertanyaan' => 'Unggah laporan hasil pengamatan.',
+            'opsi' => [],
+            'kunci_jawaban' => [],
+        ]);
+        $relasiUpload = $ujianCbt->soalUjianCbt()->create([
+            'soal_cbt_id' => $soalUpload->id,
+            'nomor_urut' => 2,
+            'bobot' => 3,
+        ]);
 
         $this->actingAs($administrator)
             ->post(route('ujian-cbt.peserta.generate', $ujianCbt))
@@ -1300,6 +1332,18 @@ class UjianCbtTest extends TestCase
             'jawaban' => ['Karena cahaya merambat lebih cepat daripada bunyi.'],
             'waktu_dijawab' => now(),
         ]);
+        $lokasiBerkas = 'jawaban-cbt/'.$ujianCbt->id.'/'.$peserta->id.'/hasil-pengamatan.pdf';
+        Storage::disk('local')->put($lokasiBerkas, 'isi laporan');
+        $jawabanUpload = $peserta->jawabanPesertaUjianCbt()->create([
+            'soal_ujian_cbt_id' => $relasiUpload->id,
+            'soal_cbt_id' => $soalUpload->id,
+            'jawaban' => ['berkas' => 'hasil-pengamatan.pdf'],
+            'lokasi_file' => $lokasiBerkas,
+            'nama_file_asli' => 'hasil-pengamatan.pdf',
+            'tipe_mime_file' => 'application/pdf',
+            'ukuran_file' => 11,
+            'waktu_dijawab' => now(),
+        ]);
 
         $this->actingAs($administrator)
             ->get(route('ujian-cbt.koreksi-manual.index', $ujianCbt))
@@ -1307,6 +1351,8 @@ class UjianCbtTest extends TestCase
             ->assertSee('Koreksi manual CBT')
             ->assertSee('Mengapa suara petir terdengar setelah kilat terlihat?')
             ->assertSee('Karena cahaya merambat lebih cepat daripada bunyi.')
+            ->assertSee('Unggah laporan hasil pengamatan.')
+            ->assertSee('hasil-pengamatan.pdf')
             ->assertSee('Belum dikoreksi');
 
         $this->actingAs($administrator)
@@ -1314,6 +1360,7 @@ class UjianCbtTest extends TestCase
             ->put(route('ujian-cbt.koreksi-manual.update', $ujianCbt), [
                 'skor' => [
                     $jawaban->id => '2',
+                    $jawabanUpload->id => '3',
                 ],
             ])
             ->assertRedirect(route('ujian-cbt.koreksi-manual.index', $ujianCbt))
@@ -1322,6 +1369,9 @@ class UjianCbtTest extends TestCase
         $jawaban->refresh();
         $this->assertTrue($jawaban->benar);
         $this->assertEquals(2.0, (float) $jawaban->skor);
+        $jawabanUpload->refresh();
+        $this->assertTrue($jawabanUpload->benar);
+        $this->assertEquals(3.0, (float) $jawabanUpload->skor);
 
         $this->actingAs($administrator)
             ->get(route('ujian-cbt.hasil.index', $ujianCbt))

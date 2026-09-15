@@ -181,6 +181,7 @@ class UjianSayaApiTest extends TestCase
         Carbon::setTestNow('2026-09-05 08:00:00');
         $data = $this->fondasi();
         $ujian = $data['peserta']->ujianCbt;
+        $ujian->update(['acak_jawaban' => true]);
         $soal = SoalCbt::create([
             'tahun_pelajaran_id' => $ujian->tahun_pelajaran_id,
             'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
@@ -190,10 +191,13 @@ class UjianSayaApiTest extends TestCase
             'tingkat_kesulitan' => 'sedang',
             'kategori' => 'umum',
             'pertanyaan' => 'Jodohkan besaran dengan satuannya.',
-            'opsi' => ['pasangan' => [
-                ['nomor' => 1, 'kiri' => 'Frekuensi', 'kanan' => 'Hertz'],
-                ['nomor' => 2, 'kiri' => 'Periode', 'kanan' => 'Sekon'],
-            ]],
+            'opsi' => [
+                'pasangan' => [
+                    ['nomor' => 1, 'kiri' => 'Frekuensi', 'kanan' => 'Hertz'],
+                    ['nomor' => 2, 'kiri' => 'Periode', 'kanan' => 'Sekon'],
+                ],
+                'pengecoh' => ['Newton'],
+            ],
             'kunci_jawaban' => ['jawaban' => [1 => 'Hertz', 2 => 'Sekon']],
             'skor_maksimal' => 2,
             'status' => 'siap',
@@ -215,12 +219,14 @@ class UjianSayaApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.soal.2.jenis', 'menjodohkan')
             ->assertJsonPath('data.soal.2.pasangan.0.kiri', 'Frekuensi')
-            ->assertJsonCount(2, 'data.soal.2.pilihan')
+            ->assertJsonCount(3, 'data.soal.2.pilihan')
             ->assertJsonMissingPath('data.soal.2.pasangan.0.kanan')
             ->assertJsonMissingPath('data.soal.2.kunci_jawaban');
 
-        $pilihan = collect($response->json('data.soal.2.pilihan'))->pluck('teks')->sort()->values()->all();
-        $this->assertSame(['Hertz', 'Sekon'], $pilihan);
+        $pilihan = collect($response->json('data.soal.2.pilihan'));
+        $this->assertSame(['A', 'B', 'C'], $pilihan->pluck('label')->all());
+        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $pilihan->pluck('kode')->all());
+        $this->assertSame(['Hertz', 'Newton', 'Sekon'], $pilihan->pluck('teks')->sort()->values()->all());
 
         $this->withToken($token)
             ->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [

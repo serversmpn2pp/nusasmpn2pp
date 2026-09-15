@@ -142,6 +142,12 @@
                             </tbody>
                         </table>
                     </div>
+                    @if (filled($soalCbt->opsi['pengecoh'] ?? []))
+                        <div class="detail-item" style="margin-top: 14px;">
+                            <dt>Jawaban pengecoh</dt>
+                            <dd>{{ collect($soalCbt->opsi['pengecoh'])->join(', ') }}</dd>
+                        </div>
+                    @endif
                 @else
                     <dl class="detail-grid">
                         <div class="detail-item span-2"><dt>Kunci jawaban</dt><dd style="white-space: pre-line;">{{ $teks($soalCbt->kunci_jawaban['jawaban'] ?? null) }}</dd></div>

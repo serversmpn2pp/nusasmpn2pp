@@ -493,6 +493,10 @@ class UjianSayaMobileService
                         ? $this->pengacakPenyajianCbt->pilihanJawaban($peserta->ujianCbt, $peserta, $relasi)
                             ->map(fn ($teks, $kode) => ['kode' => (string) $kode, 'teks' => (string) $teks])
                             ->values()
+                            ->map(fn (array $pilihan, int $urutan) => [
+                                ...$pilihan,
+                                'label' => chr(65 + $urutan),
+                            ])
                         : [],
                     'pernyataan' => collect($soal?->opsi['pernyataan'] ?? [])->map(fn ($item, $index) => [
                         'nomor' => (string) ($item['nomor'] ?? $index + 1),

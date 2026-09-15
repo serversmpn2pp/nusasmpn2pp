@@ -3,14 +3,11 @@
 namespace App\Services\Mobile;
 
 use App\Models\BuktiRuangUjianCbt;
-use App\Models\JadwalUjianCbt;
-use App\Models\KegiatanUjianCbt;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Models\RuangUjianCbt;
-use App\Models\SoalCbt;
-use App\Models\UjianCbt;
 use App\Services\Cbt\DaftarUjianSiswaService;
+use App\Services\Cbt\RingkasanPusatCbtService;
 use Illuminate\Support\Collection;
 
 class PusatCbtMobileService
@@ -25,7 +22,10 @@ class PusatCbtMobileService
         'cbt.terpusat_lihat',
     ];
 
-    public function __construct(private DaftarUjianSiswaService $daftarUjianSiswa) {}
+    public function __construct(
+        private DaftarUjianSiswaService $daftarUjianSiswa,
+        private RingkasanPusatCbtService $ringkasanPusatCbt,
+    ) {}
 
     public function siapkan(Pengguna $pengguna): array
     {
@@ -55,14 +55,7 @@ class PusatCbtMobileService
     private function pengelolaan(Pengguna $pengguna): array
     {
         return [
-            'ringkasan' => [
-                'soal_siap' => SoalCbt::query()->where('aktif', true)->where('status', 'siap')->count(),
-                'kegiatan_terpusat' => KegiatanUjianCbt::query()->where('status', '!=', 'nonaktif')->count(),
-                'asesmen_kelas' => UjianCbt::query()->where('alur', 'kelas')->where('status', '!=', 'nonaktif')->count(),
-                'paket_terjadwal' => JadwalUjianCbt::query()
-                    ->whereHas('ujianCbt', fn ($query) => $query->whereIn('status', ['terjadwal', 'berlangsung', 'selesai']))
-                    ->count(),
-            ],
+            'ringkasan' => $this->ringkasanPusatCbt->untuk($pengguna),
             'alur' => [
                 [
                     'kode' => 'asesmen-kelas',

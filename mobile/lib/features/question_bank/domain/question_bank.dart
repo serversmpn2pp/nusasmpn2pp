@@ -207,6 +207,7 @@ class QuestionAnswer {
     required this.options,
     required this.statements,
     required this.pairs,
+    required this.matchingDistractors,
     this.textKey,
     this.rubric,
   });
@@ -215,6 +216,7 @@ class QuestionAnswer {
     options: _list(json['opsi'], QuestionOption.fromJson),
     statements: _list(json['pernyataan'], QuestionStatement.fromJson),
     pairs: _list(json['pasangan'], QuestionPair.fromJson),
+    matchingDistractors: _strings(json['pengecoh_menjodohkan']),
     textKey: json['kunci_teks'] as String?,
     rubric: json['rubrik'] as String?,
   );
@@ -222,6 +224,7 @@ class QuestionAnswer {
   final List<QuestionOption> options;
   final List<QuestionStatement> statements;
   final List<QuestionPair> pairs;
+  final List<String> matchingDistractors;
   final String? textKey;
   final String? rubric;
 }
@@ -506,6 +509,13 @@ List<T> _list<T>(Object? value, T Function(Map<String, dynamic>) convert) =>
     value is List
     ? value.whereType<Map<String, dynamic>>().map(convert).toList()
     : <T>[];
+
+List<String> _strings(Object? value) => value is List
+    ? value
+          .where((item) => item != null)
+          .map((item) => item.toString())
+          .toList()
+    : <String>[];
 
 T? _nullable<T>(Object? value, T Function(Map<String, dynamic>) convert) =>
     value is Map<String, dynamic> ? convert(value) : null;

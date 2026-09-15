@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\AnggotaKelas;
+use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
 use App\Models\JenisUjianCbt;
 use App\Models\KegiatanUjianCbt;
@@ -12,9 +13,11 @@ use App\Models\MataPelajaran;
 use App\Models\Pegawai;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
+use App\Models\Peran;
 use App\Models\PesertaUjianCbt;
 use App\Models\RuangKegiatanUjianCbt;
 use App\Models\Siswa;
+use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -87,6 +90,163 @@ class PusatCbtApiTest extends TestCase
             ->assertJsonPath('data.siswa', null);
 
         $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+    }
+
+    public function test_ringkasan_guru_mapel_hanya_menghitung_mapel_dan_tingkat_yang_diajar(): void
+    {
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $tahun = TahunPelajaran::create([
+            'nama' => '2026/2027',
+            'tanggal_mulai' => '2026-07-01',
+            'tanggal_selesai' => '2027-06-30',
+            'aktif' => true,
+        ]);
+        $kelasTujuh = Kelas::create([
+            'tahun_pelajaran_id' => $tahun->id,
+            'nama' => 'VII.A',
+            'tingkat' => 7,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $kelasDelapan = Kelas::create([
+            'tahun_pelajaran_id' => $tahun->id,
+            'nama' => 'VIII.A',
+            'tingkat' => 8,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $mataPelajaran = MataPelajaran::create([
+            'kode' => 'MTK-LINTAS-TINGKAT',
+            'nama' => 'Matematika',
+            'kkm' => 75,
+            'aktif' => true,
+        ]);
+        $pegawai = Pegawai::create([
+            'nama_lengkap' => 'Guru Matematika Tingkat Tujuh',
+            'nip' => '198901012026091111',
+            'jenis_kelamin' => 'P',
+            'aktif' => true,
+        ]);
+        $guru = Pengguna::create([
+            'pegawai_id' => $pegawai->id,
+            'nama' => $pegawai->nama_lengkap,
+            'username' => $pegawai->nip,
+            'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $guru->daftarPeran()->attach(Peran::where('kode', 'guru_mapel')->firstOrFail());
+        GuruMataPelajaran::create([
+            'tahun_pelajaran_id' => $tahun->id,
+            'kelas_id' => $kelasTujuh->id,
+            'mata_pelajaran_id' => $mataPelajaran->id,
+            'pegawai_id' => $pegawai->id,
+            'jenis_penugasan' => 'pengampu',
+            'aktif' => true,
+        ]);
+
+        foreach ([7, 8] as $tingkat) {
+            SoalCbt::create([
+                'mata_pelajaran_id' => $mataPelajaran->id,
+                'tingkat' => $tingkat,
+                'kode' => 'SOAL-MTK-'.$tingkat,
+                'jenis_soal' => 'pilihan_ganda',
+                'tingkat_kesulitan' => 'mudah',
+                'kategori' => 'umum',
+                'pertanyaan' => 'Soal Matematika tingkat '.$tingkat,
+                'opsi' => ['pilihan' => ['A' => 'Benar', 'B' => 'Salah']],
+                'kunci_jawaban' => ['jawaban' => 'A'],
+                'skor_maksimal' => 1,
+                'status' => 'siap',
+                'aktif' => true,
+                'dibuat_oleh_pengguna_id' => $administrator->id,
+            ]);
+
+            UjianCbt::create([
+                'alur' => 'kelas',
+                'jenis_ujian_cbt_id' => JenisUjianCbt::query()->firstOrFail()->id,
+                'tahun_pelajaran_id' => $tahun->id,
+                'mata_pelajaran_id' => $mataPelajaran->id,
+                'kode' => 'ASESMEN-GURU-'.$tingkat,
+                'nama' => 'Asesmen tingkat '.$tingkat,
+                'semester' => 'ganjil',
+                'tingkat' => $tingkat,
+                'tanggal_mulai' => now(),
+                'tanggal_selesai' => now()->addHour(),
+                'durasi_menit' => 60,
+                'jumlah_soal' => 1,
+                'status' => 'draft',
+                'dibuat_oleh_pengguna_id' => $guru->id,
+            ]);
+        }
+
+        foreach ([[7, $kelasTujuh], [8, $kelasDelapan]] as [$tingkat, $kelas]) {
+            $kegiatan = KegiatanUjianCbt::create([
+                'jenis_ujian_cbt_id' => JenisUjianCbt::query()->firstOrFail()->id,
+                'tahun_pelajaran_id' => $tahun->id,
+                'kode' => 'KEGIATAN-'.$tingkat,
+                'nama' => 'Kegiatan tingkat '.$tingkat,
+                'semester' => 'ganjil',
+                'tanggal_mulai' => now()->toDateString(),
+                'tanggal_selesai' => now()->toDateString(),
+                'status' => 'aktif',
+                'dibuat_oleh_pengguna_id' => $administrator->id,
+            ]);
+            $paket = UjianCbt::create([
+                'alur' => 'terpusat',
+                'jenis_ujian_cbt_id' => $kegiatan->jenis_ujian_cbt_id,
+                'tahun_pelajaran_id' => $tahun->id,
+                'mata_pelajaran_id' => $mataPelajaran->id,
+                'kode' => 'PAKET-'.$tingkat,
+                'nama' => 'Paket tingkat '.$tingkat,
+                'semester' => 'ganjil',
+                'tingkat' => $tingkat,
+                'tanggal_mulai' => now(),
+                'tanggal_selesai' => now()->addHour(),
+                'durasi_menit' => 60,
+                'jumlah_soal' => 1,
+                'status' => 'terjadwal',
+                'dibuat_oleh_pengguna_id' => $administrator->id,
+            ]);
+            $jadwal = JadwalUjianCbt::create([
+                'kegiatan_ujian_cbt_id' => $kegiatan->id,
+                'ujian_cbt_id' => $paket->id,
+                'mata_pelajaran_id' => $mataPelajaran->id,
+                'tanggal' => now()->toDateString(),
+                'waktu_mulai' => '07:30',
+                'waktu_selesai' => '08:30',
+                'label_sesi' => 'Sesi Pagi',
+                'tingkat' => $tingkat,
+                'urutan' => $tingkat,
+                'status' => 'siap',
+            ]);
+            $jadwal->kelas()->attach($kelas->id);
+        }
+
+        $this->actingAs($guru)
+            ->get(route('pusat-cbt.index'))
+            ->assertOk()
+            ->assertViewHas('jumlahSoalSiap', 1)
+            ->assertViewHas('jumlahAsesmenKelas', 1)
+            ->assertViewHas('jumlahPaketTerpusatSiap', 1)
+            ->assertViewHas('jumlahKegiatanTerpusat', 1)
+            ->assertSee('Sesuai mapel dan tingkat yang Anda ajar.');
+
+        $this->actingAs($guru)
+            ->get(route('soal-cbt.index'))
+            ->assertOk()
+            ->assertSee('Soal Matematika tingkat 7')
+            ->assertDontSee('Soal Matematika tingkat 8');
+
+        $this->withToken($this->token($guru))
+            ->getJson(route('api.v1.pusat-cbt'))
+            ->assertOk()
+            ->assertJsonPath('data.pengelolaan.ringkasan.soal_siap', 1)
+            ->assertJsonPath('data.pengelolaan.ringkasan.asesmen_kelas', 1)
+            ->assertJsonPath('data.pengelolaan.ringkasan.paket_terjadwal', 1)
+            ->assertJsonPath('data.pengelolaan.ringkasan.kegiatan_terpusat', 1);
     }
 
     public function test_siswa_hanya_menerima_ringkasan_ujian_miliknya(): void

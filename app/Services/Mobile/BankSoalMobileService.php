@@ -7,6 +7,7 @@ use App\Models\MataPelajaran;
 use App\Models\Pengguna;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,8 @@ class BankSoalMobileService
     public function daftar(Pengguna $pengguna, array $filter): array
     {
         $bisaLihatSemua = $this->bisaLihatSemua($pengguna);
-        $mapelIds = $this->mataPelajaranCakupan($pengguna)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $daftarKonteks = $this->konteksBankSoal($pengguna);
+        $mapelIds = $daftarKonteks->pluck('mata_pelajaran_id')->unique()->values()->all();
         $kataKunci = trim((string) ($filter['kata_kunci'] ?? ''));
         $mataPelajaranId = isset($filter['mata_pelajaran_id']) ? (int) $filter['mata_pelajaran_id'] : null;
         $tingkat = $filter['tingkat'] ?? 'semua';
@@ -32,7 +34,7 @@ class BankSoalMobileService
         }
 
         $cakupan = SoalCbt::query()
-            ->when(! $bisaLihatSemua, fn ($query) => $query->whereIn('mata_pelajaran_id', $mapelIds));
+            ->when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks));
         $paginator = (clone $cakupan)
             ->with(['tahunPelajaran:id,nama', 'mataPelajaran:id,nama,kode', 'dibuatOleh:id,nama'])
             ->withCount('soalUjianCbt')
@@ -231,6 +233,9 @@ class BankSoalMobileService
                     'kiri' => data_get($item, 'kiri'),
                     'kanan' => data_get($item, 'kanan'),
                 ])->values(),
+                'pengecoh_menjodohkan' => collect(data_get($soal->opsi, 'pengecoh', []))
+                    ->map(fn ($item) => (string) $item)
+                    ->values(),
                 'kunci_teks' => null,
                 'rubrik' => null,
             ],
@@ -365,8 +370,25 @@ class BankSoalMobileService
             throw ValidationException::withMessages(['pasangan' => 'Isi minimal satu pasangan lengkap.']);
         }
 
+        $normalisasi = fn ($value) => mb_strtolower(trim((string) $value));
+        $jawabanBenar = $items->pluck('kanan')->map($normalisasi);
+        $pengecoh = collect($data['pengecoh_menjodohkan'] ?? [])
+            ->map(fn ($value) => $this->teksAtauNull($value))
+            ->filter()
+            ->unique($normalisasi)
+            ->values();
+
+        if ($pengecoh->contains(fn ($value) => $jawabanBenar->contains($normalisasi($value)))) {
+            throw ValidationException::withMessages([
+                'pengecoh_menjodohkan' => 'Jawaban pengecoh harus berbeda dari pasangan jawaban yang benar.',
+            ]);
+        }
+
         return [
-            'opsi' => ['pasangan' => $items->all()],
+            'opsi' => [
+                'pasangan' => $items->all(),
+                'pengecoh' => $pengecoh->all(),
+            ],
             'kunci_jawaban' => ['jawaban' => $items->pluck('kanan', 'nomor')->all()],
             'rubrik' => null,
         ];
@@ -497,7 +519,25 @@ class BankSoalMobileService
         if ($this->bisaLihatSemua($pengguna)) {
             return;
         }
-        abort_unless($this->mataPelajaranCakupan($pengguna)->contains('id', $soal->mata_pelajaran_id), 403);
+        abort_unless($this->konteksBankSoal($pengguna)->contains(fn (array $konteks) => (
+            $konteks['mata_pelajaran_id'] === (int) $soal->mata_pelajaran_id
+            && $konteks['tingkat'] === (int) $soal->tingkat
+        )), 403);
+    }
+
+    private function batasiSoalPadaKonteks(Builder $query, Collection $daftarKonteks): Builder
+    {
+        return $query->where(function (Builder $query) use ($daftarKonteks) {
+            foreach ($daftarKonteks as $konteks) {
+                $query->orWhere(fn (Builder $query) => $query
+                    ->where('mata_pelajaran_id', $konteks['mata_pelajaran_id'])
+                    ->where('tingkat', $konteks['tingkat']));
+            }
+
+            if ($daftarKonteks->isEmpty()) {
+                $query->whereRaw('1 = 0');
+            }
+        });
     }
 
     private function pastikanKonteksTersedia(Pengguna $pengguna, array $data): void

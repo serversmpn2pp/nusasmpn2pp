@@ -6,6 +6,7 @@ use App\Models\GuruMataPelajaran;
 use App\Models\MataPelajaran;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +29,6 @@ class SoalCbtController extends Controller
         $pengguna = $request->user();
         $bisaLihatSemua = $this->bisaLihatSemua($request);
         $daftarKonteks = $this->konteksBankSoal($request);
-        $mapelCakupanIds = $this->mataPelajaranCakupan($request)->pluck('id')->map(fn ($id) => (int) $id)->all();
         $kataKunci = trim((string) ($data['kata_kunci'] ?? ''));
         $mataPelajaranId = $data['mata_pelajaran_id'] ?? null;
         $tingkat = $data['tingkat'] ?? 'semua';
@@ -37,7 +37,7 @@ class SoalCbtController extends Controller
 
         $soalCbt = SoalCbt::query()
             ->with(['tahunPelajaran', 'mataPelajaran', 'dibuatOleh'])
-            ->when(! $bisaLihatSemua, fn ($query) => $query->whereIn('mata_pelajaran_id', $mapelCakupanIds))
+            ->when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))
             ->when($mataPelajaranId, fn ($query, $id) => $query->where('mata_pelajaran_id', $id))
             ->when($tingkat !== 'semua', fn ($query) => $query->where('tingkat', (int) $tingkat))
             ->when($jenisSoal !== 'semua', fn ($query) => $query->where('jenis_soal', $jenisSoal))
@@ -66,9 +66,9 @@ class SoalCbtController extends Controller
             'daftarMataPelajaran' => $bisaLihatSemua ? $this->semuaMataPelajaran() : $this->mataPelajaranCakupan($request),
             'daftarJenisSoal' => SoalCbt::DAFTAR_JENIS,
             'daftarStatus' => SoalCbt::DAFTAR_STATUS,
-            'jumlahSoal' => SoalCbt::when(! $bisaLihatSemua, fn ($query) => $query->whereIn('mata_pelajaran_id', $mapelCakupanIds))->count(),
-            'jumlahSiap' => SoalCbt::when(! $bisaLihatSemua, fn ($query) => $query->whereIn('mata_pelajaran_id', $mapelCakupanIds))->where('status', 'siap')->count(),
-            'jumlahDraft' => SoalCbt::when(! $bisaLihatSemua, fn ($query) => $query->whereIn('mata_pelajaran_id', $mapelCakupanIds))->where('status', 'draft')->count(),
+            'jumlahSoal' => SoalCbt::when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))->count(),
+            'jumlahSiap' => SoalCbt::when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))->where('status', 'siap')->count(),
+            'jumlahDraft' => SoalCbt::when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))->where('status', 'draft')->count(),
             'bisaKelolaSoal' => $pengguna?->memilikiIzin(['cbt.kelola', 'cbt.soal_kelola']) ?? false,
             'daftarKonteks' => $daftarKonteks,
         ]);
@@ -230,10 +230,12 @@ class SoalCbtController extends Controller
             'pernyataan.*' => ['nullable', 'string', 'max:800'],
             'jawaban_bs' => ['nullable', 'array'],
             'jawaban_bs.*' => ['nullable', Rule::in(['benar', 'salah'])],
-            'pasangan_kiri' => ['nullable', 'array'],
+            'pasangan_kiri' => ['nullable', 'array', 'max:10'],
             'pasangan_kiri.*' => ['nullable', 'string', 'max:800'],
-            'pasangan_kanan' => ['nullable', 'array'],
+            'pasangan_kanan' => ['nullable', 'array', 'max:10'],
             'pasangan_kanan.*' => ['nullable', 'string', 'max:800'],
+            'pengecoh_menjodohkan' => ['nullable', 'array', 'max:10'],
+            'pengecoh_menjodohkan.*' => ['nullable', 'string', 'max:800'],
             'kunci_teks' => ['nullable', 'string'],
             'rubrik_teks' => ['nullable', 'string'],
             'gambar_soal' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
@@ -396,8 +398,25 @@ class SoalCbtController extends Controller
             ]);
         }
 
+        $normalisasi = fn ($value) => mb_strtolower(trim((string) $value));
+        $jawabanBenar = $pasangan->pluck('kanan')->map($normalisasi);
+        $pengecoh = collect($data['pengecoh_menjodohkan'] ?? [])
+            ->map(fn ($value) => $this->teksAtauNull($value))
+            ->filter()
+            ->unique($normalisasi)
+            ->values();
+
+        if ($pengecoh->contains(fn ($value) => $jawabanBenar->contains($normalisasi($value)))) {
+            throw ValidationException::withMessages([
+                'pengecoh_menjodohkan' => 'Jawaban pengecoh harus berbeda dari pasangan jawaban yang benar.',
+            ]);
+        }
+
         return [
-            'opsi' => ['pasangan' => $pasangan->all()],
+            'opsi' => [
+                'pasangan' => $pasangan->all(),
+                'pengecoh' => $pengecoh->all(),
+            ],
             'kunci_jawaban' => ['jawaban' => $pasangan->mapWithKeys(fn ($item) => [$item['nomor'] => $item['kanan']])->all()],
             'rubrik' => null,
         ];
@@ -537,7 +556,29 @@ class SoalCbtController extends Controller
             abort_unless($request->user()?->memilikiIzin(['cbt.kelola', 'cbt.soal_kelola']) ?? false, 403);
         }
 
-        $this->pastikanMataPelajaranBoleh($request, (int) $soalCbt->mata_pelajaran_id);
+        if ($this->bisaLihatSemua($request)) {
+            return;
+        }
+
+        abort_unless($this->konteksBankSoal($request)->contains(fn (array $konteks) => (
+            $konteks['mata_pelajaran_id'] === (int) $soalCbt->mata_pelajaran_id
+            && $konteks['tingkat'] === (int) $soalCbt->tingkat
+        )), 403);
+    }
+
+    private function batasiSoalPadaKonteks(Builder $query, Collection $daftarKonteks): Builder
+    {
+        return $query->where(function (Builder $query) use ($daftarKonteks) {
+            foreach ($daftarKonteks as $konteks) {
+                $query->orWhere(fn (Builder $query) => $query
+                    ->where('mata_pelajaran_id', $konteks['mata_pelajaran_id'])
+                    ->where('tingkat', $konteks['tingkat']));
+            }
+
+            if ($daftarKonteks->isEmpty()) {
+                $query->whereRaw('1 = 0');
+            }
+        });
     }
 
     private function bisaLihatSemua(Request $request): bool

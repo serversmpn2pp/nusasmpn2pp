@@ -371,14 +371,22 @@ class StudentExamQuestion {
 }
 
 class StudentExamOption {
-  const StudentExamOption({required this.code, required this.text});
+  const StudentExamOption({
+    required this.code,
+    required this.text,
+    this.displayLabel,
+  });
   factory StudentExamOption.fromJson(Map<String, dynamic> json) =>
       StudentExamOption(
         code: json['kode'] as String? ?? '-',
         text: json['teks'] as String? ?? '-',
+        displayLabel: json['label'] as String?,
       );
   final String code;
   final String text;
+  final String? displayLabel;
+
+  String get label => displayLabel ?? code;
 }
 
 class StudentExamStatement {

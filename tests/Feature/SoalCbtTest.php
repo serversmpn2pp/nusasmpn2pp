@@ -42,6 +42,8 @@ class SoalCbtTest extends TestCase
             ->assertSee('Kunci diisi angka saja; koma dan titik desimal dianggap sama')
             ->assertSee('Cara mengisi Isian Singkat')
             ->assertSee('Cara mengisi Numerik')
+            ->assertSee('Tambah pasangan')
+            ->assertSee('Tambah pengecoh')
             ->assertSee('Tingkat kesulitan')
             ->assertSee('Wajib dipilih')
             ->assertSee('Sangat Sulit')
@@ -243,6 +245,35 @@ class SoalCbtTest extends TestCase
 
             $this->assertSame($skor, SoalCbt::where('kode', $kode)->value('skor_maksimal'));
         }
+    }
+
+    public function test_soal_menjodohkan_dapat_memiliki_jumlah_pengecoh_yang_berbeda(): void
+    {
+        [$tahunPelajaran, $mataPelajaran] = $this->buatDataAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+
+        $this->actingAs($administrator)
+            ->post(route('soal-cbt.store'), [
+                ...$this->dataSoal($tahunPelajaran, $mataPelajaran),
+                'jenis_soal' => 'menjodohkan',
+                'pertanyaan' => 'Jodohkan negara dengan ibu kotanya.',
+                'pasangan_kiri' => ['Indonesia', 'Jepang', 'Malaysia', 'Thailand'],
+                'pasangan_kanan' => ['Jakarta', 'Tokyo', 'Kuala Lumpur', 'Bangkok'],
+                'pengecoh_menjodohkan' => ['Seoul'],
+            ])
+            ->assertRedirect();
+
+        $soal = SoalCbt::where('kode', 'SOAL-CBT-UJI-001')->firstOrFail();
+
+        $this->assertCount(4, data_get($soal->opsi, 'pasangan'));
+        $this->assertSame(['Seoul'], data_get($soal->opsi, 'pengecoh'));
+        $this->assertCount(4, data_get($soal->kunci_jawaban, 'jawaban'));
+
+        $this->actingAs($administrator)
+            ->get(route('soal-cbt.show', $soal))
+            ->assertOk()
+            ->assertSee('Jawaban pengecoh')
+            ->assertSee('Seoul');
     }
 
     public function test_guru_mapel_hanya_dapat_mengelola_soal_mapel_yang_diajar(): void

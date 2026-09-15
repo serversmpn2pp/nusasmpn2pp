@@ -100,6 +100,13 @@
             color: var(--primary-dark);
         }
 
+        .cbt-stat-note {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-size: .72rem;
+            line-height: 1.35;
+        }
+
         @media (max-width: 920px) {
             .cbt-choice-grid,
             .cbt-tool-grid {
@@ -127,10 +134,10 @@
     </div>
 
     <div class="stats-grid">
-        <div class="panel stat active"><p class="stat-label">Soal siap digunakan</p><p class="stat-value">{{ $jumlahSoalSiap }}</p></div>
-        <div class="panel stat"><p class="stat-label">Asesmen kelas</p><p class="stat-value">{{ $jumlahAsesmenKelas }}</p></div>
-        <div class="panel stat"><p class="stat-label">Paket terpusat siap</p><p class="stat-value">{{ $jumlahPaketTerpusatSiap }}</p></div>
-        <div class="panel stat"><p class="stat-label">Kegiatan terpusat</p><p class="stat-value">{{ $jumlahKegiatanTerpusat }}</p></div>
+        <div class="panel stat active"><p class="stat-label">Soal siap digunakan</p><p class="stat-value">{{ $jumlahSoalSiap }}</p>@if ($ringkasanCbtTerbatas)<p class="cbt-stat-note">Sesuai mapel dan tingkat yang Anda ajar.</p>@endif</div>
+        <div class="panel stat"><p class="stat-label">Asesmen kelas</p><p class="stat-value">{{ $jumlahAsesmenKelas }}</p>@if ($ringkasanCbtTerbatas)<p class="cbt-stat-note">Dibuat melalui akun Anda.</p>@endif</div>
+        <div class="panel stat"><p class="stat-label">Paket terpusat siap</p><p class="stat-value">{{ $jumlahPaketTerpusatSiap }}</p>@if ($ringkasanCbtTerbatas)<p class="cbt-stat-note">Sesuai jadwal yang Anda ampu.</p>@endif</div>
+        <div class="panel stat"><p class="stat-label">Kegiatan terpusat</p><p class="stat-value">{{ $jumlahKegiatanTerpusat }}</p>@if ($ringkasanCbtTerbatas)<p class="cbt-stat-note">Memuat jadwal atau tugas Anda.</p>@endif</div>
     </div>
 
     <div class="cbt-choice-grid">
