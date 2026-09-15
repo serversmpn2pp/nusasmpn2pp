@@ -93,6 +93,15 @@ class SoalCbtTest extends TestCase
         $this->assertSame('2 Hz', $soalCbt->opsi['pilihan']['B']);
 
         $this->actingAs($administrator)
+            ->get(route('soal-cbt.index'))
+            ->assertOk()
+            ->assertSee('data-preview-source="preview-soal-'.$soalCbt->id.'"', false)
+            ->assertSee('Perlu memperbaiki soal?')
+            ->assertSee('data-preview-edit="'.route('soal-cbt.edit', $soalCbt).'"', false)
+            ->assertSee('Getaran yang terjadi')
+            ->assertDontSee('name="kunci_pg"', false);
+
+        $this->actingAs($administrator)
             ->get(route('soal-cbt.show', $soalCbt))
             ->assertOk()
             ->assertSee('SOAL-CBT-UJI-001')

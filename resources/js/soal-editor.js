@@ -320,11 +320,11 @@ const appendPreviewMedia = (container, editor, compact = false) => {
     if (media.childElementCount) container.append(media);
 };
 
-const appendAnswerPreview = (container, type) => {
+const appendAnswerPreview = (container, type, source = document) => {
     if (['pilihan_ganda', 'pilihan_ganda_kompleks'].includes(type)) {
         const options = document.createElement('div');
         options.className = 'option-list';
-        document.querySelectorAll('[name^="opsi["]').forEach((input) => {
+        source.querySelectorAll('[name^="opsi["]').forEach((input) => {
             if (!input.value.trim()) return;
             const code = input.name.match(/\[([^\]]+)\]/)?.[1] || '';
             const row = document.createElement('label');
@@ -350,7 +350,7 @@ const appendAnswerPreview = (container, type) => {
     } else if (type === 'benar_salah') {
         const options = document.createElement('div');
         options.className = 'option-list';
-        document.querySelectorAll('[name="pernyataan[]"]').forEach((input, index) => {
+        source.querySelectorAll('[name="pernyataan[]"]').forEach((input, index) => {
             if (!input.value.trim()) return;
             const row = document.createElement('div');
             row.className = 'statement-row';
@@ -381,9 +381,9 @@ const appendAnswerPreview = (container, type) => {
         });
         container.append(options);
     } else if (type === 'menjodohkan') {
-        const leftInputs = [...document.querySelectorAll('[name="pasangan_kiri[]"]')];
-        const rightInputs = [...document.querySelectorAll('[name="pasangan_kanan[]"]')];
-        const distractorInputs = [...document.querySelectorAll('[name="pengecoh_menjodohkan[]"]')];
+        const leftInputs = [...source.querySelectorAll('[name="pasangan_kiri[]"]')];
+        const rightInputs = [...source.querySelectorAll('[name="pasangan_kanan[]"]')];
+        const distractorInputs = [...source.querySelectorAll('[name="pengecoh_menjodohkan[]"]')];
         const answerInputs = [...rightInputs, ...distractorInputs];
         const answers = [
             ...rightInputs.map((input) => input.value.trim()),
@@ -481,14 +481,17 @@ const appendAnswerPreview = (container, type) => {
 };
 
 document.querySelectorAll('[data-question-preview]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        const template = document.getElementById(button.dataset.previewSource);
+        const source = template ? template.content.cloneNode(true) : document;
         const dialog = document.querySelector('[data-question-preview-dialog]');
         const body = dialog?.querySelector('[data-question-preview-body]');
-        const editor = document.querySelector('[data-question-media-editor][data-media-key="utama"]');
+        const editor = source.querySelector('[data-question-media-editor][data-media-key="utama"]');
         if (!dialog || !body || !editor) return;
 
         body.replaceChildren();
-        const typeInput = document.querySelector('[data-soal-kind]:checked');
+        const typeInput = source.querySelector('[data-soal-kind]:checked');
         const typeLabel = typeInput?.closest('label')?.querySelector('strong')?.textContent || 'Soal';
         const question = document.createElement('article');
         question.className = 'panel question-card question-preview-exam';
@@ -508,8 +511,8 @@ document.querySelectorAll('[data-question-preview]').forEach((button) => {
         head.append(identity, doubt);
         question.append(head);
 
-        const stimulus = document.querySelector('[name="stimulus"]')?.value.trim();
-        const stimulusEditor = document.querySelector('[data-question-media-editor][data-media-key="stimulus"]');
+        const stimulus = source.querySelector('[name="stimulus"]')?.value.trim();
+        const stimulusEditor = source.querySelector('[data-question-media-editor][data-media-key="stimulus"]');
         if (stimulus || stimulusEditor) {
             const stimulusBox = document.createElement('div');
             stimulusBox.className = 'stimulus';
@@ -519,8 +522,10 @@ document.querySelectorAll('[data-question-preview]').forEach((button) => {
         }
 
         appendPreviewMedia(question, editor);
-        question.append(createText('h2', document.querySelector('[name="pertanyaan"]')?.value.trim() || 'Isi soal belum ditulis.', 'question-title'));
-        appendAnswerPreview(question, typeInput?.value || 'pilihan_ganda');
+        question.append(createText('h2', source.querySelector('[name="pertanyaan"]')?.value.trim() || 'Isi soal belum ditulis.', 'question-title'));
+        appendAnswerPreview(question, typeInput?.value || 'pilihan_ganda', source);
+        const edit = dialog.querySelector('[data-preview-edit]');
+        if (edit) edit.href = button.dataset.previewEdit || '#';
         body.append(question);
 
         if (typeof dialog.showModal === 'function') dialog.showModal();

@@ -141,7 +141,7 @@
                             </td>
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
-                                    <a href="{{ route('soal-cbt.show', $item) }}" class="button button-muted">Lihat</a>
+                                    <a href="{{ route('soal-cbt.show', $item) }}" class="button button-muted" data-question-preview data-preview-source="preview-soal-{{ $item->id }}" @if ($bisaKelolaSoal) data-preview-edit="{{ route('soal-cbt.edit', $item) }}" @endif>Lihat</a>
                                     @if ($bisaKelolaSoal)
                                         <a href="{{ route('soal-cbt.edit', $item) }}" class="button button-dark">Edit</a>
                                     @endif
@@ -175,7 +175,7 @@
                         <div><dt>Skor</dt><dd>{{ $item->skor_maksimal }}</dd></div>
                     </dl>
                     <div class="actions" style="margin-top: 14px;">
-                        <a href="{{ route('soal-cbt.show', $item) }}" class="button button-muted">Lihat</a>
+                        <a href="{{ route('soal-cbt.show', $item) }}" class="button button-muted" data-question-preview data-preview-source="preview-soal-{{ $item->id }}" @if ($bisaKelolaSoal) data-preview-edit="{{ route('soal-cbt.edit', $item) }}" @endif>Lihat</a>
                         @if ($bisaKelolaSoal)
                             <a href="{{ route('soal-cbt.edit', $item) }}" class="button button-dark">Edit</a>
                         @endif
@@ -205,6 +205,27 @@
             </div>
         </nav>
     @endif
+
+    @include('soal-cbt.partials.preview-styles')
+    @foreach ($soalCbt as $item)
+        @include('soal-cbt.partials.preview-source')
+    @endforeach
+    <dialog class="question-preview-dialog" data-question-preview-dialog aria-label="Pratinjau soal">
+        <div class="question-preview-head">
+            <h2>Pratinjau soal</h2>
+            <button type="button" class="button button-muted" data-close-question-preview>Tutup</button>
+        </div>
+        <div class="question-preview-body" data-question-preview-body></div>
+        @if ($bisaKelolaSoal)
+            <div class="question-preview-footer">
+                <span>Perlu memperbaiki soal?</span>
+                <a class="button button-dark" data-preview-edit>Edit soal</a>
+            </div>
+        @endif
+    </dialog>
+    @push('scripts')
+        @vite('resources/js/soal-editor.js')
+    @endpush
 
     <script>
         (() => {
