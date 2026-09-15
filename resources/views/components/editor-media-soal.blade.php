@@ -3,7 +3,6 @@
     'media' => [],
     'label' => 'Media pendukung',
     'compact' => false,
-    'preview' => false,
 ])
 
 @php
@@ -58,9 +57,6 @@
         <button type="button" class="button button-muted question-media-button" data-media-toggle="gambar">Gambar</button>
         <button type="button" class="button button-muted question-media-button" data-media-toggle="tabel">Tabel</button>
         <button type="button" class="button button-muted question-media-button" data-media-toggle="rumus">Rumus</button>
-        @if ($preview)
-            <button type="button" class="button button-primary" data-question-preview>Pratinjau soal</button>
-        @endif
         <span class="question-media-status" data-media-status @if (! $punyaMedia) hidden @endif>Media ditambahkan</span>
     </div>
 

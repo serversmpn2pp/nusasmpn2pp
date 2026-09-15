@@ -33,8 +33,10 @@ class SoalCbtTest extends TestCase
         [$tahunPelajaran, $mataPelajaran] = $this->buatDataAkademik();
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
 
-        $this->actingAs($administrator)
-            ->get(route('soal-cbt.create'))
+        $response = $this->actingAs($administrator)
+            ->get(route('soal-cbt.create'));
+
+        $response
             ->assertOk()
             ->assertSee('Tambah soal')
             ->assertSee('Isi jawaban dan tentukan kunci')
@@ -70,6 +72,14 @@ class SoalCbtTest extends TestCase
             ->assertDontSee('name="tahun_pelajaran_id"', false)
             ->assertDontSee('name="skor_maksimal"', false)
             ->assertDontSee('name="aktif"', false);
+
+        $html = $response->getContent();
+        $posisiAksi = strrpos($html, '<div class="question-form-actions">');
+        $posisiPratinjau = strrpos($html, 'class="button button-muted" data-question-preview');
+        $this->assertNotFalse($posisiAksi);
+        $this->assertNotFalse($posisiPratinjau);
+        $this->assertGreaterThan($posisiAksi, $posisiPratinjau);
+        $this->assertSame(1, substr_count($html, ' data-question-preview>'));
 
         $this->actingAs($administrator)
             ->post(route('soal-cbt.store'), $this->dataSoal($tahunPelajaran, $mataPelajaran))
