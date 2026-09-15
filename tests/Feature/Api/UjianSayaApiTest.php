@@ -74,6 +74,9 @@ class UjianSayaApiTest extends TestCase
             ->assertJsonPath('data.mode', 'pengerjaan')
             ->assertJsonPath('data.sisa_detik', 1800)
             ->assertJsonPath('data.soal.0.pertanyaan', 'Organ pernapasan manusia adalah ....')
+            ->assertJsonPath('data.soal.0.stimulus', 'Perhatikan data pernapasan berikut.')
+            ->assertJsonPath('data.soal.0.stimulus_media.rumus.latex', 'V = \\frac{u}{t}')
+            ->assertJsonPath('data.soal.0.pilihan.0.media.tabel.judul', 'Ciri organ')
             ->assertJsonPath('data.soal.1.pertanyaan', 'Jelaskan proses pertukaran oksigen.')
             ->assertJsonMissingPath('data.soal.0.kunci_jawaban')
             ->assertJsonMissingPath('data.soal.0.pembahasan');
@@ -193,12 +196,44 @@ class UjianSayaApiTest extends TestCase
             'pertanyaan' => 'Jodohkan besaran dengan satuannya.',
             'opsi' => [
                 'pasangan' => [
-                    ['nomor' => 1, 'kiri' => 'Frekuensi', 'kanan' => 'Hertz'],
-                    ['nomor' => 2, 'kiri' => 'Periode', 'kanan' => 'Sekon'],
+                    [
+                        'nomor' => 1,
+                        'kiri' => 'Frekuensi',
+                        'kanan' => 'Hertz',
+                        'media_kiri_key' => 'besaran_frekuensi',
+                        'media_kanan_key' => 'satuan_hertz',
+                    ],
+                    [
+                        'nomor' => 2,
+                        'kiri' => 'Periode',
+                        'kanan' => 'Sekon',
+                        'media_kiri_key' => 'besaran_periode',
+                        'media_kanan_key' => 'satuan_sekon',
+                    ],
                 ],
                 'pengecoh' => ['Newton'],
+                'pengecoh_media' => [
+                    ['teks' => 'Newton', 'media_key' => 'pengecoh_newton'],
+                ],
             ],
             'kunci_jawaban' => ['jawaban' => [1 => 'Hertz', 2 => 'Sekon']],
+            'media' => [
+                'konten' => [
+                    'besaran_frekuensi' => [
+                        'rumus' => ['latex' => 'f', 'keterangan' => 'Lambang frekuensi'],
+                    ],
+                    'satuan_hertz' => [
+                        'rumus' => ['latex' => '\\mathrm{Hz}', 'keterangan' => 'Satuan frekuensi'],
+                    ],
+                    'pengecoh_newton' => [
+                        'gambar' => [
+                            'path' => 'soal-cbt/uji/newton.png',
+                            'alt' => 'Ilustrasi gaya Newton',
+                            'keterangan' => 'Gambar pengecoh Newton',
+                        ],
+                    ],
+                ],
+            ],
             'skor_maksimal' => 2,
             'status' => 'siap',
             'aktif' => true,
@@ -227,6 +262,15 @@ class UjianSayaApiTest extends TestCase
         $this->assertSame(['A', 'B', 'C'], $pilihan->pluck('label')->all());
         $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $pilihan->pluck('kode')->all());
         $this->assertSame(['Hertz', 'Newton', 'Sekon'], $pilihan->pluck('teks')->sort()->values()->all());
+        $this->assertSame('f', $response->json('data.soal.2.pasangan.0.media.rumus.latex'));
+        $this->assertSame(
+            '\\mathrm{Hz}',
+            data_get($pilihan->firstWhere('teks', 'Hertz'), 'media.rumus.latex'),
+        );
+        $this->assertSame(
+            'Gambar pengecoh Newton',
+            data_get($pilihan->firstWhere('teks', 'Newton'), 'media.gambar.keterangan'),
+        );
 
         $this->withToken($token)
             ->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
@@ -496,12 +540,26 @@ class UjianSayaApiTest extends TestCase
             'jenis_soal' => 'pilihan_ganda',
             'tingkat_kesulitan' => 'sedang',
             'kategori' => 'umum',
+            'stimulus' => 'Perhatikan data pernapasan berikut.',
             'pertanyaan' => 'Organ pernapasan manusia adalah ....',
             'opsi' => [
                 ['kode' => 'A', 'teks' => 'Paru-paru'],
                 ['kode' => 'B', 'teks' => 'Lambung'],
             ],
             'kunci_jawaban' => ['A'],
+            'media' => [
+                'konten' => [
+                    'stimulus' => [
+                        'rumus' => ['latex' => 'V = \\frac{u}{t}', 'keterangan' => 'Rumus volume udara'],
+                    ],
+                    'pilihan_A' => [
+                        'tabel' => [
+                            'judul' => 'Ciri organ',
+                            'baris' => [['Bagian', 'Fungsi'], ['Alveolus', 'Pertukaran gas']],
+                        ],
+                    ],
+                ],
+            ],
             'skor_maksimal' => 1,
             'status' => 'siap',
             'aktif' => true,

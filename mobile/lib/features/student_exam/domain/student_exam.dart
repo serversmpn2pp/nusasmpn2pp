@@ -297,6 +297,7 @@ class StudentExamQuestion {
     required this.type,
     required this.typeLabel,
     required this.question,
+    required this.stimulusMedia,
     required this.media,
     required this.options,
     required this.statements,
@@ -313,6 +314,7 @@ class StudentExamQuestion {
         type: json['jenis'] as String? ?? 'uraian',
         typeLabel: json['label_jenis'] as String? ?? 'Soal',
         stimulus: json['stimulus'] as String?,
+        stimulusMedia: StudentExamMedia.fromJson(_map(json['stimulus_media'])),
         question: json['pertanyaan'] as String? ?? '-',
         media: StudentExamMedia.fromJson(_map(json['media'])),
         options: _list(json['pilihan'], StudentExamOption.fromJson),
@@ -327,6 +329,7 @@ class StudentExamQuestion {
   final String type;
   final String typeLabel;
   final String? stimulus;
+  final StudentExamMedia stimulusMedia;
   final String question;
   final StudentExamMedia media;
   final List<StudentExamOption> options;
@@ -360,6 +363,7 @@ class StudentExamQuestion {
         type: type,
         typeLabel: typeLabel,
         stimulus: stimulus,
+        stimulusMedia: stimulusMedia,
         question: question,
         media: media,
         options: options,
@@ -374,41 +378,56 @@ class StudentExamOption {
   const StudentExamOption({
     required this.code,
     required this.text,
+    required this.media,
     this.displayLabel,
   });
   factory StudentExamOption.fromJson(Map<String, dynamic> json) =>
       StudentExamOption(
         code: json['kode'] as String? ?? '-',
         text: json['teks'] as String? ?? '-',
+        media: StudentExamMedia.fromJson(_map(json['media'])),
         displayLabel: json['label'] as String?,
       );
   final String code;
   final String text;
+  final StudentExamMedia media;
   final String? displayLabel;
 
   String get label => displayLabel ?? code;
 }
 
 class StudentExamStatement {
-  const StudentExamStatement({required this.number, required this.text});
+  const StudentExamStatement({
+    required this.number,
+    required this.text,
+    required this.media,
+  });
   factory StudentExamStatement.fromJson(Map<String, dynamic> json) =>
       StudentExamStatement(
         number: json['nomor']?.toString() ?? '-',
         text: json['teks'] as String? ?? '-',
+        media: StudentExamMedia.fromJson(_map(json['media'])),
       );
   final String number;
   final String text;
+  final StudentExamMedia media;
 }
 
 class StudentExamPair {
-  const StudentExamPair({required this.number, required this.left});
+  const StudentExamPair({
+    required this.number,
+    required this.left,
+    required this.media,
+  });
   factory StudentExamPair.fromJson(Map<String, dynamic> json) =>
       StudentExamPair(
         number: json['nomor']?.toString() ?? '-',
         left: json['kiri'] as String? ?? '-',
+        media: StudentExamMedia.fromJson(_map(json['media'])),
       );
   final String number;
   final String left;
+  final StudentExamMedia media;
 }
 
 class StudentExamMedia {

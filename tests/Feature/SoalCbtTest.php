@@ -49,7 +49,17 @@ class SoalCbtTest extends TestCase
             ->assertSee('Sangat Sulit')
             ->assertSee('Skor 4')
             ->assertSee('name="tingkat_kesulitan"', false)
-            ->assertSee('Tambahkan pendukung soal')
+            ->assertSee('Media isi soal')
+            ->assertSee('Kategori proses berpikir')
+            ->assertSee('Mengingat atau memahami informasi dan konsep dasar')
+            ->assertSee('Menerapkan konsep atau menghubungkan beberapa informasi')
+            ->assertSee('Menganalisis, menilai, atau menyelesaikan masalah baru')
+            ->assertSee('Media stimulus')
+            ->assertSee('Media pilihan A')
+            ->assertSee('Media pernyataan 1')
+            ->assertSee('Media jawaban')
+            ->assertSee('Media pengecoh')
+            ->assertSee('Keterangan yang tampil di bawah gambar')
             ->assertSee('Pratinjau soal')
             ->assertSee('name="gambar_soal"', false)
             ->assertSee('name="media_tabel"', false)
@@ -133,6 +143,26 @@ class SoalCbtTest extends TestCase
                 'tabel_judul' => 'Hasil pengamatan',
                 'rumus_latex' => 'f = \\frac{n}{t}',
                 'rumus_keterangan' => 'Rumus frekuensi',
+                'stimulus' => 'Perhatikan ilustrasi dan data berikut.',
+                'media_konten' => [
+                    'stimulus' => [
+                        'gambar' => UploadedFile::fake()->createWithContent(
+                            'stimulus.png',
+                            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
+                        ),
+                        'gambar_alt' => 'Ilustrasi percobaan getaran',
+                        'gambar_keterangan' => 'Gambar 1. Percobaan getaran',
+                    ],
+                    'pilihan_B' => [
+                        'tabel' => json_encode([
+                            ['Besaran', 'Nilai'],
+                            ['Frekuensi', '2 Hz'],
+                        ]),
+                        'tabel_judul' => 'Data pilihan B',
+                        'rumus_latex' => '2 = \\frac{20}{10}',
+                        'rumus_keterangan' => 'Perhitungan pilihan B',
+                    ],
+                ],
             ])
             ->assertRedirect();
 
@@ -143,12 +173,18 @@ class SoalCbtTest extends TestCase
         $this->assertSame('Grafik simpangan terhadap waktu', data_get($soal->media, 'gambar.alt'));
         $this->assertSame('Simpangan', data_get($soal->media, 'tabel.baris.0.1'));
         $this->assertSame('f = \\frac{n}{t}', data_get($soal->media, 'rumus.latex'));
+        $this->assertSame('Gambar 1. Percobaan getaran', data_get($soal->media, 'konten.stimulus.gambar.keterangan'));
+        $this->assertSame('2 Hz', data_get($soal->media, 'konten.pilihan_B.tabel.baris.1.1'));
+        Storage::disk('public')->assertExists(data_get($soal->media, 'konten.stimulus.gambar.path'));
 
         $this->actingAs($administrator)
             ->get(route('soal-cbt.show', $soal))
             ->assertOk()
             ->assertSee('Hasil pengamatan')
             ->assertSee('Data percobaan siswa')
+            ->assertSee('Gambar 1. Percobaan getaran')
+            ->assertSee('Data pilihan B')
+            ->assertSee('Perhitungan pilihan B')
             ->assertSee('data-rumus-latex="f = \\frac{n}{t}"', false);
 
         $this->actingAs($administrator)
@@ -157,6 +193,18 @@ class SoalCbtTest extends TestCase
                 'hapus_gambar_soal' => '1',
                 'media_tabel' => '',
                 'rumus_latex' => '',
+                'media_konten' => [
+                    'stimulus' => [
+                        'hapus_gambar' => '1',
+                        'tabel' => '',
+                        'rumus_latex' => '',
+                    ],
+                    'pilihan_B' => [
+                        'hapus_gambar' => '1',
+                        'tabel' => '',
+                        'rumus_latex' => '',
+                    ],
+                ],
             ])
             ->assertRedirect(route('soal-cbt.show', $soal));
 
@@ -173,6 +221,7 @@ class SoalCbtTest extends TestCase
             'mata_pelajaran_id' => $mataPelajaran->id,
             'tingkat' => 8,
             'jenis_soal' => 'pilihan_ganda',
+            'kategori' => 'mots',
             'topik' => 'Getaran',
             'pertanyaan' => 'Satuan frekuensi adalah ....',
             'opsi' => [
@@ -203,7 +252,7 @@ class SoalCbtTest extends TestCase
             'mata_pelajaran_id' => $mataPelajaran->id,
             'tingkat' => 8,
             'jenis_soal' => 'pilihan_ganda',
-            'kategori' => 'umum',
+            'kategori' => 'mots',
             'topik' => 'Getaran',
             'materi' => null,
         ]));
@@ -358,7 +407,7 @@ class SoalCbtTest extends TestCase
             'kode' => $kode,
             'jenis_soal' => 'pilihan_ganda',
             'tingkat_kesulitan' => 'sedang',
-            'kategori' => 'umum',
+            'kategori' => 'mots',
             'topik' => 'Getaran',
             'materi' => 'Frekuensi',
             'tujuan_pembelajaran' => 'Siswa dapat menentukan frekuensi getaran.',

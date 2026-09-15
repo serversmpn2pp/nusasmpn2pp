@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('kode', 60)->unique();
             $table->string('jenis_soal', 40)->index();
             $table->string('tingkat_kesulitan', 30)->default('sedang')->index();
-            $table->string('kategori', 40)->default('umum')->index();
+            $table->string('kategori', 40)->default('mots')->index();
             $table->string('topik', 160)->nullable();
             $table->string('materi', 180)->nullable();
             $table->text('tujuan_pembelajaran')->nullable();

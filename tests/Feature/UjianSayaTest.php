@@ -247,6 +247,7 @@ class UjianSayaTest extends TestCase
             'jenis_soal' => 'pilihan_ganda',
             'tingkat_kesulitan' => 'sedang',
             'kategori' => 'umum',
+            'stimulus' => 'Perhatikan data organ pernapasan.',
             'pertanyaan' => 'Organ pernapasan utama manusia adalah ....',
             'opsi' => [
                 ['kode' => 'A', 'teks' => 'Paru-paru'],
@@ -255,6 +256,19 @@ class UjianSayaTest extends TestCase
                 ['kode' => 'D', 'teks' => 'Usus'],
             ],
             'kunci_jawaban' => ['A'],
+            'media' => [
+                'konten' => [
+                    'stimulus' => [
+                        'rumus' => ['latex' => 'V = \\frac{u}{t}', 'keterangan' => 'Rumus volume udara'],
+                    ],
+                    'pilihan_A' => [
+                        'tabel' => [
+                            'judul' => 'Ciri organ',
+                            'baris' => [['Bagian', 'Fungsi'], ['Alveolus', 'Pertukaran gas']],
+                        ],
+                    ],
+                ],
+            ],
             'skor_maksimal' => 1,
             'status' => 'siap',
             'aktif' => true,
@@ -325,6 +339,10 @@ class UjianSayaTest extends TestCase
             ->assertOk()
             ->assertSee('Organ pernapasan utama manusia adalah')
             ->assertSee('Gas yang dibutuhkan manusia untuk bernapas')
+            ->assertSee('Perhatikan data organ pernapasan')
+            ->assertSee('Rumus volume udara')
+            ->assertSee('Ciri organ')
+            ->assertSee('Pertukaran gas')
             ->assertSee('Soal 1 dari 2')
             ->assertSee('Jawaban disimpan otomatis')
             ->assertSee('Sisa waktu')

@@ -94,16 +94,22 @@ class SoalCbtController extends Controller
         $this->pastikanMataPelajaranBoleh($request, (int) $data['mata_pelajaran_id']);
         $this->pastikanTingkatMataPelajaranTersedia($request, $data);
         $konten = $this->susunKontenJawaban($data);
-        $gambarBaru = $this->simpanGambarSoal($request);
+        $gambarBaru = [];
 
         try {
+            $gambarUtama = $this->simpanGambarSoal($request);
+            if ($gambarUtama) {
+                $gambarBaru[] = $gambarUtama;
+            }
+            [$media, $gambarKontenBaru] = $this->susunMediaSoal($request, $data, null, $gambarUtama, $konten);
+            $gambarBaru = [...$gambarBaru, ...$gambarKontenBaru];
             $soalCbt = SoalCbt::create([
                 ...$this->dataSoal($data, $konten),
-                'media' => $this->susunMediaSoal($data, null, $gambarBaru),
+                'media' => $media,
                 'dibuat_oleh_pengguna_id' => $request->user()?->id,
             ]);
         } catch (Throwable $exception) {
-            $this->hapusGambarSoal($gambarBaru);
+            collect($gambarBaru)->each(fn ($path) => $this->hapusGambarSoal($path));
 
             throw $exception;
         }
@@ -151,25 +157,28 @@ class SoalCbtController extends Controller
         $this->pastikanMataPelajaranBoleh($request, (int) $data['mata_pelajaran_id']);
         $this->pastikanTingkatMataPelajaranTersedia($request, $data);
         $konten = $this->susunKontenJawaban($data);
-        $gambarLama = data_get($soalCbt->media, 'gambar.path');
-        $gambarBaru = $this->simpanGambarSoal($request);
-        $media = $this->susunMediaSoal($data, $soalCbt, $gambarBaru);
+        $gambarLama = $this->daftarPathGambar($soalCbt->media);
+        $gambarBaru = [];
 
         try {
+            $gambarUtama = $this->simpanGambarSoal($request);
+            if ($gambarUtama) {
+                $gambarBaru[] = $gambarUtama;
+            }
+            [$media, $gambarKontenBaru] = $this->susunMediaSoal($request, $data, $soalCbt, $gambarUtama, $konten);
+            $gambarBaru = [...$gambarBaru, ...$gambarKontenBaru];
             $soalCbt->update([
                 ...$this->dataSoal($data, $konten),
                 'media' => $media,
             ]);
         } catch (Throwable $exception) {
-            $this->hapusGambarSoal($gambarBaru);
+            collect($gambarBaru)->each(fn ($path) => $this->hapusGambarSoal($path));
 
             throw $exception;
         }
 
-        $gambarSekarang = data_get($media, 'gambar.path');
-        if ($gambarLama && $gambarLama !== $gambarSekarang) {
-            $this->hapusGambarSoal($gambarLama);
-        }
+        $gambarSekarang = $this->daftarPathGambar($media);
+        collect(array_diff($gambarLama, $gambarSekarang))->each(fn ($path) => $this->hapusGambarSoal($path));
 
         return redirect()
             ->route('soal-cbt.show', $soalCbt)
@@ -211,7 +220,7 @@ class SoalCbtController extends Controller
             'kode' => ['nullable', 'string', 'max:60', Rule::unique('soal_cbt', 'kode')->ignore($soalCbt)],
             'jenis_soal' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_JENIS))],
             'tingkat_kesulitan' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KESULITAN))],
-            'kategori' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_KATEGORI))],
+            'kategori' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KATEGORI))],
             'topik' => ['nullable', 'string', 'max:160'],
             'materi' => ['nullable', 'string', 'max:180'],
             'tujuan_pembelajaran' => ['nullable', 'string'],
@@ -228,14 +237,22 @@ class SoalCbtController extends Controller
             'kunci_pgk.*' => ['nullable', 'string', 'max:5'],
             'pernyataan' => ['nullable', 'array'],
             'pernyataan.*' => ['nullable', 'string', 'max:800'],
+            'pernyataan_media_key' => ['nullable', 'array', 'max:10'],
+            'pernyataan_media_key.*' => ['nullable', 'string', 'max:100', 'regex:/\A[a-zA-Z0-9_-]+\z/'],
             'jawaban_bs' => ['nullable', 'array'],
             'jawaban_bs.*' => ['nullable', Rule::in(['benar', 'salah'])],
             'pasangan_kiri' => ['nullable', 'array', 'max:10'],
             'pasangan_kiri.*' => ['nullable', 'string', 'max:800'],
             'pasangan_kanan' => ['nullable', 'array', 'max:10'],
             'pasangan_kanan.*' => ['nullable', 'string', 'max:800'],
+            'pasangan_media_kiri_key' => ['nullable', 'array', 'max:10'],
+            'pasangan_media_kiri_key.*' => ['nullable', 'string', 'max:100', 'regex:/\A[a-zA-Z0-9_-]+\z/'],
+            'pasangan_media_kanan_key' => ['nullable', 'array', 'max:10'],
+            'pasangan_media_kanan_key.*' => ['nullable', 'string', 'max:100', 'regex:/\A[a-zA-Z0-9_-]+\z/'],
             'pengecoh_menjodohkan' => ['nullable', 'array', 'max:10'],
             'pengecoh_menjodohkan.*' => ['nullable', 'string', 'max:800'],
+            'pengecoh_media_key' => ['nullable', 'array', 'max:10'],
+            'pengecoh_media_key.*' => ['nullable', 'string', 'max:100', 'regex:/\A[a-zA-Z0-9_-]+\z/'],
             'kunci_teks' => ['nullable', 'string'],
             'rubrik_teks' => ['nullable', 'string'],
             'gambar_soal' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
@@ -255,6 +272,25 @@ class SoalCbtController extends Controller
                 },
             ],
             'rumus_keterangan' => ['nullable', 'string', 'max:220'],
+            'media_konten' => ['nullable', 'array', 'max:50'],
+            'media_konten.*' => ['nullable', 'array'],
+            'media_konten.*.gambar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'media_konten.*.hapus_gambar' => ['nullable', 'boolean'],
+            'media_konten.*.gambar_alt' => ['nullable', 'string', 'max:160'],
+            'media_konten.*.gambar_keterangan' => ['nullable', 'string', 'max:220'],
+            'media_konten.*.tabel' => ['nullable', 'json', 'max:24000'],
+            'media_konten.*.tabel_judul' => ['nullable', 'string', 'max:160'],
+            'media_konten.*.rumus_latex' => [
+                'nullable',
+                'string',
+                'max:1500',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (str_contains((string) $value, '\\placeholder')) {
+                        $fail('Lengkapi bagian rumus yang masih kosong.');
+                    }
+                },
+            ],
+            'media_konten.*.rumus_keterangan' => ['nullable', 'string', 'max:220'],
         ];
     }
 
@@ -262,7 +298,7 @@ class SoalCbtController extends Controller
     {
         $data['tahun_pelajaran_id'] = filled($data['tahun_pelajaran_id'] ?? null) ? (int) $data['tahun_pelajaran_id'] : null;
         $data['kode'] = mb_strtoupper(trim((string) ($data['kode'] ?? '')));
-        $data['kategori'] = $data['kategori'] ?? 'umum';
+        $data['kategori'] = $data['kategori'] ?? 'mots';
         $data['skor_maksimal'] = SoalCbt::skorUntukKesulitan($data['tingkat_kesulitan']);
         $data['status'] = match ($data['aksi'] ?? null) {
             'simpan_siap', 'simpan_lanjut' => 'siap',
@@ -364,6 +400,7 @@ class SoalCbtController extends Controller
                 'nomor' => (int) $key + 1,
                 'teks' => $this->teksAtauNull($value),
                 'jawaban' => ($data['jawaban_bs'][$key] ?? null) === 'benar',
+                'media_key' => $this->kunciMedia($data['pernyataan_media_key'][$key] ?? null, 'pernyataan_'.((int) $key + 1)),
             ])
             ->filter(fn ($item) => filled($item['teks']))
             ->values();
@@ -375,7 +412,7 @@ class SoalCbtController extends Controller
         }
 
         return [
-            'opsi' => ['pernyataan' => $pernyataan->map(fn ($item) => collect($item)->only(['nomor', 'teks'])->all())->all()],
+            'opsi' => ['pernyataan' => $pernyataan->map(fn ($item) => collect($item)->only(['nomor', 'teks', 'media_key'])->all())->all()],
             'kunci_jawaban' => ['jawaban' => $pernyataan->pluck('jawaban', 'nomor')->all()],
             'rubrik' => null,
         ];
@@ -388,6 +425,8 @@ class SoalCbtController extends Controller
                 'nomor' => (int) $key + 1,
                 'kiri' => $this->teksAtauNull($value),
                 'kanan' => $this->teksAtauNull($data['pasangan_kanan'][$key] ?? null),
+                'media_kiri_key' => $this->kunciMedia($data['pasangan_media_kiri_key'][$key] ?? null, 'pasangan_'.((int) $key + 1).'_kiri'),
+                'media_kanan_key' => $this->kunciMedia($data['pasangan_media_kanan_key'][$key] ?? null, 'pasangan_'.((int) $key + 1).'_kanan'),
             ])
             ->filter(fn ($item) => filled($item['kiri']) && filled($item['kanan']))
             ->values();
@@ -401,12 +440,15 @@ class SoalCbtController extends Controller
         $normalisasi = fn ($value) => mb_strtolower(trim((string) $value));
         $jawabanBenar = $pasangan->pluck('kanan')->map($normalisasi);
         $pengecoh = collect($data['pengecoh_menjodohkan'] ?? [])
-            ->map(fn ($value) => $this->teksAtauNull($value))
-            ->filter()
-            ->unique($normalisasi)
+            ->map(fn ($value, $key) => [
+                'teks' => $this->teksAtauNull($value),
+                'media_key' => $this->kunciMedia($data['pengecoh_media_key'][$key] ?? null, 'pengecoh_'.((int) $key + 1)),
+            ])
+            ->filter(fn ($item) => filled($item['teks']))
+            ->unique(fn ($item) => $normalisasi($item['teks']))
             ->values();
 
-        if ($pengecoh->contains(fn ($value) => $jawabanBenar->contains($normalisasi($value)))) {
+        if ($pengecoh->contains(fn ($item) => $jawabanBenar->contains($normalisasi($item['teks'])))) {
             throw ValidationException::withMessages([
                 'pengecoh_menjodohkan' => 'Jawaban pengecoh harus berbeda dari pasangan jawaban yang benar.',
             ]);
@@ -415,7 +457,8 @@ class SoalCbtController extends Controller
         return [
             'opsi' => [
                 'pasangan' => $pasangan->all(),
-                'pengecoh' => $pengecoh->all(),
+                'pengecoh' => $pengecoh->pluck('teks')->all(),
+                'pengecoh_media' => $pengecoh->all(),
             ],
             'kunci_jawaban' => ['jawaban' => $pasangan->mapWithKeys(fn ($item) => [$item['nomor'] => $item['kanan']])->all()],
             'rubrik' => null,
@@ -456,6 +499,13 @@ class SoalCbtController extends Controller
         return $opsi;
     }
 
+    private function kunciMedia(mixed $nilai, string $bawaan): string
+    {
+        $nilai = trim((string) $nilai);
+
+        return preg_match('/\A[a-zA-Z0-9_-]+\z/', $nilai) ? $nilai : $bawaan;
+    }
+
     private function simpanGambarSoal(Request $request): ?string
     {
         if (! $request->hasFile('gambar_soal')) {
@@ -465,10 +515,16 @@ class SoalCbtController extends Controller
         return $request->file('gambar_soal')->store('soal-cbt/'.now()->format('Y'), 'public');
     }
 
-    private function susunMediaSoal(array $data, ?SoalCbt $soalCbt, ?string $gambarBaru): ?array
-    {
+    private function susunMediaSoal(
+        Request $request,
+        array $data,
+        ?SoalCbt $soalCbt,
+        ?string $gambarBaru,
+        array $konten,
+    ): array {
         $mediaLama = $soalCbt?->media ?? [];
         $media = [];
+        $gambarKontenBaru = [];
         $hapusGambar = filter_var($data['hapus_gambar_soal'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $pathGambar = $gambarBaru ?: ($hapusGambar ? null : data_get($mediaLama, 'gambar.path'));
 
@@ -496,7 +552,101 @@ class SoalCbtController extends Controller
             ];
         }
 
-        return $media === [] ? null : $media;
+        foreach ($this->kunciMediaYangDigunakan($data, $konten) as $kunci) {
+            $dataMedia = data_get($data, 'media_konten.'.$kunci);
+            $mediaSebelumnya = data_get($mediaLama, 'konten.'.$kunci, []);
+
+            if (! is_array($dataMedia)) {
+                if (filled($mediaSebelumnya)) {
+                    $media['konten'][$kunci] = $mediaSebelumnya;
+                }
+
+                continue;
+            }
+
+            [$mediaKonten, $pathBaru] = $this->susunSatuMediaKonten(
+                $request,
+                $kunci,
+                $dataMedia,
+                is_array($mediaSebelumnya) ? $mediaSebelumnya : [],
+            );
+
+            if ($mediaKonten !== null) {
+                $media['konten'][$kunci] = $mediaKonten;
+            }
+            if ($pathBaru) {
+                $gambarKontenBaru[] = $pathBaru;
+            }
+        }
+
+        return [$media === [] ? null : $media, $gambarKontenBaru];
+    }
+
+    private function susunSatuMediaKonten(
+        Request $request,
+        string $kunci,
+        array $data,
+        array $mediaLama,
+    ): array {
+        $media = [];
+        $tabel = $this->rapikanTabelSoal($data['tabel'] ?? null);
+        $rumus = $this->teksAtauNull($data['rumus_latex'] ?? null);
+        $gambarBaru = $request->file('media_konten.'.$kunci.'.gambar')?->store('soal-cbt/'.now()->format('Y'), 'public');
+        $hapusGambar = filter_var($data['hapus_gambar'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $pathGambar = $gambarBaru ?: ($hapusGambar ? null : data_get($mediaLama, 'gambar.path'));
+
+        if ($pathGambar) {
+            $media['gambar'] = [
+                'path' => $pathGambar,
+                'alt' => $this->teksAtauNull($data['gambar_alt'] ?? null)
+                    ?: data_get($mediaLama, 'gambar.alt')
+                    ?: 'Gambar pendukung soal',
+                'keterangan' => array_key_exists('gambar_keterangan', $data)
+                    ? $this->teksAtauNull($data['gambar_keterangan'])
+                    : data_get($mediaLama, 'gambar.keterangan'),
+            ];
+        }
+
+        if ($tabel !== []) {
+            $media['tabel'] = [
+                'judul' => $this->teksAtauNull($data['tabel_judul'] ?? null),
+                'baris' => $tabel,
+            ];
+        }
+
+        if ($rumus) {
+            $media['rumus'] = [
+                'latex' => $rumus,
+                'keterangan' => $this->teksAtauNull($data['rumus_keterangan'] ?? null),
+            ];
+        }
+
+        return [$media === [] ? null : $media, $gambarBaru];
+    }
+
+    private function kunciMediaYangDigunakan(array $data, array $konten): array
+    {
+        $kunci = collect(['stimulus']);
+
+        if (in_array($data['jenis_soal'], ['pilihan_ganda', 'pilihan_ganda_kompleks'], true)) {
+            $kunci = $kunci->concat(
+                collect(data_get($konten, 'opsi.pilihan', []))->keys()->map(fn ($kode) => 'pilihan_'.mb_strtoupper((string) $kode)),
+            );
+        } elseif ($data['jenis_soal'] === 'benar_salah') {
+            $kunci = $kunci->concat(collect(data_get($konten, 'opsi.pernyataan', []))->pluck('media_key'));
+        } elseif ($data['jenis_soal'] === 'menjodohkan') {
+            $pasangan = collect(data_get($konten, 'opsi.pasangan', []));
+            $kunci = $kunci
+                ->concat($pasangan->pluck('media_kiri_key'))
+                ->concat($pasangan->pluck('media_kanan_key'))
+                ->concat(collect(data_get($konten, 'opsi.pengecoh_media', []))->pluck('media_key'));
+        }
+
+        return $kunci
+            ->filter(fn ($nilai) => is_string($nilai) && preg_match('/\A[a-zA-Z0-9_-]+\z/', $nilai))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function rapikanTabelSoal(?string $json): array
@@ -536,6 +686,14 @@ class SoalCbtController extends Controller
         if ($path) {
             Storage::disk('public')->delete($path);
         }
+    }
+
+    private function daftarPathGambar(?array $media): array
+    {
+        return collect([
+            data_get($media, 'gambar.path'),
+            ...collect(data_get($media, 'konten', []))->pluck('gambar.path')->all(),
+        ])->filter()->unique()->values()->all();
     }
 
     private function pastikanMataPelajaranBoleh(Request $request, int $mataPelajaranId): void
@@ -686,12 +844,12 @@ class SoalCbtController extends Controller
     private function nilaiAwalDariRequest(Request $request): array
     {
         $jenisSoal = (string) $request->query('jenis_soal', 'pilihan_ganda');
-        $kategori = (string) $request->query('kategori', 'umum');
+        $kategori = (string) $request->query('kategori', 'mots');
 
         return [
             'jenis_soal' => array_key_exists($jenisSoal, SoalCbt::DAFTAR_JENIS) ? $jenisSoal : 'pilihan_ganda',
             'tingkat_kesulitan' => '',
-            'kategori' => array_key_exists($kategori, SoalCbt::DAFTAR_KATEGORI) ? $kategori : 'umum',
+            'kategori' => array_key_exists($kategori, SoalCbt::DAFTAR_KATEGORI) ? $kategori : 'mots',
             'topik' => str($request->query('topik', ''))->limit(160, '')->toString(),
             'materi' => str($request->query('materi', ''))->limit(180, '')->toString(),
         ];

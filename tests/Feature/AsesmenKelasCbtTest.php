@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\Kelas;
+use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
@@ -114,6 +115,37 @@ class AsesmenKelasCbtTest extends TestCase
         $this->assertDatabaseCount('peserta_ujian_cbt', 0);
         $this->assertDatabaseCount('komponen_nilai', 0);
         $this->assertNotSame($kelasGuru->id, $kelasLain->id);
+    }
+
+    public function test_komponen_otomatis_yang_sudah_ada_dipakai_ulang_tanpa_error(): void
+    {
+        [, $mapel, $kelasGuru, , $guru, , $akunGuru] = $this->buatDataDasar();
+        $guruMataPelajaranId = GuruMataPelajaran::query()
+            ->where('pegawai_id', $guru->id)
+            ->where('kelas_id', $kelasGuru->id)
+            ->value('id');
+        $komponen = KomponenNilai::create([
+            'guru_mata_pelajaran_id' => $guruMataPelajaranId,
+            'semester' => 'ganjil',
+            'jenis_komponen' => 'sumatif',
+            'nama' => 'Sumatif Bab Bilangan',
+            'tanggal_penilaian' => '2026-08-20',
+            'urutan' => 1,
+            'aktif' => true,
+        ]);
+        $kelompok = implode('-', [$guru->id, $mapel->id, 7]);
+
+        $this->actingAs($akunGuru)
+            ->post(route('asesmen-kelas-cbt.store'), $this->dataAsesmen($kelompok, $kelasGuru->id))
+            ->assertRedirect();
+
+        $asesmen = UjianCbt::query()->where('nama', 'Sumatif Bab Bilangan')->firstOrFail();
+        $this->assertDatabaseCount('komponen_nilai', 1);
+        $this->assertDatabaseHas('kelas_ujian_cbt', [
+            'ujian_cbt_id' => $asesmen->id,
+            'kelas_id' => $kelasGuru->id,
+            'komponen_nilai_id' => $komponen->id,
+        ]);
     }
 
     private function buatDataDasar(): array

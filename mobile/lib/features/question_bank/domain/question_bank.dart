@@ -91,7 +91,7 @@ class BankQuestion {
     typeLabel: json['label_jenis_soal'] as String? ?? '-',
     difficulty: json['tingkat_kesulitan'] as String? ?? 'sedang',
     difficultyLabel: json['label_tingkat_kesulitan'] as String? ?? '-',
-    category: json['kategori'] as String? ?? 'umum',
+    category: json['kategori'] as String? ?? 'mots',
     categoryLabel: json['label_kategori'] as String? ?? '-',
     topic: json['topik'] as String?,
     material: json['materi'] as String?,

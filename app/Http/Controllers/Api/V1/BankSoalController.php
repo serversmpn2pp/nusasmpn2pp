@@ -82,7 +82,7 @@ class BankSoalController extends Controller
             'tingkat' => ['required', 'integer', Rule::in([7, 8, 9])],
             'jenis_soal' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_JENIS))],
             'tingkat_kesulitan' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KESULITAN))],
-            'kategori' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_KATEGORI))],
+            'kategori' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KATEGORI))],
             'topik' => ['nullable', 'string', 'max:160'],
             'materi' => ['nullable', 'string', 'max:180'],
             'tujuan_pembelajaran' => ['nullable', 'string', 'max:4000'],

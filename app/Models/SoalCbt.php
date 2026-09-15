@@ -36,12 +36,9 @@ class SoalCbt extends Model
     ];
 
     public const DAFTAR_KATEGORI = [
-        'umum' => 'Umum',
-        'stimulus' => 'Berbasis Stimulus',
+        'lots' => 'LOTS',
+        'mots' => 'MOTS',
         'hots' => 'HOTS',
-        'literasi' => 'Literasi',
-        'numerasi' => 'Numerasi',
-        'praktik' => 'Praktik',
     ];
 
     public const DAFTAR_STATUS = [

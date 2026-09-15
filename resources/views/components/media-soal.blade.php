@@ -1,4 +1,4 @@
-@props(['media' => []])
+@props(['media' => [], 'compact' => false])
 
 @php
     $gambar = data_get($media, 'gambar');
@@ -7,15 +7,19 @@
         : null;
     $barisTabel = data_get($media, 'tabel.baris', []);
     $rumus = data_get($media, 'rumus');
+    $keteranganGambar = data_get($gambar, 'keterangan');
+    if (blank($keteranganGambar) && filled(data_get($gambar, 'alt')) && data_get($gambar, 'alt') !== 'Gambar pendukung soal') {
+        $keteranganGambar = data_get($gambar, 'alt');
+    }
 @endphp
 
 @if ($gambarUrl || $barisTabel !== [] || filled(data_get($rumus, 'latex')))
-    <div class="question-media-content">
+    <div class="question-media-content{{ $compact ? ' is-compact' : '' }}">
         @if ($gambarUrl)
             <figure class="question-media-figure">
                 <img src="{{ $gambarUrl }}" alt="{{ data_get($gambar, 'alt', 'Gambar pendukung soal') }}">
-                @if (filled(data_get($gambar, 'keterangan')))
-                    <figcaption>{{ data_get($gambar, 'keterangan') }}</figcaption>
+                @if (filled($keteranganGambar))
+                    <figcaption>{{ $keteranganGambar }}</figcaption>
                 @endif
             </figure>
         @endif
@@ -75,6 +79,13 @@
             .question-media-formula { overflow-x:auto; border:1px solid #dfe7f0; border-radius:7px; background:#fff; padding:14px; text-align:center; }
             .question-media-formula [data-rumus-latex] { min-width:max-content; font-size:1.08rem; }
             .question-media-formula .is-invalid-formula { color:#b91c1c; font-family:inherit; font-size:.82rem; }
+            .question-media-content.is-compact { gap:9px; margin:9px 0 2px; }
+            .question-media-content.is-compact .question-media-figure { text-align:left; }
+            .question-media-content.is-compact .question-media-figure img { max-height:230px; margin-left:0; }
+            .question-media-content.is-compact .question-media-table { min-width:320px; }
+            .question-media-content.is-compact .question-media-table th,.question-media-content.is-compact .question-media-table td { padding:7px 8px; }
+            .question-media-content.is-compact .question-media-formula { padding:10px; text-align:left; }
+            .question-media-content.is-compact figcaption { text-align:left; }
             @media(max-width:620px){.question-media-figure img{max-height:320px}.question-media-table th,.question-media-table td{padding:8px}.question-media-formula{padding:11px}}
         </style>
     @endpush

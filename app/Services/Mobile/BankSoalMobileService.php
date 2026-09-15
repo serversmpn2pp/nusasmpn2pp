@@ -249,12 +249,16 @@ class BankSoalMobileService
     private function ringkasMedia(SoalCbt $soal): array
     {
         $path = data_get($soal->media, 'gambar.path');
+        $keterangan = data_get($soal->media, 'gambar.keterangan');
+        if (blank($keterangan) && filled(data_get($soal->media, 'gambar.alt')) && data_get($soal->media, 'gambar.alt') !== 'Gambar pendukung soal') {
+            $keterangan = data_get($soal->media, 'gambar.alt');
+        }
 
         return [
             'gambar' => $path ? [
                 'url' => url(Storage::url($path)),
                 'alt' => data_get($soal->media, 'gambar.alt'),
-                'keterangan' => data_get($soal->media, 'gambar.keterangan'),
+                'keterangan' => $keterangan,
             ] : null,
             'tabel' => data_get($soal->media, 'tabel'),
             'rumus' => data_get($soal->media, 'rumus'),
@@ -267,7 +271,7 @@ class BankSoalMobileService
             ...$data,
             'tahun_pelajaran_id' => filled($data['tahun_pelajaran_id'] ?? null) ? (int) $data['tahun_pelajaran_id'] : null,
             'tingkat_kesulitan' => $data['tingkat_kesulitan'],
-            'kategori' => $data['kategori'] ?? 'umum',
+            'kategori' => $data['kategori'] ?? 'mots',
             'skor_maksimal' => SoalCbt::skorUntukKesulitan($data['tingkat_kesulitan']),
             'status' => ($data['aksi'] ?? null) === 'simpan_siap' ? 'siap' : 'draft',
             'aktif' => true,
@@ -443,6 +447,10 @@ class BankSoalMobileService
                 'latex' => $rumus,
                 'keterangan' => $this->teksAtauNull($data['rumus_keterangan'] ?? null) ?? data_get($lama, 'rumus.keterangan'),
             ];
+        }
+
+        if (filled(data_get($lama, 'konten'))) {
+            $media['konten'] = data_get($lama, 'konten');
         }
 
         return $media === [] ? null : $media;

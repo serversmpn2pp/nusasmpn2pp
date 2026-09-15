@@ -72,6 +72,12 @@
                     <div class="detail-item" style="margin-bottom: 16px;">
                         <dt>Stimulus</dt>
                         <dd style="white-space: pre-line;">{{ $soalCbt->stimulus }}</dd>
+                        <x-media-soal :media="data_get($soalCbt->media, 'konten.stimulus', [])" compact />
+                    </div>
+                @elseif (filled(data_get($soalCbt->media, 'konten.stimulus')))
+                    <div class="detail-item" style="margin-bottom: 16px;">
+                        <dt>Stimulus</dt>
+                        <dd><x-media-soal :media="data_get($soalCbt->media, 'konten.stimulus', [])" compact /></dd>
                     </div>
                 @endif
                 <x-media-soal :media="$soalCbt->media" />
@@ -98,7 +104,10 @@
                                 @foreach ($soalCbt->opsi['pilihan'] as $kode => $isi)
                                     <tr>
                                         <td>{{ $kode }}</td>
-                                        <td>{{ $isi }}</td>
+                                            <td>
+                                                <div style="white-space: pre-line;">{{ $isi }}</div>
+                                                <x-media-soal :media="data_get($soalCbt->media, 'konten.pilihan_' . $kode, [])" compact />
+                                            </td>
                                         <td>
                                             @php $jawaban = $soalCbt->kunci_jawaban['jawaban'] ?? null; @endphp
                                             @if ((is_string($jawaban) && $jawaban === $kode) || (is_array($jawaban) && in_array($kode, $jawaban, true)))
@@ -120,7 +129,10 @@
                                 @foreach ($soalCbt->opsi['pernyataan'] as $item)
                                     <tr>
                                         <td>{{ $item['nomor'] }}</td>
-                                        <td>{{ $item['teks'] }}</td>
+                                        <td>
+                                            <div style="white-space: pre-line;">{{ $item['teks'] }}</div>
+                                            <x-media-soal :media="data_get($soalCbt->media, 'konten.' . ($item['media_key'] ?? ''), [])" compact />
+                                        </td>
                                         <td>{{ ($soalCbt->kunci_jawaban['jawaban'][$item['nomor']] ?? false) ? 'Benar' : 'Salah' }}</td>
                                     </tr>
                                 @endforeach
@@ -135,8 +147,14 @@
                                 @foreach ($soalCbt->opsi['pasangan'] as $item)
                                     <tr>
                                         <td>{{ $item['nomor'] }}</td>
-                                        <td>{{ $item['kiri'] }}</td>
-                                        <td>{{ $item['kanan'] }}</td>
+                                        <td>
+                                            <div style="white-space: pre-line;">{{ $item['kiri'] }}</div>
+                                            <x-media-soal :media="data_get($soalCbt->media, 'konten.' . ($item['media_kiri_key'] ?? ''), [])" compact />
+                                        </td>
+                                        <td>
+                                            <div style="white-space: pre-line;">{{ $item['kanan'] }}</div>
+                                            <x-media-soal :media="data_get($soalCbt->media, 'konten.' . ($item['media_kanan_key'] ?? ''), [])" compact />
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -145,7 +163,14 @@
                     @if (filled($soalCbt->opsi['pengecoh'] ?? []))
                         <div class="detail-item" style="margin-top: 14px;">
                             <dt>Jawaban pengecoh</dt>
-                            <dd>{{ collect($soalCbt->opsi['pengecoh'])->join(', ') }}</dd>
+                            <dd>
+                                @foreach ($soalCbt->opsi['pengecoh'] as $index => $pengecoh)
+                                    <div style="margin-bottom: 10px;">
+                                        <span>{{ is_array($pengecoh) ? ($pengecoh['teks'] ?? '-') : $pengecoh }}</span>
+                                        <x-media-soal :media="data_get($soalCbt->media, 'konten.' . data_get($soalCbt->opsi, 'pengecoh_media.' . $index . '.media_key', ''), [])" compact />
+                                    </div>
+                                @endforeach
+                            </dd>
                         </div>
                     @endif
                 @else

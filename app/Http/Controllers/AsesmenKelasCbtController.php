@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\GuruMataPelajaran;
 use App\Models\JenisUjianCbt;
-use App\Models\KomponenNilai;
 use App\Models\PengaturanMataPelajaran;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use App\Services\Cbt\SiapkanKomponenNilaiAsesmen;
 use App\Services\Cbt\SinkronkanPesertaAsesmenKelas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class AsesmenKelasCbtController extends Controller
 {
+    public function __construct(private readonly SiapkanKomponenNilaiAsesmen $siapkanKomponenNilai) {}
+
     public function index(Request $request)
     {
         $data = $request->validate([
@@ -299,20 +301,12 @@ class AsesmenKelasCbtController extends Controller
             $komponenId = $item['komponen_nilai_id'];
 
             if ($komponenId === 'baru') {
-                $urutan = KomponenNilai::query()
-                    ->where('guru_mata_pelajaran_id', $kelas['guru_mata_pelajaran_id'])
-                    ->where('semester', $data['semester'])
-                    ->max('urutan') ?? 0;
-                $komponenId = KomponenNilai::create([
-                    'guru_mata_pelajaran_id' => $kelas['guru_mata_pelajaran_id'],
-                    'semester' => $data['semester'],
-                    'jenis_komponen' => 'sumatif',
-                    'nama' => $data['nama'],
-                    'tanggal_penilaian' => substr($data['tanggal_mulai'], 0, 10),
-                    'urutan' => $urutan + 1,
-                    'aktif' => true,
-                    'keterangan' => 'Dibuat otomatis dari Asesmen Kelas CBT.',
-                ])->id;
+                $komponenId = $this->siapkanKomponenNilai->jalankan(
+                    (int) $kelas['guru_mata_pelajaran_id'],
+                    $data['semester'],
+                    $data['nama'],
+                    $data['tanggal_mulai'],
+                )->id;
             }
 
             $ujianCbt->kelasUjianCbt()->updateOrCreate(

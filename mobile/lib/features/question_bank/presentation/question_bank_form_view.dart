@@ -49,7 +49,7 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
   String? _contextKey;
   String _type = 'pilihan_ganda';
   String? _difficulty;
-  String _category = 'umum';
+  String _category = 'mots';
   String? _singleAnswer;
   final Set<String> _multipleAnswers = {};
   int? _academicYearId;
@@ -237,7 +237,14 @@ class _QuestionBankFormViewState extends ConsumerState<QuestionBankFormView> {
           final category = NusaDropdownField<String>(
             fieldKey: const Key('question-form-category'),
             value: _category,
-            decoration: const InputDecoration(labelText: 'Kategori'),
+            decoration: InputDecoration(
+              labelText: 'Kategori proses berpikir *',
+              helperText: switch (_category) {
+                'lots' => 'Mengingat atau memahami konsep dasar.',
+                'hots' => 'Menganalisis atau menyelesaikan masalah baru.',
+                _ => 'Menerapkan konsep atau menghubungkan informasi.',
+              },
+            ),
             options: [
               for (final item in references.categories)
                 NusaDropdownOption(value: item.code, label: item.label),

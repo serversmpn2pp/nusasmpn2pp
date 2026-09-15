@@ -202,7 +202,7 @@
 
         <div class="form-actions">
             <a href="{{ route('asesmen-kelas-cbt.index') }}" class="button button-muted">Batal</a>
-            <button type="submit" class="button button-primary">{{ $tombol }}</button>
+            <button type="submit" class="button button-primary" data-submit-assessment>{{ $tombol }}</button>
         </div>
     </div>
 
@@ -237,6 +237,24 @@
         const semester = document.getElementById('semester');
         const rows = document.querySelectorAll('[data-assessment-class]');
         const empty = document.querySelector('[data-class-empty]');
+        const form = group.closest('form');
+        const submitButton = form?.querySelector('[data-submit-assessment]');
+        let submitting = false;
+
+        form?.addEventListener('submit', (event) => {
+            if (submitting) {
+                event.preventDefault();
+
+                return;
+            }
+
+            submitting = true;
+            form.setAttribute('aria-busy', 'true');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Sedang menyimpan...';
+            }
+        });
 
         const refresh = () => {
             let visible = 0;

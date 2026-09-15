@@ -14,6 +14,7 @@
 
     $jenisTerpilih = $nilai('jenis_soal', 'pilihan_ganda');
     $kesulitanTerpilih = (string) $nilai('tingkat_kesulitan');
+    $kategoriTerpilih = (string) $nilai('kategori', 'mots');
     $jenisUtama = collect($daftarJenisSoal)->only(['pilihan_ganda', 'pilihan_ganda_kompleks', 'benar_salah', 'isian_singkat']);
     $jenisLainnya = collect($daftarJenisSoal)->except($jenisUtama->keys()->all());
     $deskripsiJenis = [
@@ -26,6 +27,11 @@
         'numerik' => 'Untuk hasil perhitungan. Kunci diisi angka saja; koma dan titik desimal dianggap sama.',
         'upload_file' => 'Unggah hasil tugas pada Asesmen Kelas.',
     ];
+    $deskripsiKategori = [
+        'lots' => 'Mengingat atau memahami informasi dan konsep dasar.',
+        'mots' => 'Menerapkan konsep atau menghubungkan beberapa informasi.',
+        'hots' => 'Menganalisis, menilai, atau menyelesaikan masalah baru.',
+    ];
 
     $opsiPilihan = old('opsi', $soalCbt?->opsi['pilihan'] ?? ['A' => '', 'B' => '', 'C' => '', 'D' => '']);
     $opsiPilihan = array_merge(['A' => '', 'B' => '', 'C' => '', 'D' => ''], $opsiPilihan ?: []);
@@ -33,10 +39,16 @@
     $kunciPg = old('kunci_pg', is_string($jawaban) ? $jawaban : '');
     $kunciPgk = old('kunci_pgk', is_array($jawaban) ? $jawaban : []);
 
-    $pernyataanAwal = collect($soalCbt?->opsi['pernyataan'] ?? [])->pluck('teks')->all();
+    $pernyataanAwalData = collect($soalCbt?->opsi['pernyataan'] ?? [])->values();
+    $pernyataanAwal = $pernyataanAwalData->pluck('teks')->all();
     $jawabanBsAwal = collect($soalCbt?->kunci_jawaban['jawaban'] ?? [])->map(fn ($value) => $value ? 'benar' : 'salah')->values()->all();
     $pernyataan = array_pad(old('pernyataan', $pernyataanAwal), 4, '');
     $jawabanBs = array_pad(old('jawaban_bs', $jawabanBsAwal), 4, 'benar');
+    $pernyataanMediaKeyAwal = $pernyataanAwalData->map(fn ($item, $index) => $item['media_key'] ?? 'pernyataan_' . ($index + 1))->all();
+    $pernyataanMediaKey = array_pad(old('pernyataan_media_key', $pernyataanMediaKeyAwal), 4, '');
+    foreach ($pernyataanMediaKey as $index => $key) {
+        $pernyataanMediaKey[$index] = filled($key) ? $key : 'pernyataan_' . ($index + 1);
+    }
 
     $pasanganAwal = collect($soalCbt?->opsi['pasangan'] ?? []);
     $pasanganKiriAwal = array_values((array) old('pasangan_kiri', $pasanganAwal->pluck('kiri')->all()));
@@ -44,21 +56,29 @@
     $jumlahPasangan = min(10, max(4, count($pasanganKiriAwal), count($pasanganKananAwal)));
     $pasanganKiri = array_pad($pasanganKiriAwal, $jumlahPasangan, '');
     $pasanganKanan = array_pad($pasanganKananAwal, $jumlahPasangan, '');
-    $pengecohMenjodohkan = array_values((array) old('pengecoh_menjodohkan', $soalCbt?->opsi['pengecoh'] ?? []));
+    $pasanganMediaKiriAwal = $pasanganAwal->values()->map(fn ($item, $index) => $item['media_kiri_key'] ?? 'pasangan_' . ($index + 1) . '_kiri')->all();
+    $pasanganMediaKananAwal = $pasanganAwal->values()->map(fn ($item, $index) => $item['media_kanan_key'] ?? 'pasangan_' . ($index + 1) . '_kanan')->all();
+    $pasanganMediaKiri = array_pad(old('pasangan_media_kiri_key', $pasanganMediaKiriAwal), $jumlahPasangan, '');
+    $pasanganMediaKanan = array_pad(old('pasangan_media_kanan_key', $pasanganMediaKananAwal), $jumlahPasangan, '');
+    foreach (range(0, $jumlahPasangan - 1) as $index) {
+        $pasanganMediaKiri[$index] = filled($pasanganMediaKiri[$index] ?? null) ? $pasanganMediaKiri[$index] : 'pasangan_' . ($index + 1) . '_kiri';
+        $pasanganMediaKanan[$index] = filled($pasanganMediaKanan[$index] ?? null) ? $pasanganMediaKanan[$index] : 'pasangan_' . ($index + 1) . '_kanan';
+    }
+    $pengecohLama = collect($soalCbt?->opsi['pengecoh'] ?? [])->map(fn ($item) => is_array($item) ? ($item['teks'] ?? '') : $item)->values();
+    $pengecohMenjodohkan = array_values((array) old('pengecoh_menjodohkan', $pengecohLama->all()));
+    $pengecohMediaLama = collect($soalCbt?->opsi['pengecoh_media'] ?? [])->values();
+    $pengecohMediaKeyAwal = $pengecohLama->keys()->map(fn ($index) => data_get($pengecohMediaLama, $index . '.media_key', 'pengecoh_' . ($index + 1)))->all();
+    $pengecohMediaKey = array_values((array) old('pengecoh_media_key', $pengecohMediaKeyAwal));
+    foreach ($pengecohMenjodohkan as $index => $_) {
+        $pengecohMediaKey[$index] = filled($pengecohMediaKey[$index] ?? null) ? $pengecohMediaKey[$index] : 'pengecoh_' . ($index + 1);
+    }
     $kunciTeks = old('kunci_teks', is_string($jawaban) ? $jawaban : '');
     $rubrikTeks = old('rubrik_teks', $soalCbt?->rubrik['catatan'] ?? '');
     $mediaSoal = $soalCbt?->media ?? [];
-    $gambarSoal = data_get($mediaSoal, 'gambar');
-    $gambarSoalUrl = filled(data_get($gambarSoal, 'path')) ? \Illuminate\Support\Facades\Storage::disk('public')->url(data_get($gambarSoal, 'path')) : '';
-    $tabelSoal = data_get($mediaSoal, 'tabel.baris', []);
-    $mediaTabel = old('media_tabel', $tabelSoal === [] ? '' : json_encode($tabelSoal, JSON_UNESCAPED_UNICODE));
-    $jumlahBarisTabel = max(2, min(10, count($tabelSoal) ?: 3));
-    $jumlahKolomTabel = max(2, min(8, count($tabelSoal[0] ?? []) ?: 3));
-    $punyaMedia = filled($gambarSoalUrl) || filled($mediaTabel) || filled(data_get($mediaSoal, 'rumus.latex'));
+    $mediaKonten = data_get($mediaSoal, 'konten', []);
 
     $bukaPengaturanTambahan = $errors->hasAny([
-        'kategori', 'materi', 'tujuan_pembelajaran',
-        'stimulus', 'pembahasan', 'rubrik_teks',
+        'materi', 'tujuan_pembelajaran', 'pembahasan', 'rubrik_teks',
     ]);
 @endphp
 
@@ -104,12 +124,29 @@
     .question-difficulty-option span { margin-top: 3px; color: var(--primary-dark); font-size: .72rem; font-weight: 800; }
     .question-main-grid { display: grid; grid-template-columns: minmax(180px, .4fr) minmax(0, 1.6fr); gap: 14px; }
     .question-main-grid .textarea { min-height: 132px; }
+    .question-category { margin-bottom: 16px; }
+    .question-category-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+    .question-category-head label { margin: 0; }
+    .question-category-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .question-category-option { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 9px; align-items: start; min-height: 76px; border: 1px solid var(--line); border-radius: 7px; background: #fff; padding: 11px 12px; cursor: pointer; }
+    .question-category-option:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary); }
+    .question-category-option input { margin-top: 2px; }
+    .question-category-option strong, .question-category-option span { display: block; }
+    .question-category-option strong { color: var(--primary-dark); font-size: .82rem; }
+    .question-category-option span { margin-top: 3px; color: var(--muted); font-size: .72rem; line-height: 1.4; }
+    .question-stimulus-box { margin-bottom: 16px; border: 1px solid var(--line); border-radius: 7px; background: #f8fafc; padding: 14px; }
+    .question-stimulus-box .textarea { min-height: 105px; }
     .question-media-editor { min-width: 0; max-width: 100%; overflow: hidden; margin-top: 14px; border: 1px solid var(--line); border-radius: 7px; background: #f8fafc; padding: 14px; }
+    .question-media-editor.is-compact { margin-top: 10px; background: #fbfdff; padding: 10px; }
+    .question-media-editor.is-compact .question-media-toolbar-copy strong { font-size: .78rem; }
+    .question-media-editor.is-compact .question-media-toolbar-copy span { font-size: .68rem; }
+    .question-media-editor.is-compact .question-media-button { min-height: 34px; padding: 6px 9px; font-size: .72rem; }
     .question-media-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .question-media-toolbar-copy { margin-right: auto; }
     .question-media-toolbar-copy strong, .question-media-toolbar-copy span { display: block; }
     .question-media-toolbar-copy span { margin-top: 2px; color: var(--muted); font-size: .74rem; }
     .question-media-button.is-active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-dark); }
+    .question-media-status { border-radius: 6px; background: #e1f3e9; padding: 6px 8px; color: #116644; font-size: .68rem; font-weight: 900; }
     .question-media-panel { min-width: 0; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 14px; }
     .question-media-panel[hidden] { display: none; }
     .question-media-panel-head { margin-bottom: 12px; }
@@ -177,7 +214,7 @@
     }
 
     @media (max-width: 680px) {
-        .question-type-grid, .question-difficulty-grid, .question-main-grid, .soal-option-grid, .matching-list { grid-template-columns: 1fr; }
+        .question-type-grid, .question-difficulty-grid, .question-category-grid, .question-main-grid, .soal-option-grid, .matching-list { grid-template-columns: 1fr; }
         .question-image-editor { grid-template-columns: 1fr; }
         .question-media-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
         .question-media-toolbar-copy { grid-column: 1 / -1; margin: 0; }
@@ -280,42 +317,34 @@
     </section>
 
     <section class="panel panel-pad">
-        <details class="question-advanced" @if ($bukaPengaturanTambahan) open @endif>
-            <summary>Pengaturan tambahan (opsional)</summary>
-            <p class="help-text" style="margin-bottom: 14px;">Gunakan bagian ini hanya jika soal memerlukan klasifikasi, stimulus, atau pembahasan khusus.</p>
-            <div class="form-grid">
-                <div class="field">
-                    <label for="kategori">Kategori</label>
-                    <select id="kategori" name="kategori" class="{{ $selectClass('kategori') }}">
-                        @foreach ($daftarKategori as $kode => $label)
-                            <option value="{{ $kode }}" @selected($nilai('kategori', 'umum') === $kode)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field span-2">
-                    <label for="materi">Rincian materi</label>
-                    <input id="materi" name="materi" type="text" value="{{ $nilai('materi') }}" placeholder="Contoh: Menentukan frekuensi dari jumlah getaran" class="{{ $inputClass('materi') }}">
-                </div>
-                <div class="field span-2">
-                    <label for="tujuan_pembelajaran">Tujuan pembelajaran</label>
-                    <textarea id="tujuan_pembelajaran" name="tujuan_pembelajaran" class="{{ $textareaClass('tujuan_pembelajaran') }}">{{ $nilai('tujuan_pembelajaran') }}</textarea>
-                </div>
-                <div class="field span-2">
-                    <label for="stimulus">Stimulus</label>
-                    <textarea id="stimulus" name="stimulus" class="{{ $textareaClass('stimulus') }}" placeholder="Teks bacaan, kasus, atau data pendukung sebelum pertanyaan.">{{ $nilai('stimulus') }}</textarea>
-                </div>
-                <div class="field span-2">
-                    <label for="pembahasan">Pembahasan</label>
-                    <textarea id="pembahasan" name="pembahasan" class="{{ $textareaClass('pembahasan') }}" placeholder="Pembahasan dapat ditampilkan setelah ujian selesai.">{{ $nilai('pembahasan') }}</textarea>
-                </div>
-            </div>
-        </details>
-    </section>
-
-    <section class="panel panel-pad">
         <div class="question-step-head">
             <span class="question-step-number">2</span>
             <div><h2>Tulis soal</h2><p>Materi membantu pencarian. Isi soal adalah bagian yang akan dibaca siswa.</p></div>
+        </div>
+
+        <div class="question-category">
+            <div class="question-category-head">
+                <label>Kategori proses berpikir</label>
+                <span class="question-required-badge">Wajib dipilih</span>
+            </div>
+            <div class="question-category-grid">
+                @foreach ($daftarKategori as $kode => $label)
+                    <label class="question-category-option">
+                        <input type="radio" name="kategori" value="{{ $kode }}" @checked($kategoriTerpilih === $kode) required>
+                        <span><strong>{{ $label }}</strong><span>{{ $deskripsiKategori[$kode] ?? '' }}</span></span>
+                    </label>
+                @endforeach
+            </div>
+            @error('kategori') <p class="error-text">{{ $message }}</p> @enderror
+        </div>
+
+        <div class="question-stimulus-box">
+            <div class="field">
+                <label for="stimulus">Stimulus <span class="help-text">(opsional)</span></label>
+                <textarea id="stimulus" name="stimulus" class="{{ $textareaClass('stimulus') }}" placeholder="Teks bacaan, kasus, data, atau pengantar yang dibaca siswa sebelum pertanyaan.">{{ $nilai('stimulus') }}</textarea>
+                <p class="help-text">Biarkan kosong jika pertanyaan tidak membutuhkan bacaan atau data pengantar.</p>
+            </div>
+            <x-editor-media-soal kunci="stimulus" :media="data_get($mediaKonten, 'stimulus', [])" label="Media stimulus" compact />
         </div>
 
         <div class="question-main-grid">
@@ -331,110 +360,26 @@
             </div>
         </div>
 
-        <div class="question-media-editor" data-question-media-editor data-current-image="{{ $gambarSoalUrl }}">
-            <div class="question-media-toolbar">
-                <div class="question-media-toolbar-copy">
-                    <strong>Tambahkan pendukung soal</strong>
-                    <span>Opsional. Pilih hanya yang diperlukan.</span>
+        <x-editor-media-soal :media="$mediaSoal" label="Media isi soal" preview />
+
+        <details class="question-advanced" @if ($bukaPengaturanTambahan) open @endif>
+            <summary>Catatan guru dan rincian materi (opsional)</summary>
+            <p class="help-text" style="margin-bottom: 14px;">Bagian ini membantu pencarian dan pemeriksaan soal, tetapi tidak wajib diisi.</p>
+            <div class="form-grid">
+                <div class="field span-2">
+                    <label for="materi">Rincian materi</label>
+                    <input id="materi" name="materi" type="text" value="{{ $nilai('materi') }}" placeholder="Contoh: Menentukan frekuensi dari jumlah getaran" class="{{ $inputClass('materi') }}">
                 </div>
-                <button type="button" class="button button-muted question-media-button" data-media-toggle="gambar">Gambar</button>
-                <button type="button" class="button button-muted question-media-button" data-media-toggle="tabel">Tabel</button>
-                <button type="button" class="button button-muted question-media-button" data-media-toggle="rumus">Rumus</button>
-                <button type="button" class="button button-primary" data-question-preview>Pratinjau soal</button>
+                <div class="field span-2">
+                    <label for="tujuan_pembelajaran">Tujuan pembelajaran</label>
+                    <textarea id="tujuan_pembelajaran" name="tujuan_pembelajaran" class="{{ $textareaClass('tujuan_pembelajaran') }}">{{ $nilai('tujuan_pembelajaran') }}</textarea>
+                </div>
+                <div class="field span-2">
+                    <label for="pembahasan">Pembahasan</label>
+                    <textarea id="pembahasan" name="pembahasan" class="{{ $textareaClass('pembahasan') }}" placeholder="Pembahasan dapat ditampilkan setelah ujian selesai.">{{ $nilai('pembahasan') }}</textarea>
+                </div>
             </div>
-
-            <section class="question-media-panel" data-media-panel="gambar" @if (! $errors->hasAny(['gambar_soal', 'gambar_alt', 'gambar_keterangan']) && ! $gambarSoalUrl) hidden @endif>
-                <div class="question-media-panel-head">
-                    <h3>Gambar soal</h3>
-                    <p>Gunakan JPG, PNG, atau WebP dengan ukuran maksimal 5 MB.</p>
-                </div>
-                <div class="question-image-editor">
-                    <div class="question-image-preview" data-image-preview>
-                        @if ($gambarSoalUrl)
-                            <img src="{{ $gambarSoalUrl }}" alt="{{ data_get($gambarSoal, 'alt', 'Gambar pendukung soal') }}">
-                        @else
-                            <span>Belum ada gambar</span>
-                        @endif
-                    </div>
-                    <div class="section-stack" style="gap: 11px;">
-                        <div class="field">
-                            <label for="gambar_soal">Pilih gambar</label>
-                            <input id="gambar_soal" name="gambar_soal" type="file" accept="image/jpeg,image/png,image/webp" class="input" data-image-input>
-                            @error('gambar_soal') <p class="error-text">{{ $message }}</p> @enderror
-                            <p class="error-text" data-image-error hidden></p>
-                        </div>
-                        <div class="field">
-                            <label for="gambar_alt">Keterangan singkat gambar</label>
-                            <input id="gambar_alt" name="gambar_alt" type="text" maxlength="160" value="{{ old('gambar_alt', data_get($gambarSoal, 'alt')) }}" class="input" placeholder="Contoh: Grafik hubungan waktu dan simpangan">
-                        </div>
-                        <div class="field">
-                            <label for="gambar_keterangan">Sumber/catatan gambar</label>
-                            <input id="gambar_keterangan" name="gambar_keterangan" type="text" maxlength="220" value="{{ old('gambar_keterangan', data_get($gambarSoal, 'keterangan')) }}" class="input" placeholder="Opsional">
-                        </div>
-                        <input type="hidden" name="hapus_gambar_soal" value="0" data-remove-image>
-                        <button type="button" class="button button-muted" data-clear-image>Hapus gambar</button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="question-media-panel" data-media-panel="tabel" @if (! $errors->hasAny(['media_tabel', 'tabel_judul']) && blank($mediaTabel)) hidden @endif>
-                <div class="question-media-panel-head">
-                    <h3>Tabel soal</h3>
-                    <p>Pilih jumlah baris dan kolom, lalu isi sel seperti tabel biasa. Baris pertama menjadi kepala tabel.</p>
-                </div>
-                <div class="question-table-controls">
-                    <div class="field">
-                        <label for="tabel_baris">Baris</label>
-                        <select id="tabel_baris" class="select" data-table-rows>
-                            @foreach (range(2, 10) as $jumlah)
-                                <option value="{{ $jumlah }}" @selected($jumlahBarisTabel === $jumlah)>{{ $jumlah }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="tabel_kolom">Kolom</label>
-                        <select id="tabel_kolom" class="select" data-table-columns>
-                            @foreach (range(2, 8) as $jumlah)
-                                <option value="{{ $jumlah }}" @selected($jumlahKolomTabel === $jumlah)>{{ $jumlah }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="field" style="flex: 1 1 220px;">
-                        <label for="tabel_judul">Judul tabel</label>
-                        <input id="tabel_judul" name="tabel_judul" type="text" maxlength="160" value="{{ old('tabel_judul', data_get($mediaSoal, 'tabel.judul')) }}" class="input" placeholder="Opsional">
-                    </div>
-                    <button type="button" class="button button-muted" data-clear-table>Hapus tabel</button>
-                </div>
-                <input type="hidden" name="media_tabel" value="{{ $mediaTabel }}" data-table-value>
-                @error('media_tabel') <p class="error-text">{{ $message }}</p> @enderror
-                <div class="question-table-editor" data-table-editor></div>
-            </section>
-
-            <section class="question-media-panel" data-media-panel="rumus" @if (! $errors->hasAny(['rumus_latex', 'rumus_keterangan']) && blank(old('rumus_latex', data_get($mediaSoal, 'rumus.latex'))) ) hidden @endif>
-                <div class="question-media-panel-head">
-                    <h3>Rumus matematika</h3>
-                    <p>Rumus tampil langsung dalam bentuk yang sama seperti yang akan dilihat siswa.</p>
-                </div>
-                <div class="field">
-                    <label for="rumus_visual">Isi rumus</label>
-                    <div id="rumus_visual" class="question-math-field" data-formula-field>Menyiapkan editor rumus...</div>
-                    <input type="hidden" name="rumus_latex" value="{{ old('rumus_latex', data_get($mediaSoal, 'rumus.latex')) }}" data-formula-input>
-                    @error('rumus_latex') <p class="error-text">{{ $message }}</p> @enderror
-                </div>
-                <div class="question-formula-tools" aria-label="Bentuk rumus yang sering digunakan">
-                    <button type="button" class="button button-muted question-formula-template" data-formula-template="\frac{#0}{#?}" aria-label="Sisipkan pecahan" title="Pecahan"><span data-rumus-latex="\frac{a}{b}">a/b</span></button>
-                    <button type="button" class="button button-muted question-formula-template" data-formula-template="\sqrt{#0}" aria-label="Sisipkan akar" title="Akar"><span data-rumus-latex="\sqrt{x}">akar x</span></button>
-                    <button type="button" class="button button-muted question-formula-template" data-formula-template="#0^{#?}" aria-label="Sisipkan pangkat" title="Pangkat"><span data-rumus-latex="x^{2}">x pangkat 2</span></button>
-                    <button type="button" class="button button-muted question-formula-template" data-formula-template="#0_{#?}" aria-label="Sisipkan indeks" title="Indeks"><span data-rumus-latex="x_{1}">x indeks 1</span></button>
-                    <button type="button" class="button button-muted question-formula-template" data-formula-template="\times" aria-label="Sisipkan tanda kali" title="Kali"><span data-rumus-latex="\times">kali</span></button>
-                    <button type="button" class="button button-muted question-formula-template" data-formula-template="\div" aria-label="Sisipkan tanda bagi" title="Bagi"><span data-rumus-latex="\div">bagi</span></button>
-                </div>
-                <div class="field" style="margin-top: 10px;">
-                    <label for="rumus_keterangan">Keterangan rumus</label>
-                    <input id="rumus_keterangan" name="rumus_keterangan" type="text" maxlength="220" value="{{ old('rumus_keterangan', data_get($mediaSoal, 'rumus.keterangan')) }}" class="input" placeholder="Opsional, contoh: n adalah jumlah getaran">
-                </div>
-            </section>
-        </div>
+        </details>
     </section>
 
     <section class="panel panel-pad">
@@ -457,6 +402,7 @@
                             <span>Jawaban {{ $kode }}</span>
                         </label>
                         <textarea name="opsi[{{ $kode }}]" class="textarea" rows="2" placeholder="Isi pilihan {{ $kode }}">{{ $opsiPilihan[$kode] ?? '' }}</textarea>
+                        <x-editor-media-soal :kunci="'pilihan_' . $kode" :media="data_get($mediaKonten, 'pilihan_' . $kode, [])" :label="'Media pilihan ' . $kode" compact />
                     </div>
                 @endforeach
             </div>
@@ -469,6 +415,8 @@
                     <div class="soal-option-row">
                         <label for="pernyataan_{{ $index }}">Pernyataan {{ $index + 1 }}</label>
                         <textarea id="pernyataan_{{ $index }}" name="pernyataan[]" class="textarea" rows="2">{{ $pernyataan[$index] ?? '' }}</textarea>
+                        <input type="hidden" name="pernyataan_media_key[]" value="{{ $pernyataanMediaKey[$index] }}">
+                        <x-editor-media-soal :kunci="$pernyataanMediaKey[$index]" :media="data_get($mediaKonten, $pernyataanMediaKey[$index], [])" :label="'Media pernyataan ' . ($index + 1)" compact />
                         <select name="jawaban_bs[]" class="select" style="margin-top: 8px;">
                             <option value="benar" @selected(($jawabanBs[$index] ?? 'benar') === 'benar')>Benar</option>
                             <option value="salah" @selected(($jawabanBs[$index] ?? 'benar') === 'salah')>Salah</option>
@@ -501,8 +449,12 @@
                                 </div>
                                 <label for="pasangan_kiri_{{ $index }}">Pernyataan</label>
                                 <textarea id="pasangan_kiri_{{ $index }}" name="pasangan_kiri[]" class="textarea" rows="2">{{ $kiri }}</textarea>
+                                <input type="hidden" name="pasangan_media_kiri_key[]" value="{{ $pasanganMediaKiri[$index] }}">
+                                <x-editor-media-soal :kunci="$pasanganMediaKiri[$index]" :media="data_get($mediaKonten, $pasanganMediaKiri[$index], [])" label="Media pernyataan" compact />
                                 <label for="pasangan_kanan_{{ $index }}" style="margin-top: 8px;">Jawaban yang benar</label>
                                 <textarea id="pasangan_kanan_{{ $index }}" name="pasangan_kanan[]" class="textarea" rows="2">{{ $pasanganKanan[$index] ?? '' }}</textarea>
+                                <input type="hidden" name="pasangan_media_kanan_key[]" value="{{ $pasanganMediaKanan[$index] }}">
+                                <x-editor-media-soal :kunci="$pasanganMediaKanan[$index]" :media="data_get($mediaKonten, $pasanganMediaKanan[$index], [])" label="Media jawaban" compact />
                             </div>
                         @endforeach
                     </div>
@@ -525,6 +477,8 @@
                                 </div>
                                 <label for="pengecoh_menjodohkan_{{ $index }}">Isi jawaban pengecoh</label>
                                 <textarea id="pengecoh_menjodohkan_{{ $index }}" name="pengecoh_menjodohkan[]" class="textarea" rows="2">{{ $pengecoh }}</textarea>
+                                <input type="hidden" name="pengecoh_media_key[]" value="{{ $pengecohMediaKey[$index] }}">
+                                <x-editor-media-soal :kunci="$pengecohMediaKey[$index]" :media="data_get($mediaKonten, $pengecohMediaKey[$index], [])" label="Media pengecoh" compact />
                             </div>
                         @endforeach
                     </div>
@@ -541,8 +495,12 @@
                     </div>
                     <label>Pernyataan</label>
                     <textarea name="pasangan_kiri[]" class="textarea" rows="2"></textarea>
+                    <input type="hidden" name="pasangan_media_kiri_key[]" value="__PAIR_LEFT_KEY__">
+                    <x-editor-media-soal kunci="__PAIR_LEFT_KEY__" label="Media pernyataan" compact />
                     <label style="margin-top: 8px;">Jawaban yang benar</label>
                     <textarea name="pasangan_kanan[]" class="textarea" rows="2"></textarea>
+                    <input type="hidden" name="pasangan_media_kanan_key[]" value="__PAIR_RIGHT_KEY__">
+                    <x-editor-media-soal kunci="__PAIR_RIGHT_KEY__" label="Media jawaban" compact />
                 </div>
             </template>
             <template data-matching-distractor-template>
@@ -553,6 +511,8 @@
                     </div>
                     <label>Isi jawaban pengecoh</label>
                     <textarea name="pengecoh_menjodohkan[]" class="textarea" rows="2"></textarea>
+                    <input type="hidden" name="pengecoh_media_key[]" value="__DISTRACTOR_KEY__">
+                    <x-editor-media-soal kunci="__DISTRACTOR_KEY__" label="Media pengecoh" compact />
                 </div>
             </template>
         </div>
@@ -678,9 +638,17 @@
 
         const addMatchingRow = (list, template) => {
             if (!list || !template || list.children.length >= 10) return;
-            list.append(template.content.cloneNode(true));
+            const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const html = template.innerHTML
+                .replaceAll('__PAIR_LEFT_KEY__', `pasangan_${unique}_kiri`)
+                .replaceAll('__PAIR_RIGHT_KEY__', `pasangan_${unique}_kanan`)
+                .replaceAll('__DISTRACTOR_KEY__', `pengecoh_${unique}`);
+            list.insertAdjacentHTML('beforeend', html);
             syncMatching();
-            list.lastElementChild?.querySelector('textarea')?.focus();
+            const row = list.lastElementChild;
+            window.initializeQuestionMediaEditors?.(row);
+            window.renderRumusSoal?.(row);
+            row?.querySelector('textarea')?.focus();
         };
 
         addPairButton?.addEventListener('click', () => addMatchingRow(pairList, pairTemplate));

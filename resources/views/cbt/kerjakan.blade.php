@@ -439,6 +439,23 @@
                             $jawabanAssoc = is_array($jawabanSaatIni) ? $jawabanSaatIni : [];
                             $terjawabSaatIni = (bool) $berkasTersimpan || collect((array) $jawabanSaatIni)->contains(fn ($nilai) => filled($nilai));
                             $pilihan = $pilihanJawaban->get($relasiSoal->id, collect());
+                            $kunciMediaPilihan = function ($kode, $teks) use ($soal) {
+                                if (in_array($soal?->jenis_soal, ['pilihan_ganda', 'pilihan_ganda_kompleks'], true)) {
+                                    return 'pilihan_' . mb_strtoupper((string) $kode);
+                                }
+
+                                $normal = mb_strtolower(trim((string) $teks));
+                                $pasangan = collect($soal?->opsi['pasangan'] ?? [])->first(
+                                    fn ($item) => mb_strtolower(trim((string) ($item['kanan'] ?? ''))) === $normal,
+                                );
+                                if ($pasangan) {
+                                    return $pasangan['media_kanan_key'] ?? null;
+                                }
+
+                                return collect($soal?->opsi['pengecoh_media'] ?? [])->first(
+                                    fn ($item) => mb_strtolower(trim((string) ($item['teks'] ?? ''))) === $normal,
+                                )['media_key'] ?? null;
+                            };
                         @endphp
 
                         <article
@@ -465,8 +482,13 @@
                                 </label>
                             </div>
 
-                            @if (filled($soal?->stimulus))
-                                <div class="stimulus">{{ $soal->stimulus }}</div>
+                            @if (filled($soal?->stimulus) || filled(data_get($soal?->media, 'konten.stimulus')))
+                                <div class="stimulus">
+                                    @if (filled($soal?->stimulus))
+                                        <div>{{ $soal->stimulus }}</div>
+                                    @endif
+                                    <x-media-soal :media="data_get($soal?->media, 'konten.stimulus', [])" compact />
+                                </div>
                             @endif
 
                             @if ($soal)
@@ -485,10 +507,11 @@
                                             @else
                                                 <input type="checkbox" name="jawaban[{{ $relasiSoal->id }}][]" value="{{ $kodeJawaban }}" @checked(in_array($kodeJawaban, (array) $jawabanSaatIni, true))>
                                             @endif
-                                            <span>
+                                            <div class="option-card-content">
                                                 <span class="option-code">{{ $labelPilihan }}</span>
                                                 <span class="option-text">{{ $teks }}</span>
-                                            </span>
+                                                <x-media-soal :media="data_get($soal->media, 'konten.' . $kunciMediaPilihan($kodeJawaban, $teks), [])" compact />
+                                            </div>
                                         </label>
                                     @endforeach
                                 </div>
@@ -501,8 +524,9 @@
                                         @endphp
                                         <div class="statement-row">
                                             <div>
-                                                <span class="option-code">{{ $nomorPernyataan }}</span>
-                                                <span class="option-text">{{ $item['teks'] ?? '-' }}</span>
+                                                 <span class="option-code">{{ $nomorPernyataan }}</span>
+                                                 <span class="option-text">{{ $item['teks'] ?? '-' }}</span>
+                                                 <x-media-soal :media="data_get($soal->media, 'konten.' . ($item['media_key'] ?? ''), [])" compact />
                                             </div>
                                             <div class="statement-options">
                                                 <label class="pill-option">
@@ -522,7 +546,13 @@
                                     <strong>Pilihan pasangan</strong>
                                     <div>
                                         @foreach ($pilihan as $kodeJawaban => $teks)
-                                            <span><b>{{ $kodeJawaban }}</b>{{ $teks }}</span>
+                                            <div class="matching-answer-option">
+                                                <b>{{ $kodeJawaban }}</b>
+                                                <div>
+                                                    <span>{{ $teks }}</span>
+                                                    <x-media-soal :media="data_get($soal->media, 'konten.' . $kunciMediaPilihan($kodeJawaban, $teks), [])" compact />
+                                                </div>
+                                            </div>
                                         @endforeach
                                     </div>
                                 </div>
@@ -534,8 +564,9 @@
                                         @endphp
                                         <div class="matching-row">
                                             <div>
-                                                <span class="option-code">{{ $nomorPasangan }}</span>
-                                                <span class="option-text">{{ $item['kiri'] ?? '-' }}</span>
+                                                 <span class="option-code">{{ $nomorPasangan }}</span>
+                                                 <span class="option-text">{{ $item['kiri'] ?? '-' }}</span>
+                                                 <x-media-soal :media="data_get($soal->media, 'konten.' . ($item['media_kiri_key'] ?? ''), [])" compact />
                                             </div>
                                             <select name="jawaban[{{ $relasiSoal->id }}][{{ $nomorPasangan }}]" class="select matching-select" aria-label="Pasangan untuk {{ $item['kiri'] ?? 'pernyataan '.$nomorPasangan }}">
                                                 <option value="">Pilih pasangan</option>

@@ -532,6 +532,10 @@
                 accent-color: var(--primary);
             }
 
+            .option-card-content {
+                min-width: 0;
+            }
+
             .option-code {
                 display: inline-flex;
                 min-width: 28px;
@@ -581,7 +585,7 @@
                 gap: 8px;
             }
 
-            .matching-answer-bank span {
+            .matching-answer-option {
                 display: grid;
                 grid-template-columns: 26px minmax(0, 1fr);
                 gap: 7px;

@@ -6,6 +6,7 @@ use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\JawabanPesertaUjianCbt;
 use App\Models\Kelas;
+use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
@@ -125,6 +126,37 @@ class AsesmenKelasApiTest extends TestCase
         $this->app['auth']->forgetGuards();
         $this->withToken($this->token($data['guru']))
             ->getJson(route('api.v1.asesmen-kelas.show', $asesmenLain))->assertForbidden();
+    }
+
+    public function test_api_memakai_ulang_komponen_otomatis_yang_sudah_ada(): void
+    {
+        $data = $this->fondasi();
+        $guruMataPelajaran = GuruMataPelajaran::query()
+            ->where('pegawai_id', $data['pegawai']->id)
+            ->where('kelas_id', $data['kelas']->id)
+            ->firstOrFail();
+        $komponen = KomponenNilai::create([
+            'guru_mata_pelajaran_id' => $guruMataPelajaran->id,
+            'semester' => 'ganjil',
+            'jenis_komponen' => 'sumatif',
+            'nama' => 'Sumatif Bab Persamaan',
+            'tanggal_penilaian' => '2026-09-01',
+            'urutan' => 1,
+            'aktif' => true,
+        ]);
+        $kelompok = implode('-', [$data['pegawai']->id, $data['mapel']->id, 8]);
+
+        $response = $this->withToken($this->token($data['guru']))->postJson(
+            route('api.v1.asesmen-kelas.store'),
+            $this->payload($kelompok, $data['kelas']->id),
+        )->assertCreated();
+
+        $this->assertDatabaseCount('komponen_nilai', 1);
+        $this->assertDatabaseHas('kelas_ujian_cbt', [
+            'ujian_cbt_id' => $response->json('data.id'),
+            'kelas_id' => $data['kelas']->id,
+            'komponen_nilai_id' => $komponen->id,
+        ]);
     }
 
     public function test_guru_memantau_dan_melihat_hasil_asesmen_secara_native(): void

@@ -259,9 +259,9 @@ Map<String, dynamic> _pageJson() => {
       {'kode': 'sangat_sulit', 'label': 'Sangat Sulit'},
     ],
     'kategori': const [
-      {'kode': 'umum', 'label': 'Umum'},
-      {'kode': 'literasi', 'label': 'Literasi'},
-      {'kode': 'numerasi', 'label': 'Numerasi'},
+      {'kode': 'lots', 'label': 'LOTS'},
+      {'kode': 'mots', 'label': 'MOTS'},
+      {'kode': 'hots', 'label': 'HOTS'},
     ],
     'status': const [
       {'kode': 'draft', 'label': 'Draf'},
@@ -294,8 +294,8 @@ Map<String, dynamic> _questionJson() => {
   'label_jenis_soal': 'Pilihan Ganda',
   'tingkat_kesulitan': 'sedang',
   'label_tingkat_kesulitan': 'Sedang',
-  'kategori': 'numerasi',
-  'label_kategori': 'Numerasi',
+  'kategori': 'mots',
+  'label_kategori': 'MOTS',
   'topik': 'Getaran',
   'materi': 'Frekuensi',
   'pertanyaan': 'Satuan frekuensi adalah ....',

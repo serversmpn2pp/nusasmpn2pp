@@ -1032,7 +1032,8 @@ class _QuestionPage extends StatelessWidget {
                 _SaveStatusLabel(status: saveStatus),
               ],
             ),
-            if (question.stimulus?.trim().isNotEmpty == true) ...[
+            if (question.stimulus?.trim().isNotEmpty == true ||
+                _hasMedia(question.stimulusMedia)) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(13),
@@ -1040,7 +1041,18 @@ class _QuestionPage extends StatelessWidget {
                   color: NusaColors.surfaceBlue,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Text(question.stimulus!),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (question.stimulus?.trim().isNotEmpty == true)
+                      Text(question.stimulus!),
+                    if (_hasMedia(question.stimulusMedia)) ...[
+                      if (question.stimulus?.trim().isNotEmpty == true)
+                        const SizedBox(height: 10),
+                      _QuestionMedia(media: question.stimulusMedia),
+                    ],
+                  ],
+                ),
               ),
             ],
             if (_hasMedia(question.media)) ...[
@@ -1235,7 +1247,16 @@ class _QuestionPage extends StatelessWidget {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: Text(option.text),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(option.text),
+                              if (_hasMedia(option.media)) ...[
+                                const SizedBox(height: 8),
+                                _QuestionMedia(media: option.media),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -1266,6 +1287,10 @@ class _QuestionPage extends StatelessWidget {
                   '${statement.number}. ${statement.text}',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
+                if (_hasMedia(statement.media)) ...[
+                  const SizedBox(height: 8),
+                  _QuestionMedia(media: statement.media),
+                ],
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
@@ -1312,10 +1337,19 @@ class _QuestionPage extends StatelessWidget {
               const SizedBox(height: 8),
               for (final option in question.options)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    '${option.label}. ${option.text}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '${option.label}. ${option.text}',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      if (_hasMedia(option.media)) ...[
+                        const SizedBox(height: 6),
+                        _QuestionMedia(media: option.media),
+                      ],
+                    ],
                   ),
                 ),
             ],
@@ -1324,39 +1358,50 @@ class _QuestionPage extends StatelessWidget {
         for (final pair in question.pairs)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: DropdownButtonFormField<String>(
-              key: Key('student-exam-match-${question.id}-${pair.number}'),
-              initialValue:
-                  question.options.any(
-                    (option) => option.text == question.answer[pair.number],
-                  )
-                  ? question.answer[pair.number]
-                  : null,
-              isExpanded: true,
-              items: question.options
-                  .map(
-                    (option) => DropdownMenuItem<String>(
-                      value: option.text,
-                      child: Text(
-                        '${option.label}. ${option.text}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
-              onChanged: (value) {
-                final answer = {...question.answer};
-                if (value == null || value.isEmpty) {
-                  answer.remove(pair.number);
-                } else {
-                  answer[pair.number] = value;
-                }
-                onAnswerChanged(answer);
-              },
-              decoration: InputDecoration(
-                labelText: '${pair.number}. ${pair.left}',
-                hintText: 'Pilih pasangan',
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${pair.number}. ${pair.left}',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                if (_hasMedia(pair.media)) ...[
+                  const SizedBox(height: 8),
+                  _QuestionMedia(media: pair.media),
+                ],
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  key: Key('student-exam-match-${question.id}-${pair.number}'),
+                  initialValue:
+                      question.options.any(
+                        (option) => option.text == question.answer[pair.number],
+                      )
+                      ? question.answer[pair.number]
+                      : null,
+                  isExpanded: true,
+                  items: question.options
+                      .map(
+                        (option) => DropdownMenuItem<String>(
+                          value: option.text,
+                          child: Text(
+                            '${option.label}. ${option.text}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (value) {
+                    final answer = {...question.answer};
+                    if (value == null || value.isEmpty) {
+                      answer.remove(pair.number);
+                    } else {
+                      answer[pair.number] = value;
+                    }
+                    onAnswerChanged(answer);
+                  },
+                  decoration: const InputDecoration(hintText: 'Pilih pasangan'),
+                ),
+              ],
             ),
           ),
       ],

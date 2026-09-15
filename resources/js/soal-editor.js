@@ -40,7 +40,10 @@ window.renderRumusSoal = (root = document) => {
 
 window.renderRumusSoal();
 
-document.querySelectorAll('[data-question-media-editor]').forEach((editor) => {
+const initializeQuestionMediaEditor = (editor) => {
+    if (editor.dataset.mediaEditorReady === '1') return;
+    editor.dataset.mediaEditorReady = '1';
+
     const toggles = [...editor.querySelectorAll('[data-media-toggle]')];
     const panels = [...editor.querySelectorAll('[data-media-panel]')];
     const imageInput = editor.querySelector('[data-image-input]');
@@ -56,8 +59,51 @@ document.querySelectorAll('[data-question-media-editor]').forEach((editor) => {
     const clearTableButton = editor.querySelector('[data-clear-table]');
     const formulaInput = editor.querySelector('[data-formula-input]');
     const formulaHost = editor.querySelector('[data-formula-field]');
+    const mediaStatus = editor.querySelector('[data-media-status]');
     let objectImageUrl = null;
     let tableData = [];
+    let formulaInitialized = false;
+
+    const initializeFormula = () => {
+        if (formulaInitialized) return;
+        formulaInitialized = true;
+
+        mathLiveReady.then((mathlive) => {
+            if (!formulaHost || !formulaInput || !mathlive) return;
+
+            const formulaField = new mathlive.MathfieldElement();
+            formulaField.className = formulaHost.className;
+            formulaField.setAttribute('math-virtual-keyboard-policy', 'auto');
+            formulaField.setAttribute('smart-fence', '');
+            formulaField.setAttribute('aria-label', 'Isi rumus matematika');
+            formulaField.dataset.formulaField = '';
+            formulaHost.replaceWith(formulaField);
+
+            formulaField.value = formulaInput.value || '';
+            formulaField.addEventListener('input', () => {
+                formulaInput.value = formulaField.value;
+                syncMediaStatus();
+            });
+
+            editor.querySelectorAll('[data-formula-template]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    formulaField.focus();
+                    formulaField.executeCommand(['insert', button.dataset.formulaTemplate || '']);
+                    formulaInput.value = formulaField.value;
+                    syncMediaStatus();
+                });
+            });
+        });
+    };
+
+    const syncMediaStatus = () => {
+        if (!mediaStatus) return;
+        const hasImage = Boolean(imageInput?.files?.length)
+            || (Boolean(currentImage) && removeImageInput?.value !== '1');
+        const hasTable = Boolean(tableValueInput?.value.trim());
+        const hasFormula = Boolean(formulaInput?.value.trim());
+        mediaStatus.hidden = !(hasImage || hasTable || hasFormula);
+    };
 
     const setOpenPanel = (name) => {
         panels.forEach((panel) => {
@@ -65,6 +111,7 @@ document.querySelectorAll('[data-question-media-editor]').forEach((editor) => {
             panel.hidden = !active;
         });
         toggles.forEach((button) => button.classList.toggle('is-active', button.dataset.mediaToggle === name));
+        if (name === 'rumus') initializeFormula();
     };
 
     toggles.forEach((button) => {
@@ -111,6 +158,7 @@ document.querySelectorAll('[data-question-media-editor]').forEach((editor) => {
         objectImageUrl = URL.createObjectURL(file);
         removeImageInput.value = '0';
         showImage(objectImageUrl, file.name);
+        syncMediaStatus();
     });
 
     clearImageButton?.addEventListener('click', () => {
@@ -119,6 +167,7 @@ document.querySelectorAll('[data-question-media-editor]').forEach((editor) => {
         imageInput.value = '';
         removeImageInput.value = '1';
         showImage('');
+        syncMediaStatus();
     });
 
     try {
@@ -139,6 +188,7 @@ document.querySelectorAll('[data-question-media-editor]').forEach((editor) => {
     const syncTableValue = () => {
         const hasValue = tableData.some((row) => row.some((cell) => String(cell).trim() !== ''));
         tableValueInput.value = hasValue ? JSON.stringify(tableData) : '';
+        syncMediaStatus();
     };
 
     const renderTableEditor = () => {
@@ -186,32 +236,14 @@ document.querySelectorAll('[data-question-media-editor]').forEach((editor) => {
     });
     renderTableEditor();
 
-    mathLiveReady.then((mathlive) => {
-        if (!formulaHost || !formulaInput || !mathlive) return;
+    syncMediaStatus();
+};
 
-        const formulaField = new mathlive.MathfieldElement();
-        formulaField.id = 'rumus_visual';
-        formulaField.className = formulaHost.className;
-        formulaField.setAttribute('math-virtual-keyboard-policy', 'auto');
-        formulaField.setAttribute('smart-fence', '');
-        formulaField.setAttribute('aria-label', 'Isi rumus matematika');
-        formulaField.dataset.formulaField = '';
-        formulaHost.replaceWith(formulaField);
+window.initializeQuestionMediaEditors = (root = document) => {
+    root.querySelectorAll('[data-question-media-editor]').forEach(initializeQuestionMediaEditor);
+};
 
-        formulaField.value = formulaInput.value || '';
-        formulaField.addEventListener('input', () => {
-            formulaInput.value = formulaField.value;
-        });
-
-        editor.querySelectorAll('[data-formula-template]').forEach((button) => {
-            button.addEventListener('click', () => {
-                formulaField.focus();
-                formulaField.executeCommand(['insert', button.dataset.formulaTemplate || '']);
-                formulaInput.value = formulaField.value;
-            });
-        });
-    });
-});
+window.initializeQuestionMediaEditors();
 
 const createText = (tag, text, className = '') => {
     const element = document.createElement(tag);
@@ -221,16 +253,20 @@ const createText = (tag, text, className = '') => {
 };
 
 const appendPreviewMedia = (container, editor) => {
+    if (!editor) return;
     const media = document.createElement('div');
     media.className = 'question-preview-media';
     const previewImage = editor.querySelector('[data-image-preview] img');
+    const field = (rootName, nestedName = rootName) => editor.querySelector(
+        `[name="${rootName}"], [name$="[${nestedName}]"]`,
+    );
 
     if (previewImage) {
         const image = document.createElement('img');
         image.src = previewImage.src;
-        image.alt = document.querySelector('[name="gambar_alt"]')?.value || previewImage.alt;
+        image.alt = field('gambar_alt')?.value || previewImage.alt;
         media.append(image);
-        const caption = document.querySelector('[name="gambar_keterangan"]')?.value.trim();
+        const caption = field('gambar_keterangan')?.value.trim();
         if (caption) media.append(createText('small', caption));
     }
 
@@ -238,7 +274,7 @@ const appendPreviewMedia = (container, editor) => {
     if (tableValue) {
         try {
             const rows = JSON.parse(tableValue);
-            const title = document.querySelector('[name="tabel_judul"]')?.value.trim();
+            const title = field('tabel_judul')?.value.trim();
             if (title) media.append(createText('strong', title));
             const table = document.createElement('table');
             const thead = document.createElement('thead');
@@ -261,7 +297,7 @@ const appendPreviewMedia = (container, editor) => {
         formula.className = 'question-formula-preview';
         renderFormula(formula, latex);
         media.append(formula);
-        const caption = document.querySelector('[name="rumus_keterangan"]')?.value.trim();
+        const caption = field('rumus_keterangan')?.value.trim();
         if (caption) media.append(createText('small', caption));
     }
 
@@ -278,7 +314,10 @@ const appendAnswerPreview = (container, type) => {
             if (!input.value.trim()) return;
             const row = document.createElement('div');
             row.className = 'question-preview-option';
-            row.append(createText('b', code), createText('span', input.value));
+            const content = document.createElement('div');
+            content.append(createText('span', input.value));
+            appendPreviewMedia(content, input.closest('.soal-option-row')?.querySelector('[data-question-media-editor]'));
+            row.append(createText('b', code), content);
             options.append(row);
         });
     } else if (type === 'benar_salah') {
@@ -286,7 +325,10 @@ const appendAnswerPreview = (container, type) => {
             if (!input.value.trim()) return;
             const row = document.createElement('div');
             row.className = 'question-preview-option';
-            row.append(createText('b', String(index + 1)), createText('span', input.value));
+            const content = document.createElement('div');
+            content.append(createText('span', input.value));
+            appendPreviewMedia(content, input.closest('.soal-option-row')?.querySelector('[data-question-media-editor]'));
+            row.append(createText('b', String(index + 1)), content);
             options.append(row);
         });
     } else if (type === 'menjodohkan') {
@@ -297,9 +339,12 @@ const appendAnswerPreview = (container, type) => {
             if (!input.value.trim()) return;
             const row = document.createElement('div');
             row.className = 'question-preview-option';
+            const content = document.createElement('div');
+            content.append(createText('span', input.value.trim()));
+            appendPreviewMedia(content, input.closest('[data-matching-pair]')?.querySelector('[data-question-media-editor]'));
             row.append(
                 createText('b', String(index + 1)),
-                createText('span', input.value.trim()),
+                content,
             );
             options.append(row);
         });
@@ -316,7 +361,14 @@ const appendAnswerPreview = (container, type) => {
             pilihanJawaban.forEach((value, index) => {
                 const row = document.createElement('div');
                 row.className = 'question-preview-option';
-                row.append(createText('b', String.fromCharCode(65 + index)), createText('span', value));
+                const source = [...rightInputs, ...document.querySelectorAll('[name="pengecoh_menjodohkan[]"]')]
+                    .find((input) => input.value.trim().toLocaleLowerCase() === value.toLocaleLowerCase());
+                const content = document.createElement('div');
+                content.append(createText('span', value));
+                const sourceEditors = source?.closest('.soal-option-row')?.querySelectorAll('[data-question-media-editor]') || [];
+                const sourceEditor = source?.name === 'pasangan_kanan[]' ? sourceEditors[1] : sourceEditors[0];
+                appendPreviewMedia(content, sourceEditor);
+                row.append(createText('b', String.fromCharCode(65 + index)), content);
                 options.append(row);
             });
         }
@@ -331,7 +383,7 @@ document.querySelectorAll('[data-question-preview]').forEach((button) => {
     button.addEventListener('click', () => {
         const dialog = document.querySelector('[data-question-preview-dialog]');
         const body = dialog?.querySelector('[data-question-preview-body]');
-        const editor = document.querySelector('[data-question-media-editor]');
+        const editor = document.querySelector('[data-question-media-editor][data-media-key="utama"]');
         if (!dialog || !body || !editor) return;
 
         body.replaceChildren();
@@ -341,7 +393,14 @@ document.querySelectorAll('[data-question-preview]').forEach((button) => {
         body.append(createText('div', topic ? `${typeLabel} · ${topic}` : typeLabel, 'question-preview-meta'));
 
         const stimulus = document.querySelector('[name="stimulus"]')?.value.trim();
-        if (stimulus) body.append(createText('div', stimulus, 'question-preview-stimulus'));
+        const stimulusEditor = document.querySelector('[data-question-media-editor][data-media-key="stimulus"]');
+        if (stimulus || stimulusEditor) {
+            const stimulusBox = document.createElement('div');
+            stimulusBox.className = 'question-preview-stimulus';
+            if (stimulus) stimulusBox.append(createText('div', stimulus));
+            appendPreviewMedia(stimulusBox, stimulusEditor);
+            if (stimulusBox.childElementCount) body.append(stimulusBox);
+        }
 
         appendPreviewMedia(body, editor);
         body.append(createText('div', document.querySelector('[name="pertanyaan"]')?.value.trim() || 'Isi soal belum ditulis.', 'question-preview-text'));
