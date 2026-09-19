@@ -10,6 +10,20 @@ class PesertaUjianCbt extends Model
 {
     protected $table = 'peserta_ujian_cbt';
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $peserta) {
+            if (($peserta->isDirty('waktu_mulai') && $peserta->waktu_mulai !== null)
+                || ($peserta->isDirty('status') && in_array($peserta->status, ['sedang_mengerjakan', 'selesai'], true))) {
+                // The activity row also serializes this lock with administrator changes.
+                KegiatanUjianCbt::query()->whereIn('id', JadwalUjianCbt::query()
+                    ->where('ujian_cbt_id', $peserta->ujian_cbt_id)->select('kegiatan_ujian_cbt_id'))
+                    ->whereNull('penilaian_pgk_dikunci_pada')
+                    ->update(['penilaian_pgk_dikunci_pada' => now()]);
+            }
+        });
+    }
+
     public const DAFTAR_STATUS = [
         'aktif' => 'Aktif',
         'nonaktif' => 'Nonaktif',

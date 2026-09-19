@@ -10,6 +10,11 @@ class KegiatanUjianCbt extends Model
 {
     protected $table = 'kegiatan_ujian_cbt';
 
+    public const PENILAIAN_PGK = [
+        'dikotomi' => 'Dikotomi - harus benar seluruhnya',
+        'parsial' => 'Parsial - benar dikurangi salah',
+    ];
+
     public const DAFTAR_STATUS = [
         'draft' => 'Persiapan',
         'aktif' => 'Aktif',
@@ -27,17 +32,32 @@ class KegiatanUjianCbt extends Model
         'tanggal_selesai',
         'status',
         'keterangan',
+        'penilaian_pgk',
         'dibuat_oleh_pengguna_id',
     ];
 
     protected $casts = [
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',
+        'penilaian_pgk_dikunci_pada' => 'datetime',
     ];
 
     public function jenisUjianCbt(): BelongsTo
     {
         return $this->belongsTo(JenisUjianCbt::class);
+    }
+
+    public function penilaianPgkTerkunci(): bool
+    {
+        return $this->penilaian_pgk_dikunci_pada !== null || PesertaUjianCbt::query()
+            ->whereIn('ujian_cbt_id', $this->jadwalUjianCbt()->select('ujian_cbt_id'))
+            ->where(fn ($query) => $query->whereNotNull('waktu_mulai')->orWhereIn('status', ['sedang_mengerjakan', 'selesai']))
+            ->exists();
+    }
+
+    public function labelPenilaianPgk(): string
+    {
+        return self::PENILAIAN_PGK[$this->penilaian_pgk ?? 'dikotomi'];
     }
 
     public function tahunPelajaran(): BelongsTo

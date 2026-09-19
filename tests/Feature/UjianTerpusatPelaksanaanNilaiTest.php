@@ -440,6 +440,50 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('Guru Pengawas Ruang → Guru Pengawas Pengganti');
     }
 
+    public function test_penilaian_pgk_mengikuti_kegiatan_dan_dikunci_setelah_mulai(): void
+    {
+        $data = $this->buatFondasi();
+        $kegiatan = $data['kegiatan'];
+        $payload = $kegiatan->only(['jenis_ujian_cbt_id', 'tahun_pelajaran_id', 'nama', 'semester', 'status']);
+        $payload += ['tanggal_mulai' => '2026-09-15', 'tanggal_selesai' => '2026-09-20'];
+        $this->assertSame('dikotomi', $kegiatan->fresh()->penilaian_pgk);
+        $this->actingAs($data['akun_guru'])->put(route('ujian-terpusat.update', $kegiatan), [...$payload, 'penilaian_pgk' => 'parsial'])->assertForbidden();
+        $this->actingAs($data['admin'])->put(route('ujian-terpusat.update', $kegiatan), [...$payload, 'penilaian_pgk' => 'invalid'])->assertSessionHasErrors('penilaian_pgk');
+        $soal = SoalCbt::create([
+            'mata_pelajaran_id' => $data['mapel']->id, 'tahun_pelajaran_id' => $data['tahun']->id,
+            'tingkat' => 7, 'kode' => 'PGK-MODE', 'jenis_soal' => 'pilihan_ganda_kompleks',
+            'tingkat_kesulitan' => 'sulit', 'kategori' => 'mots', 'pertanyaan' => 'Pilih yang benar',
+            'opsi' => ['pilihan' => ['A' => 'Satu', 'B' => 'Dua', 'C' => 'Tiga', 'D' => 'Empat']],
+            'kunci_jawaban' => ['jawaban' => ['A', 'C']], 'skor_maksimal' => 3, 'status' => 'siap', 'aktif' => true,
+        ]);
+        $this->put(route('paket-soal-terpusat.update', $data['jadwal']), [
+            'aksi' => 'terbitkan', 'soal' => [$soal->id => ['dipilih' => '1', 'bobot' => 3]],
+        ])->assertRedirect();
+        $paket = $data['jadwal']->fresh()->ujianCbt;
+        $peserta = $paket->pesertaUjianCbt()->firstOrFail();
+        $relasi = $paket->soalUjianCbt()->firstOrFail();
+        foreach (['dikotomi', 'parsial'] as $mode) {
+            $this->put(route('ujian-terpusat.update', $kegiatan), [...$payload, 'penilaian_pgk' => $mode])->assertSessionHasNoErrors()->assertRedirect();
+            foreach ([[['A', 'C'], 3], [['A'], 1.5], [['A', 'C', 'D'], 1.5], [['A', 'B'], 0], [['B', 'D'], 0], [[], 0], [['A', 'A'], 1.5]] as [$pilihan, $skorParsial]) {
+                $jawaban = \App\Models\JawabanPesertaUjianCbt::updateOrCreate([
+                    'peserta_ujian_cbt_id' => $peserta->id, 'soal_ujian_cbt_id' => $relasi->id,
+                ], ['soal_cbt_id' => $soal->id, 'jawaban' => $pilihan]);
+                app(\App\Services\Cbt\KoreksiOtomatisCbtService::class)->koreksiPeserta($peserta);
+                $expected = $mode === 'parsial' ? $skorParsial : ($pilihan === ['A', 'C'] ? 3 : 0);
+                $this->assertEquals($expected, (float) $jawaban->fresh()->skor);
+            }
+        }
+        $peserta->update(['waktu_mulai' => now(), 'status' => 'sedang_mengerjakan']);
+        $this->assertNotNull($kegiatan->fresh()->penilaian_pgk_dikunci_pada);
+        $peserta->update(['waktu_mulai' => null, 'status' => 'aktif']);
+        $this->put(route('ujian-terpusat.update', $kegiatan), [...$payload, 'penilaian_pgk' => 'dikotomi'])->assertSessionHasErrors('penilaian_pgk');
+        $this->assertSame('parsial', $kegiatan->fresh()->penilaian_pgk);
+        $this->put(route('ujian-terpusat.update', $kegiatan), $payload)->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('parsial', $kegiatan->fresh()->penilaian_pgk);
+        $this->get(route('ujian-terpusat.edit', $kegiatan))->assertOk()->assertSee('Pengaturan dikunci');
+        $this->actingAs($data['akun_guru'])->get(route('paket-soal-terpusat.show', $data['jadwal']))->assertOk()->assertSee('Parsial - benar dikurangi salah');
+    }
+
     private function buatFondasi(): array
     {
         $admin = Pengguna::create([

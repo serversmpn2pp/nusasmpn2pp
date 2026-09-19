@@ -45,6 +45,9 @@ class KoreksiOtomatisCbtService
     public function koreksiPeserta(PesertaUjianCbt $peserta): array
     {
         $peserta->loadMissing('ujianCbt');
+        $penilaianPgk = \App\Models\KegiatanUjianCbt::query()->whereIn('id',
+            $peserta->ujianCbt->jadwalUjianCbt()->select('kegiatan_ujian_cbt_id')
+        )->value('penilaian_pgk') ?? 'dikotomi';
         $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt, $peserta);
         $jawabanTersimpan = $peserta->jawabanPesertaUjianCbt()
             ->whereIn('soal_ujian_cbt_id', $soalUjian->pluck('id'))
@@ -53,7 +56,7 @@ class KoreksiOtomatisCbtService
         $ringkasan = $this->ringkasanKosong();
         $ringkasan['peserta'] = 1;
 
-        DB::transaction(function () use ($peserta, $soalUjian, $jawabanTersimpan, &$ringkasan) {
+        DB::transaction(function () use ($peserta, $soalUjian, $jawabanTersimpan, $penilaianPgk, &$ringkasan) {
             foreach ($soalUjian as $relasiSoal) {
                 $soal = $relasiSoal->soalCbt;
 
@@ -64,7 +67,7 @@ class KoreksiOtomatisCbtService
                 }
 
                 $jawabanPeserta = $jawabanTersimpan->get($relasiSoal->id);
-                $hasil = $this->koreksiSoal($relasiSoal, $soal, $jawabanPeserta?->jawaban);
+                $hasil = $this->koreksiSoal($relasiSoal, $soal, $jawabanPeserta?->jawaban, $penilaianPgk);
 
                 JawabanPesertaUjianCbt::updateOrCreate(
                     [
@@ -95,7 +98,7 @@ class KoreksiOtomatisCbtService
         return $ringkasan;
     }
 
-    private function koreksiSoal(SoalUjianCbt $relasiSoal, SoalCbt $soal, ?array $jawaban): array
+    private function koreksiSoal(SoalUjianCbt $relasiSoal, SoalCbt $soal, ?array $jawaban, string $penilaianPgk = 'dikotomi'): array
     {
         $bobot = (float) $relasiSoal->bobot;
 
@@ -105,7 +108,7 @@ class KoreksiOtomatisCbtService
 
         return match ($soal->jenis_soal) {
             'pilihan_ganda' => $this->koreksiPilihanGanda($soal, $jawaban, $bobot),
-            'pilihan_ganda_kompleks' => $this->koreksiPilihanGandaKompleks($soal, $jawaban, $bobot),
+            'pilihan_ganda_kompleks' => $this->koreksiPilihanGandaKompleks($soal, $jawaban, $bobot, $penilaianPgk),
             'benar_salah' => $this->koreksiPemetaan($soal, $jawaban, $bobot, normalisasiNilai: 'boolean'),
             'menjodohkan' => $this->koreksiPemetaan($soal, $jawaban, $bobot, normalisasiNilai: 'teks'),
             'isian_singkat' => $this->koreksiTeks($soal, $jawaban, $bobot),
@@ -123,11 +126,17 @@ class KoreksiOtomatisCbtService
         return ['skor' => $benar ? $bobot : 0.0, 'benar' => $benar];
     }
 
-    private function koreksiPilihanGandaKompleks(SoalCbt $soal, array $jawaban, float $bobot): array
+    private function koreksiPilihanGandaKompleks(SoalCbt $soal, array $jawaban, float $bobot, string $mode): array
     {
         $kunci = $this->setKodeJawaban((array) $this->ambilKunciJawaban($soal));
         $jawabanPeserta = $this->setKodeJawaban($jawaban);
         $benar = $kunci !== [] && $jawabanPeserta === $kunci;
+
+        if ($mode === 'parsial' && $kunci !== []) {
+            $jumlahBenar = count(array_intersect($jawabanPeserta, $kunci));
+            $jumlahSalah = count(array_diff($jawabanPeserta, $kunci));
+            return ['skor' => round(max(0, ($jumlahBenar - $jumlahSalah) / count($kunci)) * $bobot, 2), 'benar' => $benar];
+        }
 
         return ['skor' => $benar ? $bobot : 0.0, 'benar' => $benar];
     }

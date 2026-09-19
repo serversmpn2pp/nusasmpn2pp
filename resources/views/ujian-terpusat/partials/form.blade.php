@@ -89,6 +89,30 @@
             </div>
         </section>
 
+        <section class="panel panel-pad">
+            <h2 class="panel-title">Penilaian Pilihan Ganda Kompleks</h2>
+            @php $pgkTerkunci = isset($kegiatan) && $kegiatan->penilaianPgkTerkunci(); @endphp
+            <div class="field" style="margin-top:16px;">
+                <label for="penilaian_pgk">Aturan untuk seluruh mapel pada kegiatan ini</label>
+                <select id="penilaian_pgk" name="penilaian_pgk" class="{{ $selectClass('penilaian_pgk') }}" @disabled($pgkTerkunci)>
+                    @foreach (\App\Models\KegiatanUjianCbt::PENILAIAN_PGK as $kode => $label)
+                        <option value="{{ $kode }}" @selected(($pgkTerkunci ? $kegiatan->penilaian_pgk : $nilai('penilaian_pgk', 'dikotomi')) === $kode)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('penilaian_pgk')<p class="error-text">{{ $message }}</p>@enderror
+            </div>
+            <dl class="quick-facts" style="margin-top:14px;">
+                <div><dt>Dikotomi</dt><dd>Semua pilihan harus sesuai kunci untuk mendapat skor penuh. Selain itu, skor 0.</dd></div>
+                <div><dt>Parsial</dt><dd>(Pilihan benar dicentang - pilihan salah dicentang) / jumlah pilihan benar dalam kunci, dikalikan bobot soal. Skor minimum 0.</dd></div>
+            </dl>
+            <p class="help-text" style="margin-top:12px;">Contoh kunci A dan C, bobot 3: memilih A saja mendapat 0 pada dikotomi atau 1,50 pada parsial. Tidak menjawab mendapat 0. Jenis soal lain tidak berubah.</p>
+            @if ($pgkTerkunci)
+                <p class="alert" style="margin-top:12px;" role="status">Pengaturan dikunci karena peserta sudah mulai mengerjakan ujian.</p>
+            @else
+                <p class="help-text" style="margin-top:12px;">Hanya admin yang mengatur. Aturan dikunci setelah peserta pertama mulai mengerjakan.</p>
+            @endif
+        </section>
+
         <div class="form-actions">
             <a href="{{ route('ujian-terpusat.index') }}" class="button button-muted">Batal</a>
             <button type="submit" class="button button-primary">{{ $tombol }}</button>

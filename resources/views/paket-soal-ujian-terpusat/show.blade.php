@@ -132,6 +132,7 @@
             <p>{{ $jadwal->tanggal?->locale('id')->translatedFormat('l, d F Y') }} · {{ $jadwal->sesiKegiatanUjianCbt?->nama }} {{ $jadwal->sesiKegiatanUjianCbt?->labelWaktu() }}</p>
             <dl class="quick-facts">
                 <div><dt>Kelas</dt><dd>{{ $jadwal->kelas->pluck('nama')->join(', ') }}</dd></div>
+                <div><dt>Penilaian PGK (ditetapkan admin)</dt><dd>{{ $jadwal->kegiatanUjianCbt?->labelPenilaianPgk() }}</dd></div>
                 <div><dt>Tahun pelajaran</dt><dd>{{ $jadwal->kegiatanUjianCbt?->tahunPelajaran?->nama }}</dd></div>
             </dl>
         </div>

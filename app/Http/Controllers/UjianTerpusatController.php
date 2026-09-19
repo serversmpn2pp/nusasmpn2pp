@@ -10,6 +10,7 @@ use App\Models\TahunPelajaran;
 use App\Services\Cbt\SinkronkanPeranPanitiaUjian;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -133,7 +134,15 @@ class UjianTerpusatController extends Controller
     {
         $this->pastikanDapatDiakses($request, $kegiatanUjianCbt);
         $data = $this->rapikan($request->validate($this->aturanValidasi()));
-        $kegiatanUjianCbt->update($data);
+        DB::transaction(function () use ($kegiatanUjianCbt, $data) {
+            $kegiatan = KegiatanUjianCbt::query()->lockForUpdate()->findOrFail($kegiatanUjianCbt->id);
+            if (isset($data['penilaian_pgk']) && $data['penilaian_pgk'] !== $kegiatan->penilaian_pgk
+                && $kegiatan->penilaianPgkTerkunci()) {
+                throw ValidationException::withMessages(['penilaian_pgk' => 'Penilaian PGK tidak dapat diubah karena peserta sudah mulai mengerjakan ujian.']);
+            }
+            $kegiatan->update($data);
+        });
+        $kegiatanUjianCbt->refresh();
         $kegiatanUjianCbt->panitiaUjianCbt()->with('pegawai')->get()
             ->each(fn (PanitiaUjianCbt $panitia) => $sinkronkanPeran->sinkronkan($panitia->pegawai));
 
@@ -187,6 +196,7 @@ class UjianTerpusatController extends Controller
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'status' => ['required', Rule::in(array_keys(KegiatanUjianCbt::DAFTAR_STATUS))],
             'keterangan' => ['nullable', 'string', 'max:2000'],
+            'penilaian_pgk' => ['sometimes', 'required', Rule::in(array_keys(KegiatanUjianCbt::PENILAIAN_PGK))],
         ];
     }
 
@@ -201,6 +211,7 @@ class UjianTerpusatController extends Controller
             'tanggal_selesai' => $data['tanggal_selesai'],
             'status' => $data['status'],
             'keterangan' => filled($data['keterangan'] ?? null) ? trim($data['keterangan']) : null,
+            ...(isset($data['penilaian_pgk']) ? ['penilaian_pgk' => $data['penilaian_pgk']] : []),
         ];
     }
 
