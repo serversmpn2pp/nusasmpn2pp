@@ -1,5 +1,6 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { initializeInlineEditors, renderInlineMath, mathParts } from './inline-math';
 
 const mathLiveReady = document.querySelector('[data-formula-field]')
     ? Promise.all([import('mathlive'), import('mathlive/fonts.css')]).then(([mathlive]) => {
@@ -36,6 +37,7 @@ const renderFormula = (element, latex) => {
 
 window.renderRumusSoal = (root = document) => {
     root.querySelectorAll('[data-rumus-latex]').forEach((element) => renderFormula(element));
+    root.querySelectorAll('[data-inline-math], .question-title, .stimulus, .option-text, .matching-answer-option').forEach(renderInlineMath);
 };
 
 window.renderRumusSoal();
@@ -241,6 +243,7 @@ const initializeQuestionMediaEditor = (editor) => {
 };
 
 window.initializeQuestionMediaEditors = (root = document) => {
+    initializeInlineEditors(root);
     root.querySelectorAll('[data-question-media-editor]').forEach(initializeQuestionMediaEditor);
 };
 
@@ -435,7 +438,8 @@ const appendAnswerPreview = (container, type, source = document) => {
             select.tabIndex = -1;
             select.append(new Option('Pilih pasangan', ''));
             answers.forEach((answer, answerIndex) => {
-                select.append(new Option(`${String.fromCharCode(65 + answerIndex)}. ${answer}`, answer));
+                const code = String.fromCharCode(65 + answerIndex);
+                select.append(new Option(mathParts(answer).some(part => part.latex !== undefined) ? `Pilihan ${code}` : `${code}. ${answer}`, answer));
             });
             row.append(content, select);
             options.append(row);
@@ -527,6 +531,7 @@ document.querySelectorAll('[data-question-preview]').forEach((button) => {
         const edit = dialog.querySelector('[data-preview-edit]');
         if (edit) edit.href = button.dataset.previewEdit || '#';
         body.append(question);
+        renderInlineMath(question);
 
         if (typeof dialog.showModal === 'function') dialog.showModal();
         else dialog.setAttribute('open', '');

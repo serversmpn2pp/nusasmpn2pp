@@ -130,8 +130,7 @@
 
     <section class="question-media-panel" data-media-panel="rumus" hidden>
         <div class="question-media-panel-head">
-            <h3>Rumus matematika</h3>
-            <p>Rumus tampil langsung dalam bentuk yang akan dilihat siswa.</p>
+            <h3>Rumus tambahan di baris tersendiri</h3>
         </div>
         <div class="field">
             <label>Isi rumus</label>

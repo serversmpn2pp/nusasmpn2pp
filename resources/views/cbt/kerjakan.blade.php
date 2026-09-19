@@ -571,7 +571,7 @@
                                             <select name="jawaban[{{ $relasiSoal->id }}][{{ $nomorPasangan }}]" class="select matching-select" aria-label="Pasangan untuk {{ $item['kiri'] ?? 'pernyataan '.$nomorPasangan }}">
                                                 <option value="">Pilih pasangan</option>
                                                 @foreach ($pilihan as $kodeJawaban => $teks)
-                                                    <option value="{{ $teks }}" @selected(mb_strtolower(trim((string) $nilaiPasangan)) === mb_strtolower(trim((string) $teks)))>{{ $kodeJawaban }}. {{ $teks }}</option>
+                                                    <option value="{{ $teks }}" @selected(mb_strtolower(trim((string) $nilaiPasangan)) === mb_strtolower(trim((string) $teks)))>@if (str_contains($teks, '\\(') || str_contains($teks, '\\['))Pilihan {{ $kodeJawaban }}@else{{ $kodeJawaban }}. {{ $teks }}@endif</option>
                                                 @endforeach
                                             </select>
                                         </div>

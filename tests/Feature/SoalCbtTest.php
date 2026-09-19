@@ -398,7 +398,11 @@ class SoalCbtTest extends TestCase
         }
         $this->assertSame(1, SoalCbt::count());
         $this->assertSame(2, $soal->folders()->count());
-        $this->get(route('soal-cbt.index', ['folder' => $sts->id]))->assertOk()->assertViewHas('soalCbt', fn ($soal) => $soal->count() === 1);
+        $this->get(route('soal-cbt.index', ['folder' => $sts->id]))->assertOk()
+            ->assertSee('Pilih semua di halaman ini')
+            ->assertSee('Folder tujuan')
+            ->assertSee('Belum ada soal dipilih')
+            ->assertViewHas('soalCbt', fn ($soal) => $soal->count() === 1);
         $this->get(route('soal-cbt.index', ['folder' => 'belum']))->assertOk()->assertViewHas('soalCbt', fn ($soal) => $soal->count() === 0);
         $this->put(route('folder-soal-cbt.update', $sts), ['nama' => 'STS Ganjil'])->assertRedirect();
         $this->assertSame('STS Ganjil', $sts->fresh()->nama);
@@ -425,8 +429,41 @@ class SoalCbtTest extends TestCase
         $this->get(route('soal-cbt.create', ['folder' => $folder->id]))->assertForbidden();
         $this->put(route('folder-soal-cbt.update', $folder), ['nama' => 'Ubah'])->assertForbidden();
         $this->delete(route('folder-soal-cbt.destroy', $folder))->assertForbidden();
+        foreach (['masukkan', 'keluarkan'] as $aksi) {
+            $this->post(route('folder-soal-cbt.anggota', $folder), ['aksi' => $aksi, 'soal_ids' => [$soal->id]])->assertForbidden();
+        }
         $this->post(route('folder-soal-cbt.store'), ['mata_pelajaran_id' => $mapel->id, 'tingkat' => 7, 'nama' => 'Folder lain'])->assertForbidden();
         $this->assertSame(0, $folder->soal()->count());
+    }
+
+    public function test_rumus_dalam_kalimat_tersimpan_pada_stimulus_dan_semua_pilihan(): void
+    {
+        [$tahun, $mapel] = $this->buatDataAkademik();
+        $this->actingAs(Pengguna::where('username', 'administrator')->firstOrFail());
+        $rumus = 'Kapasitas \\(2^{12}\\) MB';
+        foreach (['pilihan_ganda', 'pilihan_ganda_kompleks', 'benar_salah', 'menjodohkan', 'isian_singkat', 'numerik', 'uraian', 'upload_file'] as $jenis) {
+            $data = [
+                ...$this->dataSoal($tahun, $mapel, strtoupper('INLINE-'.$jenis)),
+                'jenis_soal' => $jenis,
+                'stimulus' => $rumus,
+                'pertanyaan' => 'Hitung \\(\\frac{1}{2}\\) dari kapasitas tersebut.',
+                'opsi' => ['A' => $rumus, 'B' => '2', 'C' => '3', 'D' => '4'],
+                'kunci_pgk' => ['A'],
+                'pernyataan' => [$rumus], 'jawaban_bs' => ['benar'],
+                'pasangan_kiri' => [$rumus], 'pasangan_kanan' => ['\\(2^8\\)'],
+                'pengecoh_menjodohkan' => ['\\(2^9\\)'],
+                'kunci_teks' => in_array($jenis, ['isian_singkat', 'numerik']) ? '2048' : $rumus,
+                'rubrik_teks' => $rumus,
+            ];
+            $this->post(route('soal-cbt.store'), $data)->assertSessionHasNoErrors()->assertRedirect();
+            $soal = SoalCbt::where('kode', strtoupper('INLINE-'.$jenis))->firstOrFail();
+            $this->assertSame($rumus, $soal->stimulus);
+            $this->assertSame($data['pertanyaan'], $soal->pertanyaan);
+            $this->get(route('soal-cbt.edit', $soal))->assertOk()->assertSee($rumus);
+            if (in_array($jenis, ['pilihan_ganda', 'pilihan_ganda_kompleks', 'benar_salah', 'menjodohkan'])) {
+                $this->assertContains($rumus, \Illuminate\Support\Arr::flatten($soal->opsi));
+            }
+        }
     }
 
     private function buatDataAkademik(): array

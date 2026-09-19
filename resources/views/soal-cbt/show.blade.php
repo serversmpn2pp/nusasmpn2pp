@@ -50,7 +50,7 @@
             @endizin
         </aside>
 
-        <div class="section-stack">
+        <div class="section-stack" data-inline-math>
             <section class="panel panel-pad">
                 <h2 class="panel-title">Identitas Soal</h2>
                 <dl class="detail-grid">

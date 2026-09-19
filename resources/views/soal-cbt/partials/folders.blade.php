@@ -6,14 +6,24 @@
     .bank-folder-link { display:flex; justify-content:space-between; align-items:center; gap:12px; border:1px solid #c3d3e3; border-radius:7px; padding:12px; background:white; overflow-wrap:anywhere; }
     .bank-folder-link[aria-current=page] { border-color:var(--primary); background:var(--primary-soft); box-shadow:inset 3px 0 var(--primary); }
     .bank-folder-link small { display:block; color:var(--muted); }
-    .bank-folder-tools { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 0; }
-    .bank-folder-tools select { width:auto; max-width:100%; min-width:180px; }
+    .bank-folder-tools { display:grid; grid-template-columns:minmax(250px,1fr) minmax(280px,1.4fr) auto; align-items:end; gap:16px; margin-top:18px; padding:18px 0 0; border-top:1px solid #c3d3e3; }
+    .bank-folder-selection, .bank-folder-destination { display:grid; gap:8px; min-width:0; }
+    .bank-folder-tools .bank-folder-caption { display:block; margin:0; font-size:13px; font-weight:700; line-height:20px; }
+    .bank-folder-tools .bank-folder-check { display:flex; align-items:center; gap:10px; min-height:44px; margin:0; font-size:14px; font-weight:400; cursor:pointer; }
+    .bank-folder-check .bank-soal-select { flex:0 0 18px; margin:0; }
+    .bank-folder-tools select { width:100%; min-width:0; height:44px; margin:0; border-color:#b5c9dd; }
+    .bank-folder-tools > .button { min-height:44px; margin:0; }
+    .bank-folder-tools .button:disabled { background:#e9eef3; border-color:#ccd6e0; color:#627386; box-shadow:none; cursor:not-allowed; opacity:1; }
+    .bank-folder-secondary { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding-top:12px; border-top:1px solid var(--line); }
+    .bank-folder-count { color:var(--muted); font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; }
+    .bank-folder-tools[data-has-selection=true] .bank-folder-count { color:var(--primary); }
+    @media(min-width:761px) and (max-width:1100px) { .bank-folder-tools { grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); } .bank-folder-tools > .button { grid-column:2; justify-self:end; } }
     .bank-folder-dialog { width:min(540px,calc(100% - 24px)); max-height:90vh; overflow:auto; border:1px solid var(--line); border-radius:8px; padding:20px; }
     .bank-folder-dialog::backdrop { background:rgba(15,35,55,.55); }
     .bank-folder-dialog h2 { margin:0; font-size:1.1rem; }
     .bank-folder-dialog .field { margin:14px 0; }
     .bank-soal-select { width:18px; height:18px; accent-color:var(--primary); }
-    @media(max-width:760px) { .bank-folder-list { grid-template-columns:1fr; } .bank-folder-tools select { width:100%; } }
+    @media(max-width:760px) { .bank-folder-list { grid-template-columns:1fr; } .bank-folder-tools { grid-template-columns:minmax(0,1fr); } }
 </style>
 @if ($errors->any())
     <div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>
@@ -47,19 +57,27 @@
     @if ($bisaKelolaSoal && $soalCbt->isNotEmpty())
         <form method="POST" id="folder-bulk" class="bank-folder-tools">
             @csrf
-            <label><input type="checkbox" class="bank-soal-select" data-folder-select-all> Pilih halaman ini</label>
-            <span data-folder-selected>0 soal dipilih</span>
-            <select class="select" aria-label="Folder tujuan" data-folder-target>
+            <div class="bank-folder-selection">
+                <span class="bank-folder-caption">Pilihan soal</span>
+                <label class="bank-folder-check"><input type="checkbox" class="bank-soal-select" data-folder-select-all> Pilih semua di halaman ini</label>
+            </div>
+            <div class="bank-folder-destination">
+            <label class="bank-folder-caption" for="folder-tujuan">Folder tujuan</label>
+            <select id="folder-tujuan" class="select" data-folder-target>
                 <option value="">Pilih folder tujuan</option>
                 @foreach ($daftarFolder as $folder)
                     <option value="{{ route('folder-soal-cbt.anggota', $folder) }}">{{ $folder->nama }} · {{ $folder->mataPelajaran?->nama }} · {{ $folder->tingkat }}</option>
                 @endforeach
             </select>
+            </div>
             <button type="submit" name="aksi" value="masukkan" class="button button-primary" data-folder-add disabled>Masukkan ke folder</button>
+            <div class="bank-folder-secondary">
+                <span class="bank-folder-count" data-folder-selected role="status" aria-live="polite">Belum ada soal dipilih</span>
             @if ($folderAktif)
                 <button type="submit" name="aksi" value="keluarkan" formaction="{{ route('folder-soal-cbt.anggota', $folderAktif) }}" class="button button-muted" data-folder-remove disabled>Keluarkan dari folder ini</button>
             @endif
-            <span data-folder-payload></span>
+            </div>
+            <span data-folder-payload hidden></span>
         </form>
     @endif
 </section>
@@ -121,7 +139,8 @@
     const refresh = () => {
         if (!bulk) return;
         checks.forEach(input => input.checked = selected.has(input.value));
-        bulk.querySelector('[data-folder-selected]').textContent = `${selected.size} soal dipilih`;
+        bulk.querySelector('[data-folder-selected]').textContent = selected.size ? `${selected.size} soal dipilih` : 'Belum ada soal dipilih';
+        bulk.dataset.hasSelection = String(selected.size > 0);
         bulk.querySelector('[data-folder-add]').disabled = !selected.size || !target.value;
         const remove = bulk.querySelector('[data-folder-remove]');
         if (remove) remove.disabled = !selected.size;

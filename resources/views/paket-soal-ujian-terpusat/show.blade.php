@@ -218,7 +218,7 @@
                     </div>
                 </div>
                 <template data-package-preview-template="{{ $item->id }}">
-                    <article>
+                    <article data-inline-math>
                         <div class="package-preview-meta">
                             <span class="badge badge-muted">{{ $item->labelJenis() }}</span>
                             <span class="badge badge-muted">{{ $item->labelKesulitan() }}</span>
