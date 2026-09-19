@@ -243,6 +243,7 @@
 
     <input type="hidden" name="mata_pelajaran_id" value="{{ $mataPelajaranId ?: '' }}" data-context-mapel>
     <input type="hidden" name="tingkat" value="{{ $tingkatTerpilih ?: '' }}" data-context-level>
+    @include('soal-cbt.partials.folder-form')
     @error('mata_pelajaran_id') <p class="error-text">Pilih bank soal yang sesuai dengan penugasan Anda.</p> @enderror
     @error('tingkat') <p class="error-text">Pilih tingkat yang memang Anda ajar.</p> @enderror
 </section>

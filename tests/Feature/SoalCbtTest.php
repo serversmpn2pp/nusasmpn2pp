@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FolderSoalCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
@@ -377,6 +378,55 @@ class SoalCbtTest extends TestCase
         $this->actingAs($guruMapel)
             ->post(route('soal-cbt.store'), $this->dataSoal($tahunPelajaran, $mataPelajaranLain, 'SOAL-CBT-LAIN-001'))
             ->assertForbidden();
+    }
+
+    public function test_folder_mengelompokkan_soal_tanpa_menggandakan_atau_menghapus_soal(): void
+    {
+        [$tahun, $mapel] = $this->buatDataAkademik();
+        $this->actingAs(Pengguna::where('username', 'administrator')->firstOrFail());
+        foreach (['BAB 1', 'STS'] as $nama) {
+            $this->post(route('folder-soal-cbt.store'), ['nama' => $nama, 'mata_pelajaran_id' => $mapel->id, 'tingkat' => 8])->assertRedirect();
+        }
+        $bab = FolderSoalCbt::where('nama', 'BAB 1')->firstOrFail();
+        $sts = FolderSoalCbt::where('nama', 'STS')->firstOrFail();
+        $this->get(route('soal-cbt.create', ['folder' => $bab->id]))->assertOk()->assertSee('BAB 1');
+        $this->post(route('soal-cbt.store'), [...$this->dataSoal($tahun, $mapel), 'folder_selection' => 1, 'folder_ids' => [$bab->id]])->assertRedirect();
+        $soal = SoalCbt::firstOrFail();
+        $this->assertSame([$bab->id], $soal->folders->modelKeys());
+        foreach (range(1, 2) as $_) {
+            $this->post(route('folder-soal-cbt.anggota', $sts), ['aksi' => 'masukkan', 'soal_ids' => [$soal->id]])->assertRedirect();
+        }
+        $this->assertSame(1, SoalCbt::count());
+        $this->assertSame(2, $soal->folders()->count());
+        $this->get(route('soal-cbt.index', ['folder' => $sts->id]))->assertOk()->assertViewHas('soalCbt', fn ($soal) => $soal->count() === 1);
+        $this->get(route('soal-cbt.index', ['folder' => 'belum']))->assertOk()->assertViewHas('soalCbt', fn ($soal) => $soal->count() === 0);
+        $this->put(route('folder-soal-cbt.update', $sts), ['nama' => 'STS Ganjil'])->assertRedirect();
+        $this->assertSame('STS Ganjil', $sts->fresh()->nama);
+        $this->post(route('folder-soal-cbt.anggota', $sts), ['aksi' => 'keluarkan', 'soal_ids' => [$soal->id]])->assertRedirect();
+        $this->assertSame([$bab->id], $soal->fresh()->folders->modelKeys());
+        $this->delete(route('folder-soal-cbt.destroy', $bab))->assertRedirect();
+        $this->assertSame(1, SoalCbt::count());
+        $this->assertSame(0, $soal->folders()->count());
+        $this->get(route('soal-cbt.index', ['folder' => 'belum']))->assertOk()->assertViewHas('soalCbt', fn ($soal) => $soal->count() === 1);
+    }
+
+    public function test_folder_menolak_akses_dan_soal_di_luar_konteks(): void
+    {
+        [$tahun, $mapel, $pegawai] = $this->buatDataAkademik();
+        $folder = FolderSoalCbt::create(['mata_pelajaran_id' => $mapel->id, 'tingkat' => 7, 'nama' => 'BAB kelas 7']);
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->actingAs($admin)->post(route('soal-cbt.store'), $this->dataSoal($tahun, $mapel))->assertRedirect();
+        $soal = SoalCbt::firstOrFail();
+        $this->post(route('folder-soal-cbt.anggota', $folder), ['aksi' => 'masukkan', 'soal_ids' => [$soal->id]])->assertSessionHasErrors('soal_ids');
+        $this->put(route('soal-cbt.update', $soal), [...$this->dataSoal($tahun, $mapel), 'folder_ids' => [$folder->id]])->assertSessionHasErrors('folder_ids');
+        $guru = Pengguna::create(['pegawai_id' => $pegawai->id, 'nama' => 'Guru folder', 'username' => 'guru-folder', 'kata_sandi' => 'secret', 'peran' => 'pegawai', 'aktif' => true, 'akun_sistem' => false]);
+        $guru->daftarPeran()->sync([Peran::where('kode', 'guru_mapel')->value('id')]);
+        $this->actingAs($guru)->get(route('soal-cbt.index', ['folder' => $folder->id]))->assertForbidden();
+        $this->get(route('soal-cbt.create', ['folder' => $folder->id]))->assertForbidden();
+        $this->put(route('folder-soal-cbt.update', $folder), ['nama' => 'Ubah'])->assertForbidden();
+        $this->delete(route('folder-soal-cbt.destroy', $folder))->assertForbidden();
+        $this->post(route('folder-soal-cbt.store'), ['mata_pelajaran_id' => $mapel->id, 'tingkat' => 7, 'nama' => 'Folder lain'])->assertForbidden();
+        $this->assertSame(0, $folder->soal()->count());
     }
 
     private function buatDataAkademik(): array

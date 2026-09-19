@@ -515,6 +515,12 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::resource('soal-cbt', SoalCbtController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])
             ->middleware('izin:cbt.kelola,cbt.soal_kelola');
+        Route::middleware('izin:cbt.kelola,cbt.soal_kelola')->group(function () {
+            Route::post('folder-soal-cbt', [SoalCbtController::class, 'simpanFolder'])->name('folder-soal-cbt.store');
+            Route::put('folder-soal-cbt/{folder}', [SoalCbtController::class, 'ubahFolder'])->name('folder-soal-cbt.update');
+            Route::delete('folder-soal-cbt/{folder}', [SoalCbtController::class, 'hapusFolder'])->name('folder-soal-cbt.destroy');
+            Route::post('folder-soal-cbt/{folder}/anggota', [SoalCbtController::class, 'anggotaFolder'])->name('folder-soal-cbt.anggota');
+        });
         Route::resource('soal-cbt', SoalCbtController::class)
             ->only(['index', 'show'])
             ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola');

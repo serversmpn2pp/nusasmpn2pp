@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FolderSoalCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\MataPelajaran;
 use App\Models\SoalCbt;
@@ -9,6 +10,7 @@ use App\Models\TahunPelajaran;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -24,6 +26,7 @@ class SoalCbtController extends Controller
             'tingkat' => ['nullable', Rule::in(['semua', 7, 8, 9, '7', '8', '9'])],
             'jenis_soal' => ['nullable', Rule::in(['semua', ...array_keys(SoalCbt::DAFTAR_JENIS)])],
             'status' => ['nullable', Rule::in(['semua', ...array_keys(SoalCbt::DAFTAR_STATUS)])],
+            'folder' => ['nullable', 'string', 'max:30', 'regex:/\A(?:semua|belum|[0-9]+)\z/'],
         ]);
 
         $pengguna = $request->user();
@@ -34,9 +37,23 @@ class SoalCbtController extends Controller
         $tingkat = $data['tingkat'] ?? 'semua';
         $jenisSoal = $data['jenis_soal'] ?? 'semua';
         $status = $data['status'] ?? 'semua';
+        $folderFilter = $data['folder'] ?? 'semua';
+        $folderAktif = null;
+        if (ctype_digit($folderFilter)) {
+            $folderAktif = FolderSoalCbt::findOrFail($folderFilter);
+            $this->pastikanAksesFolder($request, $folderAktif);
+            $mataPelajaranId = $folderAktif->mata_pelajaran_id;
+            $tingkat = $folderAktif->tingkat;
+        }
+        $daftarFolder = $this->folderTersedia($request)
+            ->when($mataPelajaranId, fn ($q) => $q->where('mata_pelajaran_id', $mataPelajaranId))
+            ->when($tingkat !== 'semua', fn ($q) => $q->where('tingkat', (int) $tingkat))
+            ->with('mataPelajaran')->withCount('soal')->orderBy('nama')->get();
 
         $soalCbt = SoalCbt::query()
-            ->with(['tahunPelajaran', 'mataPelajaran', 'dibuatOleh'])
+            ->with(['tahunPelajaran', 'mataPelajaran', 'dibuatOleh', 'folders'])
+            ->when($folderAktif, fn ($q) => $q->whereHas('folders', fn ($f) => $f->whereKey($folderAktif->id)))
+            ->when($folderFilter === 'belum', fn ($q) => $q->whereDoesntHave('folders'))
             ->when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))
             ->when($mataPelajaranId, fn ($query, $id) => $query->where('mata_pelajaran_id', $id))
             ->when($tingkat !== 'semua', fn ($query) => $query->where('tingkat', (int) $tingkat))
@@ -71,11 +88,19 @@ class SoalCbtController extends Controller
             'jumlahDraft' => SoalCbt::when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))->where('status', 'draft')->count(),
             'bisaKelolaSoal' => $pengguna?->memilikiIzin(['cbt.kelola', 'cbt.soal_kelola']) ?? false,
             'daftarKonteks' => $daftarKonteks,
+            'daftarFolder' => $daftarFolder,
+            'folderAktif' => $folderAktif,
+            'folderFilter' => $folderFilter,
         ]);
     }
 
     public function create(Request $request)
     {
+        if ($request->filled('folder')) {
+            $folder = FolderSoalCbt::findOrFail($request->integer('folder'));
+            $this->pastikanAksesFolder($request, $folder);
+            $request->merge(['mata_pelajaran_id' => $folder->mata_pelajaran_id, 'tingkat' => $folder->tingkat]);
+        }
         $daftarKonteks = $this->konteksBankSoal($request);
         $konteksTerpilih = $this->pilihKonteksDariRequest($request, $daftarKonteks)
             ?? ($daftarKonteks->count() === 1 ? $daftarKonteks->first() : null);
@@ -94,6 +119,7 @@ class SoalCbtController extends Controller
         $this->pastikanMataPelajaranBoleh($request, (int) $data['mata_pelajaran_id']);
         $this->pastikanTingkatMataPelajaranTersedia($request, $data);
         $konten = $this->susunKontenJawaban($data);
+        $folderIds = $this->validasiFolderSoal($request, $data);
         $gambarBaru = [];
 
         try {
@@ -103,11 +129,16 @@ class SoalCbtController extends Controller
             }
             [$media, $gambarKontenBaru] = $this->susunMediaSoal($request, $data, null, $gambarUtama, $konten);
             $gambarBaru = [...$gambarBaru, ...$gambarKontenBaru];
-            $soalCbt = SoalCbt::create([
-                ...$this->dataSoal($data, $konten),
-                'media' => $media,
-                'dibuat_oleh_pengguna_id' => $request->user()?->id,
-            ]);
+            $soalCbt = DB::transaction(function () use ($data, $konten, $media, $request, $folderIds) {
+                $soal = SoalCbt::create([
+                    ...$this->dataSoal($data, $konten),
+                    'media' => $media,
+                    'dibuat_oleh_pengguna_id' => $request->user()?->id,
+                ]);
+                $soal->folders()->sync($folderIds);
+
+                return $soal;
+            });
         } catch (Throwable $exception) {
             collect($gambarBaru)->each(fn ($path) => $this->hapusGambarSoal($path));
 
@@ -157,6 +188,7 @@ class SoalCbtController extends Controller
         $this->pastikanMataPelajaranBoleh($request, (int) $data['mata_pelajaran_id']);
         $this->pastikanTingkatMataPelajaranTersedia($request, $data);
         $konten = $this->susunKontenJawaban($data);
+        $folderIds = $this->validasiFolderSoal($request, $data, $soalCbt);
         $gambarLama = $this->daftarPathGambar($soalCbt->media);
         $gambarBaru = [];
 
@@ -167,10 +199,13 @@ class SoalCbtController extends Controller
             }
             [$media, $gambarKontenBaru] = $this->susunMediaSoal($request, $data, $soalCbt, $gambarUtama, $konten);
             $gambarBaru = [...$gambarBaru, ...$gambarKontenBaru];
-            $soalCbt->update([
-                ...$this->dataSoal($data, $konten),
-                'media' => $media,
-            ]);
+            DB::transaction(function () use ($soalCbt, $data, $konten, $media, $folderIds) {
+                $soalCbt->update([
+                    ...$this->dataSoal($data, $konten),
+                    'media' => $media,
+                ]);
+                $soalCbt->folders()->sync($folderIds);
+            });
         } catch (Throwable $exception) {
             collect($gambarBaru)->each(fn ($path) => $this->hapusGambarSoal($path));
 
@@ -198,6 +233,102 @@ class SoalCbtController extends Controller
             ->with('berhasil', 'Soal CBT berhasil diarsipkan.');
     }
 
+    public function simpanFolder(Request $request)
+    {
+        $data = $request->validate([
+            'mata_pelajaran_id' => ['required', 'integer', 'exists:mata_pelajaran,id'],
+            'tingkat' => ['required', 'integer', Rule::in([7, 8, 9])],
+            'nama' => ['required', 'string', 'max:120'],
+            'keterangan' => ['nullable', 'string', 'max:500'],
+        ]);
+        $this->pastikanAksesFolder($request, new FolderSoalCbt($data));
+        $folder = FolderSoalCbt::firstOrCreate(
+            collect($data)->only(['mata_pelajaran_id', 'tingkat', 'nama'])->all(),
+            ['keterangan' => $data['keterangan'] ?? null],
+        );
+
+        return redirect()->route('soal-cbt.index', ['folder' => $folder->id])->with('berhasil', 'Folder siap digunakan.');
+    }
+
+    public function ubahFolder(Request $request, FolderSoalCbt $folder)
+    {
+        $this->pastikanAksesFolder($request, $folder);
+        $data = $request->validate([
+            'nama' => ['required', 'string', 'max:120', Rule::unique('folder_soal_cbt', 'nama')->where('mata_pelajaran_id', $folder->mata_pelajaran_id)->where('tingkat', $folder->tingkat)->ignore($folder)],
+            'keterangan' => ['nullable', 'string', 'max:500'],
+        ]);
+        $folder->update($data);
+
+        return back()->with('berhasil', 'Folder diperbarui.');
+    }
+
+    public function hapusFolder(Request $request, FolderSoalCbt $folder)
+    {
+        $this->pastikanAksesFolder($request, $folder);
+        $konteks = $folder->only(['mata_pelajaran_id', 'tingkat']);
+        $folder->delete();
+
+        return redirect()->route('soal-cbt.index', $konteks)->with('berhasil', 'Folder dihapus. Semua soal tetap tersimpan di Bank Soal.');
+    }
+
+    public function anggotaFolder(Request $request, FolderSoalCbt $folder)
+    {
+        $this->pastikanAksesFolder($request, $folder);
+        $data = $request->validate([
+            'soal_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'soal_ids.*' => ['required', 'integer', 'distinct'],
+            'aksi' => ['required', Rule::in(['masukkan', 'keluarkan'])],
+        ]);
+        DB::transaction(function () use ($folder, $data, $request) {
+            $folder = FolderSoalCbt::whereKey($folder->id)->lockForUpdate()->firstOrFail();
+            $soal = SoalCbt::whereIn('id', $data['soal_ids'])->lockForUpdate()->get();
+            if ($soal->count() !== count($data['soal_ids'])) {
+                throw ValidationException::withMessages(['soal_ids' => 'Ada soal yang tidak ditemukan. Muat ulang daftar soal.']);
+            }
+            foreach ($soal as $item) {
+                $this->pastikanBolehMengakses($request, $item, perluKelola: true);
+                if ((int) $item->mata_pelajaran_id !== (int) $folder->mata_pelajaran_id || (int) $item->tingkat !== (int) $folder->tingkat) {
+                    throw ValidationException::withMessages(['soal_ids' => 'Pilih soal dengan mata pelajaran dan tingkat yang sama dengan folder.']);
+                }
+            }
+            if ($data['aksi'] === 'keluarkan') {
+                $folder->soal()->detach($data['soal_ids']);
+            } else {
+                $folder->soal()->syncWithoutDetaching($data['soal_ids']);
+            }
+        });
+
+        return back()->with('berhasil', $data['aksi'] === 'keluarkan' ? 'Soal dikeluarkan dari folder. Soal tetap tersimpan.' : 'Soal dimasukkan ke folder tanpa membuat salinan.');
+    }
+
+    private function pastikanAksesFolder(Request $request, FolderSoalCbt $folder): void
+    {
+        abort_unless($this->bisaLihatSemua($request) || $this->konteksBankSoal($request)->contains(fn ($k) => (int) $k['mata_pelajaran_id'] === (int) $folder->mata_pelajaran_id && (int) $k['tingkat'] === (int) $folder->tingkat
+        ), 403);
+    }
+
+    private function folderTersedia(Request $request): Builder
+    {
+        $query = FolderSoalCbt::query();
+
+        return $this->bisaLihatSemua($request) ? $query : $this->batasiSoalPadaKonteks($query, $this->konteksBankSoal($request));
+    }
+
+    private function validasiFolderSoal(Request $request, array $data, ?SoalCbt $soal = null): array
+    {
+        $ids = $request->boolean('folder_selection') || array_key_exists('folder_ids', $data)
+            ? ($data['folder_ids'] ?? [])
+            : ($soal?->folders()->pluck('folder_soal_cbt.id')->all() ?? []);
+        foreach (FolderSoalCbt::whereIn('id', $ids)->get() as $folder) {
+            $this->pastikanAksesFolder($request, $folder);
+            if ((int) $folder->mata_pelajaran_id !== (int) $data['mata_pelajaran_id'] || (int) $folder->tingkat !== (int) $data['tingkat']) {
+                throw ValidationException::withMessages(['folder_ids' => 'Folder harus sesuai mata pelajaran dan tingkat soal.']);
+            }
+        }
+
+        return $ids;
+    }
+
     private function dataForm(Request $request, array $tambahan = []): array
     {
         return array_merge([
@@ -208,6 +339,8 @@ class SoalCbtController extends Controller
             'daftarKesulitan' => SoalCbt::DAFTAR_KESULITAN,
             'daftarKategori' => SoalCbt::DAFTAR_KATEGORI,
             'daftarStatus' => SoalCbt::DAFTAR_STATUS,
+            'folderForm' => $this->folderTersedia($request)->with('mataPelajaran')->orderBy('nama')->get(),
+            'folderPilihan' => ($tambahan['soalCbt'] ?? null)?->folders()->pluck('folder_soal_cbt.id')->all() ?? ($request->filled('folder') ? [$request->integer('folder')] : []),
         ], $tambahan);
     }
 
@@ -221,6 +354,9 @@ class SoalCbtController extends Controller
             'jenis_soal' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_JENIS))],
             'tingkat_kesulitan' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KESULITAN))],
             'kategori' => ['required', Rule::in(array_keys(SoalCbt::DAFTAR_KATEGORI))],
+            'folder_ids' => ['nullable', 'array', 'max:100'],
+            'folder_ids.*' => ['integer', 'distinct', 'exists:folder_soal_cbt,id'],
+            'folder_selection' => ['nullable', 'boolean'],
             'topik' => ['nullable', 'string', 'max:160'],
             'materi' => ['nullable', 'string', 'max:180'],
             'tujuan_pembelajaran' => ['nullable', 'string'],
@@ -864,6 +1000,7 @@ class SoalCbtController extends Controller
             'kategori' => $soalCbt->kategori,
             'topik' => $soalCbt->topik,
             'materi' => $soalCbt->materi,
+            'folder' => $soalCbt->folders()->value('folder_soal_cbt.id'),
         ];
     }
 

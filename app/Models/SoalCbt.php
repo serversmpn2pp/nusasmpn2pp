@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SoalCbt extends Model
@@ -84,6 +85,11 @@ class SoalCbt extends Model
     public function tahunPelajaran(): BelongsTo
     {
         return $this->belongsTo(TahunPelajaran::class);
+    }
+
+    public function folders(): BelongsToMany
+    {
+        return $this->belongsToMany(FolderSoalCbt::class, 'anggota_folder_soal_cbt', 'soal_cbt_id', 'folder_soal_cbt_id');
     }
 
     public function mataPelajaran(): BelongsTo

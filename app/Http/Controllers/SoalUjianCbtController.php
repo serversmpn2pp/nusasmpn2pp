@@ -23,7 +23,7 @@ class SoalUjianCbtController extends Controller
             ->keyBy('soal_cbt_id');
 
         $soalCbt = SoalCbt::query()
-            ->with(['mataPelajaran', 'tahunPelajaran'])
+            ->with(['mataPelajaran', 'tahunPelajaran', 'folders'])
             ->where('mata_pelajaran_id', $ujianCbt->mata_pelajaran_id)
             ->where('tingkat', $ujianCbt->tingkat)
             ->where(function ($query) use ($soalDipilih) {

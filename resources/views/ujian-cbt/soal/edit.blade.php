@@ -137,6 +137,7 @@
         @method('PUT')
 
         <section class="panel">
+            @include('soal-cbt.partials.folder-picker-filter', ['koleksiSoal' => $soalCbt])
             <div class="desktop-only table-wrap" data-form-layout="desktop">
                 <table class="employee-table">
                     <thead>
@@ -156,7 +157,7 @@
                                 $nomorUrut = old("soal.{$item->id}.nomor_urut", $relasi?->nomor_urut);
                                 $bisaDipilih = $item->aktif && $item->status === 'siap';
                             @endphp
-                            <tr>
+                            <tr data-exam-folders="{{ $item->folders->modelKeys() ? json_encode($item->folders->modelKeys()) : '[]' }}">
                                 <td>
                                     <input type="hidden" name="soal[{{ $item->id }}][dipilih]" value="0">
                                     <label class="package-question-check" for="soal_{{ $item->id }}">
@@ -196,7 +197,7 @@
                         $nomorUrut = old("soal.{$item->id}.nomor_urut", $relasi?->nomor_urut);
                         $bisaDipilih = $item->aktif && $item->status === 'siap';
                     @endphp
-                    <article class="mobile-card">
+                    <article class="mobile-card" data-exam-folders="{{ json_encode($item->folders->modelKeys()) }}">
                         <input type="hidden" name="soal[{{ $item->id }}][dipilih]" value="0">
                         <div class="package-question-head">
                             <label class="package-question-check" for="mobile_soal_{{ $item->id }}">

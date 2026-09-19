@@ -6,6 +6,7 @@
     @php
         $kunciKonteks = $mataPelajaranId && $tingkat !== 'semua' ? $mataPelajaranId . '-' . $tingkat : '';
         $parameterTambah = $kunciKonteks ? ['mata_pelajaran_id' => $mataPelajaranId, 'tingkat' => $tingkat] : [];
+        if ($folderAktif) $parameterTambah['folder'] = $folderAktif->id;
     @endphp
 
     <style>
@@ -61,6 +62,7 @@
     @endif
 
     <form action="{{ route('soal-cbt.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;" data-bank-question-filter>
+        <input type="hidden" name="folder" value="{{ $folderFilter }}" data-bank-folder-filter>
         <div class="soal-filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari soal</label>
@@ -105,6 +107,8 @@
         </div>
     </form>
 
+    @include('soal-cbt.partials.folders')
+
     <section class="panel">
         <div class="desktop-only table-wrap">
             <table class="employee-table">
@@ -123,8 +127,10 @@
                     @forelse ($soalCbt as $item)
                         <tr>
                             <td>
+                                @if ($bisaKelolaSoal)<input type="checkbox" class="bank-soal-select" data-folder-soal value="{{ $item->id }}" aria-label="Pilih soal {{ $item->kode }}">@endif
                                 <p class="person-name">{{ $item->kode }}</p>
                                 <p class="person-meta">{{ str(strip_tags($item->pertanyaan))->limit(90) }}</p>
+                                <p class="help-text">{{ $item->folders->pluck('nama')->join(' · ') ?: 'Belum dikelompokkan' }}</p>
                             </td>
                             <td>
                                 <p>{{ $item->mataPelajaran?->nama ?: '-' }}</p>
@@ -160,6 +166,7 @@
         <div class="mobile-only mobile-list">
             @forelse ($soalCbt as $item)
                 <article class="mobile-card">
+                    @if ($bisaKelolaSoal)<label><input type="checkbox" class="bank-soal-select" data-folder-soal value="{{ $item->id }}"> Pilih soal</label>@endif
                     <div class="mobile-card-head">
                         <div>
                             <p class="person-name">{{ $item->kode }}</p>
@@ -168,6 +175,7 @@
                         <span class="badge {{ $item->status === 'siap' ? 'badge-active' : ($item->status === 'arsip' ? 'badge-inactive' : 'badge-warning') }}">{{ $item->labelStatus() }}</span>
                     </div>
                     <p style="margin: 10px 0 0;">{{ str(strip_tags($item->pertanyaan))->limit(120) }}</p>
+                    <p class="help-text">{{ $item->folders->pluck('nama')->join(' · ') ?: 'Belum dikelompokkan' }}</p>
                     <dl class="quick-facts">
                         <div><dt>Mapel</dt><dd>{{ $item->mataPelajaran?->nama ?: '-' }}</dd></div>
                         <div><dt>Tingkat</dt><dd>Kelas {{ $item->tingkat }}</dd></div>
@@ -237,6 +245,7 @@
             let timer;
 
             context?.addEventListener('change', () => {
+                form.querySelector('[data-bank-folder-filter]').value = 'semua';
                 const option = context.selectedOptions[0];
                 mapel.value = option?.dataset.mataPelajaranId || '';
                 level.value = option?.dataset.tingkat || 'semua';

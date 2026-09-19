@@ -177,6 +177,7 @@
     @endif
 
     <section class="panel">
+        @include('soal-cbt.partials.folder-picker-filter', ['koleksiSoal' => $soal])
         @if ($bolehKelola && $soal->isNotEmpty())
             <div class="question-toolbar">
                 <div class="field"><label for="cari_soal_paket">Cari soal</label><input id="cari_soal_paket" class="input" placeholder="Kode, topik, atau isi soal" data-question-search></div>
@@ -194,7 +195,7 @@
                     $skor = $bolehKelola ? $item->skor_maksimal : ($relasi?->bobot ?? $item->skor_maksimal);
                     $bisaDipilih = $item->aktif && $item->status === 'siap';
                 @endphp
-                <div class="question-row {{ $dipilih ? 'is-selected' : '' }}" data-question-row data-score="{{ (float) $skor }}" data-type="{{ $item->jenis_soal }}" data-difficulty="{{ $item->tingkat_kesulitan }}" data-search="{{ mb_strtolower($item->kode.' '.$item->topik.' '.$item->materi.' '.strip_tags($item->pertanyaan)) }}">
+                <div class="question-row {{ $dipilih ? 'is-selected' : '' }}" data-exam-folders="{{ json_encode($item->folders->modelKeys()) }}" data-question-row data-score="{{ (float) $skor }}" data-type="{{ $item->jenis_soal }}" data-difficulty="{{ $item->tingkat_kesulitan }}" data-search="{{ mb_strtolower($item->kode.' '.$item->topik.' '.$item->materi.' '.strip_tags($item->pertanyaan)) }}">
                     @if ($bolehKelola)
                         <input type="hidden" name="soal[{{ $item->id }}][dipilih]" value="0">
                         <input id="soal_{{ $item->id }}" class="question-check" type="checkbox" name="soal[{{ $item->id }}][dipilih]" value="1" @checked($dipilih) @disabled(! $bisaDipilih) data-question-check>
@@ -367,7 +368,7 @@
                 document.querySelectorAll('[data-question-check]').forEach((input) => input.addEventListener('change', refreshSummary));
                 [search, type, difficulty].forEach((input) => input?.addEventListener(input === search ? 'input' : 'change', applyFilters));
                 document.querySelector('[data-select-visible]')?.addEventListener('click', () => {
-                    rows.filter((row) => ! row.classList.contains('is-hidden')).forEach((row) => {
+                    rows.filter((row) => ! row.hidden && ! row.classList.contains('is-hidden')).forEach((row) => {
                         const check = row.querySelector('[data-question-check]');
                         if (check && ! check.disabled) check.checked = true;
                     });

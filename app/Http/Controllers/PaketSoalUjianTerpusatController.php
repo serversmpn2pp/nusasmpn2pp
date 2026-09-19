@@ -79,6 +79,7 @@ class PaketSoalUjianTerpusatController extends Controller
         $bolehKelola = $this->bolehMengelola($request->user(), $jadwalUjianCbt);
         $soalDipilih = $jadwalUjianCbt->ujianCbt?->soalUjianCbt?->keyBy('soal_cbt_id') ?? collect();
         $soal = SoalCbt::query()
+            ->with('folders')
             ->where('mata_pelajaran_id', $jadwalUjianCbt->mata_pelajaran_id)
             ->where('tingkat', $jadwalUjianCbt->tingkat)
             ->when(
