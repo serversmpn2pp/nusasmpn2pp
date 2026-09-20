@@ -41,7 +41,11 @@
     <main id="exam-attendance-app" class="page" data-endpoint="{{ route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangUjianCbt]) }}" data-server-time="{{ $waktuServerIso }}" data-fallback-photo="{{ $fotoDefault }}">
         <div class="page-head">
             <div><p class="eyebrow">Presensi Ujian CBT</p><h1>{{ $ruangUjianCbt->kode }} - {{ $ruangUjianCbt->nama }}</h1><p>{{ $ujianCbt->nama }} · {{ $mapel ?: '-' }}</p></div>
-            <a href="{{ route('presensi-ujian-cbt.index') }}" class="back-link">Pilih ruang lain</a>
+            @if(auth()->user()?->pegawai_id && in_array((int) auth()->user()->pegawai_id, [(int) $ruangUjianCbt->pengawas_utama_pegawai_id, (int) $ruangUjianCbt->pengawas_pendamping_pegawai_id], true))
+                <a href="{{ route('tugas-pengawas-ujian.show', [$ruangUjianCbt, 'tahap' => 'pantau']) }}" class="back-link">Kembali ke ruang pengawas</a>
+            @else
+                <a href="{{ route('presensi-ujian-cbt.index') }}" class="back-link">Pilih ruang lain</a>
+            @endif
         </div>
 
         <section class="room-strip" aria-label="Informasi ruang ujian">

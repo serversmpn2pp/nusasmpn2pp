@@ -72,7 +72,8 @@
             .question-media-figure img { display:block; width:auto; max-width:100%; max-height:430px; margin:0 auto; border:1px solid #dfe7f0; border-radius:7px; object-fit:contain; }
             .question-media-content figcaption { margin-top:7px; color:#71717a; font-size:.78rem; text-align:center; }
             .question-media-table-wrap > figcaption { margin:0 0 7px; color:#18181b; font-size:.84rem; font-weight:800; text-align:left; }
-            .question-media-table-scroll { overflow-x:auto; }
+            .question-media-content, .question-media-table-wrap { min-width:0; max-width:100%; }
+            .question-media-table-scroll { min-width:0; max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; }
             .question-media-table { width:100%; min-width:420px; border-collapse:collapse; }
             .question-media-table th,.question-media-table td { border:1px solid #dfe7f0; padding:9px 10px; text-align:left; vertical-align:top; }
             .question-media-table th { background:#e8f0f8; color:#0f355c; font-weight:800; }

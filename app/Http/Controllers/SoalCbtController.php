@@ -50,13 +50,16 @@ class SoalCbtController extends Controller
             ->when($tingkat !== 'semua', fn ($q) => $q->where('tingkat', (int) $tingkat))
             ->with('mataPelajaran')->withCount('soal')->orderBy('nama')->get();
 
-        $soalCbt = SoalCbt::query()
+        $bankQuery = SoalCbt::query()
+            ->when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))
+            ->when($mataPelajaranId, fn ($query, $id) => $query->where('mata_pelajaran_id', $id))
+            ->when($tingkat !== 'semua', fn ($query) => $query->where('tingkat', (int) $tingkat));
+        $jumlahPerStatus = (clone $bankQuery)->selectRaw('status, count(*) as jumlah')->groupBy('status')->pluck('jumlah', 'status');
+
+        $soalCbt = (clone $bankQuery)
             ->with(['tahunPelajaran', 'mataPelajaran', 'dibuatOleh', 'folders'])
             ->when($folderAktif, fn ($q) => $q->whereHas('folders', fn ($f) => $f->whereKey($folderAktif->id)))
             ->when($folderFilter === 'belum', fn ($q) => $q->whereDoesntHave('folders'))
-            ->when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))
-            ->when($mataPelajaranId, fn ($query, $id) => $query->where('mata_pelajaran_id', $id))
-            ->when($tingkat !== 'semua', fn ($query) => $query->where('tingkat', (int) $tingkat))
             ->when($jenisSoal !== 'semua', fn ($query) => $query->where('jenis_soal', $jenisSoal))
             ->when($status !== 'semua', fn ($query) => $query->where('status', $status))
             ->when($kataKunci !== '', function ($query) use ($kataKunci) {
@@ -83,9 +86,9 @@ class SoalCbtController extends Controller
             'daftarMataPelajaran' => $bisaLihatSemua ? $this->semuaMataPelajaran() : $this->mataPelajaranCakupan($request),
             'daftarJenisSoal' => SoalCbt::DAFTAR_JENIS,
             'daftarStatus' => SoalCbt::DAFTAR_STATUS,
-            'jumlahSoal' => SoalCbt::when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))->count(),
-            'jumlahSiap' => SoalCbt::when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))->where('status', 'siap')->count(),
-            'jumlahDraft' => SoalCbt::when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))->where('status', 'draft')->count(),
+            'jumlahSoal' => (int) $jumlahPerStatus->sum(),
+            'jumlahSiap' => (int) ($jumlahPerStatus['siap'] ?? 0),
+            'jumlahDraft' => (int) ($jumlahPerStatus['draft'] ?? 0),
             'bisaKelolaSoal' => $pengguna?->memilikiIzin(['cbt.kelola', 'cbt.soal_kelola']) ?? false,
             'daftarKonteks' => $daftarKonteks,
             'daftarFolder' => $daftarFolder,

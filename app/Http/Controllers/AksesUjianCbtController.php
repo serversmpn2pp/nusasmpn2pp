@@ -176,6 +176,10 @@ class AksesUjianCbtController extends Controller
             ->all();
 
         DB::transaction(function () use ($peserta, $soalUjian, $jawaban, $ragu, $data) {
+            $peserta = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
+            if ($peserta->status !== 'sedang_mengerjakan') {
+                return;
+            }
             foreach ($soalUjian as $relasiSoal) {
                 if ($relasiSoal->soalCbt?->jenis_soal === 'upload_file') {
                     $jawabanBerkas = JawabanPesertaUjianCbt::query()->firstOrNew([
@@ -267,27 +271,35 @@ class AksesUjianCbtController extends Controller
 
         abort_unless($relasiSoal, 404);
 
-        $jawabanLama = JawabanPesertaUjianCbt::query()
-            ->where('peserta_ujian_cbt_id', $peserta->id)
-            ->where('soal_ujian_cbt_id', $relasiSoal->id)
-            ->first();
-        $nilaiJawaban = $relasiSoal->soalCbt?->jenis_soal === 'upload_file'
-            ? ($jawabanLama?->lokasi_file ? ['berkas' => $jawabanLama->nama_file_asli] : null)
-            : $this->normalisasiJawaban($data['jawaban'] ?? null);
-        $jawaban = JawabanPesertaUjianCbt::updateOrCreate(
-            [
-                'peserta_ujian_cbt_id' => $peserta->id,
-                'soal_ujian_cbt_id' => $relasiSoal->id,
-            ],
-            [
-                'soal_cbt_id' => $relasiSoal->soal_cbt_id,
-                'jawaban' => $nilaiJawaban,
-                'ragu' => (bool) ($data['ragu'] ?? false),
-                'skor' => null,
-                'benar' => null,
-                'waktu_dijawab' => $nilaiJawaban === null ? null : now(),
-            ],
-        );
+        $jawaban = DB::transaction(function () use ($peserta, $relasiSoal, $data) {
+            $terkunci = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
+            if ($terkunci->status !== 'sedang_mengerjakan') {
+                throw new HttpResponseException(response()->json(['message' => 'Ujian tidak sedang dikerjakan.', 'ujian_selesai' => $terkunci->status === 'selesai'], 409));
+            }
+            $jawabanLama = JawabanPesertaUjianCbt::query()
+                ->where('peserta_ujian_cbt_id', $peserta->id)
+                ->where('soal_ujian_cbt_id', $relasiSoal->id)
+                ->first();
+            $nilaiJawaban = $relasiSoal->soalCbt?->jenis_soal === 'upload_file'
+                ? ($jawabanLama?->lokasi_file ? ['berkas' => $jawabanLama->nama_file_asli] : null)
+                : $this->normalisasiJawaban($data['jawaban'] ?? null);
+
+            return JawabanPesertaUjianCbt::updateOrCreate(
+                [
+                    'peserta_ujian_cbt_id' => $peserta->id,
+                    'soal_ujian_cbt_id' => $relasiSoal->id,
+                ],
+                [
+                    'soal_cbt_id' => $relasiSoal->soal_cbt_id,
+                    'jawaban' => $nilaiJawaban,
+                    'ragu' => (bool) ($data['ragu'] ?? false),
+                    'skor' => null,
+                    'benar' => null,
+                    'waktu_dijawab' => $nilaiJawaban === null ? null : now(),
+                ],
+            );
+
+        });
 
         return response()->json([
             'message' => 'Jawaban tersimpan.',

@@ -132,7 +132,12 @@ class PaketSoalUjianTerpusatController extends Controller
             'soal.*.dipilih' => ['nullable', 'boolean'],
             'acak_soal' => ['nullable', 'boolean'],
             'acak_jawaban' => ['nullable', 'boolean'],
+            'gunakan_paket_simulasi' => ['nullable', 'boolean'],
         ]);
+        if ($request->boolean('gunakan_paket_simulasi')) {
+            $this->pastikanPaketBelumDikerjakan($jadwalUjianCbt->ujianCbt);
+            $data['soal'] = app(\App\Services\Cbt\PaketSimulasiCbt::class)->siapkan($jadwalUjianCbt);
+        }
         $soalIdsTerpilih = collect($data['soal'] ?? [])
             ->filter(fn ($item) => filter_var($item['dipilih'] ?? false, FILTER_VALIDATE_BOOLEAN))
             ->keys()
@@ -355,12 +360,12 @@ class PaketSoalUjianTerpusatController extends Controller
             'tahun_pelajaran_id' => $kegiatan->tahun_pelajaran_id,
             'mata_pelajaran_id' => $jadwal->mata_pelajaran_id,
             'kode' => "UT-{$kegiatan->id}-JADWAL-{$jadwal->id}",
-            'nama' => "{$kegiatan->nama} - {$jadwal->mataPelajaran->nama} Tingkat {$jadwal->tingkat}",
+            'nama' => $kegiatan->jenisUjianCbt?->kode === 'SIMULASI_CBT' ? 'Simulasi CBT' : "{$kegiatan->nama} - {$jadwal->mataPelajaran->nama} Tingkat {$jadwal->tingkat}",
             'semester' => $kegiatan->semester,
             'tingkat' => $jadwal->tingkat,
             'tanggal_mulai' => $mulai,
             'tanggal_selesai' => $selesai,
-            'durasi_menit' => max(10, $mulai->diffInMinutes($selesai)),
+            'durasi_menit' => $kegiatan->jenisUjianCbt?->kode === 'SIMULASI_CBT' ? 20 : max(10, $mulai->diffInMinutes($selesai)),
             'jumlah_soal' => $jumlahSoal,
             'kkm' => $pengaturan?->kkm ?? $jadwal->mataPelajaran?->kkm,
             'token' => $kegiatan->jenisUjianCbt?->memerlukan_token ? $token : null,

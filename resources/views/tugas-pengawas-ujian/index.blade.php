@@ -33,7 +33,6 @@
         <div>
             <p class="eyebrow">Ujian & Asesmen</p>
             <h1 class="page-title">Tugas Pengawas Saya</h1>
-            <p class="page-subtitle">Lihat ruang yang Anda awasi, lalu unggah foto daftar hadir dan berita acara setelah ujian selesai.</p>
         </div>
     </div>
 
@@ -66,6 +65,7 @@
                 </div>
                 <div class="supervisor-task-main">
                     <div class="supervisor-task-title">
+                        @if($jadwal?->tanggal?->isToday())<span class="badge badge-active">Hari ini</span>@endif
                         <h2>{{ $jadwal?->mataPelajaran?->nama ?: 'Mata pelajaran belum ditentukan' }} · Tingkat {{ $jadwal?->tingkat ?: '-' }}</h2>
                         <span class="badge {{ $utama ? 'badge-active' : 'badge-muted' }}">{{ $utama ? 'Pengawas utama' : 'Pendamping' }}</span>
                     </div>
@@ -83,7 +83,7 @@
                         <a href="{{ route('tugas-pengawas-ujian.show', $operasional) }}" class="button button-primary">Buka tugas</a>
                     @else
                         <span class="badge badge-warning">Paket belum diterbitkan</span>
-                        <span class="help-text">Halaman bukti tersedia setelah paket soal siap.</span>
+                        <span class="help-text">Ruang pengawas tersedia setelah paket soal diterbitkan.</span>
                     @endif
                 </div>
             </article>

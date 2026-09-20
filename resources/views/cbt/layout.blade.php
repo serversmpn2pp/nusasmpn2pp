@@ -425,6 +425,8 @@
 
             .exam-main {
                 display: grid;
+                min-width: 0;
+                grid-template-columns: minmax(0, 1fr);
                 gap: 16px;
             }
 

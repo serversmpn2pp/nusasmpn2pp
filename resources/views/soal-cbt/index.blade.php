@@ -10,6 +10,13 @@
     @endphp
 
     <style>
+        .bank-summary-heading { margin:0 0 12px; font-size:1rem; color:var(--primary-dark); overflow-wrap:anywhere; }
+        .stats-grid.bank-summary { grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+        .bank-summary .stat { min-width:0; min-height:106px; display:flex; flex-direction:column; justify-content:space-between; }
+        .bank-summary .stat-label { margin:0 0 8px; }
+        .bank-summary .stat-value { margin:0; font-variant-numeric:tabular-nums; }
+        .bank-summary .filter-count { border-color:#a5cbb7; background:#f1f8f4; }
+        @media(max-width:1000px) { .stats-grid.bank-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         .soal-filter-grid {
             display: grid;
             grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr) minmax(170px, .72fr) 140px auto;
@@ -42,7 +49,8 @@
         @endif
     </div>
 
-    <div class="stats-grid">
+    <h2 class="bank-summary-heading">{{ $mataPelajaranId ? ($daftarMataPelajaran->firstWhere('id', $mataPelajaranId)?->nama ?: 'Bank soal terpilih') : 'Semua bank soal dalam akses Anda' }}{{ $tingkat !== 'semua' ? ' · Tingkat '.$tingkat : '' }}</h2>
+    <div class="stats-grid bank-summary" aria-label="Ringkasan jumlah soal">
         <div class="panel stat">
             <p class="stat-label">Total soal</p>
             <p class="stat-value">{{ $jumlahSoal }}</p>
@@ -54,6 +62,10 @@
         <div class="panel stat">
             <p class="stat-label">Draft</p>
             <p class="stat-value">{{ $jumlahDraft }}</p>
+        </div>
+        <div class="panel stat filter-count">
+            <p class="stat-label">Sesuai filter</p>
+            <p class="stat-value">{{ $soalCbt->total() }}</p>
         </div>
     </div>
 

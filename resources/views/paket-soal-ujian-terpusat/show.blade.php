@@ -154,6 +154,22 @@
         <div class="package-auto-item"><strong>Komponen nilai</strong><span>Dibuat otomatis saat paket diterbitkan.</span></div>
     </div>
 
+    @if ($bolehKelola && $jadwal->kegiatanUjianCbt?->jenisUjianCbt?->kode === 'SIMULASI_CBT')
+        <section class="panel panel-pad" style="margin-bottom:18px;">
+            <h2 class="panel-title">Simulasi CBT</h2>
+            <p class="help-text">Paket bawaan 12 soal umum: masing-masing dua pilihan ganda, pilihan ganda kompleks, benar-salah, menjodohkan, isian singkat, dan numerik. Durasi 20 menit. Tanpa uraian, upload file, dan nilai akademik.</p>
+            <div class="actions" style="margin-top:14px;">
+                <form method="POST" action="{{ route('paket-soal-terpusat.update', $jadwal) }}">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="gunakan_paket_simulasi" value="1">
+                    <input type="hidden" name="acak_soal" value="0">
+                    <input type="hidden" name="acak_jawaban" value="0">
+                    <button class="button button-primary" name="aksi" value="terbitkan">Gunakan paket Simulasi CBT</button>
+                </form>
+            </div>
+        </section>
+    @endif
+
     @if ($bolehKelola)
         <form action="{{ route('paket-soal-terpusat.update', $jadwal) }}" method="POST" data-package-form>
             @csrf

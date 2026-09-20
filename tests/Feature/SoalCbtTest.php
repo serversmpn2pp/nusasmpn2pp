@@ -466,6 +466,53 @@ class SoalCbtTest extends TestCase
         }
     }
 
+    public function test_ringkasan_bank_soal_mengikuti_mapel_tingkat_dan_hak_akses(): void
+    {
+        [$tahun, $mapel, $pegawai] = $this->buatDataAkademik();
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->actingAs($admin)->post(route('soal-cbt.store'), $this->dataSoal($tahun, $mapel))->assertRedirect();
+        $contoh = SoalCbt::firstOrFail();
+        $contoh->update(['status' => 'siap']);
+        foreach (range(2, 15) as $nomor) {
+            $soal = $contoh->replicate();
+            $soal->kode = 'RINGKASAN-'.$nomor;
+            $soal->status = $nomor === 14 ? 'draft' : ($nomor === 15 ? 'arsip' : 'siap');
+            $soal->save();
+        }
+        $lain = $contoh->replicate();
+        $lain->kode = 'TINGKAT-LAIN';
+        $lain->tingkat = 7;
+        $lain->save();
+        $mapelLain = MataPelajaran::create(['kode' => 'IPA-UJI', 'nama' => 'IPA', 'tingkat' => 8, 'aktif' => true]);
+        $lain = $contoh->replicate();
+        $lain->kode = 'MAPEL-LAIN';
+        $lain->mata_pelajaran_id = $mapelLain->id;
+        $lain->save();
+        $filter = ['mata_pelajaran_id' => $mapel->id, 'tingkat' => 8];
+        $halaman = $this->get(route('soal-cbt.index', $filter))->assertOk()
+            ->assertViewHas('jumlahSoal', 15)->assertViewHas('jumlahSiap', 13)->assertViewHas('jumlahDraft', 1)
+            ->assertViewHas('soalCbt', fn ($soal) => $soal->total() === 15 && $soal->count() === 12)
+            ->assertSeeText('Sesuai filter');
+        if (getenv('CBT_BANK_FIXTURE')) {
+            file_put_contents(storage_path('logs/cbt-bank-summary.html'), $halaman->getContent());
+        }
+        $this->get(route('soal-cbt.index', $filter + ['status' => 'draft']))->assertOk()
+            ->assertViewHas('jumlahSoal', 15)->assertViewHas('jumlahSiap', 13)
+            ->assertViewHas('soalCbt', fn ($soal) => $soal->total() === 1);
+        $this->get(route('soal-cbt.index', $filter + ['kata_kunci' => 'tidak-ditemukan']))->assertOk()
+            ->assertViewHas('jumlahSoal', 15)->assertViewHas('soalCbt', fn ($soal) => $soal->total() === 0);
+        $folder = FolderSoalCbt::create(['mata_pelajaran_id' => $mapel->id, 'tingkat' => 8, 'nama' => 'BAB 1']);
+        $folder->soal()->attach($contoh);
+        $this->get(route('soal-cbt.index', ['folder' => $folder->id]))->assertOk()
+            ->assertViewHas('jumlahSoal', 15)->assertViewHas('soalCbt', fn ($soal) => $soal->total() === 1);
+        $this->get(route('soal-cbt.index'))->assertOk()->assertViewHas('jumlahSoal', 17);
+        $guru = Pengguna::create(['pegawai_id' => $pegawai->id, 'nama' => 'Guru ringkasan', 'username' => 'guru-ringkasan', 'kata_sandi' => 'secret', 'peran' => 'pegawai', 'aktif' => true, 'akun_sistem' => false]);
+        $guru->daftarPeran()->sync([Peran::where('kode', 'guru_mapel')->value('id')]);
+        $this->actingAs($guru)->get(route('soal-cbt.index'))->assertOk()->assertViewHas('jumlahSoal', 15);
+        $this->get(route('soal-cbt.index', ['mata_pelajaran_id' => $mapelLain->id]))->assertOk()
+            ->assertViewHas('jumlahSoal', 0)->assertViewHas('jumlahSiap', 0)->assertViewHas('jumlahDraft', 0);
+    }
+
     private function buatDataAkademik(): array
     {
         $tahunPelajaran = TahunPelajaran::create([

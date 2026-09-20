@@ -431,6 +431,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')
             ->name('ujian-terpusat.nilai-hasil.index');
         Route::middleware('izin:cbt.kelola')->group(function () {
+            Route::get('simulasi-cbt', [UjianTerpusatController::class, 'simulasi'])->name('simulasi-cbt.index');
             Route::get('ujian-terpusat-baru', [UjianTerpusatController::class, 'create'])->name('ujian-terpusat.create');
             Route::post('ujian-terpusat', [UjianTerpusatController::class, 'store'])->name('ujian-terpusat.store');
             Route::get('ujian-terpusat/{kegiatanUjianCbt}/edit', [UjianTerpusatController::class, 'edit'])->name('ujian-terpusat.edit');

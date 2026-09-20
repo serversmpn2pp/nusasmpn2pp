@@ -54,7 +54,8 @@ class TugasPengawasUjianController extends Controller
         });
 
         $tugas = $tugas->sortBy(fn (PengawasRuangUjianTerpusat $penugasan) => sprintf(
-            '%s %s %03d',
+            '%d %s %s %03d',
+            $penugasan->jadwalUjianCbt?->tanggal?->isToday() ? 0 : 1,
             $penugasan->jadwalUjianCbt?->tanggal?->format('Y-m-d') ?? '9999-12-31',
             substr((string) $penugasan->jadwalUjianCbt?->waktu_mulai, 0, 5),
             $penugasan->ruangKegiatanUjianCbt?->urutan ?? 999,
@@ -78,6 +79,8 @@ class TugasPengawasUjianController extends Controller
     {
         $this->pastikanBolehMelihat($request->user(), $ruangUjianCbt);
 
+        $data = $request->validate(['tahap' => ['nullable', Rule::in(['persiapan', 'pantau', 'bukti'])]]);
+
         $ruangUjianCbt->load([
             'ujianCbt.jenisUjianCbt',
             'ujianCbt.tahunPelajaran',
@@ -94,9 +97,14 @@ class TugasPengawasUjianController extends Controller
         ]);
 
         $pengguna = $request->user();
+        $peserta = $ruangUjianCbt->pesertaUjianCbt->sortBy('nomor_meja')->values();
+        $peserta->loadCount(['jawabanPesertaUjianCbt as jawaban_tersimpan' => fn ($query) => $query->whereNotNull('jawaban')]);
 
         return view('tugas-pengawas-ujian.show', [
             'ruang' => $ruangUjianCbt,
+            'tahap' => $data['tahap'] ?? (request('kembali') === 'panitia' ? 'bukti' : 'persiapan'),
+            'pesertaPantau' => $peserta,
+            'jumlahSoalPantau' => min((int) $ruangUjianCbt->ujianCbt->jumlah_soal, $ruangUjianCbt->ujianCbt->soalUjianCbt()->count()),
             'bolehUnggah' => $this->bolehMengunggah($pengguna, $ruangUjianCbt),
             'bolehMemeriksa' => $this->bolehMemeriksa($pengguna, $ruangUjianCbt),
             'sebagaiPengawasUtama' => (int) $pengguna?->pegawai_id === (int) $ruangUjianCbt->pengawas_utama_pegawai_id,

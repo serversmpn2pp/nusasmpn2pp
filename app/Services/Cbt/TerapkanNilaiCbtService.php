@@ -19,6 +19,9 @@ class TerapkanNilaiCbtService
 
     public function terapkan(UjianCbt $ujianCbt, ?int $penggunaId): array
     {
+        if ($ujianCbt->jenisUjianCbt?->kode === 'SIMULASI_CBT') {
+            throw ValidationException::withMessages(['nilai' => 'Hasil Simulasi CBT hanya untuk latihan dan tidak masuk nilai akademik.']);
+        }
         $soalUjian = $this->ambilSoalUjian($ujianCbt);
         $bobotTotal = round($soalUjian->sum(fn (SoalUjianCbt $item) => (float) $item->bobot), 2);
 

@@ -386,7 +386,6 @@
                                 <p class="person-name">{{ $peserta->anggotaKelas?->siswa?->nama_lengkap ?: '-' }}</p>
                                 <div class="monitor-meta">
                                     <span>NISN {{ $peserta->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
-                                    <span>NISN {{ $peserta->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
                                 </div>
                             </td>
                             <td>

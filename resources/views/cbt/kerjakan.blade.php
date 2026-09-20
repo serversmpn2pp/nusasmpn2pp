@@ -40,6 +40,7 @@
         }
 
         .question-card {
+            min-width: 0;
             min-height: 410px;
         }
 
@@ -98,6 +99,8 @@
             opacity: .42;
         }
 
+        #retrySave[hidden] { display: none !important; }
+
         .nav-number {
             cursor: pointer;
         }
@@ -107,6 +110,15 @@
             background: #e1f3e9;
             color: #116644;
         }
+
+        .nav-number.is-partial {
+            border-color: #ca8a04;
+            background: #fff7df;
+            color: #854d0e;
+            border-style: dashed;
+        }
+
+        .question-legend .legend-partial { background: #fff7df; border-color: #ca8a04; border-style: dashed; }
 
         .nav-number.is-doubt {
             border-color: #e1b100;
@@ -464,6 +476,7 @@
                             data-question-id="{{ $relasiSoal->id }}"
                             data-question-index="{{ $index }}"
                             data-answered="{{ $terjawabSaatIni ? '1' : '0' }}"
+                            data-file-saved="{{ $berkasTersimpan ? '1' : '0' }}"
                             data-doubt="{{ $raguSaatIni ? '1' : '0' }}"
                             data-dirty="0"
                             data-revision="0"
@@ -612,6 +625,7 @@
                     <div class="save-bar js-only">
                         <div style="display: grid; gap: 2px; margin-right: auto; min-width: 0;">
                             <span id="questionPosition" class="question-position">Soal 1 dari {{ $soalUjian->count() }}</span>
+                            <button id="retrySave" type="button" class="button button-muted" hidden>Coba simpan lagi</button>
                             <span id="saveStatus" class="answer-save-state" role="status" aria-live="polite">Jawaban disimpan otomatis</span>
                         </div>
                         <div class="question-actions">
@@ -656,6 +670,7 @@
                         <div class="question-legend" aria-label="Keterangan nomor soal">
                             <span><i></i>Belum</span>
                             <span><i class="legend-answered"></i>Terjawab</span>
+                            <span><i class="legend-partial"></i>Belum lengkap</span>
                             <span><i class="legend-doubt"></i>Ragu</span>
                             <span><i class="legend-current"></i>Dibuka</span>
                             <span><i class="legend-unsaved"></i>Belum tersimpan</span>
@@ -684,7 +699,7 @@
                         </div>
                         <div class="finish-summary-item">
                             <strong id="finishUnanswered">0</strong>
-                            <span>Belum dijawab</span>
+                            <span>Belum lengkap</span>
                         </div>
                         <div class="finish-summary-item">
                             <strong id="finishDoubt">0</strong>
@@ -765,6 +780,7 @@
             function setSaveStatus(state, text) {
                 saveStatus.className = `answer-save-state ${state ? `is-${state}` : ''}`;
                 saveStatus.textContent = text;
+                document.getElementById('retrySave').hidden = !questionCards.some(card => card.dataset.dirty === '1' && Number(card.dataset.saveFailures || 0) > 0);
             }
 
             function answerFromCard(card) {
@@ -796,6 +812,16 @@
                 return Object.values(answer || {}).some((value) => String(value).trim() !== '');
             }
 
+            function answerCompletion(card) {
+                const statements = [...card.querySelectorAll('.statement-row')];
+                const matches = [...card.querySelectorAll('.matching-row select')];
+                const parts = statements.length
+                    ? statements.map(row => Boolean(row.querySelector('input[type="radio"]:checked')))
+                    : matches.map(select => select.value !== '');
+                if (parts.length) return { complete: parts.every(Boolean), partial: parts.some(Boolean) && !parts.every(Boolean) };
+                return { complete: card.dataset.fileSaved === '1' || hasAnswer(answerFromCard(card)), partial: false };
+            }
+
             function doubtFromCard(card) {
                 const questionId = card.dataset.questionId;
                 return Boolean(card.querySelector(`[name="ragu[${questionId}]"]`)?.checked);
@@ -805,7 +831,9 @@
                 const card = questionCards[index];
                 if (!card) return;
 
-                card.dataset.answered = hasAnswer(answerFromCard(card)) ? '1' : '0';
+                const completion = answerCompletion(card);
+                card.dataset.answered = completion.complete ? '1' : '0';
+                card.dataset.partial = completion.partial ? '1' : '0';
                 card.dataset.doubt = doubtFromCard(card) ? '1' : '0';
                 refreshNavigation();
             }
@@ -817,6 +845,9 @@
 
                     button.classList.toggle('is-current', isCurrent);
                     button.classList.toggle('is-answered', card?.dataset.answered === '1' && card?.dataset.doubt !== '1');
+                    button.classList.toggle('is-partial', card?.dataset.partial === '1' && card?.dataset.doubt !== '1');
+                    const completionLabel = card?.dataset.partial === '1' ? 'belum lengkap' : (card?.dataset.answered === '1' ? 'terjawab' : 'belum dijawab');
+                    button.setAttribute('aria-label', `Buka soal nomor ${index + 1}, ${completionLabel}`);
                     button.classList.toggle('is-doubt', card?.dataset.doubt === '1');
                     button.classList.toggle('is-unsaved', card?.dataset.dirty === '1');
 
@@ -854,15 +885,18 @@
 
             async function performSave(index) {
                 const card = questionCards[index];
-                if (!card || card.dataset.dirty !== '1') return true;
+                if (!card || card.dataset.dirty !== '1' || finalSubmitStarted) return true;
 
                 const revision = Number(card.dataset.revision || 0);
                 setSaveStatus('saving', `Menyimpan soal ${index + 1}...`);
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 10000);
 
                 try {
                     const response = await fetch(autosaveUrl, {
                         method: 'POST',
                         credentials: 'same-origin',
+                        signal: controller.signal,
                         headers: {
                             'Accept': 'application/json',
                             'Content-Type': 'application/json',
@@ -886,29 +920,32 @@
                         throw new Error(result.message || 'Jawaban belum dapat disimpan.');
                     }
 
-                    card.dataset.answered = result.terjawab ? '1' : '0';
-                    card.dataset.doubt = result.ragu ? '1' : '0';
-
                     if (Number(card.dataset.revision || 0) === revision) {
                         card.dataset.dirty = '0';
-                        setSaveStatus('saved', `Tersimpan ${result.tersimpan_pada}`);
+                        card.dataset.saveFailures = '0';
+                        const pending = questionCards.filter(item => item.dataset.dirty === '1').length;
+                        setSaveStatus(pending ? 'unsaved' : 'saved', pending ? `${pending} soal belum tersimpan` : `Tersimpan ${result.tersimpan_pada}`);
                     } else {
                         scheduleSave(index, 150);
                     }
 
-                    refreshNavigation();
+                    refreshCardState(index);
                     return true;
                 } catch (error) {
-                    setSaveStatus('failed', error.message || 'Gagal menyimpan. Periksa koneksi.');
+                    card.dataset.saveFailures = String(Number(card.dataset.saveFailures || 0) + 1);
+                    setSaveStatus('failed', error.name === 'AbortError' ? 'Koneksi lambat. Jawaban belum tersimpan.' : 'Gagal menyimpan. Periksa koneksi.');
+                    if (!finalSubmitStarted && Number(card.dataset.saveFailures) <= 3) scheduleSave(index, 5000);
                     refreshNavigation();
                     return false;
+                } finally {
+                    clearTimeout(timeout);
                 }
             }
 
             function queueSave(index) {
                 clearTimeout(saveTimers.get(index));
-                const previousQueue = saveQueues.get(index) || Promise.resolve();
-                const nextQueue = previousQueue.catch(() => false).then(() => performSave(index));
+                if (saveQueues.has(index)) return saveQueues.get(index);
+                const nextQueue = performSave(index).finally(() => saveQueues.delete(index));
                 saveQueues.set(index, nextQueue);
                 return nextQueue;
             }
@@ -916,6 +953,7 @@
             function markDirty(index, delay) {
                 const card = questionCards[index];
                 card.dataset.dirty = '1';
+                card.dataset.saveFailures = '0';
                 card.dataset.revision = String(Number(card.dataset.revision || 0) + 1);
                 refreshCardState(index);
                 setSaveStatus('unsaved', 'Belum tersimpan');
@@ -976,6 +1014,7 @@
                     }
 
                     card.dataset.answered = '1';
+                    card.dataset.fileSaved = '1';
                     card.dataset.dirty = '0';
                     fileName.textContent = result.berkas?.nama || file.name;
                     fileInfo.textContent = `${result.berkas?.ukuran_label || ''} · Berkas sudah tersimpan`;
@@ -999,13 +1038,14 @@
                 const answered = questionCards.filter((card) => card.dataset.answered === '1').length;
                 const doubt = questionCards.filter((card) => card.dataset.doubt === '1').length;
                 const unanswered = questionCards.length - answered;
+                const partial = questionCards.filter(card => card.dataset.partial === '1').length;
 
                 finishAnswered.textContent = answered;
                 finishUnanswered.textContent = unanswered;
                 finishDoubt.textContent = doubt;
                 finishWarning.hidden = unanswered === 0 && doubt === 0;
                 finishWarning.textContent = unanswered > 0
-                    ? `Masih ada ${unanswered} soal yang belum dijawab${doubt > 0 ? ` dan ${doubt} soal ditandai ragu-ragu` : ''}.`
+                    ? `Masih ada ${unanswered} soal yang belum lengkap${partial > 0 ? ` (${partial} baru terisi sebagian)` : ''}${doubt > 0 ? ` dan ${doubt} soal ditandai ragu-ragu` : ''}.`
                     : `${doubt} soal masih ditandai ragu-ragu.`;
             }
 
@@ -1021,19 +1061,19 @@
             });
 
             navigationButtons.forEach((button) => {
-                button.addEventListener('click', async () => {
-                    await queueSave(currentQuestion);
+                button.addEventListener('click', () => {
+                    queueSave(currentQuestion);
                     showQuestion(Number(button.dataset.questionIndex));
                 });
             });
 
-            previousButton.addEventListener('click', async () => {
-                await queueSave(currentQuestion);
+            previousButton.addEventListener('click', () => {
+                queueSave(currentQuestion);
                 showQuestion(currentQuestion - 1);
             });
 
-            nextButton.addEventListener('click', async () => {
-                await queueSave(currentQuestion);
+            nextButton.addEventListener('click', () => {
+                queueSave(currentQuestion);
                 showQuestion(currentQuestion + 1);
             });
 
@@ -1066,12 +1106,23 @@
             });
 
             document.addEventListener('visibilitychange', () => {
-                if (document.hidden) queueSave(currentQuestion);
+                if (document.hidden) questionCards.forEach((card, index) => {
+                    if (card.dataset.dirty === '1') queueSave(index);
+                });
             });
 
             window.addEventListener('online', () => {
                 questionCards.forEach((card, index) => {
                     if (card.dataset.dirty === '1') queueSave(index);
+                });
+            });
+
+            document.getElementById('retrySave').addEventListener('click', () => {
+                questionCards.forEach((card, index) => {
+                    if (card.dataset.dirty === '1') {
+                        card.dataset.saveFailures = '0';
+                        queueSave(index);
+                    }
                 });
             });
 
@@ -1082,6 +1133,7 @@
                 }
             });
 
+            questionCards.forEach((card, index) => refreshCardState(index));
             showQuestion(0, false);
             setSaveStatus('saved', 'Jawaban disimpan otomatis');
             updateTimer();

@@ -62,10 +62,19 @@ class UjianTerpusatController extends Controller
         ]);
     }
 
-    public function create()
+    public function simulasi()
+    {
+        return view('ujian-terpusat.simulasi', ['contoh' => app(\App\Services\Cbt\PaketSimulasiCbt::class)->contoh()]);
+    }
+
+    public function create(Request $request)
     {
         return view('ujian-terpusat.create', $this->dataForm([
             'tahunPelajaranAwal' => TahunPelajaran::query()->where('aktif', true)->first(),
+            ...($request->boolean('simulasi') ? ['kegiatan' => new KegiatanUjianCbt([
+                'nama' => 'Simulasi CBT', 'jenis_ujian_cbt_id' => JenisUjianCbt::where('kode', 'SIMULASI_CBT')->value('id'),
+                'status' => 'draft', 'semester' => now()->month >= 7 ? 'ganjil' : 'genap',
+            ])] : []),
         ]));
     }
 

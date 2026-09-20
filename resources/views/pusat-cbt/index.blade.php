@@ -182,6 +182,9 @@
             <div><h2 class="panel-title">Peralatan CBT</h2><p class="help-text">Gunakan sesuai tahap kerja, bukan sebagai alur yang terpisah.</p></div>
         </div>
         <div class="cbt-tool-grid">
+            @izin('cbt.kelola')
+                <a class="cbt-tool" href="{{ route('simulasi-cbt.index') }}"><strong>Simulasi CBT</strong><span class="help-text">12 soal latihan umum, enam jenis soal. Tidak masuk nilai akademik.</span></a>
+            @endizin
             @if ($bolehSoal)
                 <a class="cbt-tool" href="{{ route('soal-cbt.index') }}"><strong>Bank Soal</strong><span class="help-text">Tulis dan kelola soal yang dapat digunakan kembali.</span></a>
             @endif

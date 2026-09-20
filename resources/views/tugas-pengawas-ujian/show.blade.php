@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Bukti Ruang Ujian - NUSA')
+@section('title', 'Ruang Pengawas - NUSA')
 
 @push('styles')
     <style>
@@ -9,6 +9,8 @@
         .proof-hero-side { border-left:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); }
         .proof-hero h2 { margin:0; color:#fff; font-size:1.4rem; }
         .proof-hero p { margin:7px 0 0; color:rgba(255,255,255,.84); }
+        .proof-hero.compact .proof-hero-main,.proof-hero.compact .proof-hero-side { padding:14px 20px; }
+        .proof-hero.compact h2 { font-size:1.1rem; }
         .proof-meta { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:16px; }
         .proof-meta-item { padding:12px 13px; border:1px solid var(--line); border-radius:7px; background:#fff; }
         .proof-meta-item span,.proof-meta-item strong { display:block; }
@@ -69,8 +71,7 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">Ujian & Asesmen</p>
-            <h1 class="page-title">Bukti ruang ujian</h1>
-            <p class="page-subtitle">Foto dokumen yang sudah diisi dan ditandatangani, periksa hasilnya, kemudian kirim kepada panitia.</p>
+            <h1 class="page-title">Ruang pengawas</h1>
         </div>
         <div class="actions">
             @if (request('kembali') === 'panitia' && $kegiatan)
@@ -84,25 +85,35 @@
     @if (session('berhasil')) <div class="alert">{{ session('berhasil') }}</div> @endif
     @if ($errors->any()) <div class="alert alert-danger"><strong>Ada bagian yang perlu diperbaiki.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div> @endif
 
-    <section class="panel proof-hero">
+    <section class="panel proof-hero {{ $tahap === 'pantau' ? 'compact' : '' }}">
         <div class="proof-hero-main">
             <p class="eyebrow" style="color:var(--accent);">{{ $kegiatan?->jenisUjianCbt?->nama ?: 'Ujian Terpusat' }}</p>
             <h2>{{ $kegiatan?->nama ?: $ruang->ujianCbt?->nama }}</h2>
             <p>{{ $jadwal?->mataPelajaran?->nama ?: '-' }} · Tingkat {{ $jadwal?->tingkat ?: '-' }} · {{ $ruang->kode }} - {{ $ruang->nama }}</p>
         </div>
         <div class="proof-hero-side">
+            @if($tahap === 'bukti')
             <span class="badge {{ $kelasStatus }}">{{ $ruang->labelStatusBukti() }}</span>
             <p>{{ $daftarHadir->count() }} foto/berkas daftar hadir · {{ $beritaAcara->count() }} berita acara</p>
+            @else
+                <strong>{{ $ruang->kode }} - {{ $ruang->nama }}</strong>
+                <p>{{ $jadwal?->labelWaktu() ?: '-' }} · {{ $pesertaPantau->count() }} peserta</p>
+            @endif
         </div>
     </section>
 
+    @if($tahap !== 'pantau')
     <div class="proof-meta">
         <div class="proof-meta-item"><span>Hari dan tanggal</span><strong>{{ $jadwal?->tanggal?->locale('id')->translatedFormat('l, d F Y') ?: '-' }}</strong></div>
         <div class="proof-meta-item"><span>Waktu</span><strong>{{ $jadwal?->labelWaktu() ?: '-' }}</strong></div>
         <div class="proof-meta-item"><span>Pengawas utama</span><strong>{{ $ruang->pengawasUtama?->nama_lengkap ?: '-' }}</strong></div>
         <div class="proof-meta-item"><span>Pendamping</span><strong>{{ $ruang->pengawasPendamping?->nama_lengkap ?: 'Tidak ada' }}</strong></div>
     </div>
+    @endif
 
+    @include('tugas-pengawas-ujian._ruang')
+
+    @if($tahap === 'bukti')
     @if ($ruang->status_bukti === 'perlu_diulang')
         <div class="proof-note"><strong>Bukti perlu diulang.</strong><p style="margin:5px 0 0;">{{ $ruang->catatan_pemeriksaan_bukti }}</p></div>
     @elseif ($ruang->status_bukti === 'valid')
@@ -196,6 +207,7 @@
                 <p class="proof-lock">Pemeriksaan tersedia setelah pengawas menekan tombol <strong>Kirim ke panitia</strong>.</p>
             @endif
         </section>
+    @endif
     @endif
 @endsection
 

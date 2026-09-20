@@ -264,6 +264,25 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         $this->actingAs($akunPengawas)
             ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
             ->assertOk()
+            ->assertSeeText('Ruang pengawas')
+            ->assertSeeText('Token ujian')
+            ->assertDontSeeText('Unggah bukti');
+        foreach (['persiapan', 'pantau', 'bukti'] as $tahap) {
+            $halaman = $this->actingAs($akunPengawas)
+                ->get(route('tugas-pengawas-ujian.show', [$ruangOperasional, 'tahap' => $tahap]))
+                ->assertOk();
+            if ($tahap === 'pantau') {
+                $halaman->assertSeeText('Soal dengan jawaban tersimpan')
+                    ->assertDontSeeText('Koreksi otomatis')
+                    ->assertViewHas('pesertaPantau', fn ($peserta) => $peserta->count() === 2 && $peserta->every(fn ($item) => $item->ruang_ujian_cbt_id === $ruangOperasional->id));
+            }
+            if (getenv('CBT_SUPERVISOR_FIXTURE')) {
+                file_put_contents(storage_path('logs/cbt-supervisor-'.$tahap.'.html'), $halaman->getContent());
+            }
+        }
+        $this->actingAs($akunPengawas)
+            ->get(route('tugas-pengawas-ujian.show', [$ruangOperasional, 'tahap' => 'bukti']))
+            ->assertOk()
             ->assertSeeText('Ambil foto atau pilih berkas')
             ->assertSeeText('Kirim ke panitia');
         $this->actingAs($data['akun_guru'])
@@ -482,6 +501,51 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         $this->assertSame('parsial', $kegiatan->fresh()->penilaian_pgk);
         $this->get(route('ujian-terpusat.edit', $kegiatan))->assertOk()->assertSee('Pengaturan dikunci');
         $this->actingAs($data['akun_guru'])->get(route('paket-soal-terpusat.show', $data['jadwal']))->assertOk()->assertSee('Parsial - benar dikurangi salah');
+    }
+
+    public function test_paket_simulasi_memiliki_dua_soal_per_jenis_dan_tidak_masuk_nilai(): void
+    {
+        Storage::fake('public');
+        $data = $this->buatFondasi();
+        $this->actingAs($data['admin']);
+        $this->get(route('simulasi-cbt.index'))->assertOk()->assertSee('Simulasi CBT')->assertSee('Soal 12')->assertDontSee('Kenali Jenis Soal');
+        $this->put(route('paket-soal-terpusat.update', $data['jadwal']), ['aksi' => 'terbitkan', 'gunakan_paket_simulasi' => true])->assertStatus(422);
+        $data['kegiatan']->update(['jenis_ujian_cbt_id' => JenisUjianCbt::where('kode', 'SIMULASI_CBT')->value('id')]);
+        foreach (range(1, 2) as $_) {
+            $this->put(route('paket-soal-terpusat.update', $data['jadwal']), ['aksi' => 'terbitkan', 'gunakan_paket_simulasi' => true, 'acak_soal' => false, 'acak_jawaban' => false])->assertSessionHasNoErrors()->assertRedirect();
+        }
+        $paket = $data['jadwal']->fresh()->ujianCbt;
+        $this->assertSame('Simulasi CBT', $paket->nama);
+        $this->assertSame(20, $paket->durasi_menit);
+        $this->assertSame(12, $paket->soalUjianCbt()->count());
+        $this->assertDatabaseCount('soal_cbt', 12);
+        $this->assertDatabaseCount('komponen_nilai', 0);
+        $this->assertDatabaseCount('nilai_siswa', 0);
+        Storage::disk('public')->assertExists('cbt/simulasi/lingkungan-sekolah.jpg');
+        $jumlah = $paket->soalUjianCbt()->with('soalCbt')->get()->groupBy('soalCbt.jenis_soal')->map->count();
+        $this->assertCount(6, $jumlah);
+        $this->assertSame([2], $jumlah->unique()->values()->all());
+        $peserta = $paket->pesertaUjianCbt()->firstOrFail();
+        foreach ($paket->soalUjianCbt()->with('soalCbt')->get() as $relasi) {
+            $kunci = $relasi->soalCbt->kunci_jawaban['jawaban'];
+            $jawaban = is_array($kunci) ? $kunci : [trim(explode('|', $kunci)[0])];
+            \App\Models\JawabanPesertaUjianCbt::create(['peserta_ujian_cbt_id' => $peserta->id, 'soal_ujian_cbt_id' => $relasi->id, 'soal_cbt_id' => $relasi->soal_cbt_id, 'jawaban' => $jawaban]);
+        }
+        $hasil = app(\App\Services\Cbt\KoreksiOtomatisCbtService::class)->koreksiPeserta($peserta);
+        $this->assertEquals(12, $hasil['skor_total']);
+        $this->assertEquals(12, $hasil['benar']);
+        if (getenv('CBT_PHONE_FIXTURE')) {
+            $soalUjian = $paket->soalUjianCbt()->with('soalCbt')->orderBy('nomor_urut')->get();
+            $jawabanTersimpan = collect();
+            $pilihanJawaban = $soalUjian->mapWithKeys(fn ($relasi) => [$relasi->id => app(\App\Services\Cbt\PengacakPenyajianCbt::class)->pilihanJawaban($paket, $peserta, $relasi)]);
+            $sisaDetik = 1200;
+            session()->forget('berhasil');
+            file_put_contents(storage_path('logs/cbt-phone-audit.html'), view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik'))->render());
+        }
+        $this->actingAs($data['akun_siswa'])->get(route('ujian-saya.index'))->assertOk()->assertSee('Simulasi CBT');
+        $this->get(route('simulasi-cbt.index'))->assertForbidden();
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(\App\Services\Cbt\TerapkanNilaiCbtService::class)->terapkan($paket, $data['admin']->id);
     }
 
     private function buatFondasi(): array
