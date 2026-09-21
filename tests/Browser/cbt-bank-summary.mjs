@@ -35,6 +35,27 @@ try {
         assert.deepEqual(await page.locator('.bank-summary .stat-value').allTextContents(), ['15', '13', '1', '15']);
         if (width === 1366) await page.screenshot({ path:'storage/logs/cbt-bank-summary.png', fullPage:true });
     }
+    await page.locator('[data-question-preview]').first().click();
+    const radios = page.locator('[data-question-preview-body] .option-card input[type=radio]');
+    assert.ok(await radios.count() >= 2);
+    for (let index = 0; index < await radios.count(); index++) {
+        await radios.nth(index).check();
+        assert.equal(await page.locator('[data-question-preview-body] .option-card input:checked').count(), 1);
+        assert.ok(await radios.nth(index).isChecked());
+    }
+    await page.locator('[data-close-question-preview]').click();
+    await page.locator('[data-question-preview]').first().click();
+    assert.equal(await page.locator('[data-question-preview-body] .option-card input:checked').count(), 0);
+    await page.locator('[data-close-question-preview]').click();
+    // Exercise the complex-choice renderer using the same options in the isolated fixture.
+    await page.locator('[data-question-preview]').first().evaluate(button => {
+        document.getElementById(button.dataset.previewSource).content.querySelector('[data-soal-kind]').value = 'pilihan_ganda_kompleks';
+    });
+    await page.locator('[data-question-preview]').first().click();
+    const checks = page.locator('[data-question-preview-body] .option-card input[type=checkbox]');
+    await checks.nth(0).check();
+    await checks.nth(1).check();
+    assert.equal(await page.locator('[data-question-preview-body] .option-card input:checked').count(), 2);
     assert.deepEqual(errors, []);
     console.log('PASS: four equal cards, correct totals, no clipped cards at five viewport widths.');
 } finally { await browser.close(); }

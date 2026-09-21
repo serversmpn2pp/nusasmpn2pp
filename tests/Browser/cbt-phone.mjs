@@ -41,7 +41,15 @@ try {
     await go(11);
     assert.ok(await page.locator('.question-card:not([hidden]) .question-media-table-scroll').evaluate(node => node.scrollWidth > node.clientWidth));
     await page.screenshot({ path:'storage/logs/cbt-phone-fixed.png', fullPage:true });
-    await go(0); mode = 'slow';
+    await go(0);
+    const singleChoices = page.locator('.question-card:not([hidden]) .option-card input[type=radio]');
+    for (let index = 0; index < await singleChoices.count(); index++) {
+        await singleChoices.nth(index).check();
+        assert.equal(await page.locator('.question-card:not([hidden]) .option-card input:checked').count(), 1);
+        assert.ok(await singleChoices.nth(index).isChecked());
+    }
+    await page.waitForTimeout(500);
+    mode = 'slow';
     await page.locator('.question-card:not([hidden]) input[type=radio]').first().evaluate(input => input.click());
     await page.waitForTimeout(250);
     await page.locator('#nextQuestion').click();

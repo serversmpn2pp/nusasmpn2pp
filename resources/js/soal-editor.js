@@ -323,7 +323,9 @@ const appendPreviewMedia = (container, editor, compact = false) => {
     if (media.childElementCount) container.append(media);
 };
 
+let answerPreviewSequence = 0;
 const appendAnswerPreview = (container, type, source = document) => {
+    const answerGroup = `preview-answer-${++answerPreviewSequence}`;
     if (['pilihan_ganda', 'pilihan_ganda_kompleks'].includes(type)) {
         const options = document.createElement('div');
         options.className = 'option-list';
@@ -334,6 +336,8 @@ const appendAnswerPreview = (container, type, source = document) => {
             row.className = 'option-card';
             const control = document.createElement('input');
             control.type = type === 'pilihan_ganda' ? 'radio' : 'checkbox';
+            control.name = answerGroup;
+            control.value = code;
             control.tabIndex = -1;
             const content = document.createElement('div');
             content.className = 'option-card-content';
@@ -374,7 +378,7 @@ const appendAnswerPreview = (container, type, source = document) => {
                 choice.className = 'pill-option';
                 const radio = document.createElement('input');
                 radio.type = 'radio';
-                radio.name = `preview-benar-salah-${index}`;
+                radio.name = `${answerGroup}-benar-salah-${index}`;
                 radio.tabIndex = -1;
                 choice.append(radio, label);
                 controls.append(choice);
