@@ -1406,6 +1406,87 @@ class UjianCbtTest extends TestCase
             ->assertSee('2.00');
     }
 
+    public function test_rekap_hasil_tidak_menganggap_siswa_tidak_hadir_bernilai_nol(): void
+    {
+        [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
+        $jenisUjian = JenisUjianCbt::where('kode', 'STS')->firstOrFail();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->buatAnggotaSiswa($tahunPelajaran, $kelas, 5);
+
+        $ujianCbt = UjianCbt::create([
+            ...collect($this->dataUjian($jenisUjian, $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
+                ->except('kelas_peserta')
+                ->all(),
+            'jumlah_soal' => 1,
+            'status' => 'berlangsung',
+            'dibuat_oleh_pengguna_id' => $administrator->id,
+        ]);
+        KelasUjianCbt::create([
+            'ujian_cbt_id' => $ujianCbt->id,
+            'kelas_id' => $kelas->id,
+            'komponen_nilai_id' => $komponenNilai->id,
+        ]);
+        $soal = $this->buatSoalCbt($tahunPelajaran, $mataPelajaran, 'CBT-REKAP-001', 'Soal rekap hasil.');
+        $relasiSoal = $ujianCbt->soalUjianCbt()->create([
+            'soal_cbt_id' => $soal->id,
+            'nomor_urut' => 1,
+            'bobot' => 2,
+        ]);
+        $this->actingAs($administrator)->post(route('ujian-cbt.peserta.generate', $ujianCbt))->assertRedirect();
+        $peserta = PesertaUjianCbt::query()->where('ujian_cbt_id', $ujianCbt->id)->orderBy('id')->get();
+        $peserta[0]->update([
+            'status' => 'selesai',
+            'status_kehadiran_ujian' => 'hadir',
+            'waktu_mulai' => now()->subHour(),
+            'waktu_selesai' => now(),
+        ]);
+        $peserta[0]->jawabanPesertaUjianCbt()->create([
+            'soal_ujian_cbt_id' => $relasiSoal->id,
+            'soal_cbt_id' => $soal->id,
+            'jawaban' => ['B'],
+            'benar' => true,
+            'skor' => 2,
+            'waktu_dijawab' => now(),
+        ]);
+        foreach (['sakit', 'izin', 'alfa'] as $index => $statusKehadiran) {
+            $peserta[$index + 1]->update(['status_kehadiran_ujian' => $statusKehadiran]);
+        }
+        $peserta[4]->update([
+            'status' => 'sedang_mengerjakan',
+            'status_kehadiran_ujian' => 'hadir',
+            'waktu_mulai' => now()->subMinutes(10),
+        ]);
+
+        $response = $this->actingAs($administrator)->get(route('ujian-cbt.hasil.index', $ujianCbt));
+        $response->assertOk()
+            ->assertViewHas('ringkasan', fn ($ringkasan) => $ringkasan['total_peserta'] === 5
+                && $ringkasan['hasil_final'] === 1
+                && $ringkasan['rata_rata'] === 100.0
+                && $ringkasan['nilai_tertinggi'] === 100.0
+                && $ringkasan['nilai_terendah'] === 100.0
+                && $ringkasan['belum_mengikuti'] === 3
+                && $ringkasan['belum_selesai'] === 1)
+            ->assertViewHas('rekapHasil', fn ($rekap) => $rekap->where('nilai_tersedia', false)->count() === 4
+                && $rekap->where('nilai', null)->count() === 4)
+            ->assertSeeText('Belum mengikuti - Sakit')
+            ->assertSeeText('Belum mengikuti - Izin')
+            ->assertSeeText('Belum mengikuti - Alfa')
+            ->assertSeeText('Sedang mengerjakan')
+            ->assertSeeText('Tidak dihitung sebagai nilai 0')
+            ->assertSeeText('Rata-rata hasil');
+
+        $this->get(route('ujian-cbt.hasil.index', [$ujianCbt, 'status_hasil' => 'belum_mengikuti']))
+            ->assertOk()
+            ->assertViewHas('rekapHasil', fn ($rekap) => $rekap->count() === 3
+                && $rekap->every(fn ($item) => $item['kode_status_hasil'] === 'belum_mengikuti'));
+
+        $this->from(route('ujian-cbt.hasil.index', $ujianCbt))
+            ->post(route('ujian-cbt.terapkan-nilai.store', $ujianCbt))
+            ->assertRedirect(route('ujian-cbt.hasil.index', $ujianCbt));
+        $this->assertSame(1, NilaiSiswa::query()->where('komponen_nilai_id', $komponenNilai->id)->count());
+        $this->assertTrue($peserta->slice(1)->every(fn ($item) => is_null($item->fresh()->nilai_siswa_id)));
+    }
+
     public function test_administrator_dapat_memantau_monitoring_peserta_cbt(): void
     {
         Carbon::setTestNow('2026-08-15 08:45:00');

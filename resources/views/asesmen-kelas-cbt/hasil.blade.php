@@ -180,10 +180,11 @@
             'belum_tuntas' => $ujianCbt->kkm ? 'Belum tuntas' : 'Selesai',
             'perlu_koreksi_otomatis' => 'Perlu koreksi otomatis',
             'perlu_koreksi_manual' => 'Perlu koreksi uraian',
+            'belum_mengikuti' => 'Belum mengikuti asesmen',
             'belum_selesai' => 'Belum selesai mengerjakan',
         ];
         $formatAngka = fn ($nilai, $desimal = 2) => number_format((float) $nilai, $desimal, ',', '.');
-        $jumlahSelesai = max(0, $ringkasan['total_peserta'] - $ringkasan['belum_selesai']);
+        $jumlahSelesai = $ringkasan['hasil_final'] + $ringkasan['perlu_koreksi'];
     @endphp
 
     <div class="page-header">
@@ -327,7 +328,7 @@
                             $peserta = $item['peserta'];
                             $persenJawaban = $jumlahSoalTampil > 0 ? min(100, round(($item['jawaban_tersimpan'] / $jumlahSoalTampil) * 100)) : 0;
                             $nilaiSementara = in_array($item['kode_status_hasil'], ['perlu_koreksi_otomatis', 'perlu_koreksi_manual'], true);
-                            $nilaiTersedia = $item['kode_status_hasil'] !== 'belum_selesai';
+                            $nilaiTersedia = $item['nilai_tersedia'];
                         @endphp
                         <tr>
                             <td>
@@ -339,6 +340,7 @@
                             </td>
                             <td><p class="person-name">{{ $peserta->kelasUjianCbt?->kelas?->nama ?: '-' }}</p></td>
                             <td>
+                                @if ($item['jawaban_tersimpan'] > 0 || $nilaiTersedia)
                                 <div class="hasil-asesmen-progress">
                                     <strong>{{ $item['jawaban_tersimpan'] }} dari {{ $jumlahSoalTampil }} soal dijawab</strong>
                                     <div class="hasil-asesmen-progress-track" aria-hidden="true">
@@ -346,6 +348,9 @@
                                     </div>
                                     <span class="hasil-asesmen-meta">{{ $peserta->labelStatus() }}{{ $peserta->waktu_selesai ? ' · selesai '.$peserta->waktu_selesai->format('H:i') : '' }}</span>
                                 </div>
+                                @else
+                                    <span class="hasil-asesmen-meta">Belum ada jawaban · {{ $peserta->labelStatusKehadiranUjian() }}</span>
+                                @endif
                             </td>
                             <td>
                                 <div class="hasil-asesmen-score">
@@ -382,7 +387,7 @@
                 @php
                     $peserta = $item['peserta'];
                     $nilaiSementara = in_array($item['kode_status_hasil'], ['perlu_koreksi_otomatis', 'perlu_koreksi_manual'], true);
-                    $nilaiTersedia = $item['kode_status_hasil'] !== 'belum_selesai';
+                    $nilaiTersedia = $item['nilai_tersedia'];
                 @endphp
                 <article class="mobile-card">
                     <div class="mobile-card-head">
@@ -396,6 +401,7 @@
                     <dl class="quick-facts">
                         <div><dt>Soal dijawab</dt><dd>{{ $item['jawaban_tersimpan'] }} / {{ $jumlahSoalTampil }}</dd></div>
                         <div><dt>Status pengerjaan</dt><dd>{{ $peserta->labelStatus() }}</dd></div>
+                        <div><dt>Presensi</dt><dd>{{ $peserta->labelStatusKehadiranUjian() }}</dd></div>
                         <div><dt>Jawaban benar</dt><dd>{{ $item['benar'] }}</dd></div>
                         <div><dt>Perlu koreksi uraian</dt><dd>{{ $item['perlu_koreksi_manual'] }}</dd></div>
                     </dl>

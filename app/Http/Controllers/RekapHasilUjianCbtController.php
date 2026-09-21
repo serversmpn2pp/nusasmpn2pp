@@ -27,6 +27,7 @@ class RekapHasilUjianCbtController extends Controller
                 'belum_tuntas',
                 'perlu_koreksi_otomatis',
                 'perlu_koreksi_manual',
+                'belum_mengikuti',
                 'belum_selesai',
             ])],
         ]);
@@ -149,7 +150,10 @@ class RekapHasilUjianCbtController extends Controller
             ->filter(fn ($item) => $item->benar === true)
             ->count();
         $skorTotal = round($jawaban->sum(fn ($item) => (float) ($item->skor ?? 0)), 2);
-        $nilai = $bobotTotal > 0 ? round(($skorTotal / $bobotTotal) * 100, 2) : 0.0;
+        $nilaiTersedia = $peserta->status === 'selesai';
+        $nilai = $nilaiTersedia && $bobotTotal > 0
+            ? round(($skorTotal / $bobotTotal) * 100, 2)
+            : null;
 
         $belumDikoreksiOtomatis = collect($soalOtomatisIds)
             ->filter(fn ($id) => ! $jawaban->has($id) || is_null($jawaban[$id]->skor))
@@ -177,21 +181,53 @@ class RekapHasilUjianCbtController extends Controller
             'perlu_koreksi_manual' => $perluKoreksiManual,
             'skor_total' => $skorTotal,
             'nilai' => $nilai,
+            'nilai_tersedia' => $nilaiTersedia,
             ...$status,
         ];
     }
 
     private function statusHasil(
         PesertaUjianCbt $peserta,
-        float $nilai,
+        ?float $nilai,
         ?int $kkm,
         int $belumDikoreksiOtomatis,
         int $perluKoreksiManual,
     ): array {
         if ($peserta->status !== 'selesai') {
+            $statusKehadiran = $peserta->status_kehadiran_ujian ?: 'belum_absen';
+
+            if (in_array($statusKehadiran, ['sakit', 'izin', 'alfa'], true)) {
+                $labelSusulan = match ($peserta->status_susulan) {
+                    'dijadwalkan' => 'Susulan dijadwalkan',
+                    'dibatalkan' => 'Susulan dibatalkan',
+                    default => 'Belum mengikuti',
+                };
+
+                return [
+                    'kode_status_hasil' => 'belum_mengikuti',
+                    'label_status_hasil' => $labelSusulan.' - '.$peserta->labelStatusKehadiranUjian(),
+                    'badge_status_hasil' => $statusKehadiran === 'alfa' ? 'badge-inactive' : 'badge-warning',
+                ];
+            }
+
+            if (is_null($peserta->waktu_mulai) && $statusKehadiran === 'belum_absen') {
+                return [
+                    'kode_status_hasil' => 'belum_mengikuti',
+                    'label_status_hasil' => 'Belum mengikuti ujian',
+                    'badge_status_hasil' => 'badge-muted',
+                ];
+            }
+
             return [
                 'kode_status_hasil' => 'belum_selesai',
-                'label_status_hasil' => 'Belum selesai',
+                'label_status_hasil' => match ($peserta->status) {
+                    'sedang_mengerjakan' => 'Sedang mengerjakan',
+                    'terblokir' => 'Akses terblokir',
+                    'nonaktif' => 'Peserta nonaktif',
+                    default => in_array($statusKehadiran, ['hadir', 'terlambat'], true)
+                        ? 'Hadir, belum mulai'
+                        : 'Belum selesai',
+                },
                 'badge_status_hasil' => 'badge-muted',
             ];
         }
@@ -230,7 +266,6 @@ class RekapHasilUjianCbtController extends Controller
     private function ringkasan($rekapSemua): array
     {
         $total = $rekapSemua->count();
-        $nilaiAkhir = $rekapSemua->pluck('nilai');
         $hasilFinal = $rekapSemua->filter(fn ($item) => in_array(
             $item['kode_status_hasil'],
             ['tuntas', 'belum_tuntas'],
@@ -240,9 +275,9 @@ class RekapHasilUjianCbtController extends Controller
 
         return [
             'total_peserta' => $total,
-            'rata_rata' => $total > 0 ? round($nilaiAkhir->avg(), 2) : 0,
-            'nilai_tertinggi' => $total > 0 ? round($nilaiAkhir->max(), 2) : 0,
-            'nilai_terendah' => $total > 0 ? round($nilaiAkhir->min(), 2) : 0,
+            'rata_rata' => $hasilFinal->isNotEmpty() ? round($nilaiFinal->avg(), 2) : null,
+            'nilai_tertinggi' => $hasilFinal->isNotEmpty() ? round($nilaiFinal->max(), 2) : null,
+            'nilai_terendah' => $hasilFinal->isNotEmpty() ? round($nilaiFinal->min(), 2) : null,
             'hasil_final' => $hasilFinal->count(),
             'rata_rata_final' => $hasilFinal->isNotEmpty() ? round($nilaiFinal->avg(), 2) : null,
             'nilai_tertinggi_final' => $hasilFinal->isNotEmpty() ? round($nilaiFinal->max(), 2) : null,
@@ -252,6 +287,7 @@ class RekapHasilUjianCbtController extends Controller
                 ->filter(fn ($item) => in_array($item['kode_status_hasil'], ['perlu_koreksi_otomatis', 'perlu_koreksi_manual'], true))
                 ->count(),
             'belum_selesai' => $rekapSemua->where('kode_status_hasil', 'belum_selesai')->count(),
+            'belum_mengikuti' => $rekapSemua->where('kode_status_hasil', 'belum_mengikuti')->count(),
         ];
     }
 

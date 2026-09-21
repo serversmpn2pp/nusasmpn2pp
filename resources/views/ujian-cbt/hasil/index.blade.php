@@ -79,6 +79,7 @@
             'belum_tuntas' => 'Belum tuntas',
             'perlu_koreksi_otomatis' => 'Perlu koreksi otomatis',
             'perlu_koreksi_manual' => 'Perlu koreksi manual',
+            'belum_mengikuti' => 'Belum mengikuti ujian',
             'belum_selesai' => 'Belum selesai',
         ];
         $formatAngka = fn ($nilai, $desimal = 2) => number_format((float) $nilai, $desimal, ',', '.');
@@ -217,24 +218,24 @@
             <p class="stat-value">{{ $ringkasan['total_peserta'] }}</p>
         </div>
         <div class="panel stat active">
-            <p class="stat-label">Rata-rata</p>
-            <p class="stat-value">{{ $formatAngka($ringkasan['rata_rata']) }}</p>
+            <p class="stat-label">Rata-rata hasil</p>
+            <p class="stat-value">{{ is_null($ringkasan['rata_rata']) ? '-' : $formatAngka($ringkasan['rata_rata']) }}</p>
         </div>
         <div class="panel stat">
             <p class="stat-label">Tertinggi</p>
-            <p class="stat-value">{{ $formatAngka($ringkasan['nilai_tertinggi']) }}</p>
+            <p class="stat-value">{{ is_null($ringkasan['nilai_tertinggi']) ? '-' : $formatAngka($ringkasan['nilai_tertinggi']) }}</p>
         </div>
         <div class="panel stat">
             <p class="stat-label">Terendah</p>
-            <p class="stat-value">{{ $formatAngka($ringkasan['nilai_terendah']) }}</p>
+            <p class="stat-value">{{ is_null($ringkasan['nilai_terendah']) ? '-' : $formatAngka($ringkasan['nilai_terendah']) }}</p>
         </div>
         <div class="panel stat">
             <p class="stat-label">Tuntas</p>
             <p class="stat-value">{{ $ringkasan['tuntas'] }}</p>
         </div>
         <div class="panel stat">
-            <p class="stat-label">Perlu koreksi</p>
-            <p class="stat-value">{{ $ringkasan['perlu_koreksi'] }}</p>
+            <p class="stat-label">Belum mengikuti</p>
+            <p class="stat-value">{{ $ringkasan['belum_mengikuti'] }}</p>
         </div>
     </div>
 
@@ -292,6 +293,7 @@
                             $peserta = $item['peserta'];
                             $persenJawaban = $jumlahSoalTampil > 0 ? min(100, round(($item['jawaban_tersimpan'] / $jumlahSoalTampil) * 100)) : 0;
                             $nilaiSementara = in_array($item['kode_status_hasil'], ['perlu_koreksi_otomatis', 'perlu_koreksi_manual'], true);
+                            $nilaiTersedia = $item['nilai_tersedia'];
                         @endphp
                         <tr>
                             <td>
@@ -309,12 +311,13 @@
                             </td>
                             <td>
                                 <div class="hasil-score">
-                                    <strong>{{ $formatAngka($item['nilai']) }}</strong>
-                                    <span>{{ $nilaiSementara ? 'nilai sementara' : 'nilai akhir' }}</span>
-                                    <span>Skor {{ $formatAngka($item['skor_total']) }} / {{ $formatAngka($bobotTotal) }}</span>
+                                    <strong>{{ $nilaiTersedia ? $formatAngka($item['nilai']) : '-' }}</strong>
+                                    <span>{{ ! $nilaiTersedia ? 'belum ada nilai' : ($nilaiSementara ? 'nilai sementara' : 'nilai akhir') }}</span>
+                                    <span>{{ $nilaiTersedia ? 'Skor '.$formatAngka($item['skor_total']).' / '.$formatAngka($bobotTotal) : 'Tidak dihitung sebagai nilai 0' }}</span>
                                 </div>
                             </td>
                             <td>
+                                @if ($item['jawaban_tersimpan'] > 0 || $nilaiTersedia)
                                 <div class="hasil-progress">
                                     <strong>{{ $item['jawaban_tersimpan'] }} / {{ $jumlahSoalTampil }} terjawab</strong>
                                     <div class="hasil-progress-track" aria-hidden="true">
@@ -329,11 +332,15 @@
                                         </span>
                                     @endif
                                 </div>
+                                @else
+                                    <span class="hasil-meta">Belum ada jawaban ujian.</span>
+                                @endif
                             </td>
                             <td>
                                 <span class="badge {{ $item['badge_status_hasil'] }}">{{ $item['label_status_hasil'] }}</span>
                                 <div class="hasil-meta" style="margin-top: 8px;">
                                     <span>Status ujian: {{ $peserta->labelStatus() }}</span>
+                                    <span>Presensi: {{ $peserta->labelStatusKehadiranUjian() }}</span>
                                     @if ($peserta->nilai_diterapkan_pada)
                                         <span>Nilai diterapkan: {{ $peserta->nilai_diterapkan_pada->format('d-m-Y H:i') }}</span>
                                     @else
@@ -362,6 +369,7 @@
                 @php
                     $peserta = $item['peserta'];
                     $nilaiSementara = in_array($item['kode_status_hasil'], ['perlu_koreksi_otomatis', 'perlu_koreksi_manual'], true);
+                    $nilaiTersedia = $item['nilai_tersedia'];
                 @endphp
                 <article class="mobile-card">
                     <div class="mobile-card-head">
@@ -372,12 +380,11 @@
                         <span class="badge {{ $item['badge_status_hasil'] }}">{{ $item['label_status_hasil'] }}</span>
                     </div>
                     <dl class="quick-facts">
-                        <div><dt>Nilai</dt><dd>{{ $formatAngka($item['nilai']) }}{{ $nilaiSementara ? ' sementara' : '' }}</dd></div>
-                        <div><dt>Skor</dt><dd>{{ $formatAngka($item['skor_total']) }} / {{ $formatAngka($bobotTotal) }}</dd></div>
-                        <div><dt>Benar</dt><dd>{{ $item['benar'] }}</dd></div>
-                        <div><dt>Salah</dt><dd>{{ $item['salah'] }}</dd></div>
-                        <div><dt>Kosong</dt><dd>{{ $item['belum_jawab'] }}</dd></div>
-                        <div><dt>Dikoreksi</dt><dd>{{ $item['jawaban_dikoreksi'] }}</dd></div>
+                        <div><dt>Nilai</dt><dd>{{ $nilaiTersedia ? $formatAngka($item['nilai']).($nilaiSementara ? ' sementara' : '') : 'Belum ada nilai' }}</dd></div>
+                        <div><dt>Skor</dt><dd>{{ $nilaiTersedia ? $formatAngka($item['skor_total']).' / '.$formatAngka($bobotTotal) : '-' }}</dd></div>
+                        <div><dt>Presensi</dt><dd>{{ $peserta->labelStatusKehadiranUjian() }}</dd></div>
+                        <div><dt>Jawaban</dt><dd>{{ $item['jawaban_tersimpan'] > 0 || $nilaiTersedia ? $item['jawaban_tersimpan'].' / '.$jumlahSoalTampil : 'Belum ada' }}</dd></div>
+                        <div><dt>Status ujian</dt><dd>{{ $peserta->labelStatus() }}</dd></div>
                         <div><dt>Diterapkan</dt><dd>{{ $peserta->nilai_diterapkan_pada ? $peserta->nilai_diterapkan_pada->format('d-m-Y H:i') : 'Belum' }}</dd></div>
                     </dl>
                 </article>

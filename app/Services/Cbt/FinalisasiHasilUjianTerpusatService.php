@@ -164,10 +164,15 @@ class FinalisasiHasilUjianTerpusatService
     private function kesiapan(UjianCbt $ujian): array
     {
         $peserta = $ujian->pesertaUjianCbt()->get([
-            'id', 'status', 'status_kehadiran_ujian',
+            'id', 'status', 'status_kehadiran_ujian', 'status_susulan',
         ]);
         $tidakHadir = $peserta->whereIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa']);
-        $dikecualikan = $tidakHadir->pluck('id')
+        $tidakHadirDikecualikan = $tidakHadir->reject(fn (PesertaUjianCbt $item) => in_array(
+            $item->status_susulan,
+            ['dijadwalkan', 'selesai'],
+            true,
+        ));
+        $dikecualikan = $tidakHadirDikecualikan->pluck('id')
             ->merge($peserta->where('status', 'nonaktif')->pluck('id'))
             ->unique();
         $wajibSelesai = $peserta->whereNotIn('id', $dikecualikan);

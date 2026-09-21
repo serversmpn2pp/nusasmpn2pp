@@ -4,7 +4,10 @@
 
 @push('styles')
     <style>
-        .supervisor-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+        .supervisor-summary { grid-template-columns:repeat(4,minmax(0,1fr)); }
+        .supervisor-section-head { display:flex; align-items:end; justify-content:space-between; gap:16px; margin:24px 0 10px; padding-bottom:9px; border-bottom:1px solid var(--line); }
+        .supervisor-section-head h2 { margin:0; color:var(--primary-dark); font-size:1.05rem; }
+        .supervisor-section-head p { margin:3px 0 0; color:var(--muted); font-size:.78rem; }
         .supervisor-list { display:grid; gap:14px; margin-top:18px; }
         .supervisor-task { display:grid; grid-template-columns:84px minmax(0,1fr) auto; gap:18px; align-items:center; padding:18px 20px; }
         .supervisor-date { display:grid; place-items:center; min-height:72px; border:1px solid #bfd4e8; border-radius:7px; background:var(--primary-soft); color:var(--primary-dark); text-align:center; }
@@ -17,6 +20,8 @@
         .supervisor-task-meta { display:flex; flex-wrap:wrap; gap:7px 14px; margin:8px 0 0; color:var(--muted); font-size:.82rem; font-weight:650; }
         .supervisor-task-note { margin:8px 0 0; color:var(--primary-dark); font-size:.8rem; }
         .supervisor-task-action { display:grid; justify-items:end; gap:9px; min-width:150px; }
+        .supervisor-task.is-retake { border-left:5px solid #d9a900; }
+        .supervisor-task.is-retake .supervisor-date { border-color:#ead26b; background:#fff9dc; color:#654d00; }
         .supervisor-empty { padding:34px 22px; text-align:center; }
         @media (max-width:760px) {
             .supervisor-summary { grid-template-columns:1fr; }
@@ -41,11 +46,52 @@
     <div class="stats-grid supervisor-summary">
         <div class="panel stat"><p class="stat-label">Seluruh tugas</p><p class="stat-value">{{ $ringkasan['jumlah'] }}</p></div>
         <div class="panel stat active"><p class="stat-label">Tugas hari ini</p><p class="stat-value">{{ $ringkasan['hari_ini'] }}</p></div>
+        <div class="panel stat"><p class="stat-label">Ujian susulan</p><p class="stat-value">{{ $ringkasan['susulan'] }}</p></div>
         <div class="panel stat warning"><p class="stat-label">Bukti perlu dilengkapi</p><p class="stat-value">{{ $ringkasan['perlu_bukti'] }}</p></div>
     </div>
 
-    <div class="supervisor-list">
-        @forelse ($tugas as $penugasan)
+    @if ($tugasSusulan->isEmpty() && $tugas->isEmpty())
+        <section class="panel supervisor-empty" style="margin-top:18px;">
+            <strong>Belum ada tugas pengawas.</strong>
+            <p class="help-text" style="margin-top:7px;">Tugas akan muncul otomatis setelah panitia menempatkan Anda sebagai pengawas.</p>
+        </section>
+    @else
+        @if ($tugasSusulan->isNotEmpty())
+            <div class="supervisor-section-head"><div><h2>Tugas ujian susulan</h2><p>Jadwal khusus bagi siswa yang tidak mengikuti ujian utama.</p></div><span class="badge badge-warning">{{ $tugasSusulan->count() }} tugas</span></div>
+            <div class="supervisor-list" style="margin-top:0;">
+                @foreach ($tugasSusulan as $susulan)
+                    <article class="panel supervisor-task is-retake">
+                        <div class="supervisor-date">
+                            <strong>{{ $susulan['mulai']?->format('d') ?: '-' }}</strong>
+                            <span>{{ $susulan['mulai']?->locale('id')->translatedFormat('M Y') ?: 'Belum ada' }}</span>
+                        </div>
+                        <div class="supervisor-task-main">
+                            <div class="supervisor-task-title">
+                                @if($susulan['mulai']?->isToday())<span class="badge badge-active">Hari ini</span>@endif
+                                <span class="badge badge-warning">Susulan</span>
+                                <h2>{{ $susulan['ujian']?->mataPelajaran?->nama ?: 'Mata pelajaran belum ditentukan' }} · Tingkat {{ $susulan['ujian']?->tingkat ?: '-' }}</h2>
+                            </div>
+                            <p class="supervisor-task-meta">
+                                <span>{{ $susulan['mulai']?->locale('id')->translatedFormat('l, d F Y') ?: '-' }}</span>
+                                <span>{{ $susulan['mulai']?->format('H:i') ?: '-' }}-{{ $susulan['selesai']?->format('H:i') ?: '-' }}</span>
+                                <span>{{ $susulan['ruang'] ?: 'Ruang belum ditentukan' }}</span>
+                                <span>{{ $susulan['jumlah'] }} peserta</span>
+                            </p>
+                            <p class="supervisor-task-note">{{ $susulan['jadwal']?->kegiatanUjianCbt?->nama ?: 'Ujian Terpusat' }} · {{ $susulan['jumlah_selesai'] }}/{{ $susulan['jumlah'] }} siswa selesai</p>
+                        </div>
+                        <div class="supervisor-task-action">
+                            <span class="badge {{ $susulan['kelas_status'] }}">{{ $susulan['label_status'] }}</span>
+                            <a href="{{ route('tugas-pengawas-ujian.susulan.show', $susulan['kode']) }}" class="button button-primary">Buka tugas susulan</a>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @endif
+
+        @if ($tugas->isNotEmpty())
+            <div class="supervisor-section-head"><div><h2>Tugas ujian reguler</h2><p>Pengawasan ruang pada jadwal ujian utama.</p></div><span class="badge badge-muted">{{ $tugas->count() }} tugas</span></div>
+            <div class="supervisor-list" style="margin-top:0;">
+        @foreach ($tugas as $penugasan)
             @php
                 $jadwal = $penugasan->jadwalUjianCbt;
                 $ruang = $penugasan->ruangKegiatanUjianCbt;
@@ -87,11 +133,8 @@
                     @endif
                 </div>
             </article>
-        @empty
-            <section class="panel supervisor-empty">
-                <strong>Belum ada tugas pengawas.</strong>
-                <p class="help-text" style="margin-top:7px;">Tugas akan muncul otomatis setelah panitia menempatkan Anda sebagai pengawas utama atau pendamping.</p>
-            </section>
-        @endforelse
-    </div>
+        @endforeach
+            </div>
+        @endif
+    @endif
 @endsection

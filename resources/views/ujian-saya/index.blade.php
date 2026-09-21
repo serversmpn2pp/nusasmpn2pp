@@ -194,6 +194,21 @@
             font-size: 13px;
         }
 
+        .student-exam-retake-note {
+            border: 1px solid #e9c94f;
+            border-left: 4px solid #d9a900;
+            background: #fff9dc;
+            color: #654d00;
+            padding: 10px 12px;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .student-exam-retake-note strong {
+            display: block;
+            margin-bottom: 2px;
+        }
+
         .student-exam-facts {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -414,7 +429,7 @@
                             <article class="student-exam-card {{ $bagian['kelas'] }}">
                                 <header class="student-exam-card-head">
                                     <div>
-                                        <small>{{ $ujian?->jenisUjianCbt?->nama ?: 'Ujian CBT' }}</small>
+                                        <small>{{ $item['susulan'] ? 'Ujian susulan · ' : '' }}{{ $ujian?->jenisUjianCbt?->nama ?: 'Ujian CBT' }}</small>
                                         <h3>{{ $ujian?->mataPelajaran?->nama ?: $ujian?->nama ?: 'Mata pelajaran belum ditentukan' }}</h3>
                                     </div>
                                     <span class="student-exam-status {{ $kelasStatus }}">{{ $item['label_status'] }}</span>
@@ -435,6 +450,13 @@
                                     </span>
                                 </div>
 
+                                @if ($item['susulan'] && $peserta->status_susulan !== 'dibatalkan')
+                                    <div class="student-exam-retake-note">
+                                        <strong>Menggunakan paket ujian utama</strong>
+                                        Nilai susulan akan masuk ke komponen nilai ujian yang sama.
+                                    </div>
+                                @endif
+
                                 <div class="student-exam-facts">
                                     <div class="student-exam-fact">
                                         <span>Kelas</span>
@@ -442,7 +464,7 @@
                                     </div>
                                     <div class="student-exam-fact">
                                         <span>Ruang</span>
-                                        <strong>{{ $ruang?->nama ?: $ruang?->kode ?: 'Belum diatur' }}</strong>
+                                        <strong>{{ $item['susulan'] ? ($peserta->ruang_susulan ?: 'Belum diatur') : ($ruang?->nama ?: $ruang?->kode ?: 'Belum diatur') }}</strong>
                                     </div>
                                     <div class="student-exam-fact">
                                         <span>Kode meja</span>
@@ -454,7 +476,7 @@
                                     </div>
                                     <div class="student-exam-fact">
                                         <span>Sesi</span>
-                                        <strong>{{ $peserta->sesiUjianCbt?->nama ?: $jadwal?->label_sesi ?: 'Umum' }}</strong>
+                                        <strong>{{ $item['susulan'] ? 'Ujian susulan' : ($peserta->sesiUjianCbt?->nama ?: $jadwal?->label_sesi ?: 'Umum') }}</strong>
                                     </div>
                                     <div class="student-exam-fact">
                                         <span>Kegiatan</span>

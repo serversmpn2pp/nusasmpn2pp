@@ -47,7 +47,7 @@ class AksesUjianCbtController extends Controller
 
         if ($perluToken) {
             $tokenDimasukkan = mb_strtoupper(trim((string) ($data['token'] ?? '')));
-            $tokenUjian = mb_strtoupper(trim((string) $peserta->ujianCbt?->token));
+            $tokenUjian = mb_strtoupper(trim((string) $peserta->tokenUjianAktif()));
 
             if ($tokenDimasukkan === '' || $tokenUjian === '' || ! hash_equals($tokenUjian, $tokenDimasukkan)) {
                 throw ValidationException::withMessages([
@@ -125,11 +125,11 @@ class AksesUjianCbtController extends Controller
         $sisaDetik = $this->hitungSisaDetik($peserta);
 
         if ($sisaDetik <= 0) {
-            $peserta->update([
+            $peserta->update($this->dataPenyelesaian($peserta, [
                 'status' => 'selesai',
                 'waktu_selesai' => now(),
                 'menit_tersisa' => 0,
-            ]);
+            ]));
             $peserta->refresh();
             $koreksiOtomatisCbtService->koreksiPeserta($peserta);
 
@@ -212,11 +212,11 @@ class AksesUjianCbtController extends Controller
             }
 
             if (($data['aksi'] ?? 'simpan') === 'selesai') {
-                $peserta->update([
+                $peserta->update($this->dataPenyelesaian($peserta, [
                     'status' => 'selesai',
                     'waktu_selesai' => now(),
                     'menit_tersisa' => max(0, (int) ceil($this->hitungSisaDetik($peserta) / 60)),
-                ]);
+                ]));
             }
         });
 
@@ -245,11 +245,11 @@ class AksesUjianCbtController extends Controller
         }
 
         if ($this->hitungSisaDetik($peserta) <= 0) {
-            $peserta->update([
+            $peserta->update($this->dataPenyelesaian($peserta, [
                 'status' => 'selesai',
                 'waktu_selesai' => now(),
                 'menit_tersisa' => 0,
-            ]);
+            ]));
             $peserta->refresh();
             $koreksiOtomatisCbtService->koreksiPeserta($peserta);
 
@@ -446,14 +446,23 @@ class AksesUjianCbtController extends Controller
             ]);
         }
 
-        if (! in_array($ujian->status, ['terjadwal', 'berlangsung'], true)) {
+        $susulanAktif = $peserta->susulanDijadwalkan();
+        $statusPaketDiizinkan = $susulanAktif
+            ? ['terjadwal', 'berlangsung', 'selesai']
+            : ['terjadwal', 'berlangsung'];
+
+        if (! in_array($ujian->status, $statusPaketDiizinkan, true)) {
             throw ValidationException::withMessages([
                 'token' => 'Paket ujian belum dibuka.',
             ]);
         }
 
-        $mulai = $peserta->sesiUjianCbt?->waktu_mulai ?: $ujian->tanggal_mulai;
-        $selesai = $peserta->sesiUjianCbt?->waktu_selesai ?: $ujian->tanggal_selesai;
+        $mulai = $susulanAktif
+            ? $peserta->susulan_mulai
+            : ($peserta->sesiUjianCbt?->waktu_mulai ?: $ujian->tanggal_mulai);
+        $selesai = $susulanAktif
+            ? $peserta->susulan_selesai
+            : ($peserta->sesiUjianCbt?->waktu_selesai ?: $ujian->tanggal_selesai);
 
         if ($mulai && now()->lt($mulai)) {
             throw ValidationException::withMessages([
@@ -467,7 +476,7 @@ class AksesUjianCbtController extends Controller
             ]);
         }
 
-        if ($peserta->sesiUjianCbt && $peserta->sesiUjianCbt->status === 'nonaktif') {
+        if (! $susulanAktif && $peserta->sesiUjianCbt && $peserta->sesiUjianCbt->status === 'nonaktif') {
             throw ValidationException::withMessages([
                 'token' => 'Sesi peserta tidak aktif.',
             ]);
@@ -516,12 +525,23 @@ class AksesUjianCbtController extends Controller
         }
 
         $selesaiPengerjaan = $peserta->waktu_mulai->copy()->addMinutes($peserta->ujianCbt->durasi_menit);
-        $batasPaket = $peserta->sesiUjianCbt?->waktu_selesai ?: $peserta->ujianCbt->tanggal_selesai;
+        $batasPaket = $peserta->susulanDijadwalkan()
+            ? $peserta->susulan_selesai
+            : ($peserta->sesiUjianCbt?->waktu_selesai ?: $peserta->ujianCbt->tanggal_selesai);
 
         if ($batasPaket && $batasPaket->lt($selesaiPengerjaan)) {
             $selesaiPengerjaan = $batasPaket;
         }
 
         return (int) max(0, now()->diffInSeconds($selesaiPengerjaan, false));
+    }
+
+    private function dataPenyelesaian(PesertaUjianCbt $peserta, array $data): array
+    {
+        if ($peserta->susulanDijadwalkan()) {
+            $data['status_susulan'] = 'selesai';
+        }
+
+        return $data;
     }
 }

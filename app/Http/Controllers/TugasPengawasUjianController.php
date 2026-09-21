@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BuktiRuangUjianCbt;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
+use App\Models\PesertaUjianCbt;
 use App\Models\RuangUjianCbt;
 use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use Illuminate\Http\Request;
@@ -61,17 +62,100 @@ class TugasPengawasUjianController extends Controller
             $penugasan->ruangKegiatanUjianCbt?->urutan ?? 999,
         ))->values();
 
+        $pesertaSusulan = PesertaUjianCbt::query()
+            ->where('pengawas_susulan_pegawai_id', $pengguna->pegawai_id)
+            ->whereNotNull('kelompok_susulan')
+            ->whereIn('status_susulan', ['dijadwalkan', 'selesai'])
+            ->with([
+                'ujianCbt.jenisUjianCbt',
+                'ujianCbt.mataPelajaran',
+                'ujianCbt.jadwalUjianCbt.kegiatanUjianCbt.jenisUjianCbt',
+                'ujianCbt.jadwalUjianCbt.kegiatanUjianCbt.tahunPelajaran',
+                'kelasUjianCbt.kelas',
+                'anggotaKelas.siswa',
+            ])
+            ->get();
+        $tugasSusulan = $pesertaSusulan
+            ->groupBy('kelompok_susulan')
+            ->map(function ($peserta, string $kode) {
+                $pertama = $peserta->first();
+                $status = $this->statusTugasSusulan($peserta);
+
+                return [
+                    'kode' => $kode,
+                    'peserta' => $peserta,
+                    'pertama' => $pertama,
+                    'ujian' => $pertama?->ujianCbt,
+                    'jadwal' => $pertama?->ujianCbt?->jadwalUjianCbt?->first(),
+                    'mulai' => $pertama?->susulan_mulai,
+                    'selesai' => $pertama?->susulan_selesai,
+                    'ruang' => $pertama?->ruang_susulan,
+                    'jumlah' => $peserta->count(),
+                    'jumlah_selesai' => $peserta->where('status_susulan', 'selesai')->count(),
+                    ...$status,
+                ];
+            })
+            ->sortBy(fn (array $item) => sprintf(
+                '%d %s',
+                $item['mulai']?->isToday() ? 0 : 1,
+                $item['mulai']?->format('Y-m-d H:i:s') ?? '9999-12-31 23:59:59',
+            ))
+            ->values();
+
         return view('tugas-pengawas-ujian.index', [
             'tugas' => $tugas,
+            'tugasSusulan' => $tugasSusulan,
             'ringkasan' => [
-                'jumlah' => $tugas->count(),
-                'hari_ini' => $tugas->filter(fn ($item) => $item->jadwalUjianCbt?->tanggal?->isToday())->count(),
+                'jumlah' => $tugas->count() + $tugasSusulan->count(),
+                'hari_ini' => $tugas->filter(fn ($item) => $item->jadwalUjianCbt?->tanggal?->isToday())->count()
+                    + $tugasSusulan->filter(fn ($item) => $item['mulai']?->isToday())->count(),
+                'susulan' => $tugasSusulan->count(),
                 'perlu_bukti' => $tugas->filter(fn ($item) => in_array(
                     $item->ruangOperasional?->status_bukti,
                     ['belum_diunggah', 'sebagian', 'siap_dikirim', 'perlu_diulang'],
                     true,
                 ))->count(),
             ],
+        ]);
+    }
+
+    public function showSusulan(Request $request, string $kelompokSusulan)
+    {
+        $peserta = PesertaUjianCbt::query()
+            ->where('kelompok_susulan', $kelompokSusulan)
+            ->with([
+                'ujianCbt.jenisUjianCbt',
+                'ujianCbt.tahunPelajaran',
+                'ujianCbt.mataPelajaran',
+                'ujianCbt.jadwalUjianCbt.kegiatanUjianCbt.jenisUjianCbt',
+                'ujianCbt.jadwalUjianCbt.kegiatanUjianCbt.tahunPelajaran',
+                'kelasUjianCbt.kelas',
+                'anggotaKelas.siswa',
+                'pengawasSusulan',
+            ])
+            ->withCount(['jawabanPesertaUjianCbt as jawaban_tersimpan' => fn ($query) => $query->whereNotNull('jawaban')])
+            ->orderBy('id')
+            ->get();
+
+        abort_if($peserta->isEmpty(), 404);
+        $pertama = $peserta->first();
+        $jadwal = $pertama->ujianCbt?->jadwalUjianCbt?->first();
+        $this->pastikanBolehMelihatSusulan($request->user(), $peserta, $jadwal?->kegiatanUjianCbt);
+        $pesertaAktif = $peserta->whereIn('status_susulan', ['dijadwalkan', 'selesai'])->values();
+
+        return view('tugas-pengawas-ujian.susulan', [
+            'kelompokSusulan' => $kelompokSusulan,
+            'pesertaPantau' => $pesertaAktif,
+            'pesertaDibatalkan' => $peserta->where('status_susulan', 'dibatalkan')->values(),
+            'pesertaPertama' => $pertama,
+            'ujian' => $pertama->ujianCbt,
+            'jadwal' => $jadwal,
+            'pengawas' => $pertama->pengawasSusulan,
+            'jumlahSoalPantau' => min(
+                (int) $pertama->ujianCbt?->jumlah_soal,
+                $pertama->ujianCbt?->soalUjianCbt()->count() ?? 0,
+            ),
+            ...$this->statusTugasSusulan($pesertaAktif),
         ]);
     }
 
@@ -336,5 +420,56 @@ class TugasPengawasUjianController extends Controller
             (int) $ruang->pengawas_utama_pegawai_id,
             (int) $ruang->pengawas_pendamping_pegawai_id,
         ], true);
+    }
+
+    private function pastikanBolehMelihatSusulan(?Pengguna $pengguna, $peserta, $kegiatan): void
+    {
+        abort_unless($pengguna, 403);
+        $pengawasIds = $peserta->pluck('pengawas_susulan_pegawai_id')->filter()->map(fn ($id) => (int) $id);
+
+        if ($pengguna->pegawai_id && $pengawasIds->contains((int) $pengguna->pegawai_id)) {
+            return;
+        }
+
+        if ($pengguna->memilikiIzin('cbt.kelola')) {
+            return;
+        }
+
+        abort_unless(
+            $kegiatan
+                && $pengguna->memilikiIzin(['cbt.panitia', 'cbt.terpusat_lihat'])
+                && $kegiatan->dapatDiaksesOleh($pengguna),
+            403,
+        );
+    }
+
+    private function statusTugasSusulan($peserta): array
+    {
+        $pertama = $peserta->first();
+        $mulai = $pertama?->susulan_mulai;
+        $selesai = $pertama?->susulan_selesai;
+
+        return match (true) {
+            $peserta->isNotEmpty() && $peserta->every(fn (PesertaUjianCbt $item) => $item->status_susulan === 'selesai') => [
+                'kode_status' => 'selesai',
+                'label_status' => 'Selesai',
+                'kelas_status' => 'badge-active',
+            ],
+            $mulai && now()->lt($mulai) => [
+                'kode_status' => 'akan_datang',
+                'label_status' => 'Akan datang',
+                'kelas_status' => 'badge-muted',
+            ],
+            $selesai && now()->gt($selesai) => [
+                'kode_status' => 'berakhir',
+                'label_status' => 'Waktu berakhir',
+                'kelas_status' => 'badge-danger',
+            ],
+            default => [
+                'kode_status' => 'berlangsung',
+                'label_status' => 'Sedang berlangsung',
+                'kelas_status' => 'badge-warning',
+            ],
+        };
     }
 }

@@ -378,6 +378,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('jadwal-kelas-saya', [JadwalKelasSayaController::class, 'index'])
             ->middleware('izin:jadwal.lihat')
             ->name('jadwal-kelas-saya.index');
+        Route::get('tugas-pengawas-ujian/susulan/{kelompokSusulan}', [TugasPengawasUjianController::class, 'showSusulan'])->name('tugas-pengawas-ujian.susulan.show');
         Route::middleware('akun_pegawai')->group(function () {
             Route::get('tugas-pengawas-ujian', [TugasPengawasUjianController::class, 'index'])->name('tugas-pengawas-ujian.index');
             Route::get('tugas-pengawas-ujian/{ruangUjianCbt}', [TugasPengawasUjianController::class, 'show'])->name('tugas-pengawas-ujian.show');
@@ -455,6 +456,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::delete('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}', [JadwalUjianTerpusatController::class, 'destroy'])->name('ujian-terpusat.jadwal.destroy');
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas/{ruangKegiatanUjianCbt}', [PelaksanaanNilaiUjianTerpusatController::class, 'updatePengawas'])->name('ujian-terpusat.pengawas.update');
             Route::patch('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas/{ruangKegiatanUjianCbt}/ganti', [PelaksanaanNilaiUjianTerpusatController::class, 'gantiPengawas'])->name('ujian-terpusat.pengawas.ganti');
+            Route::post('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/susulan', [PelaksanaanNilaiUjianTerpusatController::class, 'jadwalkanSusulan'])->name('ujian-terpusat.susulan.store');
+            Route::patch('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/susulan/{pesertaUjianCbt}/batalkan', [PelaksanaanNilaiUjianTerpusatController::class, 'batalkanSusulan'])->name('ujian-terpusat.susulan.batalkan');
         });
         Route::resource('ujian-cbt', UjianCbtController::class)
             ->only(['create', 'store', 'edit', 'update', 'destroy'])

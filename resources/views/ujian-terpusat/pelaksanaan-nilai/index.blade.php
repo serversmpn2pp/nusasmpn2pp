@@ -58,10 +58,34 @@
         .replacement-history-item { padding:9px 10px; border-radius:6px; background:rgba(255,255,255,.78); }
         .replacement-history-item strong,.replacement-history-item span { display:block; }
         .replacement-history-item span { margin-top:3px; color:#854d0e; font-size:.72rem; line-height:1.45; }
+        .retake-details { margin-top:16px; border-top:1px solid var(--line); padding-top:14px; }
+        .retake-details > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; color:var(--primary-dark); font-weight:800; }
+        .retake-shell { display:grid; gap:14px; margin-top:12px; }
+        .retake-intro { margin:0; padding:11px 13px; border-left:4px solid var(--primary); background:#eef5fb; color:#36516c; font-size:.8rem; line-height:1.5; }
+        .retake-form { display:grid; gap:14px; }
+        .retake-candidates { border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+        .retake-candidate { display:grid; grid-template-columns:32px minmax(180px,1.2fr) minmax(90px,.45fr) minmax(120px,.55fr); gap:10px; align-items:center; min-height:54px; padding:10px 12px; border-bottom:1px solid var(--line); background:#fff; }
+        .retake-candidate:last-child { border-bottom:0; }
+        .retake-candidate:hover { background:#f8fafc; }
+        .retake-candidate input { width:18px; height:18px; margin:0; }
+        .retake-candidate strong,.retake-candidate span { display:block; }
+        .retake-candidate span { margin-top:2px; color:var(--muted); font-size:.72rem; }
+        .retake-fields { display:grid; grid-template-columns:repeat(2,minmax(190px,1fr)); gap:12px; padding:14px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
+        .retake-fields .field.is-wide { grid-column:1 / -1; }
+        .retake-form-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .retake-form-actions p { margin:0; max-width:620px; color:var(--muted); font-size:.76rem; }
+        .retake-scheduled { display:grid; gap:8px; padding-top:4px; }
+        .retake-scheduled h4 { margin:0; font-size:.85rem; color:var(--primary-dark); }
+        .retake-scheduled-row { display:grid; grid-template-columns:minmax(190px,1fr) minmax(200px,1fr) minmax(105px,.45fr) auto; gap:12px; align-items:center; padding:11px 12px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+        .retake-scheduled-row strong,.retake-scheduled-row span { display:block; }
+        .retake-scheduled-row span { margin-top:3px; color:var(--muted); font-size:.72rem; line-height:1.4; }
+        .retake-token { color:var(--primary-dark); font-size:1rem; letter-spacing:0; }
+        .retake-row-actions { display:grid; gap:7px; min-width:145px; }
+        .retake-row-actions .button { width:100%; text-align:center; }
         .empty-execution { padding:28px; text-align:center; color:var(--muted); }
         .central-wizard-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; }
-        @media (max-width:1050px) { .execution-summary,.execution-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } .execution-card-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .supervisor-row,.replacement-form { grid-template-columns:repeat(2,minmax(0,1fr)); } .supervisor-room,.supervisor-row .actions { grid-column:1 / -1; } .replacement-form .button { width:100%; } }
-        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row,.replacement-form { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button,.replacement-form .button { width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } }
+        @media (max-width:1050px) { .execution-summary,.execution-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } .execution-card-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .supervisor-row,.replacement-form { grid-template-columns:repeat(2,minmax(0,1fr)); } .supervisor-room,.supervisor-row .actions { grid-column:1 / -1; } .replacement-form .button { width:100%; } .retake-scheduled-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row,.replacement-form { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button,.replacement-form .button { width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } .retake-candidate { grid-template-columns:28px minmax(0,1fr); } .retake-candidate > :nth-child(n+3) { grid-column:2; } .retake-fields,.retake-scheduled-row { grid-template-columns:1fr; } .retake-fields .field.is-wide { grid-column:auto; } .retake-form-actions { align-items:stretch; flex-direction:column; } .retake-form-actions .button { width:100%; } }
         @media (max-width:480px) { .execution-summary,.execution-flow { grid-template-columns:1fr; } }
     </style>
 
@@ -140,6 +164,16 @@
                 $pengawas = $item->pengawasRuangUjianTerpusat->keyBy('ruang_kegiatan_ujian_cbt_id');
                 $paketSiap = $paket && in_array($paket->status, ['terjadwal', 'berlangsung', 'selesai'], true);
                 $belumMulai = max(0, ($paket?->peserta_ujian_cbt_count ?? 0) - ($paket?->peserta_sedang_count ?? 0) - ($paket?->peserta_selesai_count ?? 0));
+                $pesertaTidakHadir = $item->pesertaSusulan ?? collect();
+                $calonSusulan = $pesertaTidakHadir->filter(fn ($peserta) =>
+                    in_array($peserta->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true)
+                    && ! in_array($peserta->status, ['sedang_mengerjakan', 'selesai'], true)
+                    && $peserta->status_susulan !== 'dijadwalkan'
+                    && ! $peserta->nilai_siswa_id
+                    && (int) $peserta->jawaban_peserta_ujian_cbt_count === 0
+                );
+                $susulanAktif = $pesertaTidakHadir->where('status_susulan', 'dijadwalkan');
+                $riwayatSusulan = $pesertaTidakHadir->whereIn('status_susulan', ['selesai', 'dibatalkan']);
             @endphp
             <section class="panel execution-card">
                 <div class="execution-card-head">
@@ -176,6 +210,77 @@
                             <a href="{{ route('paket-soal-terpusat.show', $item) }}" class="button button-primary">Siapkan paket soal</a>
                         @endif
                     </div>
+
+                    @if (! $halamanHasil && $paketSiap && $pesertaTidakHadir->isNotEmpty())
+                        <details class="retake-details" {{ $susulanAktif->isNotEmpty() ? 'open' : '' }}>
+                            <summary>
+                                <span>Ketidakhadiran & ujian susulan</span>
+                                <span class="badge {{ $susulanAktif->isNotEmpty() ? 'badge-warning' : 'badge-muted' }}">
+                                    {{ $calonSusulan->count() }} belum dijadwalkan · {{ $susulanAktif->count() }} terjadwal
+                                </span>
+                            </summary>
+                            <div class="retake-shell">
+                                <p class="retake-intro">
+                                    Status Sakit, Izin, atau Alfa tetap tersimpan sebagai riwayat ujian utama. Panitia dapat memilih siswa yang diizinkan mengikuti susulan. Paket soal dan komponen nilainya tetap sama.
+                                </p>
+
+                                @if ($bolehAturSusulan && $calonSusulan->isNotEmpty())
+                                    <form class="retake-form" method="POST" action="{{ route('ujian-terpusat.susulan.store', [$kegiatan, $item]) }}">
+                                        @csrf
+                                        <div class="retake-candidates">
+                                            @foreach ($calonSusulan as $pesertaSusulan)
+                                                <label class="retake-candidate">
+                                                    <input type="checkbox" name="peserta_ids[]" value="{{ $pesertaSusulan->id }}" {{ in_array($pesertaSusulan->id, old('peserta_ids', [])) ? 'checked' : '' }}>
+                                                    <span>
+                                                        <strong>{{ $pesertaSusulan->anggotaKelas?->siswa?->nama_lengkap ?: 'Nama siswa tidak ditemukan' }}</strong>
+                                                        <span>NISN {{ $pesertaSusulan->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
+                                                    </span>
+                                                    <span><strong>{{ $pesertaSusulan->kelasUjianCbt?->kelas?->nama ?: '-' }}</strong><span>Kelas</span></span>
+                                                    <span><span class="badge {{ $pesertaSusulan->status_kehadiran_ujian === 'alfa' ? 'badge-danger' : 'badge-warning' }}">{{ $pesertaSusulan->labelStatusKehadiranUjian() }}</span></span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+
+                                        <div class="retake-fields">
+                                            <div class="field"><label for="susulan_mulai_{{ $item->id }}">Mulai susulan</label><input id="susulan_mulai_{{ $item->id }}" name="susulan_mulai" class="input" type="datetime-local" value="{{ old('susulan_mulai') }}" required></div>
+                                            <div class="field"><label for="susulan_selesai_{{ $item->id }}">Selesai susulan</label><input id="susulan_selesai_{{ $item->id }}" name="susulan_selesai" class="input" type="datetime-local" value="{{ old('susulan_selesai') }}" required></div>
+                                            <div class="field"><label for="ruang_susulan_{{ $item->id }}">Ruang</label><select id="ruang_susulan_{{ $item->id }}" name="ruang_susulan" class="input" required><option value="">Pilih ruang</option>@foreach($item->ruangPelaksanaan as $ruang)<option value="{{ $ruang->nama }}" @selected(old('ruang_susulan') === $ruang->nama)>{{ $ruang->nama }}{{ $ruang->lokasi ? ' · '.$ruang->lokasi : '' }}</option>@endforeach</select></div>
+                                            <div class="field"><label for="pengawas_susulan_{{ $item->id }}">Pengawas</label><select id="pengawas_susulan_{{ $item->id }}" name="pengawas_susulan_pegawai_id" class="input"><option value="">Belum ditentukan</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}" @selected((string) old('pengawas_susulan_pegawai_id') === (string) $orang->id)>{{ $orang->nama_lengkap }}{{ $orang->nip ? ' · '.$orang->nip : '' }}</option>@endforeach</select></div>
+                                            <div class="field is-wide"><label for="catatan_susulan_{{ $item->id }}">Catatan <span class="help-text">(opsional)</span></label><input id="catatan_susulan_{{ $item->id }}" name="catatan_susulan" class="input" maxlength="1000" value="{{ old('catatan_susulan') }}" placeholder="Contoh: membawa surat keterangan sakit"></div>
+                                        </div>
+
+                                        <div class="retake-form-actions">
+                                            <p>Siswa berstatus Alfa hanya dijadwalkan jika sekolah telah memberikan izin. Token enam angka dibuat otomatis. Hasil ujian belum dapat difinalisasi selama susulan masih terjadwal.</p>
+                                            <button type="submit" class="button button-primary">Jadwalkan susulan</button>
+                                        </div>
+                                    </form>
+                                @elseif ($calonSusulan->isNotEmpty())
+                                    <p class="help-text">Hanya panitia atau administrator CBT yang dapat menetapkan peserta dan jadwal susulan.</p>
+                                @endif
+
+                                @if ($susulanAktif->isNotEmpty() || $riwayatSusulan->isNotEmpty())
+                                    <div class="retake-scheduled">
+                                        <h4>Jadwal dan riwayat susulan</h4>
+                                        @foreach ($susulanAktif->concat($riwayatSusulan) as $pesertaSusulan)
+                                            <div class="retake-scheduled-row">
+                                                <div><strong>{{ $pesertaSusulan->anggotaKelas?->siswa?->nama_lengkap }}</strong><span>{{ $pesertaSusulan->kelasUjianCbt?->kelas?->nama }} · Ketidakhadiran awal: {{ $pesertaSusulan->labelStatusKehadiranUjian() }}</span></div>
+                                                <div><strong>{{ $pesertaSusulan->susulan_mulai?->locale('id')->translatedFormat('d F Y, H:i') }}-{{ $pesertaSusulan->susulan_selesai?->format('H:i') }}</strong><span>{{ $pesertaSusulan->ruang_susulan ?: 'Ruang belum ditentukan' }} · {{ $pesertaSusulan->pengawasSusulan?->nama_lengkap ?: 'Pengawas belum ditentukan' }}</span></div>
+                                                <div><span>Status</span><strong>{{ $pesertaSusulan->labelStatusSusulan() }}</strong>@if($pesertaSusulan->status_susulan === 'dijadwalkan')<span>Token</span><strong class="retake-token">{{ $pesertaSusulan->token_susulan }}</strong>@endif</div>
+                                                <div class="retake-row-actions">
+                                                    @if($pesertaSusulan->kelompok_susulan)
+                                                        <a href="{{ route('tugas-pengawas-ujian.susulan.show', $pesertaSusulan->kelompok_susulan) }}" class="button button-muted">Buka tugas pengawas</a>
+                                                    @endif
+                                                    @if ($bolehAturSusulan && $pesertaSusulan->status_susulan === 'dijadwalkan')
+                                                        <form method="POST" action="{{ route('ujian-terpusat.susulan.batalkan', [$kegiatan, $item, $pesertaSusulan]) }}" onsubmit="return confirm('Batalkan jadwal susulan siswa ini?')">@csrf @method('PATCH')<button type="submit" class="button button-danger">Batalkan</button></form>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        </details>
+                    @endif
 
                     @if (! $halamanHasil && $item->ruangPelaksanaan->isNotEmpty())
                         <details class="supervisor-details">

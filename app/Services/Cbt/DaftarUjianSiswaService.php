@@ -25,6 +25,7 @@ class DaftarUjianSiswaService
                     ->orderBy('waktu_mulai')
                     ->orderBy('urutan'),
                 'sesiUjianCbt',
+                'pengawasSusulan:id,nama_lengkap',
                 'ruangUjianCbt.jadwalUjianCbt.kegiatanUjianCbt',
             ])
             ->whereHas('anggotaKelas', fn ($query) => $query->where('siswa_id', $siswa->id))
@@ -66,25 +67,38 @@ class DaftarUjianSiswaService
     {
         $ujian = $peserta->ujianCbt;
         $jadwal = $this->jadwalUntukPeserta($peserta);
-        $waktuMulai = $this->waktuMulaiResmi($jadwal, $ujian?->tanggal_mulai);
-        $waktuSelesai = $this->waktuSelesaiResmi($jadwal, $ujian?->tanggal_selesai);
-        $mulaiAkses = $peserta->sesiUjianCbt?->waktu_mulai ?: $ujian?->tanggal_mulai;
-        $selesaiAkses = $peserta->sesiUjianCbt?->waktu_selesai ?: $ujian?->tanggal_selesai;
+        $susulanTerjadwal = $peserta->susulanDijadwalkan();
+        $waktuMulai = $susulanTerjadwal
+            ? $peserta->susulan_mulai
+            : $this->waktuMulaiResmi($jadwal, $ujian?->tanggal_mulai);
+        $waktuSelesai = $susulanTerjadwal
+            ? $peserta->susulan_selesai
+            : $this->waktuSelesaiResmi($jadwal, $ujian?->tanggal_selesai);
+        $mulaiAkses = $susulanTerjadwal
+            ? $peserta->susulan_mulai
+            : ($peserta->sesiUjianCbt?->waktu_mulai ?: $ujian?->tanggal_mulai);
+        $selesaiAkses = $susulanTerjadwal
+            ? $peserta->susulan_selesai
+            : ($peserta->sesiUjianCbt?->waktu_selesai ?: $ujian?->tanggal_selesai);
         $jadwalDibatalkan = $jadwal?->status === 'dibatalkan';
         $aksesDiblokir = $peserta->status === 'terblokir';
-        $sesiNonaktif = $peserta->sesiUjianCbt?->status === 'nonaktif';
+        $sesiNonaktif = ! $susulanTerjadwal && $peserta->sesiUjianCbt?->status === 'nonaktif';
         $waktuAksesDimulai = ! $mulaiAkses || $sekarang->gte($mulaiAkses);
         $waktuAksesBelumBerakhir = ! $selesaiAkses || $sekarang->lte($selesaiAkses);
-        $dapatAktif = in_array($ujian?->status, ['terjadwal', 'berlangsung'], true)
+        $statusPaketDiizinkan = $susulanTerjadwal
+            ? ['terjadwal', 'berlangsung', 'selesai']
+            : ['terjadwal', 'berlangsung'];
+        $dapatAktif = in_array($ujian?->status, $statusPaketDiizinkan, true)
             && in_array($peserta->status, ['aktif', 'sedang_mengerjakan'], true)
-            && ! $jadwalDibatalkan
+            && ($susulanTerjadwal || ! $jadwalDibatalkan)
             && ! $sesiNonaktif
             && $waktuAksesDimulai
             && $waktuAksesBelumBerakhir;
 
         $sudahBerakhir = $peserta->status === 'selesai'
-            || $ujian?->status === 'selesai'
-            || $jadwalDibatalkan
+            || $peserta->status_susulan === 'selesai'
+            || (! $susulanTerjadwal && $ujian?->status === 'selesai')
+            || (! $susulanTerjadwal && $jadwalDibatalkan)
             || ($selesaiAkses && $sekarang->gt($selesaiAkses));
 
         $kelompok = match (true) {
@@ -94,14 +108,18 @@ class DaftarUjianSiswaService
         };
 
         [$labelStatus, $nadaStatus] = match (true) {
-            $jadwalDibatalkan => ['Dibatalkan', 'bahaya'],
+            $peserta->status_susulan === 'dibatalkan' => ['Susulan dibatalkan', 'bahaya'],
+            $jadwalDibatalkan && ! $susulanTerjadwal => ['Dibatalkan', 'bahaya'],
             $aksesDiblokir => ['Akses diblokir', 'bahaya'],
             $sesiNonaktif => ['Sesi tidak aktif', 'bahaya'],
+            $peserta->status_susulan === 'selesai' => ['Susulan selesai', 'selesai'],
             $peserta->status === 'selesai' => ['Selesai dikerjakan', 'selesai'],
-            $ujian?->status === 'selesai' => ['Ujian selesai', 'selesai'],
+            $susulanTerjadwal && $selesaiAkses && $sekarang->gt($selesaiAkses) => ['Waktu susulan berakhir', 'selesai'],
+            ! $susulanTerjadwal && $ujian?->status === 'selesai' => ['Ujian selesai', 'selesai'],
             $selesaiAkses && $sekarang->gt($selesaiAkses) => ['Waktu berakhir', 'selesai'],
-            $peserta->status === 'sedang_mengerjakan' => ['Sedang dikerjakan', 'aktif'],
-            $dapatAktif => ['Siap dimulai', 'aktif'],
+            $peserta->status === 'sedang_mengerjakan' => [$susulanTerjadwal ? 'Susulan sedang dikerjakan' : 'Sedang dikerjakan', 'aktif'],
+            $dapatAktif => [$susulanTerjadwal ? 'Susulan siap dimulai' : 'Siap dimulai', 'aktif'],
+            $susulanTerjadwal => ['Susulan terjadwal', 'menunggu'],
             default => ['Belum dibuka', 'menunggu'],
         };
 
@@ -114,6 +132,7 @@ class DaftarUjianSiswaService
             'kelompok' => $kelompok,
             'label_status' => $labelStatus,
             'nada_status' => $nadaStatus,
+            'susulan' => $susulanTerjadwal || filled($peserta->status_susulan),
         ];
     }
 

@@ -51,6 +51,12 @@ class PesertaUjianCbt extends Model
         'terblokir' => 'Terblokir',
     ];
 
+    public const DAFTAR_STATUS_SUSULAN = [
+        'dijadwalkan' => 'Dijadwalkan',
+        'selesai' => 'Selesai',
+        'dibatalkan' => 'Dibatalkan',
+    ];
+
     protected $fillable = [
         'ujian_cbt_id',
         'sesi_ujian_cbt_id',
@@ -62,6 +68,16 @@ class PesertaUjianCbt extends Model
         'nomor_peserta',
         'status',
         'status_kehadiran_ujian',
+        'status_susulan',
+        'kelompok_susulan',
+        'susulan_mulai',
+        'susulan_selesai',
+        'token_susulan',
+        'ruang_susulan',
+        'pengawas_susulan_pegawai_id',
+        'catatan_susulan',
+        'susulan_ditetapkan_pada',
+        'susulan_ditetapkan_oleh_pengguna_id',
         'absen_ujian_pada',
         'absen_ujian_oleh_pengguna_id',
         'waktu_mulai',
@@ -95,6 +111,9 @@ class PesertaUjianCbt extends Model
         'dibuka_mode_aman_pada' => 'datetime',
         'nomor_meja' => 'integer',
         'absen_ujian_pada' => 'datetime',
+        'susulan_mulai' => 'datetime',
+        'susulan_selesai' => 'datetime',
+        'susulan_ditetapkan_pada' => 'datetime',
         'nilai_diterapkan_pada' => 'datetime',
     ];
 
@@ -143,6 +162,16 @@ class PesertaUjianCbt extends Model
         return $this->belongsTo(Pengguna::class, 'absen_ujian_oleh_pengguna_id');
     }
 
+    public function pengawasSusulan(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'pengawas_susulan_pegawai_id');
+    }
+
+    public function susulanDitetapkanOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'susulan_ditetapkan_oleh_pengguna_id');
+    }
+
     public function jawabanPesertaUjianCbt(): HasMany
     {
         return $this->hasMany(JawabanPesertaUjianCbt::class);
@@ -166,6 +195,25 @@ class PesertaUjianCbt extends Model
     public function labelStatusKehadiranUjian(): string
     {
         return self::DAFTAR_STATUS_KEHADIRAN[$this->status_kehadiran_ujian] ?? str($this->status_kehadiran_ujian)->headline()->toString();
+    }
+
+    public function susulanDijadwalkan(): bool
+    {
+        return $this->status_susulan === 'dijadwalkan'
+            && $this->susulan_mulai
+            && $this->susulan_selesai;
+    }
+
+    public function labelStatusSusulan(): string
+    {
+        return self::DAFTAR_STATUS_SUSULAN[$this->status_susulan] ?? 'Belum dijadwalkan';
+    }
+
+    public function tokenUjianAktif(): ?string
+    {
+        return $this->susulanDijadwalkan()
+            ? $this->token_susulan
+            : $this->ujianCbt?->token;
     }
 
     public function statusPelaksanaan(): string

@@ -6,6 +6,7 @@ use App\Models\AnggotaKelas;
 use App\Models\BuktiRuangUjianCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
+use App\Models\JawabanPesertaUjianCbt;
 use App\Models\JenisUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
@@ -21,8 +22,14 @@ use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use App\Services\Cbt\BagiPesertaUjianTerpusat;
+use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
+use App\Services\Cbt\KoreksiOtomatisCbtService;
+use App\Services\Cbt\PengacakPenyajianCbt;
+use App\Services\Cbt\TerapkanNilaiCbtService;
+use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use PDO;
 use Tests\TestCase;
 
@@ -484,10 +491,10 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         foreach (['dikotomi', 'parsial'] as $mode) {
             $this->put(route('ujian-terpusat.update', $kegiatan), [...$payload, 'penilaian_pgk' => $mode])->assertSessionHasNoErrors()->assertRedirect();
             foreach ([[['A', 'C'], 3], [['A'], 1.5], [['A', 'C', 'D'], 1.5], [['A', 'B'], 0], [['B', 'D'], 0], [[], 0], [['A', 'A'], 1.5]] as [$pilihan, $skorParsial]) {
-                $jawaban = \App\Models\JawabanPesertaUjianCbt::updateOrCreate([
+                $jawaban = JawabanPesertaUjianCbt::updateOrCreate([
                     'peserta_ujian_cbt_id' => $peserta->id, 'soal_ujian_cbt_id' => $relasi->id,
                 ], ['soal_cbt_id' => $soal->id, 'jawaban' => $pilihan]);
-                app(\App\Services\Cbt\KoreksiOtomatisCbtService::class)->koreksiPeserta($peserta);
+                app(KoreksiOtomatisCbtService::class)->koreksiPeserta($peserta);
                 $expected = $mode === 'parsial' ? $skorParsial : ($pilihan === ['A', 'C'] ? 3 : 0);
                 $this->assertEquals($expected, (float) $jawaban->fresh()->skor);
             }
@@ -529,23 +536,254 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         foreach ($paket->soalUjianCbt()->with('soalCbt')->get() as $relasi) {
             $kunci = $relasi->soalCbt->kunci_jawaban['jawaban'];
             $jawaban = is_array($kunci) ? $kunci : [trim(explode('|', $kunci)[0])];
-            \App\Models\JawabanPesertaUjianCbt::create(['peserta_ujian_cbt_id' => $peserta->id, 'soal_ujian_cbt_id' => $relasi->id, 'soal_cbt_id' => $relasi->soal_cbt_id, 'jawaban' => $jawaban]);
+            JawabanPesertaUjianCbt::create(['peserta_ujian_cbt_id' => $peserta->id, 'soal_ujian_cbt_id' => $relasi->id, 'soal_cbt_id' => $relasi->soal_cbt_id, 'jawaban' => $jawaban]);
         }
-        $hasil = app(\App\Services\Cbt\KoreksiOtomatisCbtService::class)->koreksiPeserta($peserta);
+        $hasil = app(KoreksiOtomatisCbtService::class)->koreksiPeserta($peserta);
         $this->assertEquals(12, $hasil['skor_total']);
         $this->assertEquals(12, $hasil['benar']);
         if (getenv('CBT_PHONE_FIXTURE')) {
             $soalUjian = $paket->soalUjianCbt()->with('soalCbt')->orderBy('nomor_urut')->get();
             $jawabanTersimpan = collect();
-            $pilihanJawaban = $soalUjian->mapWithKeys(fn ($relasi) => [$relasi->id => app(\App\Services\Cbt\PengacakPenyajianCbt::class)->pilihanJawaban($paket, $peserta, $relasi)]);
+            $pilihanJawaban = $soalUjian->mapWithKeys(fn ($relasi) => [$relasi->id => app(PengacakPenyajianCbt::class)->pilihanJawaban($paket, $peserta, $relasi)]);
             $sisaDetik = 1200;
             session()->forget('berhasil');
             file_put_contents(storage_path('logs/cbt-phone-audit.html'), view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik'))->render());
         }
         $this->actingAs($data['akun_siswa'])->get(route('ujian-saya.index'))->assertOk()->assertSee('Simulasi CBT');
         $this->get(route('simulasi-cbt.index'))->assertForbidden();
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
-        app(\App\Services\Cbt\TerapkanNilaiCbtService::class)->terapkan($paket, $data['admin']->id);
+        $this->expectException(ValidationException::class);
+        app(TerapkanNilaiCbtService::class)->terapkan($paket, $data['admin']->id);
+    }
+
+    public function test_panitia_dapat_menjadwalkan_susulan_dan_siswa_mengerjakan_paket_utama(): void
+    {
+        Carbon::setTestNow('2026-09-22 08:00:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $soal = SoalCbt::create([
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'mata_pelajaran_id' => $data['mapel']->id,
+                'tingkat' => 7,
+                'kode' => 'SOAL-SUSULAN-001',
+                'jenis_soal' => 'pilihan_ganda',
+                'tingkat_kesulitan' => 'mudah',
+                'kategori' => 'lots',
+                'pertanyaan' => 'Hasil dari 1 + 1 adalah ....',
+                'opsi' => ['pilihan' => ['A' => '1', 'B' => '2']],
+                'kunci_jawaban' => ['jawaban' => 'B'],
+                'skor_maksimal' => 1,
+                'status' => 'siap',
+                'aktif' => true,
+            ]);
+
+            $this->actingAs($data['admin'])
+                ->put(route('paket-soal-terpusat.update', $data['jadwal']), [
+                    'aksi' => 'terbitkan',
+                    'soal' => [$soal->id => ['dipilih' => '1', 'bobot' => 1]],
+                ])
+                ->assertRedirect();
+
+            $jadwal = $data['jadwal']->fresh();
+            $paket = $jadwal->ujianCbt;
+            $peserta = $paket->pesertaUjianCbt()
+                ->where('anggota_kelas_id', $data['anggota'][0]->id)
+                ->firstOrFail();
+            $peserta->update(['status_kehadiran_ujian' => 'sakit']);
+            $paket->pesertaUjianCbt()
+                ->whereKeyNot($peserta->id)
+                ->update(['status_kehadiran_ujian' => 'alfa']);
+            $paket->update(['status' => 'selesai']);
+
+            $this->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+                ->assertOk()
+                ->assertSeeText('Ketidakhadiran & ujian susulan')
+                ->assertSeeText('Alya')
+                ->assertSeeText('Sakit');
+
+            $this->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), [
+                'peserta_ids' => [$peserta->id],
+                'susulan_mulai' => '2026-09-22 08:30:00',
+                'susulan_selesai' => '2026-09-22 09:30:00',
+                'ruang_susulan' => 'Ruang 1',
+                'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
+                'catatan_susulan' => 'Surat keterangan sakit sudah diterima.',
+            ])->assertSessionHasNoErrors()->assertRedirect();
+
+            $peserta->refresh();
+            $this->assertSame('dijadwalkan', $peserta->status_susulan);
+            $this->assertNotNull($peserta->kelompok_susulan);
+            $this->assertSame('sakit', $peserta->status_kehadiran_ujian);
+            $this->assertSame('Ruang 1', $peserta->ruang_susulan);
+            $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $peserta->token_susulan);
+            $this->assertDatabaseHas('notifikasi_pengguna', [
+                'pengguna_id' => $data['akun_siswa']->id,
+                'judul' => 'Jadwal ujian susulan',
+            ]);
+            $this->assertDatabaseHas('notifikasi_pengguna', [
+                'pengguna_id' => $data['akun_guru']->id,
+                'judul' => 'Tugas pengawas ujian susulan',
+                'tautan' => parse_url(route('tugas-pengawas-ujian.susulan.show', $peserta->kelompok_susulan), PHP_URL_PATH),
+            ]);
+
+            $this->actingAs($data['akun_guru'])
+                ->get(route('tugas-pengawas-ujian.index'))
+                ->assertOk()
+                ->assertSeeText('Tugas ujian susulan')
+                ->assertSeeText('Ruang 1')
+                ->assertSeeText('Buka tugas susulan');
+            $this->get(route('tugas-pengawas-ujian.susulan.show', $peserta->kelompok_susulan))
+                ->assertOk()
+                ->assertSeeText('Tugas Pengawas Susulan')
+                ->assertSeeText('Token ujian susulan')
+                ->assertSeeText($peserta->token_susulan)
+                ->assertSeeText('Alya')
+                ->assertSeeText('Ketidakhadiran awal')
+                ->assertSeeText('Jawaban tersimpan');
+            $this->actingAs($data['akun_siswa'])
+                ->get(route('tugas-pengawas-ujian.susulan.show', $peserta->kelompok_susulan))
+                ->assertForbidden();
+            $this->actingAs($data['admin'])
+                ->get(route('tugas-pengawas-ujian.susulan.show', $peserta->kelompok_susulan))
+                ->assertOk();
+
+            $kesiapanSebelum = app(FinalisasiHasilUjianTerpusatService::class)
+                ->ringkasan($data['admin'], $paket->fresh());
+            $this->assertFalse($kesiapanSebelum['siap_difinalisasi']);
+            $this->assertSame(1, $kesiapanSebelum['kesiapan']['peserta_belum_selesai']);
+
+            $this->actingAs($data['akun_siswa'])
+                ->get(route('ujian-saya.index'))
+                ->assertOk()
+                ->assertSeeText('Ujian susulan')
+                ->assertSeeText('Susulan terjadwal')
+                ->assertSeeText('Ruang 1')
+                ->assertSeeText('Nilai susulan akan masuk ke komponen nilai ujian yang sama.');
+
+            Carbon::setTestNow('2026-09-22 08:45:00');
+            $this->post(route('ujian-saya.masuk', $peserta), ['token' => $paket->token])
+                ->assertSessionHasErrors('token');
+            $this->post(route('ujian-saya.masuk', $peserta), ['token' => $peserta->token_susulan])
+                ->assertRedirect(route('cbt.ujian.show'));
+            $this->post(route('cbt.ujian.mulai'))
+                ->assertRedirect(route('cbt.ujian.kerjakan'));
+
+            $relasiSoal = $paket->soalUjianCbt()->firstOrFail();
+            $this->post(route('cbt.ujian.simpan'), [
+                'jawaban' => [$relasiSoal->id => ['B']],
+                'aksi' => 'selesai',
+            ])->assertRedirect(route('cbt.ujian.selesai'));
+
+            $peserta->refresh();
+            $this->assertSame('selesai', $peserta->status);
+            $this->assertSame('selesai', $peserta->status_susulan);
+            $this->assertSame('sakit', $peserta->status_kehadiran_ujian);
+            $this->assertSame($paket->id, $peserta->ujian_cbt_id);
+            $this->actingAs($data['akun_guru'])
+                ->get(route('tugas-pengawas-ujian.susulan.show', $peserta->kelompok_susulan))
+                ->assertOk()
+                ->assertSeeText('Selesai')
+                ->assertSeeText('1 / 1');
+            $kesiapanSesudah = app(FinalisasiHasilUjianTerpusatService::class)
+                ->ringkasan($data['admin'], $paket->fresh());
+            $this->assertTrue($kesiapanSesudah['siap_difinalisasi']);
+            $this->assertSame(2, $kesiapanSesudah['kesiapan']['peserta_tidak_hadir']);
+
+            $hasilPenerapan = app(TerapkanNilaiCbtService::class)
+                ->terapkan($paket->fresh(), $data['admin']->id);
+            $this->assertSame(1, $hasilPenerapan['ringkasan']['diterapkan']);
+            $this->assertEquals(100, (float) $peserta->fresh()->nilaiSiswa?->nilai);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_susulan_hanya_untuk_siswa_tidak_hadir_dan_dapat_dibatalkan_sebelum_dimulai(): void
+    {
+        Carbon::setTestNow('2026-09-22 08:00:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $soal = SoalCbt::create([
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'mata_pelajaran_id' => $data['mapel']->id,
+                'tingkat' => 7,
+                'kode' => 'SOAL-SUSULAN-002',
+                'jenis_soal' => 'pilihan_ganda',
+                'tingkat_kesulitan' => 'mudah',
+                'kategori' => 'lots',
+                'pertanyaan' => 'Bilangan genap adalah ....',
+                'opsi' => ['pilihan' => ['A' => '1', 'B' => '2']],
+                'kunci_jawaban' => ['jawaban' => 'B'],
+                'skor_maksimal' => 1,
+                'status' => 'siap',
+                'aktif' => true,
+            ]);
+            $this->actingAs($data['admin'])->put(route('paket-soal-terpusat.update', $data['jadwal']), [
+                'aksi' => 'terbitkan',
+                'soal' => [$soal->id => ['dipilih' => '1', 'bobot' => 1]],
+            ])->assertRedirect();
+
+            $jadwal = $data['jadwal']->fresh();
+            $peserta = $jadwal->ujianCbt->pesertaUjianCbt()->orderBy('id')->get();
+            $peserta[0]->update(['status_kehadiran_ujian' => 'izin']);
+            $peserta[1]->update(['status_kehadiran_ujian' => 'hadir']);
+            $payload = [
+                'susulan_mulai' => '2026-09-22 10:00:00',
+                'susulan_selesai' => '2026-09-22 11:00:00',
+                'ruang_susulan' => 'Ruang 1',
+            ];
+
+            $this->actingAs($data['akun_guru'])
+                ->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), $payload + [
+                    'peserta_ids' => [$peserta[0]->id],
+                ])->assertForbidden();
+
+            $this->actingAs($data['admin'])
+                ->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), $payload + [
+                    'peserta_ids' => [$peserta[1]->id],
+                ])->assertSessionHasErrors('peserta_ids');
+            $this->assertNull($peserta[1]->fresh()->status_susulan);
+
+            $peserta[1]->update(['status_kehadiran_ujian' => 'sakit']);
+            $this->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), $payload + [
+                'peserta_ids' => $peserta->pluck('id')->all(),
+                'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
+            ])->assertSessionHasNoErrors();
+            $kelompokSusulan = $peserta[0]->fresh()->kelompok_susulan;
+            $this->patch(route('ujian-terpusat.susulan.batalkan', [
+                $data['kegiatan'],
+                $jadwal,
+                $peserta[0],
+            ]))->assertSessionHasNoErrors()->assertRedirect();
+
+            $peserta[0]->refresh();
+            $this->assertSame('dibatalkan', $peserta[0]->status_susulan);
+            $this->assertNull($peserta[0]->token_susulan);
+            $this->assertSame('izin', $peserta[0]->status_kehadiran_ujian);
+            $peserta[1]->refresh();
+            $this->assertSame('dijadwalkan', $peserta[1]->status_susulan);
+            $this->assertSame($kelompokSusulan, $peserta[1]->kelompok_susulan);
+            $this->assertDatabaseHas('notifikasi_pengguna', [
+                'pengguna_id' => $data['akun_guru']->id,
+                'judul' => 'Perubahan peserta ujian susulan',
+                'tautan' => parse_url(route('tugas-pengawas-ujian.susulan.show', $kelompokSusulan), PHP_URL_PATH),
+            ]);
+
+            $this->patch(route('ujian-terpusat.susulan.batalkan', [
+                $data['kegiatan'],
+                $jadwal,
+                $peserta[1],
+            ]))->assertSessionHasNoErrors()->assertRedirect();
+            $this->assertSame('dibatalkan', $peserta[1]->fresh()->status_susulan);
+            $this->assertDatabaseHas('notifikasi_pengguna', [
+                'pengguna_id' => $data['akun_guru']->id,
+                'judul' => 'Jadwal pengawasan susulan dibatalkan',
+                'tautan' => parse_url(route('tugas-pengawas-ujian.index'), PHP_URL_PATH),
+            ]);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     private function buatFondasi(): array
