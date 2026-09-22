@@ -20,6 +20,7 @@ use App\Services\Cbt\SinkronkanPelaksanaanUjianTerpusat;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -564,6 +565,172 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         return back()->with('berhasil', "Pengawas {$ruangKegiatanUjianCbt->nama} berhasil diperbarui.");
     }
 
+    public function updatePengawasMassal(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        JadwalUjianCbt $jadwalUjianCbt,
+        SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        NotifikasiUjianTerpusatService $notifikasi,
+    ) {
+        abort_unless($kegiatanUjianCbt->dapatDiaksesOleh($request->user()), 403);
+        abort_unless((int) $jadwalUjianCbt->kegiatan_ujian_cbt_id === (int) $kegiatanUjianCbt->id, 404);
+
+        $kelompok = $kegiatanUjianCbt->kelompokPesertaKegiatanUjianCbt()
+            ->where('tingkat', $jadwalUjianCbt->tingkat)
+            ->with('ruangKegiatanUjianCbt')
+            ->firstOrFail();
+        $daftarRuang = $kelompok->ruangKegiatanUjianCbt->keyBy('id');
+
+        $data = $request->validate([
+            'jadwal_form_id' => ['required', 'integer', Rule::in([$jadwalUjianCbt->id])],
+            'ruang' => ['required', 'array', 'min:1'],
+            'ruang.*' => ['required', 'array'],
+            'ruang.*.pengawas_utama_pegawai_id' => ['nullable', 'integer', Rule::exists('pegawai', 'id')->where('aktif', true)],
+            'ruang.*.pengawas_pendamping_pegawai_id' => ['nullable', 'integer', Rule::exists('pegawai', 'id')->where('aktif', true)],
+            'ruang.*.catatan' => ['nullable', 'string', 'max:500'],
+            'only_room' => ['nullable', 'integer'],
+        ], [
+            'ruang.required' => 'Daftar ruang pengawas tidak ditemukan.',
+            'ruang.*.pengawas_utama_pegawai_id.exists' => 'Pengawas utama yang dipilih tidak aktif.',
+            'ruang.*.pengawas_pendamping_pegawai_id.exists' => 'Pengawas pendamping yang dipilih tidak aktif.',
+        ]);
+
+        $inputRuang = collect($data['ruang'])
+            ->mapWithKeys(fn ($nilai, $ruangId) => [(int) $ruangId => $nilai]);
+        $ruangTidakValid = $inputRuang->keys()->diff($daftarRuang->keys());
+        if ($ruangTidakValid->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'ruang' => 'Ada ruang yang tidak termasuk dalam jadwal tingkat ini.',
+            ]);
+        }
+
+        $hanyaRuangId = filled($data['only_room'] ?? null) ? (int) $data['only_room'] : null;
+        if ($hanyaRuangId && (! $daftarRuang->has($hanyaRuangId) || ! $inputRuang->has($hanyaRuangId))) {
+            throw ValidationException::withMessages([
+                'only_room' => 'Ruang yang akan disimpan tidak ditemukan.',
+            ]);
+        }
+
+        $inputDiproses = $hanyaRuangId
+            ? $inputRuang->only([$hanyaRuangId])
+            : $inputRuang;
+        $nilaiPerRuang = $inputDiproses->map(function (array $nilai, int $ruangId) {
+            $utama = filled($nilai['pengawas_utama_pegawai_id'] ?? null)
+                ? (int) $nilai['pengawas_utama_pegawai_id']
+                : null;
+            $pendamping = filled($nilai['pengawas_pendamping_pegawai_id'] ?? null)
+                ? (int) $nilai['pengawas_pendamping_pegawai_id']
+                : null;
+
+            if ($utama && $utama === $pendamping) {
+                throw ValidationException::withMessages([
+                    "ruang.{$ruangId}.pengawas_pendamping_pegawai_id" => 'Pengawas utama dan pendamping harus orang yang berbeda.',
+                ]);
+            }
+
+            return [
+                'pengawas_utama_pegawai_id' => $utama,
+                'pengawas_pendamping_pegawai_id' => $pendamping,
+                'catatan' => filled($nilai['catatan'] ?? null) ? trim($nilai['catatan']) : null,
+            ];
+        });
+
+        $this->pastikanPilihanPengawasMassalTidakBerulang($nilaiPerRuang, $daftarRuang);
+
+        $perubahanNotifikasi = DB::transaction(function () use (
+            $jadwalUjianCbt,
+            $nilaiPerRuang,
+            $daftarRuang,
+            $request,
+        ) {
+            JadwalUjianCbt::query()->whereKey($jadwalUjianCbt->id)->lockForUpdate()->firstOrFail();
+            $penugasanLama = PengawasRuangUjianTerpusat::query()
+                ->where('jadwal_ujian_cbt_id', $jadwalUjianCbt->id)
+                ->whereIn('ruang_kegiatan_ujian_cbt_id', $nilaiPerRuang->keys())
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('ruang_kegiatan_ujian_cbt_id');
+            $perubahan = collect();
+
+            foreach ($nilaiPerRuang as $ruangId => $nilai) {
+                $ruang = $daftarRuang->get($ruangId);
+                $lama = $penugasanLama->get($ruangId);
+
+                foreach (['pengawas_utama_pegawai_id', 'pengawas_pendamping_pegawai_id'] as $kolom) {
+                    $pegawaiLamaId = (int) ($lama?->{$kolom} ?? 0);
+                    $pegawaiBaruId = (int) ($nilai[$kolom] ?? 0);
+
+                    if ($pegawaiLamaId > 0 && $pegawaiBaruId !== $pegawaiLamaId) {
+                        throw ValidationException::withMessages([
+                            "ruang.{$ruangId}.{$kolom}" => 'Pengawas yang sudah ditugaskan harus diubah melalui Ganti pengawas mendadak agar riwayatnya tercatat.',
+                        ]);
+                    }
+
+                    if ($pegawaiBaruId > 0 && $pegawaiBaruId !== $pegawaiLamaId) {
+                        $perubahan->push([
+                            'ruang' => $ruang,
+                            'pegawai_id' => $pegawaiBaruId,
+                            'peran' => $kolom === 'pengawas_utama_pegawai_id' ? 'utama' : 'pendamping',
+                        ]);
+                    }
+                }
+
+                $this->pastikanPengawasTidakBentrok(
+                    $jadwalUjianCbt,
+                    $ruang,
+                    [$nilai['pengawas_utama_pegawai_id']],
+                    "ruang.{$ruangId}.pengawas_utama_pegawai_id",
+                );
+                $this->pastikanPengawasTidakBentrok(
+                    $jadwalUjianCbt,
+                    $ruang,
+                    [$nilai['pengawas_pendamping_pegawai_id']],
+                    "ruang.{$ruangId}.pengawas_pendamping_pegawai_id",
+                );
+
+                if (collect($nilai)->filter()->isEmpty()) {
+                    PengawasRuangUjianTerpusat::query()
+                        ->where('jadwal_ujian_cbt_id', $jadwalUjianCbt->id)
+                        ->where('ruang_kegiatan_ujian_cbt_id', $ruangId)
+                        ->delete();
+                } else {
+                    PengawasRuangUjianTerpusat::query()->updateOrCreate(
+                        [
+                            'jadwal_ujian_cbt_id' => $jadwalUjianCbt->id,
+                            'ruang_kegiatan_ujian_cbt_id' => $ruangId,
+                        ],
+                        [
+                            ...$nilai,
+                            'ditugaskan_oleh_pengguna_id' => $request->user()?->id,
+                        ],
+                    );
+                }
+            }
+
+            return $perubahan;
+        });
+
+        $sinkronisasi->sinkronkanJadwal($jadwalUjianCbt->fresh(), $request->user());
+        foreach ($perubahanNotifikasi as $perubahan) {
+            $notifikasi->kirimTugasPengawas(
+                $jadwalUjianCbt,
+                $perubahan['ruang'],
+                $perubahan['pegawai_id'],
+                $perubahan['peran'],
+            );
+        }
+
+        $jumlah = $nilaiPerRuang->count();
+        $tujuan = route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatanUjianCbt)
+            .'#pengawas-jadwal-'.$jadwalUjianCbt->id;
+
+        return redirect($tujuan)
+            ->with('pengawas_jadwal_terbuka', $jadwalUjianCbt->id)
+            ->with('berhasil', $hanyaRuangId
+                ? 'Penugasan satu ruang berhasil diperbarui.'
+                : "Penugasan {$jumlah} ruang berhasil diperbarui sekaligus.");
+    }
+
     public function gantiPengawas(
         Request $request,
         KegiatanUjianCbt $kegiatanUjianCbt,
@@ -715,6 +882,31 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             ->exists());
 
         return $token;
+    }
+
+    private function pastikanPilihanPengawasMassalTidakBerulang(
+        Collection $nilaiPerRuang,
+        Collection $daftarRuang,
+    ): void {
+        $pemakaian = [];
+
+        foreach ($nilaiPerRuang as $ruangId => $nilai) {
+            foreach (['pengawas_utama_pegawai_id', 'pengawas_pendamping_pegawai_id'] as $kolom) {
+                $pegawaiId = (int) ($nilai[$kolom] ?? 0);
+                if ($pegawaiId === 0) {
+                    continue;
+                }
+
+                if (isset($pemakaian[$pegawaiId])) {
+                    throw ValidationException::withMessages([
+                        "ruang.{$ruangId}.{$kolom}" => 'Pengawas yang sama sudah dipilih untuk '
+                            .$pemakaian[$pegawaiId].' pada jadwal ini.',
+                    ]);
+                }
+
+                $pemakaian[$pegawaiId] = $daftarRuang->get($ruangId)?->nama ?: 'ruang lain';
+            }
+        }
     }
 
     private function pastikanPengawasTidakBentrok(

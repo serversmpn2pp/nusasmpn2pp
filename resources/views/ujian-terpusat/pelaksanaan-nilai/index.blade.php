@@ -34,11 +34,18 @@
         .execution-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
         .supervisor-details { margin-top:16px; border-top:1px solid var(--line); padding-top:14px; }
         .supervisor-details > summary { cursor:pointer; color:var(--primary-dark); font-weight:800; }
+        .supervisor-summary { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .supervisor-summary-copy { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+        .supervisor-batch-intro { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:12px; padding:11px 13px; border:1px solid #bfdbfe; border-left:4px solid var(--primary); border-radius:7px; background:#eff6ff; }
+        .supervisor-batch-intro p { margin:0; color:#36516c; font-size:.78rem; line-height:1.45; }
         .supervisor-grid { display:grid; gap:10px; margin-top:12px; }
         .supervisor-entry { display:grid; gap:8px; }
         .supervisor-row { display:grid; grid-template-columns:minmax(130px,.6fr) minmax(180px,1fr) minmax(180px,1fr) minmax(180px,.8fr) auto; gap:10px; align-items:end; padding:12px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
+        .supervisor-row.is-dirty { border-color:#eab308; box-shadow:inset 4px 0 0 #eab308; background:#fffdf4; }
         .supervisor-room strong,.supervisor-room span { display:block; }
         .supervisor-room span { margin-top:3px; color:var(--muted); font-size:.74rem; }
+        .supervisor-room .supervisor-dirty { display:none; margin-top:7px; color:#854d0e; font-size:.7rem; font-weight:800; }
+        .supervisor-row.is-dirty .supervisor-dirty { display:block; }
         .supervisor-proof { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
         .proof-overview { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 18px; padding:15px 18px; }
         .proof-overview-copy strong,.proof-overview-copy span { display:block; }
@@ -46,6 +53,11 @@
         .proof-overview-stats { display:flex; flex-wrap:wrap; gap:8px; }
         .supervisor-row .actions { display:grid; gap:7px; align-self:stretch; align-content:end; }
         .supervisor-row .actions .button { text-align:center; }
+        .supervisor-batch-actions { position:sticky; bottom:10px; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 14px; border:1px solid #bfdbfe; border-radius:7px; background:rgba(255,255,255,.97); box-shadow:0 8px 22px rgba(15,52,96,.12); }
+        .supervisor-batch-actions strong,.supervisor-batch-actions span { display:block; }
+        .supervisor-batch-actions span { margin-top:2px; color:var(--muted); font-size:.72rem; }
+        .supervisor-batch-unsaved { display:none; color:#854d0e !important; font-weight:800; }
+        .supervisor-batch-actions.has-dirty .supervisor-batch-unsaved { display:block; }
         .assigned-supervisor { min-height:44px; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:#fff; }
         .assigned-supervisor strong,.assigned-supervisor span { display:block; }
         .assigned-supervisor span { margin-top:2px; color:var(--muted); font-size:.7rem; }
@@ -85,7 +97,7 @@
         .empty-execution { padding:28px; text-align:center; color:var(--muted); }
         .central-wizard-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; }
         @media (max-width:1050px) { .execution-summary,.execution-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } .execution-card-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .supervisor-row,.replacement-form { grid-template-columns:repeat(2,minmax(0,1fr)); } .supervisor-room,.supervisor-row .actions { grid-column:1 / -1; } .replacement-form .button { width:100%; } .retake-scheduled-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row,.replacement-form { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button,.replacement-form .button { width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } .retake-candidate { grid-template-columns:28px minmax(0,1fr); } .retake-candidate > :nth-child(n+3) { grid-column:2; } .retake-fields,.retake-scheduled-row { grid-template-columns:1fr; } .retake-fields .field.is-wide { grid-column:auto; } .retake-form-actions { align-items:stretch; flex-direction:column; } .retake-form-actions .button { width:100%; } }
+        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row,.replacement-form { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button,.replacement-form .button { width:100%; } .supervisor-summary,.supervisor-batch-intro,.supervisor-batch-actions { align-items:stretch; flex-direction:column; } .supervisor-batch-intro .button,.supervisor-batch-actions .button { width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } .retake-candidate { grid-template-columns:28px minmax(0,1fr); } .retake-candidate > :nth-child(n+3) { grid-column:2; } .retake-fields,.retake-scheduled-row { grid-template-columns:1fr; } .retake-fields .field.is-wide { grid-column:auto; } .retake-form-actions { align-items:stretch; flex-direction:column; } .retake-form-actions .button { width:100%; } }
         @media (max-width:480px) { .execution-summary,.execution-flow { grid-template-columns:1fr; } }
     </style>
 
@@ -283,8 +295,30 @@
                     @endif
 
                     @if (! $halamanHasil && $item->ruangPelaksanaan->isNotEmpty())
-                        <details class="supervisor-details">
-                            <summary>Pengawas ruang ({{ $item->ruangPelaksanaan->count() }} ruang)</summary>
+                        @php
+                            $jumlahRuangSiap = $item->ruangPelaksanaan->filter(
+                                fn ($ruang) => filled($pengawas->get($ruang->id)?->pengawas_utama_pegawai_id)
+                            )->count();
+                            $formPengawasId = 'form-pengawas-jadwal-'.$item->id;
+                            $gunakanNilaiLamaPengawas = (string) old('jadwal_form_id') === (string) $item->id;
+                            $bukaPengawas = (string) session('pengawas_jadwal_terbuka') === (string) $item->id
+                                || $gunakanNilaiLamaPengawas;
+                        @endphp
+                        <details id="pengawas-jadwal-{{ $item->id }}" class="supervisor-details" data-supervisor-details @if($bukaPengawas) open data-auto-focus="true" @endif>
+                            <summary class="supervisor-summary">
+                                <span class="supervisor-summary-copy">Pengawas ruang <span class="badge {{ $jumlahRuangSiap === $item->ruangPelaksanaan->count() ? 'badge-active' : 'badge-warning' }}">{{ $jumlahRuangSiap }} dari {{ $item->ruangPelaksanaan->count() }} siap</span></span>
+                                <span class="help-text">Buka pengaturan</span>
+                            </summary>
+                            @if ($bolehAturPengawas)
+                                <form id="{{ $formPengawasId }}" method="POST" action="{{ route('ujian-terpusat.pengawas.massal', [$kegiatan, $item]) }}">
+                                    @csrf @method('PUT')
+                                    <input type="hidden" name="jadwal_form_id" value="{{ $item->id }}">
+                                </form>
+                                <div class="supervisor-batch-intro">
+                                    <p>Isi seluruh ruang, lalu simpan sekaligus. Penugasan yang sudah tersimpan tetap dikunci agar riwayat penggantian pengawas terjaga.</p>
+                                    <button class="button button-primary" type="submit" form="{{ $formPengawasId }}">Simpan semua penugasan</button>
+                                </div>
+                            @endif
                             <div class="supervisor-grid">
                                 @foreach ($item->ruangPelaksanaan as $ruang)
                                     @php
@@ -299,33 +333,35 @@
                                     @endphp
                                     @if ($bolehAturPengawas)
                                         <div class="supervisor-entry">
-                                            <form class="supervisor-row" method="POST" action="{{ route('ujian-terpusat.pengawas.update', [$kegiatan, $item, $ruang]) }}">
-                                                @csrf @method('PUT')
+                                            <div class="supervisor-row" data-supervisor-row>
                                                 <div class="supervisor-room">
                                                     <strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span>
                                                     @if($ruangOperasional)<div class="supervisor-proof"><span class="badge {{ $kelasStatusBukti }}">{{ $ruangOperasional->labelStatusBukti() }}</span><span class="badge badge-muted">{{ $ruangOperasional->bukti_daftar_hadir_count }} hadir · {{ $ruangOperasional->bukti_berita_acara_count }} BA</span></div>@endif
+                                                    <span class="supervisor-dirty">Belum disimpan</span>
                                                 </div>
                                                 <div class="field">
                                                     <label for="utama_{{ $item->id }}_{{ $ruang->id }}">Pengawas utama</label>
                                                     @if($penugasan?->pengawas_utama_pegawai_id)
                                                         <div class="assigned-supervisor"><strong>{{ $penugasan->pengawasUtama?->nama_lengkap }}</strong><span>Sudah ditugaskan</span></div>
-                                                        <input type="hidden" name="pengawas_utama_pegawai_id" value="{{ $penugasan->pengawas_utama_pegawai_id }}">
+                                                        <input type="hidden" form="{{ $formPengawasId }}" name="ruang[{{ $ruang->id }}][pengawas_utama_pegawai_id]" value="{{ $penugasan->pengawas_utama_pegawai_id }}">
                                                     @else
-                                                        <select id="utama_{{ $item->id }}_{{ $ruang->id }}" name="pengawas_utama_pegawai_id" class="input"><option value="">Belum ditentukan</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}">{{ $orang->nama_lengkap }}</option>@endforeach</select>
+                                                        <select id="utama_{{ $item->id }}_{{ $ruang->id }}" form="{{ $formPengawasId }}" name="ruang[{{ $ruang->id }}][pengawas_utama_pegawai_id]" class="input" data-supervisor-control><option value="">Belum ditentukan</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}" @selected($gunakanNilaiLamaPengawas && (string) old("ruang.{$ruang->id}.pengawas_utama_pegawai_id") === (string) $orang->id)>{{ $orang->nama_lengkap }}</option>@endforeach</select>
                                                     @endif
+                                                    @if($gunakanNilaiLamaPengawas) @error("ruang.{$ruang->id}.pengawas_utama_pegawai_id")<p class="error-text">{{ $message }}</p>@enderror @endif
                                                 </div>
                                                 <div class="field">
                                                     <label for="pendamping_{{ $item->id }}_{{ $ruang->id }}">Pendamping</label>
                                                     @if($penugasan?->pengawas_pendamping_pegawai_id)
                                                         <div class="assigned-supervisor"><strong>{{ $penugasan->pengawasPendamping?->nama_lengkap }}</strong><span>Sudah ditugaskan</span></div>
-                                                        <input type="hidden" name="pengawas_pendamping_pegawai_id" value="{{ $penugasan->pengawas_pendamping_pegawai_id }}">
+                                                        <input type="hidden" form="{{ $formPengawasId }}" name="ruang[{{ $ruang->id }}][pengawas_pendamping_pegawai_id]" value="{{ $penugasan->pengawas_pendamping_pegawai_id }}">
                                                     @else
-                                                        <select id="pendamping_{{ $item->id }}_{{ $ruang->id }}" name="pengawas_pendamping_pegawai_id" class="input"><option value="">Tidak ada</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}">{{ $orang->nama_lengkap }}</option>@endforeach</select>
+                                                        <select id="pendamping_{{ $item->id }}_{{ $ruang->id }}" form="{{ $formPengawasId }}" name="ruang[{{ $ruang->id }}][pengawas_pendamping_pegawai_id]" class="input" data-supervisor-control><option value="">Tidak ada</option>@foreach($pegawai as $orang)<option value="{{ $orang->id }}" @selected($gunakanNilaiLamaPengawas && (string) old("ruang.{$ruang->id}.pengawas_pendamping_pegawai_id") === (string) $orang->id)>{{ $orang->nama_lengkap }}</option>@endforeach</select>
                                                     @endif
+                                                    @if($gunakanNilaiLamaPengawas) @error("ruang.{$ruang->id}.pengawas_pendamping_pegawai_id")<p class="error-text">{{ $message }}</p>@enderror @endif
                                                 </div>
-                                                <div class="field"><label for="catatan_{{ $item->id }}_{{ $ruang->id }}">Catatan tugas</label><input id="catatan_{{ $item->id }}_{{ $ruang->id }}" name="catatan" class="input" value="{{ $penugasan?->catatan }}" placeholder="Opsional"></div>
+                                                <div class="field"><label for="catatan_{{ $item->id }}_{{ $ruang->id }}">Catatan tugas</label><input id="catatan_{{ $item->id }}_{{ $ruang->id }}" form="{{ $formPengawasId }}" name="ruang[{{ $ruang->id }}][catatan]" class="input" value="{{ $gunakanNilaiLamaPengawas ? old("ruang.{$ruang->id}.catatan", $penugasan?->catatan) : $penugasan?->catatan }}" placeholder="Opsional" data-supervisor-control>@if($gunakanNilaiLamaPengawas) @error("ruang.{$ruang->id}.catatan")<p class="error-text">{{ $message }}</p>@enderror @endif</div>
                                                 <div class="actions">
-                                                    <button class="button button-primary" type="submit">{{ $penugasan?->pengawas_utama_pegawai_id && $penugasan?->pengawas_pendamping_pegawai_id ? 'Simpan catatan' : 'Simpan penugasan' }}</button>
+                                                    <button class="button button-muted" type="submit" form="{{ $formPengawasId }}" name="only_room" value="{{ $ruang->id }}">Simpan ruang ini</button>
                                                     @if($bolehCetakDokumen && $paketSiap && $penugasan?->pengawas_utama_pegawai_id)
                                                         <a href="{{ route('ujian-terpusat.dokumen-ruang.cetak', [$kegiatan, $item, $ruang]) }}" target="_blank" rel="noopener" class="button button-muted">Cetak hadir & berita acara</a>
                                                     @elseif($bolehCetakDokumen && $paketSiap)
@@ -333,7 +369,7 @@
                                                     @endif
                                                     @if($ruangOperasional)<a href="{{ route('tugas-pengawas-ujian.show', ['ruangUjianCbt' => $ruangOperasional, 'kembali' => 'panitia']) }}" class="button button-muted">Periksa bukti</a>@endif
                                                 </div>
-                                            </form>
+                                            </div>
 
                                             @if($penugasan?->pengawas_utama_pegawai_id || $penugasan?->pengawas_pendamping_pegawai_id)
                                                 <details class="supervisor-replacement">
@@ -374,6 +410,12 @@
                                         </div>
                                     @endif
                                 @endforeach
+                                @if ($bolehAturPengawas)
+                                    <div class="supervisor-batch-actions" data-supervisor-batch-actions>
+                                        <div><strong>Simpan penugasan seluruh ruang</strong><span>Pemeriksaan bentrok dilakukan sebelum data disimpan.</span><span class="supervisor-batch-unsaved">Ada perubahan yang belum disimpan.</span></div>
+                                        <button class="button button-primary" type="submit" form="{{ $formPengawasId }}">Simpan semua penugasan</button>
+                                    </div>
+                                @endif
                             </div>
                         </details>
                     @endif
@@ -394,3 +436,24 @@
         @endif
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-supervisor-details]').forEach((details) => {
+                const actions = details.querySelector('[data-supervisor-batch-actions]');
+                details.querySelectorAll('[data-supervisor-control]').forEach((control) => {
+                    control.addEventListener('change', () => {
+                        control.closest('[data-supervisor-row]')?.classList.add('is-dirty');
+                        actions?.classList.add('has-dirty');
+                    });
+                });
+            });
+
+            const target = document.querySelector('[data-supervisor-details][data-auto-focus="true"]');
+            if (target && !window.location.hash) {
+                requestAnimationFrame(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+            }
+        });
+    </script>
+@endpush

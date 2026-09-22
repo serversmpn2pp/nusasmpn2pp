@@ -454,6 +454,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('ujian-terpusat/{kegiatanUjianCbt}/jadwal', [JadwalUjianTerpusatController::class, 'store'])->name('ujian-terpusat.jadwal.store');
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}', [JadwalUjianTerpusatController::class, 'update'])->name('ujian-terpusat.jadwal.update');
             Route::delete('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}', [JadwalUjianTerpusatController::class, 'destroy'])->name('ujian-terpusat.jadwal.destroy');
+            Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas', [PelaksanaanNilaiUjianTerpusatController::class, 'updatePengawasMassal'])->name('ujian-terpusat.pengawas.massal');
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas/{ruangKegiatanUjianCbt}', [PelaksanaanNilaiUjianTerpusatController::class, 'updatePengawas'])->name('ujian-terpusat.pengawas.update');
             Route::patch('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas/{ruangKegiatanUjianCbt}/ganti', [PelaksanaanNilaiUjianTerpusatController::class, 'gantiPengawas'])->name('ujian-terpusat.pengawas.ganti');
             Route::post('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/susulan', [PelaksanaanNilaiUjianTerpusatController::class, 'jadwalkanSusulan'])->name('ujian-terpusat.susulan.store');

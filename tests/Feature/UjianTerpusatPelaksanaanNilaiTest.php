@@ -475,6 +475,108 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('Guru Pengawas Ruang → Guru Pengawas Pengganti');
     }
 
+    public function test_pengawas_seluruh_ruang_dapat_disimpan_sekaligus_secara_atomic(): void
+    {
+        $data = $this->buatFondasi();
+        $kelompok = $data['kegiatan']->kelompokPesertaKegiatanUjianCbt()
+            ->where('tingkat', 7)
+            ->firstOrFail();
+        $ruangKedua = RuangKegiatanUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+            'kode' => 'R02',
+            'nama' => 'Ruang 2',
+            'lokasi' => 'Lantai 1',
+            'kapasitas' => 20,
+            'urutan' => 2,
+            'aktif' => true,
+        ]);
+        $kelompok->ruangKegiatanUjianCbt()->attach($ruangKedua->id, ['urutan' => 2]);
+
+        $pengawasKedua = Pegawai::create([
+            'nama_lengkap' => 'Guru Pengawas Kedua',
+            'nip' => '198811112020121004',
+            'jenis_kelamin' => 'P',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+        $akunPengawasKedua = Pengguna::create([
+            'pegawai_id' => $pengawasKedua->id,
+            'nama' => $pengawasKedua->nama_lengkap,
+            'username' => $pengawasKedua->nip,
+            'kata_sandi' => 'rahasia123',
+            'wajib_ganti_kata_sandi' => false,
+            'peran' => 'pegawai',
+            'aktif' => true,
+            'akun_sistem' => false,
+        ]);
+        $route = route('ujian-terpusat.pengawas.massal', [$data['kegiatan'], $data['jadwal']]);
+
+        $this->actingAs($data['admin'])
+            ->put($route, [
+                'jadwal_form_id' => $data['jadwal']->id,
+                'ruang' => [
+                    $data['ruang']->id => ['pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id],
+                    $ruangKedua->id => ['pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id],
+                ],
+            ])
+            ->assertSessionHasErrors("ruang.{$ruangKedua->id}.pengawas_utama_pegawai_id");
+        $this->assertDatabaseCount('pengawas_ruang_ujian_terpusat', 0);
+
+        $respons = $this->put($route, [
+            'jadwal_form_id' => $data['jadwal']->id,
+            'ruang' => [
+                $data['ruang']->id => [
+                    'pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id,
+                    'catatan' => 'Koordinator ruang pertama.',
+                ],
+                $ruangKedua->id => [
+                    'pengawas_utama_pegawai_id' => $pengawasKedua->id,
+                    'catatan' => 'Koordinator ruang kedua.',
+                ],
+            ],
+        ]);
+        $respons->assertRedirect(
+            route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan'])
+            .'#pengawas-jadwal-'.$data['jadwal']->id,
+        )->assertSessionHas('pengawas_jadwal_terbuka', $data['jadwal']->id);
+
+        $this->assertDatabaseHas('pengawas_ruang_ujian_terpusat', [
+            'jadwal_ujian_cbt_id' => $data['jadwal']->id,
+            'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+            'pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id,
+            'catatan' => 'Koordinator ruang pertama.',
+        ]);
+        $this->assertDatabaseHas('pengawas_ruang_ujian_terpusat', [
+            'jadwal_ujian_cbt_id' => $data['jadwal']->id,
+            'ruang_kegiatan_ujian_cbt_id' => $ruangKedua->id,
+            'pengawas_utama_pegawai_id' => $pengawasKedua->id,
+            'catatan' => 'Koordinator ruang kedua.',
+        ]);
+        $this->assertDatabaseHas('notifikasi_pengguna', [
+            'pengguna_id' => $akunPengawasKedua->id,
+            'judul' => 'Tugas pengawas ujian baru',
+        ]);
+
+        $this->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+            ->assertOk()
+            ->assertSeeText('2 dari 2 siap')
+            ->assertSeeText('Simpan semua penugasan')
+            ->assertSee('data-auto-focus="true"', false);
+
+        $this->put($route, [
+            'jadwal_form_id' => $data['jadwal']->id,
+            'only_room' => $data['ruang']->id,
+            'ruang' => [
+                $data['ruang']->id => ['pengawas_utama_pegawai_id' => $pengawasKedua->id],
+            ],
+        ])->assertSessionHasErrors("ruang.{$data['ruang']->id}.pengawas_utama_pegawai_id");
+        $this->assertDatabaseHas('pengawas_ruang_ujian_terpusat', [
+            'jadwal_ujian_cbt_id' => $data['jadwal']->id,
+            'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+            'pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id,
+        ]);
+    }
+
     public function test_perubahan_jadwal_memperbarui_paket_sebelum_ujian_dan_dikunci_setelah_mulai(): void
     {
         $data = $this->buatFondasi();
