@@ -49,6 +49,10 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
     public function test_paket_terbit_menyinkronkan_peserta_ruang_dan_tampil_di_akun_siswa(): void
     {
         $data = $this->buatFondasi();
+        $data['sesi']->update([
+            'waktu_mulai' => '06:00',
+            'waktu_selesai' => '06:30',
+        ]);
         $soal = SoalCbt::create([
             'tahun_pelajaran_id' => $data['tahun']->id,
             'mata_pelajaran_id' => $data['mapel']->id,
@@ -73,6 +77,9 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertRedirect();
 
         $paket = UjianCbt::query()->where('alur', 'terpusat')->firstOrFail();
+        $this->assertSame('2026-09-15 07:30', $paket->tanggal_mulai?->format('Y-m-d H:i'));
+        $this->assertSame('2026-09-15 09:00', $paket->tanggal_selesai?->format('Y-m-d H:i'));
+        $this->assertSame(90, $paket->durasi_menit);
         $this->assertDatabaseHas('sesi_ujian_cbt', [
             'ujian_cbt_id' => $paket->id,
             'sesi_kegiatan_ujian_cbt_id' => $data['sesi']->id,
@@ -466,6 +473,78 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('Guru Pengawas Ruang → Guru Pengawas Pengganti');
     }
 
+    public function test_perubahan_jadwal_memperbarui_paket_sebelum_ujian_dan_dikunci_setelah_mulai(): void
+    {
+        $data = $this->buatFondasi();
+        $soal = SoalCbt::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'mata_pelajaran_id' => $data['mapel']->id,
+            'tingkat' => 7,
+            'kode' => 'SOAL-SINKRON-JADWAL',
+            'jenis_soal' => 'pilihan_ganda',
+            'tingkat_kesulitan' => 'mudah',
+            'kategori' => 'lots',
+            'pertanyaan' => 'Hasil dari 1 + 1 adalah ....',
+            'opsi' => ['pilihan' => ['A' => '1', 'B' => '2']],
+            'kunci_jawaban' => ['jawaban' => 'B'],
+            'skor_maksimal' => 1,
+            'status' => 'siap',
+            'aktif' => true,
+        ]);
+
+        $this->actingAs($data['admin'])
+            ->put(route('paket-soal-terpusat.update', $data['jadwal']), [
+                'aksi' => 'terbitkan',
+                'soal' => [$soal->id => ['dipilih' => '1']],
+            ])
+            ->assertRedirect();
+
+        $paket = $data['jadwal']->fresh()->ujianCbt;
+        $paketId = $paket->id;
+        $token = $paket->token;
+
+        $this->actingAs($data['admin'])
+            ->put(route('ujian-terpusat.jadwal.update', [$data['kegiatan'], $data['jadwal']]), [
+                'tanggal' => '2026-09-16',
+                'mata_pelajaran_id' => $data['mapel']->id,
+                'waktu_mulai' => '08:00',
+                'waktu_selesai' => '10:00',
+                'keterangan' => 'Jadwal diperbarui sebelum ujian',
+            ])
+            ->assertRedirect();
+
+        $paket->refresh();
+        $sesiOperasional = $paket->sesiUjianCbt()->firstOrFail();
+        $this->assertSame($paketId, $paket->id);
+        $this->assertSame($token, $paket->token);
+        $this->assertSame('2026-09-16 08:00', $paket->tanggal_mulai?->format('Y-m-d H:i'));
+        $this->assertSame('2026-09-16 10:00', $paket->tanggal_selesai?->format('Y-m-d H:i'));
+        $this->assertSame(120, $paket->durasi_menit);
+        $this->assertSame(1, $paket->soalUjianCbt()->count());
+        $this->assertSame('2026-09-16 08:00', $sesiOperasional->waktu_mulai?->format('Y-m-d H:i'));
+        $this->assertSame('2026-09-16 10:00', $sesiOperasional->waktu_selesai?->format('Y-m-d H:i'));
+
+        $peserta = $paket->pesertaUjianCbt()->firstOrFail();
+        $peserta->update([
+            'status' => 'sedang_mengerjakan',
+            'waktu_mulai' => '2026-09-16 08:05:00',
+        ]);
+
+        $this->actingAs($data['admin'])
+            ->from(route('ujian-terpusat.pelaksanaan.index', [$data['kegiatan'], 'tahap' => 7]))
+            ->put(route('ujian-terpusat.jadwal.update', [$data['kegiatan'], $data['jadwal']]), [
+                'tanggal' => '2026-09-16',
+                'mata_pelajaran_id' => $data['mapel']->id,
+                'waktu_mulai' => '08:15',
+                'waktu_selesai' => '10:15',
+            ])
+            ->assertSessionHasErrors('jadwal');
+
+        $paket->refresh();
+        $this->assertSame('2026-09-16 08:00', $paket->tanggal_mulai?->format('Y-m-d H:i'));
+        $this->assertSame('2026-09-16 10:00', $paket->tanggal_selesai?->format('Y-m-d H:i'));
+    }
+
     public function test_penilaian_pgk_mengikuti_kegiatan_dan_dikunci_setelah_mulai(): void
     {
         $data = $this->buatFondasi();
@@ -508,6 +587,104 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         $this->assertSame('parsial', $kegiatan->fresh()->penilaian_pgk);
         $this->get(route('ujian-terpusat.edit', $kegiatan))->assertOk()->assertSee('Pengaturan dikunci');
         $this->actingAs($data['akun_guru'])->get(route('paket-soal-terpusat.show', $data['jadwal']))->assertOk()->assertSee('Parsial - benar dikurangi salah');
+    }
+
+    public function test_pengawas_tidak_dapat_ditugaskan_pada_jadwal_yang_bertumpang_tindih(): void
+    {
+        $data = $this->buatFondasi();
+        $ruangKedua = RuangKegiatanUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+            'kode' => 'R02',
+            'nama' => 'Ruang 2',
+            'lokasi' => 'Lantai 1',
+            'kapasitas' => 20,
+            'urutan' => 2,
+            'aktif' => true,
+        ]);
+        $kelasDelapan = Kelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'nama' => 'VIII.A',
+            'tingkat' => 8,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $siswa = Siswa::create([
+            'nama_lengkap' => 'Siswa Tingkat Delapan',
+            'nis' => '28001',
+            'nisn' => '0130008001',
+            'jenis_kelamin' => 'L',
+            'aktif' => true,
+        ]);
+        AnggotaKelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'kelas_id' => $kelasDelapan->id,
+            'siswa_id' => $siswa->id,
+            'nomor_absen' => 1,
+            'status_keanggotaan' => 'aktif',
+        ]);
+        app(BagiPesertaUjianTerpusat::class)->bagi(
+            $data['kegiatan'],
+            8,
+            $data['sesi']->id,
+            [$kelasDelapan->id],
+            [$ruangKedua->id],
+            $data['admin'],
+        );
+        $jadwalKedua = JadwalUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+            'sesi_kegiatan_ujian_cbt_id' => $data['sesi']->id,
+            'mata_pelajaran_id' => $data['mapel']->id,
+            'tanggal' => '2026-09-15',
+            'waktu_mulai' => '08:30',
+            'waktu_selesai' => '10:00',
+            'label_sesi' => 'Sesi Pagi',
+            'tingkat' => 8,
+            'urutan' => 2,
+            'status' => 'draft',
+        ]);
+        $jadwalKedua->kelas()->sync([$kelasDelapan->id]);
+        $pengawas = Pegawai::create([
+            'nama_lengkap' => 'Guru Pengawas Rangkap',
+            'nip' => '198811112020129999',
+            'jenis_kelamin' => 'P',
+            'jenis_pegawai' => 'Guru',
+            'aktif' => true,
+        ]);
+
+        $this->actingAs($data['admin'])
+            ->put(route('ujian-terpusat.pengawas.update', [
+                $data['kegiatan'],
+                $data['jadwal'],
+                $data['ruang'],
+            ]), ['pengawas_utama_pegawai_id' => $pengawas->id])
+            ->assertRedirect();
+
+        $this->actingAs($data['admin'])
+            ->from(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+            ->put(route('ujian-terpusat.pengawas.update', [
+                $data['kegiatan'],
+                $jadwalKedua,
+                $ruangKedua,
+            ]), ['pengawas_utama_pegawai_id' => $pengawas->id])
+            ->assertSessionHasErrors('pengawas_utama_pegawai_id');
+
+        $jadwalKedua->update([
+            'waktu_mulai' => '09:00',
+            'waktu_selesai' => '10:30',
+        ]);
+        $this->actingAs($data['admin'])
+            ->put(route('ujian-terpusat.pengawas.update', [
+                $data['kegiatan'],
+                $jadwalKedua,
+                $ruangKedua,
+            ]), ['pengawas_utama_pegawai_id' => $pengawas->id])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('pengawas_ruang_ujian_terpusat', [
+            'jadwal_ujian_cbt_id' => $jadwalKedua->id,
+            'ruang_kegiatan_ujian_cbt_id' => $ruangKedua->id,
+            'pengawas_utama_pegawai_id' => $pengawas->id,
+        ]);
     }
 
     public function test_paket_simulasi_memiliki_dua_soal_per_jenis_dan_tidak_masuk_nilai(): void

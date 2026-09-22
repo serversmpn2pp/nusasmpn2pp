@@ -175,6 +175,8 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
             ->post(route('ujian-terpusat.jadwal.store', $kegiatan), [
                 'tanggal' => '2026-12-01',
                 'mata_pelajaran_id' => $mapel->id,
+                'waktu_mulai' => '07:00',
+                'waktu_selesai' => '08:30',
                 'tingkat' => [7, 8],
                 'keterangan' => 'Hari pertama',
             ])
@@ -184,6 +186,9 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         $this->assertCount(2, $jadwal);
         $this->assertSame([7, 8], $jadwal->pluck('tingkat')->all());
         $this->assertSame([$sesi->id, $sesi->id], $jadwal->pluck('sesi_kegiatan_ujian_cbt_id')->all());
+        $this->assertSame(['07:00', '07:00'], $jadwal->pluck('waktu_mulai')->map(fn ($waktu) => substr($waktu, 0, 5))->all());
+        $this->assertSame(['08:30', '08:30'], $jadwal->pluck('waktu_selesai')->map(fn ($waktu) => substr($waktu, 0, 5))->all());
+        $this->assertSame(90, $jadwal[0]->durasiMenit());
         $this->assertSame([1, 2], $jadwal->pluck('urutan')->all());
         $this->assertSame(1, $jadwal[0]->kelas()->count());
         $this->assertSame(1, $jadwal[1]->kelas()->count());
@@ -194,6 +199,199 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
             ->assertSee('Bahasa Indonesia')
             ->assertSee('Ruang 1')
             ->assertSee('Ruang 3');
+    }
+
+    public function test_sesi_tidak_memerlukan_jam_dan_jam_jadwal_tidak_mengikuti_sesi_lama(): void
+    {
+        [$admin, , $kegiatan, $sesi] = $this->buatFondasi();
+
+        $this->actingAs($admin)
+            ->post(route('ujian-terpusat.sesi.store', $kegiatan), [
+                'nama' => 'Sesi Kedua',
+                'aktif' => true,
+            ])
+            ->assertRedirect();
+
+        $sesiKedua = SesiKegiatanUjianCbt::query()
+            ->where('kegiatan_ujian_cbt_id', $kegiatan->id)
+            ->where('nama', 'Sesi Kedua')
+            ->firstOrFail();
+        $this->assertNull($sesiKedua->waktu_mulai);
+        $this->assertNull($sesiKedua->waktu_selesai);
+
+        $this->actingAs($admin)
+            ->put(route('ujian-terpusat.sesi.update', [$kegiatan, $sesi]), [
+                'nama' => 'Gelombang Pertama',
+                'aktif' => true,
+            ])
+            ->assertRedirect();
+
+        $sesi->refresh();
+        $this->assertSame('Gelombang Pertama', $sesi->nama);
+        $this->assertSame('07:30', substr($sesi->waktu_mulai, 0, 5));
+        $this->assertSame('09:30', substr($sesi->waktu_selesai, 0, 5));
+    }
+
+    public function test_tingkat_yang_sama_dapat_memiliki_beberapa_mapel_pada_hari_yang_sama_tanpa_bentrok(): void
+    {
+        [$admin, $tahun, $kegiatan, $sesi, $ruang] = $this->buatFondasi();
+        $kelas8 = $this->buatKelas($tahun, 'VIII.A', 8);
+        $kelas9 = $this->buatKelas($tahun, 'IX.A', 9);
+        $this->buatSiswa($tahun, $kelas8, ['Siswa Delapan'], 7600);
+        $this->buatSiswa($tahun, $kelas9, ['Siswa Sembilan'], 7700);
+        $bahasaIndonesia = MataPelajaran::create([
+            'kode' => 'BIND-HARIAN',
+            'nama' => 'Bahasa Indonesia',
+            'kkm' => 78,
+            'aktif' => true,
+        ]);
+        $pendidikanAgama = MataPelajaran::create([
+            'kode' => 'PAI-HARIAN',
+            'nama' => 'Pendidikan Agama Islam',
+            'kkm' => 78,
+            'aktif' => true,
+        ]);
+
+        foreach ([[8, $kelas8, $ruang[0]], [9, $kelas9, $ruang[2]]] as [$tingkat, $kelas, $ruangTingkat]) {
+            $this->actingAs($admin)->post(route('ujian-terpusat.peserta.atur', $kegiatan), [
+                'tingkat' => $tingkat,
+                'sesi_kegiatan_ujian_cbt_id' => $sesi->id,
+                'kelas' => [$kelas->id],
+                'ruang' => [$ruangTingkat->id],
+            ]);
+            $kelompok = KelompokPesertaKegiatanUjianCbt::query()
+                ->where('kegiatan_ujian_cbt_id', $kegiatan->id)
+                ->where('tingkat', $tingkat)
+                ->firstOrFail();
+            $this->actingAs($admin)->post(route('ujian-terpusat.peserta.bangkitkan', [$kegiatan, $kelompok]));
+        }
+
+        $this->actingAs($admin)
+            ->post(route('ujian-terpusat.jadwal.store', $kegiatan), [
+                'tanggal' => '2026-12-01',
+                'mata_pelajaran_id' => $bahasaIndonesia->id,
+                'waktu_mulai' => '07:00',
+                'waktu_selesai' => '08:00',
+                'tingkat' => [8, 9],
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->post(route('ujian-terpusat.jadwal.store', $kegiatan), [
+                'tanggal' => '2026-12-01',
+                'mata_pelajaran_id' => $pendidikanAgama->id,
+                'waktu_mulai' => '08:15',
+                'waktu_selesai' => '09:15',
+                'tingkat' => [8, 9],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('jadwal_ujian_cbt', 4);
+        foreach ([8, 9] as $tingkat) {
+            $this->assertDatabaseHas('jadwal_ujian_cbt', [
+                'kegiatan_ujian_cbt_id' => $kegiatan->id,
+                'mata_pelajaran_id' => $bahasaIndonesia->id,
+                'tingkat' => $tingkat,
+                'waktu_mulai' => '07:00',
+                'waktu_selesai' => '08:00',
+            ]);
+            $this->assertDatabaseHas('jadwal_ujian_cbt', [
+                'kegiatan_ujian_cbt_id' => $kegiatan->id,
+                'mata_pelajaran_id' => $pendidikanAgama->id,
+                'tingkat' => $tingkat,
+                'waktu_mulai' => '08:15',
+                'waktu_selesai' => '09:15',
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->from(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]))
+            ->post(route('ujian-terpusat.jadwal.store', $kegiatan), [
+                'tanggal' => '2026-12-01',
+                'mata_pelajaran_id' => $bahasaIndonesia->id,
+                'waktu_mulai' => '08:30',
+                'waktu_selesai' => '09:30',
+                'tingkat' => [8, 9],
+            ])
+            ->assertSessionHasErrors('waktu_mulai');
+
+        $this->assertDatabaseCount('jadwal_ujian_cbt', 4);
+    }
+
+    public function test_ruang_dapat_dipakai_sesi_berikutnya_setelah_jadwal_sebelumnya_selesai(): void
+    {
+        [$admin, $tahun, $kegiatan, $sesiPertama, $ruang] = $this->buatFondasi();
+        $sesiKedua = SesiKegiatanUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $kegiatan->id,
+            'kode' => 'S02',
+            'nama' => 'Sesi Kedua',
+            'urutan' => 2,
+            'aktif' => true,
+        ]);
+        $mapel = MataPelajaran::create([
+            'kode' => 'MTK-JUMAT',
+            'nama' => 'Matematika Jumat',
+            'kkm' => 78,
+            'aktif' => true,
+        ]);
+
+        foreach ([7, 8, 9] as $tingkat) {
+            $kelas = $this->buatKelas($tahun, "Kelas {$tingkat}", $tingkat);
+            $this->buatSiswa($tahun, $kelas, ["Siswa {$tingkat}"], 8000 + $tingkat);
+            $sesi = $tingkat === 7 ? $sesiKedua : $sesiPertama;
+            $ruangTingkat = $tingkat === 9 ? $ruang[1] : $ruang[0];
+
+            $this->actingAs($admin)->post(route('ujian-terpusat.peserta.atur', $kegiatan), [
+                'tingkat' => $tingkat,
+                'sesi_kegiatan_ujian_cbt_id' => $sesi->id,
+                'kelas' => [$kelas->id],
+                'ruang' => [$ruangTingkat->id],
+            ]);
+            $kelompok = KelompokPesertaKegiatanUjianCbt::query()
+                ->where('kegiatan_ujian_cbt_id', $kegiatan->id)
+                ->where('tingkat', $tingkat)
+                ->firstOrFail();
+            $this->actingAs($admin)->post(route('ujian-terpusat.peserta.bangkitkan', [$kegiatan, $kelompok]));
+        }
+
+        $this->actingAs($admin)
+            ->post(route('ujian-terpusat.jadwal.store', $kegiatan), [
+                'tanggal' => '2026-12-04',
+                'mata_pelajaran_id' => $mapel->id,
+                'waktu_mulai' => '07:00',
+                'waktu_selesai' => '08:30',
+                'tingkat' => [8, 9],
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->from(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]))
+            ->post(route('ujian-terpusat.jadwal.store', $kegiatan), [
+                'tanggal' => '2026-12-04',
+                'mata_pelajaran_id' => $mapel->id,
+                'waktu_mulai' => '08:00',
+                'waktu_selesai' => '09:30',
+                'tingkat' => [7],
+            ])
+            ->assertSessionHasErrors('waktu_mulai');
+
+        $this->actingAs($admin)
+            ->post(route('ujian-terpusat.jadwal.store', $kegiatan), [
+                'tanggal' => '2026-12-04',
+                'mata_pelajaran_id' => $mapel->id,
+                'waktu_mulai' => '08:45',
+                'waktu_selesai' => '10:15',
+                'tingkat' => [7],
+            ])
+            ->assertRedirect();
+
+        $jadwal = JadwalUjianCbt::query()->orderBy('tingkat')->get();
+        $this->assertCount(3, $jadwal);
+        $this->assertSame('08:45', substr($jadwal->firstWhere('tingkat', 7)->waktu_mulai, 0, 5));
+        $this->assertSame('10:15', substr($jadwal->firstWhere('tingkat', 7)->waktu_selesai, 0, 5));
+        $this->assertSame(90, $jadwal->firstWhere('tingkat', 7)->durasiMenit());
+        $this->assertSame('07:00', substr($jadwal->firstWhere('tingkat', 8)->waktu_mulai, 0, 5));
+        $this->assertSame('07:00', substr($jadwal->firstWhere('tingkat', 9)->waktu_mulai, 0, 5));
     }
 
     private function buatFondasi(): array

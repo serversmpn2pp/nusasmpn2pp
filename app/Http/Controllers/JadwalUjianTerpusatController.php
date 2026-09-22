@@ -19,6 +19,8 @@ class JadwalUjianTerpusatController extends Controller
         $data = $request->validate([
             'tanggal' => ['required', 'date'],
             'mata_pelajaran_id' => ['required', 'integer', 'exists:mata_pelajaran,id'],
+            'waktu_mulai' => ['required', 'date_format:H:i'],
+            'waktu_selesai' => ['required', 'date_format:H:i', 'after:waktu_mulai'],
             'tingkat' => ['required', 'array', 'min:1'],
             'tingkat.*' => ['integer', Rule::in([7, 8, 9])],
             'keterangan' => ['nullable', 'string', 'max:500'],
@@ -40,6 +42,8 @@ class JadwalUjianTerpusatController extends Controller
         $data = $request->validate([
             'tanggal' => ['required', 'date'],
             'mata_pelajaran_id' => ['required', 'integer', 'exists:mata_pelajaran,id'],
+            'waktu_mulai' => ['required', 'date_format:H:i'],
+            'waktu_selesai' => ['required', 'date_format:H:i', 'after:waktu_mulai'],
             'keterangan' => ['nullable', 'string', 'max:500'],
         ]);
         $pengelola->ubah($kegiatanUjianCbt, $jadwalUjianCbt, $data, $request->user());

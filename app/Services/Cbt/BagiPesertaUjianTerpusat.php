@@ -180,8 +180,6 @@ class BagiPesertaUjianTerpusat
                 ->each(function (JadwalUjianCbt $jadwal) use ($sesi, $kelas) {
                     $jadwal->update([
                         'sesi_kegiatan_ujian_cbt_id' => $sesi->id,
-                        'waktu_mulai' => $sesi->waktu_mulai,
-                        'waktu_selesai' => $sesi->waktu_selesai,
                         'label_sesi' => $sesi->nama,
                     ]);
                     $jadwal->kelas()->sync($kelas->modelKeys());

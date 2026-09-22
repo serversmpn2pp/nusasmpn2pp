@@ -79,8 +79,6 @@ class PersiapanUjianTerpusatApiTest extends TestCase
         $this->withToken($token)
             ->postJson(route('api.v1.ujian-terpusat.sesi.store', $kegiatan), [
                 'nama' => 'Sesi Pagi',
-                'waktu_mulai' => '07:30',
-                'waktu_selesai' => '09:30',
                 'aktif' => true,
             ])
             ->assertCreated();
@@ -110,7 +108,7 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             ->assertJsonPath('data.panitia.0.nama', 'Teknisi Ujian Mobile')
             ->assertJsonPath('data.panitia.0.label_jabatan', 'Teknisi')
             ->assertJsonPath('data.sesi.0.kode', 'S01')
-            ->assertJsonPath('data.sesi.0.label_waktu', '07:30 - 09:30')
+            ->assertJsonPath('data.sesi.0.label_waktu', null)
             ->assertJsonPath('data.ruang.0.kode', 'R01')
             ->assertJsonPath('data.ruang.0.kapasitas', 20)
             ->assertJsonPath('data.referensi.pegawai.0.nama', 'Teknisi Ujian Mobile');
@@ -152,19 +150,7 @@ class PersiapanUjianTerpusatApiTest extends TestCase
 
         $this->withToken($token)
             ->patchJson(route('api.v1.ujian-terpusat.sesi.update', [$kegiatan, $sesi]), [
-                'nama' => 'Sesi Tidak Valid',
-                'waktu_mulai' => '09:00',
-                'waktu_selesai' => '08:00',
-                'aktif' => true,
-            ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('waktu_selesai');
-
-        $this->withToken($token)
-            ->patchJson(route('api.v1.ujian-terpusat.sesi.update', [$kegiatan, $sesi]), [
                 'nama' => 'Sesi Pertama',
-                'waktu_mulai' => '07:30',
-                'waktu_selesai' => '09:30',
                 'aktif' => true,
                 'keterangan' => 'Pagi',
             ])
@@ -172,8 +158,10 @@ class PersiapanUjianTerpusatApiTest extends TestCase
         $this->assertDatabaseHas('sesi_kegiatan_ujian_cbt', [
             'id' => $sesi->id,
             'nama' => 'Sesi Pertama',
-            'waktu_mulai' => '07:30',
         ]);
+        $sesi->refresh();
+        $this->assertSame('07:00', substr($sesi->waktu_mulai, 0, 5));
+        $this->assertSame('08:00', substr($sesi->waktu_selesai, 0, 5));
 
         $this->withToken($token)
             ->patchJson(route('api.v1.ujian-terpusat.ruang.update', [$kegiatan, $ruang]), [
@@ -322,6 +310,8 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             ->postJson(route('api.v1.ujian-terpusat.jadwal.store', $kegiatan), [
                 'tanggal' => '2027-12-01',
                 'mata_pelajaran_id' => $mataPelajaran->id,
+                'waktu_mulai' => '07:15',
+                'waktu_selesai' => '08:45',
                 'tingkat' => [7],
                 'keterangan' => 'Hari pertama native',
             ])
@@ -332,10 +322,12 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             ->postJson(route('api.v1.ujian-terpusat.jadwal.store', $kegiatan), [
                 'tanggal' => '2027-12-01',
                 'mata_pelajaran_id' => $mataPelajaran->id,
+                'waktu_mulai' => '07:15',
+                'waktu_selesai' => '08:45',
                 'tingkat' => [7],
             ])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('tingkat');
+            ->assertJsonValidationErrors('waktu_mulai');
 
         $this->withToken($token)
             ->getJson(route('api.v1.ujian-terpusat.show', $kegiatan))
@@ -343,6 +335,8 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             ->assertJsonPath('data.tahap_jadwal.items.0.id', $jadwalId)
             ->assertJsonPath('data.tahap_jadwal.items.0.mata_pelajaran', 'Matematika Native')
             ->assertJsonPath('data.tahap_jadwal.items.0.nama_sesi', 'Sesi Pagi')
+            ->assertJsonPath('data.tahap_jadwal.items.0.label_waktu', '07:15 - 08:45')
+            ->assertJsonPath('data.tahap_jadwal.items.0.durasi_menit', 90)
             ->assertJsonPath('data.tahap_jadwal.items.0.jumlah_peserta', 3)
             ->assertJsonPath('data.tahap_jadwal.items.0.dapat_dihapus', true)
             ->assertJsonPath('data.tahap_jadwal.mata_pelajaran.0.id', $mataPelajaran->id)
@@ -353,6 +347,8 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             ->patchJson(route('api.v1.ujian-terpusat.jadwal.update', [$kegiatan, $jadwal]), [
                 'tanggal' => '2028-01-01',
                 'mata_pelajaran_id' => $mataPelajaran->id,
+                'waktu_mulai' => '08:00',
+                'waktu_selesai' => '09:30',
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('tanggal');
@@ -361,6 +357,8 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             ->patchJson(route('api.v1.ujian-terpusat.jadwal.update', [$kegiatan, $jadwal]), [
                 'tanggal' => '2027-12-02',
                 'mata_pelajaran_id' => $mataPelajaran->id,
+                'waktu_mulai' => '08:00',
+                'waktu_selesai' => '09:30',
                 'keterangan' => 'Jadwal direvisi dari Android',
             ])
             ->assertOk();
@@ -369,6 +367,9 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             'tanggal' => '2027-12-02 00:00:00',
             'keterangan' => 'Jadwal direvisi dari Android',
         ]);
+        $jadwal->refresh();
+        $this->assertSame('08:00', substr($jadwal->waktu_mulai, 0, 5));
+        $this->assertSame('09:30', substr($jadwal->waktu_selesai, 0, 5));
 
         $this->withToken($token)
             ->deleteJson(route('api.v1.ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal]))

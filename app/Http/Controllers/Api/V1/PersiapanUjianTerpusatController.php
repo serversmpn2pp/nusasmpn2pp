@@ -13,7 +13,6 @@ use App\Services\Mobile\PersiapanUjianTerpusatMobileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class PersiapanUjianTerpusatController extends Controller
 {
@@ -296,6 +295,8 @@ class PersiapanUjianTerpusatController extends Controller
         return [
             'tanggal' => ['required', 'date'],
             'mata_pelajaran_id' => ['required', 'integer', 'exists:mata_pelajaran,id'],
+            'waktu_mulai' => ['required', 'date_format:H:i'],
+            'waktu_selesai' => ['required', 'date_format:H:i', 'after:waktu_mulai'],
             'tingkat' => $beberapaTingkat ? ['required', 'array', 'min:1'] : ['prohibited'],
             'tingkat.*' => $beberapaTingkat ? ['integer', Rule::in([7, 8, 9])] : ['prohibited'],
             'keterangan' => ['nullable', 'string', 'max:500'],
@@ -306,14 +307,9 @@ class PersiapanUjianTerpusatController extends Controller
     {
         $data = $request->validate([
             'nama' => ['required', 'string', 'max:100'],
-            'waktu_mulai' => ['required', 'date_format:H:i'],
-            'waktu_selesai' => ['required', 'date_format:H:i'],
             'aktif' => ['required', 'boolean'],
             'keterangan' => ['nullable', 'string', 'max:500'],
         ]);
-        if ($data['waktu_selesai'] <= $data['waktu_mulai']) {
-            throw ValidationException::withMessages(['waktu_selesai' => 'Waktu selesai harus setelah waktu mulai.']);
-        }
 
         return $data;
     }

@@ -208,7 +208,7 @@ class PaketSoalMobileService
             'tingkat' => (int) $jadwal->tingkat,
             'kelas' => $jadwal->kelas->pluck('nama')->values(),
             'tanggal' => $jadwal->tanggal?->toDateString(),
-            'waktu' => $jadwal->sesiKegiatanUjianCbt?->labelWaktu() ?: $jadwal->labelWaktu(),
+            'waktu' => $jadwal->labelWaktu(),
             'sesi' => $jadwal->sesiKegiatanUjianCbt?->nama ?? $jadwal->label_sesi,
             'status' => $kodeStatus,
             'label_status' => match ($kodeStatus) {

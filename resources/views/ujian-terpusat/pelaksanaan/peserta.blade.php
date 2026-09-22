@@ -60,7 +60,7 @@
     </div>
 
     <section class="panel placement-intro">
-        <div><p class="eyebrow" style="color:var(--accent);">{{ $kegiatan->jenisUjianCbt?->nama ?: 'Ujian Terpusat' }}</p><h2>{{ $kegiatan->nama }}</h2><p>{{ $kegiatan->tahunPelajaran?->nama }} · {{ $kelompok->sesiKegiatanUjianCbt?->nama }} {{ $kelompok->sesiKegiatanUjianCbt?->labelWaktu() }}</p></div>
+        <div><p class="eyebrow" style="color:var(--accent);">{{ $kegiatan->jenisUjianCbt?->nama ?: 'Ujian Terpusat' }}</p><h2>{{ $kegiatan->nama }}</h2><p>{{ $kegiatan->tahunPelajaran?->nama }} · {{ $kelompok->sesiKegiatanUjianCbt?->nama }}</p></div>
         <div class="placement-intro-level">T{{ $kelompok->tingkat }}</div>
     </section>
 

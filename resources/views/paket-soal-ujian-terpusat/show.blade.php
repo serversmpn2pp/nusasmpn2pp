@@ -19,7 +19,7 @@
         .package-context .quick-facts div { border-color:rgba(255,255,255,.18); background:rgba(255,255,255,.07); }
         .package-context .quick-facts dt { color:rgba(255,255,255,.7); }
         .package-context .quick-facts dd { color:#fff; }
-        .package-auto { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
+        .package-auto { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
         .package-auto-item { padding:13px 14px; border:1px solid var(--line); border-radius:7px; background:#fff; }
         .package-auto-item strong, .package-auto-item span { display:block; }
         .package-auto-item strong { color:var(--primary-dark); font-size:.78rem; }
@@ -129,9 +129,10 @@
         <div class="package-context-main">
             <p class="eyebrow" style="color:var(--accent);">{{ $jadwal->kegiatanUjianCbt?->nama }}</p>
             <h2>{{ $jadwal->mataPelajaran?->nama }} · Tingkat {{ $jadwal->tingkat }}</h2>
-            <p>{{ $jadwal->tanggal?->locale('id')->translatedFormat('l, d F Y') }} · {{ $jadwal->sesiKegiatanUjianCbt?->nama }} {{ $jadwal->sesiKegiatanUjianCbt?->labelWaktu() }}</p>
+            <p>{{ $jadwal->tanggal?->locale('id')->translatedFormat('l, d F Y') }} · {{ $jadwal->sesiKegiatanUjianCbt?->nama }} · {{ $jadwal->labelWaktu() }}</p>
             <dl class="quick-facts">
                 <div><dt>Kelas</dt><dd>{{ $jadwal->kelas->pluck('nama')->join(', ') }}</dd></div>
+                <div><dt>Durasi ujian</dt><dd>{{ $jadwal->durasiMenit() }} menit</dd></div>
                 <div><dt>Penilaian PGK (ditetapkan admin)</dt><dd>{{ $jadwal->kegiatanUjianCbt?->labelPenilaianPgk() }}</dd></div>
                 <div><dt>Tahun pelajaran</dt><dd>{{ $jadwal->kegiatanUjianCbt?->tahunPelajaran?->nama }}</dd></div>
             </dl>
@@ -149,7 +150,8 @@
     <div class="package-auto" aria-label="Pengaturan otomatis paket">
         <div class="package-auto-item"><strong>Jumlah soal</strong><span>Mengikuti jumlah soal yang dicentang.</span></div>
         <div class="package-auto-item"><strong>Skor soal</strong><span>Mudah 1 · Sedang 2 · Sulit 3 · Sangat Sulit 4.</span></div>
-        <div class="package-auto-item"><strong>Durasi & peserta</strong><span>Mengikuti sesi serta kelas pada jadwal.</span></div>
+        <div class="package-auto-item"><strong>Jadwal & durasi</strong><span>Mengikuti tanggal dan jam pada Tahap 7.</span></div>
+        <div class="package-auto-item"><strong>Peserta</strong><span>Mengikuti pembagian kelas dan ruang pada Tahap 6.</span></div>
         <div class="package-auto-item"><strong>Pengacakan</strong><span>Soal: {{ ($paket?->acak_soal ?? true) ? 'diacak' : 'tetap' }} · Pilihan: {{ ($paket?->acak_jawaban ?? true) ? 'diacak' : 'tetap' }}.</span></div>
         <div class="package-auto-item"><strong>Komponen nilai</strong><span>Dibuat otomatis saat paket diterbitkan.</span></div>
     </div>

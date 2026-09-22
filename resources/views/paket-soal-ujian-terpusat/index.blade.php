@@ -129,7 +129,7 @@
                     $paketSiap = $paket && in_array($paket->status, ['terjadwal', 'berlangsung', 'selesai'], true);
                 @endphp
                 <div class="package-schedule">
-                    <div class="package-schedule-date"><strong>{{ $jadwal->tanggal?->locale('id')->translatedFormat('D, d M Y') }}</strong><span>{{ $jadwal->sesiKegiatanUjianCbt?->labelWaktu() ?: $jadwal->labelWaktu() }}</span></div>
+                    <div class="package-schedule-date"><strong>{{ $jadwal->tanggal?->locale('id')->translatedFormat('D, d M Y') }}</strong><span>{{ $jadwal->labelWaktu() }} · {{ $jadwal->durasiMenit() }} menit</span></div>
                     <span class="package-level">T{{ $jadwal->tingkat }}</span>
                     <div class="package-schedule-main"><strong>{{ $jadwal->mataPelajaran?->nama }}</strong><span>{{ $jadwal->sesiKegiatanUjianCbt?->nama }}</span></div>
                     <div class="package-schedule-class"><strong>{{ $jadwal->kelas->pluck('nama')->join(', ') }}</strong><span>{{ $jadwal->kelas->count() }} kelas peserta</span></div>

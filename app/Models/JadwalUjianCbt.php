@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class JadwalUjianCbt extends Model
 {
@@ -91,5 +92,14 @@ class JadwalUjianCbt extends Model
     public function labelWaktu(): string
     {
         return substr((string) $this->waktu_mulai, 0, 5).' - '.substr((string) $this->waktu_selesai, 0, 5);
+    }
+
+    public function durasiMenit(): int
+    {
+        if (! $this->waktu_mulai || ! $this->waktu_selesai) {
+            return 0;
+        }
+
+        return (int) Carbon::parse($this->waktu_mulai)->diffInMinutes(Carbon::parse($this->waktu_selesai));
     }
 }

@@ -33,8 +33,6 @@ class SesiKegiatanUjianCbtController extends Controller
         DB::transaction(function () use ($sesiKegiatanUjianCbt, $data) {
             $sesiKegiatanUjianCbt->update($data);
             $sesiKegiatanUjianCbt->jadwalUjianCbt()->update([
-                'waktu_mulai' => $data['waktu_mulai'],
-                'waktu_selesai' => $data['waktu_selesai'],
                 'label_sesi' => $data['nama'],
             ]);
         });
@@ -60,15 +58,9 @@ class SesiKegiatanUjianCbtController extends Controller
     {
         $data = $request->validate([
             'nama' => ['required', 'string', 'max:100'],
-            'waktu_mulai' => ['required', 'date_format:H:i'],
-            'waktu_selesai' => ['required', 'date_format:H:i'],
             'aktif' => ['nullable', 'boolean'],
             'keterangan' => ['nullable', 'string', 'max:500'],
         ]);
-
-        if ($data['waktu_selesai'] <= $data['waktu_mulai']) {
-            throw ValidationException::withMessages(['waktu_selesai' => 'Waktu selesai harus setelah waktu mulai.']);
-        }
 
         return $data;
     }
@@ -77,8 +69,6 @@ class SesiKegiatanUjianCbtController extends Controller
     {
         return [
             'nama' => trim($data['nama']),
-            'waktu_mulai' => $data['waktu_mulai'],
-            'waktu_selesai' => $data['waktu_selesai'],
             'aktif' => filter_var($data['aktif'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'keterangan' => filled($data['keterangan'] ?? null) ? trim($data['keterangan']) : null,
         ];

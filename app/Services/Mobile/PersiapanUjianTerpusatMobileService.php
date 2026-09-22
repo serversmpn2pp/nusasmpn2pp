@@ -175,9 +175,9 @@ class PersiapanUjianTerpusatMobileService
                 'id' => (int) $item->id,
                 'kode' => $item->kode,
                 'nama' => $item->nama,
-                'waktu_mulai' => substr((string) $item->waktu_mulai, 0, 5),
-                'waktu_selesai' => substr((string) $item->waktu_selesai, 0, 5),
-                'label_waktu' => $item->labelWaktu(),
+                'waktu_mulai' => $item->waktu_mulai ? substr((string) $item->waktu_mulai, 0, 5) : null,
+                'waktu_selesai' => $item->waktu_selesai ? substr((string) $item->waktu_selesai, 0, 5) : null,
+                'label_waktu' => null,
                 'aktif' => (bool) $item->aktif,
                 'keterangan' => $item->keterangan,
                 'dapat_dihapus' => (int) $item->kelompok_peserta_kegiatan_ujian_cbt_count === 0
@@ -212,7 +212,7 @@ class PersiapanUjianTerpusatMobileService
                             'id' => (int) $kelompok->id,
                             'sesi_id' => (int) $kelompok->sesi_kegiatan_ujian_cbt_id,
                             'nama_sesi' => $kelompok->sesiKegiatanUjianCbt?->nama ?? '-',
-                            'label_waktu' => $kelompok->sesiKegiatanUjianCbt?->labelWaktu() ?? '-',
+                            'label_waktu' => null,
                             'kelas_id' => $kelompok->kelas->modelKeys(),
                             'ruang_id' => $kelompok->ruangKegiatanUjianCbt->modelKeys(),
                             'jumlah_peserta' => (int) $kelompok->jumlah_peserta,
@@ -243,7 +243,10 @@ class PersiapanUjianTerpusatMobileService
                         'mata_pelajaran' => $jadwal->mataPelajaran?->nama ?? '-',
                         'tingkat' => (int) $jadwal->tingkat,
                         'nama_sesi' => $jadwal->sesiKegiatanUjianCbt?->nama ?? $jadwal->label_sesi,
-                        'label_waktu' => $jadwal->sesiKegiatanUjianCbt?->labelWaktu() ?? $jadwal->labelWaktu(),
+                        'waktu_mulai' => substr((string) $jadwal->waktu_mulai, 0, 5),
+                        'waktu_selesai' => substr((string) $jadwal->waktu_selesai, 0, 5),
+                        'durasi_menit' => $jadwal->durasiMenit(),
+                        'label_waktu' => $jadwal->labelWaktu(),
                         'kelas' => $jadwal->kelas->pluck('nama')->values(),
                         'ruang' => $kelompok?->ruangKegiatanUjianCbt->pluck('nama')->values() ?? [],
                         'jumlah_peserta' => (int) ($kelompok?->jumlah_peserta ?? 0),
@@ -366,7 +369,7 @@ class PersiapanUjianTerpusatMobileService
                 'id' => (int) $kelompok->id,
                 'tingkat' => (int) $kelompok->tingkat,
                 'nama_sesi' => $kelompok->sesiKegiatanUjianCbt?->nama ?? '-',
-                'label_waktu' => $kelompok->sesiKegiatanUjianCbt?->labelWaktu() ?? '-',
+                'label_waktu' => null,
                 'jumlah_kelas' => $kelompok->kelas->count(),
                 'nama_kelas' => $kelompok->kelas->pluck('nama')->values(),
                 'jumlah_peserta' => (int) $kelompok->jumlah_peserta,
@@ -475,8 +478,6 @@ class PersiapanUjianTerpusatMobileService
         DB::transaction(function () use ($sesi, $rapi) {
             $sesi->update($rapi);
             $sesi->jadwalUjianCbt()->update([
-                'waktu_mulai' => $rapi['waktu_mulai'],
-                'waktu_selesai' => $rapi['waktu_selesai'],
                 'label_sesi' => $rapi['nama'],
             ]);
         });
@@ -628,8 +629,6 @@ class PersiapanUjianTerpusatMobileService
     {
         return [
             'nama' => trim($data['nama']),
-            'waktu_mulai' => $data['waktu_mulai'],
-            'waktu_selesai' => $data['waktu_selesai'],
             'aktif' => (bool) $data['aktif'],
             'keterangan' => filled($data['keterangan'] ?? null) ? trim($data['keterangan']) : null,
         ];

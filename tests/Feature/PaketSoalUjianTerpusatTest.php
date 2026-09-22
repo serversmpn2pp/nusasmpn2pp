@@ -43,6 +43,7 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ->assertOk()
             ->assertSee($data['kegiatan']->jenisUjianCbt->nama)
             ->assertSee($data['kegiatan']->nama)
+            ->assertSeeText('120 menit')
             ->assertSee('0 dari 1 paket siap');
 
         $this->actingAs($data['admin'])
@@ -50,6 +51,9 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ->assertOk()
             ->assertSee('Susun paket soal')
             ->assertSee('Informasi lainnya sudah diambil dari jadwal')
+            ->assertSeeText('Durasi ujian')
+            ->assertSeeText('Jadwal & durasi')
+            ->assertSeeText('Mengikuti tanggal dan jam pada Tahap 7.')
             ->assertSee('Pengacakan untuk siswa')
             ->assertSee('Skor soal')
             ->assertSee('name="acak_soal"', false)

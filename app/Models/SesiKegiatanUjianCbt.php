@@ -43,6 +43,10 @@ class SesiKegiatanUjianCbt extends Model
 
     public function labelWaktu(): string
     {
+        if (! $this->waktu_mulai || ! $this->waktu_selesai) {
+            return 'Waktu mengikuti jadwal';
+        }
+
         return substr((string) $this->waktu_mulai, 0, 5).' - '.substr((string) $this->waktu_selesai, 0, 5);
     }
 }

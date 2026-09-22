@@ -476,6 +476,15 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             }
         }
 
+        $this->pastikanPengawasTidakBentrok(
+            $jadwalUjianCbt,
+            $ruangKegiatanUjianCbt,
+            [
+                $nilai['pengawas_utama_pegawai_id'],
+                $nilai['pengawas_pendamping_pegawai_id'],
+            ],
+        );
+
         if (collect($nilai)->filter()->isEmpty()) {
             PengawasRuangUjianTerpusat::query()
                 ->where('jadwal_ujian_cbt_id', $jadwalUjianCbt->id)
@@ -582,6 +591,13 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                 ]);
             }
 
+            $this->pastikanPengawasTidakBentrok(
+                $jadwalUjianCbt,
+                $ruangKegiatanUjianCbt,
+                [$pegawaiBaruId],
+                'pegawai_pengganti_id',
+            );
+
             $pengawasLama = Pegawai::query()->findOrFail($pegawaiLamaId);
             $pengawasBaru = Pegawai::query()->findOrFail($pegawaiBaruId);
 
@@ -660,5 +676,49 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             ->exists());
 
         return $token;
+    }
+
+    private function pastikanPengawasTidakBentrok(
+        JadwalUjianCbt $jadwal,
+        RuangKegiatanUjianCbt $ruang,
+        array $pegawaiIds,
+        string $kunciValidasi = 'pengawas_utama_pegawai_id',
+    ): void {
+        $pegawaiIds = collect($pegawaiIds)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($pegawaiIds->isEmpty()) {
+            return;
+        }
+
+        $bentrok = PengawasRuangUjianTerpusat::query()
+            ->where(function ($query) use ($jadwal, $ruang) {
+                $query->where('jadwal_ujian_cbt_id', '!=', $jadwal->id)
+                    ->orWhere('ruang_kegiatan_ujian_cbt_id', '!=', $ruang->id);
+            })
+            ->where(function ($query) use ($pegawaiIds) {
+                $query->whereIn('pengawas_utama_pegawai_id', $pegawaiIds)
+                    ->orWhereIn('pengawas_pendamping_pegawai_id', $pegawaiIds);
+            })
+            ->whereHas('jadwalUjianCbt', fn ($query) => $query
+                ->whereDate('tanggal', $jadwal->tanggal)
+                ->where('waktu_mulai', '<', $jadwal->waktu_selesai)
+                ->where('waktu_selesai', '>', $jadwal->waktu_mulai))
+            ->with(['jadwalUjianCbt.mataPelajaran', 'ruangKegiatanUjianCbt'])
+            ->first();
+
+        if (! $bentrok) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $kunciValidasi => 'Pengawas sudah bertugas pada '
+                .($bentrok->jadwalUjianCbt?->mataPelajaran?->nama ?: 'mata pelajaran lain')
+                .' di '.($bentrok->ruangKegiatanUjianCbt?->nama ?: 'ruang lain')
+                .' pukul '.($bentrok->jadwalUjianCbt?->labelWaktu() ?: '-').'.',
+        ]);
     }
 }

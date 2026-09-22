@@ -45,7 +45,7 @@
         .distribution-summary span { padding: 7px 9px; border-radius: 6px; background: var(--primary-soft); color: var(--primary-dark); font-size: .74rem; font-weight: 800; }
         .distribution-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
         .schedule-builder { padding:18px 0; border-bottom:1px solid var(--line); }
-        .schedule-fields { display:grid; grid-template-columns:180px minmax(240px,1fr) minmax(220px,.9fr); gap:12px; align-items:end; }
+        .schedule-fields { display:grid; grid-template-columns:180px minmax(220px,1fr) 135px 135px minmax(190px,.8fr); gap:12px; align-items:end; }
         .schedule-level-section { margin-top:16px; padding-top:15px; border-top:1px solid var(--line); }
         .schedule-level-head { display:flex; justify-content:space-between; gap:14px; align-items:end; margin-bottom:10px; }
         .schedule-level-head strong,.schedule-level-head span { display:block; }
@@ -68,7 +68,7 @@
         .schedule-level { display: inline-grid; width: 44px; height: 38px; place-items: center; border-radius: 6px; background: var(--accent-soft); color: var(--accent-text); font-weight: 900; }
         .schedule-actions { display: flex; gap: 7px; }
         .schedule-edit { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid var(--line); }
-        .schedule-edit form { display: grid; grid-template-columns: 170px minmax(220px,1fr) minmax(180px,1fr) auto; gap: 12px; align-items: end; }
+        .schedule-edit form { display: grid; grid-template-columns: 160px minmax(200px,1fr) 125px 125px minmax(180px,.8fr) auto; gap: 12px; align-items: end; }
         .inline-empty { padding: 26px 14px; text-align: center; color: var(--muted); }
         .central-wizard-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:20px; }
         @media (max-width: 1400px) {
@@ -76,6 +76,8 @@
             .distribution-form > .field { grid-column: 1 / -1; }
             .schedule-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
             .schedule-fields .field:last-child { grid-column:1 / -1; }
+            .schedule-edit form { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .schedule-edit .actions { grid-column:1 / -1; }
             .schedule-row { grid-template-columns: 100px 52px minmax(0,1fr) auto; }
             .schedule-room { grid-column: 3 / 4; }
             .schedule-actions { grid-column: 4; grid-row: 1 / span 2; }
@@ -87,7 +89,7 @@
             .execution-section-head, .grade-head { display: grid; }
             .grade-status { justify-content: flex-start; }
             .distribution-form, .schedule-fields, .schedule-edit form { grid-template-columns: 1fr; }
-            .distribution-form > .field, .schedule-fields .field:last-child { grid-column: auto; }
+            .distribution-form > .field, .schedule-fields .field:last-child, .schedule-edit .actions { grid-column: auto; }
             .schedule-level-head { display:grid; }
             .level-options { grid-template-columns:1fr; }
             .schedule-builder-actions .button { width:100%; }
@@ -114,7 +116,7 @@
         $subjudulTahap = [
             5 => 'Tentukan kelas, sesi, dan ruang yang digunakan oleh setiap tingkat.',
             6 => 'Bangkitkan pembagian siswa otomatis setelah penetapan ruang selesai.',
-            7 => 'Susun mata pelajaran dan tanggal ujian setelah seluruh peserta terbagi.',
+            7 => 'Susun mata pelajaran, tanggal, dan jam ujian setelah seluruh peserta terbagi.',
         ][$tahapAktif];
         $pemakaianRuang = [];
         foreach ($kegiatan->kelompokPesertaKegiatanUjianCbt as $kelompokPemakai) {
@@ -192,7 +194,7 @@
                                 <select id="sesi_{{ $tingkat }}" name="sesi_kegiatan_ujian_cbt_id" class="input" data-session-select required>
                                     <option value="">Pilih sesi</option>
                                     @foreach ($kegiatan->sesiKegiatanUjianCbt as $sesi)
-                                        <option value="{{ $sesi->id }}" @selected((int) $kelompok?->sesi_kegiatan_ujian_cbt_id === (int) $sesi->id)>{{ $sesi->nama }} · {{ $sesi->labelWaktu() }}</option>
+                                        <option value="{{ $sesi->id }}" @selected((int) $kelompok?->sesi_kegiatan_ujian_cbt_id === (int) $sesi->id)>{{ $sesi->nama }}</option>
                                     @endforeach
                                 </select>
                                 <p class="help-text" style="margin-top:8px;">Satu tingkat menggunakan sesi yang sama selama rangkaian ujian.</p>
@@ -320,7 +322,7 @@
     @if ($tahapAktif === 7)
     <section class="panel panel-pad execution-section">
         <div class="execution-section-head">
-            <div><h2>Jadwal ujian</h2><p>Satu mata pelajaran dapat ditambahkan sekaligus untuk beberapa tingkat yang pesertanya sudah dibagi.</p></div>
+            <div><h2>Jadwal ujian</h2><p>Tentukan jam setiap mata pelajaran. Tingkat yang sama boleh memiliki beberapa mapel pada hari yang sama selama waktunya tidak bertumpang tindih.</p></div>
             <span class="badge {{ $kegiatan->jadwalUjianCbt->isNotEmpty() ? 'badge-active' : 'badge-warning' }}">{{ $kegiatan->jadwalUjianCbt->count() }} jadwal</span>
         </div>
 
@@ -330,6 +332,8 @@
                 <div class="schedule-fields">
                     <div class="field"><label for="tanggal_jadwal">Tanggal ujian</label><input id="tanggal_jadwal" name="tanggal" type="date" min="{{ $kegiatan->tanggal_mulai?->format('Y-m-d') }}" max="{{ $kegiatan->tanggal_selesai?->format('Y-m-d') }}" value="{{ old('tanggal', $kegiatan->tanggal_mulai?->format('Y-m-d')) }}" class="input" required></div>
                     <div class="field"><label for="mata_pelajaran_jadwal">Mata pelajaran</label><select id="mata_pelajaran_jadwal" name="mata_pelajaran_id" class="input" data-subject-select required><option value="">Pilih mata pelajaran</option>@foreach($daftarMataPelajaran as $mapel)<option value="{{ $mapel->id }}" data-levels='@json($mapel->tingkat_tersedia)' @selected((int) old('mata_pelajaran_id') === (int) $mapel->id)>{{ $mapel->nama }}</option>@endforeach</select></div>
+                    <div class="field"><label for="waktu_mulai_jadwal">Mulai</label><input id="waktu_mulai_jadwal" name="waktu_mulai" type="time" value="{{ old('waktu_mulai') }}" class="input" required></div>
+                    <div class="field"><label for="waktu_selesai_jadwal">Selesai</label><input id="waktu_selesai_jadwal" name="waktu_selesai" type="time" value="{{ old('waktu_selesai') }}" class="input" required></div>
                     <div class="field"><label for="catatan_jadwal">Catatan</label><input id="catatan_jadwal" name="keterangan" value="{{ old('keterangan') }}" class="input" placeholder="Opsional, misalnya hari pertama"></div>
                 </div>
                 <div class="schedule-level-section">
@@ -353,7 +357,7 @@
             @forelse ($kegiatan->jadwalUjianCbt as $jadwal)
                 @php($kelompok=$kelompokPerTingkat->get($jadwal->tingkat))
                 <div class="schedule-row">
-                    <div class="schedule-date"><strong>{{ $jadwal->tanggal?->locale('id')->translatedFormat('D, d M Y') }}</strong><span>{{ $jadwal->sesiKegiatanUjianCbt?->labelWaktu() ?: $jadwal->labelWaktu() }}</span></div>
+                    <div class="schedule-date"><strong>{{ $jadwal->tanggal?->locale('id')->translatedFormat('D, d M Y') }}</strong><span>{{ $jadwal->labelWaktu() }} · {{ $jadwal->durasiMenit() }} menit</span></div>
                     <span class="schedule-level">T{{ $jadwal->tingkat }}</span>
                     <div class="schedule-main"><strong>{{ $jadwal->mataPelajaran?->nama ?: 'Mata pelajaran belum diisi' }}</strong><span>{{ $jadwal->sesiKegiatanUjianCbt?->nama }} · {{ $jadwal->kelas->pluck('nama')->join(', ') }}</span></div>
                     <div class="schedule-room"><strong>{{ $kelompok?->ruangKegiatanUjianCbt->pluck('nama')->join(', ') ?: 'Ruang belum dibagi' }}</strong><span>{{ $kelompok?->jumlah_peserta ?? 0 }} peserta</span></div>
@@ -368,6 +372,8 @@
                                     @csrf @method('PUT')
                                     <div class="field"><label for="tanggal_{{ $jadwal->id }}">Tanggal</label><input id="tanggal_{{ $jadwal->id }}" name="tanggal" type="date" min="{{ $kegiatan->tanggal_mulai?->format('Y-m-d') }}" max="{{ $kegiatan->tanggal_selesai?->format('Y-m-d') }}" value="{{ $jadwal->tanggal?->format('Y-m-d') }}" class="input" required></div>
                                     <div class="field"><label for="mapel_{{ $jadwal->id }}">Mata pelajaran</label><select id="mapel_{{ $jadwal->id }}" name="mata_pelajaran_id" class="input" required>@foreach($daftarMataPelajaran as $mapel) @if(in_array($jadwal->tingkat,$mapel->tingkat_tersedia,true))<option value="{{ $mapel->id }}" @selected($jadwal->mata_pelajaran_id===$mapel->id)>{{ $mapel->nama }}</option>@endif @endforeach</select></div>
+                                    <div class="field"><label for="mulai_{{ $jadwal->id }}">Mulai</label><input id="mulai_{{ $jadwal->id }}" name="waktu_mulai" type="time" value="{{ substr((string) $jadwal->waktu_mulai, 0, 5) }}" class="input" required></div>
+                                    <div class="field"><label for="selesai_{{ $jadwal->id }}">Selesai</label><input id="selesai_{{ $jadwal->id }}" name="waktu_selesai" type="time" value="{{ substr((string) $jadwal->waktu_selesai, 0, 5) }}" class="input" required></div>
                                     <div class="field"><label for="catatan_{{ $jadwal->id }}">Catatan</label><input id="catatan_{{ $jadwal->id }}" name="keterangan" value="{{ $jadwal->keterangan }}" class="input"></div>
                                     <div class="actions"><button class="button button-primary" type="submit">Simpan</button></div>
                                 </form>

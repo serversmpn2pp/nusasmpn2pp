@@ -164,7 +164,7 @@
         }
 
         .central-add-grid.session {
-            grid-template-columns: minmax(180px, 1fr) 150px 150px minmax(180px, .8fr) auto;
+            grid-template-columns: minmax(220px, .8fr) minmax(280px, 1.2fr) auto;
         }
 
         .central-add-grid.room {
@@ -446,17 +446,15 @@
         @if ($tahapAktif === 3)
         <section id="sesi" class="panel panel-pad">
             <div class="central-section-head">
-                <div><p class="eyebrow">Tahap 3</p><h2 class="panel-title">Sesi ujian</h2><p class="help-text" style="margin-top: 5px;">Sesi adalah pembagian waktu ujian dalam satu hari, misalnya sesi pagi dan sesi siang.</p></div>
+                <div><p class="eyebrow">Tahap 3</p><h2 class="panel-title">Sesi peserta</h2><p class="help-text" style="margin-top: 5px;">Sesi adalah identitas gelombang peserta, misalnya Sesi 1 dan Sesi 2. Jam setiap mata pelajaran diatur pada Tahap 7.</p></div>
                 <span class="badge {{ $sesiSiap ? 'badge-active' : 'badge-warning' }}">{{ $kegiatan->sesiKegiatanUjianCbt->count() }} sesi</span>
             </div>
 
             @if ($bolehKelolaPersiapan)
                 <form action="{{ route('ujian-terpusat.sesi.store', $kegiatan) }}" method="POST" class="central-add-grid session">
                     @csrf
-                    <div class="field"><label for="nama_sesi">Nama sesi</label><input id="nama_sesi" name="nama" class="input" placeholder="Contoh: Sesi Pagi" required></div>
-                    <div class="field"><label for="waktu_mulai_sesi">Mulai</label><input id="waktu_mulai_sesi" name="waktu_mulai" type="time" class="input" required></div>
-                    <div class="field"><label for="waktu_selesai_sesi">Selesai</label><input id="waktu_selesai_sesi" name="waktu_selesai" type="time" class="input" required></div>
-                    <div class="field"><label for="keterangan_sesi">Catatan</label><input id="keterangan_sesi" name="keterangan" class="input" placeholder="Opsional"><input type="hidden" name="aktif" value="1"></div>
+                    <div class="field"><label for="nama_sesi">Nama sesi</label><input id="nama_sesi" name="nama" class="input" placeholder="Contoh: Sesi 1" required></div>
+                    <div class="field"><label for="keterangan_sesi">Keterangan <span class="help-text">(opsional)</span></label><input id="keterangan_sesi" name="keterangan" class="input" placeholder="Contoh: Gelombang pertama"><input type="hidden" name="aktif" value="1"></div>
                     <div class="actions"><button type="submit" class="button button-primary">Tambahkan</button></div>
                 </form>
             @endif
@@ -466,7 +464,7 @@
                     <div class="central-row">
                         <div class="central-row-main">
                             <span class="central-initial">{{ $sesi->kode }}</span>
-                            <div class="central-row-copy"><strong>{{ $sesi->nama }}</strong><span>{{ $sesi->labelWaktu() }}{{ $sesi->keterangan ? ' · '.$sesi->keterangan : '' }}</span></div>
+                            <div class="central-row-copy"><strong>{{ $sesi->nama }}</strong><span>{{ $sesi->keterangan ?: 'Jam pelaksanaan mengikuti jadwal mata pelajaran.' }}</span></div>
                         </div>
                         @if ($bolehKelolaPersiapan)
                             <div class="central-row-actions">
@@ -482,8 +480,6 @@
                                 <form action="{{ route('ujian-terpusat.sesi.update', [$kegiatan, $sesi]) }}" method="POST" class="central-edit-grid">
                                     @csrf @method('PUT')
                                     <div class="field"><label for="nama_sesi_{{ $sesi->id }}">Nama</label><input id="nama_sesi_{{ $sesi->id }}" name="nama" value="{{ $sesi->nama }}" class="input" required></div>
-                                    <div class="field"><label for="mulai_sesi_{{ $sesi->id }}">Mulai</label><input id="mulai_sesi_{{ $sesi->id }}" name="waktu_mulai" value="{{ substr($sesi->waktu_mulai, 0, 5) }}" type="time" class="input" required></div>
-                                    <div class="field"><label for="selesai_sesi_{{ $sesi->id }}">Selesai</label><input id="selesai_sesi_{{ $sesi->id }}" name="waktu_selesai" value="{{ substr($sesi->waktu_selesai, 0, 5) }}" type="time" class="input" required></div>
                                     <div class="field"><label for="catatan_sesi_{{ $sesi->id }}">Catatan</label><input id="catatan_sesi_{{ $sesi->id }}" name="keterangan" value="{{ $sesi->keterangan }}" class="input"><input type="hidden" name="aktif" value="{{ $sesi->aktif ? 1 : 0 }}"></div>
                                     <div class="actions"><button type="submit" class="button button-dark">Simpan sesi</button></div>
                                 </form>
