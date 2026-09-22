@@ -13,6 +13,7 @@ use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\PanitiaUjianCbt;
 use App\Models\Pegawai;
+use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\RuangKegiatanUjianCbt;
@@ -23,6 +24,7 @@ use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use App\Services\Cbt\BagiPesertaUjianTerpusat;
 use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
+use App\Services\Cbt\KelolaJadwalUjianTerpusat;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use App\Services\Cbt\TerapkanNilaiCbtService;
@@ -782,7 +784,7 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
                 'peserta_ids' => [$peserta->id],
                 'susulan_mulai' => '2026-09-22 08:30:00',
                 'susulan_selesai' => '2026-09-22 09:30:00',
-                'ruang_susulan' => 'Ruang 1',
+                'ruang_susulan_kegiatan_ujian_cbt_id' => $data['ruang']->id,
                 'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
                 'catatan_susulan' => 'Surat keterangan sakit sudah diterima.',
             ])->assertSessionHasNoErrors()->assertRedirect();
@@ -908,7 +910,8 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             $payload = [
                 'susulan_mulai' => '2026-09-22 10:00:00',
                 'susulan_selesai' => '2026-09-22 11:00:00',
-                'ruang_susulan' => 'Ruang 1',
+                'ruang_susulan_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
             ];
 
             $this->actingAs($data['akun_guru'])
@@ -961,6 +964,192 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_jadwal_susulan_menolak_bentrok_ruang_dan_pengawas_dengan_ujian_utama(): void
+    {
+        Carbon::setTestNow('2026-09-22 08:00:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $jadwal = $this->terbitkanPaketUntukSusulan($data, 'SOAL-SUSULAN-BENTROK-UTAMA');
+            $jadwal->update([
+                'tanggal' => '2026-09-22',
+                'waktu_mulai' => '10:00',
+                'waktu_selesai' => '11:00',
+            ]);
+            $peserta = $jadwal->ujianCbt->pesertaUjianCbt()->firstOrFail();
+            $peserta->update(['status_kehadiran_ujian' => 'sakit']);
+
+            $ruangKedua = RuangKegiatanUjianCbt::create([
+                'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+                'kode' => 'R02',
+                'nama' => 'Ruang 2',
+                'lokasi' => 'Lantai 1',
+                'kapasitas' => 20,
+                'urutan' => 2,
+                'aktif' => true,
+            ]);
+            $pengawasKedua = Pegawai::create([
+                'nama_lengkap' => 'Pengawas Kedua',
+                'nip' => '198800012020121002',
+                'jenis_kelamin' => 'P',
+                'jenis_pegawai' => 'Guru',
+                'aktif' => true,
+            ]);
+            PengawasRuangUjianTerpusat::create([
+                'jadwal_ujian_cbt_id' => $jadwal->id,
+                'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                'pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id,
+                'ditugaskan_oleh_pengguna_id' => $data['admin']->id,
+            ]);
+
+            $payload = [
+                'peserta_ids' => [$peserta->id],
+                'susulan_mulai' => '2026-09-22 10:15:00',
+                'susulan_selesai' => '2026-09-22 11:15:00',
+            ];
+
+            $this->actingAs($data['admin'])
+                ->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), $payload + [
+                    'ruang_susulan_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                    'pengawas_susulan_pegawai_id' => $pengawasKedua->id,
+                ])
+                ->assertSessionHasErrors('ruang_susulan_kegiatan_ujian_cbt_id');
+
+            $this->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), $payload + [
+                'ruang_susulan_kegiatan_ujian_cbt_id' => $ruangKedua->id,
+                'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
+            ])->assertSessionHasErrors('pengawas_susulan_pegawai_id');
+
+            $this->assertNull($peserta->fresh()->status_susulan);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_jadwal_susulan_menolak_bentrok_susulan_lain_dan_mengizinkan_waktu_bersambung(): void
+    {
+        Carbon::setTestNow('2026-09-22 08:00:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $jadwal = $this->terbitkanPaketUntukSusulan($data, 'SOAL-SUSULAN-BENTROK-SUSULAN');
+            $peserta = $jadwal->ujianCbt->pesertaUjianCbt()->orderBy('id')->get();
+            $peserta->each->update(['status_kehadiran_ujian' => 'sakit']);
+
+            $ruangKedua = RuangKegiatanUjianCbt::create([
+                'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+                'kode' => 'R02',
+                'nama' => 'Ruang 2',
+                'lokasi' => 'Lantai 1',
+                'kapasitas' => 20,
+                'urutan' => 2,
+                'aktif' => true,
+            ]);
+            $pengawasKedua = Pegawai::create([
+                'nama_lengkap' => 'Pengawas Kedua',
+                'nip' => '198800012020121002',
+                'jenis_kelamin' => 'P',
+                'jenis_pegawai' => 'Guru',
+                'aktif' => true,
+            ]);
+
+            $this->actingAs($data['admin'])
+                ->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), [
+                    'peserta_ids' => [$peserta[0]->id],
+                    'susulan_mulai' => '2026-09-22 10:00:00',
+                    'susulan_selesai' => '2026-09-22 11:00:00',
+                    'ruang_susulan_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                    'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
+                ])
+                ->assertSessionHasNoErrors();
+
+            $data['kegiatan']->update(['tanggal_selesai' => '2026-09-30']);
+            try {
+                app(KelolaJadwalUjianTerpusat::class)->ubah($data['kegiatan']->fresh(), $jadwal, [
+                    'tanggal' => '2026-09-22',
+                    'mata_pelajaran_id' => $data['mapel']->id,
+                    'waktu_mulai' => '10:30',
+                    'waktu_selesai' => '11:30',
+                    'keterangan' => null,
+                ], $data['admin']);
+                $this->fail('Jadwal utama yang berbenturan dengan ruang susulan seharusnya ditolak.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('waktu_mulai', $exception->errors());
+            }
+
+            $jadwal->update([
+                'tanggal' => '2026-09-22',
+                'waktu_mulai' => '10:30',
+                'waktu_selesai' => '10:45',
+            ]);
+            $this->put(route('ujian-terpusat.pengawas.update', [$data['kegiatan'], $jadwal, $data['ruang']]), [
+                'pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id,
+                'pengawas_pendamping_pegawai_id' => null,
+            ])->assertSessionHasErrors('pengawas_utama_pegawai_id');
+            $jadwal->update([
+                'tanggal' => '2026-09-15',
+                'waktu_mulai' => '07:30',
+                'waktu_selesai' => '09:00',
+            ]);
+
+            $payloadBentrok = [
+                'peserta_ids' => [$peserta[1]->id],
+                'susulan_mulai' => '2026-09-22 10:30:00',
+                'susulan_selesai' => '2026-09-22 11:30:00',
+            ];
+            $this->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), $payloadBentrok + [
+                'ruang_susulan_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                'pengawas_susulan_pegawai_id' => $pengawasKedua->id,
+            ])->assertSessionHasErrors('ruang_susulan_kegiatan_ujian_cbt_id');
+
+            $this->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), $payloadBentrok + [
+                'ruang_susulan_kegiatan_ujian_cbt_id' => $ruangKedua->id,
+                'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
+            ])->assertSessionHasErrors('pengawas_susulan_pegawai_id');
+
+            $this->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), [
+                'peserta_ids' => [$peserta[1]->id],
+                'susulan_mulai' => '2026-09-22 11:00:00',
+                'susulan_selesai' => '2026-09-22 12:00:00',
+                'ruang_susulan_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
+            ])->assertSessionHasNoErrors();
+
+            $this->assertSame('dijadwalkan', $peserta[1]->fresh()->status_susulan);
+            $this->assertSame($data['ruang']->id, $peserta[1]->fresh()->ruang_susulan_kegiatan_ujian_cbt_id);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    private function terbitkanPaketUntukSusulan(array $data, string $kodeSoal): JadwalUjianCbt
+    {
+        $soal = SoalCbt::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'mata_pelajaran_id' => $data['mapel']->id,
+            'tingkat' => 7,
+            'kode' => $kodeSoal,
+            'jenis_soal' => 'pilihan_ganda',
+            'tingkat_kesulitan' => 'mudah',
+            'kategori' => 'lots',
+            'pertanyaan' => 'Hasil dari 2 + 2 adalah ....',
+            'opsi' => ['pilihan' => ['A' => '3', 'B' => '4']],
+            'kunci_jawaban' => ['jawaban' => 'B'],
+            'skor_maksimal' => 1,
+            'status' => 'siap',
+            'aktif' => true,
+        ]);
+
+        $this->actingAs($data['admin'])
+            ->put(route('paket-soal-terpusat.update', $data['jadwal']), [
+                'aksi' => 'terbitkan',
+                'soal' => [$soal->id => ['dipilih' => '1', 'bobot' => 1]],
+            ])
+            ->assertRedirect();
+
+        return $data['jadwal']->fresh();
     }
 
     private function buatFondasi(): array

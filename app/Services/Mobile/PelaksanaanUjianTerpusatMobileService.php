@@ -13,6 +13,7 @@ use App\Models\RuangKegiatanUjianCbt;
 use App\Models\RuangUjianCbt;
 use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use App\Services\Cbt\SinkronkanPelaksanaanUjianTerpusat;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -296,16 +297,33 @@ class PelaksanaanUjianTerpusatMobileService
             ->with(['jadwalUjianCbt.mataPelajaran', 'ruangKegiatanUjianCbt'])
             ->first();
 
-        if (! $bentrok) {
-            return;
+        if ($bentrok) {
+            throw ValidationException::withMessages([
+                'pegawai_id' => 'Pengawas sudah bertugas pada '
+                    .($bentrok->jadwalUjianCbt?->mataPelajaran?->nama ?: 'mata pelajaran lain')
+                    .' di '.($bentrok->ruangKegiatanUjianCbt?->nama ?: 'ruang lain')
+                    .' pukul '.($bentrok->jadwalUjianCbt?->labelWaktu() ?: '-').'.',
+            ]);
         }
 
-        throw ValidationException::withMessages([
-            'pegawai_id' => 'Pengawas sudah bertugas pada '
-                .($bentrok->jadwalUjianCbt?->mataPelajaran?->nama ?: 'mata pelajaran lain')
-                .' di '.($bentrok->ruangKegiatanUjianCbt?->nama ?: 'ruang lain')
-                .' pukul '.($bentrok->jadwalUjianCbt?->labelWaktu() ?: '-').'.',
-        ]);
+        $mulai = Carbon::parse($jadwal->tanggal?->toDateString().' '.$jadwal->waktu_mulai);
+        $selesai = Carbon::parse($jadwal->tanggal?->toDateString().' '.$jadwal->waktu_selesai);
+        $susulanBentrok = PesertaUjianCbt::query()
+            ->where('status_susulan', 'dijadwalkan')
+            ->where('pengawas_susulan_pegawai_id', $pegawaiId)
+            ->where('susulan_mulai', '<', $selesai)
+            ->where('susulan_selesai', '>', $mulai)
+            ->with('ujianCbt.mataPelajaran')
+            ->first();
+
+        if ($susulanBentrok) {
+            throw ValidationException::withMessages([
+                'pegawai_id' => 'Pengawas sudah bertugas pada ujian susulan '
+                    .($susulanBentrok->ujianCbt?->mataPelajaran?->nama ?: 'lainnya')
+                    .' di '.($susulanBentrok->ruang_susulan ?: 'ruang lain')
+                    .' pukul '.$susulanBentrok->susulan_mulai?->format('H:i').'-'.$susulanBentrok->susulan_selesai?->format('H:i').'.',
+            ]);
+        }
     }
 
     private function queryKegiatanDalamCakupan(Pengguna $pengguna): Builder

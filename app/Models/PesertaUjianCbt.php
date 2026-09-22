@@ -74,6 +74,7 @@ class PesertaUjianCbt extends Model
         'susulan_selesai',
         'token_susulan',
         'ruang_susulan',
+        'ruang_susulan_kegiatan_ujian_cbt_id',
         'pengawas_susulan_pegawai_id',
         'catatan_susulan',
         'susulan_ditetapkan_pada',
@@ -165,6 +166,11 @@ class PesertaUjianCbt extends Model
     public function pengawasSusulan(): BelongsTo
     {
         return $this->belongsTo(Pegawai::class, 'pengawas_susulan_pegawai_id');
+    }
+
+    public function ruangSusulanKegiatanUjianCbt(): BelongsTo
+    {
+        return $this->belongsTo(RuangKegiatanUjianCbt::class, 'ruang_susulan_kegiatan_ujian_cbt_id');
     }
 
     public function susulanDitetapkanOleh(): BelongsTo

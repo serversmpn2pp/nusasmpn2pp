@@ -8,6 +8,7 @@ use App\Models\KelompokPesertaKegiatanUjianCbt;
 use App\Models\MataPelajaran;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
+use App\Models\PesertaUjianCbt;
 use App\Models\UjianCbt;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -239,6 +240,13 @@ class KelolaJadwalUjianTerpusat
             }
         }
 
+        $this->pastikanRuangTidakBentrokDenganSusulan(
+            $tanggal,
+            $waktuMulai,
+            $waktuSelesai,
+            $kelompokDipilih,
+        );
+
         $jadwalBentrok = JadwalUjianCbt::query()
             ->where('kegiatan_ujian_cbt_id', $kegiatan->id)
             ->whereDate('tanggal', $tanggal)
@@ -344,6 +352,67 @@ class KelolaJadwalUjianTerpusat
                     .($bentrok->jadwalUjianCbt?->mataPelajaran?->nama ?: 'jadwal lain').'.',
             ]);
         }
+
+        $mulai = Carbon::parse($tanggal.' '.$waktuMulai);
+        $selesai = Carbon::parse($tanggal.' '.$waktuSelesai);
+        $susulanBentrok = PesertaUjianCbt::query()
+            ->where('status_susulan', 'dijadwalkan')
+            ->whereIn('pengawas_susulan_pegawai_id', $pegawaiIds)
+            ->where('susulan_mulai', '<', $selesai)
+            ->where('susulan_selesai', '>', $mulai)
+            ->with('ujianCbt.mataPelajaran')
+            ->first();
+
+        if ($susulanBentrok) {
+            throw ValidationException::withMessages([
+                'waktu_mulai' => 'Waktu baru berbenturan dengan tugas pengawas ujian susulan '
+                    .($susulanBentrok->ujianCbt?->mataPelajaran?->nama ?: 'lainnya')
+                    .' pukul '.$susulanBentrok->susulan_mulai?->format('H:i').'-'.$susulanBentrok->susulan_selesai?->format('H:i').'.',
+            ]);
+        }
+    }
+
+    private function pastikanRuangTidakBentrokDenganSusulan(
+        string $tanggal,
+        string $waktuMulai,
+        string $waktuSelesai,
+        Collection $kelompokDipilih,
+    ): void {
+        $ruang = $kelompokDipilih
+            ->flatMap(fn ($kelompok) => $kelompok->ruangKegiatanUjianCbt)
+            ->unique('id')
+            ->values();
+
+        if ($ruang->isEmpty()) {
+            return;
+        }
+
+        $mulai = Carbon::parse($tanggal.' '.$waktuMulai);
+        $selesai = Carbon::parse($tanggal.' '.$waktuSelesai);
+        $bentrok = PesertaUjianCbt::query()
+            ->where('status_susulan', 'dijadwalkan')
+            ->where('susulan_mulai', '<', $selesai)
+            ->where('susulan_selesai', '>', $mulai)
+            ->where(function ($query) use ($ruang) {
+                $query->whereIn('ruang_susulan_kegiatan_ujian_cbt_id', $ruang->pluck('id'))
+                    ->orWhere(function ($query) use ($ruang) {
+                        $query->whereNull('ruang_susulan_kegiatan_ujian_cbt_id')
+                            ->whereIn('ruang_susulan', $ruang->flatMap(fn ($item) => [$item->nama, $item->kode])->filter()->unique());
+                    });
+            })
+            ->with('ujianCbt.mataPelajaran')
+            ->first();
+
+        if (! $bentrok) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'waktu_mulai' => ($bentrok->ruang_susulan ?: 'Ruang ujian')
+                .' sudah digunakan untuk ujian susulan '
+                .($bentrok->ujianCbt?->mataPelajaran?->nama ?: 'lainnya')
+                .' pukul '.$bentrok->susulan_mulai?->format('H:i').'-'.$bentrok->susulan_selesai?->format('H:i').'.',
+        ]);
     }
 
     private function pelaksanaanBerubah(JadwalUjianCbt $jadwal, string $tanggal, array $data): bool
