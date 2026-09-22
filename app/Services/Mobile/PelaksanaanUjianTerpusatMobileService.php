@@ -215,6 +215,7 @@ class PelaksanaanUjianTerpusatMobileService
         $this->pastikanBolehMengelola($pengguna, $kegiatan);
         $this->pastikanRelasi($kegiatan, $jadwal, $ruang);
         $pegawaiBaru = Pegawai::query()->where('aktif', true)->findOrFail($pegawaiId);
+        $this->pastikanPengawasTidakBentrok($jadwal, $ruang, $pegawaiBaru->id);
 
         [$pegawaiLama, $penugasanBaru] = DB::transaction(function () use (
             $pengguna, $jadwal, $ruang, $peran, $pegawaiBaru, $alasan,
@@ -272,6 +273,39 @@ class PelaksanaanUjianTerpusatMobileService
             'pengawas_lama' => $pegawaiLama?->nama_lengkap,
             'pengawas_baru' => $pegawaiBaru->nama_lengkap,
         ];
+    }
+
+    private function pastikanPengawasTidakBentrok(
+        JadwalUjianCbt $jadwal,
+        RuangKegiatanUjianCbt $ruang,
+        int $pegawaiId,
+    ): void {
+        $bentrok = PengawasRuangUjianTerpusat::query()
+            ->where(function (Builder $query) use ($jadwal, $ruang): void {
+                $query->where('jadwal_ujian_cbt_id', '!=', $jadwal->id)
+                    ->orWhere('ruang_kegiatan_ujian_cbt_id', '!=', $ruang->id);
+            })
+            ->where(function (Builder $query) use ($pegawaiId): void {
+                $query->where('pengawas_utama_pegawai_id', $pegawaiId)
+                    ->orWhere('pengawas_pendamping_pegawai_id', $pegawaiId);
+            })
+            ->whereHas('jadwalUjianCbt', fn (Builder $query) => $query
+                ->whereDate('tanggal', $jadwal->tanggal)
+                ->where('waktu_mulai', '<', $jadwal->waktu_selesai)
+                ->where('waktu_selesai', '>', $jadwal->waktu_mulai))
+            ->with(['jadwalUjianCbt.mataPelajaran', 'ruangKegiatanUjianCbt'])
+            ->first();
+
+        if (! $bentrok) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'pegawai_id' => 'Pengawas sudah bertugas pada '
+                .($bentrok->jadwalUjianCbt?->mataPelajaran?->nama ?: 'mata pelajaran lain')
+                .' di '.($bentrok->ruangKegiatanUjianCbt?->nama ?: 'ruang lain')
+                .' pukul '.($bentrok->jadwalUjianCbt?->labelWaktu() ?: '-').'.',
+        ]);
     }
 
     private function queryKegiatanDalamCakupan(Pengguna $pengguna): Builder

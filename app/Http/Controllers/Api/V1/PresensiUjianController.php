@@ -49,16 +49,21 @@ class PresensiUjianController extends Controller
             'catatan' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $hasil = $service->ubahManual(
+            $request->user(),
+            $ruangUjianCbt,
+            $pesertaUjianCbt,
+            $data['status'],
+            $data['catatan'] ?? null,
+        );
+        $berhasil = (bool) ($hasil['berhasil'] ?? true);
+
         return $this->tanpaCache([
-            'pesan' => 'Presensi '.$pesertaUjianCbt->anggotaKelas?->siswa?->nama_lengkap.' berhasil diperbarui.',
-            'data' => $service->ubahManual(
-                $request->user(),
-                $ruangUjianCbt,
-                $pesertaUjianCbt,
-                $data['status'],
-                $data['catatan'] ?? null,
-            ),
-        ]);
+            'pesan' => $berhasil
+                ? 'Presensi '.$pesertaUjianCbt->anggotaKelas?->siswa?->nama_lengkap.' berhasil diperbarui.'
+                : $hasil['pesan'],
+            'data' => $hasil,
+        ], $berhasil ? 200 : 422);
     }
 
     private function tanpaCache(array $data, int $status = 200): JsonResponse

@@ -701,6 +701,49 @@ class UjianCbtTest extends TestCase
                 ]);
             });
 
+            Carbon::setTestNow('2026-08-14 22:08:00');
+
+            $this->actingAs($pengawas)
+                ->get(route('presensi-ujian-cbt.show', [$ujianCbt, $ruangSatu]))
+                ->assertOk()
+                ->assertSee('Presensi belum dibuka')
+                ->assertSee('Presensi dapat dicatat mulai');
+
+            $this->actingAs($pengawas)
+                ->postJson(route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangSatu]), [
+                    'isi_scan' => $anggota[0]->siswa->nisn,
+                ])
+                ->assertUnprocessable()
+                ->assertJsonPath('status', 'presensi_belum_dibuka');
+
+            $this->actingAs($pengawas)
+                ->putJson(route('presensi-ujian-cbt.manual', [$ujianCbt, $ruangSatu, $peserta[1]]), [
+                    'status_kehadiran_ujian' => 'izin',
+                ])
+                ->assertUnprocessable()
+                ->assertJsonPath('status', 'presensi_belum_dibuka');
+
+            $peserta[0]->update([
+                'status_kehadiran_ujian' => 'hadir',
+                'absen_ujian_pada' => now(),
+                'absen_ujian_oleh_pengguna_id' => $pengawas->id,
+            ]);
+
+            $this->actingAs($pengawas)
+                ->get(route('presensi-ujian-cbt.show', [$ujianCbt, $ruangSatu]))
+                ->assertOk()
+                ->assertSee('Batalkan catatan');
+
+            $this->actingAs($pengawas)
+                ->putJson(route('presensi-ujian-cbt.manual', [$ujianCbt, $ruangSatu, $peserta[0]]), [
+                    'status_kehadiran_ujian' => 'belum_absen',
+                ])
+                ->assertOk()
+                ->assertJsonPath('peserta.status', 'belum_absen');
+
+            $this->assertNull($peserta[0]->fresh()->absen_ujian_pada);
+            Carbon::setTestNow('2026-08-15 07:30:00');
+
             $this->actingAs($pengawas)
                 ->get(route('presensi-ujian-cbt.index'))
                 ->assertOk()

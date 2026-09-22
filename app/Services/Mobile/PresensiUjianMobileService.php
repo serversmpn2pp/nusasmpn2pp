@@ -6,11 +6,14 @@ use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\RuangUjianCbt;
 use App\Models\Siswa;
+use App\Services\Cbt\JendelaPresensiUjianCbt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class PresensiUjianMobileService
 {
+    public function __construct(private JendelaPresensiUjianCbt $jendelaPresensi) {}
+
     public function daftar(Pengguna $pengguna): array
     {
         $dapatKelolaSemua = $this->dapatKelolaSemua($pengguna);
@@ -84,6 +87,7 @@ class PresensiUjianMobileService
             ->take(8)
             ->map(fn (PesertaUjianCbt $item) => $this->dataPeserta($item))
             ->values();
+        $statusJendela = $this->dataJendelaPresensi($ruang);
 
         return [
             'ruang' => $this->detailRuang($pengguna, $ruang),
@@ -93,6 +97,7 @@ class PresensiUjianMobileService
                 ->values(),
             'presensi_terbaru' => $terbaru,
             'peserta' => $peserta->map(fn (PesertaUjianCbt $item) => $this->dataPeserta($item))->values(),
+            'jendela_presensi' => $statusJendela,
             'waktu_server' => now()->toISOString(),
         ];
     }
@@ -100,6 +105,16 @@ class PresensiUjianMobileService
     public function scan(Pengguna $pengguna, RuangUjianCbt $ruang, string $isiScan): array
     {
         $this->pastikanDapatMengelolaRuang($pengguna, $ruang);
+
+        if (! $this->jendelaPresensi->sudahDibuka($ruang)) {
+            $statusJendela = $this->dataJendelaPresensi($ruang);
+
+            return [
+                ...$this->hasilGagal('presensi_belum_dibuka', $statusJendela['pesan']),
+                'dibuka_pada' => $statusJendela['dibuka_pada'],
+            ];
+        }
+
         $nisn = $this->nisnDariIsiScan($isiScan);
 
         if (! $nisn) {
@@ -198,6 +213,15 @@ class PresensiUjianMobileService
             404,
         );
 
+        if ($status !== 'belum_absen' && ! $this->jendelaPresensi->sudahDibuka($ruang)) {
+            $statusJendela = $this->dataJendelaPresensi($ruang);
+
+            return [
+                ...$this->hasilGagal('presensi_belum_dibuka', $statusJendela['pesan']),
+                'dibuka_pada' => $statusJendela['dibuka_pada'],
+            ];
+        }
+
         $peserta = DB::transaction(function () use ($pengguna, $peserta, $status, $catatan) {
             $terkunci = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
             $statusBerubah = $terkunci->status_kehadiran_ujian !== $status;
@@ -222,6 +246,7 @@ class PresensiUjianMobileService
         $peserta->load(['ruangUjianCbt', 'kelasUjianCbt.kelas', 'anggotaKelas.siswa']);
 
         return [
+            'berhasil' => true,
             'peserta' => $this->dataPeserta($peserta),
             'ringkasan' => $this->ringkasanRuang($ruang),
             'detail' => $this->detail($pengguna, $ruang->fresh()),
@@ -256,6 +281,7 @@ class PresensiUjianMobileService
             'jumlah_belum_absen' => (int) ($ruang->jumlah_belum_absen ?? 0),
             'jumlah_tidak_hadir' => (int) ($ruang->jumlah_tidak_hadir ?? 0),
             'persentase_hadir' => $jumlahPeserta > 0 ? (int) round(($jumlahHadir / $jumlahPeserta) * 100) : 0,
+            'presensi_dibuka' => $this->jendelaPresensi->sudahDibuka($ruang),
         ];
     }
 
@@ -283,7 +309,20 @@ class PresensiUjianMobileService
             'peran_saya' => $this->dapatKelolaSemua($pengguna)
                 ? 'Pengelola CBT'
                 : ((int) $pengguna->pegawai_id === (int) $ruang->pengawas_utama_pegawai_id ? 'Pengawas utama' : 'Pengawas pendamping'),
-            'dapat_mengubah' => true,
+            'dapat_mengubah' => $this->jendelaPresensi->sudahDibuka($ruang),
+        ];
+    }
+
+    private function dataJendelaPresensi(RuangUjianCbt $ruang): array
+    {
+        $status = $this->jendelaPresensi->status($ruang);
+
+        return [
+            'dibuka' => $status['dibuka'],
+            'waktu_mulai' => $status['waktu_mulai']?->toIso8601String(),
+            'dibuka_pada' => $status['dibuka_pada']?->toIso8601String(),
+            'menit_sebelum_ujian' => $status['menit_sebelum_ujian'],
+            'pesan' => $status['pesan'],
         ];
     }
 

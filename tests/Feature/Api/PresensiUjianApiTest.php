@@ -144,6 +144,62 @@ class PresensiUjianApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_presensi_mobile_dikunci_sebelum_jendela_dibuka_tetapi_catatan_salah_dapat_dibatalkan(): void
+    {
+        Carbon::setTestNow('2026-09-06 07:15:00');
+
+        try {
+            $data = $this->fondasi();
+            $token = $this->token($data['admin']);
+            Carbon::setTestNow('2026-09-05 22:08:00');
+
+            $this->withToken($token)
+                ->getJson(route('api.v1.presensi-ujian.show', $data['ruang_satu']))
+                ->assertOk()
+                ->assertJsonPath('data.ruang.dapat_mengubah', false)
+                ->assertJsonPath('data.jendela_presensi.dibuka', false)
+                ->assertJsonPath('data.jendela_presensi.menit_sebelum_ujian', 60);
+
+            $this->withToken($token)
+                ->postJson(route('api.v1.presensi-ujian.scan', $data['ruang_satu']), [
+                    'isi_scan' => $data['siswa_satu']->nisn,
+                ])
+                ->assertUnprocessable()
+                ->assertJsonPath('data.status', 'presensi_belum_dibuka');
+
+            $this->withToken($token)
+                ->patchJson(route('api.v1.presensi-ujian.manual', [
+                    $data['ruang_satu'],
+                    $data['peserta_satu'],
+                ]), [
+                    'status' => 'sakit',
+                ])
+                ->assertUnprocessable()
+                ->assertJsonPath('data.status', 'presensi_belum_dibuka');
+
+            $data['peserta_satu']->update([
+                'status_kehadiran_ujian' => 'hadir',
+                'absen_ujian_pada' => now(),
+                'absen_ujian_oleh_pengguna_id' => $data['admin']->id,
+            ]);
+
+            $this->withToken($token)
+                ->patchJson(route('api.v1.presensi-ujian.manual', [
+                    $data['ruang_satu'],
+                    $data['peserta_satu'],
+                ]), [
+                    'status' => 'belum_absen',
+                ])
+                ->assertOk()
+                ->assertJsonPath('data.berhasil', true)
+                ->assertJsonPath('data.peserta.status', 'belum_absen');
+
+            $this->assertNull($data['peserta_satu']->fresh()->absen_ujian_pada);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     private function fondasi(): array
     {
         $admin = Pengguna::query()->where('username', 'administrator')->firstOrFail();

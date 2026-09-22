@@ -113,6 +113,71 @@ class PelaksanaanUjianTerpusatApiTest extends TestCase
             ->assertJsonValidationErrors('alasan');
     }
 
+    public function test_pengawas_mobile_tidak_dapat_ditugaskan_di_dua_ruang_pada_waktu_bertumpang_tindih(): void
+    {
+        $data = $this->fondasi();
+        $token = $data['admin']->createToken('Panitia Bentrok Android', ['mobile'])->plainTextToken;
+        $ruangKedua = RuangKegiatanUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+            'kode' => 'R-02',
+            'nama' => 'Labor Komputer 2',
+            'lokasi' => 'Lantai 1',
+            'kapasitas' => 30,
+            'urutan' => 2,
+            'aktif' => true,
+        ]);
+        $kelompok = KelompokPesertaKegiatanUjianCbt::query()
+            ->where('kegiatan_ujian_cbt_id', $data['kegiatan']->id)
+            ->where('tingkat', $data['jadwal']->tingkat)
+            ->firstOrFail();
+        $kelompok->ruangKegiatanUjianCbt()->attach($ruangKedua->id, ['urutan' => 2]);
+        $jadwalKedua = JadwalUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+            'sesi_kegiatan_ujian_cbt_id' => $data['jadwal']->sesi_kegiatan_ujian_cbt_id,
+            'mata_pelajaran_id' => $data['jadwal']->mata_pelajaran_id,
+            'tanggal' => $data['jadwal']->tanggal,
+            'waktu_mulai' => '08:30',
+            'waktu_selesai' => '10:00',
+            'label_sesi' => 'Sesi Lanjutan',
+            'tingkat' => $data['jadwal']->tingkat,
+            'urutan' => 2,
+            'status' => 'siap',
+        ]);
+
+        $this->withToken($token)
+            ->patchJson(route('api.v1.pelaksanaan-ujian-terpusat.pengawas.update', [
+                $data['kegiatan'], $jadwalKedua, $ruangKedua,
+            ]), [
+                'peran' => 'utama',
+                'pegawai_id' => $data['pengawas_lama']->id,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('pegawai_id');
+
+        $this->assertDatabaseMissing('pengawas_ruang_ujian_terpusat', [
+            'jadwal_ujian_cbt_id' => $jadwalKedua->id,
+            'ruang_kegiatan_ujian_cbt_id' => $ruangKedua->id,
+        ]);
+
+        $jadwalKedua->update(['waktu_mulai' => '09:00', 'waktu_selesai' => '10:30']);
+
+        $this->withToken($token)
+            ->patchJson(route('api.v1.pelaksanaan-ujian-terpusat.pengawas.update', [
+                $data['kegiatan'], $jadwalKedua, $ruangKedua,
+            ]), [
+                'peran' => 'utama',
+                'pegawai_id' => $data['pengawas_lama']->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.jenis', 'penugasan');
+
+        $this->assertDatabaseHas('pengawas_ruang_ujian_terpusat', [
+            'jadwal_ujian_cbt_id' => $jadwalKedua->id,
+            'ruang_kegiatan_ujian_cbt_id' => $ruangKedua->id,
+            'pengawas_utama_pegawai_id' => $data['pengawas_lama']->id,
+        ]);
+    }
+
     public function test_nilai_dan_hasil_ujian_terpusat_menampilkan_jadwal_dan_peserta(): void
     {
         $data = $this->fondasi();

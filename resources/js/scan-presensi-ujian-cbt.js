@@ -27,6 +27,8 @@ if (root) {
     const context = canvas.getContext('2d', { willReadFrequently: true });
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     const fallbackPhoto = root.dataset.fallbackPhoto;
+    const attendanceOpen = root.dataset.attendanceOpen === '1';
+    const lockedMessage = root.dataset.lockedMessage || 'Presensi belum dibuka.';
     const serverStartedAt = new Date(root.dataset.serverTime);
     const localStartedAt = Date.now();
     const scanQueue = [];
@@ -89,7 +91,7 @@ if (root) {
         stream = null;
         video.srcObject = null;
         cameraWrap.classList.remove('camera-on');
-        startButton.disabled = false;
+        startButton.disabled = !attendanceOpen;
         switchButton.disabled = true;
         stopButton.disabled = true;
         statusText.textContent = 'Kamera dihentikan. Tekan Mulai kamera untuk melanjutkan.';
@@ -103,6 +105,11 @@ if (root) {
     };
 
     const startCamera = async (deviceId = null) => {
+        if (!attendanceOpen) {
+            showWarning(lockedMessage);
+            return;
+        }
+
         if (!navigator.mediaDevices?.getUserMedia) {
             showWarning('Browser ini tidak mendukung kamera. Gunakan Chrome, Edge, atau Safari versi terbaru.');
             return;
@@ -170,8 +177,9 @@ if (root) {
     const showResult = (payload) => {
         const known = payload.berhasil && !payload.baru;
         result.className = `result show ${payload.berhasil ? (known ? 'known' : 'success') : 'error'}`;
-        resultKicker.textContent = payload.berhasil ? (known ? 'Sudah tercatat' : 'Presensi berhasil') : 'Presensi belum tercatat';
-        resultName.textContent = payload.siswa?.nama_lengkap || 'QR tidak dikenali';
+        const belumDibuka = payload.status === 'presensi_belum_dibuka';
+        resultKicker.textContent = payload.berhasil ? (known ? 'Sudah tercatat' : 'Presensi berhasil') : (belumDibuka ? 'Belum waktunya presensi' : 'Presensi belum tercatat');
+        resultName.textContent = payload.siswa?.nama_lengkap || (belumDibuka ? 'Presensi belum dibuka' : 'QR tidak dikenali');
         resultPhoto.src = payload.siswa?.foto_url || fallbackPhoto;
         createMeta([
             payload.siswa?.kelas ? `Kelas ${payload.siswa.kelas}` : null,
@@ -227,6 +235,18 @@ if (root) {
 
         while (recentList.querySelectorAll('.recent-item').length > 8) {
             recentList.lastElementChild?.remove();
+        }
+    };
+
+    const removeRecent = (participant) => {
+        if (!recentList || !participant) return;
+        recentList.querySelector(`[data-participant-id="${participant.id}"]`)?.remove();
+
+        if (recentList.querySelectorAll('.recent-item').length === 0 && !recentList.querySelector('.participant-empty')) {
+            const empty = document.createElement('p');
+            empty.className = 'participant-empty';
+            empty.textContent = 'Belum ada peserta yang tercatat hadir.';
+            recentList.append(empty);
         }
     };
 
@@ -292,6 +312,12 @@ if (root) {
     };
 
     const enqueueScan = (rawValue) => {
+        if (!attendanceOpen) {
+            showResult({ berhasil: false, status: 'presensi_belum_dibuka', pesan: lockedMessage, waktu_server: clock.textContent });
+            sound(false);
+            return;
+        }
+
         const value = String(rawValue || '').trim();
         if (!value) return;
         lastValue = value;
@@ -324,13 +350,16 @@ if (root) {
         event.preventDefault();
         if (form.classList.contains('is-updating')) return;
         form.classList.add('is-updating');
-        form.querySelector('button').disabled = true;
+        const button = form.querySelector('button');
+        const select = form.querySelector('select');
+        button.disabled = true;
+        let tetapDinonaktifkan = false;
 
         try {
             const response = await fetch(form.action, {
                 method: 'PUT',
                 headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ status_kehadiran_ujian: form.querySelector('select').value }),
+                body: JSON.stringify({ status_kehadiran_ujian: select.value }),
             });
             const payload = await parseResponse(response);
             showResult({
@@ -347,13 +376,25 @@ if (root) {
             sound(Boolean(payload.berhasil));
             updateSummary(payload.ringkasan);
             updateParticipantRow(payload.peserta);
-            if (payload.peserta && ['hadir', 'terlambat'].includes(payload.peserta.status)) addRecent(payload.peserta);
+            if (payload.peserta && ['hadir', 'terlambat'].includes(payload.peserta.status)) {
+                addRecent(payload.peserta);
+            } else {
+                removeRecent(payload.peserta);
+            }
+
+            if (!attendanceOpen && payload.berhasil && payload.peserta?.status === 'belum_absen') {
+                select.disabled = true;
+                select.replaceChildren(new Option('Belum hadir', 'belum_absen', true, true));
+                button.textContent = 'Belum dibuka';
+                button.className = 'button button-secondary participant-save';
+                tetapDinonaktifkan = true;
+            }
         } catch (_) {
             showResult({ berhasil: false, pesan: 'Perubahan manual tidak dapat dikirim ke server.' });
             sound(false);
         } finally {
             form.classList.remove('is-updating');
-            form.querySelector('button').disabled = false;
+            button.disabled = tetapDinonaktifkan;
         }
     }));
     window.addEventListener('pagehide', stopCamera);

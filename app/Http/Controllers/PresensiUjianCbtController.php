@@ -6,6 +6,7 @@ use App\Models\PesertaUjianCbt;
 use App\Models\RuangUjianCbt;
 use App\Models\Siswa;
 use App\Models\UjianCbt;
+use App\Services\Cbt\JendelaPresensiUjianCbt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -63,8 +64,12 @@ class PresensiUjianCbtController extends Controller
         ]);
     }
 
-    public function show(Request $request, UjianCbt $ujianCbt, RuangUjianCbt $ruangUjianCbt)
-    {
+    public function show(
+        Request $request,
+        UjianCbt $ujianCbt,
+        RuangUjianCbt $ruangUjianCbt,
+        JendelaPresensiUjianCbt $jendelaPresensi,
+    ) {
         $this->pastikanRuangMilikUjian($ujianCbt, $ruangUjianCbt);
         $this->pastikanDapatMengelolaRuang($request, $ruangUjianCbt);
 
@@ -85,6 +90,7 @@ class PresensiUjianCbtController extends Controller
             ->take(8)
             ->map(fn (PesertaUjianCbt $item) => $this->dataPeserta($item))
             ->values();
+        $statusJendelaPresensi = $jendelaPresensi->status($ruangUjianCbt);
 
         return view('presensi-ujian-cbt.show', [
             'ujianCbt' => $ujianCbt,
@@ -94,13 +100,22 @@ class PresensiUjianCbtController extends Controller
             'ringkasan' => $this->ringkasanRuang($ruangUjianCbt),
             'waktuServerIso' => now()->toIso8601String(),
             'daftarStatusKehadiran' => PesertaUjianCbt::DAFTAR_STATUS_KEHADIRAN,
+            'statusJendelaPresensi' => $statusJendelaPresensi,
         ]);
     }
 
-    public function scan(Request $request, UjianCbt $ujianCbt, RuangUjianCbt $ruangUjianCbt): JsonResponse
-    {
+    public function scan(
+        Request $request,
+        UjianCbt $ujianCbt,
+        RuangUjianCbt $ruangUjianCbt,
+        JendelaPresensiUjianCbt $jendelaPresensi,
+    ): JsonResponse {
         $this->pastikanRuangMilikUjian($ujianCbt, $ruangUjianCbt);
         $this->pastikanDapatMengelolaRuang($request, $ruangUjianCbt);
+
+        if (! $jendelaPresensi->sudahDibuka($ruangUjianCbt)) {
+            return $this->responsPresensiBelumDibuka($jendelaPresensi->status($ruangUjianCbt));
+        }
 
         $data = $request->validate([
             'isi_scan' => ['required', 'string', 'max:120'],
@@ -191,7 +206,8 @@ class PresensiUjianCbtController extends Controller
         Request $request,
         UjianCbt $ujianCbt,
         RuangUjianCbt $ruangUjianCbt,
-        PesertaUjianCbt $pesertaUjianCbt
+        PesertaUjianCbt $pesertaUjianCbt,
+        JendelaPresensiUjianCbt $jendelaPresensi,
     ): JsonResponse {
         $this->pastikanRuangMilikUjian($ujianCbt, $ruangUjianCbt);
         $this->pastikanDapatMengelolaRuang($request, $ruangUjianCbt);
@@ -205,6 +221,13 @@ class PresensiUjianCbtController extends Controller
             'status_kehadiran_ujian' => ['required', Rule::in(array_keys(PesertaUjianCbt::DAFTAR_STATUS_KEHADIRAN))],
             'catatan_kehadiran_ujian' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        if (
+            $data['status_kehadiran_ujian'] !== 'belum_absen'
+            && ! $jendelaPresensi->sudahDibuka($ruangUjianCbt)
+        ) {
+            return $this->responsPresensiBelumDibuka($jendelaPresensi->status($ruangUjianCbt));
+        }
 
         $peserta = DB::transaction(function () use ($request, $data, $pesertaUjianCbt) {
             $peserta = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($pesertaUjianCbt->id);
@@ -326,6 +349,17 @@ class PresensiUjianCbtController extends Controller
             'berhasil' => false,
             'status' => 'tidak_dikenali',
             'pesan' => $pesan,
+            'waktu_server' => now()->format('H:i:s'),
+        ], 422);
+    }
+
+    private function responsPresensiBelumDibuka(array $statusJendela): JsonResponse
+    {
+        return response()->json([
+            'berhasil' => false,
+            'status' => 'presensi_belum_dibuka',
+            'pesan' => $statusJendela['pesan'],
+            'dibuka_pada' => $statusJendela['dibuka_pada']?->toIso8601String(),
             'waktu_server' => now()->format('H:i:s'),
         ], 422);
     }
