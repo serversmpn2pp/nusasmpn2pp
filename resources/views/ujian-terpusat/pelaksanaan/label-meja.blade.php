@@ -16,8 +16,9 @@
         .button-primary { border-color:var(--primary); background:var(--primary); color:#fff; }
         .print-area { padding:10mm; }
         .sheet { display:grid; width:190mm; min-height:267mm; margin:0 auto 10mm; grid-template-columns:repeat(2,92mm); grid-auto-rows:62mm; gap:4mm 6mm; align-content:start; }
-        .desk-label { position:relative; display:grid; min-width:0; grid-template-rows:auto 1fr auto; overflow:hidden; border:1px solid var(--primary); border-radius:3mm; background:var(--paper); box-shadow:0 4px 14px rgba(21,71,122,.12); break-inside:avoid; }
-        .desk-label::after { position:absolute; right:-13mm; bottom:-16mm; width:34mm; height:34mm; border:7mm solid var(--accent); border-radius:50%; content:""; opacity:.95; }
+        .desk-label { position:relative; display:grid; min-width:0; grid-template-rows:auto 1fr auto; overflow:hidden; isolation:isolate; border:1px solid var(--primary); border-radius:3mm; background:var(--paper); box-shadow:0 4px 14px rgba(21,71,122,.12); break-inside:avoid; }
+        .desk-label::after { position:absolute; z-index:0; right:-13mm; bottom:-16mm; width:34mm; height:34mm; border:7mm solid var(--accent); border-radius:50%; content:""; opacity:.95; pointer-events:none; }
+        .label-head,.label-body,.desk-code { position:relative; z-index:1; }
         .label-head { display:grid; grid-template-columns:12mm minmax(0,1fr) auto; gap:3mm; align-items:center; padding:3mm 4mm; background:var(--primary); color:#fff; }
         .label-logo { width:11mm; height:11mm; padding:.7mm; border-radius:2mm; background:#fff; object-fit:contain; }
         .label-school { min-width:0; }

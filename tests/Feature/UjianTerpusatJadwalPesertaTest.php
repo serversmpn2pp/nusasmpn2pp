@@ -91,6 +91,8 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
             ->assertSeeText('8 label per lembar A4')
             ->assertSeeText('SMP NEGERI 2 PADANG PANJANG')
             ->assertSee('images/kartu-pelajar/logo-smpn2pp.png')
+            ->assertSee('.desk-label::after { position:absolute; z-index:0;', false)
+            ->assertSee('.label-head,.label-body,.desk-code { position:relative; z-index:1;', false)
             ->assertSee('SAS-2627-01-S01-R01-M001')
             ->assertSee('Aulia')
             ->assertSee('9000007001')
