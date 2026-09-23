@@ -72,12 +72,12 @@
                     <div class="detail-item" style="margin-bottom: 16px;">
                         <dt>Stimulus</dt>
                         <dd style="white-space: pre-line;">{{ $soalCbt->stimulus }}</dd>
-                        <x-media-soal :media="data_get($soalCbt->media, 'konten.stimulus', [])" compact />
+                        <x-media-soal :media="data_get($soalCbt->media, 'konten.stimulus', [])" stimulus />
                     </div>
                 @elseif (filled(data_get($soalCbt->media, 'konten.stimulus')))
                     <div class="detail-item" style="margin-bottom: 16px;">
                         <dt>Stimulus</dt>
-                        <dd><x-media-soal :media="data_get($soalCbt->media, 'konten.stimulus', [])" compact /></dd>
+                        <dd><x-media-soal :media="data_get($soalCbt->media, 'konten.stimulus', [])" stimulus /></dd>
                     </div>
                 @endif
                 <x-media-soal :media="$soalCbt->media" />

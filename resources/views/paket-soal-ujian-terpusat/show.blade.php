@@ -48,26 +48,6 @@
         .question-meta span { margin-top:4px; color:var(--muted); font-size:.7rem; font-weight:700; }
         .question-preview-action .button { width:100%; min-width:0; }
         .question-weight label { display:block; margin-bottom:5px; color:var(--muted); font-size:.68rem; font-weight:800; }
-        .package-preview-dialog { width:min(760px,calc(100% - 28px)); max-height:calc(100vh - 32px); overflow:hidden; border:0; border-radius:8px; padding:0; box-shadow:0 24px 70px rgba(15,53,92,.26); }
-        .package-preview-dialog::backdrop { background:rgba(15,35,55,.58); }
-        .package-preview-head { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); padding:15px 18px; }
-        .package-preview-head h2 { margin:0; font-size:1rem; }
-        .package-preview-body { max-height:calc(100vh - 112px); overflow-y:auto; padding:18px; }
-        .package-preview-meta { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; }
-        .package-preview-stimulus { margin-bottom:14px; border-left:4px solid var(--accent); background:var(--accent-soft); padding:12px 14px; color:var(--ink); font-size:.82rem; line-height:1.6; white-space:pre-line; }
-        .package-preview-question { margin:15px 0; color:var(--dark); font-size:1rem; font-weight:800; line-height:1.65; white-space:pre-line; }
-        .package-preview-options { display:grid; gap:8px; }
-        .package-preview-option { display:grid; grid-template-columns:30px minmax(0,1fr) auto; gap:9px; align-items:start; border:1px solid var(--line); border-radius:7px; padding:10px 12px; }
-        .package-preview-option > strong { color:var(--primary-dark); }
-        .package-preview-option.is-answer { border-color:#86c7a4; background:#f0fbf5; }
-        .package-preview-answer { margin-top:14px; border:1px solid #bfd5ea; border-radius:7px; background:var(--primary-soft); padding:12px 14px; }
-        .package-preview-answer strong,.package-preview-answer span { display:block; }
-        .package-preview-answer strong { color:var(--primary-dark); font-size:.74rem; }
-        .package-preview-answer span { margin-top:5px; color:var(--ink); font-size:.82rem; line-height:1.55; white-space:pre-line; }
-        .package-preview-notes { margin-top:14px; border-top:1px solid var(--line); padding-top:14px; }
-        .package-preview-notes strong,.package-preview-notes span { display:block; }
-        .package-preview-notes strong { color:var(--primary-dark); font-size:.74rem; }
-        .package-preview-notes span { margin-top:5px; color:var(--muted); font-size:.8rem; line-height:1.55; white-space:pre-line; }
         .package-form-actions { position:sticky; bottom:0; display:flex; justify-content:space-between; gap:12px; align-items:center; margin-top:16px; padding:13px 15px; border:1px solid var(--line); border-radius:7px; background:rgba(255,255,255,.96); box-shadow:0 -8px 24px rgba(15,53,92,.08); z-index:3; }
         .package-form-summary { display:flex; flex-wrap:wrap; gap:8px; }
         .package-form-summary span { padding:7px 9px; border-radius:6px; background:var(--primary-soft); color:var(--primary-dark); font-size:.74rem; font-weight:800; }
@@ -93,10 +73,6 @@
             .question-type-meta,.question-status-meta,.question-preview-action,.question-weight { grid-column:2; grid-row:auto; }
             .question-preview-action .button { width:auto; }
             .question-weight { max-width:150px; }
-            .package-preview-head { display:grid; grid-template-columns:minmax(0,1fr) auto; }
-            .package-preview-head .button { width:auto; min-width:74px; }
-            .package-preview-option { grid-template-columns:26px minmax(0,1fr); }
-            .package-preview-option .badge { grid-column:2; justify-self:start; }
             .package-form-actions { position:static; display:grid; }
             .package-form-buttons { display:grid; grid-template-columns:1fr; }
             .package-form-buttons .button { width:100%; }
@@ -229,72 +205,13 @@
                     <div class="question-meta question-type-meta"><strong>{{ $item->labelJenis() }}</strong><span>{{ $item->labelKesulitan() }}</span></div>
                     <div class="question-meta question-status-meta"><strong>{{ $item->labelKategori() }}</strong><span>{{ $bisaDipilih ? 'Siap digunakan' : 'Tidak aktif' }}</span></div>
                     <div class="question-preview-action">
-                        <button type="button" class="button button-muted" data-open-package-preview="{{ $item->id }}" data-preview-code="{{ $item->kode }}">Pratinjau</button>
+                        <button type="button" class="button button-muted" data-question-preview data-preview-source="preview-soal-{{ $item->id }}">Pratinjau</button>
                     </div>
                     <div class="question-weight">
                         <label>Skor</label>
                         <strong>{{ number_format((float) $skor, 0, ',', '.') }}</strong>
                     </div>
                 </div>
-                <template data-package-preview-template="{{ $item->id }}">
-                    <article data-inline-math>
-                        <div class="package-preview-meta">
-                            <span class="badge badge-muted">{{ $item->labelJenis() }}</span>
-                            <span class="badge badge-muted">{{ $item->labelKesulitan() }}</span>
-                            <span class="badge badge-muted">{{ $item->topik ?: ($item->materi ?: 'Tanpa topik') }}</span>
-                        </div>
-
-                        @if ($item->stimulus)
-                            <div class="package-preview-stimulus">{{ $item->stimulus }}</div>
-                        @endif
-
-                        <x-media-soal :media="$item->media" />
-                        <div class="package-preview-question">{{ $item->pertanyaan }}</div>
-
-                        @if (isset($item->opsi['pilihan']))
-                            @php $jawabanPilihan = $item->kunci_jawaban['jawaban'] ?? null; @endphp
-                            <div class="package-preview-options">
-                                @foreach ($item->opsi['pilihan'] as $kode => $isi)
-                                    @php $jawabanBenar = (is_string($jawabanPilihan) && $jawabanPilihan === $kode) || (is_array($jawabanPilihan) && in_array($kode, $jawabanPilihan, true)); @endphp
-                                    <div class="package-preview-option {{ $jawabanBenar ? 'is-answer' : '' }}">
-                                        <strong>{{ $kode }}</strong>
-                                        <span>{{ $isi }}</span>
-                                        @if ($jawabanBenar)<span class="badge badge-active">Kunci</span>@endif
-                                    </div>
-                                @endforeach
-                            </div>
-                        @elseif (isset($item->opsi['pernyataan']))
-                            <div class="package-preview-options">
-                                @foreach ($item->opsi['pernyataan'] as $pernyataan)
-                                    @php $jawabanBenarSalah = (bool) ($item->kunci_jawaban['jawaban'][$pernyataan['nomor']] ?? false); @endphp
-                                    <div class="package-preview-option">
-                                        <strong>{{ $pernyataan['nomor'] }}</strong>
-                                        <span>{{ $pernyataan['teks'] }}</span>
-                                        <span class="badge {{ $jawabanBenarSalah ? 'badge-active' : 'badge-muted' }}">{{ $jawabanBenarSalah ? 'Benar' : 'Salah' }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @elseif (isset($item->opsi['pasangan']))
-                            <div class="package-preview-options">
-                                @foreach ($item->opsi['pasangan'] as $pasangan)
-                                    <div class="package-preview-option is-answer">
-                                        <strong>{{ $pasangan['nomor'] }}</strong>
-                                        <span>{{ $pasangan['kiri'] }} → {{ $pasangan['kanan'] }}</span>
-                                        <span class="badge badge-active">Pasangan</span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @elseif ($item->jenis_soal === 'upload_file')
-                            <div class="package-preview-answer"><strong>Bentuk jawaban</strong><span>Siswa mengunggah berkas jawaban.</span></div>
-                        @else
-                            <div class="package-preview-answer"><strong>Kunci jawaban</strong><span>{{ filled($item->kunci_jawaban['jawaban'] ?? null) ? $item->kunci_jawaban['jawaban'] : 'Diperiksa manual oleh guru.' }}</span></div>
-                        @endif
-
-                        @if ($item->pembahasan)
-                            <div class="package-preview-notes"><strong>Pembahasan</strong><span>{{ $item->pembahasan }}</span></div>
-                        @endif
-                    </article>
-                </template>
             @empty
                 <div class="question-empty"><strong>{{ $bolehKelola ? 'Belum ada soal siap untuk mapel dan tingkat ini.' : 'Paket belum memiliki soal.' }}</strong>@if($bolehKelola)<p class="help-text" style="margin-top:6px;">Tambahkan atau ubah soal menjadi Siap digunakan melalui Bank Soal.</p>@endif</div>
             @endforelse
@@ -318,40 +235,20 @@
         </form>
     @endif
 
-    <dialog class="package-preview-dialog" data-package-preview-dialog aria-labelledby="package-preview-title">
-        <div class="package-preview-head">
-            <h2 id="package-preview-title" data-package-preview-title>Pratinjau soal</h2>
-            <button type="button" class="button button-muted" data-close-package-preview>Tutup</button>
+    @include('soal-cbt.partials.preview-styles')
+    @foreach ($soal as $item)
+        @include('soal-cbt.partials.preview-source')
+    @endforeach
+    <dialog class="question-preview-dialog" data-question-preview-dialog aria-label="Pratinjau soal">
+        <div class="question-preview-head">
+            <h2>Pratinjau soal</h2>
+            <button type="button" class="button button-muted" data-close-question-preview>Tutup</button>
         </div>
-        <div class="package-preview-body" data-package-preview-body></div>
+        <div class="question-preview-body" data-question-preview-body></div>
     </dialog>
-
-    <script>
-        (() => {
-            const dialog = document.querySelector('[data-package-preview-dialog]');
-            const body = dialog?.querySelector('[data-package-preview-body]');
-            const title = dialog?.querySelector('[data-package-preview-title]');
-
-            document.querySelectorAll('[data-open-package-preview]').forEach((button) => {
-                button.addEventListener('click', () => {
-                    const template = document.querySelector(`[data-package-preview-template="${button.dataset.openPackagePreview}"]`);
-                    if (!dialog || !body || !template) return;
-
-                    body.replaceChildren(template.content.cloneNode(true));
-                    if (title) title.textContent = `Pratinjau ${button.dataset.previewCode || 'soal'}`;
-
-                    window.renderRumusSoal?.(body);
-                    if (typeof dialog.showModal === 'function') dialog.showModal();
-                    else dialog.setAttribute('open', '');
-                });
-            });
-
-            dialog?.querySelector('[data-close-package-preview]')?.addEventListener('click', () => dialog.close());
-            dialog?.addEventListener('click', (event) => {
-                if (event.target === dialog) dialog.close();
-            });
-        })();
-    </script>
+    @push('scripts')
+        @vite('resources/js/soal-editor.js')
+    @endpush
 
     @if ($bolehKelola)
         <script>

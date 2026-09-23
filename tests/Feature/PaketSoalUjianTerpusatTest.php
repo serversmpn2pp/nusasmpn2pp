@@ -16,6 +16,7 @@ use App\Models\SesiKegiatanUjianCbt;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use Illuminate\Support\Facades\Storage;
 use PDO;
 use Tests\TestCase;
 
@@ -59,7 +60,8 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ->assertSee('name="acak_soal"', false)
             ->assertSee('name="acak_jawaban"', false)
             ->assertSee('Pratinjau')
-            ->assertSee('data-open-package-preview', false)
+            ->assertSee('data-question-preview', false)
+            ->assertSee('data-preview-source="preview-soal-'.$soalSatu->id.'"', false)
             ->assertSee('Benar')
             ->assertDontSee('name="mata_pelajaran_id"', false)
             ->assertDontSee('name="tingkat"', false)
@@ -123,6 +125,39 @@ class PaketSoalUjianTerpusatTest extends TestCase
         $paket->refresh();
         $this->assertFalse($paket->acak_soal);
         $this->assertFalse($paket->acak_jawaban);
+    }
+
+    public function test_pratinjau_paket_memuat_gambar_stimulus_dan_pilihan_seperti_bank_soal(): void
+    {
+        $data = $this->buatFondasi();
+        $soal = $this->buatSoal($data['tahun'], $data['mapel'], 'SOAL-MEDIA-001', 'Perhatikan gambar.');
+        $soal->update([
+            'stimulus' => 'Amati diagram berikut.',
+            'media' => [
+                'konten' => [
+                    'stimulus' => ['gambar' => [
+                        'path' => 'soal-cbt/diagram-stimulus.png',
+                        'alt' => 'Diagram stimulus',
+                        'keterangan' => 'Diagram untuk soal',
+                    ]],
+                    'pilihan_B' => ['gambar' => [
+                        'path' => 'soal-cbt/diagram-jawaban.png',
+                        'alt' => 'Diagram jawaban',
+                        'keterangan' => 'Pilihan B',
+                    ]],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($data['admin'])
+            ->get(route('paket-soal-terpusat.show', $data['jadwal']))
+            ->assertOk()
+            ->assertSee('id="preview-soal-'.$soal->id.'"', false)
+            ->assertSee('data-preview-source="preview-soal-'.$soal->id.'"', false)
+            ->assertSee(Storage::disk('public')->url('soal-cbt/diagram-stimulus.png'))
+            ->assertSee(Storage::disk('public')->url('soal-cbt/diagram-jawaban.png'))
+            ->assertSee('Diagram untuk soal')
+            ->assertSee('Pilihan B');
     }
 
     public function test_guru_hanya_mengelola_paket_mapel_dan_kelas_yang_diampu(): void

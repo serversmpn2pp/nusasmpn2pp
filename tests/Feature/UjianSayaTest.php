@@ -187,6 +187,119 @@ class UjianSayaTest extends TestCase
             ->assertDontSee('Siswa Rahasia Kelas Lain');
     }
 
+    public function test_nilai_cbt_terpusat_hanya_tampil_untuk_peserta_sendiri_setelah_dipublikasikan(): void
+    {
+        Carbon::setTestNow('2026-12-01 08:00:00');
+
+        $tahun = TahunPelajaran::create([
+            'nama' => '2026/2027',
+            'tanggal_mulai' => '2026-07-01',
+            'tanggal_selesai' => '2027-06-30',
+            'aktif' => true,
+        ]);
+        $kelas = $this->buatKelas($tahun, 'VIII.A');
+        $kelasLain = $this->buatKelas($tahun, 'VIII.B');
+        [, $anggota, $akun] = $this->buatSiswaBerakun($kelas, 'Siswa Pemilik Nilai', '0131201160');
+        [, $anggotaLain] = $this->buatSiswaBerakun($kelasLain, 'Siswa Nilai Lain', '0131201161');
+        $mapel = MataPelajaran::create([
+            'kode' => 'BIND8',
+            'nama' => 'Bahasa Indonesia',
+            'tingkat' => 8,
+            'kkm' => 70,
+            'aktif' => true,
+        ]);
+        $jenis = JenisUjianCbt::firstOrCreate(
+            ['kode' => 'STS'],
+            ['nama' => 'Sumatif Tengah Semester', 'memerlukan_token' => true, 'dapat_diterapkan_ke_nilai' => true, 'urutan' => 1, 'aktif' => true],
+        );
+        $ujian = $this->buatUjian(
+            $jenis, $tahun, $mapel, 'CBT-NILAI-PUBLIK', 'STS Bahasa Indonesia',
+            '2026-11-20 07:30:00', '2026-11-20 09:00:00', 'selesai',
+        );
+        $ujian->update(['jumlah_soal' => 2]);
+        $kelasUjian = KelasUjianCbt::create(['ujian_cbt_id' => $ujian->id, 'kelas_id' => $kelas->id]);
+        $kelasUjianLain = KelasUjianCbt::create(['ujian_cbt_id' => $ujian->id, 'kelas_id' => $kelasLain->id]);
+        $peserta = $this->buatPeserta($ujian, $kelasUjian, $anggota, 'NILAI-001', status: 'selesai');
+        $pesertaLain = $this->buatPeserta($ujian, $kelasUjianLain, $anggotaLain, 'NILAI-002', status: 'selesai');
+
+        foreach ([1, 3] as $nomor => $bobot) {
+            $soal = SoalCbt::create([
+                'tahun_pelajaran_id' => $tahun->id,
+                'mata_pelajaran_id' => $mapel->id,
+                'tingkat' => 8,
+                'kode' => 'NILAI-PUBLIK-'.($nomor + 1),
+                'jenis_soal' => $nomor === 0 ? 'pilihan_ganda' : 'pilihan_ganda_kompleks',
+                'tingkat_kesulitan' => $nomor === 0 ? 'mudah' : 'sulit',
+                'kategori' => 'lots',
+                'pertanyaan' => 'Pertanyaan '.($nomor + 1),
+                'opsi' => ['pilihan' => ['A' => 'Benar', 'B' => 'Benar juga', 'C' => 'Salah']],
+                'kunci_jawaban' => ['jawaban' => $nomor === 0 ? 'A' : ['A', 'B']],
+                'skor_maksimal' => $bobot,
+                'status' => 'siap',
+                'aktif' => true,
+            ]);
+            $relasiSoal = $ujian->soalUjianCbt()->create([
+                'soal_cbt_id' => $soal->id,
+                'nomor_urut' => $nomor + 1,
+                'bobot' => $bobot,
+            ]);
+            $peserta->jawabanPesertaUjianCbt()->create([
+                'soal_ujian_cbt_id' => $relasiSoal->id,
+                'soal_cbt_id' => $soal->id,
+                'jawaban' => ['A'],
+                'skor' => $nomor === 0 ? 1 : 2,
+            ]);
+            $pesertaLain->jawabanPesertaUjianCbt()->create([
+                'soal_ujian_cbt_id' => $relasiSoal->id,
+                'soal_cbt_id' => $soal->id,
+                'jawaban' => ['A'],
+                'skor' => $bobot,
+            ]);
+        }
+
+        $this->actingAs($akun)
+            ->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertSee('Belum dipublikasikan')
+            ->assertDontSee('75,00');
+
+        $ujian->update(['tampilkan_hasil' => true]);
+        $this->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertSee('Belum dipublikasikan')
+            ->assertDontSee('75,00');
+
+        $ujian->update(['hasil_difinalisasi_pada' => now()]);
+        $this->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertSee('75,00')
+            ->assertDontSee('100,00');
+
+        $jawabanKedua = $peserta->jawabanPesertaUjianCbt()->orderByDesc('id')->firstOrFail();
+        $jawabanKedua->update(['skor' => null]);
+        $this->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertSee('Belum tersedia')
+            ->assertDontSee('75,00');
+
+        $jawabanKedua->update(['skor' => 0]);
+        $this->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertSee('25,00');
+
+        $peserta->jawabanPesertaUjianCbt()->orderBy('id')->firstOrFail()->update(['skor' => 0]);
+        $this->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertSee('0,00')
+            ->assertDontSee('Belum tersedia');
+
+        $ujian->update(['tampilkan_hasil' => false]);
+        $this->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertSee('Belum dipublikasikan')
+            ->assertDontSee('0,00');
+    }
+
     public function test_siswa_masuk_dan_melanjutkan_ujian_dari_akun_nusa_dengan_token_pengawas(): void
     {
         Carbon::setTestNow('2026-12-01 08:00:00');

@@ -35,7 +35,20 @@ class DaftarUjianSiswaService
                 'berlangsung',
                 'selesai',
             ]))
-            ->get()
+            ->get();
+
+        $pesertaTerpublikasi = $peserta->filter(fn (PesertaUjianCbt $item) =>
+            $item->status === 'selesai'
+            && $item->ujianCbt?->ujianTerpusat()
+            && $item->ujianCbt->tampilkan_hasil
+            && $item->ujianCbt->hasil_difinalisasi_pada
+        );
+        $pesertaTerpublikasi->loadMissing([
+            'jawabanPesertaUjianCbt',
+            'ujianCbt.soalUjianCbt',
+        ]);
+
+        $peserta = $peserta
             ->map(fn (PesertaUjianCbt $item) => $this->rapikanItem($item, $sekarang))
             ->sortBy(fn (array $item) => sprintf(
                 '%d|%s|%08d',
@@ -133,6 +146,39 @@ class DaftarUjianSiswaService
             'label_status' => $labelStatus,
             'nada_status' => $nadaStatus,
             'susulan' => $susulanTerjadwal || filled($peserta->status_susulan),
+            'hasil_cbt' => $peserta->status === 'selesai' && $ujian?->ujianTerpusat()
+                ? $this->hasilCbt($peserta)
+                : null,
+        ];
+    }
+
+    private function hasilCbt(PesertaUjianCbt $peserta): array
+    {
+        $ujian = $peserta->ujianCbt;
+        if (! $ujian->tampilkan_hasil || ! $ujian->hasil_difinalisasi_pada) {
+            return ['status' => 'belum_dipublikasikan', 'nilai' => null];
+        }
+
+        $soal = $ujian->soalUjianCbt
+            ->sortBy(fn ($item) => sprintf('%05d|%08d', $item->nomor_urut ?? 9999, $item->id))
+            ->take($ujian->jumlah_soal);
+        $bobotTotal = (float) $soal->sum(fn ($item) => (float) $item->bobot);
+        $jawaban = $peserta->jawabanPesertaUjianCbt->keyBy('soal_ujian_cbt_id');
+        $belumDikoreksi = $soal->contains(function ($item) use ($jawaban) {
+            $jawabanSoal = $jawaban->get($item->id);
+
+            return ! is_null($jawabanSoal?->jawaban) && is_null($jawabanSoal?->skor);
+        });
+
+        if ($bobotTotal <= 0 || $belumDikoreksi) {
+            return ['status' => 'belum_tersedia', 'nilai' => null];
+        }
+
+        $skorTotal = $soal->sum(fn ($item) => (float) ($jawaban->get($item->id)?->skor ?? 0));
+
+        return [
+            'status' => 'dipublikasikan',
+            'nilai' => max(0, min(100, round(($skorTotal / $bobotTotal) * 100, 2))),
         ];
     }
 

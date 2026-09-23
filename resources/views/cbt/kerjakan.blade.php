@@ -500,7 +500,7 @@
                                     @if (filled($soal?->stimulus))
                                         <div>{{ $soal->stimulus }}</div>
                                     @endif
-                                    <x-media-soal :media="data_get($soal?->media, 'konten.stimulus', [])" compact />
+                                    <x-media-soal :media="data_get($soal?->media, 'konten.stimulus', [])" stimulus />
                                 </div>
                             @endif
 

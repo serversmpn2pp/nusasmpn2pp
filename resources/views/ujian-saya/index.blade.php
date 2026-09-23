@@ -219,6 +219,32 @@
             min-width: 0;
         }
 
+        .student-exam-result {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px 16px;
+            flex-wrap: wrap;
+            border-top: 1px solid #d8e2ec;
+            padding-top: 14px;
+        }
+
+        .student-exam-result span {
+            color: #61758a;
+            font-size: 13px;
+        }
+
+        .student-exam-result strong {
+            color: #123c67;
+            font-size: 22px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .student-exam-result.is-pending strong {
+            color: #61758a;
+            font-size: 14px;
+        }
+
         .student-exam-fact span {
             color: #6a7c8e;
             display: block;
@@ -483,6 +509,19 @@
                                         <strong>{{ $jadwal?->kegiatanUjianCbt?->nama ?: $ujian?->nama ?: '-' }}</strong>
                                     </div>
                                 </div>
+
+                                @if ($item['hasil_cbt'])
+                                    <div class="student-exam-result {{ $item['hasil_cbt']['nilai'] === null ? 'is-pending' : '' }}">
+                                        <span>Hasil CBT</span>
+                                        <strong>
+                                            @if ($item['hasil_cbt']['nilai'] !== null)
+                                                {{ number_format($item['hasil_cbt']['nilai'], 2, ',', '.') }}
+                                            @else
+                                                {{ $item['hasil_cbt']['status'] === 'belum_dipublikasikan' ? 'Belum dipublikasikan' : 'Belum tersedia' }}
+                                            @endif
+                                        </strong>
+                                    </div>
+                                @endif
 
                                 @if ($bagian['kelas'] === 'is-active' && in_array($peserta->status, ['aktif', 'sedang_mengerjakan'], true))
                                     @php

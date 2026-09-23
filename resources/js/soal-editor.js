@@ -256,10 +256,10 @@ const createText = (tag, text, className = '') => {
     return element;
 };
 
-const appendPreviewMedia = (container, editor, compact = false) => {
+const appendPreviewMedia = (container, editor, compact = false, stimulus = false) => {
     if (!editor) return;
     const media = document.createElement('div');
-    media.className = `question-media-content${compact ? ' is-compact' : ''}`;
+    media.className = `question-media-content${compact ? ' is-compact' : ''}${stimulus ? ' is-stimulus' : ''}`;
     const previewImage = editor.querySelector('[data-image-preview] img');
     const field = (rootName, nestedName = rootName) => editor.querySelector(
         `[name="${rootName}"], [name$="[${nestedName}]"]`,
@@ -525,7 +525,7 @@ document.querySelectorAll('[data-question-preview]').forEach((button) => {
             const stimulusBox = document.createElement('div');
             stimulusBox.className = 'stimulus';
             if (stimulus) stimulusBox.append(createText('div', stimulus));
-            appendPreviewMedia(stimulusBox, stimulusEditor, true);
+            appendPreviewMedia(stimulusBox, stimulusEditor, false, true);
             if (stimulusBox.childElementCount) question.append(stimulusBox);
         }
 

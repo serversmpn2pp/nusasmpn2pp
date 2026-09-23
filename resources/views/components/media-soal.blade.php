@@ -1,4 +1,4 @@
-@props(['media' => [], 'compact' => false])
+@props(['media' => [], 'compact' => false, 'stimulus' => false])
 
 @php
     $gambar = data_get($media, 'gambar');
@@ -14,7 +14,7 @@
 @endphp
 
 @if ($gambarUrl || $barisTabel !== [] || filled(data_get($rumus, 'latex')))
-    <div class="question-media-content{{ $compact ? ' is-compact' : '' }}">
+    <div class="question-media-content{{ $compact ? ' is-compact' : '' }}{{ $stimulus ? ' is-stimulus' : '' }}">
         @if ($gambarUrl)
             <figure class="question-media-figure">
                 <img src="{{ $gambarUrl }}" alt="{{ data_get($gambar, 'alt', 'Gambar pendukung soal') }}">
@@ -70,6 +70,7 @@
             .question-media-content figure { margin:0; }
             .question-media-figure { text-align:center; }
             .question-media-figure img { display:block; width:auto; max-width:100%; max-height:430px; margin:0 auto; border:1px solid #dfe7f0; border-radius:7px; object-fit:contain; }
+            .question-media-content.is-stimulus .question-media-figure img { max-height:none; }
             .question-media-content figcaption { margin-top:7px; color:#71717a; font-size:.78rem; text-align:center; }
             .question-media-table-wrap > figcaption { margin:0 0 7px; color:#18181b; font-size:.84rem; font-weight:800; text-align:left; }
             .question-media-content, .question-media-table-wrap { min-width:0; max-width:100%; }

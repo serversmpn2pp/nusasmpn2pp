@@ -42,6 +42,7 @@
     .question-preview-exam .question-media-content figure { margin: 0; }
     .question-preview-exam .question-media-figure { text-align: center; }
     .question-preview-exam .question-media-figure img { display: block; width: auto; max-width: 100%; max-height: 430px; margin: 0 auto; border: 1px solid #dfe7f0; border-radius: 7px; object-fit: contain; }
+    .question-preview-exam .question-media-content.is-stimulus .question-media-figure img { max-height: none; }
     .question-preview-exam .question-media-content figcaption { margin-top: 7px; color: #71717a; font-size: .78rem; text-align: center; }
     .question-preview-exam .question-media-table-wrap > figcaption { margin: 0 0 7px; color: #18181b; font-size: .84rem; font-weight: 800; text-align: left; }
     .question-preview-exam .question-media-table-scroll { overflow-x: auto; }
