@@ -24,6 +24,7 @@ use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use App\Services\Cbt\BagiPesertaUjianTerpusat;
 use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
+use App\Services\Cbt\KelayakanPenyelesaianUjianCbtService;
 use App\Services\Cbt\KelolaJadwalUjianTerpusat;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
@@ -827,8 +828,10 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             $jawabanTersimpan = collect();
             $pilihanJawaban = $soalUjian->mapWithKeys(fn ($relasi) => [$relasi->id => app(PengacakPenyajianCbt::class)->pilihanJawaban($paket, $peserta, $relasi)]);
             $sisaDetik = 1200;
+            $kelayakanSelesai = app(KelayakanPenyelesaianUjianCbtService::class)
+                ->ringkasan($peserta, $soalUjian, $sisaDetik);
             session()->forget('berhasil');
-            file_put_contents(storage_path('logs/cbt-phone-audit.html'), view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik'))->render());
+            file_put_contents(storage_path('logs/cbt-phone-audit.html'), view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik', 'kelayakanSelesai'))->render());
         }
         $this->actingAs($data['akun_siswa'])->get(route('ujian-saya.index'))->assertOk()->assertSee('Simulasi CBT');
         $this->get(route('simulasi-cbt.index'))->assertForbidden();

@@ -7,6 +7,7 @@ use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
 use App\Services\Cbt\JawabanBerkasUjianCbtService;
+use App\Services\Cbt\KelayakanPenyelesaianUjianCbtService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -19,6 +20,7 @@ class AksesUjianCbtController extends Controller
     public function __construct(
         private readonly PengacakPenyajianCbt $pengacakPenyajianCbt,
         private readonly JawabanBerkasUjianCbtService $jawabanBerkas,
+        private readonly KelayakanPenyelesaianUjianCbtService $kelayakanPenyelesaian,
     ) {}
 
     public function masukDariAkunSiswa(Request $request, PesertaUjianCbt $pesertaUjianCbt)
@@ -148,8 +150,9 @@ class AksesUjianCbtController extends Controller
                 $relasiSoal,
             ),
         ]);
+        $kelayakanSelesai = $this->kelayakanPenyelesaian->ringkasan($peserta, $soalUjian, $sisaDetik);
 
-        return view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik'));
+        return view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik', 'kelayakanSelesai'));
     }
 
     public function simpan(Request $request, KoreksiOtomatisCbtService $koreksiOtomatisCbtService)
@@ -175,7 +178,10 @@ class AksesUjianCbtController extends Controller
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        DB::transaction(function () use ($peserta, $soalUjian, $jawaban, $ragu, $data) {
+        $inginSelesai = ($data['aksi'] ?? 'simpan') === 'selesai';
+        $bolehSelesai = false;
+
+        DB::transaction(function () use ($peserta, $soalUjian, $jawaban, $ragu, $inginSelesai, &$bolehSelesai) {
             $peserta = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
             if ($peserta->status !== 'sedang_mengerjakan') {
                 return;
@@ -211,7 +217,18 @@ class AksesUjianCbtController extends Controller
                 );
             }
 
-            if (($data['aksi'] ?? 'simpan') === 'selesai') {
+            if ($inginSelesai) {
+                $ringkasan = $this->kelayakanPenyelesaian->ringkasan(
+                    $peserta,
+                    $soalUjian,
+                    $this->hitungSisaDetik($peserta),
+                );
+                $bolehSelesai = $ringkasan['boleh_selesai'];
+
+                if (! $bolehSelesai) {
+                    return;
+                }
+
                 $peserta->update($this->dataPenyelesaian($peserta, [
                     'status' => 'selesai',
                     'waktu_selesai' => now(),
@@ -220,7 +237,13 @@ class AksesUjianCbtController extends Controller
             }
         });
 
-        if (($data['aksi'] ?? 'simpan') === 'selesai') {
+        if ($inginSelesai && ! $bolehSelesai) {
+            return redirect()
+                ->route('cbt.ujian.kerjakan')
+                ->withErrors(['ujian' => $this->kelayakanPenyelesaian->pesanPenolakan()]);
+        }
+
+        if ($inginSelesai) {
             $peserta->refresh();
             $koreksiOtomatisCbtService->koreksiPeserta($peserta);
 

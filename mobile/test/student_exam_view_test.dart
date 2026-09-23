@@ -32,6 +32,18 @@ void main() {
     expect(option.code, 'D');
   });
 
+  test('soal berbutir baru lengkap setelah semua baris dijawab', () {
+    final matching = StudentExamSession.fromJson(
+      _runningJson(withMatching: true),
+    ).questions.last;
+
+    expect(matching.copyWith(answer: {'1': 'Hertz'}).isAnswered, isFalse);
+    expect(
+      matching.copyWith(answer: {'1': 'Hertz', '2': 'Sekon'}).isAnswered,
+      isTrue,
+    );
+  });
+
   testWidgets('siswa membuka, autosave, dan menyelesaikan ujian native', (
     tester,
   ) async {
@@ -86,6 +98,12 @@ void main() {
     await tester.tap(find.byKey(const Key('student-exam-next')));
     await tester.pumpAndSettle();
     expect(find.text('Jelaskan proses pertukaran oksigen.'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('student-exam-finish')))
+          .onPressed,
+      isNull,
+    );
     expect(tester.takeException(), isNull);
 
     await tester.enterText(
@@ -95,10 +113,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 750));
     await tester.pump();
     expect(remote.savedQuestions, contains(102));
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('student-exam-finish')))
+          .onPressed,
+      isNotNull,
+    );
 
     await tester.tap(find.byKey(const Key('student-exam-finish')));
     await tester.pumpAndSettle();
-    expect(find.text('Selesaikan ujian?'), findsOneWidget);
+    expect(find.text('Kumpulkan ujian?'), findsOneWidget);
     await tester.tap(find.byKey(const Key('student-exam-confirm-finish')));
     await tester.pumpAndSettle();
 

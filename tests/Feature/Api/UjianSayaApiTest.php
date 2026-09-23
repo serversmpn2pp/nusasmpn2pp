@@ -114,6 +114,15 @@ class UjianSayaApiTest extends TestCase
             ->assertJsonPath('data.terjawab', true);
 
         $this->withToken($token)
+            ->postJson(route('api.v1.ujian-saya.selesai', $data['peserta']), [
+                'perangkat' => 'NUSA Android A',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ujian');
+
+        $this->assertSame('sedang_mengerjakan', $data['peserta']->fresh()->status);
+
+        $this->withToken($token)
             ->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
                 'soal_ujian_cbt_id' => $data['soal_uraian']->id,
                 'jawaban' => ['Pertukaran terjadi di alveolus.'],
@@ -139,6 +148,44 @@ class UjianSayaApiTest extends TestCase
             'soal_ujian_cbt_id' => $data['soal_pg']->id,
             'benar' => true,
         ]);
+        $this->assertSame('selesai', $data['peserta']->fresh()->status);
+    }
+
+    public function test_ujian_dapat_dikumpulkan_dengan_jawaban_belum_lengkap_pada_15_menit_terakhir(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $token = $this->token($data['pengguna']);
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+                'token' => 'MULAI1',
+                'perangkat' => 'NUSA Android Batas Akhir',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.penyelesaian.boleh_dikumpulkan', false)
+            ->assertJsonPath('data.penyelesaian.batas_akhir_detik', 900);
+
+        $this->withToken($token)
+            ->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
+                'soal_ujian_cbt_id' => $data['soal_pg']->id,
+                'jawaban' => ['A'],
+                'ragu' => false,
+                'perangkat' => 'NUSA Android Batas Akhir',
+            ])
+            ->assertOk();
+
+        Carbon::setTestNow('2026-09-05 08:15:00');
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.ujian-saya.selesai', $data['peserta']), [
+                'perangkat' => 'NUSA Android Batas Akhir',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.mode', 'selesai')
+            ->assertJsonPath('data.kemajuan.terjawab', 1)
+            ->assertJsonPath('data.kemajuan.belum_dijawab', 1);
+
         $this->assertSame('selesai', $data['peserta']->fresh()->status);
     }
 

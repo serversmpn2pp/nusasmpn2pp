@@ -9,6 +9,7 @@ use App\Models\SoalCbt;
 use App\Models\SoalUjianCbt;
 use App\Services\Cbt\DaftarUjianSiswaService;
 use App\Services\Cbt\JawabanBerkasUjianCbtService;
+use App\Services\Cbt\KelayakanPenyelesaianUjianCbtService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use Illuminate\Http\UploadedFile;
@@ -25,6 +26,7 @@ class UjianSayaMobileService
         private readonly KoreksiOtomatisCbtService $koreksiOtomatisCbtService,
         private readonly KeamananUjianMobileService $keamananUjian,
         private readonly JawabanBerkasUjianCbtService $jawabanBerkas,
+        private readonly KelayakanPenyelesaianUjianCbtService $kelayakanPenyelesaian,
     ) {}
 
     public function daftar(Pengguna $pengguna): array
@@ -300,6 +302,18 @@ class UjianSayaMobileService
         }
 
         $this->pastikanPerangkatSesuai($peserta, $perangkat);
+        $ringkasan = $this->kelayakanPenyelesaian->ringkasan(
+            $peserta,
+            $this->soalUntukPeserta($peserta),
+            $this->hitungSisaDetik($peserta),
+        );
+
+        if (! $ringkasan['boleh_selesai']) {
+            throw ValidationException::withMessages([
+                'ujian' => $this->kelayakanPenyelesaian->pesanPenolakan(),
+            ]);
+        }
+
         $this->akhiri($peserta);
 
         return $this->hasil($pengguna, $peserta->fresh());
@@ -447,16 +461,13 @@ class UjianSayaMobileService
     private function ringkasKemajuan(PesertaUjianCbt $peserta): array
     {
         $soal = $this->soalUntukPeserta($peserta);
-        $jawaban = $peserta->jawabanPesertaUjianCbt()
-            ->whereIn('soal_ujian_cbt_id', $soal->pluck('id'))
-            ->get();
-        $terjawab = $jawaban->whereNotNull('jawaban')->count();
+        $ringkasan = $this->kelayakanPenyelesaian->ringkasan($peserta, $soal, $this->hitungSisaDetik($peserta));
 
         return [
-            'jumlah_soal' => $soal->count(),
-            'terjawab' => $terjawab,
-            'belum_dijawab' => max(0, $soal->count() - $terjawab),
-            'ragu' => $jawaban->where('ragu', true)->count(),
+            'jumlah_soal' => $ringkasan['jumlah_soal'],
+            'terjawab' => $ringkasan['lengkap'],
+            'belum_dijawab' => $ringkasan['belum_lengkap'],
+            'ragu' => $ringkasan['ragu'],
         ];
     }
 
@@ -468,6 +479,7 @@ class UjianSayaMobileService
             ->get()
             ->keyBy('soal_ujian_cbt_id');
         $sisaDetik = $this->hitungSisaDetik($peserta);
+        $kelayakanSelesai = $this->kelayakanPenyelesaian->ringkasan($peserta, $soal, $sisaDetik);
 
         return [
             'mode' => 'pengerjaan',
@@ -477,6 +489,12 @@ class UjianSayaMobileService
             'peserta' => $this->ringkasPeserta($peserta),
             'ujian' => $this->ringkasUjian($peserta),
             'kemajuan' => $this->ringkasKemajuan($peserta),
+            'penyelesaian' => [
+                'boleh_dikumpulkan' => $kelayakanSelesai['boleh_selesai'],
+                'semua_soal_lengkap' => $kelayakanSelesai['semua_lengkap'],
+                'dalam_15_menit_terakhir' => $kelayakanSelesai['dalam_batas_akhir'],
+                'batas_akhir_detik' => $kelayakanSelesai['batas_pengumpulan_detik'],
+            ],
             'soal' => $soal->values()->map(function (SoalUjianCbt $relasi, int $index) use ($peserta, $jawaban) {
                 $soal = $relasi->soalCbt;
                 $tersimpan = $jawaban->get($relasi->id);

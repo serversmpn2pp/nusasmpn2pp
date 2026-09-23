@@ -206,6 +206,13 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     }
     final current = session
         .questions[_currentQuestion.clamp(0, session.questions.length - 1)];
+    final progress = _progressFor(session.questions);
+    final canFinish = progress.unanswered == 0 || _remainingSeconds <= 15 * 60;
+    final finishAvailability = progress.unanswered == 0
+        ? 'Semua soal sudah lengkap.'
+        : _remainingSeconds <= 15 * 60
+        ? '15 menit terakhir. Ujian sudah dapat dikumpulkan.'
+        : 'Lengkapi semua soal atau tunggu hingga 15 menit terakhir.';
     return Column(
       children: [
         if (session.security.enabled)
@@ -245,6 +252,8 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
           current: _currentQuestion,
           total: session.questions.length,
           finishing: _finishing,
+          canFinish: canFinish,
+          finishAvailability: finishAvailability,
           saveStatus: _saveStatuses[current.id] ?? _AnswerSaveStatus.saved,
           onPrevious: _currentQuestion > 0
               ? () => _goToQuestion(_currentQuestion - 1)
@@ -689,37 +698,68 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
 
   Future<void> _confirmFinish(StudentExamSession session) async {
     if (_finishing) return;
+    final progress = _progressFor(session.questions);
+    final canFinish = progress.unanswered == 0 || _remainingSeconds <= 15 * 60;
+    if (!canFinish) {
+      _showMessage(
+        'Lengkapi seluruh soal atau tunggu hingga 15 menit terakhir sebelum mengumpulkan ujian.',
+        error: true,
+      );
+      return;
+    }
+    final needsAcknowledgement =
+        progress.unanswered > 0 || progress.doubtful > 0;
+    var acknowledged = false;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Selesaikan ujian?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${session.progress.answered} terjawab, '
-              '${session.progress.unanswered} belum dijawab, dan '
-              '${session.progress.doubtful} ditandai ragu-ragu.',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Kumpulkan ujian?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${progress.answered} terjawab, '
+                '${progress.unanswered} belum lengkap, dan '
+                '${progress.doubtful} ditandai ragu-ragu.',
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Setelah dikumpulkan, jawaban tidak dapat diubah dan ujian tidak dapat dibuka kembali.',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              if (needsAcknowledgement) ...[
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  key: const Key('student-exam-finish-acknowledgement'),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: acknowledged,
+                  onChanged: (value) =>
+                      setDialogState(() => acknowledged = value ?? false),
+                  title: const Text(
+                    'Saya memahami masih ada jawaban yang belum lengkap atau ragu-ragu.',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Periksa Lagi'),
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'Setelah dikumpulkan, jawaban tidak dapat diubah lagi.',
-              style: TextStyle(fontWeight: FontWeight.w700),
+            FilledButton(
+              key: const Key('student-exam-confirm-finish'),
+              onPressed: needsAcknowledgement && !acknowledged
+                  ? null
+                  : () => Navigator.pop(context, true),
+              child: const Text('Kumpulkan'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Periksa Lagi'),
-          ),
-          FilledButton(
-            key: const Key('student-exam-confirm-finish'),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Kumpulkan'),
-          ),
-        ],
       ),
     );
     if (confirmed == true) await _finish();
@@ -1485,6 +1525,8 @@ class _ExamNavigationBar extends StatelessWidget {
     required this.current,
     required this.total,
     required this.finishing,
+    required this.canFinish,
+    required this.finishAvailability,
     required this.saveStatus,
     required this.onPrevious,
     required this.onNext,
@@ -1493,6 +1535,8 @@ class _ExamNavigationBar extends StatelessWidget {
   final int current;
   final int total;
   final bool finishing;
+  final bool canFinish;
+  final String finishAvailability;
   final _AnswerSaveStatus saveStatus;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
@@ -1517,40 +1561,71 @@ class _ExamNavigationBar extends StatelessWidget {
         ),
       ],
     ),
-    child: Row(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton.filledTonal(
-          tooltip: 'Sebelumnya',
-          onPressed: onPrevious,
-          icon: const Icon(Icons.arrow_back_rounded),
+        Row(
+          children: [
+            IconButton.filledTonal(
+              tooltip: 'Sebelumnya',
+              onPressed: onPrevious,
+              icon: const Icon(Icons.arrow_back_rounded),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _SaveStatusLabel(status: saveStatus, centered: true),
+            ),
+            const SizedBox(width: 8),
+            if (onNext != null)
+              FilledButton.icon(
+                key: const Key('student-exam-next'),
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: onNext,
+                icon: const Icon(Icons.arrow_forward_rounded),
+                label: const Text('Berikutnya'),
+              )
+            else
+              const SizedBox(width: 48),
+          ],
         ),
-        const SizedBox(width: 8),
-        Expanded(child: _SaveStatusLabel(status: saveStatus, centered: true)),
-        const SizedBox(width: 8),
-        if (onNext != null)
-          FilledButton.icon(
-            key: const Key('student-exam-next'),
-            style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-            onPressed: onNext,
-            icon: const Icon(Icons.arrow_forward_rounded),
-            label: const Text('Berikutnya'),
-          )
-        else
-          FilledButton.icon(
-            key: const Key('student-exam-finish'),
-            style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-            onPressed: finishing ? null : onFinish,
-            icon: finishing
-                ? const SizedBox.square(
-                    dimension: 17,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Icons.task_alt_rounded),
-            label: const Text('Selesai'),
+        if (onNext == null) ...[
+          const SizedBox(height: 9),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              finishAvailability,
+              style: const TextStyle(
+                color: NusaColors.textSecondary,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
+          const SizedBox(height: 7),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const Key('student-exam-finish'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: const Color(0xFF9F2F2F),
+              ),
+              onPressed: finishing || !canFinish ? null : onFinish,
+              icon: finishing
+                  ? const SizedBox.square(
+                      dimension: 17,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.task_alt_rounded),
+              label: const Text('Kumpulkan Ujian'),
+            ),
+          ),
+        ],
       ],
     ),
   );

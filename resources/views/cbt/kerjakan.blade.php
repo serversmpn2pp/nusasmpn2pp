@@ -94,9 +94,56 @@
             gap: 9px;
         }
 
-        .question-actions .button:disabled {
+        .question-actions .button:disabled,
+        .finish-action .button:disabled {
             cursor: not-allowed;
             opacity: .42;
+        }
+
+        .finish-action {
+            display: grid;
+            max-width: 260px;
+            gap: 5px;
+            border-left: 1px solid var(--line);
+            padding-left: 12px;
+        }
+
+        .finish-availability {
+            color: var(--muted);
+            font-size: .72rem;
+            font-weight: 750;
+            line-height: 1.35;
+            text-align: right;
+        }
+
+        .button-finish {
+            border-color: #9f2f2f;
+            background: #9f2f2f;
+        }
+
+        .finish-acknowledgement {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            border: 1px solid #e5c84c;
+            background: #fffbea;
+            padding: 11px 12px;
+            color: #594800;
+            font-size: .86rem;
+            font-weight: 750;
+            line-height: 1.45;
+        }
+
+        .finish-acknowledgement input {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
+            margin-top: 1px;
+            accent-color: var(--primary);
+        }
+
+        .finish-acknowledgement[hidden] {
+            display: none;
         }
 
         #retrySave[hidden] { display: none !important; }
@@ -361,8 +408,21 @@
                 padding-left: 9px;
             }
 
-            .question-actions .button-finish {
-                grid-column: 1 / -1;
+            .finish-action {
+                width: 100%;
+                max-width: none;
+                border-top: 1px solid var(--line);
+                border-left: 0;
+                padding-top: 10px;
+                padding-left: 0;
+            }
+
+            .finish-action .button {
+                width: 100%;
+            }
+
+            .finish-availability {
+                text-align: left;
             }
 
             .save-bar {
@@ -631,7 +691,12 @@
                         <div class="question-actions">
                             <button id="previousQuestion" type="button" class="button button-muted">Sebelumnya</button>
                             <button id="nextQuestion" type="button" class="button button-muted">Berikutnya</button>
-                            <button id="openFinishDialog" type="button" class="button button-primary button-finish">Selesai Ujian</button>
+                        </div>
+                        <div class="finish-action">
+                            <span id="finishAvailability" class="finish-availability" role="status" aria-live="polite">
+                                {{ $kelayakanSelesai['boleh_selesai'] ? 'Ujian sudah dapat dikumpulkan.' : 'Aktif setelah semua soal lengkap atau pada 15 menit terakhir.' }}
+                            </span>
+                            <button id="openFinishDialog" type="button" class="button button-primary button-finish" @disabled(! $kelayakanSelesai['boleh_selesai'])>Kumpulkan Ujian</button>
                         </div>
                     </div>
 
@@ -639,8 +704,11 @@
                         <div class="alert alert-danger">JavaScript tidak aktif. Semua soal tetap dapat dikerjakan, tetapi penyimpanan otomatis dan navigasi satu soal tidak tersedia.</div>
                         <div class="save-bar">
                             <button type="submit" class="button button-muted" onclick="document.getElementById('aksiInput').value='simpan'">Simpan Jawaban</button>
-                            <button type="submit" class="button button-primary" onclick="document.getElementById('aksiInput').value='selesai'">Selesai Ujian</button>
+                            <button type="submit" class="button button-primary" onclick="document.getElementById('aksiInput').value='selesai'" @disabled(! $kelayakanSelesai['boleh_selesai'])>Kumpulkan Ujian</button>
                         </div>
+                        @unless ($kelayakanSelesai['boleh_selesai'])
+                            <p class="muted">Lengkapi seluruh soal atau muat ulang halaman saat waktu tersisa 15 menit untuk mengumpulkan ujian.</p>
+                        @endunless
                     </noscript>
                 </section>
 
@@ -689,8 +757,8 @@
                 <div class="finish-dialog-body">
                     <div>
                         <p class="eyebrow">Periksa jawaban</p>
-                        <h2>Akhiri ujian sekarang?</h2>
-                        <p class="muted" style="margin-top: 7px;">Pastikan seluruh jawaban sudah diperiksa sebelum ujian diakhiri.</p>
+                        <h2>Kumpulkan ujian sekarang?</h2>
+                        <p class="muted" style="margin-top: 7px;">Setelah dikumpulkan, jawaban tidak dapat diubah dan ujian tidak dapat dibuka kembali.</p>
                     </div>
                     <div class="finish-summary">
                         <div class="finish-summary-item">
@@ -707,9 +775,13 @@
                         </div>
                     </div>
                     <div id="finishWarning" class="finish-warning" hidden></div>
+                    <label id="finishAcknowledgementRow" class="finish-acknowledgement" hidden>
+                        <input id="finishAcknowledgement" type="checkbox">
+                        <span>Saya memahami masih ada jawaban yang belum lengkap atau ditandai ragu-ragu, dan tetap ingin mengumpulkan ujian.</span>
+                    </label>
                     <div class="actions" style="justify-content: flex-end;">
                         <button id="cancelFinish" type="button" class="button button-muted">Periksa Lagi</button>
-                        <button id="confirmFinish" type="submit" class="button button-primary">Ya, Selesaikan</button>
+                        <button id="confirmFinish" type="button" class="button button-primary">Ya, Kumpulkan</button>
                     </div>
                 </div>
             </dialog>
@@ -738,17 +810,22 @@
             const finishUnanswered = document.getElementById('finishUnanswered');
             const finishDoubt = document.getElementById('finishDoubt');
             const finishWarning = document.getElementById('finishWarning');
+            const finishAvailability = document.getElementById('finishAvailability');
+            const finishAcknowledgementRow = document.getElementById('finishAcknowledgementRow');
+            const finishAcknowledgement = document.getElementById('finishAcknowledgement');
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             const autosaveUrl = @json(route('cbt.ujian.jawaban'));
             const fileUploadUrl = @json(route('cbt.ujian.jawaban-berkas'));
             const finishedUrl = @json(route('cbt.ujian.selesai'));
             const targetTime = Date.now() + ({{ (int) $sisaDetik }} * 1000);
+            const finishThresholdSeconds = 15 * 60;
             const saveTimers = new Map();
             const saveQueues = new Map();
             const activeUploads = new Set();
             let currentQuestion = 0;
             let automaticSubmitStarted = false;
             let finalSubmitStarted = false;
+            let remainingSeconds = {{ (int) $sisaDetik }};
 
             function formatTwoDigits(value) {
                 return String(value).padStart(2, '0');
@@ -756,6 +833,7 @@
 
             function updateTimer() {
                 const remaining = Math.max(0, Math.floor((targetTime - Date.now()) / 1000));
+                remainingSeconds = remaining;
                 const hours = Math.floor(remaining / 3600);
                 const minutes = Math.floor((remaining % 3600) / 60);
                 const seconds = remaining % 60;
@@ -768,6 +846,8 @@
                     if (timerValue) timerValue.style.color = '#b91c1c';
                     if (timerValueCompact) timerValueCompact.style.color = '#b91c1c';
                 }
+
+                updateFinishAvailability();
 
                 if (remaining <= 0 && !automaticSubmitStarted) {
                     automaticSubmitStarted = true;
@@ -836,6 +916,39 @@
                 card.dataset.partial = completion.partial ? '1' : '0';
                 card.dataset.doubt = doubtFromCard(card) ? '1' : '0';
                 refreshNavigation();
+                updateFinishAvailability();
+            }
+
+            function finishState() {
+                const answered = questionCards.filter((card) => card.dataset.answered === '1').length;
+
+                return {
+                    answered,
+                    unanswered: questionCards.length - answered,
+                    doubt: questionCards.filter((card) => card.dataset.doubt === '1').length,
+                    partial: questionCards.filter((card) => card.dataset.partial === '1').length,
+                };
+            }
+
+            function updateFinishAvailability() {
+                const state = finishState();
+                const allComplete = questionCards.length > 0 && state.unanswered === 0;
+                const finalWindow = remainingSeconds <= finishThresholdSeconds;
+                const uploading = activeUploads.size > 0;
+                const allowed = (allComplete || finalWindow) && !uploading;
+                openFinishDialogButton.disabled = !allowed;
+
+                if (uploading) {
+                    finishAvailability.textContent = 'Tunggu hingga unggahan jawaban selesai.';
+                } else if (allComplete) {
+                    finishAvailability.textContent = 'Semua soal sudah lengkap. Ujian dapat dikumpulkan.';
+                } else if (finalWindow) {
+                    finishAvailability.textContent = '15 menit terakhir. Ujian dapat dikumpulkan meski masih ada soal yang belum lengkap.';
+                } else {
+                    finishAvailability.textContent = 'Aktif setelah semua soal lengkap atau pada 15 menit terakhir.';
+                }
+
+                return allowed;
             }
 
             function refreshNavigation() {
@@ -1027,7 +1140,7 @@
                     setSaveStatus('failed', message.textContent);
                 } finally {
                     activeUploads.delete(card.dataset.questionId);
-                    openFinishDialogButton.disabled = activeUploads.size > 0;
+                    updateFinishAvailability();
                     fileButton.removeAttribute('aria-disabled');
                     input.value = '';
                 }
@@ -1035,10 +1148,8 @@
 
             function refreshFinishSummary() {
                 questionCards.forEach((card, index) => refreshCardState(index));
-                const answered = questionCards.filter((card) => card.dataset.answered === '1').length;
-                const doubt = questionCards.filter((card) => card.dataset.doubt === '1').length;
-                const unanswered = questionCards.length - answered;
-                const partial = questionCards.filter(card => card.dataset.partial === '1').length;
+                const state = finishState();
+                const { answered, unanswered, doubt, partial } = state;
 
                 finishAnswered.textContent = answered;
                 finishUnanswered.textContent = unanswered;
@@ -1047,6 +1158,10 @@
                 finishWarning.textContent = unanswered > 0
                     ? `Masih ada ${unanswered} soal yang belum lengkap${partial > 0 ? ` (${partial} baru terisi sebagian)` : ''}${doubt > 0 ? ` dan ${doubt} soal ditandai ragu-ragu` : ''}.`
                     : `${doubt} soal masih ditandai ragu-ragu.`;
+                const needsAcknowledgement = unanswered > 0 || doubt > 0;
+                finishAcknowledgementRow.hidden = !needsAcknowledgement;
+                finishAcknowledgement.checked = false;
+                confirmFinishButton.disabled = needsAcknowledgement;
             }
 
             questionCards.forEach((card, index) => {
@@ -1078,6 +1193,7 @@
             });
 
             openFinishDialogButton.addEventListener('click', () => {
+                if (!updateFinishAvailability()) return;
                 refreshFinishSummary();
 
                 if (typeof finishDialog.showModal === 'function') {
@@ -1090,15 +1206,26 @@
             });
 
             cancelFinishButton.addEventListener('click', () => finishDialog.close());
+            finishAcknowledgement.addEventListener('change', () => {
+                confirmFinishButton.disabled = !finishAcknowledgement.checked;
+            });
             confirmFinishButton.addEventListener('click', () => {
+                if (confirmFinishButton.disabled || !updateFinishAvailability()) return;
                 finalSubmitStarted = true;
                 aksiInput.value = 'selesai';
+                formUjian.requestSubmit();
             });
 
             formUjian.addEventListener('submit', (event) => {
                 if (aksiInput.value !== 'selesai') {
                     event.preventDefault();
                     queueSave(currentQuestion);
+                    return;
+                }
+
+                if (!updateFinishAvailability()) {
+                    event.preventDefault();
+                    aksiInput.value = 'simpan';
                     return;
                 }
 

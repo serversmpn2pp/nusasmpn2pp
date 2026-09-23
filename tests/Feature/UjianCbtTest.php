@@ -1043,6 +1043,23 @@ class UjianCbtTest extends TestCase
                 ->assertSee('data-answer-file-input', false)
                 ->assertSee('Sisa waktu');
 
+            $this->post(route('cbt.ujian.simpan'), [
+                'jawaban' => [
+                    $relasiPertama->id => 'B',
+                ],
+                'aksi' => 'selesai',
+            ])->assertRedirect(route('cbt.ujian.kerjakan'))
+                ->assertSessionHasErrors('ujian');
+
+            $this->assertSame('sedang_mengerjakan', $peserta->fresh()->status);
+            $this->assertSame(
+                ['B'],
+                $peserta->jawabanPesertaUjianCbt()
+                    ->where('soal_ujian_cbt_id', $relasiPertama->id)
+                    ->firstOrFail()
+                    ->jawaban,
+            );
+
             $this->post(route('cbt.ujian.jawaban-berkas'), [
                 'soal_ujian_cbt_id' => $relasiUpload->id,
                 'berkas' => UploadedFile::fake()->create('laporan-praktik.pdf', 100, 'application/pdf'),

@@ -338,7 +338,20 @@ class StudentExamQuestion {
   final Map<String, String> answer;
   final bool doubtful;
 
-  bool get isAnswered => answer.values.any((value) => value.trim().isNotEmpty);
+  bool get isAnswered {
+    if (type == 'benar_salah' && statements.isNotEmpty) {
+      return statements.every(
+        (item) => answer[item.number]?.trim().isNotEmpty == true,
+      );
+    }
+    if (type == 'menjodohkan' && pairs.isNotEmpty) {
+      return pairs.every(
+        (item) => answer[item.number]?.trim().isNotEmpty == true,
+      );
+    }
+
+    return answer.values.any((value) => value.trim().isNotEmpty);
+  }
 
   Object? get answerPayload {
     final values = answer.values
