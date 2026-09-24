@@ -18,6 +18,7 @@ use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\RuangKegiatanUjianCbt;
+use App\Models\RuangUjianCbt;
 use App\Models\SesiKegiatanUjianCbt;
 use App\Models\Siswa;
 use App\Models\SoalCbt;
@@ -103,13 +104,18 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'status' => 'aktif',
         ]);
 
-        $this->actingAs($data['akun_siswa'])
-            ->get(route('ujian-saya.index'))
-            ->assertOk()
-            ->assertSee('Matematika')
-            ->assertSee('Ruang 1')
-            ->assertSee('Kode meja')
-            ->assertSee('STS-2627-01-S01-R01-M001');
+        Carbon::setTestNow('2026-09-15 07:00:00');
+        try {
+            $this->actingAs($data['akun_siswa'])
+                ->get(route('ujian-saya.index'))
+                ->assertOk()
+                ->assertSee('Matematika')
+                ->assertSee('Ruang 1')
+                ->assertSee('Kode meja')
+                ->assertSee('STS-2627-01-S01-R01-M001');
+        } finally {
+            Carbon::setTestNow();
+        }
 
         $this->actingAs($data['admin'])
             ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
@@ -598,6 +604,78 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('Ganti pengawas mendadak')
             ->assertSeeText('Pengawas utama sakit pada hari pelaksanaan ujian.')
             ->assertSeeText('Guru Pengawas Ruang → Guru Pengawas Pengganti');
+    }
+
+    public function test_tugas_pengawas_berpindah_ke_riwayat_setelah_ujian_dan_bukti_selesai(): void
+    {
+        $data = $this->buatFondasi();
+        $paket = UjianCbt::create([
+            'alur' => 'terpusat',
+            'jenis_ujian_cbt_id' => $data['kegiatan']->jenis_ujian_cbt_id,
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'mata_pelajaran_id' => $data['mapel']->id,
+            'kode' => 'UT-RIWAYAT-PENGAWAS',
+            'nama' => 'STS Matematika Tingkat 7',
+            'semester' => 'ganjil',
+            'tingkat' => 7,
+            'tanggal_mulai' => '2026-09-15 07:30:00',
+            'tanggal_selesai' => '2026-09-15 09:00:00',
+            'durasi_menit' => 90,
+            'jumlah_soal' => 0,
+            'status' => 'terjadwal',
+        ]);
+        $data['jadwal']->update(['ujian_cbt_id' => $paket->id, 'status' => 'siap']);
+        PengawasRuangUjianTerpusat::create([
+            'jadwal_ujian_cbt_id' => $data['jadwal']->id,
+            'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+            'pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id,
+            'ditugaskan_oleh_pengguna_id' => $data['admin']->id,
+        ]);
+        $ruang = RuangUjianCbt::create([
+            'ujian_cbt_id' => $paket->id,
+            'jadwal_ujian_cbt_id' => $data['jadwal']->id,
+            'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+            'kode' => 'R01',
+            'nama' => 'Ruang 1',
+            'kapasitas' => 20,
+            'status' => 'siap',
+            'status_bukti' => 'menunggu_pemeriksaan',
+        ]);
+
+        try {
+            Carbon::setTestNow('2026-09-15 08:30:00');
+            $this->actingAs($data['akun_guru'])
+                ->get(route('tugas-pengawas-ujian.index'))
+                ->assertOk()
+                ->assertViewHas('tugas', fn ($items) => $items->count() === 1)
+                ->assertViewHas('ringkasan', fn ($nilai) => $nilai['perlu'] === 1 && $nilai['riwayat'] === 0);
+
+            Carbon::setTestNow('2026-09-15 09:05:00');
+            $this->get(route('tugas-pengawas-ujian.index'))
+                ->assertOk()
+                ->assertViewHas('tugas', fn ($items) => $items->isEmpty())
+                ->assertViewHas('ringkasan', fn ($nilai) => $nilai['perlu'] === 0 && $nilai['riwayat'] === 1)
+                ->assertSeeText('Lihat riwayat tugas');
+            $this->get(route('tugas-pengawas-ujian.index', ['tab' => 'riwayat']))
+                ->assertOk()
+                ->assertViewHas('tugas', fn ($items) => $items->count() === 1)
+                ->assertSeeText('Menunggu pemeriksaan')
+                ->assertSeeText('Lihat tugas');
+
+            $ruang->update(['status_bukti' => 'perlu_diulang']);
+            $this->get(route('tugas-pengawas-ujian.index'))
+                ->assertOk()
+                ->assertViewHas('tugas', fn ($items) => $items->count() === 1)
+                ->assertViewHas('ringkasan', fn ($nilai) => $nilai['perlu_bukti'] === 1 && $nilai['riwayat'] === 0);
+
+            $ruang->update(['status_bukti' => 'valid']);
+            $this->get(route('tugas-pengawas-ujian.index', ['tab' => 'riwayat']))
+                ->assertOk()
+                ->assertViewHas('tugas', fn ($items) => $items->count() === 1)
+                ->assertSeeText('Lengkap dan valid');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_pengawas_seluruh_ruang_dapat_disimpan_sekaligus_secara_atomic(): void
@@ -1137,6 +1215,14 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             $this->assertSame('selesai', $peserta->status_susulan);
             $this->assertSame('sakit', $peserta->status_kehadiran_ujian);
             $this->assertSame($paket->id, $peserta->ujian_cbt_id);
+            $this->actingAs($data['akun_guru'])
+                ->get(route('tugas-pengawas-ujian.index'))
+                ->assertOk()
+                ->assertViewHas('tugasSusulan', fn ($items) => $items->isEmpty());
+            $this->get(route('tugas-pengawas-ujian.index', ['tab' => 'riwayat']))
+                ->assertOk()
+                ->assertViewHas('tugasSusulan', fn ($items) => $items->count() === 1)
+                ->assertSeeText('Lihat tugas susulan');
             $this->actingAs($data['akun_guru'])
                 ->get(route('tugas-pengawas-ujian.susulan.show', $peserta->kelompok_susulan))
                 ->assertOk()

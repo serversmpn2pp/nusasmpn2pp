@@ -103,19 +103,36 @@ class TugasPengawasUjianController extends Controller
             ))
             ->values();
 
+        [$tugasRiwayat, $tugasPerluDikerjakan] = $tugas->partition(
+            fn (PengawasRuangUjianTerpusat $item) => $this->tugasRegulerSelesai($item),
+        );
+        $tugasRiwayat = $tugasRiwayat->sortByDesc(fn (PengawasRuangUjianTerpusat $item) => sprintf(
+            '%s %s',
+            $item->jadwalUjianCbt?->tanggal?->format('Y-m-d') ?? '',
+            substr((string) $item->jadwalUjianCbt?->waktu_mulai, 0, 5),
+        ))->values();
+        [$tugasSusulanRiwayat, $tugasSusulanPerluDikerjakan] = $tugasSusulan->partition(
+            fn (array $item) => $item['kode_status'] === 'selesai',
+        );
+        $tugasSusulanRiwayat = $tugasSusulanRiwayat->sortByDesc(fn (array $item) => $item['mulai']?->timestamp ?? 0)->values();
+        $tabTugas = $request->query('tab') === 'riwayat' ? 'riwayat' : 'perlu';
+
         return view('tugas-pengawas-ujian.index', [
-            'tugas' => $tugas,
-            'tugasSusulan' => $tugasSusulan,
+            'tabTugas' => $tabTugas,
+            'tugas' => $tabTugas === 'riwayat' ? $tugasRiwayat : $tugasPerluDikerjakan->values(),
+            'tugasSusulan' => $tabTugas === 'riwayat' ? $tugasSusulanRiwayat : $tugasSusulanPerluDikerjakan->values(),
             'ringkasan' => [
-                'jumlah' => $tugas->count() + $tugasSusulan->count(),
-                'hari_ini' => $tugas->filter(fn ($item) => $item->jadwalUjianCbt?->tanggal?->isToday())->count()
-                    + $tugasSusulan->filter(fn ($item) => $item['mulai']?->isToday())->count(),
-                'susulan' => $tugasSusulan->count(),
-                'perlu_bukti' => $tugas->filter(fn ($item) => in_array(
-                    $item->ruangOperasional?->status_bukti,
-                    ['belum_diunggah', 'sebagian', 'siap_dikirim', 'perlu_diulang'],
-                    true,
-                ))->count(),
+                'perlu' => $tugasPerluDikerjakan->count() + $tugasSusulanPerluDikerjakan->count(),
+                'hari_ini' => $tugasPerluDikerjakan->filter(fn ($item) => $item->jadwalUjianCbt?->tanggal?->isToday())->count()
+                    + $tugasSusulanPerluDikerjakan->filter(fn ($item) => $item['mulai']?->isToday())->count(),
+                'riwayat' => $tugasRiwayat->count() + $tugasSusulanRiwayat->count(),
+                'perlu_bukti' => $tugasPerluDikerjakan->filter(fn ($item) => $item->ruangOperasional
+                    && $this->jadwalRegulerBerakhir($item)
+                    && ! in_array(
+                        $item->ruangOperasional?->status_bukti,
+                        ['menunggu_pemeriksaan', 'valid'],
+                        true,
+                    ))->count(),
             ],
         ]);
     }
@@ -469,6 +486,27 @@ class TugasPengawasUjianController extends Controller
             (int) $ruang->pengawas_utama_pegawai_id,
             (int) $ruang->pengawas_pendamping_pegawai_id,
         ], true);
+    }
+
+    private function tugasRegulerSelesai(PengawasRuangUjianTerpusat $penugasan): bool
+    {
+        if ($penugasan->jadwalUjianCbt?->status === 'dibatalkan') {
+            return true;
+        }
+
+        return in_array($penugasan->ruangOperasional?->status_bukti, ['menunggu_pemeriksaan', 'valid'], true)
+            && $this->jadwalRegulerBerakhir($penugasan);
+    }
+
+    private function jadwalRegulerBerakhir(PengawasRuangUjianTerpusat $penugasan): bool
+    {
+        $jadwal = $penugasan->jadwalUjianCbt;
+        if ($jadwal?->status === 'selesai' || $penugasan->ruangOperasional?->status === 'selesai') {
+            return true;
+        }
+
+        return (bool) ($jadwal?->tanggal && filled($jadwal->waktu_selesai)
+            && now()->gte($jadwal->tanggal->copy()->setTimeFromTimeString($jadwal->waktu_selesai)));
     }
 
     private function pastikanBolehMelihatSusulan(?Pengguna $pengguna, $peserta, $kegiatan): void
