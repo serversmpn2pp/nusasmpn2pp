@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\PesertaUjianCbt;
 use App\Services\Cbt\JawabanBerkasUjianCbtService;
-use App\Services\Mobile\KeamananUjianMobileService;
+use App\Services\Cbt\KeamananUjianService;
 use App\Services\Mobile\UjianSayaMobileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -142,7 +142,7 @@ class UjianSayaController extends Controller
     public function aktivitasKeamanan(
         Request $request,
         PesertaUjianCbt $pesertaUjianCbt,
-        KeamananUjianMobileService $service,
+        KeamananUjianService $service,
     ): JsonResponse {
         $data = $request->validate([
             'peristiwa' => ['required', 'in:keluar,kembali,heartbeat'],

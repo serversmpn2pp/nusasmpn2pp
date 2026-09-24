@@ -214,7 +214,7 @@
                 'acak_soal' => ['Acak soal', 'Urutan berbeda untuk setiap siswa', true],
                 'acak_jawaban' => ['Acak pilihan jawaban', 'Berlaku untuk pilihan ganda', true],
                 'batasi_satu_perangkat' => ['Satu perangkat', 'Cegah akun aktif di dua perangkat', false],
-                'deteksi_pindah_tab' => ['Catat pindah tab', 'Masuk ke log monitoring guru', false],
+                'deteksi_pindah_tab' => ['Catat keluar halaman', 'Kejadian tersimpan sebagai indikasi untuk diperiksa, bukan bukti otomatis kecurangan.', false],
                 'tampilkan_hasil' => ['Tampilkan hasil', 'Nilai terlihat setelah asesmen selesai', false],
             ] as $field => [$label, $helper, $default])
                 <label class="assessment-toggle">

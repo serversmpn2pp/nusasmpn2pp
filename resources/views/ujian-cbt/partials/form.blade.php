@@ -121,7 +121,7 @@
                 'acak_jawaban' => ['Acak jawaban', 'Pilihan jawaban PG dapat berbeda urutan', true],
                 'batasi_satu_perangkat' => ['Batasi satu perangkat', 'Satu akun siswa hanya aktif di satu perangkat', false],
                 'deteksi_pindah_tab' => ['Deteksi pindah tab', 'Catat saat siswa keluar dari halaman ujian', false],
-                'wajib_fullscreen' => ['Wajib layar penuh', 'Siswa diminta masuk mode fullscreen', false],
+                'wajib_fullscreen' => ['Layar penuh di aplikasi', 'Pengaturan aplikasi; halaman ujian web tidak memaksakan fullscreen.', false],
                 'tampilkan_hasil' => ['Tampilkan hasil', 'Nilai dapat dilihat siswa setelah selesai', false],
             ] as $field => [$label, $helper, $default])
                 <label class="status-toggle">

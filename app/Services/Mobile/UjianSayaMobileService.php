@@ -9,6 +9,7 @@ use App\Models\SoalCbt;
 use App\Models\SoalUjianCbt;
 use App\Services\Cbt\DaftarUjianSiswaService;
 use App\Services\Cbt\JawabanBerkasUjianCbtService;
+use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\KelayakanPenyelesaianUjianCbtService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
@@ -24,7 +25,7 @@ class UjianSayaMobileService
         private readonly DaftarUjianSiswaService $daftarUjianSiswa,
         private readonly PengacakPenyajianCbt $pengacakPenyajianCbt,
         private readonly KoreksiOtomatisCbtService $koreksiOtomatisCbtService,
-        private readonly KeamananUjianMobileService $keamananUjian,
+        private readonly KeamananUjianService $keamananUjian,
         private readonly JawabanBerkasUjianCbtService $jawabanBerkas,
         private readonly KelayakanPenyelesaianUjianCbtService $kelayakanPenyelesaian,
     ) {}

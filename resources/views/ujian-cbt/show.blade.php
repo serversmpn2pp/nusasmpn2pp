@@ -126,8 +126,10 @@
                     <div class="detail-item"><dt>Acak soal</dt><dd>{{ $ujianCbt->acak_soal ? 'Ya' : 'Tidak' }}</dd></div>
                     <div class="detail-item"><dt>Acak jawaban</dt><dd>{{ $ujianCbt->acak_jawaban ? 'Ya' : 'Tidak' }}</dd></div>
                     <div class="detail-item"><dt>Satu perangkat</dt><dd>{{ $ujianCbt->batasi_satu_perangkat ? 'Dibatasi' : 'Tidak dibatasi' }}</dd></div>
-                    <div class="detail-item"><dt>Pindah tab</dt><dd>{{ $ujianCbt->deteksi_pindah_tab ? 'Dicatat' : 'Tidak dicatat' }}</dd></div>
-                    <div class="detail-item"><dt>Fullscreen</dt><dd>{{ $ujianCbt->wajib_fullscreen ? 'Wajib' : 'Tidak wajib' }}</dd></div>
+                    <div class="detail-item"><dt>Keluar halaman</dt><dd>{{ $ujianCbt->deteksi_pindah_tab ? 'Dicatat setelah '.$ujianCbt->toleransi_pindah_aplikasi_detik.' detik' : 'Tidak dicatat' }}</dd></div>
+                    <div class="detail-item"><dt>Mode Aman</dt><dd>{{ ! $ujianCbt->deteksi_pindah_tab ? 'Tidak aktif' : ($ujianCbt->tindakan_pindah_aplikasi === 'tahan' ? 'Tahan setelah '.$ujianCbt->batas_pindah_aplikasi.' kejadian' : 'Hanya mencatat') }}</dd></div>
+                    <div class="detail-item"><dt>Layar penuh</dt><dd>{{ $ujianCbt->wajib_fullscreen ? 'Kebijakan aplikasi; web tidak dipaksa' : 'Tidak diwajibkan' }}</dd></div>
+                    <div class="detail-item"><dt>Tangkapan layar</dt><dd>{{ $ujianCbt->blokir_tangkapan_layar ? 'Kebijakan aplikasi; web tidak diblokir' : 'Tidak dibatasi' }}</dd></div>
                     <div class="detail-item"><dt>Hasil siswa</dt><dd>{{ $ujianCbt->tampilkan_hasil ? 'Ditampilkan' : 'Tidak ditampilkan' }}</dd></div>
                     <div class="detail-item span-2"><dt>Petunjuk</dt><dd style="white-space: pre-line;">{{ $teks($ujianCbt->petunjuk) }}</dd></div>
                     <div class="detail-item span-2"><dt>Catatan internal</dt><dd style="white-space: pre-line;">{{ $teks($ujianCbt->keterangan) }}</dd></div>

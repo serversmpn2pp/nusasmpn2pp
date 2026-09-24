@@ -497,6 +497,12 @@ class UjianSayaApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', 'sedang_mengerjakan')
             ->assertJsonPath('data.keamanan.ditahan', false);
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', [
+            'peserta_ujian_cbt_id' => $data['peserta']->id,
+            'jenis' => 'buka_mode_aman',
+            'oleh_pengguna_id' => $admin->id,
+            'catatan' => null,
+        ]);
 
         Sanctum::actingAs($data['pengguna'], ['mobile']);
         $this->getJson(route('api.v1.ujian-saya.kerjakan', [

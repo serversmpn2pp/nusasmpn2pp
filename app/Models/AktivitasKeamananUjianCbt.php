@@ -16,6 +16,8 @@ class AktivitasKeamananUjianCbt extends Model
         'selesai_pada',
         'durasi_detik',
         'dihitung',
+        'oleh_pengguna_id',
+        'catatan',
         'perangkat',
         'ip',
         'metadata',
@@ -32,5 +34,10 @@ class AktivitasKeamananUjianCbt extends Model
     public function pesertaUjianCbt(): BelongsTo
     {
         return $this->belongsTo(PesertaUjianCbt::class);
+    }
+
+    public function dibukaOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'oleh_pengguna_id');
     }
 }

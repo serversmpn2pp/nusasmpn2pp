@@ -243,6 +243,150 @@
             background: rgba(15, 30, 46, .62);
         }
 
+        .exam-security-dialog {
+            width: min(92vw, 500px);
+            border: 0;
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+            padding: 0;
+            box-shadow: 0 24px 70px rgba(71, 38, 0, .28);
+        }
+
+        .exam-security-dialog::backdrop {
+            background: rgba(15, 30, 46, .68);
+        }
+
+        .security-dialog-body {
+            display: grid;
+            gap: 17px;
+            border-top: 5px solid var(--accent);
+            padding: 24px;
+        }
+
+        .security-dialog-body h2,
+        .security-dialog-body p {
+            margin: 0;
+        }
+
+        .security-warning-summary {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            border: 1px solid #eadb9b;
+            background: #fffbea;
+        }
+
+        .security-warning-summary > div {
+            padding: 13px 14px;
+        }
+
+        .security-warning-summary > div + div {
+            border-left: 1px solid #eadb9b;
+        }
+
+        .security-warning-summary strong,
+        .security-warning-summary span {
+            display: block;
+        }
+
+        .security-warning-summary strong {
+            color: #6b5200;
+            font-size: 1.35rem;
+        }
+
+        .security-warning-summary span {
+            color: #6f6441;
+            font-size: .75rem;
+            font-weight: 800;
+        }
+
+        .security-hold-screen[hidden] {
+            display: none;
+        }
+
+        .security-hold-screen {
+            position: fixed;
+            z-index: 100;
+            inset: 0;
+            display: grid;
+            overflow-y: auto;
+            place-items: center;
+            background: #edf3f8;
+            padding: 24px;
+        }
+
+        .security-hold-panel {
+            width: min(100%, 560px);
+            border: 1px solid #bdcddd;
+            border-top: 6px solid #b91c1c;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: var(--shadow);
+        }
+
+        .security-hold-content {
+            display: grid;
+            gap: 18px;
+            padding: 26px;
+        }
+
+        .security-hold-content h2,
+        .security-hold-content p {
+            margin: 0;
+        }
+
+        .security-hold-heading {
+            display: grid;
+            gap: 6px;
+        }
+
+        .security-hold-heading .eyebrow {
+            color: var(--danger);
+        }
+
+        .security-hold-info {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            border: 1px solid var(--line);
+        }
+
+        .security-hold-info > div {
+            padding: 14px;
+        }
+
+        .security-hold-info > div + div {
+            border-left: 1px solid var(--line);
+        }
+
+        .security-hold-info strong,
+        .security-hold-info span {
+            display: block;
+        }
+
+        .security-hold-info strong {
+            color: var(--primary-dark);
+            font-size: 1.3rem;
+        }
+
+        .security-hold-info span {
+            color: var(--muted);
+            font-size: .75rem;
+            font-weight: 800;
+        }
+
+        .security-hold-status {
+            border-left: 4px solid var(--accent);
+            background: var(--accent-soft);
+            padding: 12px 14px;
+            color: #5f4b00;
+            font-size: .86rem;
+            font-weight: 800;
+        }
+
+        body.security-is-held {
+            overflow: hidden;
+        }
+
         .finish-dialog-body {
             display: grid;
             gap: 18px;
@@ -426,11 +570,14 @@
             }
 
             .save-bar {
+                position: static;
                 margin-right: -12px;
                 margin-left: -12px;
                 padding: 10px 12px 8px;
                 border: 1px solid var(--line);
                 border-bottom: 0;
+                background: transparent;
+                backdrop-filter: none;
             }
 
             .answer-save-state,
@@ -453,6 +600,26 @@
 
             .finish-summary-item:last-child {
                 border-bottom: 0;
+            }
+
+            .security-warning-summary,
+            .security-hold-info {
+                grid-template-columns: 1fr;
+            }
+
+            .security-warning-summary > div + div,
+            .security-hold-info > div + div {
+                border-top: 1px solid var(--line);
+                border-left: 0;
+            }
+
+            .security-hold-screen {
+                align-items: start;
+                padding: 14px;
+            }
+
+            .security-hold-content {
+                padding: 20px;
             }
         }
     </style>
@@ -494,7 +661,15 @@
             <div class="alert alert-danger">{{ $errors->first() }}</div>
         @endif
 
-        <form id="formUjian" action="{{ route('cbt.ujian.simpan') }}" method="POST">
+        <form
+            id="formUjian"
+            action="{{ route('cbt.ujian.simpan') }}"
+            method="POST"
+            data-security-endpoint="{{ route('cbt.ujian.aktivitas-keamanan') }}"
+            data-security-detection="{{ $peserta->ujianCbt->deteksi_pindah_tab ? '1' : '0' }}"
+            data-security-held="{{ $peserta->status === 'terblokir' ? '1' : '0' }}"
+            @if ($peserta->status === 'terblokir') inert @endif
+        >
             @csrf
             <input id="aksiInput" type="hidden" name="aksi" value="simpan">
 
@@ -786,6 +961,61 @@
                 </div>
             </dialog>
         </form>
+
+        <dialog id="securityWarningDialog" class="exam-security-dialog" aria-labelledby="securityWarningTitle">
+            <div class="security-dialog-body">
+                <div>
+                    <p class="eyebrow">Mode Aman</p>
+                    <h2 id="securityWarningTitle">Peringatan aktivitas ujian</h2>
+                    <p id="securityWarningMessage" class="muted" style="margin-top: 7px;">Anda terdeteksi meninggalkan halaman ujian.</p>
+                </div>
+                <div class="security-warning-summary" aria-label="Ringkasan peringatan Mode Aman">
+                    <div>
+                        <strong id="securityWarningCount">0 / 0</strong>
+                        <span>Peringatan tercatat</span>
+                    </div>
+                    <div>
+                        <strong id="securityWarningRemaining">0</strong>
+                        <span>Kesempatan tersisa</span>
+                    </div>
+                </div>
+                <p class="muted">Tetap berada di halaman NUSA selama ujian berlangsung. Waktu ujian terus berjalan ketika halaman ditinggalkan.</p>
+                <div class="actions" style="justify-content: flex-end;">
+                    <button id="securityWarningConfirm" type="button" class="button button-primary">Saya mengerti</button>
+                </div>
+            </div>
+        </dialog>
+
+        <section
+            id="securityHoldScreen"
+            class="security-hold-screen"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="securityHoldTitle"
+            @if ($peserta->status !== 'terblokir') hidden @endif
+        >
+            <div class="security-hold-panel">
+                <div class="security-hold-content">
+                    <div class="security-hold-heading">
+                        <p class="eyebrow">Mode Aman</p>
+                        <h2 id="securityHoldTitle">Ujian sementara ditahan</h2>
+                        <p class="muted">Batas meninggalkan halaman ujian telah tercapai. Minta pengawas membuka kembali akses ujian Anda.</p>
+                    </div>
+                    <div class="security-hold-info">
+                        <div>
+                            <strong id="securityHoldCount">{{ (int) $peserta->jumlah_pindah_aplikasi }} / {{ max(1, (int) $ujian->batas_pindah_aplikasi) }}</strong>
+                            <span>Aktivitas tercatat</span>
+                        </div>
+                        <div>
+                            <strong id="securityHoldTimer">--:--:--</strong>
+                            <span>Sisa waktu ujian</span>
+                        </div>
+                    </div>
+                    <p id="securityHoldStatus" class="security-hold-status" role="status" aria-live="polite">Menunggu pengawas membuka Mode Aman. Status diperiksa otomatis.</p>
+                    <button id="checkSecurityStatus" type="button" class="button button-primary">Periksa status</button>
+                </div>
+            </div>
+        </section>
     </main>
 @endsection
 
@@ -813,12 +1043,25 @@
             const finishAvailability = document.getElementById('finishAvailability');
             const finishAcknowledgementRow = document.getElementById('finishAcknowledgementRow');
             const finishAcknowledgement = document.getElementById('finishAcknowledgement');
+            const securityWarningDialog = document.getElementById('securityWarningDialog');
+            const securityWarningMessage = document.getElementById('securityWarningMessage');
+            const securityWarningCount = document.getElementById('securityWarningCount');
+            const securityWarningRemaining = document.getElementById('securityWarningRemaining');
+            const securityWarningConfirm = document.getElementById('securityWarningConfirm');
+            const securityHoldScreen = document.getElementById('securityHoldScreen');
+            const securityHoldCount = document.getElementById('securityHoldCount');
+            const securityHoldTimer = document.getElementById('securityHoldTimer');
+            const securityHoldStatus = document.getElementById('securityHoldStatus');
+            const checkSecurityStatus = document.getElementById('checkSecurityStatus');
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             const autosaveUrl = @json(route('cbt.ujian.jawaban'));
             const fileUploadUrl = @json(route('cbt.ujian.jawaban-berkas'));
             const finishedUrl = @json(route('cbt.ujian.selesai'));
             const targetTime = Date.now() + ({{ (int) $sisaDetik }} * 1000);
             const finishThresholdSeconds = 15 * 60;
+            const securityEndpoint = formUjian.dataset.securityEndpoint;
+            const securityDetectionEnabled = formUjian.dataset.securityDetection === '1';
+            const securityHeartbeatIntervalMs = 15000;
             const saveTimers = new Map();
             const saveQueues = new Map();
             const activeUploads = new Set();
@@ -826,9 +1069,153 @@
             let automaticSubmitStarted = false;
             let finalSubmitStarted = false;
             let remainingSeconds = {{ (int) $sisaDetik }};
+            let securityAway = false;
+            let securityAwayRequest = null;
+            let securityStopped = false;
+            let securityRequestQueue = Promise.resolve();
+            let isExamHeld = formUjian.dataset.securityHeld === '1';
 
             function formatTwoDigits(value) {
                 return String(value).padStart(2, '0');
+            }
+
+            function isIntentionalExamExit() {
+                return finalSubmitStarted || automaticSubmitStarted;
+            }
+
+            function securityMetadata(trigger) {
+                return {
+                    visibility: document.visibilityState || (document.hidden ? 'hidden' : 'visible'),
+                    pemicu: trigger,
+                    fullscreen: Boolean(document.fullscreenElement),
+                    online: navigator.onLine,
+                    waktu_klien: new Date().toISOString(),
+                };
+            }
+
+            async function sendSecurityEvent(eventName, trigger, keepalive = false) {
+                if ((!securityDetectionEnabled && !isExamHeld) || securityStopped || isIntentionalExamExit()) return null;
+
+                try {
+                    const response = await fetch(securityEndpoint, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        keepalive,
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify({
+                            peristiwa: eventName,
+                            metadata: securityMetadata(trigger),
+                        }),
+                    });
+                    const result = await response.json().catch(() => ({}));
+
+                    if ([401, 403, 409, 419].includes(response.status)) {
+                        securityStopped = true;
+                    }
+                    if (!response.ok) return null;
+
+                    document.dispatchEvent(new CustomEvent('cbt:security-response', {
+                        detail: result.data || null,
+                    }));
+                    handleSecurityResponse(result.data || null);
+
+                    return result.data || null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function queueSecurityEvent(eventName, trigger, keepalive = false) {
+                securityRequestQueue = securityRequestQueue
+                    .catch(() => null)
+                    .then(() => sendSecurityEvent(eventName, trigger, keepalive));
+
+                return securityRequestQueue;
+            }
+
+            function reportSecurityAway(trigger, keepalive = false) {
+                if (!securityDetectionEnabled || securityAway || isIntentionalExamExit()) return;
+
+                securityAway = true;
+                securityAwayRequest = keepalive
+                    ? sendSecurityEvent('keluar', trigger, true)
+                    : queueSecurityEvent('keluar', trigger);
+            }
+
+            function reportSecurityReturn(trigger) {
+                if (!securityDetectionEnabled || !securityAway || isIntentionalExamExit()) return;
+
+                securityAway = false;
+                const awayRequest = securityAwayRequest;
+                securityAwayRequest = null;
+                securityRequestQueue = securityRequestQueue
+                    .catch(() => null)
+                    .then(async () => {
+                        if (awayRequest) await awayRequest;
+                        return sendSecurityEvent('kembali', trigger);
+                    });
+            }
+
+            function sendSecurityHeartbeat(trigger = 'timer') {
+                if ((!securityDetectionEnabled && !isExamHeld) || securityAway || document.hidden || isIntentionalExamExit()) return;
+
+                return queueSecurityEvent('heartbeat', trigger);
+            }
+
+            function setExamHeld(data) {
+                const security = data?.keamanan || {};
+                const wasHeld = isExamHeld;
+                isExamHeld = true;
+                formUjian.toggleAttribute('inert', true);
+                document.body.classList.add('security-is-held');
+                securityHoldScreen.hidden = false;
+                securityHoldCount.textContent = `${Number(security.jumlah_kejadian || 0)} / ${Number(security.batas_kejadian || 0)}`;
+                securityHoldStatus.textContent = data?.pesan || 'Menunggu pengawas membuka Mode Aman. Status diperiksa otomatis.';
+                if (finishDialog.open) finishDialog.close();
+                if (securityWarningDialog.open) securityWarningDialog.close();
+                if (!wasHeld) checkSecurityStatus.focus({ preventScroll: true });
+            }
+
+            function releaseExamHold() {
+                if (!isExamHeld) return;
+
+                isExamHeld = false;
+                formUjian.toggleAttribute('inert', false);
+                document.body.classList.remove('security-is-held');
+                securityHoldScreen.hidden = true;
+                setSaveStatus('saved', 'Pengawas membuka ujian. Silakan lanjutkan.');
+                questionCards[currentQuestion]?.focus({ preventScroll: true });
+            }
+
+            function showSecurityWarning(data) {
+                const security = data?.keamanan || {};
+                securityWarningMessage.textContent = data?.pesan || 'Aktivitas meninggalkan halaman ujian telah dicatat untuk pengawas.';
+                securityWarningCount.textContent = `${Number(security.jumlah_kejadian || 0)} / ${Number(security.batas_kejadian || 0)}`;
+                securityWarningRemaining.textContent = String(Number(security.sisa_kejadian || 0));
+                if (finishDialog.open) finishDialog.close();
+
+                if (typeof securityWarningDialog.showModal === 'function') {
+                    if (!securityWarningDialog.open) securityWarningDialog.showModal();
+                } else {
+                    alert(securityWarningMessage.textContent);
+                }
+            }
+
+            function handleSecurityResponse(data) {
+                if (!data) return;
+
+                const held = data.mode === 'ditahan' || data.keamanan?.ditahan === true;
+                if (held) {
+                    setExamHeld(data);
+                    return;
+                }
+
+                releaseExamHold();
+                if (data.kejadian_dihitung) showSecurityWarning(data);
             }
 
             function updateTimer() {
@@ -841,6 +1228,7 @@
 
                 if (timerValue) timerValue.textContent = label;
                 if (timerValueCompact) timerValueCompact.textContent = label;
+                if (securityHoldTimer) securityHoldTimer.textContent = label;
 
                 if (remaining <= 300) {
                     if (timerValue) timerValue.style.color = '#b91c1c';
@@ -998,7 +1386,7 @@
 
             async function performSave(index) {
                 const card = questionCards[index];
-                if (!card || card.dataset.dirty !== '1' || finalSubmitStarted) return true;
+                if (!card || card.dataset.dirty !== '1' || finalSubmitStarted || isExamHeld) return true;
 
                 const revision = Number(card.dataset.revision || 0);
                 setSaveStatus('saving', `Menyimpan soal ${index + 1}...`);
@@ -1064,6 +1452,8 @@
             }
 
             function markDirty(index, delay) {
+                if (isExamHeld) return;
+
                 const card = questionCards[index];
                 card.dataset.dirty = '1';
                 card.dataset.saveFailures = '0';
@@ -1074,7 +1464,7 @@
             }
 
             async function uploadAnswerFile(card, index, input) {
-                if (activeUploads.has(card.dataset.questionId)) {
+                if (isExamHeld || activeUploads.has(card.dataset.questionId)) {
                     return;
                 }
 
@@ -1193,7 +1583,7 @@
             });
 
             openFinishDialogButton.addEventListener('click', () => {
-                if (!updateFinishAvailability()) return;
+                if (isExamHeld || !updateFinishAvailability()) return;
                 refreshFinishSummary();
 
                 if (typeof finishDialog.showModal === 'function') {
@@ -1210,13 +1600,18 @@
                 confirmFinishButton.disabled = !finishAcknowledgement.checked;
             });
             confirmFinishButton.addEventListener('click', () => {
-                if (confirmFinishButton.disabled || !updateFinishAvailability()) return;
+                if (isExamHeld || confirmFinishButton.disabled || !updateFinishAvailability()) return;
                 finalSubmitStarted = true;
                 aksiInput.value = 'selesai';
                 formUjian.requestSubmit();
             });
 
             formUjian.addEventListener('submit', (event) => {
+                if (isExamHeld && remainingSeconds > 0) {
+                    event.preventDefault();
+                    return;
+                }
+
                 if (aksiInput.value !== 'selesai') {
                     event.preventDefault();
                     queueSave(currentQuestion);
@@ -1233,15 +1628,45 @@
             });
 
             document.addEventListener('visibilitychange', () => {
-                if (document.hidden) questionCards.forEach((card, index) => {
-                    if (card.dataset.dirty === '1') queueSave(index);
-                });
+                if (document.hidden) {
+                    questionCards.forEach((card, index) => {
+                        if (card.dataset.dirty === '1') queueSave(index);
+                    });
+                    reportSecurityAway('visibilitychange', true);
+                } else {
+                    reportSecurityReturn('visibilitychange');
+                }
+            });
+
+            window.addEventListener('pagehide', () => reportSecurityAway('pagehide', true));
+            window.addEventListener('pageshow', () => {
+                if (!document.hidden) reportSecurityReturn('pageshow');
+            });
+            window.addEventListener('focus', () => {
+                if (!document.hidden) reportSecurityReturn('focus');
+            });
+
+            securityWarningDialog.addEventListener('cancel', event => event.preventDefault());
+            securityWarningConfirm.addEventListener('click', () => securityWarningDialog.close());
+            checkSecurityStatus.addEventListener('click', async () => {
+                checkSecurityStatus.disabled = true;
+                securityHoldStatus.textContent = 'Memeriksa status kepada server...';
+                const result = await sendSecurityHeartbeat('periksa_status');
+                if (!result && isExamHeld) {
+                    securityHoldStatus.textContent = 'Status belum dapat diperiksa. Pastikan perangkat terhubung ke jaringan.';
+                }
+                checkSecurityStatus.disabled = false;
             });
 
             window.addEventListener('online', () => {
                 questionCards.forEach((card, index) => {
                     if (card.dataset.dirty === '1') queueSave(index);
                 });
+                if (securityAway && document.hidden) {
+                    queueSecurityEvent('keluar', 'online', true);
+                } else {
+                    sendSecurityHeartbeat('online');
+                }
             });
 
             document.getElementById('retrySave').addEventListener('click', () => {
@@ -1263,8 +1688,28 @@
             questionCards.forEach((card, index) => refreshCardState(index));
             showQuestion(0, false);
             setSaveStatus('saved', 'Jawaban disimpan otomatis');
+            if (isExamHeld) {
+                setExamHeld({
+                    mode: 'ditahan',
+                    pesan: 'Ujian ditahan karena batas keluar aplikasi tercapai. Minta pengawas membuka ujian.',
+                    keamanan: {
+                        jumlah_kejadian: {{ (int) $peserta->jumlah_pindah_aplikasi }},
+                        batas_kejadian: {{ max(1, (int) $ujian->batas_pindah_aplikasi) }},
+                        ditahan: true,
+                    },
+                });
+            }
             updateTimer();
             setInterval(updateTimer, 1000);
+            setTimeout(() => {
+                if (document.hidden) {
+                    reportSecurityAway('awal', true);
+                    return;
+                }
+                queueSecurityEvent('kembali', 'awal');
+                sendSecurityHeartbeat('awal');
+            }, 1000);
+            setInterval(sendSecurityHeartbeat, securityHeartbeatIntervalMs);
         })();
     </script>
 @endpush

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\PesertaUjianCbt;
-use App\Services\Mobile\KeamananUjianMobileService;
+use App\Services\Cbt\KeamananUjianService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,7 +13,7 @@ class KeamananUjianController extends Controller
     public function buka(
         Request $request,
         PesertaUjianCbt $pesertaUjianCbt,
-        KeamananUjianMobileService $service,
+        KeamananUjianService $service,
     ): JsonResponse {
         return response()->json([
             'pesan' => 'Ujian peserta sudah dibuka dan dapat dilanjutkan.',

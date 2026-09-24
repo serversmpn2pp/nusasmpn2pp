@@ -162,6 +162,9 @@ Route::middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default'])
         Route::get('ujian', [AksesUjianCbtController::class, 'show'])->name('ujian.show');
         Route::post('ujian/mulai', [AksesUjianCbtController::class, 'mulai'])->name('ujian.mulai');
         Route::get('ujian/kerjakan', [AksesUjianCbtController::class, 'kerjakan'])->name('ujian.kerjakan');
+        Route::post('ujian/aktivitas-keamanan', [AksesUjianCbtController::class, 'aktivitasKeamanan'])
+            ->middleware('throttle:120,1,cbt-keamanan-web:')
+            ->name('ujian.aktivitas-keamanan');
         Route::post('ujian/jawaban', [AksesUjianCbtController::class, 'simpanJawaban'])->name('ujian.jawaban');
         Route::post('ujian/jawaban-berkas', [AksesUjianCbtController::class, 'simpanBerkasJawaban'])
             ->middleware('throttle:20,1')
@@ -382,6 +385,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::middleware('akun_pegawai')->group(function () {
             Route::get('tugas-pengawas-ujian', [TugasPengawasUjianController::class, 'index'])->name('tugas-pengawas-ujian.index');
             Route::get('tugas-pengawas-ujian/{ruangUjianCbt}', [TugasPengawasUjianController::class, 'show'])->name('tugas-pengawas-ujian.show');
+            Route::get('tugas-pengawas-ujian/{ruangUjianCbt}/peserta/{pesertaUjianCbt}/riwayat-mode-aman', [TugasPengawasUjianController::class, 'riwayatModeAman'])->name('tugas-pengawas-ujian.mode-aman.riwayat');
+            Route::post('tugas-pengawas-ujian/{ruangUjianCbt}/peserta/{pesertaUjianCbt}/buka-mode-aman', [TugasPengawasUjianController::class, 'bukaModeAman'])->name('tugas-pengawas-ujian.mode-aman.buka');
             Route::post('tugas-pengawas-ujian/{ruangUjianCbt}/bukti', [TugasPengawasUjianController::class, 'storeBukti'])->name('tugas-pengawas-ujian.bukti.store');
             Route::get('tugas-pengawas-ujian/{ruangUjianCbt}/bukti/{buktiRuangUjianCbt}', [TugasPengawasUjianController::class, 'lihatBukti'])->name('tugas-pengawas-ujian.bukti.show');
             Route::delete('tugas-pengawas-ujian/{ruangUjianCbt}/bukti/{buktiRuangUjianCbt}', [TugasPengawasUjianController::class, 'destroyBukti'])->name('tugas-pengawas-ujian.bukti.destroy');

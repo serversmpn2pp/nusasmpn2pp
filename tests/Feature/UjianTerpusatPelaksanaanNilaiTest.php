@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AnggotaKelas;
+use App\Models\AktivitasKeamananUjianCbt;
 use App\Models\BuktiRuangUjianCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
@@ -204,6 +205,7 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'aktif' => true,
             'akun_sistem' => false,
         ]);
+        $akunPengawas->daftarPeran()->sync([Peran::query()->where('kode', 'guru_mapel')->value('id')]);
         $pegawaiPanitia = Pegawai::create([
             'nama_lengkap' => 'Panitia Pemeriksa Bukti',
             'nip' => '198811112020121002',
@@ -273,16 +275,20 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         );
         $ruangOperasional = $paket->ruangUjianCbt()->firstOrFail();
 
-        $this->actingAs($akunPengawas)
+        $halamanDaftarTugas = $this->actingAs($akunPengawas)
             ->get(route('tugas-pengawas-ujian.index'))
             ->assertOk()
             ->assertSeeText('Tugas Pengawas Saya')
             ->assertSeeText('Ruang 1');
+        if (getenv('CBT_SUPERVISOR_FIXTURE')) {
+            file_put_contents(storage_path('logs/cbt-supervisor-index.html'), $halamanDaftarTugas->getContent());
+        }
         $this->actingAs($akunPengawas)
             ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
             ->assertOk()
             ->assertSeeText('Ruang pengawas')
             ->assertSeeText('Token ujian')
+            ->assertSeeText('Buka presensi ruang')
             ->assertDontSeeText('Unggah bukti');
         foreach (['persiapan', 'pantau', 'bukti'] as $tahap) {
             $halaman = $this->actingAs($akunPengawas)
@@ -297,6 +303,16 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
                 file_put_contents(storage_path('logs/cbt-supervisor-'.$tahap.'.html'), $halaman->getContent());
             }
         }
+        $halamanPresensi = $this->actingAs($akunPengawas)
+            ->get(route('presensi-ujian-cbt.show', [$paket, $ruangOperasional]))
+            ->assertOk()
+            ->assertSeeText('Presensi Ujian CBT')
+            ->assertSeeText('Kamera pemindai')
+            ->assertSeeText('Scanner USB atau input NISN')
+            ->assertSeeText('Daftar peserta ruang');
+        if (getenv('CBT_SUPERVISOR_FIXTURE')) {
+            file_put_contents(storage_path('logs/cbt-supervisor-attendance.html'), $halamanPresensi->getContent());
+        }
         $this->actingAs($akunPengawas)
             ->get(route('tugas-pengawas-ujian.show', [$ruangOperasional, 'tahap' => 'bukti']))
             ->assertOk()
@@ -305,6 +321,89 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         $this->actingAs($data['akun_guru'])
             ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
             ->assertForbidden();
+
+        $pesertaDitahan = $ruangOperasional->pesertaUjianCbt()->firstOrFail();
+        $pesertaDitahan->update([
+            'status' => 'terblokir',
+            'ditahan_mode_aman_pada' => now(),
+            'jumlah_pindah_aplikasi' => 3,
+            'durasi_di_luar_aplikasi_detik' => 12,
+        ]);
+        AktivitasKeamananUjianCbt::create([
+            'peserta_ujian_cbt_id' => $pesertaDitahan->id,
+            'jenis' => 'keluar_aplikasi',
+            'mulai_pada' => now()->subMinutes(2),
+            'selesai_pada' => now()->subMinutes(2)->addSeconds(4),
+            'durasi_detik' => 4,
+            'dihitung' => true,
+        ]);
+        AktivitasKeamananUjianCbt::create([
+            'peserta_ujian_cbt_id' => $pesertaDitahan->id,
+            'jenis' => 'keluar_aplikasi',
+            'mulai_pada' => now()->subMinute(),
+            'selesai_pada' => now()->subMinute()->addSeconds(2),
+            'durasi_detik' => 2,
+            'dihitung' => false,
+        ]);
+        $ruteBukaModeAman = route('tugas-pengawas-ujian.mode-aman.buka', [$ruangOperasional, $pesertaDitahan]);
+        $ruteRiwayatModeAman = route('tugas-pengawas-ujian.mode-aman.riwayat', [$ruangOperasional, $pesertaDitahan]);
+        $halamanDitahan = $this->actingAs($akunPengawas)
+            ->get(route('tugas-pengawas-ujian.show', [$ruangOperasional, 'tahap' => 'pantau']))
+            ->assertOk()
+            ->assertSeeText('Tinjau & buka')
+            ->assertSeeText('3 kejadian dihitung')
+            ->assertSee($ruteRiwayatModeAman, false);
+        if (getenv('CBT_SUPERVISOR_FIXTURE')) {
+            file_put_contents(storage_path('logs/cbt-supervisor-pantau-held.html'), $halamanDitahan->getContent());
+        }
+        $halamanRiwayat = $this->actingAs($akunPengawas)
+            ->get($ruteRiwayatModeAman)
+            ->assertOk()
+            ->assertSeeText('Riwayat Mode Aman')
+            ->assertSeeText('3 kali')
+            ->assertSeeText('12 detik')
+            ->assertSeeText('Di bawah batas toleransi')
+            ->assertSeeText('Dihitung sebagai kejadian')
+            ->assertSee($ruteBukaModeAman, false);
+        if (getenv('CBT_SUPERVISOR_FIXTURE')) {
+            file_put_contents(storage_path('logs/cbt-supervisor-mode-aman-history.html'), $halamanRiwayat->getContent());
+        }
+        $this->actingAs($data['akun_guru'])
+            ->get($ruteRiwayatModeAman)
+            ->assertForbidden();
+        $this->actingAs($data['akun_guru'])
+            ->post($ruteBukaModeAman)
+            ->assertForbidden();
+        $this->assertSame('terblokir', $pesertaDitahan->fresh()->status);
+        $this->actingAs($akunPengawas)
+            ->post($ruteBukaModeAman)
+            ->assertSessionHasErrors('alasan_pembukaan');
+        $this->actingAs($akunPengawas)
+            ->post($ruteBukaModeAman, ['alasan_pembukaan' => 'Singkat'])
+            ->assertSessionHasErrors('alasan_pembukaan');
+        $this->assertSame('terblokir', $pesertaDitahan->fresh()->status);
+        $this->actingAs($akunPengawas)
+            ->post($ruteBukaModeAman, ['alasan_pembukaan' => 'Aplikasi tertutup saat ada panggilan masuk.'])
+            ->assertRedirect($ruteRiwayatModeAman);
+        $this->assertDatabaseHas('peserta_ujian_cbt', [
+            'id' => $pesertaDitahan->id,
+            'status' => 'sedang_mengerjakan',
+            'dibuka_mode_aman_oleh_pengguna_id' => $akunPengawas->id,
+        ]);
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', [
+            'peserta_ujian_cbt_id' => $pesertaDitahan->id,
+            'jenis' => 'buka_mode_aman',
+            'oleh_pengguna_id' => $akunPengawas->id,
+            'catatan' => 'Aplikasi tertutup saat ada panggilan masuk.',
+        ]);
+        $this->actingAs($akunPengawas)
+            ->get($ruteRiwayatModeAman)
+            ->assertOk()
+            ->assertSeeText('Aplikasi tertutup saat ada panggilan masuk.');
+        $this->actingAs($akunPengawas)
+            ->post($ruteBukaModeAman, ['alasan_pembukaan' => 'Mencoba membuka ulang tanpa tahanan.'])
+            ->assertSessionHasErrors('peserta');
+        $this->assertSame(1, $pesertaDitahan->aktivitasKeamananUjianCbt()->where('jenis', 'buka_mode_aman')->count());
 
         foreach (['daftar-hadir-1.jpg', 'daftar-hadir-2.jpg'] as $namaFile) {
             $this->actingAs($akunPengawas)
@@ -468,6 +567,31 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
             ->assertOk()
             ->assertSeeText('Guru Pengawas Pengganti');
+        $pesertaDitahan->refresh()->update([
+            'status' => 'terblokir',
+            'ditahan_mode_aman_pada' => now(),
+        ]);
+        $this->actingAs($akunPengawas)
+            ->post($ruteBukaModeAman, ['alasan_pembukaan' => 'Pengawas lama tidak lagi bertugas.'])
+            ->assertForbidden();
+        $this->actingAs($akunPengawas)
+            ->get($ruteRiwayatModeAman)
+            ->assertForbidden();
+        $this->actingAs($akunPengganti)
+            ->get($ruteRiwayatModeAman)
+            ->assertOk()
+            ->assertSeeText('Buka kembali ujian');
+        $this->actingAs($akunPengganti)
+            ->post($ruteBukaModeAman, ['alasan_pembukaan' => 'Sudah diperiksa oleh pengawas pengganti.'])
+            ->assertRedirect($ruteRiwayatModeAman);
+        $this->assertSame($akunPengganti->id, $pesertaDitahan->fresh()->dibuka_mode_aman_oleh_pengguna_id);
+        $this->assertSame(2, $pesertaDitahan->aktivitasKeamananUjianCbt()->where('jenis', 'buka_mode_aman')->count());
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', [
+            'peserta_ujian_cbt_id' => $pesertaDitahan->id,
+            'jenis' => 'buka_mode_aman',
+            'oleh_pengguna_id' => $akunPengganti->id,
+            'catatan' => 'Sudah diperiksa oleh pengawas pengganti.',
+        ]);
         $this->actingAs($data['admin'])
             ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
             ->assertOk()
@@ -815,6 +939,56 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         $this->assertCount(6, $jumlah);
         $this->assertSame([2], $jumlah->unique()->values()->all());
         $peserta = $paket->pesertaUjianCbt()->firstOrFail();
+        $data['jadwal']->update([
+            'tanggal' => today()->toDateString(),
+            'waktu_mulai' => now()->subMinutes(5)->format('H:i'),
+            'waktu_selesai' => now()->addMinutes(30)->format('H:i'),
+        ]);
+        $paket->update([
+            'tanggal_mulai' => now()->subMinutes(5),
+            'tanggal_selesai' => now()->addMinutes(30),
+            'status' => 'berlangsung',
+        ]);
+        $peserta->sesiUjianCbt()->update([
+            'waktu_mulai' => now()->subMinutes(5),
+            'waktu_selesai' => now()->addMinutes(30),
+            'status' => 'aktif',
+        ]);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $paket->token);
+        $this->actingAs($data['admin'])
+            ->get(route('paket-soal-terpusat.show', $data['jadwal']))
+            ->assertOk()
+            ->assertSeeText('Token otomatis')
+            ->assertSeeText($paket->token);
+        $this->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+            ->assertOk()
+            ->assertSeeText('Token ujian')
+            ->assertSeeText($paket->token);
+        $this->actingAs($data['akun_siswa'])
+            ->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertSeeText('Token dari pengawas')
+            ->assertSee('name="token"', false);
+        $this->actingAs($data['akun_siswa'])
+            ->post(route('ujian-saya.masuk', $peserta), ['token' => 'SALAH'])
+            ->assertSessionHasErrors('token')
+            ->assertSessionMissing('cbt_peserta_ujian_id');
+        $this->post(route('ujian-saya.masuk', $peserta), ['token' => $paket->token])
+            ->assertRedirect(route('cbt.ujian.show'))
+            ->assertSessionHas('cbt_peserta_ujian_id', $peserta->id);
+        $this->post(route('cbt.ujian.mulai'))
+            ->assertRedirect(route('cbt.ujian.kerjakan'));
+        $this->get(route('cbt.ujian.kerjakan'))
+            ->assertOk()
+            ->assertSeeText('Pilihan Ganda')
+            ->assertSeeText('Pilihan Ganda Kompleks')
+            ->assertSeeText('Benar-Salah')
+            ->assertSeeText('Menjodohkan')
+            ->assertSeeText('Isian Singkat')
+            ->assertSeeText('Numerik')
+            ->assertSeeText('Lingkungan sekolah yang perlu dijaga bersama.')
+            ->assertSeeText('Menyiram tanaman')
+            ->assertSeeText('Buku di rak kelas');
         foreach ($paket->soalUjianCbt()->with('soalCbt')->get() as $relasi) {
             $kunci = $relasi->soalCbt->kunci_jawaban['jawaban'];
             $jawaban = is_array($kunci) ? $kunci : [trim(explode('|', $kunci)[0])];

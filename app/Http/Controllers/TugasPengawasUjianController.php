@@ -7,6 +7,7 @@ use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\RuangUjianCbt;
+use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -159,7 +160,7 @@ class TugasPengawasUjianController extends Controller
         ]);
     }
 
-    public function show(Request $request, RuangUjianCbt $ruangUjianCbt)
+    public function show(Request $request, RuangUjianCbt $ruangUjianCbt, KeamananUjianService $keamanan)
     {
         $this->pastikanBolehMelihat($request->user(), $ruangUjianCbt);
 
@@ -182,7 +183,10 @@ class TugasPengawasUjianController extends Controller
 
         $pengguna = $request->user();
         $peserta = $ruangUjianCbt->pesertaUjianCbt->sortBy('nomor_meja')->values();
-        $peserta->loadCount(['jawabanPesertaUjianCbt as jawaban_tersimpan' => fn ($query) => $query->whereNotNull('jawaban')]);
+        $peserta->loadCount([
+            'jawabanPesertaUjianCbt as jawaban_tersimpan' => fn ($query) => $query->whereNotNull('jawaban'),
+            'aktivitasKeamananUjianCbt as jumlah_aktivitas_keamanan',
+        ]);
 
         return view('tugas-pengawas-ujian.show', [
             'ruang' => $ruangUjianCbt,
@@ -191,8 +195,53 @@ class TugasPengawasUjianController extends Controller
             'jumlahSoalPantau' => min((int) $ruangUjianCbt->ujianCbt->jumlah_soal, $ruangUjianCbt->ujianCbt->soalUjianCbt()->count()),
             'bolehUnggah' => $this->bolehMengunggah($pengguna, $ruangUjianCbt),
             'bolehMemeriksa' => $this->bolehMemeriksa($pengguna, $ruangUjianCbt),
+            'pesertaDapatDibuka' => $peserta->filter(fn (PesertaUjianCbt $item) => $item->status === 'terblokir'
+                && $keamanan->dapatMembuka($pengguna, $item))->pluck('id')->all(),
             'sebagaiPengawasUtama' => (int) $pengguna?->pegawai_id === (int) $ruangUjianCbt->pengawas_utama_pegawai_id,
         ]);
+    }
+
+    public function riwayatModeAman(
+        Request $request,
+        RuangUjianCbt $ruangUjianCbt,
+        PesertaUjianCbt $pesertaUjianCbt,
+        KeamananUjianService $keamanan,
+    ) {
+        abort_unless((int) $pesertaUjianCbt->ruang_ujian_cbt_id === (int) $ruangUjianCbt->id, 404);
+        $this->pastikanBolehMelihat($request->user(), $ruangUjianCbt);
+
+        $ruangUjianCbt->load(['ujianCbt', 'jadwalUjianCbt.mataPelajaran']);
+        $pesertaUjianCbt->load(['anggotaKelas.siswa', 'kelasUjianCbt.kelas', 'dibukaModeAmanOleh']);
+
+        return view('tugas-pengawas-ujian.riwayat-mode-aman', [
+            'ruang' => $ruangUjianCbt,
+            'peserta' => $pesertaUjianCbt,
+            'aktivitas' => $pesertaUjianCbt->aktivitasKeamananUjianCbt()
+                ->with('dibukaOleh')
+                ->orderByDesc('mulai_pada')
+                ->orderByDesc('id')
+                ->paginate(20),
+            'dapatMembuka' => $pesertaUjianCbt->status === 'terblokir'
+                && $keamanan->dapatMembuka($request->user(), $pesertaUjianCbt),
+        ]);
+    }
+
+    public function bukaModeAman(
+        Request $request,
+        RuangUjianCbt $ruangUjianCbt,
+        PesertaUjianCbt $pesertaUjianCbt,
+        KeamananUjianService $keamanan,
+    ) {
+        abort_unless((int) $pesertaUjianCbt->ruang_ujian_cbt_id === (int) $ruangUjianCbt->id, 404);
+        abort_unless($keamanan->dapatMembuka($request->user(), $pesertaUjianCbt), 403);
+        $data = $request->validate([
+            'alasan_pembukaan' => ['required', 'string', 'min:10', 'max:500'],
+        ]);
+        $keamanan->bukaTahanan($request->user(), $pesertaUjianCbt, $data['alasan_pembukaan']);
+
+        return redirect()
+            ->route('tugas-pengawas-ujian.mode-aman.riwayat', [$ruangUjianCbt, $pesertaUjianCbt])
+            ->with('berhasil', 'Mode Aman peserta telah dibuka. Siswa dapat melanjutkan ujian.');
     }
 
     public function storeBukti(Request $request, RuangUjianCbt $ruangUjianCbt)

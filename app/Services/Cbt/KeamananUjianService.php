@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Mobile;
+namespace App\Services\Cbt;
 
 use App\Models\AktivitasKeamananUjianCbt;
 use App\Models\Pengguna;
@@ -8,7 +8,7 @@ use App\Models\PesertaUjianCbt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class KeamananUjianMobileService
+class KeamananUjianService
 {
     public function catat(
         Pengguna $pengguna,
@@ -131,10 +131,10 @@ class KeamananUjianMobileService
         ];
     }
 
-    public function bukaTahanan(Pengguna $pengguna, PesertaUjianCbt $peserta): array
+    public function bukaTahanan(Pengguna $pengguna, PesertaUjianCbt $peserta, ?string $alasan = null): array
     {
         $peserta->loadMissing(['ujianCbt', 'ruangUjianCbt']);
-        abort_unless($this->bolehMembuka($pengguna, $peserta), 403);
+        abort_unless($this->dapatMembuka($pengguna, $peserta), 403);
 
         if ($peserta->status !== 'terblokir') {
             throw ValidationException::withMessages([
@@ -142,18 +142,31 @@ class KeamananUjianMobileService
             ]);
         }
 
-        DB::transaction(function () use ($pengguna, $peserta): void {
+        DB::transaction(function () use ($pengguna, $peserta, $alasan): void {
             $terkunci = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
             if ($terkunci->status !== 'terblokir') {
-                return;
+                throw ValidationException::withMessages([
+                    'peserta' => 'Peserta tidak sedang ditahan oleh Mode Aman.',
+                ]);
             }
 
+            $dibukaPada = now();
             $terkunci->forceFill([
                 'status' => 'sedang_mengerjakan',
                 'ditahan_mode_aman_pada' => null,
-                'dibuka_mode_aman_pada' => now(),
+                'dibuka_mode_aman_pada' => $dibukaPada,
                 'dibuka_mode_aman_oleh_pengguna_id' => $pengguna->id,
             ])->save();
+
+            AktivitasKeamananUjianCbt::create([
+                'peserta_ujian_cbt_id' => $terkunci->id,
+                'jenis' => 'buka_mode_aman',
+                'mulai_pada' => $dibukaPada,
+                'selesai_pada' => $dibukaPada,
+                'oleh_pengguna_id' => $pengguna->id,
+                'catatan' => $alasan === null ? null : trim($alasan),
+                'metadata' => ['nama_petugas' => $pengguna->nama],
+            ]);
         });
 
         $peserta = $peserta->fresh(['ujianCbt']);
@@ -201,16 +214,32 @@ class KeamananUjianMobileService
             ->firstOrFail();
     }
 
-    private function bolehMembuka(Pengguna $pengguna, PesertaUjianCbt $peserta): bool
+    public function dapatMembuka(Pengguna $pengguna, PesertaUjianCbt $peserta): bool
     {
-        if ($peserta->ujianCbt->dapatDiaksesOperasionalOleh($pengguna)) {
+        $peserta->loadMissing(['ujianCbt', 'ruangUjianCbt']);
+
+        if ($pengguna->memilikiIzin('cbt.kelola')) {
+            return true;
+        }
+
+        if ($peserta->ujianCbt->asesmenKelas()) {
+            return $peserta->ujianCbt->dapatDikelolaOleh($pengguna);
+        }
+
+        if (filled($pengguna->pegawai_id)
+            && $peserta->ruang_ujian_cbt_id
+            && $peserta->ruangUjianCbt()
+                ->ditugaskanKepada((int) $pengguna->pegawai_id)
+                ->exists()) {
             return true;
         }
 
         return filled($pengguna->pegawai_id)
-            && $peserta->ruang_ujian_cbt_id
-            && $peserta->ruangUjianCbt()
-                ->ditugaskanKepada((int) $pengguna->pegawai_id)
+            && $pengguna->memilikiIzin('cbt.panitia')
+            && $peserta->ujianCbt->jadwalUjianCbt()
+                ->whereHas('kegiatanUjianCbt.panitiaUjianCbt', fn ($query) => $query
+                    ->where('pegawai_id', $pengguna->pegawai_id)
+                    ->where('aktif', true))
                 ->exists();
     }
 

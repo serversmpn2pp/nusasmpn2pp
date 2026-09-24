@@ -6,7 +6,7 @@
     .supervisor-preparation { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; padding:8px 0 24px; }
     .supervisor-preparation h2 { margin:0 0 14px; font-size:1.1rem; }
     .supervisor-token { display:block; font-size:2.4rem; font-variant-numeric:tabular-nums; color:var(--primary); margin:12px 0; overflow-wrap:anywhere; }
-    .supervisor-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0; }
+    .supervisor-metrics { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin:18px 0; }
     .supervisor-metrics div { padding:12px; border-left:3px solid var(--primary); background:var(--primary-soft); }
     .supervisor-metrics span,.supervisor-metrics strong { display:block; }
     .supervisor-metrics strong { font-size:1.5rem; margin-top:5px; }
@@ -19,7 +19,20 @@
     .supervisor-participants small { display:block; color:var(--muted); margin-top:4px; }
     .supervisor-participants tr:last-child td { border-bottom:0; }
     .supervisor-live { color:var(--muted); margin:0; }
+    @media(max-width:900px) { .supervisor-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } }
     @media(max-width:680px) { .supervisor-preparation { grid-template-columns:1fr; } .supervisor-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .supervisor-tabs a { flex-direction:column; text-align:center; padding:12px 6px; font-size:.85rem; } .supervisor-participants th,.supervisor-participants td { padding:12px 8px; } }
+    @media(max-width:560px) {
+        .supervisor-participants { overflow:visible; border:0; background:transparent; }
+        .supervisor-participants table,.supervisor-participants tbody { display:block; width:100%; }
+        .supervisor-participants thead { display:none; }
+        .supervisor-participants tbody { display:grid; gap:10px; }
+        .supervisor-participants tr[data-supervisor-student] { display:block; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#fff; }
+        .supervisor-participants tr[data-supervisor-student][hidden] { display:none !important; }
+        .supervisor-participants td { display:grid; grid-template-columns:88px minmax(0,1fr); gap:10px; align-items:start; padding:10px 12px; border-bottom:1px solid var(--line); }
+        .supervisor-participants td:last-child { border-bottom:0; }
+        .supervisor-participants td::before { content:attr(data-label); color:var(--muted); font-size:.7rem; font-weight:800; text-transform:uppercase; }
+        .supervisor-cell { min-width:0; overflow-wrap:anywhere; }
+    }
 </style>
 <nav class="supervisor-tabs" aria-label="Tahap tugas pengawas">
     @foreach(['persiapan' => 'Persiapan', 'pantau' => 'Pantau siswa', 'bukti' => 'Bukti ujian'] as $key => $label)
@@ -51,7 +64,7 @@
 @elseif($tahap === 'pantau')
     <div class="supervisor-tools">
         <div class="field"><label for="supervisor-search">Cari siswa</label><input class="input" id="supervisor-search" type="search" placeholder="Nama atau NISN" autocomplete="off"></div>
-        <div class="field"><label for="supervisor-status">Status pengerjaan</label><select class="select" id="supervisor-status"><option value="">Semua siswa</option><option value="belum">Belum mulai</option><option value="sedang_mengerjakan">Sedang mengerjakan</option><option value="selesai">Selesai</option></select></div>
+        <div class="field"><label for="supervisor-status">Status pengerjaan</label><select class="select" id="supervisor-status"><option value="">Semua siswa</option><option value="belum">Belum mulai</option><option value="sedang_mengerjakan">Sedang mengerjakan</option><option value="terblokir">Ditahan Mode Aman</option><option value="selesai">Selesai</option></select></div>
         <label><input type="checkbox" id="supervisor-auto" checked> Perbarui otomatis</label>
         <button type="button" class="button button-muted" id="supervisor-refresh">Perbarui sekarang</button>
     </div>
@@ -59,21 +72,23 @@
     <div id="supervisor-monitor">
         <div class="supervisor-metrics">
             <div><span>Total peserta</span><strong>{{ $pesertaPantau->count() }}</strong></div>
-            <div><span>Belum mulai</span><strong>{{ $pesertaPantau->whereNotIn('status', ['sedang_mengerjakan', 'selesai'])->count() }}</strong></div>
+            <div><span>Belum mulai</span><strong>{{ $pesertaPantau->whereNotIn('status', ['sedang_mengerjakan', 'terblokir', 'selesai'])->count() }}</strong></div>
+            <div><span>Ditahan Mode Aman</span><strong>{{ $pesertaPantau->where('status', 'terblokir')->count() }}</strong></div>
             <div><span>Mengerjakan</span><strong>{{ $pesertaPantau->where('status', 'sedang_mengerjakan')->count() }}</strong></div>
             <div><span>Selesai</span><strong>{{ $pesertaPantau->where('status', 'selesai')->count() }}</strong></div>
         </div>
         <div class="supervisor-participants">
             <table>
-                <thead><tr><th>Meja</th><th>Siswa</th><th>Status</th><th>Soal dengan jawaban tersimpan</th></tr></thead>
+                <thead><tr><th>Meja</th><th>Siswa</th><th>Status</th><th>Soal dengan jawaban tersimpan</th><th>Tindakan</th></tr></thead>
                 <tbody>
                     @foreach($pesertaPantau as $peserta)
                         @php($siswa = $peserta->anggotaKelas?->siswa)
-                        <tr data-supervisor-student data-search="{{ str($siswa?->nama_lengkap.' '.$siswa?->nisn)->lower() }}" data-status="{{ in_array($peserta->status, ['sedang_mengerjakan', 'selesai']) ? $peserta->status : 'belum' }}">
-                            <td>{{ $peserta->nomor_meja ?: '-' }}</td>
-                            <td><strong>{{ $siswa?->nama_lengkap ?: '-' }}</strong><small>{{ $peserta->kelasUjianCbt?->kelas?->nama }} · {{ $siswa?->nisn }}</small></td>
-                            <td><span class="badge {{ $peserta->status === 'selesai' ? 'badge-active' : 'badge-muted' }}">{{ $peserta->labelStatusPelaksanaan() }}</span><small>{{ \App\Models\PesertaUjianCbt::DAFTAR_STATUS_KEHADIRAN[$peserta->status_kehadiran_ujian ?: 'belum_absen'] ?? '-' }}</small></td>
-                            <td>{{ $peserta->jawaban_tersimpan }} / {{ $jumlahSoalPantau }}<small>Mulai {{ $peserta->waktu_mulai?->format('H:i') ?: '-' }} · Selesai {{ $peserta->waktu_selesai?->format('H:i') ?: '-' }}</small></td>
+                        <tr data-supervisor-student data-search="{{ str($siswa?->nama_lengkap.' '.$siswa?->nisn)->lower() }}" data-status="{{ in_array($peserta->status, ['sedang_mengerjakan', 'terblokir', 'selesai']) ? $peserta->status : 'belum' }}">
+                            <td data-label="Meja"><div class="supervisor-cell">{{ $peserta->nomor_meja ?: '-' }}</div></td>
+                            <td data-label="Siswa"><div class="supervisor-cell"><strong>{{ $siswa?->nama_lengkap ?: '-' }}</strong><small>{{ $peserta->kelasUjianCbt?->kelas?->nama }} · {{ $siswa?->nisn }}</small></div></td>
+                            <td data-label="Status"><div class="supervisor-cell"><span class="badge {{ $peserta->status === 'terblokir' ? 'badge-danger' : ($peserta->status === 'selesai' ? 'badge-active' : 'badge-muted') }}">{{ $peserta->status === 'terblokir' ? 'Ditahan Mode Aman' : $peserta->labelStatusPelaksanaan() }}</span><small>{{ \App\Models\PesertaUjianCbt::DAFTAR_STATUS_KEHADIRAN[$peserta->status_kehadiran_ujian ?: 'belum_absen'] ?? '-' }}</small>@if($peserta->jumlah_aktivitas_keamanan > 0)<small>{{ $peserta->jumlah_pindah_aplikasi }} kejadian dihitung · {{ $peserta->durasi_di_luar_aplikasi_detik }} detik</small>@endif</div></td>
+                            <td data-label="Jawaban"><div class="supervisor-cell">{{ $peserta->jawaban_tersimpan }} / {{ $jumlahSoalPantau }}<small>Mulai {{ $peserta->waktu_mulai?->format('H:i') ?: '-' }} · Selesai {{ $peserta->waktu_selesai?->format('H:i') ?: '-' }}</small></div></td>
+                            <td data-label="Tindakan"><div class="supervisor-cell">@if($peserta->jumlah_aktivitas_keamanan > 0 || $peserta->status === 'terblokir')<a class="button {{ in_array($peserta->id, $pesertaDapatDibuka, true) ? 'button-primary' : 'button-muted' }} button-sm" href="{{ route('tugas-pengawas-ujian.mode-aman.riwayat', [$ruang, $peserta]) }}">{{ in_array($peserta->id, $pesertaDapatDibuka, true) ? 'Tinjau & buka' : 'Riwayat' }}</a>@else<span class="muted">-</span>@endif</div></td>
                         </tr>
                     @endforeach
                 </tbody>

@@ -341,7 +341,14 @@ class UjianSayaTest extends TestCase
             '2026-12-01 09:30:00',
             'berlangsung',
         );
-        $ujian->update(['token' => 'MASUK1', 'jumlah_soal' => 2]);
+        $ujian->update([
+            'token' => 'MASUK1',
+            'jumlah_soal' => 2,
+            'deteksi_pindah_tab' => true,
+            'toleransi_pindah_aplikasi_detik' => 3,
+            'batas_pindah_aplikasi' => 3,
+            'tindakan_pindah_aplikasi' => 'tahan',
+        ]);
         $kelasUjianA = KelasUjianCbt::create([
             'ujian_cbt_id' => $ujian->id,
             'kelas_id' => $kelasA->id,
@@ -440,9 +447,62 @@ class UjianSayaTest extends TestCase
         $this->assertSame('sedang_mengerjakan', $peserta->status);
         $this->assertNotNull($peserta->waktu_mulai);
 
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'tidak_valid'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('peristiwa');
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), [
+            'peristiwa' => 'heartbeat',
+            'metadata' => ['kolom_bebas' => 'tidak boleh disimpan'],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('metadata');
+
+        $responsHeartbeat = $this->withHeader('User-Agent', 'Chrome Android Pengujian')
+            ->postJson(route('cbt.ujian.aktivitas-keamanan'), [
+                'peristiwa' => 'heartbeat',
+                'metadata' => [
+                    'visibility' => 'visible',
+                    'pemicu' => 'timer',
+                    'fullscreen' => false,
+                    'online' => true,
+                    'waktu_klien' => '2026-12-01T08:00:00+07:00',
+                ],
+            ])
+            ->assertOk()
+            ->assertHeader('Cache-Control')
+            ->assertJsonPath('data.mode', 'pengerjaan')
+            ->assertJsonPath('data.keamanan.jumlah_kejadian', 0);
+        $this->assertStringContainsString('no-store', (string) $responsHeartbeat->headers->get('Cache-Control'));
+        $this->assertNotNull($peserta->fresh()->heartbeat_terakhir_pada);
+
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'keluar'])
+            ->assertOk();
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'keluar'])
+            ->assertOk();
+        Carbon::setTestNow(now()->addSeconds(4));
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), [
+            'peristiwa' => 'kembali',
+            'metadata' => ['visibility' => 'visible', 'pemicu' => 'visibilitychange'],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.kejadian_dihitung', true)
+            ->assertJsonPath('data.durasi_kejadian_detik', 4)
+            ->assertJsonPath('data.keamanan.jumlah_kejadian', 1)
+            ->assertJsonPath('data.keamanan.sisa_kejadian', 2);
+        $this->assertDatabaseCount('aktivitas_keamanan_ujian_cbt', 1);
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', [
+            'peserta_ujian_cbt_id' => $peserta->id,
+            'jenis' => 'keluar_aplikasi',
+            'durasi_detik' => 4,
+            'dihitung' => true,
+        ]);
+
         $this->post(route('cbt.logout'))
             ->assertRedirect(route('ujian-saya.index'))
             ->assertSessionMissing('cbt_peserta_ujian_id');
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'heartbeat'])
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Sesi ujian tidak aktif.');
 
         $this->actingAs($akun)
             ->post(route('ujian-saya.masuk', $peserta))
@@ -459,7 +519,12 @@ class UjianSayaTest extends TestCase
             ->assertSee('Soal 1 dari 2')
             ->assertSee('Jawaban disimpan otomatis')
             ->assertSee('Sisa waktu')
-            ->assertSee('Selesai Ujian');
+            ->assertSee('data-security-detection="1"', false)
+            ->assertSee('data-security-held="0"', false)
+            ->assertSee(route('cbt.ujian.aktivitas-keamanan'), false)
+            ->assertSee('Peringatan aktivitas ujian')
+            ->assertSee('Ujian sementara ditahan')
+            ->assertSee('Kumpulkan Ujian');
 
         $this->postJson(route('cbt.ujian.jawaban'), [
             'soal_ujian_cbt_id' => $relasiSoalPertama->id,
@@ -507,6 +572,42 @@ class UjianSayaTest extends TestCase
             'soal_ujian_cbt_id' => 999999,
             'jawaban' => ['A'],
         ])->assertNotFound();
+
+        foreach (range(2, 3) as $kejadian) {
+            Carbon::setTestNow(now()->addSecond());
+            $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'keluar'])
+                ->assertOk();
+            Carbon::setTestNow(now()->addSeconds(4));
+            $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'kembali'])
+                ->assertOk()
+                ->assertJsonPath('data.keamanan.jumlah_kejadian', $kejadian);
+        }
+
+        $this->assertSame('terblokir', $peserta->fresh()->status);
+        $this->get(route('cbt.ujian.kerjakan'))
+            ->assertOk()
+            ->assertSee('data-security-held="1"', false)
+            ->assertSee('Ujian sementara ditahan')
+            ->assertSee('Minta pengawas membuka kembali akses ujian Anda.')
+            ->assertSee('inert', false);
+        $this->postJson(route('cbt.ujian.jawaban'), [
+            'soal_ujian_cbt_id' => $relasiSoalPertama->id,
+            'jawaban' => ['A'],
+        ])->assertStatus(409);
+
+        Carbon::setTestNow($peserta->waktu_mulai->copy()->addMinutes(91));
+        $this->post(route('cbt.ujian.simpan'), [
+            'aksi' => 'selesai',
+            'jawaban' => [
+                $relasiSoalPertama->id => ['A'],
+                $relasiSoalKedua->id => ['oksigen'],
+            ],
+            'ragu' => [$relasiSoalKedua->id => '1'],
+        ])->assertRedirect(route('cbt.ujian.selesai'));
+        $this->assertSame('selesai', $peserta->fresh()->status);
+        $this->assertSame(['B'], $peserta->jawabanPesertaUjianCbt()
+            ->where('soal_ujian_cbt_id', $relasiSoalPertama->id)
+            ->firstOrFail()->jawaban);
     }
 
     public function test_akun_bukan_siswa_tidak_dapat_membuka_ujian_saya(): void

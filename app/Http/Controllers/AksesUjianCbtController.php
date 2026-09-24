@@ -7,12 +7,15 @@ use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
 use App\Services\Cbt\JawabanBerkasUjianCbtService;
+use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\KelayakanPenyelesaianUjianCbtService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AksesUjianCbtController extends Controller
@@ -120,7 +123,7 @@ class AksesUjianCbtController extends Controller
             return redirect()->route('cbt.ujian.selesai');
         }
 
-        if ($peserta->status !== 'sedang_mengerjakan') {
+        if (! in_array($peserta->status, ['sedang_mengerjakan', 'terblokir'], true)) {
             return redirect()->route('cbt.ujian.show');
         }
 
@@ -155,12 +158,48 @@ class AksesUjianCbtController extends Controller
         return view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik', 'kelayakanSelesai'));
     }
 
+    public function aktivitasKeamanan(Request $request, KeamananUjianService $service): JsonResponse
+    {
+        $peserta = $this->ambilPesertaDariSesi($request, true);
+        abort_unless(
+            in_array($peserta->status, ['sedang_mengerjakan', 'terblokir'], true),
+            409,
+            'Ujian tidak sedang dikerjakan.',
+        );
+        $data = $request->validate([
+            'peristiwa' => ['required', 'in:keluar,kembali,heartbeat'],
+            'metadata' => ['nullable', 'array:visibility,pemicu,fullscreen,online,waktu_klien'],
+            'metadata.visibility' => ['nullable', 'string', 'max:20'],
+            'metadata.pemicu' => ['nullable', 'string', 'max:30'],
+            'metadata.fullscreen' => ['nullable', 'boolean'],
+            'metadata.online' => ['nullable', 'boolean'],
+            'metadata.waktu_klien' => ['nullable', 'string', 'max:40'],
+        ]);
+        $userAgent = trim((string) $request->userAgent());
+        $perangkat = $userAgent === '' ? 'Web' : 'Web - '.Str::limit($userAgent, 112, '');
+
+        return response()->json([
+            'data' => $service->catat(
+                $request->user(),
+                $peserta,
+                $data['peristiwa'],
+                $perangkat,
+                $request->ip(),
+                array_merge($data['metadata'] ?? [], ['saluran' => 'web']),
+            ),
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
     public function simpan(Request $request, KoreksiOtomatisCbtService $koreksiOtomatisCbtService)
     {
         $peserta = $this->ambilPesertaDariSesi($request);
         $peserta->load('ujianCbt');
 
-        if ($peserta->status !== 'sedang_mengerjakan') {
+        $penyelesaianTerblokirKarenaWaktuHabis = $peserta->status === 'terblokir'
+            && $request->input('aksi') === 'selesai'
+            && $this->hitungSisaDetik($peserta) <= 0;
+
+        if ($peserta->status !== 'sedang_mengerjakan' && ! $penyelesaianTerblokirKarenaWaktuHabis) {
             return redirect()->route('cbt.ujian.show');
         }
 
@@ -183,10 +222,14 @@ class AksesUjianCbtController extends Controller
 
         DB::transaction(function () use ($peserta, $soalUjian, $jawaban, $ragu, $inginSelesai, &$bolehSelesai) {
             $peserta = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
-            if ($peserta->status !== 'sedang_mengerjakan') {
+            $penyelesaianTerblokirKarenaWaktuHabis = $peserta->status === 'terblokir'
+                && $inginSelesai
+                && $this->hitungSisaDetik($peserta) <= 0;
+
+            if ($peserta->status !== 'sedang_mengerjakan' && ! $penyelesaianTerblokirKarenaWaktuHabis) {
                 return;
             }
-            foreach ($soalUjian as $relasiSoal) {
+            foreach ($penyelesaianTerblokirKarenaWaktuHabis ? [] : $soalUjian as $relasiSoal) {
                 if ($relasiSoal->soalCbt?->jenis_soal === 'upload_file') {
                     $jawabanBerkas = JawabanPesertaUjianCbt::query()->firstOrNew([
                         'peserta_ujian_cbt_id' => $peserta->id,
@@ -397,11 +440,17 @@ class AksesUjianCbtController extends Controller
         return redirect()->route('ujian-saya.index');
     }
 
-    private function ambilPesertaDariSesi(Request $request): PesertaUjianCbt
+    private function ambilPesertaDariSesi(Request $request, bool $responsJson = false): PesertaUjianCbt
     {
         $pesertaId = $request->session()->get('cbt_peserta_ujian_id');
 
         if (! $pesertaId) {
+            if ($responsJson) {
+                throw new HttpResponseException(response()->json([
+                    'message' => 'Sesi ujian tidak aktif.',
+                ], 409));
+            }
+
             throw new HttpResponseException(redirect()->route('ujian-saya.index'));
         }
 
@@ -409,6 +458,13 @@ class AksesUjianCbtController extends Controller
 
         if (! $peserta) {
             $this->hapusSesiPeserta($request);
+
+            if ($responsJson) {
+                throw new HttpResponseException(response()->json([
+                    'message' => 'Sesi ujian tidak lagi tersedia.',
+                ], 409));
+            }
+
             throw new HttpResponseException(redirect()->route('ujian-saya.index'));
         }
 
@@ -423,6 +479,12 @@ class AksesUjianCbtController extends Controller
 
         if (! $milikSiswaLogin) {
             $this->hapusSesiPeserta($request);
+
+            if ($responsJson) {
+                throw new HttpResponseException(response()->json([
+                    'message' => 'Sesi ujian tidak sesuai dengan akun siswa yang sedang digunakan.',
+                ], 409));
+            }
 
             throw new HttpResponseException(redirect()
                 ->route($pengguna ? 'beranda' : 'login')

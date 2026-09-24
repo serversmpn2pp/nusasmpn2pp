@@ -75,7 +75,7 @@
             .question-media-table-wrap > figcaption { margin:0 0 7px; color:#18181b; font-size:.84rem; font-weight:800; text-align:left; }
             .question-media-content, .question-media-table-wrap { min-width:0; max-width:100%; }
             .question-media-table-scroll { min-width:0; max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; }
-            .question-media-table { width:100%; min-width:420px; border-collapse:collapse; }
+            .question-media-table { width:max-content; min-width:100%; border-collapse:collapse; }
             .question-media-table th,.question-media-table td { border:1px solid #dfe7f0; padding:9px 10px; text-align:left; vertical-align:top; }
             .question-media-table th { background:#e8f0f8; color:#0f355c; font-weight:800; }
             .question-media-formula { overflow-x:auto; border:1px solid #dfe7f0; border-radius:7px; background:#fff; padding:14px; text-align:center; }
@@ -84,7 +84,7 @@
             .question-media-content.is-compact { gap:9px; margin:9px 0 2px; }
             .question-media-content.is-compact .question-media-figure { text-align:left; }
             .question-media-content.is-compact .question-media-figure img { max-height:230px; margin-left:0; }
-            .question-media-content.is-compact .question-media-table { min-width:320px; }
+            .question-media-content.is-compact .question-media-table { min-width:100%; }
             .question-media-content.is-compact .question-media-table th,.question-media-content.is-compact .question-media-table td { padding:7px 8px; }
             .question-media-content.is-compact .question-media-formula { padding:10px; text-align:left; }
             .question-media-content.is-compact figcaption { text-align:left; }
