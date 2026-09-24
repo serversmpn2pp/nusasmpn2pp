@@ -17,6 +17,7 @@ class UjianSayaController extends Controller
 
         return view('ujian-saya.index', [
             'siswa' => $siswa,
+            'tabUjian' => $request->query('tab') === 'riwayat' ? 'riwayat' : 'jadwal',
             ...$this->daftarUjianSiswa->siapkan($siswa),
         ]);
     }

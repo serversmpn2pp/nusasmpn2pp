@@ -109,7 +109,7 @@ class UjianSayaTest extends TestCase
             'kapasitas' => 22,
             'status' => 'siap',
         ]);
-        $this->buatPeserta($ujianAktif, $kelasUjian, $anggota, 'AKTIF-001', ruang: $ruang, nomorMeja: 7);
+        $pesertaAktif = $this->buatPeserta($ujianAktif, $kelasUjian, $anggota, 'AKTIF-001', ruang: $ruang, nomorMeja: 7);
 
         $ujianAkanDatang = $this->buatUjian(
             $jenis,
@@ -177,7 +177,8 @@ class UjianSayaTest extends TestCase
             ])
             ->assertSee('Ujian Saya')
             ->assertSee('Matematika Akan Datang')
-            ->assertSee('Matematika Selesai')
+            ->assertDontSee('Matematika Selesai')
+            ->assertSee('Riwayat')
             ->assertSee('Ruang 01')
             ->assertSee('Kode meja')
             ->assertSee('Sesi Pagi')
@@ -185,6 +186,22 @@ class UjianSayaTest extends TestCase
             ->assertSee('Masuk Ujian')
             ->assertDontSee('Ujian Rahasia Siswa Lain')
             ->assertDontSee('Siswa Rahasia Kelas Lain');
+
+        $this->get(route('ujian-saya.index', ['tab' => 'riwayat']))
+            ->assertOk()
+            ->assertSee('Matematika Selesai')
+            ->assertDontSee('Matematika Akan Datang')
+            ->assertDontSee('Matematika Aktif')
+            ->assertDontSee('Ujian Rahasia Siswa Lain');
+
+        $pesertaAktif->update(['status' => 'terblokir']);
+        $this->get(route('ujian-saya.index'))
+            ->assertOk()
+            ->assertViewHas('ujianAktif', fn ($daftar) => $daftar->pluck('peserta.id')->all() === [$pesertaAktif->id])
+            ->assertSee('Ditahan Mode Aman')
+            ->assertSee('Hubungi pengawas untuk membuka kembali akses')
+            ->assertDontSee('Matematika Selesai')
+            ->assertDontSee('Masuk Ujian');
     }
 
     public function test_nilai_cbt_terpusat_hanya_tampil_untuk_peserta_sendiri_setelah_dipublikasikan(): void
@@ -258,13 +275,13 @@ class UjianSayaTest extends TestCase
         }
 
         $this->actingAs($akun)
-            ->get(route('ujian-saya.index'))
+            ->get(route('ujian-saya.index', ['tab' => 'riwayat']))
             ->assertOk()
             ->assertSee('Belum dipublikasikan')
             ->assertDontSee('75,00');
 
         $ujian->update(['tampilkan_hasil' => true]);
-        $this->get(route('ujian-saya.index'))
+        $this->get(route('ujian-saya.index', ['tab' => 'riwayat']))
             ->assertOk()
             ->assertSee('Belum dipublikasikan')
             ->assertDontSee('75,00');
@@ -272,29 +289,32 @@ class UjianSayaTest extends TestCase
         $ujian->update(['hasil_difinalisasi_pada' => now()]);
         $this->get(route('ujian-saya.index'))
             ->assertOk()
+            ->assertDontSee('75,00');
+        $this->get(route('ujian-saya.index', ['tab' => 'riwayat']))
+            ->assertOk()
             ->assertSee('75,00')
             ->assertDontSee('100,00');
 
         $jawabanKedua = $peserta->jawabanPesertaUjianCbt()->orderByDesc('id')->firstOrFail();
         $jawabanKedua->update(['skor' => null]);
-        $this->get(route('ujian-saya.index'))
+        $this->get(route('ujian-saya.index', ['tab' => 'riwayat']))
             ->assertOk()
             ->assertSee('Belum tersedia')
             ->assertDontSee('75,00');
 
         $jawabanKedua->update(['skor' => 0]);
-        $this->get(route('ujian-saya.index'))
+        $this->get(route('ujian-saya.index', ['tab' => 'riwayat']))
             ->assertOk()
             ->assertSee('25,00');
 
         $peserta->jawabanPesertaUjianCbt()->orderBy('id')->firstOrFail()->update(['skor' => 0]);
-        $this->get(route('ujian-saya.index'))
+        $this->get(route('ujian-saya.index', ['tab' => 'riwayat']))
             ->assertOk()
             ->assertSee('0,00')
             ->assertDontSee('Belum tersedia');
 
         $ujian->update(['tampilkan_hasil' => false]);
-        $this->get(route('ujian-saya.index'))
+        $this->get(route('ujian-saya.index', ['tab' => 'riwayat']))
             ->assertOk()
             ->assertSee('Belum dipublikasikan')
             ->assertDontSee('0,00');
@@ -608,6 +628,12 @@ class UjianSayaTest extends TestCase
         $this->assertSame(['B'], $peserta->jawabanPesertaUjianCbt()
             ->where('soal_ujian_cbt_id', $relasiSoalPertama->id)
             ->firstOrFail()->jawaban);
+        $this->get(route('cbt.ujian.selesai'))
+            ->assertOk()
+            ->assertSee('Lihat Riwayat Ujian');
+        $this->post(route('cbt.logout'), ['tujuan' => 'riwayat'])
+            ->assertRedirect(route('ujian-saya.index', ['tab' => 'riwayat']))
+            ->assertSessionMissing('cbt_peserta_ujian_id');
     }
 
     public function test_akun_bukan_siswa_tidak_dapat_membuka_ujian_saya(): void

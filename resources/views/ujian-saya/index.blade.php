@@ -71,6 +71,46 @@
             background: #fff8dc;
         }
 
+        .student-exam-tabs {
+            display: flex;
+            gap: 20px;
+            border-bottom: 1px solid #cbd9e8;
+            overflow-x: auto;
+        }
+
+        .student-exam-tabs a {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            min-height: 44px;
+            border-bottom: 3px solid transparent;
+            color: #48627c;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .student-exam-tabs a:hover,
+        .student-exam-tabs a[aria-current="page"] {
+            color: #123c67;
+        }
+
+        .student-exam-tabs a[aria-current="page"] {
+            border-bottom-color: #15477a;
+        }
+
+        .student-exam-tabs span {
+            display: inline-grid;
+            min-width: 24px;
+            height: 24px;
+            place-items: center;
+            border-radius: 12px;
+            background: #e8eef5;
+            font-size: 12px;
+            font-variant-numeric: tabular-nums;
+        }
+
         .student-exam-section {
             display: grid;
             gap: 12px;
@@ -119,6 +159,18 @@
 
         .student-exam-card.is-upcoming {
             border-left-color: #e4ad00;
+        }
+
+        .student-exam-card.is-held {
+            border-left-color: #b84c4c;
+        }
+
+        .student-exam-hold-note {
+            padding: 10px 12px;
+            border: 1px solid #f1caca;
+            background: #fff5f5;
+            color: #8d2929;
+            font-size: 13px;
         }
 
         .student-exam-card-head {
@@ -318,6 +370,13 @@
             text-align: center;
         }
 
+        .student-exam-empty a {
+            display: block;
+            margin-top: 9px;
+            color: #15477a;
+            font-weight: 700;
+        }
+
         @media (max-width: 820px) {
             .student-exam-head {
                 align-items: flex-start;
@@ -335,16 +394,20 @@
 
         @media (max-width: 560px) {
             .student-exam-summary {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
             }
 
             .student-exam-summary-item {
-                border-bottom: 1px solid #cbd9e8;
-                border-right: 0;
+                padding: 12px 8px;
+                text-align: center;
             }
 
-            .student-exam-summary-item:last-child {
-                border-bottom: 0;
+            .student-exam-summary-item span {
+                font-size: 11px;
+            }
+
+            .student-exam-summary-item strong {
+                font-size: 23px;
             }
 
             .student-exam-card-head {
@@ -369,7 +432,13 @@
     </style>
 
     @php
-        $bagianUjian = [
+        $bagianUjian = $tabUjian === 'riwayat' ? [[
+            'judul' => 'Riwayat Ujian',
+            'keterangan' => 'Ujian yang sudah dikerjakan atau waktunya berakhir',
+            'daftar' => $ujianSelesai,
+            'kelas' => 'is-complete',
+            'kosong' => 'Belum ada riwayat ujian.',
+        ]] : [
             [
                 'judul' => 'Sedang Aktif',
                 'keterangan' => 'Ujian yang sudah masuk waktu pelaksanaan',
@@ -384,13 +453,6 @@
                 'kelas' => 'is-upcoming',
                 'kosong' => 'Belum ada ujian yang akan datang.',
             ],
-            [
-                'judul' => 'Selesai',
-                'keterangan' => 'Riwayat ujian siswa',
-                'daftar' => $ujianSelesai,
-                'kelas' => 'is-complete',
-                'kosong' => 'Belum ada riwayat ujian selesai.',
-            ],
         ];
     @endphp
 
@@ -399,7 +461,7 @@
             <div>
                 <p class="eyebrow">Ujian & Asesmen</p>
                 <h1 class="page-title">Ujian Saya</h1>
-                <p class="help-text" style="margin-top: 7px;">Jadwal dan penempatan ujian yang terhubung dengan akun siswa.</p>
+                <p class="help-text" style="margin-top: 7px;">{{ $tabUjian === 'riwayat' ? 'Ujian yang telah berlalu dan hasil yang sudah dipublikasikan.' : 'Jadwal dan penempatan ujian yang terhubung dengan akun siswa.' }}</p>
             </div>
             <div class="student-exam-identity">
                 <strong>{{ $siswa->nama_lengkap }}</strong>
@@ -426,6 +488,19 @@
             </div>
         </section>
 
+        <nav class="student-exam-tabs" aria-label="Tampilan ujian saya">
+            <a href="{{ route('ujian-saya.index') }}" @if($tabUjian === 'jadwal') aria-current="page" @endif>Jadwal ujian <span>{{ $ringkasanUjian['aktif'] + $ringkasanUjian['akan_datang'] }}</span></a>
+            <a href="{{ route('ujian-saya.index', ['tab' => 'riwayat']) }}" @if($tabUjian === 'riwayat') aria-current="page" @endif>Riwayat <span>{{ $ringkasanUjian['selesai'] }}</span></a>
+        </nav>
+
+        @if($tabUjian === 'jadwal' && $ujianAktif->isEmpty() && $ujianAkanDatang->isEmpty())
+            <div class="student-exam-empty">
+                Belum ada ujian yang sedang berlangsung atau akan datang.
+                @if($ujianSelesai->isNotEmpty())
+                    <a href="{{ route('ujian-saya.index', ['tab' => 'riwayat']) }}">Lihat riwayat ujian</a>
+                @endif
+            </div>
+        @else
         @foreach ($bagianUjian as $bagian)
             <section class="student-exam-section">
                 <header class="student-exam-section-head">
@@ -452,7 +527,7 @@
                                 };
                             @endphp
 
-                            <article class="student-exam-card {{ $bagian['kelas'] }}">
+                            <article class="student-exam-card {{ $bagian['kelas'] }} {{ $bagian['kelas'] === 'is-active' && $peserta->status === 'terblokir' ? 'is-held' : '' }}">
                                 <header class="student-exam-card-head">
                                     <div>
                                         <small>{{ $item['susulan'] ? 'Ujian susulan · ' : '' }}{{ $ujian?->jenisUjianCbt?->nama ?: 'Ujian CBT' }}</small>
@@ -523,6 +598,10 @@
                                     </div>
                                 @endif
 
+                                @if ($bagian['kelas'] === 'is-active' && $peserta->status === 'terblokir')
+                                    <div class="student-exam-hold-note">Ujian sementara ditahan. Hubungi pengawas untuk membuka kembali akses.</div>
+                                @endif
+
                                 @if ($bagian['kelas'] === 'is-active' && in_array($peserta->status, ['aktif', 'sedang_mengerjakan'], true))
                                     @php
                                         $sedangMengerjakan = $peserta->status === 'sedang_mengerjakan';
@@ -555,5 +634,6 @@
                 @endif
             </section>
         @endforeach
+        @endif
     </div>
 @endsection

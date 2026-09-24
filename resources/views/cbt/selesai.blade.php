@@ -46,8 +46,9 @@
 
             <form action="{{ route('cbt.logout') }}" method="POST">
                 @csrf
+                <input type="hidden" name="tujuan" value="riwayat">
                 <button type="submit" class="button button-primary">
-                    Kembali ke Ujian Saya
+                    Lihat Riwayat Ujian
                 </button>
             </form>
         </section>

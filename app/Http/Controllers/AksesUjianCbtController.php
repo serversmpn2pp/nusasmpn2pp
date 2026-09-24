@@ -437,7 +437,9 @@ class AksesUjianCbtController extends Controller
     {
         $this->hapusSesiPeserta($request);
 
-        return redirect()->route('ujian-saya.index');
+        return redirect()->route('ujian-saya.index', $request->input('tujuan') === 'riwayat'
+            ? ['tab' => 'riwayat']
+            : []);
     }
 
     private function ambilPesertaDariSesi(Request $request, bool $responsJson = false): PesertaUjianCbt
