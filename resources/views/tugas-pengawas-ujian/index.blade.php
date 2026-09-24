@@ -5,11 +5,14 @@
 @push('styles')
     <style>
         .supervisor-summary { grid-template-columns:repeat(4,minmax(0,1fr)); }
-        .supervisor-view-tabs { display:flex; gap:20px; border-bottom:1px solid var(--line); margin-top:20px; overflow-x:auto; }
-        .supervisor-view-tabs a { display:inline-flex; align-items:center; gap:9px; min-height:44px; border-bottom:3px solid transparent; color:var(--muted); font-size:.88rem; font-weight:800; text-decoration:none; white-space:nowrap; }
-        .supervisor-view-tabs a:hover,.supervisor-view-tabs a[aria-current="page"] { color:var(--primary-dark); }
-        .supervisor-view-tabs a[aria-current="page"] { border-bottom-color:var(--primary); }
-        .supervisor-view-tabs span { display:grid; min-width:24px; height:24px; place-items:center; border-radius:12px; background:var(--primary-soft); font-size:.75rem; font-variant-numeric:tabular-nums; }
+        .supervisor-view-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; width:min(100%,520px); margin-top:20px; }
+        .supervisor-view-tabs a { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; min-height:50px; padding:10px 15px; border:1px solid #b9c9d9; border-radius:7px; background:#fff; box-shadow:0 1px 2px rgba(16,47,80,.08); color:var(--primary-dark); font-size:.88rem; font-weight:800; line-height:1.2; text-decoration:none; }
+        .supervisor-view-tabs a:hover:not([aria-current="page"]) { border-color:var(--primary); background:var(--primary-soft); }
+        .supervisor-view-tabs a[aria-current="page"] { border-color:var(--primary); background:var(--primary); color:#fff; box-shadow:0 2px 5px rgba(16,47,80,.16); }
+        .supervisor-view-tabs a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+        .supervisor-view-tabs a > span:first-child { min-width:0; overflow-wrap:anywhere; }
+        .supervisor-view-tabs .supervisor-view-count { display:grid; flex:0 0 auto; min-width:27px; height:27px; place-items:center; border-radius:5px; background:var(--primary-soft); color:var(--primary-dark); font-size:.75rem; font-variant-numeric:tabular-nums; }
+        .supervisor-view-tabs a[aria-current="page"] .supervisor-view-count { background:rgba(255,255,255,.22); color:#fff; }
         .supervisor-section-head { display:flex; align-items:end; justify-content:space-between; gap:16px; margin:24px 0 10px; padding-bottom:9px; border-bottom:1px solid var(--line); }
         .supervisor-section-head h2 { margin:0; color:var(--primary-dark); font-size:1.05rem; }
         .supervisor-section-head p { margin:3px 0 0; color:var(--muted); font-size:.78rem; }
@@ -31,6 +34,7 @@
         .supervisor-empty a { display:inline-block; margin-top:12px; }
         @media (max-width:760px) {
             .supervisor-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .supervisor-view-tabs a { padding:9px 11px; }
             .supervisor-task { grid-template-columns:66px minmax(0,1fr); gap:13px; padding:15px; }
             .supervisor-date { min-height:66px; }
             .supervisor-task-action { grid-column:1 / -1; width:100%; justify-items:stretch; }
@@ -57,8 +61,8 @@
     </div>
 
     <nav class="supervisor-view-tabs" aria-label="Tampilan tugas pengawas">
-        <a href="{{ route('tugas-pengawas-ujian.index') }}" @if($tabTugas === 'perlu') aria-current="page" @endif>Perlu dikerjakan <span>{{ $ringkasan['perlu'] }}</span></a>
-        <a href="{{ route('tugas-pengawas-ujian.index', ['tab' => 'riwayat']) }}" @if($tabTugas === 'riwayat') aria-current="page" @endif>Riwayat tugas <span>{{ $ringkasan['riwayat'] }}</span></a>
+        <a href="{{ route('tugas-pengawas-ujian.index') }}" @if($tabTugas === 'perlu') aria-current="page" @endif><span>Perlu dikerjakan</span><span class="supervisor-view-count">{{ $ringkasan['perlu'] }}</span></a>
+        <a href="{{ route('tugas-pengawas-ujian.index', ['tab' => 'riwayat']) }}" @if($tabTugas === 'riwayat') aria-current="page" @endif><span>Riwayat tugas</span><span class="supervisor-view-count">{{ $ringkasan['riwayat'] }}</span></a>
     </nav>
 
     @if ($tugasSusulan->isEmpty() && $tugas->isEmpty())
