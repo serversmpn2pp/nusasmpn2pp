@@ -154,6 +154,24 @@ class RuangUjianCbt extends Model
         });
     }
 
+    public function dapatMencatatPresensiOleh(?Pengguna $pengguna): bool
+    {
+        if (! $pengguna) {
+            return false;
+        }
+
+        if ($pengguna->administrator() || $pengguna->memilikiIzin('cbt.kelola')) {
+            return true;
+        }
+
+        $pegawaiId = (int) ($pengguna->pegawai_id ?? 0);
+
+        return $pegawaiId > 0 && in_array($pegawaiId, [
+            (int) $this->pengawas_utama_pegawai_id,
+            (int) $this->pengawas_pendamping_pegawai_id,
+        ], true);
+    }
+
     public function labelStatusBukti(): string
     {
         return self::DAFTAR_STATUS_BUKTI[$this->status_bukti]

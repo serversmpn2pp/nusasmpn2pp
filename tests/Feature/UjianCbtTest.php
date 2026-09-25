@@ -659,7 +659,8 @@ class UjianCbtTest extends TestCase
                 'peran' => 'pegawai',
                 'aktif' => true,
             ]);
-            $pengawas->daftarPeran()->attach(Peran::where('kode', 'guru_mapel')->firstOrFail());
+            $pengawas->daftarPeran()->attach(Peran::where('kode', 'pegawai')->firstOrFail());
+            $this->assertFalse($pengawas->memilikiIzin('cbt.presensi'));
 
             $ruangSatu = RuangUjianCbt::create([
                 'ujian_cbt_id' => $ujianCbt->id,
@@ -806,6 +807,67 @@ class UjianCbtTest extends TestCase
 
             $this->actingAs($pengawas)
                 ->get(route('presensi-ujian-cbt.show', [$ujianCbt, $ruangDua]))
+                ->assertForbidden();
+
+            $pegawaiPengganti = Pegawai::create([
+                'nama_lengkap' => 'Pengawas Pengganti',
+                'nip' => '198301012010012002',
+                'aktif' => true,
+            ]);
+            $pengawasPengganti = Pengguna::create([
+                'pegawai_id' => $pegawaiPengganti->id,
+                'nama' => $pegawaiPengganti->nama_lengkap,
+                'username' => $pegawaiPengganti->nip,
+                'kata_sandi' => 'rahasia-pengganti',
+                'peran' => 'pegawai',
+                'aktif' => true,
+            ]);
+            $pengawasPengganti->daftarPeran()->attach(Peran::where('kode', 'pegawai')->firstOrFail());
+            $this->assertFalse($pengawasPengganti->memilikiIzin('cbt.presensi'));
+            $ruangSatu->update(['pengawas_utama_pegawai_id' => $pegawaiPengganti->id]);
+
+            $this->actingAs($pengawas)
+                ->get(route('presensi-ujian-cbt.show', [$ujianCbt, $ruangSatu]))
+                ->assertForbidden();
+            $this->actingAs($pengawas)
+                ->postJson(route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangSatu]), [
+                    'isi_scan' => $anggota[0]->siswa->nisn,
+                ])
+                ->assertForbidden();
+            $this->actingAs($pengawas)
+                ->putJson(route('presensi-ujian-cbt.manual', [$ujianCbt, $ruangSatu, $peserta[1]]), [
+                    'status_kehadiran_ujian' => 'hadir',
+                ])
+                ->assertForbidden();
+            $this->actingAs($pengawas)
+                ->get(route('presensi-ujian-cbt.index'))
+                ->assertForbidden();
+
+            $this->actingAs($pengawasPengganti)
+                ->get(route('tugas-pengawas-ujian.show', $ruangSatu))
+                ->assertOk()
+                ->assertSee('Buka presensi ruang');
+            $this->actingAs($pengawasPengganti)
+                ->get(route('presensi-ujian-cbt.index'))
+                ->assertOk()
+                ->assertSee('R-01 - Ruang 1')
+                ->assertDontSee('R-02 - Ruang 2');
+            $this->actingAs($pengawasPengganti)
+                ->get(route('presensi-ujian-cbt.show', [$ujianCbt, $ruangSatu]))
+                ->assertOk();
+            $this->actingAs($pengawasPengganti)
+                ->putJson(route('presensi-ujian-cbt.manual', [$ujianCbt, $ruangSatu, $peserta[1]]), [
+                    'status_kehadiran_ujian' => 'sakit',
+                ])
+                ->assertOk()
+                ->assertJsonPath('peserta.status', 'sakit');
+            $this->actingAs($pengawasPengganti)
+                ->get(route('presensi-ujian-cbt.show', [$ujianCbt, $ruangDua]))
+                ->assertForbidden();
+            $this->actingAs($pengawasPengganti)
+                ->postJson(route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangDua]), [
+                    'isi_scan' => $anggota[2]->siswa->nisn,
+                ])
                 ->assertForbidden();
         } finally {
             Carbon::setTestNow();

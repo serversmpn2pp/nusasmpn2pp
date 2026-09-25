@@ -510,12 +510,10 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::put('ujian-cbt/{ujianCbt}/sesi/{sesiUjianCbt}', [SesiUjianCbtController::class, 'update'])->name('ujian-cbt.sesi.update');
             Route::delete('ujian-cbt/{ujianCbt}/sesi/{sesiUjianCbt}', [SesiUjianCbtController::class, 'destroy'])->name('ujian-cbt.sesi.destroy');
         });
-        Route::middleware('izin:cbt.presensi,cbt.kelola')->group(function () {
-            Route::get('presensi-ujian-cbt', [PresensiUjianCbtController::class, 'index'])->name('presensi-ujian-cbt.index');
-            Route::get('presensi-ujian-cbt/{ujianCbt}/{ruangUjianCbt}', [PresensiUjianCbtController::class, 'show'])->name('presensi-ujian-cbt.show');
-            Route::post('presensi-ujian-cbt/{ujianCbt}/{ruangUjianCbt}/scan', [PresensiUjianCbtController::class, 'scan'])->name('presensi-ujian-cbt.scan');
-            Route::put('presensi-ujian-cbt/{ujianCbt}/{ruangUjianCbt}/peserta/{pesertaUjianCbt}', [PresensiUjianCbtController::class, 'updateManual'])->name('presensi-ujian-cbt.manual');
-        });
+        Route::get('presensi-ujian-cbt', [PresensiUjianCbtController::class, 'index'])->name('presensi-ujian-cbt.index');
+        Route::get('presensi-ujian-cbt/{ujianCbt}/{ruangUjianCbt}', [PresensiUjianCbtController::class, 'show'])->name('presensi-ujian-cbt.show');
+        Route::post('presensi-ujian-cbt/{ujianCbt}/{ruangUjianCbt}/scan', [PresensiUjianCbtController::class, 'scan'])->name('presensi-ujian-cbt.scan');
+        Route::put('presensi-ujian-cbt/{ujianCbt}/{ruangUjianCbt}/peserta/{pesertaUjianCbt}', [PresensiUjianCbtController::class, 'updateManual'])->name('presensi-ujian-cbt.manual');
         Route::get('ujian-cbt', [UjianCbtController::class, 'index'])
             ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola,cbt.presensi,cbt.asesmen_kelola,cbt.panitia,cbt.terpusat_lihat')
             ->name('ujian-cbt.index');

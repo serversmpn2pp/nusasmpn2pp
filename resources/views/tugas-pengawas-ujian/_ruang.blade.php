@@ -44,7 +44,7 @@
         <div>
             <h2>Presensi ruang</h2>
             <p>{{ $pesertaPantau->count() }} peserta terdaftar · {{ $ruang->lokasi ?: 'Lokasi belum diisi' }}</p>
-            @if(auth()->user()?->memilikiIzin(['cbt.presensi', 'cbt.kelola']))
+            @if($ruang->dapatMencatatPresensiOleh(auth()->user()))
                 <a class="button button-primary" href="{{ route('presensi-ujian-cbt.show', [$ruang->ujianCbt, $ruang]) }}">Buka presensi ruang</a>
             @else
                 <p class="alert">Akses pencatatan presensi belum diberikan. Hubungi panitia.</p>

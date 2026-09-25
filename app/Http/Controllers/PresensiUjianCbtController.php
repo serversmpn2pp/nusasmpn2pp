@@ -20,7 +20,14 @@ class PresensiUjianCbtController extends Controller
         $pengguna = $request->user();
         $dapatKelolaSemua = $this->dapatKelolaSemua($pengguna);
 
-        abort_unless($dapatKelolaSemua || filled($pengguna?->pegawai_id), 403);
+        $pegawaiId = (int) ($pengguna?->pegawai_id ?? 0);
+        abort_unless(
+            $dapatKelolaSemua || ($pegawaiId > 0 && (
+                $pengguna->memilikiIzin('cbt.presensi')
+                || RuangUjianCbt::query()->ditugaskanKepada($pegawaiId)->exists()
+            )),
+            403,
+        );
 
         $daftarRuang = RuangUjianCbt::query()
             ->with([
@@ -38,10 +45,7 @@ class PresensiUjianCbtController extends Controller
                 'pesertaUjianCbt as jumlah_belum_absen' => fn ($query) => $query->where('status_kehadiran_ujian', 'belum_absen'),
                 'pesertaUjianCbt as jumlah_tidak_hadir' => fn ($query) => $query->whereIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa']),
             ])
-            ->when(! $dapatKelolaSemua, fn ($query) => $query->where(function ($query) use ($pengguna) {
-                $query->where('pengawas_utama_pegawai_id', $pengguna->pegawai_id)
-                    ->orWhere('pengawas_pendamping_pegawai_id', $pengguna->pegawai_id);
-            }))
+            ->when(! $dapatKelolaSemua, fn ($query) => $query->ditugaskanKepada($pegawaiId))
             ->get()
             ->sortBy(fn (RuangUjianCbt $ruang) => sprintf(
                 '%s|%s|%s',
@@ -371,20 +375,7 @@ class PresensiUjianCbtController extends Controller
 
     private function pastikanDapatMengelolaRuang(Request $request, RuangUjianCbt $ruangUjianCbt): void
     {
-        $pengguna = $request->user();
-
-        if ($this->dapatKelolaSemua($pengguna)) {
-            return;
-        }
-
-        abort_unless(
-            filled($pengguna?->pegawai_id)
-            && in_array((int) $pengguna->pegawai_id, [
-                (int) $ruangUjianCbt->pengawas_utama_pegawai_id,
-                (int) $ruangUjianCbt->pengawas_pendamping_pegawai_id,
-            ], true),
-            403,
-        );
+        abort_unless($ruangUjianCbt->dapatMencatatPresensiOleh($request->user()), 403);
     }
 
     private function dapatKelolaSemua($pengguna): bool
