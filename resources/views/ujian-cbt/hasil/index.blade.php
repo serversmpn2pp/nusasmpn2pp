@@ -93,6 +93,7 @@
         </div>
 
         <div class="actions">
+            <a href="{{ route('ujian-cbt.hasil.analisis-soal', $ujianCbt) }}" class="button button-muted">Analisis soal</a>
             @if ($ujianCbt->dapatDikelolaOleh(auth()->user()))
                 @if (! $finalisasiHasil || $finalisasiHasil['status'] === 'draf')
                     <form action="{{ route('ujian-cbt.koreksi-otomatis.store', $ujianCbt) }}" method="POST" onsubmit="return confirm('Jalankan koreksi otomatis untuk jawaban objektif pada paket ini?')">

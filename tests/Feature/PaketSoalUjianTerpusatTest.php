@@ -202,6 +202,72 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_guru_dapat_membuka_hasil_dan_analisis_dari_pusat_cbt_tanpa_akses_pengelolaan_kegiatan(): void
+    {
+        $data = $this->buatFondasi();
+        $soal = $this->buatSoal($data['tahun'], $data['mapel'], 'HASIL-MTK', 'Soal hasil Matematika');
+        $mapelLain = MataPelajaran::create(['kode' => 'IPA8', 'nama' => 'IPA khusus', 'tingkat' => 8, 'aktif' => true]);
+        $soalLain = $this->buatSoal($data['tahun'], $mapelLain, 'HASIL-IPA', 'Soal hasil IPA');
+        $kelasLain = Kelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'nama' => 'VIII.B di luar penugasan',
+            'tingkat' => 8,
+            'aktif' => true,
+        ]);
+        $jadwalMapelLain = $data['jadwal']->replicate(['ujian_cbt_id']);
+        $jadwalMapelLain->fill(['mata_pelajaran_id' => $mapelLain->id, 'tanggal' => '2026-09-16', 'urutan' => 2])->save();
+        $jadwalMapelLain->kelas()->sync([$data['kelas']->id]);
+        $jadwalKelasLain = $data['jadwal']->replicate(['ujian_cbt_id']);
+        $jadwalKelasLain->fill(['tanggal' => '2026-09-17', 'urutan' => 3])->save();
+        $jadwalKelasLain->kelas()->sync([$kelasLain->id]);
+
+        foreach ([[$data['jadwal'], $soal], [$jadwalMapelLain, $soalLain], [$jadwalKelasLain, $soal]] as [$jadwal, $pilihan]) {
+            $this->actingAs($data['admin'])
+                ->put(route('paket-soal-terpusat.update', $jadwal), [
+                    'aksi' => 'terbitkan',
+                    'soal' => [$pilihan->id => ['dipilih' => '1']],
+                ])->assertRedirect()->assertSessionHasNoErrors();
+        }
+        $paket = $data['jadwal']->fresh()->ujianCbt;
+        $paketMapelLain = $jadwalMapelLain->fresh()->ujianCbt;
+        $paketKelasLain = $jadwalKelasLain->fresh()->ujianCbt;
+        $this->assertNull($paket->hasil_difinalisasi_pada);
+
+        $this->actingAs($data['akun_guru'])->get(route('pusat-cbt.index'))
+            ->assertOk()
+            ->assertSeeText('Hasil & Analisis Ujian')
+            ->assertSee(route('paket-soal-terpusat.index', ['tampilan' => 'hasil']))
+            ->assertDontSeeText('Buka Ujian Terpusat');
+
+        $this->get(route('paket-soal-terpusat.index', ['tampilan' => 'hasil']))
+            ->assertOk()
+            ->assertViewHas('tampilanHasil', true)
+            ->assertViewHas('jumlahJadwal', 1)
+            ->assertViewHas('jumlahHasilTersedia', 1)
+            ->assertSeeText($data['kegiatan']->nama)
+            ->assertSeeText('Lihat nilai')
+            ->assertSee(route('ujian-cbt.hasil.index', $paket))
+            ->assertSee(route('ujian-cbt.hasil.analisis-soal', $paket))
+            ->assertDontSeeText('IPA khusus')
+            ->assertDontSeeText($kelasLain->nama)
+            ->assertDontSeeText('Terbitkan');
+
+        $this->get(route('ujian-cbt.hasil.index', $paket))->assertOk()->assertSeeText('Rekap hasil CBT');
+        $this->get(route('ujian-cbt.hasil.analisis-soal', $paket))->assertOk()->assertSeeText('Analisis soal');
+        $this->get(route('ujian-cbt.hasil.rincian-soal', [$paket, $paket->soalUjianCbt()->firstOrFail()]))
+            ->assertOk()->assertSeeText('Rincian jawaban dan pengecoh');
+        $this->get(route('paket-soal-terpusat.show', $data['jadwal']))
+            ->assertOk()->assertSee(route('ujian-cbt.hasil.index', $paket));
+
+        foreach ([$paketMapelLain, $paketKelasLain] as $tidakDiampu) {
+            $this->get(route('ujian-cbt.hasil.index', $tidakDiampu))->assertForbidden();
+            $this->get(route('ujian-cbt.hasil.analisis-soal', $tidakDiampu))->assertForbidden();
+            $this->get(route('ujian-cbt.hasil.rincian-soal', [$tidakDiampu, $tidakDiampu->soalUjianCbt()->firstOrFail()]))->assertForbidden();
+        }
+        $this->get(route('ujian-cbt.hasil.rincian-soal', [$paket, $paketMapelLain->soalUjianCbt()->firstOrFail()]))->assertNotFound();
+        $this->get(route('ujian-terpusat.show', $data['kegiatan']))->assertForbidden();
+    }
+
     public function test_panitia_dapat_memantau_tetapi_tidak_mengubah_paket(): void
     {
         $data = $this->buatFondasi();

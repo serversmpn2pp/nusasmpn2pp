@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
+use App\Models\JawabanPesertaUjianCbt;
 use App\Models\JenisUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
@@ -21,6 +22,7 @@ use App\Models\Siswa;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use App\Services\Cbt\KoreksiOtomatisCbtService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -1607,6 +1609,483 @@ class UjianCbtTest extends TestCase
             ->assertRedirect(route('ujian-cbt.hasil.index', $ujianCbt));
         $this->assertSame(1, NilaiSiswa::query()->where('komponen_nilai_id', $komponenNilai->id)->count());
         $this->assertTrue($peserta->slice(1)->every(fn ($item) => is_null($item->fresh()->nilai_siswa_id)));
+    }
+
+    public function test_analisis_soal_membedakan_skor_penuh_parsial_dan_koreksi_tertunda(): void
+    {
+        [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->buatAnggotaSiswa($tahunPelajaran, $kelas, 4);
+
+        $ujian = UjianCbt::create([
+            ...collect($this->dataUjian(JenisUjianCbt::where('kode', 'STS')->firstOrFail(), $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
+                ->except('kelas_peserta')->all(),
+            'jumlah_soal' => 3,
+            'acak_soal' => false,
+            'dibuat_oleh_pengguna_id' => $administrator->id,
+        ]);
+        KelasUjianCbt::create([
+            'ujian_cbt_id' => $ujian->id,
+            'kelas_id' => $kelas->id,
+            'komponen_nilai_id' => $komponenNilai->id,
+        ]);
+        $soalPg = $this->buatSoalCbt($tahunPelajaran, $mataPelajaran, 'CBT-ANALISIS-PG', 'Pilih satu jawaban.');
+        $soalPgk = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
+            'kode' => 'CBT-ANALISIS-PGK',
+            'jenis_soal' => 'pilihan_ganda_kompleks',
+            'pertanyaan' => 'Pilih semua jawaban benar.',
+            'opsi' => ['pilihan' => ['A' => 'Satu', 'B' => 'Dua', 'C' => 'Tiga']],
+            'kunci_jawaban' => ['jawaban' => ['A', 'C']],
+        ]);
+        $soalUraian = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
+            'kode' => 'CBT-ANALISIS-URAIAN',
+            'jenis_soal' => 'uraian',
+            'pertanyaan' => 'Jelaskan alasanmu.',
+        ]);
+        $relasiPg = $ujian->soalUjianCbt()->create(['soal_cbt_id' => $soalPg->id, 'nomor_urut' => 1, 'bobot' => 2]);
+        $relasiPgk = $ujian->soalUjianCbt()->create(['soal_cbt_id' => $soalPgk->id, 'nomor_urut' => 2, 'bobot' => 4]);
+        $relasiUraian = $ujian->soalUjianCbt()->create(['soal_cbt_id' => $soalUraian->id, 'nomor_urut' => 3, 'bobot' => 3]);
+        $this->actingAs($administrator)->post(route('ujian-cbt.peserta.generate', $ujian))->assertRedirect();
+        $peserta = PesertaUjianCbt::where('ujian_cbt_id', $ujian->id)->orderBy('id')->get();
+        foreach ($peserta->take(3) as $siswa) {
+            $siswa->update(['status' => 'selesai', 'waktu_mulai' => now()->subHour(), 'waktu_selesai' => now()]);
+        }
+
+        foreach ([
+            [$peserta[0], $relasiPg, ['B'], 2],
+            [$peserta[1], $relasiPg, ['A'], 0],
+            [$peserta[2], $relasiPg, null, 0],
+            [$peserta[3], $relasiPg, ['B'], 2],
+            [$peserta[0], $relasiPgk, ['A', 'C'], 4],
+            [$peserta[1], $relasiPgk, ['A'], 2],
+            [$peserta[2], $relasiPgk, ['B'], null],
+            [$peserta[0], $relasiUraian, ['Isi jawaban'], 3],
+            [$peserta[1], $relasiUraian, ['Belum diperiksa'], null],
+        ] as [$siswa, $soal, $jawaban, $skor]) {
+            $siswa->jawabanPesertaUjianCbt()->create([
+                'soal_ujian_cbt_id' => $soal->id,
+                'soal_cbt_id' => $soal->soal_cbt_id,
+                'jawaban' => $jawaban,
+                'skor' => $skor,
+            ]);
+        }
+
+        $this->get(route('ujian-cbt.hasil.analisis-soal', $ujian))
+            ->assertOk()
+            ->assertSeeText('Analisis soal')
+            ->assertViewHas('analisis', function (array $analisis) {
+                $pg = $analisis['soal'][0];
+                $pgk = $analisis['soal'][1];
+                $uraian = $analisis['soal'][2];
+
+                return $analisis['peserta_selesai'] === 3
+                    && $analisis['soal_belum_lengkap'] === 2
+                    && $pg['disajikan'] === 3
+                    && $pg['terjawab'] === 2
+                    && $pg['belum_dijawab'] === 1
+                    && $pg['dinilai'] === 3
+                    && $pg['persen_skor_penuh'] === 33.33
+                    && $pg['persen_rata_rata_skor'] === 33.33
+                    && $pg['kesukaran']['status'] === 'sampel_terbatas'
+                    && $pg['kesukaran']['kategori'] === null
+                    && $pg['pilihan'] === ['A' => 1, 'B' => 1, 'C' => 0, 'D' => 0]
+                    && $pgk['disajikan'] === 3
+                    && $pgk['dinilai'] === 2
+                    && $pgk['belum_dinilai'] === 1
+                    && $pgk['skor_sebagian'] === 1
+                    && $pgk['persen_skor_penuh'] === 50.0
+                    && $pgk['persen_rata_rata_skor'] === 75.0
+                    && $pgk['kesukaran']['indeks'] === 0.75
+                    && $pgk['kesukaran']['status'] === 'menunggu_koreksi'
+                    && $pgk['kesukaran']['kategori'] === null
+                    && $pgk['pilihan'] === ['A' => 2, 'B' => 1, 'C' => 1]
+                    && $uraian['disajikan'] === 3
+                    && $uraian['dinilai'] === 2
+                    && $uraian['belum_dijawab'] === 1
+                    && $uraian['belum_dinilai'] === 1
+                    && $uraian['skor_nol'] === 1
+                    && $uraian['kesukaran']['indeks'] === 0.5
+                    && $uraian['kesukaran']['status'] === 'menunggu_koreksi'
+                    && $analisis['ringkasan_kesukaran']['belum_dikategorikan'] === 3;
+            });
+    }
+
+    public function test_analisis_soal_acak_menghitung_hanya_siswa_yang_menerima_soal(): void
+    {
+        [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->buatAnggotaSiswa($tahunPelajaran, $kelas, 3);
+
+        $ujian = UjianCbt::create([
+            ...collect($this->dataUjian(JenisUjianCbt::where('kode', 'STS')->firstOrFail(), $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
+                ->except('kelas_peserta')->all(),
+            'jumlah_soal' => 1,
+            'acak_soal' => true,
+            'dibuat_oleh_pengguna_id' => $administrator->id,
+        ]);
+        KelasUjianCbt::create([
+            'ujian_cbt_id' => $ujian->id,
+            'kelas_id' => $kelas->id,
+            'komponen_nilai_id' => $komponenNilai->id,
+        ]);
+        foreach (range(1, 3) as $nomor) {
+            $soal = $this->buatSoalCbt($tahunPelajaran, $mataPelajaran, 'CBT-ACAK-'.$nomor, 'Soal acak '.$nomor);
+            $ujian->soalUjianCbt()->create(['soal_cbt_id' => $soal->id, 'nomor_urut' => $nomor, 'bobot' => 2]);
+        }
+        $this->actingAs($administrator)->post(route('ujian-cbt.peserta.generate', $ujian))->assertRedirect();
+        $peserta = PesertaUjianCbt::where('ujian_cbt_id', $ujian->id)->orderBy('id')->get();
+        $peserta[0]->update(['status' => 'selesai']);
+        $peserta[1]->update(['status' => 'selesai']);
+
+        $this->get(route('ujian-cbt.hasil.analisis-soal', $ujian))
+            ->assertOk()
+            ->assertViewHas('analisis', fn (array $analisis) => $analisis['peserta_selesai'] === 2
+                && $analisis['soal']->sum('disajikan') === 2
+                && $analisis['soal']->sum('belum_dinilai') === 2
+                && $analisis['soal']->every(fn ($item) => $item['kesukaran']['indeks'] === null
+                    && $item['kesukaran']['kategori'] === null));
+
+        // Jawaban di luar subset peserta tidak boleh masuk distribusi, termasuk data peserta belum selesai.
+        foreach ($peserta as $siswa) {
+            foreach ($ujian->soalUjianCbt()->get() as $soal) {
+                $siswa->jawabanPesertaUjianCbt()->create([
+                    'soal_ujian_cbt_id' => $soal->id,
+                    'soal_cbt_id' => $soal->soal_cbt_id,
+                    'jawaban' => ['B'],
+                    'skor' => 2,
+                ]);
+            }
+        }
+        $this->get(route('ujian-cbt.hasil.analisis-soal', $ujian))
+            ->assertOk()
+            ->assertViewHas('analisis', fn (array $analisis) => $analisis['soal']->sum('pilihan.B') === 2
+                && $analisis['soal']->every(fn ($item) => $item['rincian_pilihan']['opsi'][1]['persen'] === ($item['disajikan'] > 0 ? 100.0 : null)
+                    && $item['rincian_pilihan']['perlu_ditinjau'] === 0));
+    }
+
+    public function test_kesukaran_hasil_siswa_mengikuti_skor_parsial_dan_filter_kelas_tanpa_mengubah_nilai(): void
+    {
+        [$tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai] = $this->buatDataAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->buatAnggotaSiswa($tahunPelajaran, $kelas, 12);
+        $ujian = UjianCbt::create([
+            ...collect($this->dataUjian(JenisUjianCbt::where('kode', 'STS')->firstOrFail(), $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
+                ->except('kelas_peserta')->all(),
+            'jumlah_soal' => 3,
+            'acak_soal' => false,
+            'dibuat_oleh_pengguna_id' => $administrator->id,
+        ]);
+        KelasUjianCbt::create([
+            'ujian_cbt_id' => $ujian->id,
+            'kelas_id' => $kelas->id,
+            'komponen_nilai_id' => $komponenNilai->id,
+        ]);
+
+        foreach (['pilihan_ganda' => 2, 'pilihan_ganda_kompleks' => 4, 'benar_salah' => 1] as $jenis => $bobot) {
+            $soal = $this->buatSoalObjektif($tahunPelajaran, $mataPelajaran, [
+                'kode' => 'CBT-KESUKARAN-'.$jenis,
+                'jenis_soal' => $jenis,
+                'pertanyaan' => 'Soal analisis '.$jenis,
+            ]);
+            $ujian->soalUjianCbt()->create(['soal_cbt_id' => $soal->id, 'nomor_urut' => $ujian->soalUjianCbt()->count() + 1, 'bobot' => $bobot]);
+        }
+        $this->actingAs($administrator)->post(route('ujian-cbt.peserta.generate', $ujian))->assertRedirect();
+        $peserta = $ujian->pesertaUjianCbt()->orderBy('id')->get();
+        $soalPaket = $ujian->soalUjianCbt()->orderBy('nomor_urut')->get();
+        foreach ($peserta as $index => $siswa) {
+            $siswa->update([
+                'status' => $index < 10 ? 'selesai' : 'aktif',
+                'status_kehadiran_ujian' => $index === 11 ? 'sakit' : 'hadir',
+            ]);
+            foreach ($soalPaket as $nomor => $soal) {
+                $skor = match ($nomor) {
+                    0 => $index < 3 ? 2 : 0,
+                    1 => 2,
+                    default => $index < 8 ? 1 : 0,
+                };
+                $siswa->jawabanPesertaUjianCbt()->create([
+                    'soal_ujian_cbt_id' => $soal->id,
+                    'soal_cbt_id' => $soal->soal_cbt_id,
+                    'jawaban' => ['A'],
+                    'skor' => $skor,
+                ]);
+            }
+        }
+        $nilaiSebelum = JawabanPesertaUjianCbt::query()->orderBy('id')->get()->toArray();
+        $soalSebelum = SoalCbt::query()->orderBy('id')->get()->toArray();
+
+        $this->get(route('ujian-cbt.hasil.analisis-soal', $ujian))
+            ->assertOk()
+            ->assertSeeText('Kesukaran hasil siswa')
+            ->assertSeeText('Indeks 0,3000')
+            ->assertSeeText('Indeks 0,5000')
+            ->assertSeeText('Indeks 0,8000')
+            ->assertSeeText('Kesulitan dari guru: Sedang')
+            ->assertViewHas('analisis', fn (array $analisis) => $analisis['peserta_selesai'] === 10
+                && $analisis['soal']->pluck('kesukaran.kategori')->all() === ['sukar', 'sedang', 'mudah']
+                && $analisis['soal'][1]['skor_penuh'] === 0
+                && $analisis['soal'][1]['skor_sebagian'] === 10
+                && $analisis['ringkasan_kesukaran'] === ['sukar' => 1, 'sedang' => 1, 'mudah' => 1, 'belum_dikategorikan' => 0]);
+
+        $kelasLain = Kelas::create([
+            'tahun_pelajaran_id' => $tahunPelajaran->id,
+            'nama' => 'VIII.B',
+            'tingkat' => 8,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        $kelasUjianLain = KelasUjianCbt::create(['ujian_cbt_id' => $ujian->id, 'kelas_id' => $kelasLain->id]);
+        foreach ($peserta->slice(8, 2) as $siswa) {
+            $siswa->update(['kelas_ujian_cbt_id' => $kelasUjianLain->id]);
+        }
+
+        $this->get(route('ujian-cbt.hasil.analisis-soal', [$ujian, 'kelas_id' => $kelas->id]))
+            ->assertOk()
+            ->assertSeeText('Sampel terbatas')
+            ->assertViewHas('analisis', fn (array $analisis) => $analisis['peserta_selesai'] === 8
+                && $analisis['soal'][0]['kesukaran']['indeks'] === 0.375
+                && $analisis['soal']->every(fn ($item) => $item['kesukaran']['status'] === 'sampel_terbatas')
+                && $analisis['ringkasan_kesukaran']['belum_dikategorikan'] === 3);
+        $this->assertSame($nilaiSebelum, JawabanPesertaUjianCbt::query()->orderBy('id')->get()->toArray());
+        $this->assertSame($soalSebelum, SoalCbt::query()->orderBy('id')->get()->toArray());
+
+        $peserta[0]->jawabanPesertaUjianCbt()->where('soal_ujian_cbt_id', $soalPaket[0]->id)->update(['skor' => 3]);
+        $this->get(route('ujian-cbt.hasil.analisis-soal', $ujian))
+            ->assertOk()
+            ->assertSeeText('Periksa skor')
+            ->assertViewHas('analisis', fn (array $analisis) => $analisis['soal'][0]['kesukaran']['status'] === 'skor_tidak_valid'
+                && $analisis['soal'][0]['kesukaran']['kategori'] === null);
+    }
+
+    public function test_rincian_pilihan_menghitung_siswa_sekali_dan_menjaga_akses_kunci_jawaban(): void
+    {
+        [$tahun, $mapel, $kelas, $komponen] = $this->buatDataAkademik();
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->buatAnggotaSiswa($tahun, $kelas, 22);
+        $ujian = UjianCbt::create([
+            ...collect($this->dataUjian(JenisUjianCbt::where('kode', 'STS')->firstOrFail(), $tahun, $mapel, $kelas, $komponen))
+                ->except('kelas_peserta')->all(),
+            'jumlah_soal' => 2,
+            'acak_soal' => false,
+            'acak_jawaban' => true,
+            'dibuat_oleh_pengguna_id' => $admin->id,
+        ]);
+        KelasUjianCbt::create(['ujian_cbt_id' => $ujian->id, 'kelas_id' => $kelas->id, 'komponen_nilai_id' => $komponen->id]);
+        $soalPg = $this->buatSoalCbt($tahun, $mapel, 'RINCIAN-PG', 'Pilih jawaban.');
+        $soalPg->update([
+            'stimulus' => 'Hasil dari \\(2^{3}\\).',
+            'media' => ['konten' => ['pilihan_A' => [
+                'gambar' => ['path' => 'cbt/uji-opsi.png', 'alt' => 'Gambar pilihan A', 'keterangan' => 'Keterangan gambar opsi'],
+                'tabel' => ['baris' => [['Nilai', 'Jumlah'], ['A', '8']]],
+                'rumus' => ['latex' => '2^3'],
+            ]]],
+            'opsi' => ['pilihan' => ['A' => 'Delapan', 'B' => '<script>alert("opsi")</script>', 'C' => 'Tiga', 'D' => 'Empat']],
+        ]);
+        $soalPgk = $this->buatSoalObjektif($tahun, $mapel, [
+            'kode' => 'RINCIAN-PGK',
+            'jenis_soal' => 'pilihan_ganda_kompleks',
+            'pertanyaan' => 'Pilih semua jawaban yang benar.',
+            'opsi' => ['pilihan' => ['A' => 'Satu', 'B' => 'Dua', 'C' => 'Tiga']],
+            'kunci_jawaban' => ['jawaban' => ['A', 'C']],
+        ]);
+        $pg = $ujian->soalUjianCbt()->create(['soal_cbt_id' => $soalPg->id, 'nomor_urut' => 1, 'bobot' => 2]);
+        $pgk = $ujian->soalUjianCbt()->create(['soal_cbt_id' => $soalPgk->id, 'nomor_urut' => 2, 'bobot' => 4]);
+        $this->actingAs($admin)->post(route('ujian-cbt.peserta.generate', $ujian))->assertRedirect();
+        $peserta = $ujian->pesertaUjianCbt()->orderBy('id')->get();
+        foreach ($peserta as $nomor => $siswa) {
+            $siswa->update(['status' => $nomor < 20 ? 'selesai' : 'aktif', 'status_kehadiran_ujian' => $nomor === 21 ? 'sakit' : 'hadir']);
+            $jawabanPg = match ($nomor) {
+                0 => [' a ', 'A'],
+                18 => ['C'],
+                19 => null,
+                20, 21 => ['D'],
+                default => ['B'],
+            };
+            foreach ([[$pg, $jawabanPg], [$pgk, $nomor === 19 ? null : [' a ', 'A', 'C']]] as [$soal, $jawaban]) {
+                $siswa->jawabanPesertaUjianCbt()->create([
+                    'soal_ujian_cbt_id' => $soal->id,
+                    'soal_cbt_id' => $soal->soal_cbt_id,
+                    'jawaban' => $jawaban,
+                    'skor' => $jawaban === null ? 0 : $soal->bobot,
+                ]);
+            }
+        }
+        $nilaiSebelum = JawabanPesertaUjianCbt::query()->orderBy('id')->get()->toArray();
+        $url = route('ujian-cbt.hasil.rincian-soal', ['ujianCbt' => $ujian, 'soalUjianCbt' => $pg, 'kelas_id' => $kelas->id]);
+        $this->get(route('ujian-cbt.hasil.analisis-soal', [$ujian, 'kelas_id' => $kelas->id]))
+            ->assertOk()->assertSee($url)->assertSeeText('1 pengecoh perlu ditinjau')
+            ->assertSeeText('Saran pemeriksaan, bukan berarti soal salah.');
+        $this->get($url)->assertOk()
+            ->assertSeeText('Rincian jawaban dan pengecoh')
+            ->assertSeeText('Pengecoh belum dipilih')
+            ->assertSeeText('Ini saran untuk memeriksa pilihan jawaban, bukan keputusan bahwa soal salah.')
+            ->assertSeeText('Apa arti "Perlu ditinjau"? Penjelasan dan contoh')
+            ->assertSeeText('Diperlukan minimal 10 peserta selesai')
+            ->assertSeeText('Tepat 5% tidak mendapat penanda ini.')
+            ->assertSeeText('C dipilih 1 siswa (3,33%): perlu ditinjau karena jarang dipilih.')
+            ->assertSeeText('Apa yang perlu diperiksa guru?')
+            ->assertSeeText('Analisis ini tidak mengubah kunci, bobot, atau nilai siswa.')
+            ->assertSeeText('85,00%')
+            ->assertSeeText('Keterangan gambar opsi')
+            ->assertSee('data-rumus-latex="2^3"', false)
+            ->assertSeeText('Nilai')
+            ->assertDontSee('<script>alert("opsi")</script>', false)
+            ->assertSee('&lt;script&gt;', false)
+            ->assertSee(route('ujian-cbt.hasil.analisis-soal', [$ujian, 'kelas_id' => $kelas->id]).'#soal-'.$pg->id)
+            ->assertViewHas('item', fn ($item) => $item['disajikan'] === 20
+                && $item['belum_dijawab'] === 1
+                && $item['rincian_pilihan']['perlu_ditinjau'] === 1
+                && array_column($item['rincian_pilihan']['opsi'], 'dipilih') === [1, 17, 1, 0]
+                && array_column($item['rincian_pilihan']['opsi'], 'persen') === [5.0, 85.0, 5.0, 0.0]);
+        $this->get(route('ujian-cbt.hasil.rincian-soal', [$ujian, $pgk]))
+            ->assertOk()->assertSeeText('Tidak dipilih')->assertSeeText('95,00%')
+            ->assertSeeText('tanpa penanda pengecoh perlu ditinjau berdasarkan patokan 5%')
+            ->assertDontSeeText('Apa arti "Perlu ditinjau"? Penjelasan dan contoh')
+            ->assertViewHas('item', fn ($item) => $item['rincian_pilihan']['perlu_ditinjau'] === 0
+                && array_column($item['rincian_pilihan']['opsi'], 'dipilih') === [19, 0, 19]
+                && array_sum(array_column($item['rincian_pilihan']['opsi'], 'persen')) === 190.0);
+        $this->assertSame($nilaiSebelum, JawabanPesertaUjianCbt::query()->orderBy('id')->get()->toArray());
+
+        $kelasLain = Kelas::create(['tahun_pelajaran_id' => $tahun->id, 'nama' => 'VIII.B', 'tingkat' => 8, 'aktif' => true]);
+        $kelasUjianLain = KelasUjianCbt::create(['ujian_cbt_id' => $ujian->id, 'kelas_id' => $kelasLain->id]);
+        foreach ($peserta->slice(10, 10) as $siswa) {
+            $siswa->update(['kelas_ujian_cbt_id' => $kelasUjianLain->id]);
+        }
+        $this->get($url)->assertOk()->assertViewHas('item', fn ($item) => $item['disajikan'] === 10
+            && array_column($item['rincian_pilihan']['opsi'], 'dipilih') === [1, 9, 0, 0]
+            && array_column($item['rincian_pilihan']['opsi'], 'persen') === [10.0, 90.0, 0.0, 0.0]);
+
+        $peserta[0]->jawabanPesertaUjianCbt()->where('soal_ujian_cbt_id', $pg->id)->update(['jawaban' => ['A', 'B']]);
+        $this->get($url)->assertOk()->assertSeeText('1 jawaban siswa yang tidak sesuai')
+            ->assertViewHas('item', fn ($item) => $item['rincian_pilihan']['perlu_ditinjau'] === 0
+                && array_column($item['rincian_pilihan']['opsi'], 'dipilih') === [0, 9, 0, 0]);
+
+        $peserta[0]->jawabanPesertaUjianCbt()->where('soal_ujian_cbt_id', $pgk->id)->update(['jawaban' => ['A', 'Z']]);
+        $this->get(route('ujian-cbt.hasil.rincian-soal', [$ujian, $pgk]))
+            ->assertOk()->assertSeeText('1 jawaban siswa yang tidak sesuai')
+            ->assertViewHas('item', fn ($item) => $item['rincian_pilihan']['jawaban_tidak_dikenali'] === 1
+                && array_column($item['rincian_pilihan']['opsi'], 'dipilih') === [19, 0, 18]);
+
+        $akunSiswa = Pengguna::create([
+            'siswa_id' => $peserta[0]->anggotaKelas->siswa_id,
+            'nama' => 'Siswa analisis',
+            'username' => 'siswa-analisis',
+            'kata_sandi' => 'rahasia-siswa',
+            'peran' => 'siswa',
+            'aktif' => true,
+            'wajib_ganti_kata_sandi' => false,
+        ]);
+        $this->actingAs($akunSiswa)->get($url)->assertForbidden();
+    }
+
+    public function test_rincian_benar_salah_dan_menjodohkan_mengikuti_peserta_kelas_dan_soal_yang_disajikan(): void
+    {
+        [$tahun, $mapel, $kelas, $komponen] = $this->buatDataAkademik();
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->buatAnggotaSiswa($tahun, $kelas, 5);
+        $ujian = UjianCbt::create([
+            ...collect($this->dataUjian(JenisUjianCbt::where('kode', 'STS')->firstOrFail(), $tahun, $mapel, $kelas, $komponen))
+                ->except('kelas_peserta')->all(),
+            'jumlah_soal' => 2,
+            'acak_soal' => false,
+            'acak_jawaban' => true,
+            'dibuat_oleh_pengguna_id' => $admin->id,
+        ]);
+        KelasUjianCbt::create(['ujian_cbt_id' => $ujian->id, 'kelas_id' => $kelas->id, 'komponen_nilai_id' => $komponen->id]);
+        $bs = $this->buatSoalObjektif($tahun, $mapel, [
+            'kode' => 'RINCIAN-BS',
+            'jenis_soal' => 'benar_salah',
+            'pertanyaan' => 'Tentukan Benar atau Salah.',
+            'opsi' => ['pernyataan' => [
+                ['nomor' => 2, 'teks' => 'Hasil dari \\(2+2\\) adalah 4.', 'media_key' => 'bs-dua'],
+                ['nomor' => 5, 'teks' => '<script>alert("butir")</script>'],
+            ]],
+            'kunci_jawaban' => ['jawaban' => [2 => true, 5 => false]],
+            'media' => ['konten' => ['bs-dua' => ['tabel' => ['baris' => [['Angka', 'Nilai'], ['Dua', '2']]]]]],
+        ]);
+        $mj = $this->buatSoalObjektif($tahun, $mapel, [
+            'kode' => 'RINCIAN-MJ',
+            'jenis_soal' => 'menjodohkan',
+            'pertanyaan' => 'Pasangkan wilayah dengan ibu kotanya.',
+            'opsi' => [
+                'pasangan' => [
+                    ['nomor' => 1, 'kiri' => 'Indonesia', 'kanan' => 'Jakarta', 'media_kiri_key' => 'mj-satu', 'media_kanan_key' => 'jawab-satu'],
+                    ['nomor' => 3, 'kiri' => 'Jawa Barat', 'kanan' => 'Bandung'],
+                ],
+                'pengecoh' => ['Surabaya'],
+                'pengecoh_media' => [['teks' => 'Surabaya', 'media_key' => 'mj-pengecoh']],
+            ],
+            'kunci_jawaban' => ['jawaban' => [1 => 'Jakarta', 3 => 'Bandung']],
+            'media' => ['konten' => [
+                'mj-satu' => ['gambar' => ['path' => 'cbt/rincian-uji.png', 'keterangan' => 'Media pernyataan']],
+                'jawab-satu' => ['rumus' => ['latex' => 'x^{2}']],
+                'mj-pengecoh' => ['gambar' => ['path' => 'cbt/rincian-uji.png', 'keterangan' => 'Media pengecoh']],
+            ]],
+        ]);
+        $relasiBs = $ujian->soalUjianCbt()->create(['soal_cbt_id' => $bs->id, 'nomor_urut' => 1, 'bobot' => 2]);
+        $relasiMj = $ujian->soalUjianCbt()->create(['soal_cbt_id' => $mj->id, 'nomor_urut' => 2, 'bobot' => 2]);
+        $this->actingAs($admin)->post(route('ujian-cbt.peserta.generate', $ujian))->assertRedirect();
+        $peserta = $ujian->pesertaUjianCbt()->orderBy('id')->get();
+        foreach ($peserta as $nomor => $siswa) {
+            $siswa->update(['status' => $nomor < 3 ? 'selesai' : 'aktif', 'status_kehadiran_ujian' => $nomor === 4 ? 'sakit' : 'hadir']);
+            $jawabanBs = match ($nomor) {
+                1 => [2 => false, 5 => true], 2 => [2 => true], default => [2 => true, 5 => false]
+            };
+            $jawabanMj = match ($nomor) {
+                1 => [1 => 'Surabaya', 3 => 'Jakarta'], 2 => [3 => 'Bandung'], default => [1 => 'Jakarta', 3 => 'Bandung']
+            };
+            foreach ([[$relasiBs, $jawabanBs], [$relasiMj, $jawabanMj]] as [$soal, $jawaban]) {
+                $siswa->jawabanPesertaUjianCbt()->create(['soal_ujian_cbt_id' => $soal->id, 'soal_cbt_id' => $soal->soal_cbt_id, 'jawaban' => $jawaban]);
+            }
+            app(KoreksiOtomatisCbtService::class)->koreksiPeserta($siswa);
+        }
+        $nilaiSebelum = JawabanPesertaUjianCbt::query()->orderBy('id')->get()->toArray();
+        $urlBs = route('ujian-cbt.hasil.rincian-soal', [$ujian, $relasiBs, 'kelas_id' => $kelas->id]);
+        $urlMj = route('ujian-cbt.hasil.rincian-soal', [$ujian, $relasiMj, 'kelas_id' => $kelas->id]);
+        $this->get(route('ujian-cbt.hasil.analisis-soal', [$ujian, 'kelas_id' => $kelas->id]))
+            ->assertOk()->assertSee($urlBs)->assertSee($urlMj);
+        $this->get($urlBs)->assertOk()
+            ->assertSeeText('Rincian jawaban per pernyataan')->assertSeeText('Kunci: Salah')
+            ->assertSeeText('Angka')->assertSeeText('66,67%')
+            ->assertDontSee('<script>alert("butir")</script>', false)
+            ->assertViewHas('item', fn ($item) => $item['disajikan'] === 3
+                && $item['skor_penuh'] === 1 && $item['skor_sebagian'] === 1 && $item['skor_nol'] === 1
+                && array_column($item['rincian_pemetaan']['butir'], 'benar') === [2, 1]
+                && array_column($item['rincian_pemetaan']['butir'], 'salah') === [1, 1]
+                && array_column($item['rincian_pemetaan']['butir'], 'kosong') === [0, 1]);
+        $this->get($urlMj)->assertOk()
+            ->assertSeeText('Rincian jawaban dan pasangan')->assertSeeText('Pengecoh tambahan')
+            ->assertSeeText('Media pernyataan')->assertSeeText('Media pengecoh')
+            ->assertSee('data-rumus-latex="x^{2}"', false)
+            ->assertViewHas('item', fn ($item) => $item['disajikan'] === 3
+                && array_column($item['rincian_pemetaan']['butir'], 'benar') === [1, 2]
+                && array_column($item['rincian_pemetaan']['butir'], 'salah') === [1, 1]
+                && array_column($item['rincian_pemetaan']['butir'], 'kosong') === [1, 0]
+                && array_column($item['rincian_pemetaan']['butir'][0]['pilihan'], 'dipilih') === [1, 0, 1]);
+        $this->assertSame($nilaiSebelum, JawabanPesertaUjianCbt::query()->orderBy('id')->get()->toArray());
+
+        $kelasLain = Kelas::create(['tahun_pelajaran_id' => $tahun->id, 'nama' => 'VIII.B', 'tingkat' => 8, 'aktif' => true]);
+        $kelasUjianLain = KelasUjianCbt::create(['ujian_cbt_id' => $ujian->id, 'kelas_id' => $kelasLain->id]);
+        $peserta[2]->update(['kelas_ujian_cbt_id' => $kelasUjianLain->id]);
+        foreach ([$urlBs, $urlMj] as $url) {
+            $this->get($url)->assertOk()->assertSeeText('50,00%')
+                ->assertViewHas('item', fn ($item) => $item['disajikan'] === 2
+                    && array_column($item['rincian_pemetaan']['butir'], 'benar') === [1, 1]);
+        }
+        $ujian->update(['acak_soal' => true, 'jumlah_soal' => 1]);
+        $this->get(route('ujian-cbt.hasil.analisis-soal', $ujian))->assertOk()
+            ->assertViewHas('analisis', fn ($analisis) => $analisis['soal']->sum('disajikan') === 3
+                && $analisis['soal']->every(fn ($item) => collect($item['rincian_pemetaan']['butir'])->every(
+                    fn ($butir) => $item['disajikan'] === $butir['benar'] + $butir['salah'] + $butir['kosong']
+                )));
+
+        $akunSiswa = Pengguna::create([
+            'siswa_id' => $peserta[0]->anggotaKelas->siswa_id, 'nama' => 'Siswa rincian',
+            'username' => 'siswa-rincian', 'kata_sandi' => 'rahasia-siswa', 'peran' => 'siswa',
+            'aktif' => true, 'wajib_ganti_kata_sandi' => false,
+        ]);
+        $this->actingAs($akunSiswa)->get($urlBs)->assertForbidden();
+        $this->get($urlMj)->assertForbidden();
     }
 
     public function test_administrator_dapat_memantau_monitoring_peserta_cbt(): void

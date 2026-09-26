@@ -172,6 +172,8 @@
             <div class="actions">
                 @if ($bolehTerpusat)<a href="{{ route('ujian-terpusat.index') }}" class="button button-primary">Buka Ujian Terpusat</a>@endif
                 @if ($bolehPaketTerpusat)<a href="{{ route('paket-soal-terpusat.index') }}" class="button button-muted">Paket Soal Terpusat</a>@endif
+                @if ($bolehPaketTerpusat)<a href="{{ route('paket-soal-terpusat.index', ['tampilan' => 'hasil']) }}" class="button button-primary">Hasil & Analisis Ujian</a>@endif
+                @if (\App\Services\Nilai\RaporStsService::dapatMengakses(auth()->user()))<a href="{{ route('rapor-sts.index') }}" class="button button-muted">Rapor STS</a>@endif
                 @if ($bolehPresensi)<a href="{{ route('presensi-ujian-cbt.index') }}" class="button button-muted">Presensi Ujian</a>@endif
             </div>
         </section>
@@ -193,6 +195,7 @@
             @endif
             @if ($bolehPaketTerpusat)
                 <a class="cbt-tool" href="{{ route('paket-soal-terpusat.index') }}"><strong>Paket Soal Terpusat</strong><span class="help-text">Pilih soal untuk jadwal yang sudah disusun panitia.</span></a>
+                <a class="cbt-tool" href="{{ route('paket-soal-terpusat.index', ['tampilan' => 'hasil']) }}"><strong>Hasil & Analisis Ujian</strong><span class="help-text">Nilai siswa dan analisis soal pada ujian yang dapat Anda akses.</span></a>
             @endif
             @if ($bolehPresensi)
                 <a class="cbt-tool" href="{{ route('presensi-ujian-cbt.index') }}"><strong>Presensi Ujian</strong><span class="help-text">Catat kehadiran siswa pada ruang ujian.</span></a>

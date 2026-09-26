@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Paket Soal Terpusat - NUSA')
+@section('title', $tampilanHasil ? 'Hasil & Analisis Ujian - NUSA' : 'Paket Soal Terpusat - NUSA')
 
 @section('content')
     <style>
@@ -23,7 +23,7 @@
         .package-event-head p { margin:5px 0 0; color:var(--muted); font-size:.76rem; }
         .package-event-status { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; }
         .package-event-status .badge { min-height:42px; align-items:center; justify-content:center; padding:10px 14px; }
-        .package-schedule { display:grid; grid-template-columns:130px 56px minmax(190px,1.2fr) minmax(170px,.8fr) 130px auto; gap:14px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); }
+        .package-schedule { display:grid; grid-template-columns:130px 56px minmax(0,1.2fr) minmax(0,.8fr) 130px 150px; gap:14px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); }
         .package-schedule:last-child { border-bottom:0; }
         .package-schedule-date strong, .package-schedule-date span, .package-schedule-main strong, .package-schedule-main span, .package-schedule-class strong, .package-schedule-class span { display:block; }
         .package-schedule-date strong, .package-schedule-main strong, .package-schedule-class strong { font-size:.8rem; }
@@ -32,6 +32,10 @@
         .package-status strong, .package-status span { display:block; }
         .package-status strong { font-size:.78rem; color:var(--primary-dark); }
         .package-status span { margin-top:3px; color:var(--muted); font-size:.7rem; font-weight:700; }
+        .package-schedule > div { min-width:0; overflow-wrap:anywhere; }
+        .package-schedule-action { display:grid; gap:8px; min-width:150px; }
+        .package-schedule-action .button { text-align:center; }
+        .package-view-nav { display:flex; gap:8px; flex-wrap:wrap; padding-bottom:16px; margin-bottom:20px; border-bottom:1px solid var(--line); }
         .package-empty { padding:34px 18px; text-align:center; color:var(--muted); }
         .central-wizard-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; }
         @media (max-width:1180px) {
@@ -59,9 +63,11 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Ujian Terpusat · Tahap 8</p>
-            <h1 class="page-title">Paket soal terpusat</h1>
-            <p class="page-subtitle">Guru cukup memilih jadwal yang diampu, kemudian menentukan soal dari Bank Soal.</p>
+            <p class="eyebrow">{{ $tampilanHasil ? 'Ujian Terpusat' : 'Ujian Terpusat · Tahap 8' }}</p>
+            <h1 class="page-title">{{ $tampilanHasil ? 'Hasil & analisis ujian' : 'Paket soal terpusat' }}</h1>
+            @unless ($tampilanHasil)
+                <p class="page-subtitle">Guru cukup memilih jadwal yang diampu, kemudian menentukan soal dari Bank Soal.</p>
+            @endunless
         </div>
         <div class="actions">
             <a href="{{ route('soal-cbt.index') }}" class="button button-muted">Bank Soal</a>
@@ -72,6 +78,11 @@
     @if (session('berhasil')) <div class="alert">{{ session('berhasil') }}</div> @endif
     @if ($errors->any()) <div class="alert alert-danger">{{ $errors->first() }}</div> @endif
 
+    <nav class="package-view-nav" aria-label="Tampilan ujian terpusat">
+        <a href="{{ route('paket-soal-terpusat.index', request()->only('kegiatan')) }}" class="button {{ $tampilanHasil ? 'button-muted' : 'button-primary' }}" @if (! $tampilanHasil) aria-current="page" @endif>Paket soal</a>
+        <a href="{{ route('paket-soal-terpusat.index', [...request()->only('kegiatan'), 'tampilan' => 'hasil']) }}" class="button {{ $tampilanHasil ? 'button-primary' : 'button-muted' }}" @if ($tampilanHasil) aria-current="page" @endif>Hasil & analisis</a>
+    </nav>
+
     @if ($kegiatanAlur)
         <section class="panel package-context">
             <div class="package-context-main">
@@ -80,27 +91,34 @@
                 <p>{{ $kegiatanAlur->tahunPelajaran?->nama }} · Semester {{ ucfirst($kegiatanAlur->semester) }} · {{ $kegiatanAlur->labelPeriode() }}</p>
             </div>
             <div class="package-context-side">
-                <strong>{{ $jumlahSiap }} dari {{ $jumlahJadwal }} paket siap</strong>
+                <strong>{{ $tampilanHasil ? $jumlahHasilTersedia.' paket tersedia' : $jumlahSiap.' dari '.$jumlahJadwal.' paket siap' }}</strong>
                 <span>{{ $jumlahBelumDisusun > 0 ? $jumlahBelumDisusun.' jadwal belum memiliki paket soal' : 'Seluruh jadwal sudah memiliki paket soal' }}</span>
             </div>
         </section>
     @endif
 
-    @if ($kegiatanAlur?->dapatDiaksesOleh(auth()->user()))
+    @if (! $tampilanHasil && $kegiatanAlur?->dapatDiaksesOleh(auth()->user()))
         @include('ujian-terpusat.partials.alur', ['kegiatan' => $kegiatanAlur, 'tahapAktif' => 8])
     @endif
 
-    <div class="package-flow" aria-label="Alur penyusunan paket soal">
-        <div class="package-flow-step"><span class="package-flow-number">1</span><div><strong>Buka jadwal</strong><span>Mapel, tingkat, kelas, dan waktu sudah diisi panitia.</span></div></div>
-        <div class="package-flow-step"><span class="package-flow-number">2</span><div><strong>Pilih soal</strong><span>Centang soal siap yang sesuai dari Bank Soal.</span></div></div>
-        <div class="package-flow-step"><span class="package-flow-number">3</span><div><strong>Terbitkan</strong><span>NUSA menyiapkan paket dan komponen nilai secara otomatis.</span></div></div>
-    </div>
+    @unless ($tampilanHasil)
+        <div class="package-flow" aria-label="Alur penyusunan paket soal">
+            <div class="package-flow-step"><span class="package-flow-number">1</span><div><strong>Buka jadwal</strong><span>Mapel, tingkat, kelas, dan waktu sudah diisi panitia.</span></div></div>
+            <div class="package-flow-step"><span class="package-flow-number">2</span><div><strong>Pilih soal</strong><span>Centang soal siap yang sesuai dari Bank Soal.</span></div></div>
+            <div class="package-flow-step"><span class="package-flow-number">3</span><div><strong>Terbitkan</strong><span>NUSA menyiapkan paket dan komponen nilai secara otomatis.</span></div></div>
+        </div>
+    @endunless
 
     <div class="stats-grid">
         <div class="panel stat"><p class="stat-label">Jadwal dalam cakupan</p><p class="stat-value">{{ $jumlahJadwal }}</p></div>
-        <div class="panel stat active"><p class="stat-label">Paket siap</p><p class="stat-value">{{ $jumlahSiap }}</p></div>
-        <div class="panel stat"><p class="stat-label">Masih draf</p><p class="stat-value">{{ $jumlahDraf }}</p></div>
-        <div class="panel stat warning"><p class="stat-label">Belum disusun</p><p class="stat-value">{{ $jumlahBelumDisusun }}</p></div>
+        @if ($tampilanHasil)
+            <div class="panel stat active"><p class="stat-label">Paket tersedia</p><p class="stat-value">{{ $jumlahHasilTersedia }}</p></div>
+            <div class="panel stat"><p class="stat-label">Pengerjaan selesai</p><p class="stat-value">{{ $jumlahPesertaSelesai }}</p></div>
+        @else
+            <div class="panel stat active"><p class="stat-label">Paket siap</p><p class="stat-value">{{ $jumlahSiap }}</p></div>
+            <div class="panel stat"><p class="stat-label">Masih draf</p><p class="stat-value">{{ $jumlahDraf }}</p></div>
+            <div class="panel stat warning"><p class="stat-label">Belum disusun</p><p class="stat-value">{{ $jumlahBelumDisusun }}</p></div>
+        @endif
     </div>
 
     @forelse ($jadwalPerKegiatan as $daftarJadwal)
@@ -116,7 +134,11 @@
                     <p>{{ $kegiatan?->tahunPelajaran?->nama }} · {{ $kegiatan?->labelPeriode() }}</p>
                 </div>
                 <div class="package-event-status">
-                    <span class="badge {{ $siap === $daftarJadwal->count() ? 'badge-active' : 'badge-warning' }}">{{ $siap }}/{{ $daftarJadwal->count() }} paket siap</span>
+                    @if ($tampilanHasil)
+                        <span class="badge badge-muted">{{ $daftarJadwal->count() }} jadwal</span>
+                    @else
+                        <span class="badge {{ $siap === $daftarJadwal->count() ? 'badge-active' : 'badge-warning' }}">{{ $siap }}/{{ $daftarJadwal->count() }} paket siap</span>
+                    @endif
                     @if (auth()->user()?->memilikiIzin(['cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola']))
                         <a href="{{ route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]) }}" class="button button-muted">Jadwal ujian</a>
                     @endif
@@ -133,8 +155,27 @@
                     <span class="package-level">T{{ $jadwal->tingkat }}</span>
                     <div class="package-schedule-main"><strong>{{ $jadwal->mataPelajaran?->nama }}</strong><span>{{ $jadwal->sesiKegiatanUjianCbt?->nama }}</span></div>
                     <div class="package-schedule-class"><strong>{{ $jadwal->kelas->pluck('nama')->join(', ') }}</strong><span>{{ $jadwal->kelas->count() }} kelas peserta</span></div>
-                    <div class="package-status"><strong>{{ $paketSiap ? 'Siap digunakan' : ($paket ? 'Masih draf' : 'Belum disusun') }}</strong><span>{{ $paket?->soal_ujian_cbt_count ?? 0 }} soal</span></div>
-                    <div class="package-schedule-action"><a href="{{ route('paket-soal-terpusat.show', $jadwal) }}" class="button {{ $jadwal->boleh_kelola_paket ? 'button-primary' : 'button-muted' }}">{{ $jadwal->boleh_kelola_paket ? ($paket ? 'Buka paket' : 'Susun paket') : 'Lihat paket' }}</a></div>
+                    <div class="package-status">
+                        @if ($tampilanHasil)
+                            <strong>{{ $paket ? ($paket->hasil_difinalisasi_pada ? ($paket->tampilkan_hasil ? 'Dipublikasikan' : 'Final') : ($paket->peserta_selesai_count > 0 ? 'Hasil sementara' : 'Belum ada hasil')) : 'Paket belum dibuat' }}</strong>
+                            <span>{{ $paket?->peserta_selesai_count ?? 0 }} / {{ $paket?->peserta_ujian_cbt_count ?? 0 }} peserta selesai</span>
+                        @else
+                            <strong>{{ $paketSiap ? 'Siap digunakan' : ($paket ? 'Masih draf' : 'Belum disusun') }}</strong><span>{{ $paket?->soal_ujian_cbt_count ?? 0 }} soal</span>
+                        @endif
+                    </div>
+                    <div class="package-schedule-action">
+                        @unless ($tampilanHasil)
+                            <a href="{{ route('paket-soal-terpusat.show', $jadwal) }}" class="button {{ $jadwal->boleh_kelola_paket ? 'button-primary' : 'button-muted' }}">{{ $jadwal->boleh_kelola_paket ? ($paket ? 'Buka paket' : 'Susun paket') : 'Lihat paket' }}</a>
+                        @endunless
+                        @if ($jadwal->boleh_lihat_hasil)
+                            <a href="{{ route('ujian-cbt.hasil.index', $paket) }}" class="button {{ $tampilanHasil ? 'button-primary' : 'button-muted' }}">Lihat nilai</a>
+                            @if ($tampilanHasil)
+                                <a href="{{ route('ujian-cbt.hasil.analisis-soal', $paket) }}" class="button button-muted">Analisis soal</a>
+                            @endif
+                        @elseif ($tampilanHasil)
+                            <span class="help-text">{{ $paket ? 'Hasil tidak dapat diakses.' : 'Menunggu paket soal.' }}</span>
+                        @endif
+                    </div>
                 </div>
             @endforeach
         </section>
@@ -145,7 +186,7 @@
         </section>
     @endforelse
 
-    @if ($kegiatanAlur?->dapatDiaksesOleh(auth()->user()))
+    @if (! $tampilanHasil && $kegiatanAlur?->dapatDiaksesOleh(auth()->user()))
         <div class="central-wizard-actions">
             <a href="{{ route('ujian-terpusat.pelaksanaan.index', [$kegiatanAlur, 'tahap' => 7]) }}" class="button button-muted">Kembali ke Jadwal Ujian</a>
             <a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatanAlur) }}" class="button button-primary">Lanjut ke Pelaksanaan</a>

@@ -24,7 +24,9 @@ class PaketSoalUjianTerpusatController extends Controller
     {
         $data = $request->validate([
             'kegiatan' => ['nullable', 'integer', 'exists:kegiatan_ujian_cbt,id'],
+            'tampilan' => ['nullable', Rule::in(['paket', 'hasil'])],
         ]);
+        $tampilanHasil = ($data['tampilan'] ?? 'paket') === 'hasil';
 
         $jadwal = $this->queryJadwalDalamCakupan($request)
             ->with([
@@ -33,7 +35,11 @@ class PaketSoalUjianTerpusatController extends Controller
                 'sesiKegiatanUjianCbt',
                 'mataPelajaran',
                 'kelas',
-                'ujianCbt' => fn ($query) => $query->withCount('soalUjianCbt'),
+                'ujianCbt' => fn ($query) => $query->withCount('soalUjianCbt')
+                    ->when($tampilanHasil, fn ($query) => $query->withCount([
+                        'pesertaUjianCbt',
+                        'pesertaUjianCbt as peserta_selesai_count' => fn ($query) => $query->where('status', 'selesai'),
+                    ])),
             ])
             ->when($data['kegiatan'] ?? null, fn (Builder $query, $id) => $query->where('kegiatan_ujian_cbt_id', $id))
             ->whereHas('kegiatanUjianCbt', fn (Builder $query) => $query->where('status', '!=', 'nonaktif'))
@@ -44,6 +50,7 @@ class PaketSoalUjianTerpusatController extends Controller
 
         $jadwal->each(function (JadwalUjianCbt $item) use ($request) {
             $item->setAttribute('boleh_kelola_paket', $this->bolehMengelola($request->user(), $item));
+            $item->setAttribute('boleh_lihat_hasil', $item->ujianCbt?->dapatDiaksesOperasionalOleh($request->user()) ?? false);
         });
 
         $kegiatanAlur = filled($data['kegiatan'] ?? null)
@@ -54,12 +61,15 @@ class PaketSoalUjianTerpusatController extends Controller
         }
 
         return view('paket-soal-ujian-terpusat.index', [
+            'tampilanHasil' => $tampilanHasil,
             'kegiatanAlur' => $kegiatanAlur,
             'jadwalPerKegiatan' => $jadwal->groupBy('kegiatan_ujian_cbt_id'),
             'jumlahJadwal' => $jadwal->count(),
             'jumlahSiap' => $jadwal->filter(fn (JadwalUjianCbt $item) => $this->paketSiap($item->ujianCbt))->count(),
             'jumlahDraf' => $jadwal->filter(fn (JadwalUjianCbt $item) => $item->ujianCbt?->status === 'draft')->count(),
             'jumlahBelumDisusun' => $jadwal->whereNull('ujian_cbt_id')->count(),
+            'jumlahHasilTersedia' => $jadwal->where('boleh_lihat_hasil', true)->count(),
+            'jumlahPesertaSelesai' => $jadwal->sum(fn ($item) => $item->ujianCbt?->peserta_selesai_count ?? 0),
         ]);
     }
 

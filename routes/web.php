@@ -94,6 +94,7 @@ use App\Http\Controllers\PertanyaanSurveiPembelajaranController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\PiketKehadiranSiswaController;
 use App\Http\Controllers\PresensiAnakController;
+use App\Http\Controllers\AnalisisSoalCbtController;
 use App\Http\Controllers\PresensiUjianCbtController;
 use App\Http\Controllers\ProfilOrangTuaController;
 use App\Http\Controllers\ProfilPegawaiController;
@@ -108,6 +109,7 @@ use App\Http\Controllers\RekapBerhalanganIbadahController;
 use App\Http\Controllers\RekapHasilUjianCbtController;
 use App\Http\Controllers\RekapKegiatanIbadahController;
 use App\Http\Controllers\RekapNilaiRaporController;
+use App\Http\Controllers\RaporStsController;
 use App\Http\Controllers\RekapPeminjamanBarangController;
 use App\Http\Controllers\RekapPoinSiswaController;
 use App\Http\Controllers\RingkasanKegiatanIbadahBulananController;
@@ -475,6 +477,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::middleware(['izin:cbt.asesmen_kelola,cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola', 'akses_ujian_cbt'])->group(function () {
             Route::get('ujian-cbt/{ujianCbt}/monitoring', [MonitoringUjianCbtController::class, 'index'])->name('ujian-cbt.monitoring.index');
             Route::get('ujian-cbt/{ujianCbt}/hasil', [RekapHasilUjianCbtController::class, 'index'])->name('ujian-cbt.hasil.index');
+            Route::get('ujian-cbt/{ujianCbt}/hasil/analisis-soal', [AnalisisSoalCbtController::class, 'index'])->name('ujian-cbt.hasil.analisis-soal');
+            Route::get('ujian-cbt/{ujianCbt}/hasil/analisis-soal/{soalUjianCbt}', [AnalisisSoalCbtController::class, 'show'])->name('ujian-cbt.hasil.rincian-soal');
         });
         Route::middleware(['izin:cbt.asesmen_kelola,cbt.soal_kelola,cbt.kelola', 'akses_ujian_cbt'])->group(function () {
             Route::post('ujian-cbt/{ujianCbt}/koreksi-otomatis', [KoreksiOtomatisUjianCbtController::class, 'store'])->name('ujian-cbt.koreksi-otomatis.store');
@@ -680,6 +684,13 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('rekap-nilai-rapor', [RekapNilaiRaporController::class, 'index'])
             ->middleware('izin:nilai.rekap')
             ->name('rekap-nilai-rapor.index');
+        Route::middleware('izin:nilai.rekap')->group(function () {
+            Route::get('rapor-sts', [RaporStsController::class, 'index'])->name('rapor-sts.index');
+            Route::put('rapor-sts/{kegiatan}/{kelas}/pengaturan', [RaporStsController::class, 'pengaturan'])->name('rapor-sts.pengaturan');
+            Route::put('rapor-sts/{kegiatan}/{kelas}/kehadiran', [RaporStsController::class, 'kehadiran'])->name('rapor-sts.kehadiran');
+            Route::put('rapor-sts/{kegiatan}/{kelas}/pengecualian', [RaporStsController::class, 'pengecualian'])->name('rapor-sts.pengecualian');
+            Route::get('rapor-sts/{kegiatan}/{kelas}/cetak', [RaporStsController::class, 'cetak'])->name('rapor-sts.cetak');
+        });
         Route::resource('pengaturan-absensi', PengaturanAbsensiController::class)
             ->middleware('izin:absensi.pengaturan_kelola');
         Route::resource('pengaturan-absensi-pegawai', PengaturanAbsensiPegawaiController::class)

@@ -267,7 +267,7 @@ class KoreksiOtomatisCbtService
         return $jawaban === '' ? null : $jawaban;
     }
 
-    private function normalisasiBooleanJawaban(mixed $jawaban): ?bool
+    public function normalisasiBooleanJawaban(mixed $jawaban): ?bool
     {
         if (is_bool($jawaban)) {
             return $jawaban;
@@ -282,7 +282,7 @@ class KoreksiOtomatisCbtService
         };
     }
 
-    private function normalisasiTeksJawaban(mixed $jawaban): string
+    public function normalisasiTeksJawaban(mixed $jawaban): string
     {
         $jawaban = mb_strtolower(trim((string) $jawaban));
         $jawaban = preg_replace('/[^\pL\pN]+/u', ' ', $jawaban) ?: '';

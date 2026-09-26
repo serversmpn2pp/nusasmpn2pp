@@ -87,6 +87,10 @@
         </div>
         <div class="actions">
             @if ($bolehKelola)<a href="{{ route('soal-cbt.index') }}" class="button button-muted">Buka Bank Soal</a>@endif
+            @if ($paket?->dapatDiaksesOperasionalOleh(auth()->user()))
+                <a href="{{ route('ujian-cbt.hasil.index', $paket) }}" class="button button-muted">Lihat nilai</a>
+                <a href="{{ route('ujian-cbt.hasil.analisis-soal', $paket) }}" class="button button-muted">Analisis soal</a>
+            @endif
             @if ($paketSiap)<a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $jadwal->kegiatan_ujian_cbt_id) }}" class="button button-muted">Pelaksanaan ujian</a>@endif
             <a href="{{ route('paket-soal-terpusat.index', ['kegiatan' => $jadwal->kegiatan_ujian_cbt_id]) }}" class="button button-primary">Daftar paket</a>
         </div>

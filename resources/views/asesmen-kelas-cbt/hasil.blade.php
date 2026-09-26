@@ -195,6 +195,7 @@
         </div>
 
         <div class="actions hasil-asesmen-actions">
+            <a href="{{ route('ujian-cbt.hasil.analisis-soal', $ujianCbt) }}" class="button button-muted">Analisis soal</a>
             <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Pantau pengerjaan</a>
             @if ($ujianCbt->dapatDikelolaOleh(auth()->user()))
                 @if ($jumlahSoalManual > 0)
