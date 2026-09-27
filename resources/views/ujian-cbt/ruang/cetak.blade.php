@@ -324,6 +324,8 @@
             gap: 7mm;
             margin-top: auto;
             padding-top: 5mm;
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         .signature-box {
@@ -390,7 +392,10 @@
         }
 
         @media print {
+            html,
             body {
+                margin: 0;
+                padding: 0;
                 background: #fff;
             }
 
@@ -405,9 +410,10 @@
 
             .print-page {
                 width: auto;
-                min-height: 277mm;
+                min-height: 266mm;
                 margin: 0;
                 border-top-width: 2.2mm;
+                padding: 6mm 8mm 5mm;
                 box-shadow: none;
                 break-after: page;
                 page-break-after: always;
@@ -415,6 +421,113 @@
                 page-break-inside: avoid;
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
+            }
+
+            .attendance-page .letterhead {
+                grid-template-columns: 16mm minmax(0, 1fr) 14mm;
+                gap: 3mm;
+                padding-bottom: 2mm;
+            }
+
+            .attendance-page .logo-box {
+                height: 15mm;
+            }
+
+            .attendance-page .school-name {
+                font-size: 11.5pt;
+            }
+
+            .attendance-page .school-app {
+                margin-top: .5mm;
+                font-size: 7.6pt;
+            }
+
+            .attendance-page .document-title {
+                margin: 2.5mm 0 2mm;
+            }
+
+            .attendance-page .document-title h1 {
+                font-size: 11pt;
+            }
+
+            .attendance-page .document-title p {
+                margin-top: .5mm;
+                font-size: 7.8pt;
+            }
+
+            .attendance-page .meta-grid {
+                gap: .8mm 4mm;
+                margin-bottom: 2mm;
+                padding: 1.5mm 2mm;
+                font-size: 7.5pt;
+                line-height: 1.15;
+            }
+
+            .attendance-page .meta-row {
+                grid-template-columns: 25mm minmax(0, 1fr);
+                gap: 1mm;
+            }
+
+            .attendance-page .note {
+                margin-bottom: 1.5mm;
+                font-size: 6.8pt;
+                line-height: 1.25;
+            }
+
+            .attendance-page .data-table {
+                font-size: 6.6pt;
+            }
+
+            .attendance-page .data-table th,
+            .attendance-page .data-table td {
+                padding: .65mm .75mm;
+            }
+
+            .attendance-page .data-table th {
+                font-size: 6.1pt;
+                line-height: 1.05;
+            }
+
+            .attendance-page .data-table td {
+                line-height: 1.08;
+            }
+
+            .attendance-page .data-table tbody tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .attendance-page .data-table td:nth-child(2),
+            .attendance-page .data-table td:nth-child(3),
+            .attendance-page .data-table td:nth-child(5) {
+                font-size: 6.1pt;
+            }
+
+            .attendance-page .signature-cell {
+                height: 5.5mm;
+            }
+
+            .attendance-page .signature-grid {
+                gap: 5mm;
+                padding-top: 2mm;
+            }
+
+            .attendance-page .signature-box {
+                font-size: 7pt;
+                line-height: 1.2;
+            }
+
+            .attendance-page .signature-role {
+                min-height: 5mm;
+            }
+
+            .attendance-page .signature-space {
+                height: 11mm;
+            }
+
+            .attendance-page .signature-nip {
+                margin-top: .5mm;
+                font-size: 6.4pt;
             }
 
             .print-page:last-child {
@@ -464,6 +577,7 @@
         <div>
             <strong>Daftar hadir dan berita acara CBT</strong>
             <p>{{ $ruangUjianCbt->count() }} ruang siap dicetak. Satu ruang berisi daftar hadir dan berita acara.</p>
+            <p>Gunakan kertas A4, skala 100%, dan nonaktifkan header/footer bawaan browser.</p>
         </div>
 
         <div class="toolbar-actions">
