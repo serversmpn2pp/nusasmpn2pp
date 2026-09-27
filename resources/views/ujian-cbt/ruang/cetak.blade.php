@@ -559,6 +559,7 @@
         $formatTanggalSaja = fn ($tanggal) => $tanggal ? $tanggal->format('d-m-Y') : '-';
         $formatJam = fn ($tanggal) => $tanggal ? $tanggal->format('H:i') : '-';
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
+        $jumlahPesertaPerHalaman = 24;
         $queryKembali = array_filter([
             'sesi_ujian_cbt_id' => $sesiUjianCbtId,
             'jadwal_ujian_cbt_id' => $jadwalUjianCbtId,
@@ -598,14 +599,16 @@
                 $mataPelajaranRuang = $jadwalRuang?->mataPelajaran?->nama ?: ($ujianCbt->mataPelajaran?->nama ?: '-');
                 $labelSesiRuang = $jadwalRuang?->label_sesi ?: ($ruang->sesiUjianCbt?->nama ?: 'Mengikuti jadwal paket');
                 $kegiatanUjianRuang = $jadwalRuang?->kegiatanUjianCbt?->nama ?: ($ujianCbt->jenisUjianCbt?->nama ?: '-');
-                $halamanDaftarHadir = $pesertaRuang->isEmpty() ? collect([collect()]) : $pesertaRuang->chunk(20);
+                $halamanDaftarHadir = $pesertaRuang->isEmpty()
+                    ? collect([collect()])
+                    : $pesertaRuang->chunk($jumlahPesertaPerHalaman);
             @endphp
 
             @foreach($halamanDaftarHadir as $pesertaHalaman)
             @php
                 $nomorHalaman = $loop->iteration;
                 $jumlahHalaman = $loop->count;
-                $nomorAwal = ($nomorHalaman - 1) * 20;
+                $nomorAwal = ($nomorHalaman - 1) * $jumlahPesertaPerHalaman;
             @endphp
             <section class="print-page attendance-page">
                 <header class="letterhead">
