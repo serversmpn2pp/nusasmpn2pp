@@ -23,6 +23,7 @@ use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
+use App\Services\Nilai\LegerStsService;
 use App\Services\Nilai\RaporStsService;
 use Carbon\Carbon;
 use PDO;
@@ -68,9 +69,220 @@ class RaporStsTest extends TestCase
         $this->assertDatabaseHas('kehadiran_rapor_sts', ['anggota_kelas_id' => $id, 'sakit' => 2, 'diperiksa_oleh_pengguna_id' => $d['admin']->id]);
         $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas']]))->assertOk()
             ->assertSee('100,00')->assertSee('0,00')->assertSeeText('Perlu Bimbingan')
+            ->assertSeeText('LAPORAN HASIL CAPAIAN PEMBELAJARAN')
+            ->assertSeeText('A4 portrait')
+            ->assertSee('images/logo-padang-panjang.png', false)
+            ->assertDontSee('images/kartu-pelajar/logo-nusa.png', false)
+            ->assertSee('images/kartu-pelajar/logo-smpn2pp.png', false)
+            ->assertSee('class="attendance-list"', false)
             ->assertDontSeeText('DRAF PRATINJAU')->assertSeeText('Cetak / Simpan PDF')
             ->assertViewHas('baris', fn ($b) => $b->count() === 2 && $b[0]['kehadiran']['sakit'] === 2 && $b->every(fn ($r) => $r['siap']));
         $this->assertFalse($d['ujian']->fresh()->tampilkan_hasil);
+    }
+
+    public function test_leger_kelas_menghitung_ranking_ringkasan_dan_statistik_mapel(): void
+    {
+        $d = $this->fondasi();
+        $response = $this->actingAs($d['admin'])->get(route('leger-sts.index'))
+            ->assertOk()
+            ->assertSeeText('Leger STS')
+            ->assertSeeText('Per Kelas')
+            ->assertSeeText('Ranking kelas IX.A')
+            ->assertSeeText('Mapel tertinggi')
+            ->assertSeeText('Matematika')
+            ->assertSeeText('Masuk ranking')
+            ->assertSeeText('Nilai final')
+            ->assertSeeText('1 siswa')
+            ->assertViewHas('leger');
+
+        $leger = $response->viewData('leger');
+        $this->assertSame([1, 2], $leger['baris']->pluck('ranking')->all());
+        $this->assertSame([100.0, 0.0], $leger['baris']->pluck('rata_leger')->all());
+        $this->assertSame(2, $leger['ringkasan']['masuk_ranking']);
+        $this->assertSame(50.0, $leger['ringkasan']['rata_kelas']);
+        $this->assertSame(100.0, $leger['ringkasan']['rata_tertinggi']);
+        $this->assertSame(0.0, $leger['ringkasan']['rata_terendah']);
+        $this->assertSame($d['mapel']->id, $leger['mapel_tertinggi']['mapel']->id);
+        $this->assertSame(50.0, $leger['mapel_tertinggi']['rata']);
+        $this->assertSame([1, 0, 0, 1], $leger['distribusi']->pluck('jumlah')->all());
+    }
+
+    public function test_leger_memberi_ranking_sama_dan_tidak_meranking_nilai_belum_lengkap(): void
+    {
+        $d = $this->fondasi();
+        $d['peserta'][1]->jawabanPesertaUjianCbt()->update(['skor' => 2]);
+
+        $leger = app(LegerStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame([1, 1], $leger['baris']->pluck('ranking')->all());
+        $this->assertSame(100.0, $leger['ringkasan']['rata_kelas']);
+
+        $d['peserta'][0]->jawabanPesertaUjianCbt()->update(['skor' => null]);
+        $leger = app(LegerStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $belumLengkap = $leger['baris']->firstWhere('anggota.id', $d['anggota'][0]->id);
+        $lengkap = $leger['baris']->firstWhere('anggota.id', $d['anggota'][1]->id);
+
+        $this->assertNull($belumLengkap['ranking']);
+        $this->assertNull($belumLengkap['rata_leger']);
+        $this->assertSame('Nilai belum lengkap', $belumLengkap['status_ranking']);
+        $this->assertSame(1, $lengkap['ranking']);
+        $this->assertSame(1, $leger['ringkasan']['masuk_ranking']);
+        $this->assertSame(1, $leger['ringkasan']['belum_masuk_ranking']);
+    }
+
+    public function test_leger_kelas_dapat_dicetak_dengan_format_landscape(): void
+    {
+        $d = $this->fondasi();
+        $response = $this->actingAs($d['admin'])->get(route('leger-sts.cetak', [
+            'mode' => 'kelas',
+            'kegiatan_id' => $d['kegiatan']->id,
+            'kelas_id' => $d['kelas']->id,
+        ]))->assertOk()
+            ->assertSeeText('LEGER NILAI SUMATIF TENGAH SEMESTER I')
+            ->assertSeeText('IX.A')
+            ->assertSeeText('Alya Contoh')
+            ->assertSeeText('Cetak / Simpan PDF')
+            ->assertSee('size:A4 landscape', false)
+            ->assertSeeText('MTK-STS = Matematika');
+
+        $this->assertStringContainsString('private', $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertSame(2, $response->viewData('leger')['baris']->count());
+    }
+
+    public function test_kandidat_penghargaan_kelas_mendukung_keseluruhan_mapel_dan_nilai_seri(): void
+    {
+        $d = $this->fondasi();
+        $keseluruhan = $this->actingAs($d['admin'])->get(route('leger-sts.penghargaan', [
+            'cakupan' => 'kelas',
+            'kegiatan_id' => $d['kegiatan']->id,
+            'kelas_id' => $d['kelas']->id,
+            'kategori' => 'keseluruhan',
+            'batas' => 10,
+        ]))->assertOk()
+            ->assertSeeText('Kandidat Penghargaan STS')
+            ->assertSeeText('Siswa terbaik setiap mata pelajaran')
+            ->assertSeeText('Juara Umum')
+            ->assertSeeText('Matematika')
+            ->assertViewHas('penghargaan');
+        $this->assertSame([1, 2], $keseluruhan->viewData('penghargaan')['kandidat']->pluck('ranking')->all());
+        $this->assertSame('Alya Contoh', $keseluruhan->viewData('penghargaan')['ringkasan_mapel'][0]['juara'][0]['anggota']->siswa->nama_lengkap);
+
+        $d['peserta'][1]->jawabanPesertaUjianCbt()->update(['skor' => 2]);
+        $mapel = $this->get(route('leger-sts.penghargaan', [
+            'cakupan' => 'kelas',
+            'kegiatan_id' => $d['kegiatan']->id,
+            'kelas_id' => $d['kelas']->id,
+            'kategori' => 'mapel',
+            'mapel_id' => $d['mapel']->id,
+            'batas' => 1,
+        ]))->assertOk()->assertSeeText('Terbaik Mata Pelajaran');
+        $this->assertSame([1, 1], $mapel->viewData('penghargaan')['kandidat']->pluck('ranking')->all());
+        $this->assertSame(2, $mapel->viewData('penghargaan')['ringkasan']['jumlah_kandidat']);
+        $this->get(route('leger-sts.penghargaan', [
+            'cakupan' => 'kelas', 'kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $d['kelas']->id,
+            'kategori' => 'mapel', 'mapel_id' => 999999,
+        ]))->assertNotFound();
+    }
+
+    public function test_leger_tingkat_membandingkan_kelas_dan_menghitung_ranking_paralel(): void
+    {
+        $d = $this->fondasi();
+        $kelasB = Kelas::create([
+            'tahun_pelajaran_id' => $d['tahun']->id,
+            'nama' => 'IX.B',
+            'tingkat' => 9,
+            'aktif' => true,
+        ]);
+        GuruMataPelajaran::create([
+            'tahun_pelajaran_id' => $d['tahun']->id,
+            'kelas_id' => $kelasB->id,
+            'mata_pelajaran_id' => $d['mapel']->id,
+            'pegawai_id' => $d['guru']->id,
+            'jenis_penugasan' => 'pengampu',
+            'aktif' => true,
+        ]);
+        $d['kegiatan']->jadwalUjianCbt()->first()->kelas()->attach($kelasB);
+        $kelasUjian = KelasUjianCbt::create(['ujian_cbt_id' => $d['ujian']->id, 'kelas_id' => $kelasB->id]);
+        $relasi = $d['ujian']->soalUjianCbt()->first();
+        foreach ([['Citra Paralel', 2], ['Dedi Paralel', 1]] as $index => [$nama, $skor]) {
+            $siswa = Siswa::create([
+                'nama_lengkap' => $nama,
+                'nis' => 'PB00'.$index,
+                'nisn' => '223456789'.$index,
+                'jenis_kelamin' => $index ? 'L' : 'P',
+                'aktif' => true,
+            ]);
+            $anggota = AnggotaKelas::create([
+                'tahun_pelajaran_id' => $d['tahun']->id,
+                'kelas_id' => $kelasB->id,
+                'siswa_id' => $siswa->id,
+                'nomor_absen' => $index + 1,
+                'status_keanggotaan' => 'aktif',
+            ]);
+            $peserta = PesertaUjianCbt::create([
+                'ujian_cbt_id' => $d['ujian']->id,
+                'kelas_ujian_cbt_id' => $kelasUjian->id,
+                'anggota_kelas_id' => $anggota->id,
+                'nomor_peserta' => 'PARALEL-'.$index,
+                'status' => 'selesai',
+            ]);
+            $peserta->jawabanPesertaUjianCbt()->create([
+                'soal_ujian_cbt_id' => $relasi->id,
+                'soal_cbt_id' => $relasi->soal_cbt_id,
+                'jawaban' => ['A'],
+                'skor' => $skor,
+            ]);
+        }
+
+        $response = $this->actingAs($d['admin'])->get(route('leger-sts.index', ['mode' => 'tingkat', 'tingkat' => 9]))
+            ->assertOk()
+            ->assertSeeText('Per Tingkat')
+            ->assertSeeText('Perbandingan kelas')
+            ->assertSeeText('Ranking paralel tingkat 9')
+            ->assertSeeText('Citra Paralel')
+            ->assertViewHas('legerTingkat');
+        $leger = $response->viewData('legerTingkat');
+
+        $this->assertSame(2, $leger['ringkasan']['jumlah_kelas']);
+        $this->assertSame(4, $leger['ringkasan']['jumlah_siswa']);
+        $this->assertSame(4, $leger['ringkasan']['masuk_ranking']);
+        $this->assertSame(62.5, $leger['ringkasan']['rata_tingkat']);
+        $this->assertSame([1, 1, 3, 4], $leger['baris']->pluck('ranking')->all());
+        $this->assertSame('IX.B', $leger['statistik_kelas'][0]['kelas']->nama);
+        $this->assertSame(1, $leger['statistik_kelas'][0]['ranking']);
+        $this->assertSame(75.0, $leger['statistik_kelas'][0]['rata']);
+        $this->assertSame('IX.A', $leger['statistik_kelas'][1]['kelas']->nama);
+        $this->assertSame(2, $leger['statistik_kelas'][1]['ranking']);
+        $this->assertSame([50.0, 75.0], $leger['statistik_mapel'][0]['per_kelas']->pluck('rata')->all());
+
+        $cetak = $this->get(route('leger-sts.cetak', [
+            'mode' => 'tingkat',
+            'kegiatan_id' => $d['kegiatan']->id,
+            'tingkat' => 9,
+        ]))->assertOk()
+            ->assertSeeText('Tingkat 9')
+            ->assertSeeText('Citra Paralel')
+            ->assertSeeText('IX.B')
+            ->assertSeeText('A4 landscape');
+        $penghargaan = $this->get(route('leger-sts.penghargaan', [
+            'cakupan' => 'tingkat',
+            'kegiatan_id' => $d['kegiatan']->id,
+            'tingkat' => 9,
+            'kategori' => 'mapel',
+            'mapel_id' => $d['mapel']->id,
+            'batas' => 3,
+        ]))->assertOk()->assertSeeText('Tiga Besar Mata Pelajaran');
+        $this->assertSame([1, 1, 3], $penghargaan->viewData('penghargaan')['kandidat']->pluck('ranking')->all());
+        if (getenv('LEGER_PENGHARGAAN_FIXTURE')) {
+            file_put_contents(storage_path('logs/leger-penghargaan-preview.html'), $penghargaan->getContent());
+        }
+
+        if (getenv('LEGER_TINGKAT_FIXTURE')) {
+            file_put_contents(storage_path('logs/leger-tingkat-preview.html'), $response->getContent());
+        }
+        if (getenv('LEGER_CETAK_FIXTURE')) {
+            file_put_contents(storage_path('logs/leger-tingkat-cetak-preview.html'), $cetak->getContent());
+        }
     }
 
     public function test_koreksi_memerlukan_alasan_angka_valid_dan_mencegah_tabrakan_perubahan(): void
@@ -125,6 +337,23 @@ class RaporStsTest extends TestCase
             ->assertDontSee('<details class="sts-detail"', false)
             ->assertViewHas('laporan', fn ($laporan) => $laporan['mapel']->count() === 11);
 
+        if (getenv('RAPOR_STS_FIXTURE')) {
+            $pratinjau = $this->get(route('rapor-sts.cetak', [
+                $d['kegiatan'], $d['kelas'], 'anggota_id' => $id, 'pratinjau' => 1,
+            ]))->assertOk();
+            file_put_contents(storage_path('logs/rapor-sts-preview.html'), $pratinjau->getContent());
+        }
+        if (getenv('LEGER_STS_FIXTURE')) {
+            $leger = $this->get(route('leger-sts.index'))->assertOk();
+            file_put_contents(storage_path('logs/leger-sts-preview.html'), $leger->getContent());
+        }
+        if (getenv('LEGER_CETAK_KELAS_FIXTURE')) {
+            $cetakLeger = $this->get(route('leger-sts.cetak', [
+                'mode' => 'kelas', 'kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $d['kelas']->id,
+            ]))->assertOk();
+            file_put_contents(storage_path('logs/leger-kelas-cetak-preview.html'), $cetakLeger->getContent());
+        }
+
         preg_match('/<table class="sts-table">(.*?)<\/table>/s', $response->getContent(), $table);
         $this->assertStringNotContainsString('Pendidikan Jasmani', $table[1]);
         $this->assertStringNotContainsString('<template', $table[1]);
@@ -173,14 +402,28 @@ class RaporStsTest extends TestCase
         $wali = $this->akunGuru($d['guru'], 'wali_kelas');
         $asing = Kelas::create(['tahun_pelajaran_id' => $d['tahun']->id, 'nama' => 'IX.B', 'tingkat' => 9, 'aktif' => true]);
         $this->actingAs($wali)->get(route('rapor-sts.index'))->assertOk()->assertSeeText('Rapor STS');
+        $this->get(route('leger-sts.index'))->assertOk()->assertSeeText('Leger STS');
+        $this->get(route('leger-sts.index', ['mode' => 'tingkat', 'tingkat' => 9]))->assertOk()
+            ->assertViewHas('legerTingkat', fn ($leger) => $leger['ringkasan']['jumlah_kelas'] === 1);
+        $this->get(route('leger-sts.penghargaan', ['cakupan' => 'tingkat', 'tingkat' => 9]))->assertOk()
+            ->assertViewHas('leger', fn ($leger) => $leger['ringkasan']['jumlah_kelas'] === 1);
+        $this->get(route('leger-sts.index', ['mode' => 'tingkat', 'tingkat' => 8]))->assertNotFound();
+        $this->get(route('leger-sts.cetak', ['mode' => 'tingkat', 'kegiatan_id' => $d['kegiatan']->id, 'tingkat' => 8]))->assertNotFound();
+        $this->get(route('leger-sts.penghargaan', ['cakupan' => 'tingkat', 'tingkat' => 8]))->assertNotFound();
         $this->get(route('rapor-sts.index', ['kelas_id' => $asing->id]))->assertNotFound();
+        $this->get(route('leger-sts.index', ['kelas_id' => $asing->id]))->assertNotFound();
+        $this->get(route('leger-sts.cetak', ['mode' => 'kelas', 'kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $asing->id]))->assertNotFound();
+        $this->get(route('leger-sts.penghargaan', ['cakupan' => 'kelas', 'kelas_id' => $asing->id]))->assertNotFound();
         $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $asing, 'pratinjau' => 1]))->assertForbidden();
         $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $asing]), [])->assertForbidden();
         $this->put(route('rapor-sts.pengaturan', [$d['kegiatan'], $asing]), [])->assertForbidden();
         $wali->daftarPeran()->sync([Peran::where('kode', 'guru_mapel')->value('id')]);
         $this->actingAs($wali->fresh())->get(route('rapor-sts.index'))->assertForbidden();
+        $this->get(route('leger-sts.index'))->assertForbidden();
+        $this->get(route('leger-sts.penghargaan'))->assertForbidden();
         $wali->daftarPeran()->sync([Peran::where('kode', 'wakil_pimpinan_kurikulum')->value('id')]);
         $this->actingAs($wali->fresh())->get(route('rapor-sts.index', ['kelas_id' => $asing->id]))->assertOk();
+        $this->get(route('leger-sts.index', ['kelas_id' => $asing->id]))->assertOk();
     }
 
     public function test_batas_tahun_jenis_ujian_dan_siswa_luar_kelas_ditolak(): void

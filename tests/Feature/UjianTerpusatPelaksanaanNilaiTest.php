@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\AnggotaKelas;
 use App\Models\AktivitasKeamananUjianCbt;
+use App\Models\AnggotaKelas;
 use App\Models\BuktiRuangUjianCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
@@ -323,6 +323,9 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->get(route('tugas-pengawas-ujian.show', [$ruangOperasional, 'tahap' => 'bukti']))
             ->assertOk()
             ->assertSeeText('Ambil foto atau pilih berkas')
+            ->assertSeeText('Setelah tombol ditekan, tunggu sampai proses dinyatakan berhasil')
+            ->assertSeeText('Sedang mengunggah dokumen')
+            ->assertSee('data-proof-status', false)
             ->assertSeeText('Kirim ke panitia');
         $this->actingAs($data['akun_guru'])
             ->get(route('tugas-pengawas-ujian.show', $ruangOperasional))
@@ -420,11 +423,17 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
                 ->assertRedirect();
         }
         $this->actingAs($akunPengawas)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
             ->post(route('tugas-pengawas-ujian.bukti.store', $ruangOperasional), [
                 'jenis' => BuktiRuangUjianCbt::JENIS_BERITA_ACARA,
                 'berkas' => UploadedFile::fake()->create('berita-acara.jpg', 350, 'image/jpeg'),
             ])
-            ->assertRedirect();
+            ->assertOk()
+            ->assertJsonPath('message', 'Bukti berhasil ditambahkan. Periksa pratinjau sebelum dikirim ke panitia.');
+        $this->flushHeaders();
 
         $this->assertDatabaseCount('bukti_ruang_ujian_cbt', 3);
         $this->assertSame('siap_dikirim', $ruangOperasional->fresh()->status_bukti);

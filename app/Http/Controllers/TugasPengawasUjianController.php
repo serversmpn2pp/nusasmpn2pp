@@ -295,7 +295,17 @@ class TugasPengawasUjianController extends Controller
             throw $exception;
         }
 
-        return back()->with('berhasil', 'Bukti berhasil ditambahkan. Periksa pratinjau sebelum dikirim ke panitia.');
+        $pesanBerhasil = 'Bukti berhasil ditambahkan. Periksa pratinjau sebelum dikirim ke panitia.';
+
+        if ($request->expectsJson()) {
+            $request->session()->flash('berhasil', $pesanBerhasil);
+
+            return response()->json([
+                'message' => $pesanBerhasil,
+            ]);
+        }
+
+        return back()->with('berhasil', $pesanBerhasil);
     }
 
     public function lihatBukti(Request $request, RuangUjianCbt $ruangUjianCbt, BuktiRuangUjianCbt $buktiRuangUjianCbt)

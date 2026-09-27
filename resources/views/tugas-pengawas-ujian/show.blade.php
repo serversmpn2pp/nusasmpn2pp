@@ -32,6 +32,20 @@
         .proof-preview.is-visible { display:grid; }
         .proof-preview img { width:76px; height:76px; border-radius:6px; object-fit:cover; background:#fff; }
         .proof-preview .pdf-preview { display:grid; width:76px; height:76px; place-items:center; border-radius:6px; background:#fff; color:var(--primary-dark); font-weight:900; }
+        .proof-upload-status { display:grid; grid-template-columns:34px minmax(0,1fr); gap:11px; align-items:start; margin-top:12px; padding:12px 13px; border:1px solid #9ec3e6; border-radius:7px; background:#eef6fd; color:var(--primary-dark); }
+        .proof-upload-status[hidden] { display:none; }
+        .proof-upload-status.is-error { border-color:#efb4b0; background:#fff2f1; color:#8f211a; }
+        .proof-upload-status.is-success { border-color:#9bd3b1; background:#eefaf2; color:#146c3a; }
+        .proof-upload-status strong,.proof-upload-status span { display:block; }
+        .proof-upload-status span { margin-top:3px; font-size:.77rem; line-height:1.45; }
+        .proof-upload-spinner { width:28px; height:28px; border:3px solid rgba(23,82,137,.2); border-top-color:var(--primary); border-radius:50%; animation:proof-upload-spin .8s linear infinite; }
+        .proof-upload-status.is-error .proof-upload-spinner,.proof-upload-status.is-success .proof-upload-spinner { animation:none; border:0; }
+        .proof-upload-status.is-error .proof-upload-spinner::before,.proof-upload-status.is-success .proof-upload-spinner::before { display:grid; width:28px; height:28px; place-items:center; border-radius:50%; color:#fff; font-weight:900; }
+        .proof-upload-status.is-error .proof-upload-spinner::before { content:'!'; background:#b42318; }
+        .proof-upload-status.is-success .proof-upload-spinner::before { content:'✓'; background:#16834b; }
+        .proof-upload-progress { grid-column:1 / -1; width:100%; height:7px; accent-color:var(--primary); }
+        .proof-upload-wait { margin:8px 0 0; color:var(--muted); font-size:.74rem; }
+        @keyframes proof-upload-spin { to { transform:rotate(360deg); } }
         .proof-submit { margin-top:18px; padding:18px; border:1px solid #f0c84b; background:#fff9dc; }
         .proof-submit h2 { margin:0; font-size:1.02rem; }
         .proof-submit p { margin:6px 0 0; color:#5f4b00; }
@@ -166,7 +180,16 @@
                                 <div data-proof-visual></div>
                                 <div><strong data-proof-name></strong><span class="help-text" data-proof-size></span></div>
                             </div>
+                            <div class="proof-upload-status" data-proof-status role="status" aria-live="assertive" hidden>
+                                <span class="proof-upload-spinner" aria-hidden="true"></span>
+                                <div>
+                                    <strong data-proof-status-title>Sedang mengunggah dokumen</strong>
+                                    <span data-proof-status-detail>Tetap di halaman ini sampai muncul konfirmasi bahwa dokumen berhasil disimpan.</span>
+                                </div>
+                                <progress class="proof-upload-progress" max="100" value="0" data-proof-progress></progress>
+                            </div>
                             <button class="button button-primary" type="submit" style="margin-top:11px;" disabled data-proof-submit>Unggah bukti</button>
+                            <p class="proof-upload-wait">Setelah tombol ditekan, tunggu sampai proses dinyatakan berhasil sebelum kembali atau menutup halaman.</p>
                         </form>
                     @elseif ($buktiTerkunci)
                         <div class="proof-lock">Bukti dikunci karena sudah dikirim kepada panitia.</div>
@@ -213,44 +236,164 @@
 
 @push('scripts')
     <script>
-        document.querySelectorAll('[data-proof-form]').forEach((form) => {
-            const input = form.querySelector('[data-proof-input]');
-            const preview = form.querySelector('[data-proof-preview]');
-            const visual = form.querySelector('[data-proof-visual]');
-            const name = form.querySelector('[data-proof-name]');
-            const size = form.querySelector('[data-proof-size]');
-            const submit = form.querySelector('[data-proof-submit]');
-            let objectUrl = null;
+        (() => {
+            const forms = [...document.querySelectorAll('[data-proof-form]')];
+            let uploadSedangBerjalan = false;
+            let navigasiDiizinkan = false;
 
-            input.addEventListener('change', () => {
-                if (objectUrl) URL.revokeObjectURL(objectUrl);
-                const file = input.files[0];
-                visual.replaceChildren();
-                preview.classList.remove('is-visible');
-                submit.disabled = true;
-                if (!file) return;
+            const aturKontrolForm = (dinonaktifkan) => {
+                forms.forEach((form) => {
+                    const input = form.querySelector('[data-proof-input]');
+                    const submit = form.querySelector('[data-proof-submit]');
+                    input.disabled = dinonaktifkan;
+                    submit.disabled = dinonaktifkan || form.dataset.fileValid !== 'true';
+                });
+            };
 
-                const terlaluBesar = file.size > 10 * 1024 * 1024;
-                name.textContent = file.name;
-                size.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB${terlaluBesar ? ' - melebihi batas 10 MB' : ''}`;
-                size.style.color = terlaluBesar ? '#b42318' : '';
+            const pesanKesalahan = (xhr) => {
+                try {
+                    const payload = JSON.parse(xhr.responseText);
+                    const errors = payload.errors
+                        ? Object.values(payload.errors).flat().filter(Boolean)
+                        : [];
 
-                if (file.type.startsWith('image/')) {
-                    objectUrl = URL.createObjectURL(file);
-                    const image = document.createElement('img');
-                    image.src = objectUrl;
-                    image.alt = 'Pratinjau bukti';
-                    visual.appendChild(image);
-                } else {
-                    const pdf = document.createElement('div');
-                    pdf.className = 'pdf-preview';
-                    pdf.textContent = 'PDF';
-                    visual.appendChild(pdf);
+                    return errors[0] || payload.message || 'Dokumen belum berhasil diunggah.';
+                } catch (error) {
+                    return 'Dokumen belum berhasil diunggah. Periksa koneksi, lalu coba lagi.';
                 }
+            };
 
-                preview.classList.add('is-visible');
-                submit.disabled = terlaluBesar;
+            window.addEventListener('beforeunload', (event) => {
+                if (!uploadSedangBerjalan || navigasiDiizinkan) return;
+
+                event.preventDefault();
+                event.returnValue = '';
             });
-        });
+
+            forms.forEach((form) => {
+                const input = form.querySelector('[data-proof-input]');
+                const preview = form.querySelector('[data-proof-preview]');
+                const visual = form.querySelector('[data-proof-visual]');
+                const name = form.querySelector('[data-proof-name]');
+                const size = form.querySelector('[data-proof-size]');
+                const submit = form.querySelector('[data-proof-submit]');
+                const status = form.querySelector('[data-proof-status]');
+                const statusTitle = form.querySelector('[data-proof-status-title]');
+                const statusDetail = form.querySelector('[data-proof-status-detail]');
+                const progress = form.querySelector('[data-proof-progress]');
+                let objectUrl = null;
+
+                input.addEventListener('change', () => {
+                    if (objectUrl) URL.revokeObjectURL(objectUrl);
+                    const file = input.files[0];
+                    visual.replaceChildren();
+                    preview.classList.remove('is-visible');
+                    status.hidden = true;
+                    status.classList.remove('is-error', 'is-success');
+                    form.dataset.fileValid = 'false';
+                    submit.disabled = true;
+                    if (!file) return;
+
+                    const terlaluBesar = file.size > 10 * 1024 * 1024;
+                    name.textContent = file.name;
+                    size.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB${terlaluBesar ? ' - melebihi batas 10 MB' : ''}`;
+                    size.style.color = terlaluBesar ? '#b42318' : '';
+
+                    if (file.type.startsWith('image/')) {
+                        objectUrl = URL.createObjectURL(file);
+                        const image = document.createElement('img');
+                        image.src = objectUrl;
+                        image.alt = 'Pratinjau bukti';
+                        visual.appendChild(image);
+                    } else {
+                        const pdf = document.createElement('div');
+                        pdf.className = 'pdf-preview';
+                        pdf.textContent = 'PDF';
+                        visual.appendChild(pdf);
+                    }
+
+                    preview.classList.add('is-visible');
+                    form.dataset.fileValid = terlaluBesar ? 'false' : 'true';
+                    submit.disabled = terlaluBesar;
+                });
+
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+
+                    if (uploadSedangBerjalan || form.dataset.fileValid !== 'true' || !form.reportValidity()) return;
+
+                    const formData = new FormData(form);
+                    uploadSedangBerjalan = true;
+                    navigasiDiizinkan = false;
+                    form.setAttribute('aria-busy', 'true');
+                    status.hidden = false;
+                    status.classList.remove('is-error', 'is-success');
+                    statusTitle.textContent = 'Sedang mengunggah dokumen';
+                    statusDetail.textContent = 'Tetap di halaman ini. Jangan kembali atau menutup halaman sampai proses selesai.';
+                    progress.hidden = false;
+                    progress.value = 0;
+                    submit.textContent = 'Mengunggah...';
+                    aturKontrolForm(true);
+                    status.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', form.action);
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.withCredentials = true;
+
+                    xhr.upload.addEventListener('progress', (progressEvent) => {
+                        if (!progressEvent.lengthComputable) {
+                            progress.removeAttribute('value');
+                            return;
+                        }
+
+                        progress.value = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                    });
+
+                    xhr.upload.addEventListener('load', () => {
+                        progress.removeAttribute('value');
+                        statusTitle.textContent = 'Dokumen terkirim, sedang diproses';
+                        statusDetail.textContent = 'Server sedang memeriksa dan menyimpan dokumen. Tetap di halaman ini.';
+                        submit.textContent = 'Memproses...';
+                    });
+
+                    const tanganiGagal = (message) => {
+                        uploadSedangBerjalan = false;
+                        form.removeAttribute('aria-busy');
+                        status.classList.add('is-error');
+                        statusTitle.textContent = 'Unggahan belum berhasil';
+                        statusDetail.textContent = message;
+                        progress.hidden = true;
+                        submit.textContent = 'Coba unggah lagi';
+                        aturKontrolForm(false);
+                        status.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    };
+
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status < 200 || xhr.status >= 300) {
+                            tanganiGagal(pesanKesalahan(xhr));
+                            return;
+                        }
+
+                        uploadSedangBerjalan = false;
+                        navigasiDiizinkan = true;
+                        form.removeAttribute('aria-busy');
+                        status.classList.add('is-success');
+                        statusTitle.textContent = 'Dokumen berhasil disimpan';
+                        statusDetail.textContent = 'Daftar berkas sedang diperbarui. Mohon tunggu sebentar.';
+                        progress.hidden = false;
+                        progress.value = 100;
+                        submit.textContent = 'Berhasil diunggah';
+
+                        window.setTimeout(() => window.location.reload(), 500);
+                    });
+
+                    xhr.addEventListener('error', () => tanganiGagal('Koneksi terputus sebelum unggahan selesai. Periksa koneksi, lalu coba lagi.'));
+                    xhr.addEventListener('abort', () => tanganiGagal('Unggahan dibatalkan. Pilih dokumen dan coba lagi.'));
+                    xhr.send(formData);
+                });
+            });
+        })();
     </script>
 @endpush

@@ -77,6 +77,7 @@
     </style>
     <div class="page-header">
         <div><p class="eyebrow">Penilaian</p><h1 class="page-title">Rapor STS</h1></div>
+        <a class="button button-muted" href="{{ route('leger-sts.index', ['kegiatan_id' => $kegiatan?->id, 'kelas_id' => $kelas?->id]) }}">Buka Leger STS</a>
     </div>
     <form method="GET" action="{{ route('rapor-sts.index') }}" class="sts-section sts-filters">
         <div class="field"><label for="sts-kegiatan">Kegiatan STS</label>

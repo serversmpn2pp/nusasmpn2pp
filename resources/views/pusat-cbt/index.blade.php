@@ -174,6 +174,7 @@
                 @if ($bolehPaketTerpusat)<a href="{{ route('paket-soal-terpusat.index') }}" class="button button-muted">Paket Soal Terpusat</a>@endif
                 @if ($bolehPaketTerpusat)<a href="{{ route('paket-soal-terpusat.index', ['tampilan' => 'hasil']) }}" class="button button-primary">Hasil & Analisis Ujian</a>@endif
                 @if (\App\Services\Nilai\RaporStsService::dapatMengakses(auth()->user()))<a href="{{ route('rapor-sts.index') }}" class="button button-muted">Rapor STS</a>@endif
+                @if (\App\Services\Nilai\RaporStsService::dapatMengakses(auth()->user()))<a href="{{ route('leger-sts.index') }}" class="button button-muted">Leger STS</a>@endif
                 @if ($bolehPresensi)<a href="{{ route('presensi-ujian-cbt.index') }}" class="button button-muted">Presensi Ujian</a>@endif
             </div>
         </section>
