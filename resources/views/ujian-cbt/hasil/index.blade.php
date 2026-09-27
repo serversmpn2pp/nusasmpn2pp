@@ -101,10 +101,12 @@
                         <button type="submit" class="button button-dark">Koreksi otomatis</button>
                     </form>
                     <a href="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" class="button button-muted">Koreksi manual</a>
+                @elseif ($finalisasiHasil['kesiapan']['perlu_koreksi_manual'] > 0)
+                    <a href="{{ route('ujian-cbt.koreksi-manual.index', [$ujianCbt, 'status_koreksi' => 'belum_dikoreksi']) }}" class="button button-muted">Koreksi jawaban susulan</a>
                 @endif
                 @if ($finalisasiHasil)
                     @if ($finalisasiHasil['dapat_finalisasi'])
-                        <form action="{{ route('ujian-cbt.hasil.finalisasi', $ujianCbt) }}" method="POST" onsubmit="return confirm('Finalisasi hasil dan kunci seluruh skor ujian?')">
+                        <form action="{{ route('ujian-cbt.hasil.finalisasi', $ujianCbt) }}" method="POST" onsubmit="return confirm('Finalisasi hasil peserta yang sudah selesai? Peserta yang menunggu susulan tidak akan diberi nilai 0 dan tetap dapat mengikuti susulan.')">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="button button-dark">Finalisasi hasil</button>
@@ -164,7 +166,7 @@
             <div style="display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
                 <div>
                     <h2 class="panel-title">Finalisasi & publikasi</h2>
-                    <p class="help-text" style="margin-top: 6px;">Finalisasi mengunci skor. Publikasi membuka hasil pada menu Ujian Saya milik siswa.</p>
+                    <p class="help-text" style="margin-top: 6px;">Finalisasi mengunci hasil yang sudah tersedia. Peserta susulan tetap dapat mengerjakan dan nilainya akan menyusul tanpa menjadi 0.</p>
                 </div>
                 <span class="badge {{ $finalisasiHasil['status'] === 'dipublikasikan' ? 'badge-active' : ($finalisasiHasil['status'] === 'final' ? 'badge-warning' : 'badge-muted') }}">
                     {{ $finalisasiHasil['label_status'] }}
@@ -173,13 +175,55 @@
             <dl class="quick-facts" style="margin-top: 18px;">
                 <div><dt>Peserta wajib selesai</dt><dd>{{ $kesiapan['peserta_selesai'] }} / {{ $kesiapan['peserta_wajib_selesai'] }}</dd></div>
                 <div><dt>Tidak hadir</dt><dd>{{ $kesiapan['peserta_tidak_hadir'] }}</dd></div>
+                <div><dt>Menunggu jadwal susulan</dt><dd>{{ $kesiapan['peserta_menunggu_susulan'] }}</dd></div>
+                <div><dt>Susulan dijadwalkan</dt><dd>{{ $kesiapan['peserta_susulan_dijadwalkan'] }}</dd></div>
+                <div><dt>Belum pernah mulai</dt><dd>{{ $kesiapan['peserta_belum_mulai'] }}</dd></div>
+                <div><dt>Akan ditutup otomatis</dt><dd>{{ $kesiapan['peserta_dapat_diselesaikan_otomatis'] }}</dd></div>
                 <div><dt>Uraian belum dikoreksi</dt><dd>{{ $kesiapan['perlu_koreksi_manual'] }}</dd></div>
                 <div><dt>Jumlah soal</dt><dd>{{ $kesiapan['jumlah_soal'] }}</dd></div>
             </dl>
-            @if ($finalisasiHasil['status'] === 'draf' && ! $finalisasiHasil['siap_difinalisasi'])
-                <p class="help-text" style="margin-top: 14px; color: #9a7000;">
-                    Hasil belum dapat difinalisasi. Pastikan seluruh peserta wajib selesai dan semua jawaban uraian telah dikoreksi.
+            @if ($finalisasiHasil['status'] === 'draf' && $kesiapan['peserta_dapat_diselesaikan_otomatis'] > 0)
+                <p class="help-text" style="margin-top: 14px; color: #166534;">
+                    <strong>{{ $kesiapan['peserta_dapat_diselesaikan_otomatis'] }} pengerjaan sudah melewati batas waktu.</strong>
+                    Jawaban yang tersimpan akan dipertahankan, pengerjaan ditutup otomatis, lalu dikoreksi ketika tombol Finalisasi hasil ditekan.
                 </p>
+            @endif
+            @if ($kesiapan['peserta_susulan_tertunda'] > 0)
+                <div class="help-text" style="margin-top: 14px; color: #7a5700; display: grid; gap: 7px;">
+                    <p>
+                        <strong>{{ $kesiapan['peserta_susulan_tertunda'] }} peserta masih menunggu penyelesaian ujian susulan.</strong>
+                        Mereka tidak menghambat finalisasi peserta lain, tidak diberi nilai 0, serta tidak dihitung dalam rata-rata, peringkat, dan analisis sampai hasilnya tersedia.
+                    </p>
+                    @if ($kegiatanTerpusat && auth()->user()->memilikiIzin(['cbt.panitia', 'cbt.kelola']))
+                        <div class="actions">
+                            <a class="button button-muted button-sm" href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatanTerpusat) }}">Kelola ujian susulan</a>
+                        </div>
+                    @elseif ($kegiatanTerpusat)
+                        <p>Panitia ujian dapat mengatur jadwal susulan peserta tersebut.</p>
+                    @endif
+                </div>
+            @endif
+            @if ($finalisasiHasil['status'] === 'draf' && ! $finalisasiHasil['siap_difinalisasi'])
+                <div class="help-text" style="margin-top: 14px; color: #9a7000; display: grid; gap: 7px;">
+                    @if ($kesiapan['peserta_belum_mulai'] > 0)
+                        <p>
+                            <strong>{{ $kesiapan['peserta_belum_mulai'] }} peserta belum pernah memulai ujian.</strong>
+                            Periksa kehadirannya. Jika memang tidak mengikuti, tetapkan sebagai Sakit, Izin, atau Alfa terlebih dahulu.
+                        </p>
+                        <div class="actions">
+                            <a class="button button-muted button-sm" href="{{ route('ujian-cbt.hasil.index', [$ujianCbt, 'status_hasil' => 'belum_mengikuti']) }}">Lihat peserta</a>
+                            @if (auth()->user()->memilikiIzin('cbt.kelola'))
+                                <a class="button button-muted button-sm" href="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}">Atur presensi peserta</a>
+                            @endif
+                        </div>
+                    @endif
+                    @if ($kesiapan['peserta_masih_aktif'] > 0)
+                        <p><strong>{{ $kesiapan['peserta_masih_aktif'] }} peserta masih memiliki waktu atau status pengerjaan aktif.</strong> Hasil baru dapat difinalisasi setelah batas waktunya berakhir.</p>
+                    @endif
+                    @if ($kesiapan['perlu_koreksi_manual'] > 0)
+                        <p><strong>{{ $kesiapan['perlu_koreksi_manual'] }} jawaban uraian belum dikoreksi.</strong> Selesaikan koreksi manual sebelum finalisasi.</p>
+                    @endif
+                </div>
             @endif
             @if ($finalisasiHasil['difinalisasi_pada'])
                 <p class="help-text" style="margin-top: 12px;">Difinalisasi {{ \Illuminate\Support\Carbon::parse($finalisasiHasil['difinalisasi_pada'])->timezone(config('app.timezone'))->format('d-m-Y H:i') }}{{ $finalisasiHasil['difinalisasi_oleh'] ? ' oleh '.$finalisasiHasil['difinalisasi_oleh'] : '' }}.</p>

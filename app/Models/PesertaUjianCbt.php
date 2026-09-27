@@ -52,6 +52,7 @@ class PesertaUjianCbt extends Model
     ];
 
     public const DAFTAR_STATUS_SUSULAN = [
+        'menunggu_jadwal' => 'Menunggu jadwal',
         'dijadwalkan' => 'Dijadwalkan',
         'selesai' => 'Selesai',
         'dibatalkan' => 'Dibatalkan',

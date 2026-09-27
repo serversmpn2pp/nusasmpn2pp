@@ -9,6 +9,7 @@ use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\UjianCbt;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class FinalisasiHasilUjianTerpusatService
@@ -25,10 +26,21 @@ class FinalisasiHasilUjianTerpusatService
         $kesiapan = $this->kesiapan($ujian);
         $final = ! is_null($ujian->hasil_difinalisasi_pada);
         $dipublikasikan = $final && (bool) $ujian->tampilkan_hasil;
+        $finalSebagian = $final && (
+            $kesiapan['peserta_susulan_tertunda'] > 0
+            || $kesiapan['perlu_koreksi_manual'] > 0
+        );
 
         return [
             'status' => $dipublikasikan ? 'dipublikasikan' : ($final ? 'final' : 'draf'),
-            'label_status' => $dipublikasikan ? 'Dipublikasikan' : ($final ? 'Final' : 'Draf hasil'),
+            'label_status' => match (true) {
+                $dipublikasikan && $finalSebagian => 'Dipublikasikan sebagian',
+                $dipublikasikan => 'Dipublikasikan',
+                $finalSebagian => 'Final sebagian',
+                $final => 'Final',
+                default => 'Draf hasil',
+            },
+            'final_sebagian' => $finalSebagian,
             'dapat_mengelola' => $dapatMengelola,
             'siap_difinalisasi' => $kesiapan['siap'],
             'dapat_finalisasi' => $dapatMengelola && ! $final && $kesiapan['siap'],
@@ -45,6 +57,53 @@ class FinalisasiHasilUjianTerpusatService
         ];
     }
 
+    public function sinkronkanAlfaOtomatis(Pengguna $pengguna, UjianCbt $ujian): int
+    {
+        if ($ujian->hasil_difinalisasi_pada) {
+            return 0;
+        }
+
+        return DB::transaction(function () use ($pengguna, $ujian) {
+            $jumlah = 0;
+            $peserta = $ujian->pesertaUjianCbt()
+                ->with('sesiUjianCbt:id,waktu_selesai')
+                ->whereNotIn('status', ['selesai', 'nonaktif'])
+                ->whereNull('waktu_mulai')
+                ->whereNull('status_susulan')
+                ->where(function ($query) {
+                    $query->whereNull('status_kehadiran_ujian')
+                        ->orWhereNotIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa']);
+                })
+                ->whereDoesntHave('jawabanPesertaUjianCbt', fn ($query) => $query
+                    ->where(function ($query) {
+                        $query->whereNotNull('jawaban')
+                            ->orWhereNotNull('waktu_dijawab');
+                    }))
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($peserta as $item) {
+                $batasAkses = $this->batasAksesPeserta($ujian, $item);
+
+                if (! $batasAkses || now()->lt($batasAkses)) {
+                    continue;
+                }
+
+                $item->update([
+                    'status_kehadiran_ujian' => 'alfa',
+                    'status_susulan' => 'menunggu_jadwal',
+                    'absen_ujian_pada' => now(),
+                    'absen_ujian_oleh_pengguna_id' => $pengguna->id,
+                    'catatan_kehadiran_ujian' => $item->catatan_kehadiran_ujian
+                        ?: 'Otomatis Alfa karena tidak pernah memulai hingga jadwal ujian berakhir.',
+                ]);
+                $jumlah++;
+            }
+
+            return $jumlah;
+        });
+    }
+
     public function finalisasi(
         Pengguna $pengguna,
         KegiatanUjianCbt $kegiatan,
@@ -59,6 +118,7 @@ class FinalisasiHasilUjianTerpusatService
             ];
         }
 
+        $jumlahDitutupOtomatis = $this->selesaikanPesertaKadaluarsa($ujian);
         $this->koreksiOtomatis->koreksiUjian($ujian);
         $kesiapan = $this->kesiapan($ujian->fresh());
 
@@ -78,7 +138,13 @@ class FinalisasiHasilUjianTerpusatService
         ]);
 
         return [
-            'pesan' => 'Hasil ujian berhasil difinalisasi dan skor dikunci.',
+            'pesan' => 'Hasil peserta yang sudah selesai berhasil difinalisasi.'
+                .($kesiapan['peserta_susulan_tertunda'] > 0
+                    ? " {$kesiapan['peserta_susulan_tertunda']} peserta menunggu atau sedang dijadwalkan susulan dan tidak diberi nilai 0."
+                    : '')
+                .($jumlahDitutupOtomatis > 0
+                    ? " {$jumlahDitutupOtomatis} pengerjaan yang waktunya telah habis ditutup otomatis."
+                    : ''),
             'data' => $this->ringkasan($pengguna, $ujian->fresh()),
         ];
     }
@@ -163,20 +229,31 @@ class FinalisasiHasilUjianTerpusatService
 
     private function kesiapan(UjianCbt $ujian): array
     {
-        $peserta = $ujian->pesertaUjianCbt()->get([
-            'id', 'status', 'status_kehadiran_ujian', 'status_susulan',
-        ]);
+        $peserta = $ujian->pesertaUjianCbt()
+            ->with('sesiUjianCbt:id,waktu_selesai')
+            ->get([
+                'id', 'sesi_ujian_cbt_id', 'status', 'status_kehadiran_ujian',
+                'status_susulan', 'susulan_selesai', 'waktu_mulai',
+            ]);
         $tidakHadir = $peserta->whereIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa']);
-        $tidakHadirDikecualikan = $tidakHadir->reject(fn (PesertaUjianCbt $item) => in_array(
-            $item->status_susulan,
-            ['dijadwalkan', 'selesai'],
-            true,
-        ));
-        $dikecualikan = $tidakHadirDikecualikan->pluck('id')
-            ->merge($peserta->where('status', 'nonaktif')->pluck('id'))
-            ->unique();
+        $menungguSusulan = $peserta->where('status_susulan', 'menunggu_jadwal');
+        $susulanDijadwalkan = $peserta
+            ->where('status_susulan', 'dijadwalkan')
+            ->where('status', '!=', 'selesai');
+        $susulanTertunda = $menungguSusulan
+            ->merge($susulanDijadwalkan)
+            ->unique('id');
+        $dikecualikan = $peserta
+            ->filter(fn (PesertaUjianCbt $item) => $this->pesertaDikecualikan($item))
+            ->pluck('id');
         $wajibSelesai = $peserta->whereNotIn('id', $dikecualikan);
-        $belumSelesai = $wajibSelesai->where('status', '!=', 'selesai')->count();
+        $belumSelesai = $wajibSelesai->where('status', '!=', 'selesai');
+        $dapatDitutupOtomatis = $belumSelesai
+            ->filter(fn (PesertaUjianCbt $item) => $this->dapatDitutupOtomatis($ujian, $item));
+        $penghambatFinalisasi = $belumSelesai->whereNotIn('id', $dapatDitutupOtomatis->pluck('id'));
+        $belumMulai = $penghambatFinalisasi
+            ->whereNull('waktu_mulai');
+        $masihAktif = $penghambatFinalisasi->whereNotNull('waktu_mulai');
         $soalManualIds = $ujian->soalUjianCbt()
             ->whereHas('soalCbt', fn ($query) => $query->whereNotIn(
                 'jenis_soal',
@@ -198,16 +275,90 @@ class FinalisasiHasilUjianTerpusatService
         return [
             'siap' => $peserta->isNotEmpty()
                 && $jumlahSoal > 0
-                && $belumSelesai === 0
+                && $penghambatFinalisasi->isEmpty()
                 && $perluManual === 0,
             'total_peserta' => $peserta->count(),
             'peserta_wajib_selesai' => $wajibSelesai->count(),
             'peserta_selesai' => $wajibSelesai->where('status', 'selesai')->count(),
-            'peserta_belum_selesai' => $belumSelesai,
+            'peserta_belum_selesai' => $belumSelesai->count(),
+            'peserta_dapat_diselesaikan_otomatis' => $dapatDitutupOtomatis->count(),
+            'peserta_penghambat_finalisasi' => $penghambatFinalisasi->count(),
+            'peserta_menunggu_susulan' => $menungguSusulan->count(),
+            'peserta_susulan_dijadwalkan' => $susulanDijadwalkan->count(),
+            'peserta_susulan_tertunda' => $susulanTertunda->count(),
+            'peserta_belum_mulai' => $belumMulai->count(),
+            'peserta_masih_aktif' => $masihAktif->count(),
             'peserta_tidak_hadir' => $tidakHadir->count(),
             'perlu_koreksi_manual' => $perluManual,
             'jumlah_soal' => $jumlahSoal,
         ];
+    }
+
+    private function selesaikanPesertaKadaluarsa(UjianCbt $ujian): int
+    {
+        return DB::transaction(function () use ($ujian) {
+            $jumlah = 0;
+            $peserta = $ujian->pesertaUjianCbt()
+                ->with('sesiUjianCbt:id,waktu_selesai')
+                ->where('status', '!=', 'selesai')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($peserta as $item) {
+                if ($this->pesertaDikecualikan($item) || ! $this->dapatDitutupOtomatis($ujian, $item)) {
+                    continue;
+                }
+
+                $batasAkses = $this->batasAksesPeserta($ujian, $item);
+                $perubahan = [
+                    'status' => 'selesai',
+                    'waktu_selesai' => $batasAkses ?? now(),
+                    'menit_tersisa' => 0,
+                ];
+
+                if ($item->status_susulan === 'dijadwalkan') {
+                    $perubahan['status_susulan'] = 'selesai';
+                }
+
+                $item->update($perubahan);
+                $jumlah++;
+            }
+
+            return $jumlah;
+        });
+    }
+
+    private function pesertaDikecualikan(PesertaUjianCbt $peserta): bool
+    {
+        if ($peserta->status === 'nonaktif') {
+            return true;
+        }
+
+        if ($peserta->status === 'selesai') {
+            return false;
+        }
+
+        return in_array($peserta->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true);
+    }
+
+    private function dapatDitutupOtomatis(UjianCbt $ujian, PesertaUjianCbt $peserta): bool
+    {
+        if ($peserta->status === 'selesai' || ! $peserta->waktu_mulai) {
+            return false;
+        }
+
+        $batasAkses = $this->batasAksesPeserta($ujian, $peserta);
+
+        return $batasAkses && now()->greaterThanOrEqualTo($batasAkses);
+    }
+
+    private function batasAksesPeserta(UjianCbt $ujian, PesertaUjianCbt $peserta)
+    {
+        if ($peserta->susulanDijadwalkan()) {
+            return $peserta->susulan_selesai;
+        }
+
+        return $peserta->sesiUjianCbt?->waktu_selesai ?: $ujian->tanggal_selesai;
     }
 
     private function pesanBelumSiap(array $kesiapan): string
@@ -215,8 +366,11 @@ class FinalisasiHasilUjianTerpusatService
         $alasan = collect([
             $kesiapan['total_peserta'] < 1 ? 'belum ada peserta' : null,
             $kesiapan['jumlah_soal'] < 1 ? 'belum ada soal' : null,
-            $kesiapan['peserta_belum_selesai'] > 0
-                ? "{$kesiapan['peserta_belum_selesai']} peserta wajib belum selesai"
+            $kesiapan['peserta_belum_mulai'] > 0
+                ? "{$kesiapan['peserta_belum_mulai']} peserta belum pernah memulai dan status kehadirannya belum diselesaikan"
+                : null,
+            $kesiapan['peserta_masih_aktif'] > 0
+                ? "{$kesiapan['peserta_masih_aktif']} peserta masih memiliki waktu atau status pengerjaan aktif"
                 : null,
             $kesiapan['perlu_koreksi_manual'] > 0
                 ? "{$kesiapan['perlu_koreksi_manual']} jawaban uraian belum dikoreksi"

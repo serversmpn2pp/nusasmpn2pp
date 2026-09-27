@@ -13,6 +13,7 @@ use App\Models\PesertaUjianCbt;
 use App\Models\RiwayatPergantianPengawasUjian;
 use App\Models\RuangKegiatanUjianCbt;
 use App\Models\RuangUjianCbt;
+use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use App\Services\Cbt\PemeriksaBentrokUjianSusulan;
@@ -32,22 +33,25 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         Request $request,
         KegiatanUjianCbt $kegiatanUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        FinalisasiHasilUjianTerpusatService $finalisasiHasil,
     ) {
-        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, 'pelaksanaan');
+        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, $finalisasiHasil, 'pelaksanaan');
     }
 
     public function hasil(
         Request $request,
         KegiatanUjianCbt $kegiatanUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        FinalisasiHasilUjianTerpusatService $finalisasiHasil,
     ) {
-        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, 'hasil');
+        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, $finalisasiHasil, 'hasil');
     }
 
     private function tampilkan(
         Request $request,
         KegiatanUjianCbt $kegiatanUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        FinalisasiHasilUjianTerpusatService $finalisasiHasil,
         string $mode,
     ) {
         $aksesPenuh = $kegiatanUjianCbt->dapatDiaksesOleh($request->user());
@@ -58,6 +62,9 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
 
         abort_if(! $aksesPenuh && $jadwalCakupan->isEmpty(), 403);
         $sinkronisasi->sinkronkanKegiatan($kegiatanUjianCbt, $request->user());
+        $jadwalCakupan->pluck('ujianCbt')
+            ->filter()
+            ->each(fn ($ujian) => $finalisasiHasil->sinkronkanAlfaOtomatis($request->user(), $ujian));
 
         $kegiatanUjianCbt->load([
             'jenisUjianCbt',
@@ -325,8 +332,15 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                     ]);
                 }
 
+                $memilikiJawabanNyata = $item->jawabanPesertaUjianCbt()
+                    ->where(function ($query) {
+                        $query->whereNotNull('jawaban')
+                            ->orWhereNotNull('waktu_dijawab');
+                    })
+                    ->exists();
+
                 if (in_array($item->status, ['sedang_mengerjakan', 'selesai'], true)
-                    || $item->jawabanPesertaUjianCbt()->exists()
+                    || $memilikiJawabanNyata
                     || $item->nilai_siswa_id) {
                     throw ValidationException::withMessages([
                         'peserta_ids' => "{$item->anggotaKelas?->siswa?->nama_lengkap} sudah mulai atau sudah menyelesaikan ujian.",
@@ -335,6 +349,10 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             }
 
             foreach ($daftar as $item) {
+                $item->jawabanPesertaUjianCbt()
+                    ->whereNull('jawaban')
+                    ->whereNull('waktu_dijawab')
+                    ->delete();
                 $item->update([
                     'status' => 'aktif',
                     'status_susulan' => 'dijadwalkan',
@@ -863,13 +881,7 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         abort_unless((int) $jadwalUjianCbt->kegiatan_ujian_cbt_id === (int) $kegiatanUjianCbt->id, 404);
         abort_unless($jadwalUjianCbt->ujian_cbt_id, 422, 'Paket soal untuk jadwal ini belum diterbitkan.');
 
-        $paket = $jadwalUjianCbt->ujianCbt()->first();
-
-        if ($paket?->hasil_difinalisasi_pada) {
-            throw ValidationException::withMessages([
-                'susulan' => 'Hasil ujian sudah difinalisasi. Batalkan publikasi dan finalisasi hasil terlebih dahulu sebelum menjadwalkan susulan.',
-            ]);
-        }
+        $jadwalUjianCbt->ujianCbt()->firstOrFail();
     }
 
     private function buatTokenSusulan(): string

@@ -36,6 +36,10 @@ class RekapHasilUjianCbtController extends Controller
         $sesiUjianCbtId = $data['sesi_ujian_cbt_id'] ?? null;
         $statusHasil = $data['status_hasil'] ?? 'semua';
 
+        if ($ujianCbt->ujianTerpusat()) {
+            $finalisasiHasil->sinkronkanAlfaOtomatis($request->user(), $ujianCbt);
+        }
+
         $ujianCbt->load([
             'jenisUjianCbt',
             'tahunPelajaran',
@@ -198,6 +202,7 @@ class RekapHasilUjianCbtController extends Controller
 
             if (in_array($statusKehadiran, ['sakit', 'izin', 'alfa'], true)) {
                 $labelSusulan = match ($peserta->status_susulan) {
+                    'menunggu_jadwal' => 'Menunggu jadwal susulan',
                     'dijadwalkan' => 'Susulan dijadwalkan',
                     'dibatalkan' => 'Susulan dibatalkan',
                     default => 'Belum mengikuti',

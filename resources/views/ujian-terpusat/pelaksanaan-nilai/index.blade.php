@@ -224,7 +224,7 @@
                     </div>
 
                     @if (! $halamanHasil && $paketSiap && $pesertaTidakHadir->isNotEmpty())
-                        <details class="retake-details" {{ $susulanAktif->isNotEmpty() ? 'open' : '' }}>
+                        <details class="retake-details" {{ $susulanAktif->isNotEmpty() || $calonSusulan->isNotEmpty() ? 'open' : '' }}>
                             <summary>
                                 <span>Ketidakhadiran & ujian susulan</span>
                                 <span class="badge {{ $susulanAktif->isNotEmpty() ? 'badge-warning' : 'badge-muted' }}">
@@ -242,13 +242,16 @@
                                         <div class="retake-candidates">
                                             @foreach ($calonSusulan as $pesertaSusulan)
                                                 <label class="retake-candidate">
-                                                    <input type="checkbox" name="peserta_ids[]" value="{{ $pesertaSusulan->id }}" {{ in_array($pesertaSusulan->id, old('peserta_ids', [])) ? 'checked' : '' }}>
+                                                    <input type="checkbox" name="peserta_ids[]" value="{{ $pesertaSusulan->id }}" {{ in_array($pesertaSusulan->id, old('peserta_ids', [])) || $pesertaSusulan->status_susulan === 'menunggu_jadwal' ? 'checked' : '' }}>
                                                     <span>
                                                         <strong>{{ $pesertaSusulan->anggotaKelas?->siswa?->nama_lengkap ?: 'Nama siswa tidak ditemukan' }}</strong>
                                                         <span>NISN {{ $pesertaSusulan->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
                                                     </span>
                                                     <span><strong>{{ $pesertaSusulan->kelasUjianCbt?->kelas?->nama ?: '-' }}</strong><span>Kelas</span></span>
-                                                    <span><span class="badge {{ $pesertaSusulan->status_kehadiran_ujian === 'alfa' ? 'badge-danger' : 'badge-warning' }}">{{ $pesertaSusulan->labelStatusKehadiranUjian() }}</span></span>
+                                                    <span>
+                                                        <span class="badge {{ $pesertaSusulan->status_kehadiran_ujian === 'alfa' ? 'badge-danger' : 'badge-warning' }}">{{ $pesertaSusulan->labelStatusKehadiranUjian() }}</span>
+                                                        @if($pesertaSusulan->status_susulan === 'menunggu_jadwal')<span>Menunggu jadwal susulan</span>@endif
+                                                    </span>
                                                 </label>
                                             @endforeach
                                         </div>

@@ -1194,8 +1194,9 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
 
             $kesiapanSebelum = app(FinalisasiHasilUjianTerpusatService::class)
                 ->ringkasan($data['admin'], $paket->fresh());
-            $this->assertFalse($kesiapanSebelum['siap_difinalisasi']);
-            $this->assertSame(1, $kesiapanSebelum['kesiapan']['peserta_belum_selesai']);
+            $this->assertTrue($kesiapanSebelum['siap_difinalisasi']);
+            $this->assertSame(0, $kesiapanSebelum['kesiapan']['peserta_belum_selesai']);
+            $this->assertSame(1, $kesiapanSebelum['kesiapan']['peserta_susulan_tertunda']);
 
             $this->actingAs($data['akun_siswa'])
                 ->get(route('ujian-saya.index'))
@@ -1397,6 +1398,221 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ])->assertSessionHasErrors('pengawas_susulan_pegawai_id');
 
             $this->assertNull($peserta->fresh()->status_susulan);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_finalisasi_menutup_pengerjaan_kadaluarsa_dan_mengarahkan_peserta_yang_belum_mulai(): void
+    {
+        Carbon::setTestNow('2026-09-15 10:00:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $jadwal = $this->terbitkanPaketUntukSusulan($data, 'SOAL-FINALISASI-KADALUARSA');
+            $paket = $jadwal->ujianCbt;
+            $peserta = $paket->pesertaUjianCbt()->orderBy('id')->get();
+            $relasiSoal = $paket->soalUjianCbt()->firstOrFail();
+
+            $peserta[0]->update([
+                'status' => 'sedang_mengerjakan',
+                'status_kehadiran_ujian' => 'hadir',
+                'waktu_mulai' => '2026-09-15 08:00:00',
+                'menit_tersisa' => 30,
+            ]);
+            JawabanPesertaUjianCbt::create([
+                'peserta_ujian_cbt_id' => $peserta[0]->id,
+                'soal_ujian_cbt_id' => $relasiSoal->id,
+                'soal_cbt_id' => $relasiSoal->soal_cbt_id,
+                'jawaban' => ['B'],
+                'waktu_dijawab' => '2026-09-15 08:15:00',
+            ]);
+
+            $this->actingAs($data['admin'])
+                ->get(route('ujian-cbt.hasil.index', $paket))
+                ->assertOk()
+                ->assertSeeText('1 pengerjaan sudah melewati batas waktu.')
+                ->assertSeeText('1 peserta masih menunggu penyelesaian ujian susulan.')
+                ->assertSeeText('Kelola ujian susulan');
+
+            $this->assertSame('alfa', $peserta[1]->fresh()->status_kehadiran_ujian);
+            $this->assertSame('menunggu_jadwal', $peserta[1]->fresh()->status_susulan);
+            $this->assertStringContainsString('Otomatis Alfa', (string) $peserta[1]->fresh()->catatan_kehadiran_ujian);
+
+            $ringkasanBelumSiap = app(FinalisasiHasilUjianTerpusatService::class)
+                ->ringkasan($data['admin'], $paket->fresh());
+            $this->assertTrue($ringkasanBelumSiap['siap_difinalisasi']);
+            $this->assertSame(1, $ringkasanBelumSiap['kesiapan']['peserta_dapat_diselesaikan_otomatis']);
+            $this->assertSame(1, $ringkasanBelumSiap['kesiapan']['peserta_menunggu_susulan']);
+            $this->assertSame(1, $ringkasanBelumSiap['kesiapan']['peserta_susulan_tertunda']);
+            $this->assertSame(0, $ringkasanBelumSiap['kesiapan']['peserta_belum_mulai']);
+
+            $this->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+                ->assertOk()
+                ->assertSeeText('1 belum dijadwalkan')
+                ->assertSeeText('Alfa')
+                ->assertSee('value="'.$peserta[1]->id.'" checked', false);
+
+            $this->patch(route('ujian-cbt.hasil.finalisasi', $paket))
+                ->assertRedirect()
+                ->assertSessionHas('berhasil', fn ($pesan) => str_contains(
+                    $pesan,
+                    '1 peserta menunggu atau sedang dijadwalkan susulan dan tidak diberi nilai 0.',
+                ));
+
+            $this->assertSame('selesai', $peserta[0]->fresh()->status);
+            $this->assertSame(0, $peserta[0]->fresh()->menit_tersisa);
+            $this->assertSame('alfa', $peserta[1]->fresh()->status_kehadiran_ujian);
+            $this->assertSame('menunggu_jadwal', $peserta[1]->fresh()->status_susulan);
+            $this->assertFalse($peserta[1]->jawabanPesertaUjianCbt()->exists());
+            $this->assertEquals(1.0, (float) JawabanPesertaUjianCbt::query()
+                ->where('peserta_ujian_cbt_id', $peserta[0]->id)
+                ->where('soal_ujian_cbt_id', $relasiSoal->id)
+                ->value('skor'));
+            $this->assertNotNull($paket->fresh()->hasil_difinalisasi_pada);
+            $this->get(route('ujian-cbt.hasil.index', $paket))
+                ->assertOk()
+                ->assertSeeText('Final sebagian')
+                ->assertSeeText('Mereka tidak menghambat finalisasi peserta lain');
+
+            JawabanPesertaUjianCbt::create([
+                'peserta_ujian_cbt_id' => $peserta[1]->id,
+                'soal_ujian_cbt_id' => $relasiSoal->id,
+                'soal_cbt_id' => $relasiSoal->soal_cbt_id,
+                'jawaban' => null,
+                'skor' => 0,
+            ]);
+            $this->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), [
+                'peserta_ids' => [$peserta[1]->id],
+                'susulan_mulai' => '2026-09-15 10:30:00',
+                'susulan_selesai' => '2026-09-15 11:30:00',
+                'ruang_susulan_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
+            ])->assertSessionHasNoErrors()->assertRedirect();
+
+            $peserta[1]->refresh();
+            $this->assertSame('dijadwalkan', $peserta[1]->status_susulan);
+            $this->assertFalse($peserta[1]->jawabanPesertaUjianCbt()->exists());
+
+            $akunSusulan = Pengguna::create([
+                'siswa_id' => $data['anggota'][1]->siswa_id,
+                'nama' => 'Bima',
+                'username' => '0130000001',
+                'kata_sandi' => 'rahasia123',
+                'wajib_ganti_kata_sandi' => false,
+                'peran' => 'siswa',
+                'aktif' => true,
+            ]);
+            Carbon::setTestNow('2026-09-15 10:45:00');
+            $this->actingAs($akunSusulan)
+                ->post(route('ujian-saya.masuk', $peserta[1]), ['token' => $peserta[1]->token_susulan])
+                ->assertRedirect(route('cbt.ujian.show'));
+            $this->post(route('cbt.ujian.mulai'))
+                ->assertRedirect(route('cbt.ujian.kerjakan'));
+            $this->post(route('cbt.ujian.simpan'), [
+                'jawaban' => [$relasiSoal->id => ['B']],
+                'aksi' => 'selesai',
+            ])->assertRedirect(route('cbt.ujian.selesai'));
+
+            $this->assertSame('selesai', $peserta[1]->fresh()->status);
+            $this->assertSame('selesai', $peserta[1]->fresh()->status_susulan);
+            $ringkasanLengkap = app(FinalisasiHasilUjianTerpusatService::class)
+                ->ringkasan($data['admin'], $paket->fresh());
+            $this->assertFalse($ringkasanLengkap['final_sebagian']);
+            $this->assertSame('Final', $ringkasanLengkap['label_status']);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_koreksi_manual_susulan_tetap_terbuka_setelah_finalisasi_sebagian(): void
+    {
+        Carbon::setTestNow('2026-09-15 10:00:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $soal = SoalCbt::create([
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'mata_pelajaran_id' => $data['mapel']->id,
+                'tingkat' => 7,
+                'kode' => 'SOAL-SUSULAN-URAIAN',
+                'jenis_soal' => 'uraian',
+                'tingkat_kesulitan' => 'sedang',
+                'kategori' => 'mots',
+                'pertanyaan' => 'Jelaskan alasan jawabanmu.',
+                'rubrik' => ['catatan' => 'Jawaban logis dan lengkap.'],
+                'skor_maksimal' => 2,
+                'status' => 'siap',
+                'aktif' => true,
+            ]);
+            $this->actingAs($data['admin'])
+                ->put(route('paket-soal-terpusat.update', $data['jadwal']), [
+                    'aksi' => 'terbitkan',
+                    'soal' => [$soal->id => ['dipilih' => '1', 'bobot' => 2]],
+                ])
+                ->assertRedirect();
+
+            $jadwal = $data['jadwal']->fresh();
+            $paket = $jadwal->ujianCbt;
+            $peserta = $paket->pesertaUjianCbt()->orderBy('id')->get();
+            $relasiSoal = $paket->soalUjianCbt()->firstOrFail();
+            $peserta[0]->update([
+                'status' => 'selesai',
+                'status_kehadiran_ujian' => 'hadir',
+                'waktu_mulai' => '2026-09-15 07:00:00',
+                'waktu_selesai' => '2026-09-15 07:30:00',
+            ]);
+            $jawabanUtama = JawabanPesertaUjianCbt::create([
+                'peserta_ujian_cbt_id' => $peserta[0]->id,
+                'soal_ujian_cbt_id' => $relasiSoal->id,
+                'soal_cbt_id' => $relasiSoal->soal_cbt_id,
+                'jawaban' => ['Jawaban peserta utama.'],
+                'skor' => 2,
+                'benar' => true,
+                'waktu_dijawab' => '2026-09-15 07:20:00',
+            ]);
+
+            $this->get(route('ujian-cbt.hasil.index', $paket))->assertOk();
+            $this->patch(route('ujian-cbt.hasil.finalisasi', $paket))
+                ->assertSessionHasNoErrors()
+                ->assertRedirect();
+
+            $paket->refresh();
+            $peserta[1]->update([
+                'status' => 'selesai',
+                'status_kehadiran_ujian' => 'alfa',
+                'status_susulan' => 'selesai',
+                'waktu_mulai' => '2026-09-15 10:15:00',
+                'waktu_selesai' => '2026-09-15 10:30:00',
+            ]);
+            $jawabanSusulan = JawabanPesertaUjianCbt::create([
+                'peserta_ujian_cbt_id' => $peserta[1]->id,
+                'soal_ujian_cbt_id' => $relasiSoal->id,
+                'soal_cbt_id' => $relasiSoal->soal_cbt_id,
+                'jawaban' => ['Jawaban peserta susulan.'],
+                'waktu_dijawab' => '2026-09-15 10:25:00',
+            ]);
+
+            $this->get(route('ujian-cbt.koreksi-manual.index', $paket))
+                ->assertOk()
+                ->assertSee('name="skor['.$jawabanSusulan->id.']"', false)
+                ->assertSeeText('Skor dikunci');
+
+            $this->from(route('ujian-cbt.koreksi-manual.index', $paket))
+                ->put(route('ujian-cbt.koreksi-manual.update', $paket), [
+                    'skor' => [$jawabanUtama->id => 1],
+                ])
+                ->assertSessionHasErrors('skor.'.$jawabanUtama->id);
+            $this->put(route('ujian-cbt.koreksi-manual.update', $paket), [
+                'skor' => [$jawabanSusulan->id => 1.5],
+            ])->assertSessionHasNoErrors()->assertRedirect();
+
+            $this->assertEquals(2.0, (float) $jawabanUtama->fresh()->skor);
+            $this->assertEquals(1.5, (float) $jawabanSusulan->fresh()->skor);
+            $ringkasan = app(FinalisasiHasilUjianTerpusatService::class)
+                ->ringkasan($data['admin'], $paket->fresh());
+            $this->assertFalse($ringkasan['final_sebagian']);
+            $this->assertSame('Final', $ringkasan['label_status']);
         } finally {
             Carbon::setTestNow();
         }

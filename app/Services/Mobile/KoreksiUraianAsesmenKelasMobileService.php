@@ -32,10 +32,13 @@ class KoreksiUraianAsesmenKelasMobileService
     ): array {
         $asesmen = $this->paketUjianTerpusat($kegiatan, $jadwal);
         $dapatMengelola = $asesmen->dapatDikelolaOleh($pengguna);
-        $dapatMengoreksi = $dapatMengelola && ! $asesmen->hasil_difinalisasi_pada;
+        $dapatMengoreksi = $dapatMengelola && (
+            ! $asesmen->hasil_difinalisasi_pada
+            || $this->adaKoreksiSusulanSetelahFinalisasi($asesmen)
+        );
         abort_unless($kegiatan->dapatDiaksesOleh($pengguna) || $dapatMengelola, 403);
 
-        return $this->susunDaftar($asesmen, $filter, $dapatMengoreksi);
+        return $this->susunDaftar($asesmen, $filter, $dapatMengoreksi, true);
     }
 
     public function simpanUjianTerpusat(
@@ -46,19 +49,15 @@ class KoreksiUraianAsesmenKelasMobileService
     ): int {
         $asesmen = $this->paketUjianTerpusat($kegiatan, $jadwal);
         abort_unless($asesmen->dapatDikelolaOleh($pengguna), 403);
-        abort_if(
-            $asesmen->hasil_difinalisasi_pada,
-            422,
-            'Hasil ujian sudah difinalisasi. Batalkan finalisasi untuk mengubah skor.',
-        );
 
-        return $this->simpanSkor($asesmen, $daftarSkor);
+        return $this->simpanSkor($asesmen, $daftarSkor, true);
     }
 
     private function susunDaftar(
         UjianCbt $asesmen,
         array $filter,
         bool $dapatMengoreksi,
+        bool $batasiFinalisasi = false,
     ): array {
         $asesmen->loadMissing([
             'tahunPelajaran:id,nama',
@@ -91,7 +90,7 @@ class KoreksiUraianAsesmenKelasMobileService
                 $item->anggotaKelas?->siswa?->nama_lengkap ?? '',
             ))
             ->values();
-        $semuaBaris = $this->susunBaris($peserta, $soalManual);
+        $semuaBaris = $this->susunBaris($peserta, $soalManual, $asesmen, $batasiFinalisasi);
         $baris = $semuaBaris
             ->when($status === 'belum_dikoreksi', fn (Collection $items) => $items->filter(
                 fn (array $item) => $item['sudah_dijawab'] && ! $item['sudah_dikoreksi'],
@@ -134,11 +133,15 @@ class KoreksiUraianAsesmenKelasMobileService
         return $this->simpanSkor($asesmen, $daftarSkor);
     }
 
-    private function simpanSkor(UjianCbt $asesmen, array $daftarSkor): int
-    {
+    private function simpanSkor(
+        UjianCbt $asesmen,
+        array $daftarSkor,
+        bool $batasiFinalisasi = false,
+    ): int {
         $nilaiSkor = collect($daftarSkor)->keyBy(fn (array $item) => (int) $item['jawaban_id']);
         $soalManual = $this->soalManual($asesmen)->keyBy('id');
         $jawaban = JawabanPesertaUjianCbt::query()
+            ->with('pesertaUjianCbt')
             ->whereIn('id', $nilaiSkor->keys())
             ->whereHas(
                 'pesertaUjianCbt',
@@ -157,6 +160,16 @@ class KoreksiUraianAsesmenKelasMobileService
                 || is_null($jawabanPeserta->jawaban)
             ) {
                 $errors["skor.{$index}.jawaban_id"] = 'Jawaban tidak valid untuk koreksi uraian asesmen ini.';
+
+                continue;
+            }
+
+            if ($batasiFinalisasi && ! $this->dapatMengoreksiSetelahFinalisasi(
+                $asesmen,
+                $jawabanPeserta->pesertaUjianCbt,
+                $jawabanPeserta,
+            )) {
+                $errors["skor.{$index}.nilai"] = 'Skor ini sudah dikunci saat finalisasi hasil.';
 
                 continue;
             }
@@ -216,12 +229,25 @@ class KoreksiUraianAsesmenKelasMobileService
             ->values();
     }
 
-    private function susunBaris(Collection $peserta, Collection $soalManual): Collection
-    {
-        return $peserta->flatMap(function (PesertaUjianCbt $peserta) use ($soalManual) {
+    private function susunBaris(
+        Collection $peserta,
+        Collection $soalManual,
+        UjianCbt $asesmen,
+        bool $batasiFinalisasi,
+    ): Collection {
+        return $peserta->flatMap(function (PesertaUjianCbt $peserta) use (
+            $soalManual,
+            $asesmen,
+            $batasiFinalisasi,
+        ) {
             $jawaban = $peserta->jawabanPesertaUjianCbt->keyBy('soal_ujian_cbt_id');
 
-            return $soalManual->map(function (SoalUjianCbt $relasiSoal) use ($peserta, $jawaban) {
+            return $soalManual->map(function (SoalUjianCbt $relasiSoal) use (
+                $peserta,
+                $jawaban,
+                $asesmen,
+                $batasiFinalisasi,
+            ) {
                 $jawabanPeserta = $jawaban->get($relasiSoal->id);
                 $sudahDijawab = $jawabanPeserta && ! is_null($jawabanPeserta->jawaban);
                 $sudahDikoreksi = $jawabanPeserta && ! is_null($jawabanPeserta->skor);
@@ -254,12 +280,49 @@ class KoreksiUraianAsesmenKelasMobileService
                     'jawaban' => $this->teksJawaban($jawabanPeserta?->jawaban),
                     'sudah_dijawab' => (bool) $sudahDijawab,
                     'sudah_dikoreksi' => (bool) $sudahDikoreksi,
+                    'dapat_dikoreksi' => ! $batasiFinalisasi
+                        || $this->dapatMengoreksiSetelahFinalisasi($asesmen, $peserta, $jawabanPeserta),
                     'skor' => is_null($jawabanPeserta?->skor)
                         ? null
                         : round((float) $jawabanPeserta->skor, 2),
                 ];
             });
         })->values();
+    }
+
+    private function adaKoreksiSusulanSetelahFinalisasi(UjianCbt $asesmen): bool
+    {
+        if (! $asesmen->hasil_difinalisasi_pada) {
+            return false;
+        }
+
+        return JawabanPesertaUjianCbt::query()
+            ->whereNotNull('jawaban')
+            ->whereNull('skor')
+            ->whereHas('pesertaUjianCbt', fn (Builder $query) => $query
+                ->where('ujian_cbt_id', $asesmen->id)
+                ->where('status_susulan', 'selesai')
+                ->where('waktu_selesai', '>', $asesmen->hasil_difinalisasi_pada))
+            ->whereHas('soalCbt', fn (Builder $query) => $query->whereNotIn(
+                'jenis_soal',
+                KoreksiOtomatisCbtService::JENIS_OTOMATIS,
+            ))
+            ->exists();
+    }
+
+    private function dapatMengoreksiSetelahFinalisasi(
+        UjianCbt $asesmen,
+        ?PesertaUjianCbt $peserta,
+        ?JawabanPesertaUjianCbt $jawaban,
+    ): bool {
+        if (! $asesmen->hasil_difinalisasi_pada) {
+            return true;
+        }
+
+        return $peserta?->status_susulan === 'selesai'
+            && $peserta->waktu_selesai?->gt($asesmen->hasil_difinalisasi_pada)
+            && $jawaban
+            && is_null($jawaban->skor);
     }
 
     private function ringkasan(Collection $items): array

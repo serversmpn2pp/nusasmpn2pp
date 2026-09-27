@@ -250,10 +250,15 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if ($jawaban && $item['sudah_dijawab'])
+                                    @if ($jawaban && $item['sudah_dijawab'] && $item['dapat_dikoreksi'])
                                         <div class="manual-score">
                                             <input type="number" name="skor[{{ $jawaban->id }}]" value="{{ old('skor.' . $jawaban->id, $jawaban->skor) }}" min="0" max="{{ (float) $relasiSoal->bobot }}" step="0.01" class="input" aria-label="Skor {{ $peserta->anggotaKelas?->siswa?->nama_lengkap }}" data-manual-input="desktop">
                                             <span class="person-meta">Maks. {{ $formatAngka($relasiSoal->bobot) }}</span>
+                                        </div>
+                                    @elseif ($jawaban && $item['sudah_dijawab'])
+                                        <div class="manual-score">
+                                            <strong>{{ is_null($jawaban->skor) ? 'Menunggu koreksi' : $formatAngka($jawaban->skor) }}</strong>
+                                            <span class="person-meta">Skor dikunci</span>
                                         </div>
                                     @else
                                         <span class="person-meta">Tidak ada jawaban</span>
@@ -309,10 +314,15 @@
                                 <a href="{{ route('ujian-cbt.koreksi-manual.berkas', [$ujianCbt, $jawaban]) }}" class="button button-muted button-sm" style="margin-top:10px;">Unduh berkas jawaban</a>
                             @endif
                         </div>
-                        @if ($jawaban && $item['sudah_dijawab'])
+                        @if ($jawaban && $item['sudah_dijawab'] && $item['dapat_dikoreksi'])
                             <div class="field" style="margin-top: 12px;">
                                 <label for="skor_mobile_{{ $jawaban->id }}">Skor</label>
                                 <input id="skor_mobile_{{ $jawaban->id }}" type="number" name="skor[{{ $jawaban->id }}]" value="{{ old('skor.' . $jawaban->id, $jawaban->skor) }}" min="0" max="{{ (float) $relasiSoal->bobot }}" step="0.01" class="input" data-manual-input="mobile">
+                            </div>
+                        @elseif ($jawaban && $item['sudah_dijawab'])
+                            <div style="margin-top: 12px;">
+                                <p class="person-meta">Skor dikunci</p>
+                                <strong>{{ is_null($jawaban->skor) ? 'Menunggu koreksi' : $formatAngka($jawaban->skor) }}</strong>
                             </div>
                         @endif
                     </article>
@@ -321,7 +331,7 @@
                 @endforelse
             </div>
 
-            @if ($barisKoreksi->isNotEmpty())
+            @if ($barisKoreksi->contains('dapat_dikoreksi', true))
                 <div class="manual-save-bar">
                     <div class="panel-pad" style="padding-top: 0;">
                         <div class="actions" style="justify-content: flex-end;">

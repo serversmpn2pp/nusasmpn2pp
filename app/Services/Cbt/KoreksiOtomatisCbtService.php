@@ -3,6 +3,7 @@
 namespace App\Services\Cbt;
 
 use App\Models\JawabanPesertaUjianCbt;
+use App\Models\KegiatanUjianCbt;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalCbt;
 use App\Models\SoalUjianCbt;
@@ -28,6 +29,7 @@ class KoreksiOtomatisCbtService
 
         $ujianCbt->pesertaUjianCbt()
             ->with('ujianCbt')
+            ->where('status', 'selesai')
             ->orderBy('id')
             ->chunkById(100, function ($daftarPeserta) use (&$ringkasan) {
                 foreach ($daftarPeserta as $peserta) {
@@ -45,7 +47,7 @@ class KoreksiOtomatisCbtService
     public function koreksiPeserta(PesertaUjianCbt $peserta): array
     {
         $peserta->loadMissing('ujianCbt');
-        $penilaianPgk = \App\Models\KegiatanUjianCbt::query()->whereIn('id',
+        $penilaianPgk = KegiatanUjianCbt::query()->whereIn('id',
             $peserta->ujianCbt->jadwalUjianCbt()->select('kegiatan_ujian_cbt_id')
         )->value('penilaian_pgk') ?? 'dikotomi';
         $soalUjian = $this->ambilSoalUjian($peserta->ujianCbt, $peserta);
@@ -135,6 +137,7 @@ class KoreksiOtomatisCbtService
         if ($mode === 'parsial' && $kunci !== []) {
             $jumlahBenar = count(array_intersect($jawabanPeserta, $kunci));
             $jumlahSalah = count(array_diff($jawabanPeserta, $kunci));
+
             return ['skor' => round(max(0, ($jumlahBenar - $jumlahSalah) / count($kunci)) * $bobot, 2), 'benar' => $benar];
         }
 

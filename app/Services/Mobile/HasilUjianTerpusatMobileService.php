@@ -223,6 +223,7 @@ class HasilUjianTerpusatMobileService
     {
         return [
             'status' => 'draf', 'label_status' => 'Draf hasil',
+            'final_sebagian' => false,
             'dapat_mengelola' => false, 'siap_difinalisasi' => false,
             'dapat_finalisasi' => false, 'dapat_batalkan_finalisasi' => false,
             'dapat_publikasi' => false, 'dapat_batalkan_publikasi' => false,
@@ -231,6 +232,12 @@ class HasilUjianTerpusatMobileService
             'kesiapan' => [
                 'siap' => false, 'total_peserta' => 0, 'peserta_wajib_selesai' => 0,
                 'peserta_selesai' => 0, 'peserta_belum_selesai' => 0,
+                'peserta_dapat_diselesaikan_otomatis' => 0,
+                'peserta_penghambat_finalisasi' => 0,
+                'peserta_menunggu_susulan' => 0,
+                'peserta_susulan_dijadwalkan' => 0,
+                'peserta_susulan_tertunda' => 0,
+                'peserta_belum_mulai' => 0, 'peserta_masih_aktif' => 0,
                 'peserta_tidak_hadir' => 0, 'perlu_koreksi_manual' => 0,
                 'jumlah_soal' => 0,
             ],

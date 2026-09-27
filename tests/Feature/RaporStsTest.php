@@ -509,7 +509,7 @@ class RaporStsTest extends TestCase
         $this->simpanPeriode($d);
         $this->tidakMengikuti($d);
         app(KoreksiOtomatisCbtService::class)->koreksiUjian($d['ujian']);
-        $this->assertNotNull($d['peserta'][1]->jawabanPesertaUjianCbt()->first());
+        $this->assertNull($d['peserta'][1]->jawabanPesertaUjianCbt()->first());
         $url = route('rapor-sts.pengecualian', [$d['kegiatan'], $d['kelas']]);
         $payload = $this->payloadPengecualian($d);
         $mid = $d['mapel']->id;

@@ -160,7 +160,7 @@ class RaporStsService
             && ! in_array($peserta->status_susulan, ['dijadwalkan', 'selesai'], true)
             && in_array($peserta->status, ['aktif', 'nonaktif'], true)
             && $peserta->waktu_mulai === null && $peserta->waktu_selesai === null
-            // Automatic correction also creates empty, zero-score rows for absent students.
+            // Ignore legacy empty rows that may have been created before absent students were excluded.
             && ! $peserta->jawabanPesertaUjianCbt->contains(fn ($jawaban) => filled($jawaban->jawaban)
                 || $jawaban->waktu_dijawab !== null || (float) ($jawaban->skor ?? 0) !== 0.0);
     }

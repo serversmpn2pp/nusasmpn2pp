@@ -70,7 +70,12 @@ class KoreksiManualUjianCbtController extends Controller
             ))
             ->values();
 
-        $barisKoreksi = $this->susunBarisKoreksi($pesertaUjian, $soalManual, $statusKoreksi);
+        $barisKoreksi = $this->susunBarisKoreksi(
+            $pesertaUjian,
+            $soalManual,
+            $statusKoreksi,
+            $ujianCbt,
+        );
 
         return view('ujian-cbt.koreksi-manual.index', [
             'ujianCbt' => $ujianCbt,
@@ -87,12 +92,6 @@ class KoreksiManualUjianCbtController extends Controller
 
     public function update(Request $request, UjianCbt $ujianCbt)
     {
-        abort_if(
-            $ujianCbt->ujianTerpusat() && $ujianCbt->hasil_difinalisasi_pada,
-            422,
-            'Hasil ujian sudah difinalisasi. Batalkan finalisasi untuk mengubah skor.',
-        );
-
         $data = $request->validate([
             'skor' => ['nullable', 'array'],
             'skor.*' => ['nullable', 'numeric', 'min:0'],
@@ -106,6 +105,7 @@ class KoreksiManualUjianCbtController extends Controller
 
         $soalManual = $this->ambilSoalManual($ujianCbt)->keyBy('id');
         $jawaban = JawabanPesertaUjianCbt::query()
+            ->with('pesertaUjianCbt')
             ->whereIn('id', $nilaiSkor->keys()->map(fn ($id) => (int) $id))
             ->whereHas('pesertaUjianCbt', fn ($query) => $query->where('ujian_cbt_id', $ujianCbt->id))
             ->get()
@@ -118,6 +118,12 @@ class KoreksiManualUjianCbtController extends Controller
 
             if (! $jawabanPeserta || ! $soalManual->has($jawabanPeserta->soal_ujian_cbt_id)) {
                 $errors["skor.{$jawabanId}"] = 'Jawaban tidak valid untuk koreksi manual paket ini.';
+
+                continue;
+            }
+
+            if (! $this->dapatMengoreksi($ujianCbt, $jawabanPeserta->pesertaUjianCbt, $jawabanPeserta)) {
+                $errors["skor.{$jawabanId}"] = 'Skor ini sudah dikunci saat finalisasi hasil.';
 
                 continue;
             }
@@ -192,13 +198,17 @@ class KoreksiManualUjianCbtController extends Controller
             ->values();
     }
 
-    private function susunBarisKoreksi($pesertaUjian, $soalManual, string $statusKoreksi)
-    {
+    private function susunBarisKoreksi(
+        $pesertaUjian,
+        $soalManual,
+        string $statusKoreksi,
+        UjianCbt $ujianCbt,
+    ) {
         return $pesertaUjian
-            ->flatMap(function (PesertaUjianCbt $peserta) use ($soalManual) {
+            ->flatMap(function (PesertaUjianCbt $peserta) use ($soalManual, $ujianCbt) {
                 $jawaban = $peserta->jawabanPesertaUjianCbt->keyBy('soal_ujian_cbt_id');
 
-                return $soalManual->map(function (SoalUjianCbt $relasiSoal) use ($peserta, $jawaban) {
+                return $soalManual->map(function (SoalUjianCbt $relasiSoal) use ($peserta, $jawaban, $ujianCbt) {
                     $jawabanPeserta = $jawaban->get($relasiSoal->id);
                     $sudahDijawab = $jawabanPeserta && ! is_null($jawabanPeserta->jawaban);
                     $sudahDikoreksi = $jawabanPeserta && ! is_null($jawabanPeserta->skor);
@@ -210,6 +220,7 @@ class KoreksiManualUjianCbtController extends Controller
                         'teks_jawaban' => $this->teksJawaban($jawabanPeserta?->jawaban),
                         'sudah_dijawab' => $sudahDijawab,
                         'sudah_dikoreksi' => $sudahDikoreksi,
+                        'dapat_dikoreksi' => $this->dapatMengoreksi($ujianCbt, $peserta, $jawabanPeserta),
                     ];
                 });
             })
@@ -219,6 +230,21 @@ class KoreksiManualUjianCbtController extends Controller
                 default => true,
             })
             ->values();
+    }
+
+    private function dapatMengoreksi(
+        UjianCbt $ujianCbt,
+        ?PesertaUjianCbt $peserta,
+        ?JawabanPesertaUjianCbt $jawaban,
+    ): bool {
+        if (! $ujianCbt->ujianTerpusat() || ! $ujianCbt->hasil_difinalisasi_pada) {
+            return true;
+        }
+
+        return $peserta?->status_susulan === 'selesai'
+            && $peserta->waktu_selesai?->gt($ujianCbt->hasil_difinalisasi_pada)
+            && $jawaban
+            && is_null($jawaban->skor);
     }
 
     private function teksJawaban(?array $jawaban): string
