@@ -17,6 +17,28 @@
             gap: 14px;
         }
 
+        .central-section {
+            margin-top: 28px;
+        }
+
+        .central-section-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .central-section-heading h2 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.1rem;
+        }
+
+        .central-section-heading p {
+            margin: 4px 0 0;
+        }
+
         .stats-grid .stat.warning {
             border-color: var(--accent);
             background: #fff8d6;
@@ -30,6 +52,11 @@
             padding: 18px 20px;
         }
 
+        .central-item.is-history {
+            border-left: 4px solid #94a3b8;
+            background: #fbfdff;
+        }
+
         .central-item-title {
             display: flex;
             align-items: flex-start;
@@ -37,10 +64,42 @@
             justify-content: space-between;
         }
 
-        .central-item-title h2 {
+        .central-item-title h3 {
             margin: 0;
             color: var(--primary-dark);
             font-size: 1.05rem;
+        }
+
+        .central-item-status {
+            display: flex;
+            flex: 0 0 auto;
+            align-items: flex-end;
+            flex-direction: column;
+            gap: 5px;
+            text-align: right;
+        }
+
+        .central-item-status > span:last-child {
+            color: var(--muted);
+            font-size: .7rem;
+            font-weight: 750;
+        }
+
+        .central-item-period {
+            margin-top: 8px;
+        }
+
+        .central-empty {
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 22px;
+            background: #fff;
+            color: var(--muted);
+        }
+
+        .central-empty strong {
+            display: block;
+            color: var(--primary-dark);
         }
 
         .central-readiness {
@@ -101,6 +160,20 @@
                 padding: 16px;
             }
 
+            .central-section-heading {
+                align-items: flex-start;
+            }
+
+            .central-item-title {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .central-item-status {
+                align-items: flex-start;
+                text-align: left;
+            }
+
             .central-readiness {
                 grid-template-columns: 1fr;
             }
@@ -137,8 +210,8 @@
     <div class="stats-grid">
         <div class="panel stat"><p class="stat-label">Total kegiatan</p><p class="stat-value">{{ $ringkasan['total'] }}</p></div>
         <div class="panel stat warning"><p class="stat-label">Persiapan</p><p class="stat-value">{{ $ringkasan['persiapan'] }}</p></div>
-        <div class="panel stat active"><p class="stat-label">Aktif</p><p class="stat-value">{{ $ringkasan['aktif'] }}</p></div>
-        <div class="panel stat"><p class="stat-label">Selesai</p><p class="stat-value">{{ $ringkasan['selesai'] }}</p></div>
+        <div class="panel stat active"><p class="stat-label">Aktif & akan datang</p><p class="stat-value">{{ $ringkasan['aktif'] }}</p></div>
+        <div class="panel stat"><p class="stat-label">Jadwal selesai</p><p class="stat-value">{{ $ringkasan['selesai'] }}</p></div>
     </div>
 
     <form action="{{ route('ujian-terpusat.index') }}" method="GET" class="panel panel-pad central-filter">
@@ -161,46 +234,61 @@
         </div>
     </form>
 
-    <section class="central-list">
-        @forelse ($daftarKegiatan as $kegiatan)
-            @php
-                $panitiaSiap = $kegiatan->panitia_ujian_cbt_count > 0;
-                $sesiSiap = $kegiatan->sesi_kegiatan_ujian_cbt_count > 0;
-                $ruangSiap = $kegiatan->ruang_kegiatan_ujian_cbt_count > 0;
-            @endphp
-            <article class="panel central-item">
-                <div>
-                    <div class="central-item-title">
-                        <div>
-                            <p class="eyebrow">{{ $kegiatan->jenisUjianCbt?->nama ?: 'Ujian Terpusat' }}</p>
-                            <h2>{{ $kegiatan->nama }}</h2>
-                        </div>
-                        <span class="badge {{ $kegiatan->status === 'aktif' ? 'badge-active' : ($kegiatan->status === 'draft' ? 'badge-warning' : 'badge-muted') }}">{{ $kegiatan->labelStatus() }}</span>
-                    </div>
-                    <p class="help-text" style="margin-top: 8px;">{{ $kegiatan->tahunPelajaran?->nama ?: '-' }} · Semester {{ ucfirst($kegiatan->semester) }} · {{ $kegiatan->labelPeriode() }}</p>
-                </div>
+    <section class="central-section" aria-labelledby="kegiatan-aktif-title">
+        <div class="central-section-heading">
+            <div>
+                <h2 id="kegiatan-aktif-title">Aktif & akan datang</h2>
+                <p class="help-text">Kegiatan yang masih disiapkan, sedang berlangsung, atau masih memiliki ujian susulan.</p>
+            </div>
+            <span class="badge badge-active">{{ $daftarAktif->total() }} kegiatan</span>
+        </div>
 
-                <div class="central-readiness" aria-label="Kesiapan {{ $kegiatan->nama }}">
-                    <div class="{{ $panitiaSiap ? 'complete' : '' }}"><strong>{{ $kegiatan->panitia_ujian_cbt_count }}</strong><span>Panitia</span></div>
-                    <div class="{{ $sesiSiap ? 'complete' : '' }}"><strong>{{ $kegiatan->sesi_kegiatan_ujian_cbt_count }}</strong><span>Sesi</span></div>
-                    <div class="{{ $ruangSiap ? 'complete' : '' }}"><strong>{{ $kegiatan->ruang_kegiatan_ujian_cbt_count }}</strong><span>Ruang</span></div>
-                </div>
-
-                <div class="actions">
-                    <a href="{{ route('ujian-terpusat.show', $kegiatan) }}" class="button button-primary">Buka persiapan</a>
-                </div>
-            </article>
+        <div class="central-list">
+        @forelse ($daftarAktif as $kegiatan)
+            @include('ujian-terpusat.partials.kartu-kegiatan', [
+                'kegiatan' => $kegiatan,
+                'statusKegiatan' => $statusWaktu[$kegiatan->id],
+                'riwayat' => false,
+            ])
         @empty
-            <section class="panel panel-pad">
-                <div class="empty-state">
-                    <strong>Belum ada Ujian Terpusat.</strong>
-                    <p style="margin-top: 6px;">Buat kegiatan pertama untuk mulai menentukan panitia, sesi, dan ruang.</p>
-                </div>
-            </section>
+            <div class="central-empty">
+                <strong>Tidak ada kegiatan aktif.</strong>
+                <span>Ujian yang akan datang atau masih memiliki proses susulan akan ditampilkan di sini.</span>
+            </div>
         @endforelse
+        </div>
+
+        @if ($daftarAktif->hasPages())
+            <div class="panel panel-pad" style="margin-top: 14px;">{{ $daftarAktif->links() }}</div>
+        @endif
     </section>
 
-    @if ($daftarKegiatan->hasPages())
-        <div class="panel panel-pad" style="margin-top: 18px;">{{ $daftarKegiatan->links() }}</div>
-    @endif
+    <section class="central-section" aria-labelledby="riwayat-kegiatan-title">
+        <div class="central-section-heading">
+            <div>
+                <h2 id="riwayat-kegiatan-title">Riwayat kegiatan</h2>
+                <p class="help-text">Jadwal utama dan susulan telah lewat. Data hasil, analisis, dan dokumen tetap dapat dibuka.</p>
+            </div>
+            <span class="badge badge-muted">{{ $daftarRiwayat->total() }} kegiatan</span>
+        </div>
+
+        <div class="central-list">
+        @forelse ($daftarRiwayat as $kegiatan)
+            @include('ujian-terpusat.partials.kartu-kegiatan', [
+                'kegiatan' => $kegiatan,
+                'statusKegiatan' => $statusWaktu[$kegiatan->id],
+                'riwayat' => true,
+            ])
+        @empty
+            <div class="central-empty">
+                <strong>Belum ada riwayat kegiatan.</strong>
+                <span>Kegiatan akan berpindah ke bagian ini setelah seluruh jadwal yang relevan selesai.</span>
+            </div>
+        @endforelse
+        </div>
+
+        @if ($daftarRiwayat->hasPages())
+            <div class="panel panel-pad" style="margin-top: 14px;">{{ $daftarRiwayat->links() }}</div>
+        @endif
+    </section>
 @endsection

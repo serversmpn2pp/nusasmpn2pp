@@ -7,7 +7,9 @@ use App\Models\KegiatanUjianCbt;
 use App\Models\PanitiaUjianCbt;
 use App\Models\Pegawai;
 use App\Models\TahunPelajaran;
+use App\Services\Cbt\PaketSimulasiCbt;
 use App\Services\Cbt\SinkronkanPeranPanitiaUjian;
+use App\Services\Cbt\StatusKegiatanUjianTerpusat;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 
 class UjianTerpusatController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, StatusKegiatanUjianTerpusat $statusKegiatan)
     {
         $data = $request->validate([
             'kata_kunci' => ['nullable', 'string', 'max:100'],
@@ -25,6 +27,7 @@ class UjianTerpusatController extends Controller
         $kataKunci = trim((string) ($data['kata_kunci'] ?? ''));
         $status = $data['status'] ?? 'semua';
         $pengguna = $request->user();
+        $sekarang = now();
 
         $queryDasar = KegiatanUjianCbt::query()
             ->when(! $pengguna->memilikiIzin(['cbt.kelola', 'cbt.terpusat_lihat']), function (Builder $query) use ($pengguna) {
@@ -33,38 +36,71 @@ class UjianTerpusatController extends Controller
                     ->where('aktif', true));
             });
 
-        $daftarKegiatan = (clone $queryDasar)
-            ->with(['jenisUjianCbt', 'tahunPelajaran'])
-            ->withCount(['panitiaUjianCbt', 'sesiKegiatanUjianCbt', 'ruangKegiatanUjianCbt', 'jadwalUjianCbt'])
+        $queryTerfilter = (clone $queryDasar)
             ->when($status !== 'semua', fn (Builder $query) => $query->where('status', $status))
             ->when($kataKunci !== '', fn (Builder $query) => $query->where(function (Builder $query) use ($kataKunci) {
                 $query->where('nama', 'like', '%'.$kataKunci.'%')
                     ->orWhere('kode', 'like', '%'.$kataKunci.'%')
                     ->orWhereHas('jenisUjianCbt', fn (Builder $query) => $query->where('nama', 'like', '%'.$kataKunci.'%'));
-            }))
-            ->orderByRaw("CASE WHEN status IN ('draft', 'aktif') THEN 0 ELSE 1 END")
+            }));
+
+        $idsKegiatanAktif = $statusKegiatan
+            ->batasiAktif(clone $queryTerfilter, $sekarang)
+            ->pluck('id');
+        $idsAktifKeseluruhan = $statusKegiatan
+            ->batasiAktif(clone $queryDasar, $sekarang)
+            ->pluck('id');
+
+        $daftarAktif = $this->siapkanDaftarKegiatan(clone $queryTerfilter)
+            ->whereIn('id', $idsKegiatanAktif)
+            ->orderBy('tanggal_mulai')
+            ->orderBy('id')
+            ->paginate(10, ['*'], 'aktif_halaman')
+            ->withQueryString();
+        $daftarRiwayat = $this->siapkanDaftarKegiatan(clone $queryTerfilter)
+            ->whereNotIn('id', $idsKegiatanAktif)
             ->orderByDesc('tanggal_mulai')
             ->orderByDesc('id')
-            ->paginate(10)
+            ->paginate(10, ['*'], 'riwayat_halaman')
             ->withQueryString();
+        $statusWaktu = $statusKegiatan->statusUntuk(
+            $daftarAktif->getCollection()->concat($daftarRiwayat->getCollection()),
+            $sekarang,
+        );
 
         return view('ujian-terpusat.index', [
-            'daftarKegiatan' => $daftarKegiatan,
+            'daftarAktif' => $daftarAktif,
+            'daftarRiwayat' => $daftarRiwayat,
+            'statusWaktu' => $statusWaktu,
             'kataKunci' => $kataKunci,
             'status' => $status,
             'daftarStatus' => KegiatanUjianCbt::DAFTAR_STATUS,
             'ringkasan' => [
                 'total' => (clone $queryDasar)->where('status', '!=', 'nonaktif')->count(),
                 'persiapan' => (clone $queryDasar)->where('status', 'draft')->count(),
-                'aktif' => (clone $queryDasar)->where('status', 'aktif')->count(),
-                'selesai' => (clone $queryDasar)->where('status', 'selesai')->count(),
+                'aktif' => $idsAktifKeseluruhan->count(),
+                'selesai' => (clone $queryDasar)
+                    ->where('status', '!=', 'nonaktif')
+                    ->whereNotIn('id', $idsAktifKeseluruhan)
+                    ->count(),
             ],
         ]);
     }
 
+    private function siapkanDaftarKegiatan(Builder $query): Builder
+    {
+        return $query
+            ->with([
+                'jenisUjianCbt',
+                'tahunPelajaran',
+                'jadwalUjianCbt:id,kegiatan_ujian_cbt_id,tanggal,waktu_mulai,waktu_selesai,status',
+            ])
+            ->withCount(['panitiaUjianCbt', 'sesiKegiatanUjianCbt', 'ruangKegiatanUjianCbt', 'jadwalUjianCbt']);
+    }
+
     public function simulasi()
     {
-        return view('ujian-terpusat.simulasi', ['contoh' => app(\App\Services\Cbt\PaketSimulasiCbt::class)->contoh()]);
+        return view('ujian-terpusat.simulasi', ['contoh' => app(PaketSimulasiCbt::class)->contoh()]);
     }
 
     public function create(Request $request)

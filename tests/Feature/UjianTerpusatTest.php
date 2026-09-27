@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\JadwalUjianCbt;
 use App\Models\JenisUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\TahunPelajaran;
+use Illuminate\Support\Carbon;
 use PDO;
 use Tests\TestCase;
 
@@ -157,6 +159,45 @@ class UjianTerpusatTest extends TestCase
             ->assertDontSee('name="token"', false)
             ->assertDontSee('name="kelas_peserta', false)
             ->assertDontSee('name="jumlah_soal"', false);
+    }
+
+    public function test_daftar_memisahkan_kegiatan_aktif_dan_jadwal_yang_sudah_selesai(): void
+    {
+        $this->travelTo(Carbon::parse('2026-09-27 10:00:00'));
+        $admin = $this->buatAdministrator();
+        $tahun = $this->buatTahunPelajaran();
+        $jenis = JenisUjianCbt::query()->where('kode', 'STS')->firstOrFail();
+        $akanDatang = $this->buatKegiatan($admin, $tahun, $jenis, 'STS Akan Datang');
+
+        $this->actingAs($admin)->post(route('ujian-terpusat.store'), [
+            ...$this->dataKegiatan($tahun, $jenis),
+            'nama' => 'Simulasi Jadwal Selesai',
+            'tanggal_mulai' => '2026-09-27',
+            'tanggal_selesai' => '2026-09-27',
+        ]);
+        $sudahSelesai = KegiatanUjianCbt::query()->where('nama', 'Simulasi Jadwal Selesai')->firstOrFail();
+        JadwalUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $sudahSelesai->id,
+            'tanggal' => '2026-09-27',
+            'waktu_mulai' => '07:00',
+            'waktu_selesai' => '08:00',
+            'urutan' => 1,
+            'status' => 'siap',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('ujian-terpusat.index'))
+            ->assertOk()
+            ->assertSeeTextInOrder([
+                'Aktif & akan datang',
+                $akanDatang->nama,
+                'Riwayat kegiatan',
+                $sudahSelesai->nama,
+            ])
+            ->assertSeeText('Akan datang')
+            ->assertSeeText('Jadwal utama selesai')
+            ->assertSeeText('Status administrasi: Persiapan')
+            ->assertSeeText('Lihat kegiatan');
     }
 
     private function buatAdministrator(): Pengguna
