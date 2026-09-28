@@ -21,11 +21,20 @@ class PresensiUjianCbtController extends Controller
         $dapatKelolaSemua = $this->dapatKelolaSemua($pengguna);
 
         $pegawaiId = (int) ($pengguna?->pegawai_id ?? 0);
+        $sebagaiPanitia = $pegawaiId > 0 && $pengguna->memilikiIzin('cbt.panitia');
+        $dapatMemantauSebagaiPanitia = $sebagaiPanitia && RuangUjianCbt::query()
+            ->whereHas(
+                'jadwalUjianCbt.kegiatanUjianCbt.panitiaUjianCbt',
+                fn ($query) => $query
+                    ->where('pegawai_id', $pegawaiId)
+                    ->where('aktif', true),
+            )
+            ->exists();
         abort_unless(
             $dapatKelolaSemua || ($pegawaiId > 0 && (
                 $pengguna->memilikiIzin('cbt.presensi')
                 || RuangUjianCbt::query()->ditugaskanKepada($pegawaiId)->exists()
-            )),
+            )) || $dapatMemantauSebagaiPanitia,
             403,
         );
 
@@ -45,7 +54,20 @@ class PresensiUjianCbtController extends Controller
                 'pesertaUjianCbt as jumlah_belum_absen' => fn ($query) => $query->where('status_kehadiran_ujian', 'belum_absen'),
                 'pesertaUjianCbt as jumlah_tidak_hadir' => fn ($query) => $query->whereIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa']),
             ])
-            ->when(! $dapatKelolaSemua, fn ($query) => $query->ditugaskanKepada($pegawaiId))
+            ->when(! $dapatKelolaSemua, function ($query) use ($pegawaiId, $sebagaiPanitia) {
+                $query->where(function ($query) use ($pegawaiId, $sebagaiPanitia) {
+                    $query->ditugaskanKepada($pegawaiId);
+
+                    if ($sebagaiPanitia) {
+                        $query->orWhereHas(
+                            'jadwalUjianCbt.kegiatanUjianCbt.panitiaUjianCbt',
+                            fn ($query) => $query
+                                ->where('pegawai_id', $pegawaiId)
+                                ->where('aktif', true),
+                        );
+                    }
+                });
+            })
             ->get()
             ->sortBy(fn (RuangUjianCbt $ruang) => sprintf(
                 '%s|%s|%s',
@@ -65,6 +87,7 @@ class PresensiUjianCbtController extends Controller
                 ->reject(fn (RuangUjianCbt $ruang) => $ruang->jadwalUjianCbt?->tanggal?->toDateString() === $hariIni)
                 ->values(),
             'dapatKelolaSemua' => $dapatKelolaSemua,
+            'modePantauanPanitia' => $dapatMemantauSebagaiPanitia && ! $dapatKelolaSemua,
         ]);
     }
 
@@ -75,7 +98,7 @@ class PresensiUjianCbtController extends Controller
         JendelaPresensiUjianCbt $jendelaPresensi,
     ) {
         $this->pastikanRuangMilikUjian($ujianCbt, $ruangUjianCbt);
-        $this->pastikanDapatMengelolaRuang($request, $ruangUjianCbt);
+        $this->pastikanDapatMelihatRuang($request, $ruangUjianCbt);
 
         $ruangUjianCbt->load([
             'ujianCbt.jenisUjianCbt',
@@ -105,6 +128,7 @@ class PresensiUjianCbtController extends Controller
             'waktuServerIso' => now()->toIso8601String(),
             'daftarStatusKehadiran' => PesertaUjianCbt::DAFTAR_STATUS_KEHADIRAN,
             'statusJendelaPresensi' => $statusJendelaPresensi,
+            'dapatMencatatPresensi' => $ruangUjianCbt->dapatMencatatPresensiOleh($request->user()),
         ]);
     }
 
@@ -376,6 +400,11 @@ class PresensiUjianCbtController extends Controller
     private function pastikanDapatMengelolaRuang(Request $request, RuangUjianCbt $ruangUjianCbt): void
     {
         abort_unless($ruangUjianCbt->dapatMencatatPresensiOleh($request->user()), 403);
+    }
+
+    private function pastikanDapatMelihatRuang(Request $request, RuangUjianCbt $ruangUjianCbt): void
+    {
+        abort_unless($ruangUjianCbt->dapatMelihatPresensiOleh($request->user()), 403);
     }
 
     private function dapatKelolaSemua($pengguna): bool

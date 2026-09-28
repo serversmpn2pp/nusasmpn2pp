@@ -6,7 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Presensi {{ $ruangUjianCbt->kode }} - NUSA</title>
     <link rel="icon" href="{{ asset('images/logo-nusa.png') }}" type="image/png">
-    @vite('resources/js/scan-presensi-ujian-cbt.js')
+    @if($dapatMencatatPresensi)
+        @vite('resources/js/scan-presensi-ujian-cbt.js')
+    @endif
     <style>
         :root { color-scheme:light; --blue:#15477a; --blue-dark:#0c3157; --blue-soft:#e9f2fa; --yellow:#f1c40f; --ink:#102033; --muted:#607083; --line:#d7e1eb; --surface:#fff; --green:#15803d; --green-soft:#edf9f1; --red:#b42318; --red-soft:#fff0ef; --shadow:0 12px 30px rgba(21,71,122,.10); }
         * { box-sizing:border-box; } html,body { margin:0; min-height:100%; } body { background:#f3f7fb; color:var(--ink); font-family:"Instrument Sans",Inter,Arial,sans-serif; font-size:15px; letter-spacing:0; }
@@ -15,15 +17,18 @@
         .brand { display:flex; align-items:center; gap:11px; min-width:0; color:var(--ink); text-decoration:none; }.brand img { width:46px; height:46px; padding:4px; border:1px solid #f1d44d; border-radius:8px; background:#fff; object-fit:contain; }.brand strong,.brand span { display:block; }.brand strong { font-size:1.02rem; }.brand span { color:var(--muted); font-size:.77rem; }
         .server-clock { flex:0 0 auto; text-align:right; }.server-clock strong,.server-clock span { display:block; }.server-clock strong { color:var(--blue); font-size:1.24rem; }.server-clock span { color:var(--muted); font-size:.72rem; font-weight:700; }
         .page { width:min(1240px,100%); margin:0 auto; padding:24px 20px calc(34px + env(safe-area-inset-bottom)); }.page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:18px; }.eyebrow { margin:0 0 5px; color:var(--blue); font-size:.78rem; font-weight:800; }.page-head h1 { margin:0; font-size:clamp(1.55rem,3vw,2.1rem); line-height:1.12; }.page-head p:last-child { margin:8px 0 0; color:var(--muted); }.back-link { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:10px 15px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); font-weight:800; text-decoration:none; }
-        .room-strip { display:grid; grid-template-columns:minmax(0,1.4fr) repeat(4,minmax(110px,.6fr)); gap:1px; overflow:hidden; margin-bottom:18px; border:1px solid var(--line); border-radius:8px; background:var(--line); box-shadow:var(--shadow); }.room-block { min-width:0; padding:15px 17px; background:#fff; }.room-block span,.room-block strong { display:block; }.room-block span { color:var(--muted); font-size:.75rem; font-weight:700; }.room-block strong { margin-top:5px; overflow-wrap:anywhere; font-size:.96rem; }.room-block.highlight { background:#fff8d6; }.room-block.highlight strong { color:var(--blue-dark); font-size:1.12rem; }
+        .room-strip { display:grid; grid-template-columns:minmax(0,1.4fr) repeat(5,minmax(100px,.6fr)); gap:1px; overflow:hidden; margin-bottom:18px; border:1px solid var(--line); border-radius:8px; background:var(--line); box-shadow:var(--shadow); }.room-block { min-width:0; padding:15px 17px; background:#fff; }.room-block span,.room-block strong { display:block; }.room-block span { color:var(--muted); font-size:.75rem; font-weight:700; }.room-block strong { margin-top:5px; overflow-wrap:anywhere; font-size:.96rem; }.room-block.highlight { background:#fff8d6; }.room-block.highlight strong { color:var(--blue-dark); font-size:1.12rem; }
         .schedule-guard { display:grid; grid-template-columns:auto minmax(0,1fr); gap:13px; align-items:start; margin-bottom:18px; padding:15px 17px; border:1px solid #e6bd2d; border-left:5px solid #d39e00; border-radius:8px; background:#fff9dc; color:#594900; box-shadow:var(--shadow); }.schedule-guard-icon { display:grid; width:34px; height:34px; place-items:center; border-radius:50%; background:#f1c40f; color:#382d00; font-size:1.08rem; font-weight:900; }.schedule-guard strong { display:block; margin:1px 0 4px; color:#382d00; font-size:1rem; }.schedule-guard p { margin:0; line-height:1.5; }.schedule-guard-note { margin-top:7px !important; color:#7b2d24; font-size:.82rem; font-weight:700; }
+        .schedule-guard.monitor-mode { border-color:#9fc0dd; border-left-color:var(--blue); background:var(--blue-soft); color:#244b6c; }.schedule-guard.monitor-mode .schedule-guard-icon { background:var(--blue); color:#fff; }.schedule-guard.monitor-mode strong { color:var(--blue-dark); }
         .scan-layout { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr); gap:18px; align-items:start; }.panel { overflow:hidden; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:var(--shadow); }.panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px; border-bottom:1px solid var(--line); }.panel-head h2 { margin:0; font-size:1rem; }.panel-head p { margin:4px 0 0; color:var(--muted); font-size:.78rem; }.summary-number { min-width:48px; padding:7px 9px; border-radius:7px; background:#fff8d6; color:var(--blue-dark); text-align:center; font-size:1.15rem; font-weight:900; }
+        .scan-layout.monitor-only { grid-template-columns:1fr; }
         .camera-wrap { position:relative; aspect-ratio:16/10; min-height:330px; overflow:hidden; background:#071525; }.camera-wrap video { display:none; width:100%; height:100%; object-fit:cover; }.camera-wrap.camera-on video { display:block; }.camera-placeholder { position:absolute; inset:0; display:grid; place-content:center; gap:8px; padding:28px; color:#dbe8f4; text-align:center; }.camera-placeholder strong { color:#fff; font-size:1.15rem; }.camera-placeholder p { max-width:430px; margin:0; color:#a9bdd0; line-height:1.5; }.camera-wrap.camera-on .camera-placeholder { display:none; }.scan-frame { position:absolute; left:50%; top:50%; display:none; width:min(54%,260px); aspect-ratio:1; transform:translate(-50%,-50%); border:2px solid rgba(255,255,255,.9); border-radius:8px; box-shadow:0 0 0 999px rgba(2,12,24,.30); }.camera-wrap.camera-on .scan-frame { display:block; }.scan-frame::before,.scan-frame::after { position:absolute; content:""; width:38px; height:38px; }.scan-frame::before { left:-3px; top:-3px; border-left:6px solid var(--yellow); border-top:6px solid var(--yellow); }.scan-frame::after { right:-3px; bottom:-3px; border-right:6px solid var(--yellow); border-bottom:6px solid var(--yellow); }.camera-message { position:absolute; left:50%; bottom:15px; display:none; width:max-content; max-width:calc(100% - 28px); transform:translateX(-50%); padding:9px 13px; border-radius:999px; background:rgba(255,255,255,.94); color:var(--blue-dark); text-align:center; font-size:.78rem; font-weight:900; }.camera-wrap.camera-on .camera-message { display:block; }
         .camera-controls { display:flex; flex-wrap:wrap; gap:9px; padding:14px 16px; border-top:1px solid var(--line); }.button { min-height:43px; padding:10px 15px; border:1px solid transparent; border-radius:8px; cursor:pointer; font-weight:900; }.button:disabled { cursor:not-allowed; opacity:.48; }.button-primary { background:var(--blue); color:#fff; }.button-secondary { border-color:var(--line); background:#fff; color:var(--ink); }.button-danger { border-color:#f5b8b3; background:var(--red-soft); color:var(--red); }.button-grow { flex:1 1 180px; }.camera-warning { margin:0 16px 16px; padding:11px 13px; border:1px solid #f2d374; border-radius:8px; background:#fff8d6; color:#715d09; line-height:1.45; }.camera-warning[hidden] { display:none; }
         .manual-panel { margin-top:18px; padding:16px; }.manual-panel h2 { margin:0; font-size:1rem; }.manual-panel p { margin:5px 0 13px; color:var(--muted); font-size:.78rem; }.manual-form { display:flex; gap:8px; }.manual-form input { min-width:0; flex:1; padding:11px 12px; border:1px solid var(--line); border-radius:8px; }
         .result { display:none; margin-bottom:18px; padding:16px; border:1px solid var(--line); border-left:5px solid var(--blue); border-radius:8px; background:#fff; box-shadow:var(--shadow); }.result.show { display:block; }.result.success { border-left-color:var(--green); background:var(--green-soft); }.result.known { border-left-color:var(--blue); background:var(--blue-soft); }.result.error { border-left-color:var(--red); background:var(--red-soft); }.result-grid { display:grid; grid-template-columns:82px minmax(0,1fr); gap:14px; align-items:center; }.result-photo { width:82px; height:98px; border:3px solid #fff; border-radius:8px; background:#d8e1ea; object-fit:cover; box-shadow:0 5px 16px rgba(16,32,51,.12); }.result-kicker { margin:0 0 5px; color:var(--green); font-size:.75rem; font-weight:900; text-transform:uppercase; }.result.known .result-kicker { color:var(--blue); }.result.error .result-kicker { color:var(--red); }.result h3 { margin:0; font-size:1.18rem; line-height:1.18; }.result-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }.result-meta span { padding:5px 8px; border-radius:999px; background:rgba(255,255,255,.82); color:#405064; font-size:.74rem; font-weight:800; }.result-text { margin:8px 0 0; color:#405064; line-height:1.4; }
         .recent-list { padding:7px 15px 13px; }.recent-item { display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }.recent-item:last-child { border-bottom:0; }.recent-photo { width:44px; height:52px; border-radius:7px; background:#d8e1ea; object-fit:cover; }.recent-name { margin:0; overflow:hidden; font-weight:900; text-overflow:ellipsis; white-space:nowrap; }.recent-meta { margin:4px 0 0; color:var(--muted); font-size:.73rem; }.recent-time { color:var(--blue); font-weight:900; }
         .participant-panel { margin-top:18px; }.participant-search { margin:14px 16px 8px; width:calc(100% - 32px); padding:11px 12px; border:1px solid var(--line); border-radius:8px; }.participant-list { max-height:560px; overflow:auto; padding:4px 15px 14px; }.participant-row { display:grid; grid-template-columns:42px minmax(0,1fr) minmax(118px,.55fr) auto; gap:10px; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); }.participant-row[hidden] { display:none !important; }.participant-row:last-child { border-bottom:0; }.participant-photo { width:42px; height:50px; border-radius:7px; background:#d8e1ea; object-fit:cover; }.participant-name { margin:0; font-weight:900; }.participant-meta { margin:4px 0 0; color:var(--muted); font-size:.73rem; }.participant-status { min-width:0; padding:9px 28px 9px 9px; border:1px solid var(--line); border-radius:7px; background:#fff; }.participant-status:disabled { background:#f3f6f9; color:var(--muted); opacity:1; }.participant-save { min-height:38px; padding:8px 10px; }.participant-row.is-updating { opacity:.55; }.participant-empty { padding:24px; color:var(--muted); text-align:center; }
+        .participant-readonly-status { justify-self:start; padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:#f3f6f9; color:var(--muted); font-size:.76rem; font-weight:900; }.participant-readonly-status.is-present { border-color:#9fd6af; background:var(--green-soft); color:var(--green); }.participant-readonly-status.is-absent { border-color:#f2b7b2; background:var(--red-soft); color:var(--red); }.participant-recorded-time { color:var(--blue); font-size:.78rem; font-weight:900; text-align:right; }
         @media(max-width:920px) { .page { padding:18px 14px calc(30px + env(safe-area-inset-bottom)); }.scan-layout { grid-template-columns:1fr; }.room-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }.room-block:first-child { grid-column:1/-1; }.camera-wrap { aspect-ratio:4/5; min-height:430px; } }
         @media(max-width:560px) { .app-header { min-height:64px; }.brand img { width:40px; height:40px; }.brand span { display:none; }.server-clock strong { font-size:1.08rem; }.page-head { display:block; }.back-link { width:100%; margin-top:14px; }.room-strip { grid-template-columns:1fr 1fr; }.room-block.highlight { grid-column:1/-1; }.camera-wrap { min-height:0; aspect-ratio:3/4; }.camera-controls .button { flex:1 1 calc(50% - 9px); }.camera-controls .button-grow { flex-basis:100%; }.result-grid { grid-template-columns:70px minmax(0,1fr); }.result-photo { width:70px; height:86px; }.manual-form { flex-direction:column; }.manual-form .button { width:100%; }.participant-row { grid-template-columns:40px minmax(0,1fr); }.participant-status,.participant-save { grid-column:2; width:100%; } }
     </style>
@@ -39,7 +44,7 @@
         <div class="server-clock"><strong id="server-clock">{{ now()->format('H:i:s') }}</strong><span>WAKTU SERVER</span></div>
     </header>
 
-    <main id="exam-attendance-app" class="page" data-endpoint="{{ route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangUjianCbt]) }}" data-server-time="{{ $waktuServerIso }}" data-fallback-photo="{{ $fotoDefault }}" data-attendance-open="{{ $statusJendelaPresensi['dibuka'] ? '1' : '0' }}" data-locked-message="{{ $statusJendelaPresensi['pesan'] }}">
+    <main id="exam-attendance-app" class="page" data-endpoint="{{ route('presensi-ujian-cbt.scan', [$ujianCbt, $ruangUjianCbt]) }}" data-server-time="{{ $waktuServerIso }}" data-fallback-photo="{{ $fotoDefault }}" data-attendance-open="{{ $statusJendelaPresensi['dibuka'] ? '1' : '0' }}" data-locked-message="{{ $statusJendelaPresensi['pesan'] }}" data-can-record="{{ $dapatMencatatPresensi ? '1' : '0' }}">
         <div class="page-head">
             <div><p class="eyebrow">Presensi Ujian CBT</p><h1>{{ $ruangUjianCbt->kode }} - {{ $ruangUjianCbt->nama }}</h1><p>{{ $ujianCbt->nama }} · {{ $mapel ?: '-' }}</p></div>
             @if(auth()->user()?->pegawai_id && in_array((int) auth()->user()->pegawai_id, [(int) $ruangUjianCbt->pengawas_utama_pegawai_id, (int) $ruangUjianCbt->pengawas_pendamping_pegawai_id], true))
@@ -55,7 +60,18 @@
             <div class="room-block"><span>Peserta</span><strong id="summary-participants">{{ $ringkasan['peserta'] }}</strong></div>
             <div class="room-block"><span>Sudah hadir</span><strong id="summary-present">{{ $ringkasan['hadir'] }}</strong></div>
             <div class="room-block"><span>Belum tercatat</span><strong id="summary-unrecorded">{{ $ringkasan['belum_absen'] }}</strong></div>
+            <div class="room-block"><span>Tidak hadir</span><strong>{{ $ringkasan['tidak_hadir'] }}</strong></div>
         </section>
+
+        @unless($dapatMencatatPresensi)
+            <section class="schedule-guard monitor-mode" role="status">
+                <span class="schedule-guard-icon" aria-hidden="true">i</span>
+                <div>
+                    <strong>Mode pantauan panitia</strong>
+                    <p>Anda dapat memeriksa kelengkapan presensi dan rincian siswa di ruang ini. Perubahan presensi tetap dilakukan oleh pengawas ruang.</p>
+                </div>
+            </section>
+        @endunless
 
         @unless($statusJendelaPresensi['dibuka'])
             <section class="schedule-guard" role="alert">
@@ -64,13 +80,14 @@
                     <strong>Presensi belum dibuka</strong>
                     <p>{{ $statusJendelaPresensi['pesan'] }}</p>
                     @if($ringkasan['hadir'] + $ringkasan['tidak_hadir'] > 0)
-                        <p class="schedule-guard-note">Ada {{ $ringkasan['hadir'] + $ringkasan['tidak_hadir'] }} catatan yang dibuat lebih awal. Gunakan tombol Batalkan catatan pada nama siswa bila catatan tersebut keliru.</p>
+                        <p class="schedule-guard-note">Ada {{ $ringkasan['hadir'] + $ringkasan['tidak_hadir'] }} catatan yang dibuat lebih awal. {{ $dapatMencatatPresensi ? 'Gunakan tombol Batalkan catatan pada nama siswa bila catatan tersebut keliru.' : 'Hubungi pengawas ruang bila catatan tersebut perlu diperbaiki.' }}</p>
                     @endif
                 </div>
             </section>
         @endunless
 
-        <div class="scan-layout">
+        <div class="scan-layout {{ $dapatMencatatPresensi ? '' : 'monitor-only' }}">
+            @if($dapatMencatatPresensi)
             <div>
                 <section class="panel">
                     <header class="panel-head"><div><h2>Kamera pemindai</h2><p id="camera-status-text">Kamera siap dinyalakan.</p></div><strong class="summary-number">Antrean <span id="queue-count">0</span></strong></header>
@@ -81,14 +98,17 @@
 
                 <section class="panel manual-panel"><h2>Scanner USB atau input NISN</h2><p>Scanner USB dapat langsung memindai kartu. NISN juga dapat diketik jika kamera bermasalah.</p><form id="manual-form" class="manual-form"><input id="manual-nisn" name="nisn" inputmode="numeric" autocomplete="off" placeholder="Scan atau masukkan NISN" @disabled(! $statusJendelaPresensi['dibuka'])><button class="button button-primary" type="submit" @disabled(! $statusJendelaPresensi['dibuka'])>Catat hadir</button></form></section>
             </div>
+            @endif
 
             <div>
+                @if($dapatMencatatPresensi)
                 <section id="scan-result" class="result" aria-live="polite"><div class="result-grid"><img id="result-photo" class="result-photo" src="{{ $fotoDefault }}" alt="Foto siswa"><div><p id="result-kicker" class="result-kicker">Hasil scan</p><h3 id="result-name">Menunggu QR</h3><div id="result-meta" class="result-meta"></div><p id="result-text" class="result-text"></p></div></div></section>
+                @endif
 
                 <section class="panel"><header class="panel-head"><div><h2>Presensi terbaru</h2><p>Peserta yang terakhir tercatat di ruang ini.</p></div><strong id="total-present" class="summary-number">{{ $ringkasan['hadir'] }}</strong></header><div id="recent-list" class="recent-list">@forelse($presensiTerbaru as $item)<article class="recent-item" data-participant-id="{{ $item['id'] }}"><img class="recent-photo" src="{{ $item['foto_url'] ?: $fotoDefault }}" alt=""><div><p class="recent-name">{{ $item['nama_lengkap'] }}</p><p class="recent-meta">Meja {{ $item['nomor_meja'] ?: '-' }} · {{ $item['kelas'] ?: '-' }}</p></div><time class="recent-time">{{ substr((string)$item['waktu_scan'],0,5) }}</time></article>@empty<p class="participant-empty">Belum ada peserta yang tercatat hadir.</p>@endforelse</div></section>
 
                 <section class="panel participant-panel">
-                    <header class="panel-head"><div><h2>Daftar peserta ruang</h2><p>{{ $statusJendelaPresensi['dibuka'] ? 'Cari nama untuk pencatatan manual.' : 'Pencatatan baru dikunci sampai waktu presensi dibuka.' }}</p></div><strong class="summary-number">{{ $peserta->count() }}</strong></header>
+                    <header class="panel-head"><div><h2>Daftar peserta ruang</h2><p>{{ ! $dapatMencatatPresensi ? 'Pantauan panitia. Perubahan presensi dilakukan oleh pengawas ruang.' : ($statusJendelaPresensi['dibuka'] ? 'Cari nama untuk pencatatan manual.' : 'Pencatatan baru dikunci sampai waktu presensi dibuka.') }}</p></div><strong class="summary-number">{{ $peserta->count() }}</strong></header>
                     <input id="participant-search" class="participant-search" type="search" placeholder="Cari nama atau NISN">
                     <div id="participant-list" class="participant-list">
                         @forelse($peserta as $item)
@@ -96,20 +116,34 @@
                                 $siswa = $item->anggotaKelas?->siswa;
                                 $sudahTercatat = $item->status_kehadiran_ujian !== 'belum_absen';
                             @endphp
-                            <form class="participant-row participant-manual-form" data-search="{{ str($siswa?->nama_lengkap.' '.$siswa?->nisn)->lower() }}" data-participant-id="{{ $item->id }}" action="{{ route('presensi-ujian-cbt.manual', [$ujianCbt, $ruangUjianCbt, $item]) }}">
-                                <img class="participant-photo" src="{{ $siswa?->foto ? asset('storage/'.$siswa->foto) : $fotoDefault }}" alt="">
-                                <div><p class="participant-name">{{ $siswa?->nama_lengkap ?: '-' }}</p><p class="participant-meta">Meja {{ $item->nomor_meja ?: '-' }} · {{ $item->kelasUjianCbt?->kelas?->nama ?: '-' }} · NISN {{ $siswa?->nisn ?: '-' }}</p></div>
-                                @if($statusJendelaPresensi['dibuka'])
-                                    <select name="status_kehadiran_ujian" class="participant-status" aria-label="Status presensi {{ $siswa?->nama_lengkap }}">@foreach($daftarStatusKehadiran as $nilai => $label)<option value="{{ $nilai }}" @selected($item->status_kehadiran_ujian === $nilai)>{{ $label }}</option>@endforeach</select>
-                                    <button class="button button-secondary participant-save" type="submit">Simpan</button>
-                                @elseif($sudahTercatat)
-                                    <select name="status_kehadiran_ujian" class="participant-status" aria-label="Batalkan presensi {{ $siswa?->nama_lengkap }}"><option value="belum_absen">Kembalikan: Belum hadir</option></select>
-                                    <button class="button button-danger participant-save" type="submit">Batalkan catatan</button>
-                                @else
-                                    <select name="status_kehadiran_ujian" class="participant-status" aria-label="Status presensi {{ $siswa?->nama_lengkap }}" disabled><option>Belum hadir</option></select>
-                                    <button class="button button-secondary participant-save" type="button" disabled>Belum dibuka</button>
-                                @endif
-                            </form>
+                            @if($dapatMencatatPresensi)
+                                <form class="participant-row participant-manual-form" data-search="{{ str($siswa?->nama_lengkap.' '.$siswa?->nisn)->lower() }}" data-participant-id="{{ $item->id }}" action="{{ route('presensi-ujian-cbt.manual', [$ujianCbt, $ruangUjianCbt, $item]) }}">
+                                    <img class="participant-photo" src="{{ $siswa?->foto ? asset('storage/'.$siswa->foto) : $fotoDefault }}" alt="">
+                                    <div><p class="participant-name">{{ $siswa?->nama_lengkap ?: '-' }}</p><p class="participant-meta">Meja {{ $item->nomor_meja ?: '-' }} · {{ $item->kelasUjianCbt?->kelas?->nama ?: '-' }} · NISN {{ $siswa?->nisn ?: '-' }}</p></div>
+                                    @if($statusJendelaPresensi['dibuka'])
+                                        <select name="status_kehadiran_ujian" class="participant-status" aria-label="Status presensi {{ $siswa?->nama_lengkap }}">@foreach($daftarStatusKehadiran as $nilai => $label)<option value="{{ $nilai }}" @selected($item->status_kehadiran_ujian === $nilai)>{{ $label }}</option>@endforeach</select>
+                                        <button class="button button-secondary participant-save" type="submit">Simpan</button>
+                                    @elseif($sudahTercatat)
+                                        <select name="status_kehadiran_ujian" class="participant-status" aria-label="Batalkan presensi {{ $siswa?->nama_lengkap }}"><option value="belum_absen">Kembalikan: Belum hadir</option></select>
+                                        <button class="button button-danger participant-save" type="submit">Batalkan catatan</button>
+                                    @else
+                                        <select name="status_kehadiran_ujian" class="participant-status" aria-label="Status presensi {{ $siswa?->nama_lengkap }}" disabled><option>Belum hadir</option></select>
+                                        <button class="button button-secondary participant-save" type="button" disabled>Belum dibuka</button>
+                                    @endif
+                                </form>
+                            @else
+                                @php
+                                    $kelasStatus = in_array($item->status_kehadiran_ujian, ['hadir', 'terlambat'], true)
+                                        ? 'is-present'
+                                        : (in_array($item->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true) ? 'is-absent' : '');
+                                @endphp
+                                <article class="participant-row" data-search="{{ str($siswa?->nama_lengkap.' '.$siswa?->nisn)->lower() }}" data-participant-id="{{ $item->id }}">
+                                    <img class="participant-photo" src="{{ $siswa?->foto ? asset('storage/'.$siswa->foto) : $fotoDefault }}" alt="">
+                                    <div><p class="participant-name">{{ $siswa?->nama_lengkap ?: '-' }}</p><p class="participant-meta">Meja {{ $item->nomor_meja ?: '-' }} · {{ $item->kelasUjianCbt?->kelas?->nama ?: '-' }} · NISN {{ $siswa?->nisn ?: '-' }}</p></div>
+                                    <span class="participant-readonly-status {{ $kelasStatus }}">{{ $item->labelStatusKehadiranUjian() }}</span>
+                                    <time class="participant-recorded-time">{{ $item->absen_ujian_pada?->format('H:i') ?: '-' }}</time>
+                                </article>
+                            @endif
                         @empty
                             <p class="participant-empty">Belum ada peserta di ruang ini.</p>
                         @endforelse
@@ -118,5 +152,32 @@
             </div>
         </div>
     </main>
+    @unless($dapatMencatatPresensi)
+        <script>
+            (() => {
+                const root = document.getElementById('exam-attendance-app');
+                const clock = document.getElementById('server-clock');
+                const search = document.getElementById('participant-search');
+                const rows = [...document.querySelectorAll('.participant-row[data-search]')];
+                const serverStartedAt = new Date(root.dataset.serverTime);
+                const localStartedAt = Date.now();
+                const updateClock = () => {
+                    const current = new Date(serverStartedAt.getTime() + (Date.now() - localStartedAt));
+                    clock.textContent = new Intl.DateTimeFormat('id-ID', {
+                        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+                    }).format(current).replaceAll('.', ':');
+                };
+
+                updateClock();
+                window.setInterval(updateClock, 1000);
+                search?.addEventListener('input', () => {
+                    const keyword = search.value.trim().toLocaleLowerCase('id-ID');
+                    rows.forEach((row) => {
+                        row.hidden = keyword !== '' && !row.dataset.search.includes(keyword);
+                    });
+                });
+            })();
+        </script>
+    @endunless
 </body>
 </html>

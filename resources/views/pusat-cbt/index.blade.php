@@ -8,7 +8,7 @@
         $bolehKelola = $pengguna?->memilikiIzin('cbt.kelola') ?? false;
         $bolehAsesmen = $pengguna?->memilikiIzin(['cbt.asesmen_kelola', 'cbt.kelola']) ?? false;
         $bolehSoal = $pengguna?->memilikiIzin(['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola']) ?? false;
-        $bolehPresensi = $pengguna?->memilikiIzin(['cbt.presensi', 'cbt.kelola']) ?? false;
+        $bolehPresensi = $pengguna?->memilikiIzin(['cbt.presensi', 'cbt.panitia', 'cbt.kelola']) ?? false;
         $bolehTerpusat = $pengguna?->memilikiIzin(['cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola']) ?? false;
         $bolehPaketTerpusat = $pengguna?->memilikiIzin(['cbt.soal_kelola', 'cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola']) ?? false;
     @endphp

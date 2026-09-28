@@ -172,6 +172,26 @@ class RuangUjianCbt extends Model
         ], true);
     }
 
+    public function dapatMelihatPresensiOleh(?Pengguna $pengguna): bool
+    {
+        if ($this->dapatMencatatPresensiOleh($pengguna)) {
+            return true;
+        }
+
+        if (! $pengguna?->pegawai_id || ! $pengguna->memilikiIzin('cbt.panitia')) {
+            return false;
+        }
+
+        return $this->jadwalUjianCbt()
+            ->whereHas(
+                'kegiatanUjianCbt.panitiaUjianCbt',
+                fn ($query) => $query
+                    ->where('pegawai_id', $pengguna->pegawai_id)
+                    ->where('aktif', true),
+            )
+            ->exists();
+    }
+
     public function labelStatusBukti(): string
     {
         return self::DAFTAR_STATUS_BUKTI[$this->status_bukti]

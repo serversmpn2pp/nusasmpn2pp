@@ -282,6 +282,31 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             $akunPengawas->notifikasiPengguna()->where('judul', 'Tugas pengawas ujian baru')->count(),
         );
         $ruangOperasional = $paket->ruangUjianCbt()->firstOrFail();
+        $pesertaPantauanPanitia = $ruangOperasional->pesertaUjianCbt()->firstOrFail();
+
+        $this->actingAs($akunPanitia)
+            ->get(route('presensi-ujian-cbt.index'))
+            ->assertOk()
+            ->assertSeeText('Pantau kelengkapan presensi seluruh ruang')
+            ->assertSeeText('Ruang 1')
+            ->assertSeeText('Lihat rincian presensi');
+        $this->actingAs($akunPanitia)
+            ->get(route('presensi-ujian-cbt.show', [$paket, $ruangOperasional]))
+            ->assertOk()
+            ->assertSeeText('Mode pantauan panitia')
+            ->assertSeeText('Daftar peserta ruang')
+            ->assertDontSeeText('Kamera pemindai')
+            ->assertDontSeeText('Scanner USB atau input NISN');
+        $this->actingAs($akunPanitia)
+            ->postJson(route('presensi-ujian-cbt.scan', [$paket, $ruangOperasional]), [
+                'isi_scan' => $pesertaPantauanPanitia->anggotaKelas?->siswa?->nisn,
+            ])
+            ->assertForbidden();
+        $this->actingAs($akunPanitia)
+            ->putJson(route('presensi-ujian-cbt.manual', [$paket, $ruangOperasional, $pesertaPantauanPanitia]), [
+                'status_kehadiran_ujian' => 'hadir',
+            ])
+            ->assertForbidden();
 
         $halamanDaftarTugas = $this->actingAs($akunPengawas)
             ->get(route('tugas-pengawas-ujian.index'))

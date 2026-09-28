@@ -4,7 +4,7 @@
 
 @section('content')
     <style>
-        .exam-attendance-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:24px; }
+        .exam-attendance-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:24px; }
         .exam-room-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
         .exam-room-card { display:grid; gap:16px; }
         .exam-room-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -13,8 +13,10 @@
         .exam-room-subtitle { margin:5px 0 0; color:var(--muted); font-size:.84rem; }
         .exam-room-progress { overflow:hidden; height:8px; border-radius:999px; background:#e8eef4; }
         .exam-room-progress span { display:block; height:100%; background:var(--primary); }
+        .exam-room-badges { display:flex; flex-wrap:wrap; gap:7px; justify-content:flex-end; }
         .exam-section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:26px 0 12px; }
         .exam-section-head h2 { margin:0; font-size:1.02rem; }
+        .exam-attendance-summary .stat.warning { border-color:#e6bd2d; background:#fff9dc; }
         @media(max-width:900px) { .exam-room-list { grid-template-columns:1fr; } }
         @media(max-width:620px) { .exam-attendance-summary { grid-template-columns:1fr; }.exam-room-head { display:grid; }.exam-room-card .button { width:100%; } }
     </style>
@@ -23,15 +25,16 @@
         $semuaRuang = $ruangHariIni->concat($ruangLain);
         $jumlahPeserta = $semuaRuang->sum('jumlah_peserta');
         $jumlahHadir = $semuaRuang->sum('jumlah_hadir');
+        $jumlahBelumTercatat = $semuaRuang->sum('jumlah_belum_absen');
     @endphp
 
     <div class="page-header">
         <div>
             <p class="eyebrow">Ujian & Asesmen</p>
             <h1 class="page-title">Presensi ujian CBT</h1>
-            <p class="page-subtitle">Pilih ruang, lalu pindai QR pada kartu pelajar peserta.</p>
+            <p class="page-subtitle">{{ $modePantauanPanitia ? 'Pantau kelengkapan presensi seluruh ruang pada kegiatan ujian Anda.' : 'Pilih ruang, lalu pindai QR pada kartu pelajar peserta.' }}</p>
         </div>
-        @if ($dapatKelolaSemua)
+        @if ($dapatKelolaSemua || $modePantauanPanitia)
             <a href="{{ route('pusat-cbt.index') }}" class="button button-muted">Pusat CBT</a>
         @endif
     </div>
@@ -40,6 +43,7 @@
         <div class="panel stat"><p class="stat-label">Ruang ditampilkan</p><p class="stat-value">{{ $semuaRuang->count() }}</p></div>
         <div class="panel stat"><p class="stat-label">Peserta</p><p class="stat-value">{{ $jumlahPeserta }}</p></div>
         <div class="panel stat active"><p class="stat-label">Sudah tercatat hadir</p><p class="stat-value">{{ $jumlahHadir }}</p></div>
+        <div class="panel stat {{ $jumlahBelumTercatat > 0 ? 'warning' : '' }}"><p class="stat-label">Belum tercatat</p><p class="stat-value">{{ $jumlahBelumTercatat }}</p></div>
     </div>
 
     @foreach ([['judul' => 'Ruang ujian hari ini', 'data' => $ruangHariIni, 'kosong' => 'Belum ada ruang ujian terjadwal hari ini.'], ['judul' => 'Jadwal ruang lainnya', 'data' => $ruangLain, 'kosong' => 'Belum ada ruang ujian lainnya.']] as $bagian)
@@ -63,7 +67,12 @@
                                 <h3 class="exam-room-title">{{ $ruang->kode }} - {{ $ruang->nama }}</h3>
                                 <p class="exam-room-subtitle">{{ $mapel ?: $ruang->ujianCbt?->nama }}{{ $jadwal ? ' · '.$jadwal->labelWaktu() : '' }}</p>
                             </div>
-                            <span class="badge {{ $ruang->jumlah_belum_absen ? 'badge-warning' : 'badge-active' }}">{{ $ruang->jumlah_hadir }}/{{ $ruang->jumlah_peserta }} hadir</span>
+                            <div class="exam-room-badges">
+                                <span class="badge {{ $ruang->jumlah_belum_absen ? 'badge-warning' : 'badge-active' }}">
+                                    {{ $ruang->jumlah_belum_absen ? $ruang->jumlah_belum_absen.' belum tercatat' : 'Presensi lengkap' }}
+                                </span>
+                                <span class="badge badge-muted">{{ $ruang->jumlah_hadir }}/{{ $ruang->jumlah_peserta }} hadir</span>
+                            </div>
                         </div>
 
                         <div class="exam-room-progress" aria-label="{{ $persentase }} persen peserta hadir"><span style="width:{{ $persentase }}%"></span></div>
@@ -75,7 +84,9 @@
                             <div><dt>Lokasi</dt><dd>{{ $ruang->lokasi ?: '-' }}</dd></div>
                         </dl>
 
-                        <a href="{{ route('presensi-ujian-cbt.show', [$ruang->ujianCbt, $ruang]) }}" class="button button-primary">Buka presensi ruang</a>
+                        <a href="{{ route('presensi-ujian-cbt.show', [$ruang->ujianCbt, $ruang]) }}" class="button button-primary">
+                            {{ $ruang->dapatMencatatPresensiOleh(auth()->user()) ? 'Buka presensi ruang' : 'Lihat rincian presensi' }}
+                        </a>
                     </article>
                 @endforeach
             </section>
