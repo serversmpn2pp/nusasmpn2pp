@@ -684,7 +684,7 @@
                             $berkasTersimpan = $jawabanModel?->lokasi_file ? $jawabanModel : null;
                             $raguSaatIni = (bool) ($jawabanModel?->ragu ?? false);
                             $jawabanAssoc = is_array($jawabanSaatIni) ? $jawabanSaatIni : [];
-                            $terjawabSaatIni = (bool) $berkasTersimpan || collect((array) $jawabanSaatIni)->contains(fn ($nilai) => filled($nilai));
+                            $statusJawabanSaatIni = $statusJawaban->get($relasiSoal->id, ['lengkap' => false, 'sebagian' => false]);
                             $pilihan = $pilihanJawaban->get($relasiSoal->id, collect());
                             $kunciMediaPilihan = function ($kode, $teks) use ($soal) {
                                 if (in_array($soal?->jenis_soal, ['pilihan_ganda', 'pilihan_ganda_kompleks'], true)) {
@@ -710,7 +710,10 @@
                             class="panel panel-pad question-card"
                             data-question-id="{{ $relasiSoal->id }}"
                             data-question-index="{{ $index }}"
-                            data-answered="{{ $terjawabSaatIni ? '1' : '0' }}"
+                            data-answered="{{ $statusJawabanSaatIni['lengkap'] ? '1' : '0' }}"
+                            data-partial="{{ $statusJawabanSaatIni['sebagian'] ? '1' : '0' }}"
+                            data-saved-answered="{{ $statusJawabanSaatIni['lengkap'] ? '1' : '0' }}"
+                            data-saved-partial="{{ $statusJawabanSaatIni['sebagian'] ? '1' : '0' }}"
                             data-file-saved="{{ $berkasTersimpan ? '1' : '0' }}"
                             data-doubt="{{ $raguSaatIni ? '1' : '0' }}"
                             data-dirty="0"
@@ -869,7 +872,13 @@
                         </div>
                         <div class="finish-action">
                             <span id="finishAvailability" class="finish-availability" role="status" aria-live="polite">
-                                {{ $kelayakanSelesai['boleh_selesai'] ? 'Ujian sudah dapat dikumpulkan.' : 'Aktif setelah semua soal lengkap atau pada 15 menit terakhir.' }}
+                                @if ($kelayakanSelesai['boleh_selesai'])
+                                    15 menit terakhir. Ujian sudah dapat dikumpulkan.
+                                @elseif ($kelayakanSelesai['semua_lengkap'])
+                                    Semua soal sudah lengkap. Periksa kembali jawaban; tombol aktif pada 15 menit terakhir.
+                                @else
+                                    Tombol kumpulkan aktif pada 15 menit terakhir.
+                                @endif
                             </span>
                             <button id="openFinishDialog" type="button" class="button button-primary button-finish" @disabled(! $kelayakanSelesai['boleh_selesai'])>Kumpulkan Ujian</button>
                         </div>
@@ -882,7 +891,7 @@
                             <button type="submit" class="button button-primary" onclick="document.getElementById('aksiInput').value='selesai'" @disabled(! $kelayakanSelesai['boleh_selesai'])>Kumpulkan Ujian</button>
                         </div>
                         @unless ($kelayakanSelesai['boleh_selesai'])
-                            <p class="muted">Lengkapi seluruh soal atau muat ulang halaman saat waktu tersisa 15 menit untuk mengumpulkan ujian.</p>
+                            <p class="muted">Jawaban dapat terus diperiksa. Tombol kumpulkan aktif saat waktu tersisa 15 menit.</p>
                         @endunless
                     </noscript>
                 </section>
@@ -899,12 +908,12 @@
                             @foreach ($soalUjian as $index => $relasiSoal)
                                 @php
                                     $jawabanModel = $jawabanTersimpan->get($relasiSoal->id);
-                                    $terjawab = collect((array) $jawabanModel?->jawaban)->contains(fn ($nilai) => filled($nilai));
+                                    $statusJawabanSaatIni = $statusJawaban->get($relasiSoal->id, ['lengkap' => false, 'sebagian' => false]);
                                     $ragu = (bool) $jawabanModel?->ragu;
                                 @endphp
                                 <button
                                     type="button"
-                                    class="nav-number {{ $terjawab ? 'is-answered' : '' }} {{ $ragu ? 'is-doubt' : '' }}"
+                                    class="nav-number {{ $statusJawabanSaatIni['lengkap'] ? 'is-answered' : '' }} {{ $statusJawabanSaatIni['sebagian'] ? 'is-partial' : '' }} {{ $ragu ? 'is-doubt' : '' }}"
                                     data-question-index="{{ $index }}"
                                     aria-label="Buka soal nomor {{ $index + 1 }}"
                                 >{{ $index + 1 }}</button>
@@ -1290,6 +1299,15 @@
                 return { complete: card.dataset.fileSaved === '1' || hasAnswer(answerFromCard(card)), partial: false };
             }
 
+            function effectiveAnswerCompletion(card) {
+                if (card.dataset.dirty === '1') return answerCompletion(card);
+
+                return {
+                    complete: card.dataset.savedAnswered === '1',
+                    partial: card.dataset.savedPartial === '1',
+                };
+            }
+
             function doubtFromCard(card) {
                 const questionId = card.dataset.questionId;
                 return Boolean(card.querySelector(`[name="ragu[${questionId}]"]`)?.checked);
@@ -1299,7 +1317,7 @@
                 const card = questionCards[index];
                 if (!card) return;
 
-                const completion = answerCompletion(card);
+                const completion = effectiveAnswerCompletion(card);
                 card.dataset.answered = completion.complete ? '1' : '0';
                 card.dataset.partial = completion.partial ? '1' : '0';
                 card.dataset.doubt = doubtFromCard(card) ? '1' : '0';
@@ -1323,17 +1341,19 @@
                 const allComplete = questionCards.length > 0 && state.unanswered === 0;
                 const finalWindow = remainingSeconds <= finishThresholdSeconds;
                 const uploading = activeUploads.size > 0;
-                const allowed = (allComplete || finalWindow) && !uploading;
+                const allowed = finalWindow && !uploading;
                 openFinishDialogButton.disabled = !allowed;
 
                 if (uploading) {
                     finishAvailability.textContent = 'Tunggu hingga unggahan jawaban selesai.';
-                } else if (allComplete) {
-                    finishAvailability.textContent = 'Semua soal sudah lengkap. Ujian dapat dikumpulkan.';
                 } else if (finalWindow) {
-                    finishAvailability.textContent = '15 menit terakhir. Ujian dapat dikumpulkan meski masih ada soal yang belum lengkap.';
+                    finishAvailability.textContent = allComplete
+                        ? '15 menit terakhir. Semua soal lengkap dan ujian dapat dikumpulkan.'
+                        : '15 menit terakhir. Ujian dapat dikumpulkan meski masih ada soal yang belum lengkap.';
+                } else if (allComplete) {
+                    finishAvailability.textContent = 'Semua soal sudah lengkap. Periksa kembali jawaban; tombol aktif pada 15 menit terakhir.';
                 } else {
-                    finishAvailability.textContent = 'Aktif setelah semua soal lengkap atau pada 15 menit terakhir.';
+                    finishAvailability.textContent = 'Tombol kumpulkan aktif pada 15 menit terakhir.';
                 }
 
                 return allowed;
@@ -1430,6 +1450,10 @@
                         scheduleSave(index, 150);
                     }
 
+                    if (typeof result.jawaban_lengkap === 'boolean') {
+                        card.dataset.savedAnswered = result.jawaban_lengkap ? '1' : '0';
+                        card.dataset.savedPartial = result.jawaban_sebagian ? '1' : '0';
+                    }
                     refreshCardState(index);
                     return true;
                 } catch (error) {
@@ -1516,15 +1540,16 @@
                         throw new Error(validationMessage || result.message || 'Berkas belum dapat diunggah.');
                     }
 
-                    card.dataset.answered = '1';
                     card.dataset.fileSaved = '1';
                     card.dataset.dirty = '0';
+                    card.dataset.savedAnswered = '1';
+                    card.dataset.savedPartial = '0';
                     fileName.textContent = result.berkas?.nama || file.name;
                     fileInfo.textContent = `${result.berkas?.ukuran_label || ''} · Berkas sudah tersimpan`;
                     fileButton.textContent = 'Ganti berkas';
                     message.textContent = 'Berkas berhasil diunggah dan tersimpan.';
                     setSaveStatus('saved', `Tersimpan ${result.tersimpan_pada}`);
-                    refreshNavigation();
+                    refreshCardState(index);
                 } catch (error) {
                     message.textContent = error.message || 'Unggahan gagal. Periksa koneksi lalu coba lagi.';
                     setSaveStatus('failed', message.textContent);

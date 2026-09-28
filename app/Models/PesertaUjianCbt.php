@@ -85,6 +85,12 @@ class PesertaUjianCbt extends Model
         'waktu_mulai',
         'waktu_selesai',
         'menit_tersisa',
+        'waktu_tambahan_sampai',
+        'selesai_otomatis_pada',
+        'cara_selesai',
+        'alasan_waktu_tambahan',
+        'waktu_tambahan_diberikan_pada',
+        'waktu_tambahan_oleh_pengguna_id',
         'jumlah_pindah_aplikasi',
         'durasi_di_luar_aplikasi_detik',
         'heartbeat_terakhir_pada',
@@ -106,6 +112,9 @@ class PesertaUjianCbt extends Model
         'waktu_mulai' => 'datetime',
         'waktu_selesai' => 'datetime',
         'menit_tersisa' => 'integer',
+        'waktu_tambahan_sampai' => 'datetime',
+        'selesai_otomatis_pada' => 'datetime',
+        'waktu_tambahan_diberikan_pada' => 'datetime',
         'jumlah_pindah_aplikasi' => 'integer',
         'durasi_di_luar_aplikasi_detik' => 'integer',
         'heartbeat_terakhir_pada' => 'datetime',
@@ -157,6 +166,16 @@ class PesertaUjianCbt extends Model
     public function nilaiDiterapkanOleh(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'nilai_diterapkan_oleh_pengguna_id');
+    }
+
+    public function waktuTambahanOleh(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'waktu_tambahan_oleh_pengguna_id');
+    }
+
+    public function riwayatWaktuTambahanUjianCbt(): HasMany
+    {
+        return $this->hasMany(RiwayatWaktuTambahanUjianCbt::class);
     }
 
     public function absenUjianOleh(): BelongsTo

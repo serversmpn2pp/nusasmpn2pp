@@ -8,6 +8,7 @@ use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
 use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
+use App\Services\Cbt\SelesaikanPengerjaanKedaluwarsaCbtService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -17,6 +18,7 @@ class RekapHasilUjianCbtController extends Controller
         Request $request,
         UjianCbt $ujianCbt,
         FinalisasiHasilUjianTerpusatService $finalisasiHasil,
+        SelesaikanPengerjaanKedaluwarsaCbtService $penyelesaianKedaluwarsa,
     ) {
         $data = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
@@ -37,6 +39,7 @@ class RekapHasilUjianCbtController extends Controller
         $statusHasil = $data['status_hasil'] ?? 'semua';
 
         if ($ujianCbt->ujianTerpusat()) {
+            $penyelesaianKedaluwarsa->selesaikanUjian($ujianCbt);
             $finalisasiHasil->sinkronkanAlfaOtomatis($request->user(), $ujianCbt);
         }
 

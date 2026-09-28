@@ -7,6 +7,7 @@ use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalCbt;
 use App\Models\SoalUjianCbt;
+use App\Services\Cbt\BatasWaktuPesertaUjianCbtService;
 use App\Services\Cbt\DaftarUjianSiswaService;
 use App\Services\Cbt\JawabanBerkasUjianCbtService;
 use App\Services\Cbt\KeamananUjianService;
@@ -28,6 +29,7 @@ class UjianSayaMobileService
         private readonly KeamananUjianService $keamananUjian,
         private readonly JawabanBerkasUjianCbtService $jawabanBerkas,
         private readonly KelayakanPenyelesaianUjianCbtService $kelayakanPenyelesaian,
+        private readonly BatasWaktuPesertaUjianCbtService $batasWaktu,
     ) {}
 
     public function daftar(Pengguna $pengguna): array
@@ -56,7 +58,7 @@ class UjianSayaMobileService
 
         if (in_array($peserta->status, ['sedang_mengerjakan', 'terblokir'], true)
             && $this->hitungSisaDetik($peserta) <= 0) {
-            $this->akhiri($peserta);
+            $this->akhiri($peserta, true);
 
             return $this->hasil($pengguna, $peserta->fresh());
         }
@@ -101,7 +103,7 @@ class UjianSayaMobileService
 
         if ($this->memerlukanToken($peserta)) {
             $tokenDimasukkan = mb_strtoupper(trim((string) $token));
-            $tokenUjian = mb_strtoupper(trim((string) $peserta->ujianCbt?->token));
+            $tokenUjian = mb_strtoupper(trim((string) $peserta->tokenUjianAktif()));
 
             if ($tokenDimasukkan === '' || $tokenUjian === '' || ! hash_equals($tokenUjian, $tokenDimasukkan)) {
                 throw ValidationException::withMessages([
@@ -150,7 +152,7 @@ class UjianSayaMobileService
 
         if ($peserta->status === 'terblokir') {
             if ($this->hitungSisaDetik($peserta) <= 0) {
-                $this->akhiri($peserta);
+                $this->akhiri($peserta, true);
 
                 return $this->hasil($pengguna, $peserta->fresh());
             }
@@ -167,7 +169,7 @@ class UjianSayaMobileService
         $this->pastikanPerangkatSesuai($peserta, $perangkat);
 
         if ($this->hitungSisaDetik($peserta) <= 0) {
-            $this->akhiri($peserta);
+            $this->akhiri($peserta, true);
 
             return $this->hasil($pengguna, $peserta->fresh());
         }
@@ -194,7 +196,7 @@ class UjianSayaMobileService
         $this->pastikanPerangkatSesuai($peserta, $perangkat);
 
         if ($this->hitungSisaDetik($peserta) <= 0) {
-            $this->akhiri($peserta);
+            $this->akhiri($peserta, true);
 
             return $this->hasil($pengguna, $peserta->fresh());
         }
@@ -254,7 +256,7 @@ class UjianSayaMobileService
         $this->pastikanPerangkatSesuai($peserta, $perangkat);
 
         if ($this->hitungSisaDetik($peserta) <= 0) {
-            $this->akhiri($peserta);
+            $this->akhiri($peserta, true);
 
             return $this->hasil($pengguna, $peserta->fresh());
         }
@@ -288,7 +290,7 @@ class UjianSayaMobileService
 
         if ($peserta->status === 'terblokir') {
             if ($this->hitungSisaDetik($peserta) <= 0) {
-                $this->akhiri($peserta);
+                $this->akhiri($peserta, true);
 
                 return $this->hasil($pengguna, $peserta->fresh());
             }
@@ -633,14 +635,28 @@ class UjianSayaMobileService
             ]);
         }
 
-        if (! in_array($ujian->status, ['terjadwal', 'berlangsung'], true)) {
+        $susulanAktif = $peserta->susulanDijadwalkan();
+        $waktuTambahanAktif = $this->batasWaktu->waktuTambahanAktif($peserta);
+        $statusPaketDiizinkan = $susulanAktif || $waktuTambahanAktif
+            ? ['terjadwal', 'berlangsung', 'selesai']
+            : ['terjadwal', 'berlangsung'];
+
+        if (! in_array($ujian->status, $statusPaketDiizinkan, true)) {
             throw ValidationException::withMessages([
                 'token' => 'Paket ujian belum dibuka.',
             ]);
         }
 
-        $mulai = $peserta->sesiUjianCbt?->waktu_mulai ?: $ujian->tanggal_mulai;
-        $selesai = $peserta->sesiUjianCbt?->waktu_selesai ?: $ujian->tanggal_selesai;
+        $mulai = $waktuTambahanAktif
+            ? null
+            : ($susulanAktif
+                ? $peserta->susulan_mulai
+                : ($peserta->sesiUjianCbt?->waktu_mulai ?: $ujian->tanggal_mulai));
+        $selesai = $waktuTambahanAktif
+            ? $peserta->waktu_tambahan_sampai
+            : ($susulanAktif
+                ? $peserta->susulan_selesai
+                : ($peserta->sesiUjianCbt?->waktu_selesai ?: $ujian->tanggal_selesai));
 
         if ($mulai && now()->lt($mulai)) {
             throw ValidationException::withMessages([
@@ -654,7 +670,7 @@ class UjianSayaMobileService
             ]);
         }
 
-        if ($peserta->sesiUjianCbt?->status === 'nonaktif') {
+        if (! $susulanAktif && ! $waktuTambahanAktif && $peserta->sesiUjianCbt?->status === 'nonaktif') {
             throw ValidationException::withMessages([
                 'token' => 'Sesi peserta tidak aktif.',
             ]);
@@ -723,31 +739,43 @@ class UjianSayaMobileService
 
     private function hitungSisaDetik(PesertaUjianCbt $peserta): int
     {
-        if (! $peserta->waktu_mulai) {
-            return $peserta->ujianCbt->durasi_menit * 60;
-        }
-
-        $selesaiPengerjaan = $peserta->waktu_mulai->copy()->addMinutes($peserta->ujianCbt->durasi_menit);
-        $batasPaket = $peserta->sesiUjianCbt?->waktu_selesai ?: $peserta->ujianCbt->tanggal_selesai;
-
-        if ($batasPaket && $batasPaket->lt($selesaiPengerjaan)) {
-            $selesaiPengerjaan = $batasPaket;
-        }
-
-        return (int) max(0, now()->diffInSeconds($selesaiPengerjaan, false));
+        return $this->batasWaktu->sisaDetik($peserta);
     }
 
-    private function akhiri(PesertaUjianCbt $peserta): void
+    private function akhiri(PesertaUjianCbt $peserta, bool $otomatisKarenaWaktu = false): void
     {
-        DB::transaction(function () use ($peserta): void {
-            $pesertaTerkunci = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
+        DB::transaction(function () use ($peserta, $otomatisKarenaWaktu): void {
+            $pesertaTerkunci = PesertaUjianCbt::query()
+                ->with(['ujianCbt', 'sesiUjianCbt'])
+                ->lockForUpdate()
+                ->findOrFail($peserta->id);
 
             if ($pesertaTerkunci->status !== 'selesai') {
-                $pesertaTerkunci->update([
+                $perubahan = [
                     'status' => 'selesai',
-                    'waktu_selesai' => now(),
+                    'waktu_selesai' => $otomatisKarenaWaktu
+                        ? ($this->batasWaktu->batasAkses($pesertaTerkunci) ?: now())
+                        : now(),
                     'menit_tersisa' => max(0, (int) ceil($this->hitungSisaDetik($peserta) / 60)),
-                ]);
+                    'selesai_otomatis_pada' => $otomatisKarenaWaktu ? now() : null,
+                    'cara_selesai' => $otomatisKarenaWaktu ? 'waktu_habis' : 'manual',
+                ];
+
+                if ($pesertaTerkunci->status_susulan === 'dijadwalkan') {
+                    $perubahan['status_susulan'] = 'selesai';
+                } elseif ($otomatisKarenaWaktu && $pesertaTerkunci->status_susulan === 'menunggu_jadwal') {
+                    $perubahan['status_susulan'] = null;
+                }
+
+                if ($otomatisKarenaWaktu
+                    && in_array($pesertaTerkunci->status_kehadiran_ujian, [null, 'belum_absen', 'alfa'], true)) {
+                    $perubahan['status_kehadiran_ujian'] = 'hadir';
+                    $catatan = trim((string) $pesertaTerkunci->catatan_kehadiran_ujian);
+                    $tambahan = 'Kehadiran diselaraskan otomatis karena peserta tercatat telah memulai ujian.';
+                    $perubahan['catatan_kehadiran_ujian'] = $catatan === '' ? $tambahan : $catatan.' '.$tambahan;
+                }
+
+                $pesertaTerkunci->update($perubahan);
             }
         });
 

@@ -17,6 +17,7 @@ use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use App\Services\Cbt\PemeriksaBentrokUjianSusulan;
+use App\Services\Cbt\SelesaikanPengerjaanKedaluwarsaCbtService;
 use App\Services\Cbt\SinkronkanPelaksanaanUjianTerpusat;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
 use Carbon\Carbon;
@@ -34,8 +35,9 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         KegiatanUjianCbt $kegiatanUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
         FinalisasiHasilUjianTerpusatService $finalisasiHasil,
+        SelesaikanPengerjaanKedaluwarsaCbtService $penyelesaianKedaluwarsa,
     ) {
-        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, $finalisasiHasil, 'pelaksanaan');
+        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, $finalisasiHasil, $penyelesaianKedaluwarsa, 'pelaksanaan');
     }
 
     public function hasil(
@@ -43,8 +45,9 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         KegiatanUjianCbt $kegiatanUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
         FinalisasiHasilUjianTerpusatService $finalisasiHasil,
+        SelesaikanPengerjaanKedaluwarsaCbtService $penyelesaianKedaluwarsa,
     ) {
-        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, $finalisasiHasil, 'hasil');
+        return $this->tampilkan($request, $kegiatanUjianCbt, $sinkronisasi, $finalisasiHasil, $penyelesaianKedaluwarsa, 'hasil');
     }
 
     private function tampilkan(
@@ -52,6 +55,7 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         KegiatanUjianCbt $kegiatanUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
         FinalisasiHasilUjianTerpusatService $finalisasiHasil,
+        SelesaikanPengerjaanKedaluwarsaCbtService $penyelesaianKedaluwarsa,
         string $mode,
     ) {
         $aksesPenuh = $kegiatanUjianCbt->dapatDiaksesOleh($request->user());
@@ -64,7 +68,10 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         $sinkronisasi->sinkronkanKegiatan($kegiatanUjianCbt, $request->user());
         $jadwalCakupan->pluck('ujianCbt')
             ->filter()
-            ->each(fn ($ujian) => $finalisasiHasil->sinkronkanAlfaOtomatis($request->user(), $ujian));
+            ->each(function ($ujian) use ($request, $finalisasiHasil, $penyelesaianKedaluwarsa) {
+                $penyelesaianKedaluwarsa->selesaikanUjian($ujian);
+                $finalisasiHasil->sinkronkanAlfaOtomatis($request->user(), $ujian);
+            });
 
         $kegiatanUjianCbt->load([
             'jenisUjianCbt',

@@ -22,6 +22,7 @@ use App\Models\RuangUjianCbt;
 use App\Models\SesiKegiatanUjianCbt;
 use App\Models\Siswa;
 use App\Models\SoalCbt;
+use App\Models\SoalUjianCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use App\Services\Cbt\BagiPesertaUjianTerpusat;
@@ -1215,6 +1216,7 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
                 ->assertRedirect(route('cbt.ujian.kerjakan'));
 
             $relasiSoal = $paket->soalUjianCbt()->firstOrFail();
+            Carbon::setTestNow('2026-09-22 09:15:00');
             $this->post(route('cbt.ujian.simpan'), [
                 'jawaban' => [$relasiSoal->id => ['B']],
                 'aksi' => 'selesai',
@@ -1431,9 +1433,17 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             $this->actingAs($data['admin'])
                 ->get(route('ujian-cbt.hasil.index', $paket))
                 ->assertOk()
-                ->assertSeeText('1 pengerjaan sudah melewati batas waktu.')
+                ->assertSeeText('100,00')
                 ->assertSeeText('1 peserta masih menunggu penyelesaian ujian susulan.')
                 ->assertSeeText('Kelola ujian susulan');
+
+            $this->assertSame('selesai', $peserta[0]->fresh()->status);
+            $this->assertSame('waktu_habis', $peserta[0]->fresh()->cara_selesai);
+            $this->assertNotNull($peserta[0]->fresh()->selesai_otomatis_pada);
+            $this->assertEquals(1.0, (float) JawabanPesertaUjianCbt::query()
+                ->where('peserta_ujian_cbt_id', $peserta[0]->id)
+                ->where('soal_ujian_cbt_id', $relasiSoal->id)
+                ->value('skor'));
 
             $this->assertSame('alfa', $peserta[1]->fresh()->status_kehadiran_ujian);
             $this->assertSame('menunggu_jadwal', $peserta[1]->fresh()->status_susulan);
@@ -1442,7 +1452,7 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             $ringkasanBelumSiap = app(FinalisasiHasilUjianTerpusatService::class)
                 ->ringkasan($data['admin'], $paket->fresh());
             $this->assertTrue($ringkasanBelumSiap['siap_difinalisasi']);
-            $this->assertSame(1, $ringkasanBelumSiap['kesiapan']['peserta_dapat_diselesaikan_otomatis']);
+            $this->assertSame(0, $ringkasanBelumSiap['kesiapan']['peserta_dapat_diselesaikan_otomatis']);
             $this->assertSame(1, $ringkasanBelumSiap['kesiapan']['peserta_menunggu_susulan']);
             $this->assertSame(1, $ringkasanBelumSiap['kesiapan']['peserta_susulan_tertunda']);
             $this->assertSame(0, $ringkasanBelumSiap['kesiapan']['peserta_belum_mulai']);
@@ -1509,6 +1519,7 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
                 ->assertRedirect(route('cbt.ujian.show'));
             $this->post(route('cbt.ujian.mulai'))
                 ->assertRedirect(route('cbt.ujian.kerjakan'));
+            Carbon::setTestNow('2026-09-15 11:15:00');
             $this->post(route('cbt.ujian.simpan'), [
                 'jawaban' => [$relasiSoal->id => ['B']],
                 'aksi' => 'selesai',
@@ -1520,6 +1531,123 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
                 ->ringkasan($data['admin'], $paket->fresh());
             $this->assertFalse($ringkasanLengkap['final_sebagian']);
             $this->assertSame('Final', $ringkasanLengkap['label_status']);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_waktu_habis_menilai_jawaban_sebagian_dan_panitia_dapat_memberi_waktu_tambahan(): void
+    {
+        Carbon::setTestNow('2026-09-15 10:00:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $jadwal = $this->terbitkanPaketUntukSusulan($data, 'SOAL-WAKTU-TAMBAHAN-1');
+            $paket = $jadwal->ujianCbt;
+            $peserta = $paket->pesertaUjianCbt()->orderBy('id')->firstOrFail();
+            $soalPertama = $paket->soalUjianCbt()->firstOrFail();
+            $soalKedua = SoalCbt::create([
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'mata_pelajaran_id' => $data['mapel']->id,
+                'tingkat' => 7,
+                'kode' => 'SOAL-WAKTU-TAMBAHAN-2',
+                'jenis_soal' => 'pilihan_ganda',
+                'tingkat_kesulitan' => 'mudah',
+                'kategori' => 'lots',
+                'pertanyaan' => 'Hasil dari 3 + 3 adalah ....',
+                'opsi' => ['pilihan' => ['A' => '5', 'B' => '6']],
+                'kunci_jawaban' => ['jawaban' => 'B'],
+                'skor_maksimal' => 1,
+                'status' => 'siap',
+                'aktif' => true,
+            ]);
+            SoalUjianCbt::create([
+                'ujian_cbt_id' => $paket->id,
+                'soal_cbt_id' => $soalKedua->id,
+                'nomor_urut' => 2,
+                'bobot' => 1,
+            ]);
+            $paket->update(['jumlah_soal' => 2]);
+
+            $peserta->update([
+                'status' => 'sedang_mengerjakan',
+                'status_kehadiran_ujian' => 'alfa',
+                'status_susulan' => 'menunggu_jadwal',
+                'waktu_mulai' => '2026-09-15 08:00:00',
+                'menit_tersisa' => 0,
+            ]);
+            $jawaban = JawabanPesertaUjianCbt::create([
+                'peserta_ujian_cbt_id' => $peserta->id,
+                'soal_ujian_cbt_id' => $soalPertama->id,
+                'soal_cbt_id' => $soalPertama->soal_cbt_id,
+                'jawaban' => ['B'],
+                'waktu_dijawab' => '2026-09-15 08:15:00',
+            ]);
+
+            $this->actingAs($data['admin'])
+                ->get(route('ujian-cbt.monitoring.index', $paket))
+                ->assertOk()
+                ->assertSeeText('Selesai otomatis')
+                ->assertSeeText('Berikan waktu tambahan');
+
+            $peserta->refresh();
+            $this->assertSame('selesai', $peserta->status);
+            $this->assertSame('hadir', $peserta->status_kehadiran_ujian);
+            $this->assertNull($peserta->status_susulan);
+            $this->assertSame('waktu_habis', $peserta->cara_selesai);
+            $this->assertNotNull($peserta->selesai_otomatis_pada);
+            $this->assertEquals(1.0, (float) $jawaban->fresh()->skor);
+            $this->assertEquals(0.0, (float) JawabanPesertaUjianCbt::query()
+                ->where('peserta_ujian_cbt_id', $peserta->id)
+                ->where('soal_ujian_cbt_id', '!=', $soalPertama->id)
+                ->value('skor'));
+
+            $this->get(route('ujian-cbt.hasil.index', $paket))
+                ->assertOk()
+                ->assertSeeText('50,00');
+
+            $this->actingAs($data['akun_guru'])
+                ->patch(route('ujian-cbt.waktu-tambahan.update', [$paket, $peserta]), [
+                    'menit_tambahan' => 15,
+                    'alasan' => 'HP siswa berhenti merespons saat waktu ujian berakhir.',
+                ])->assertForbidden();
+
+            $this->actingAs($data['admin']);
+            $this->patch(route('ujian-cbt.waktu-tambahan.update', [$paket, $peserta]), [
+                'menit_tambahan' => 15,
+                'alasan' => 'HP siswa berhenti merespons saat waktu ujian berakhir.',
+            ])->assertRedirect()->assertSessionHasNoErrors();
+
+            $peserta->refresh();
+            $this->assertSame('sedang_mengerjakan', $peserta->status);
+            $this->assertSame('2026-09-15 10:15', $peserta->waktu_tambahan_sampai?->format('Y-m-d H:i'));
+            $this->assertNull($peserta->waktu_selesai);
+            $this->assertNull($jawaban->fresh()->skor);
+            $this->assertSame(['B'], $jawaban->fresh()->jawaban);
+            $this->assertDatabaseHas('riwayat_waktu_tambahan_ujian_cbt', [
+                'peserta_ujian_cbt_id' => $peserta->id,
+                'menit_tambahan' => 15,
+                'diberikan_oleh_pengguna_id' => $data['admin']->id,
+            ]);
+
+            $this->actingAs($data['akun_siswa'])
+                ->get(route('ujian-saya.index'))
+                ->assertOk()
+                ->assertSeeText('Waktu tambahan aktif');
+            $this->post(route('ujian-saya.masuk', $peserta), [])
+                ->assertRedirect(route('cbt.ujian.show'));
+            $this->get(route('cbt.ujian.kerjakan'))
+                ->assertOk()
+                ->assertSeeText('Sisa waktu');
+
+            Carbon::setTestNow('2026-09-15 10:16:01');
+            $this->artisan('cbt:selesaikan-kedaluwarsa')
+                ->expectsOutput('1 pengerjaan CBT kedaluwarsa ditutup dan dikoreksi otomatis.')
+                ->assertSuccessful();
+
+            $this->assertSame('selesai', $peserta->fresh()->status);
+            $this->assertSame('waktu_habis', $peserta->fresh()->cara_selesai);
+            $this->assertEquals(1.0, (float) $jawaban->fresh()->skor);
         } finally {
             Carbon::setTestNow();
         }

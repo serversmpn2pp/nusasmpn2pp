@@ -114,6 +114,47 @@
             font-weight: 800;
         }
 
+        .monitor-extra-time {
+            min-width: 210px;
+        }
+
+        .monitor-extra-time > summary {
+            cursor: pointer;
+            color: var(--primary-dark);
+            font-size: .78rem;
+            font-weight: 900;
+        }
+
+        .monitor-extra-form {
+            display: grid;
+            gap: 8px;
+            margin-top: 9px;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--accent);
+            border-radius: 7px;
+            background: #fffdf5;
+        }
+
+        .monitor-extra-form label {
+            color: var(--text);
+            font-size: .72rem;
+            font-weight: 850;
+        }
+
+        .monitor-extra-form .input {
+            min-height: 38px;
+            padding: 8px 9px;
+            font-size: .78rem;
+        }
+
+        .monitor-extra-note {
+            color: #854d0e;
+            font-size: .72rem;
+            font-weight: 750;
+            line-height: 1.45;
+        }
+
         @media (max-width: 1200px) {
             .monitor-filter-grid,
             .monitor-ready-grid {
@@ -166,20 +207,18 @@
                 : 0;
             $sisaMenit = null;
 
-            if ($peserta->status === 'sedang_mengerjakan' && $peserta->waktu_mulai) {
-                $batasPengerjaan = $peserta->waktu_mulai->copy()->addMinutes($ujianCbt->durasi_menit);
-                $batasSesi = $peserta->sesiUjianCbt?->waktu_selesai ?: $ujianCbt->tanggal_selesai;
-
-                if ($batasSesi && $batasSesi->lt($batasPengerjaan)) {
-                    $batasPengerjaan = $batasSesi;
-                }
-
+            if (in_array($peserta->status, ['sedang_mengerjakan', 'terblokir'], true)
+                && $peserta->waktu_mulai
+                && $peserta->batas_waktu_monitor) {
+                $batasPengerjaan = $peserta->batas_waktu_monitor;
                 $sisaMenit = max(0, (int) ceil($waktuSekarang->diffInSeconds($batasPengerjaan, false) / 60));
             }
 
+            $selesaiOtomatis = $peserta->status === 'selesai' && $peserta->cara_selesai === 'waktu_habis';
+
             return [
                 'status_pelaksanaan' => $statusPelaksanaan,
-                'label_pelaksanaan' => $peserta->labelStatusPelaksanaan(),
+                'label_pelaksanaan' => $selesaiOtomatis ? 'Selesai otomatis' : $peserta->labelStatusPelaksanaan(),
                 'badge_pelaksanaan' => match ($statusPelaksanaan) {
                     'sedang_mengerjakan', 'selesai' => 'badge-active',
                     'hadir_belum_mulai' => 'badge-warning',
@@ -196,6 +235,7 @@
                 'jawaban_tersimpan' => $jawabanTersimpan,
                 'persen_jawaban' => $persenJawaban,
                 'sisa_menit' => $sisaMenit,
+                'selesai_otomatis' => $selesaiOtomatis,
             ];
         };
     @endphp
@@ -233,6 +273,12 @@
     <section class="panel panel-pad" style="margin-bottom: 24px;">
         @if (session('berhasil'))
             <div class="alert" style="margin-bottom: 16px;">{{ session('berhasil') }}</div>
+        @endif
+        @if ($errors->any())
+            <div class="alert alert-danger" style="margin-bottom: 16px;"><strong>Waktu tambahan belum dapat diberikan.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+        @endif
+        @if ($jumlahDitutupOtomatis > 0)
+            <div class="alert" style="margin-bottom: 16px;">{{ $jumlahDitutupOtomatis }} pengerjaan yang waktunya habis telah ditutup dan dikoreksi otomatis.</div>
         @endif
 
         <div style="display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
@@ -374,6 +420,7 @@
                         <th>Pengerjaan</th>
                         <th>Jawaban</th>
                         <th>Waktu</th>
+                        @if ($bolehBeriWaktuTambahan)<th>Tindakan</th>@endif
                     </tr>
                 </thead>
                 <tbody>
@@ -437,13 +484,44 @@
                                     @if (! is_null($monitor['sisa_menit']))
                                         <span class="monitor-time">Sisa sekitar {{ $monitor['sisa_menit'] }} menit</span>
                                     @endif
+                                    @if ($peserta->waktu_tambahan_aktif)
+                                        <span class="badge badge-warning">Tambahan hingga {{ $peserta->waktu_tambahan_sampai?->format('H:i') }}</span>
+                                        <span>{{ $peserta->alasan_waktu_tambahan }}</span>
+                                        <span>Oleh {{ $peserta->waktuTambahanOleh?->nama ?: 'panitia' }}</span>
+                                    @elseif ($monitor['selesai_otomatis'])
+                                        <span>Ditutup sistem saat waktu habis</span>
+                                    @endif
                                     <span>IP: {{ $peserta->ip_terakhir ?: '-' }}</span>
                                 </div>
                             </td>
+                            @if ($bolehBeriWaktuTambahan)
+                                <td>
+                                    @if ($peserta->dapat_diberi_waktu_tambahan)
+                                        <details class="monitor-extra-time">
+                                            <summary>Berikan waktu tambahan</summary>
+                                            <form class="monitor-extra-form" method="POST" action="{{ route('ujian-cbt.waktu-tambahan.update', [$ujianCbt, $peserta]) }}">
+                                                @csrf @method('PATCH')
+                                                <label>Lama waktu
+                                                    <select class="input" name="menit_tambahan" required>
+                                                        @foreach ([5, 10, 15, 30, 45, 60] as $menit)<option value="{{ $menit }}" @selected((int) old('menit_tambahan', 15) === $menit)>{{ $menit }} menit</option>@endforeach
+                                                    </select>
+                                                </label>
+                                                <label>Alasan
+                                                    <input class="input" name="alasan" maxlength="1000" minlength="5" required placeholder="Contoh: HP berhenti merespons">
+                                                </label>
+                                                <span class="monitor-extra-note">Jawaban lama dipertahankan. Siswa perlu memuat ulang halaman ujian.</span>
+                                                <button type="submit" class="button button-primary">Aktifkan waktu</button>
+                                            </form>
+                                        </details>
+                                    @else
+                                        <span class="person-meta">Tidak ada tindakan</span>
+                                    @endif
+                                </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="empty-state">Belum ada peserta yang sesuai filter monitoring.</td>
+                            <td colspan="{{ $bolehBeriWaktuTambahan ? 8 : 7 }}" class="empty-state">Belum ada peserta yang sesuai filter monitoring.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -475,7 +553,27 @@
                         <div><dt>Selesai</dt><dd>{{ $peserta->waktu_selesai?->format('H:i:s') ?: '-' }}</dd></div>
                         <div><dt>IP</dt><dd>{{ $peserta->ip_terakhir ?: '-' }}</dd></div>
                         <div><dt>Progres</dt><dd>{{ $monitor['persen_jawaban'] }}%</dd></div>
+                        @if ($peserta->waktu_tambahan_aktif)
+                            <div><dt>Waktu tambahan</dt><dd>Sampai {{ $peserta->waktu_tambahan_sampai?->format('H:i') }}</dd></div>
+                            <div><dt>Alasan</dt><dd>{{ $peserta->alasan_waktu_tambahan }}</dd></div>
+                        @endif
                     </dl>
+                    @if ($bolehBeriWaktuTambahan && $peserta->dapat_diberi_waktu_tambahan)
+                        <details class="monitor-extra-time" style="margin-top: 12px;">
+                            <summary>Berikan waktu tambahan</summary>
+                            <form class="monitor-extra-form" method="POST" action="{{ route('ujian-cbt.waktu-tambahan.update', [$ujianCbt, $peserta]) }}">
+                                @csrf @method('PATCH')
+                                <label>Lama waktu
+                                    <select class="input" name="menit_tambahan" required>
+                                        @foreach ([5, 10, 15, 30, 45, 60] as $menit)<option value="{{ $menit }}" @selected($menit === 15)>{{ $menit }} menit</option>@endforeach
+                                    </select>
+                                </label>
+                                <label>Alasan<input class="input" name="alasan" maxlength="1000" minlength="5" required placeholder="Contoh: HP berhenti merespons"></label>
+                                <span class="monitor-extra-note">Jawaban lama dipertahankan. Siswa perlu memuat ulang halaman ujian.</span>
+                                <button type="submit" class="button button-primary button-full">Aktifkan waktu</button>
+                            </form>
+                        </details>
+                    @endif
                 </article>
             @empty
                 <div class="empty-state">Belum ada peserta yang sesuai filter monitoring.</div>
@@ -495,7 +593,10 @@
                 urlPembaruan.searchParams.set('auto_refresh', '0');
 
                 const perbaruiMonitoring = async () => {
-                    if (sedangMemperbarui || document.hidden) {
+                    const sedangMengisiTindakan = document.activeElement?.closest?.('.monitor-extra-form')
+                        || document.querySelector('.monitor-extra-time[open]');
+
+                    if (sedangMemperbarui || document.hidden || sedangMengisiTindakan) {
                         return;
                     }
 

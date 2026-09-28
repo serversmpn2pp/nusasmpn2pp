@@ -1107,6 +1107,22 @@ class UjianCbtTest extends TestCase
                 ->assertSee('data-answer-file-input', false)
                 ->assertSee('Sisa waktu');
 
+            $this->postJson(route('cbt.ujian.jawaban'), [
+                'soal_ujian_cbt_id' => $relasiMenjodohkan->id,
+                'jawaban' => [1 => 'Hertz'],
+                'ragu' => false,
+            ])->assertOk()
+                ->assertJsonPath('jawaban_lengkap', false)
+                ->assertJsonPath('jawaban_sebagian', true);
+
+            $this->postJson(route('cbt.ujian.jawaban'), [
+                'soal_ujian_cbt_id' => $relasiMenjodohkan->id,
+                'jawaban' => [1 => 'Hertz', 2 => 'Sekon'],
+                'ragu' => false,
+            ])->assertOk()
+                ->assertJsonPath('jawaban_lengkap', true)
+                ->assertJsonPath('jawaban_sebagian', false);
+
             $this->post(route('cbt.ujian.simpan'), [
                 'jawaban' => [
                     $relasiPertama->id => 'B',
@@ -1164,6 +1180,20 @@ class UjianCbtTest extends TestCase
             $this->assertSame(['C'], $jawabanKedua->jawaban);
             $this->assertSame(['1' => 'Hertz', '2' => 'Sekon'], $jawabanMenjodohkan->jawaban);
             $this->assertTrue($jawabanKedua->ragu);
+
+            $this->post(route('cbt.ujian.simpan'), [
+                'jawaban' => [
+                    $relasiPertama->id => 'B',
+                    $relasiKedua->id => 'B',
+                    $relasiMenjodohkan->id => [1 => 'Hertz', 2 => 'Sekon'],
+                ],
+                'aksi' => 'selesai',
+            ])->assertRedirect(route('cbt.ujian.kerjakan'))
+                ->assertSessionHasErrors('ujian');
+
+            $this->assertSame('sedang_mengerjakan', $peserta->fresh()->status);
+
+            Carbon::setTestNow('2026-08-15 09:45:00');
 
             $this->post(route('cbt.ujian.simpan'), [
                 'jawaban' => [
@@ -1541,6 +1571,8 @@ class UjianCbtTest extends TestCase
             ...collect($this->dataUjian($jenisUjian, $tahunPelajaran, $mataPelajaran, $kelas, $komponenNilai))
                 ->except('kelas_peserta')
                 ->all(),
+            'tanggal_mulai' => now()->subHour(),
+            'tanggal_selesai' => now()->addHour(),
             'jumlah_soal' => 1,
             'status' => 'berlangsung',
             'dibuat_oleh_pengguna_id' => $administrator->id,

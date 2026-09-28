@@ -17,6 +17,8 @@ class FinalisasiHasilUjianTerpusatService
     public function __construct(
         private readonly KoreksiOtomatisCbtService $koreksiOtomatis,
         private readonly NotifikasiPenggunaService $notifikasi,
+        private readonly BatasWaktuPesertaUjianCbtService $batasWaktu,
+        private readonly SelesaikanPengerjaanKedaluwarsaCbtService $penyelesaianKedaluwarsa,
     ) {}
 
     public function ringkasan(Pengguna $pengguna, UjianCbt $ujian): array
@@ -83,7 +85,7 @@ class FinalisasiHasilUjianTerpusatService
                 ->get();
 
             foreach ($peserta as $item) {
-                $batasAkses = $this->batasAksesPeserta($ujian, $item);
+                $batasAkses = $this->batasWaktu->batasAkses($item);
 
                 if (! $batasAkses || now()->lt($batasAkses)) {
                     continue;
@@ -233,7 +235,7 @@ class FinalisasiHasilUjianTerpusatService
             ->with('sesiUjianCbt:id,waktu_selesai')
             ->get([
                 'id', 'sesi_ujian_cbt_id', 'status', 'status_kehadiran_ujian',
-                'status_susulan', 'susulan_selesai', 'waktu_mulai',
+                'status_susulan', 'susulan_selesai', 'waktu_mulai', 'waktu_tambahan_sampai',
             ]);
         $tidakHadir = $peserta->whereIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa']);
         $menungguSusulan = $peserta->where('status_susulan', 'menunggu_jadwal');
@@ -249,7 +251,7 @@ class FinalisasiHasilUjianTerpusatService
         $wajibSelesai = $peserta->whereNotIn('id', $dikecualikan);
         $belumSelesai = $wajibSelesai->where('status', '!=', 'selesai');
         $dapatDitutupOtomatis = $belumSelesai
-            ->filter(fn (PesertaUjianCbt $item) => $this->dapatDitutupOtomatis($ujian, $item));
+            ->filter(fn (PesertaUjianCbt $item) => $this->dapatDitutupOtomatis($item));
         $penghambatFinalisasi = $belumSelesai->whereNotIn('id', $dapatDitutupOtomatis->pluck('id'));
         $belumMulai = $penghambatFinalisasi
             ->whereNull('waktu_mulai');
@@ -296,36 +298,7 @@ class FinalisasiHasilUjianTerpusatService
 
     private function selesaikanPesertaKadaluarsa(UjianCbt $ujian): int
     {
-        return DB::transaction(function () use ($ujian) {
-            $jumlah = 0;
-            $peserta = $ujian->pesertaUjianCbt()
-                ->with('sesiUjianCbt:id,waktu_selesai')
-                ->where('status', '!=', 'selesai')
-                ->lockForUpdate()
-                ->get();
-
-            foreach ($peserta as $item) {
-                if ($this->pesertaDikecualikan($item) || ! $this->dapatDitutupOtomatis($ujian, $item)) {
-                    continue;
-                }
-
-                $batasAkses = $this->batasAksesPeserta($ujian, $item);
-                $perubahan = [
-                    'status' => 'selesai',
-                    'waktu_selesai' => $batasAkses ?? now(),
-                    'menit_tersisa' => 0,
-                ];
-
-                if ($item->status_susulan === 'dijadwalkan') {
-                    $perubahan['status_susulan'] = 'selesai';
-                }
-
-                $item->update($perubahan);
-                $jumlah++;
-            }
-
-            return $jumlah;
-        });
+        return $this->penyelesaianKedaluwarsa->selesaikanUjian($ujian, 0);
     }
 
     private function pesertaDikecualikan(PesertaUjianCbt $peserta): bool
@@ -338,27 +311,22 @@ class FinalisasiHasilUjianTerpusatService
             return false;
         }
 
+        if ($peserta->waktu_mulai) {
+            return false;
+        }
+
         return in_array($peserta->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true);
     }
 
-    private function dapatDitutupOtomatis(UjianCbt $ujian, PesertaUjianCbt $peserta): bool
+    private function dapatDitutupOtomatis(PesertaUjianCbt $peserta): bool
     {
         if ($peserta->status === 'selesai' || ! $peserta->waktu_mulai) {
             return false;
         }
 
-        $batasAkses = $this->batasAksesPeserta($ujian, $peserta);
+        $batasAkses = $this->batasWaktu->batasAkses($peserta);
 
         return $batasAkses && now()->greaterThanOrEqualTo($batasAkses);
-    }
-
-    private function batasAksesPeserta(UjianCbt $ujian, PesertaUjianCbt $peserta)
-    {
-        if ($peserta->susulanDijadwalkan()) {
-            return $peserta->susulan_selesai;
-        }
-
-        return $peserta->sesiUjianCbt?->waktu_selesai ?: $ujian->tanggal_selesai;
     }
 
     private function pesanBelumSiap(array $kesiapan): string

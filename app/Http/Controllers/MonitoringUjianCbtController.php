@@ -5,13 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\PesertaUjianCbt;
 use App\Models\SesiUjianCbt;
 use App\Models\UjianCbt;
+use App\Services\Cbt\BatasWaktuPesertaUjianCbtService;
+use App\Services\Cbt\SelesaikanPengerjaanKedaluwarsaCbtService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class MonitoringUjianCbtController extends Controller
 {
-    public function index(Request $request, UjianCbt $ujianCbt)
-    {
+    public function index(
+        Request $request,
+        UjianCbt $ujianCbt,
+        SelesaikanPengerjaanKedaluwarsaCbtService $penyelesaianKedaluwarsa,
+        BatasWaktuPesertaUjianCbtService $batasWaktu,
+    ) {
         $data = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'sesi_ujian_cbt_id' => ['nullable', 'integer', 'exists:sesi_ujian_cbt,id'],
@@ -35,6 +41,7 @@ class MonitoringUjianCbtController extends Controller
             'auto_refresh' => ['nullable', 'boolean'],
         ]);
 
+        $jumlahDitutupOtomatis = $penyelesaianKedaluwarsa->selesaikanUjian($ujianCbt);
         $kelasId = $data['kelas_id'] ?? null;
         $sesiUjianCbtId = $data['sesi_ujian_cbt_id'] ?? null;
         $ruangUjianCbtId = $data['ruang_ujian_cbt_id'] ?? null;
@@ -71,12 +78,16 @@ class MonitoringUjianCbtController extends Controller
 
         $ringkasan = $this->ringkasanMonitoring($ujianCbt);
 
+        $bolehBeriWaktuTambahan = $ujianCbt->ujianTerpusat()
+            && ! $ujianCbt->hasil_difinalisasi_pada
+            && ($request->user()?->memilikiIzin(['cbt.panitia', 'cbt.kelola']) ?? false);
         $pesertaUjianCbt = $ujianCbt->pesertaUjianCbt()
             ->with([
                 'sesiUjianCbt',
                 'kelasUjianCbt.kelas',
                 'ruangUjianCbt',
                 'anggotaKelas.siswa',
+                'waktuTambahanOleh:id,nama',
             ])
             ->withCount([
                 'jawabanPesertaUjianCbt as jumlah_jawaban_tersimpan' => fn ($query) => $query->whereNotNull('jawaban'),
@@ -100,7 +111,17 @@ class MonitoringUjianCbtController extends Controller
                 $item->anggotaKelas?->nomor_absen ?? 999,
                 $item->anggotaKelas?->siswa?->nama_lengkap ?? '',
             ))
-            ->values();
+            ->values()
+            ->each(function (PesertaUjianCbt $peserta) use ($batasWaktu, $bolehBeriWaktuTambahan) {
+                $batas = $batasWaktu->batasAkses($peserta);
+                $peserta->setAttribute('batas_waktu_monitor', $batas);
+                $peserta->setAttribute('waktu_tambahan_aktif', $batasWaktu->waktuTambahanAktif($peserta));
+                $peserta->setAttribute('dapat_diberi_waktu_tambahan', $bolehBeriWaktuTambahan
+                    && $peserta->waktu_mulai
+                    && ! $peserta->nilai_siswa_id
+                    && $peserta->status === 'selesai'
+                    && $peserta->cara_selesai === 'waktu_habis');
+            });
 
         return view('ujian-cbt.monitoring.index', [
             'ujianCbt' => $ujianCbt,
@@ -117,6 +138,8 @@ class MonitoringUjianCbtController extends Controller
             'jumlahSoalPaket' => $jumlahSoalPaket,
             'jumlahSoalTampil' => $jumlahSoalTampil,
             'waktuSekarang' => now(),
+            'jumlahDitutupOtomatis' => $jumlahDitutupOtomatis,
+            'bolehBeriWaktuTambahan' => $bolehBeriWaktuTambahan,
         ]);
     }
 

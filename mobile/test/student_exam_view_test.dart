@@ -52,7 +52,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final remote = _FakeStudentExamRemoteDataSource();
+    final remote = _FakeStudentExamRemoteDataSource(
+      remainingSeconds: 910,
+      remainingSecondsAfterThirdSave: 900,
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -113,6 +116,21 @@ void main() {
     await tester.pump(const Duration(milliseconds: 750));
     await tester.pump();
     expect(remote.savedQuestions, contains(102));
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('student-exam-finish')))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.ensureVisible(find.text('Tandai ragu-ragu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tandai ragu-ragu'));
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+    await tester.tap(find.text('Tandai ragu-ragu'));
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
     expect(
       tester
           .widget<FilledButton>(find.byKey(const Key('student-exam-finish')))
@@ -373,12 +391,16 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
     this.matching = false,
     this.upload = false,
     this.allTypes = false,
+    this.remainingSeconds = 1800,
+    this.remainingSecondsAfterThirdSave,
   });
 
   final bool locked;
   final bool matching;
   final bool upload;
   final bool allTypes;
+  final int remainingSeconds;
+  final int? remainingSecondsAfterThirdSave;
   String? startToken;
   int finishCalls = 0;
   Object? lastAnswer;
@@ -411,7 +433,11 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
     return StudentExamSession.fromJson(
       allTypes
           ? _allTypesRunningJson()
-          : _runningJson(withMatching: matching, withUpload: upload),
+          : _runningJson(
+              withMatching: matching,
+              withUpload: upload,
+              remainingSeconds: remainingSeconds,
+            ),
     );
   }
 
@@ -422,7 +448,11 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
   }) async => StudentExamSession.fromJson(
     allTypes
         ? _allTypesRunningJson()
-        : _runningJson(withMatching: matching, withUpload: upload),
+        : _runningJson(
+            withMatching: matching,
+            withUpload: upload,
+            remainingSeconds: remainingSeconds,
+          ),
   );
 
   @override
@@ -437,7 +467,9 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
     lastAnswer = answer;
     return StudentExamSaveResult.fromJson({
       'mode': 'tersimpan',
-      'sisa_detik': 1790,
+      'sisa_detik': savedQuestions.length >= 3
+          ? remainingSecondsAfterThirdSave ?? remainingSeconds
+          : remainingSeconds,
     });
   }
 
@@ -479,11 +511,12 @@ Map<String, dynamic> _confirmationJson() => {
 Map<String, dynamic> _runningJson({
   bool withMatching = false,
   bool withUpload = false,
+  int remainingSeconds = 1800,
 }) => {
   'mode': 'pengerjaan',
   'waktu_server': '2026-09-05T08:00:00+07:00',
   'berakhir_pada': '2026-09-05T08:30:00+07:00',
-  'sisa_detik': 1800,
+  'sisa_detik': remainingSeconds,
   'peserta': _participantJson(status: 'sedang_mengerjakan'),
   'ujian': _examJson(),
   'kemajuan': {

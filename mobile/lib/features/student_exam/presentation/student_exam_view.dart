@@ -207,12 +207,14 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     final current = session
         .questions[_currentQuestion.clamp(0, session.questions.length - 1)];
     final progress = _progressFor(session.questions);
-    final canFinish = progress.unanswered == 0 || _remainingSeconds <= 15 * 60;
-    final finishAvailability = progress.unanswered == 0
-        ? 'Semua soal sudah lengkap.'
-        : _remainingSeconds <= 15 * 60
-        ? '15 menit terakhir. Ujian sudah dapat dikumpulkan.'
-        : 'Lengkapi semua soal atau tunggu hingga 15 menit terakhir.';
+    final canFinish = _remainingSeconds <= 15 * 60;
+    final finishAvailability = canFinish
+        ? progress.unanswered == 0
+              ? '15 menit terakhir. Semua soal lengkap dan ujian dapat dikumpulkan.'
+              : '15 menit terakhir. Ujian sudah dapat dikumpulkan.'
+        : progress.unanswered == 0
+        ? 'Semua soal sudah lengkap. Periksa kembali; tombol aktif pada 15 menit terakhir.'
+        : 'Tombol kumpulkan aktif pada 15 menit terakhir.';
     return Column(
       children: [
         if (session.security.enabled)
@@ -699,10 +701,9 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   Future<void> _confirmFinish(StudentExamSession session) async {
     if (_finishing) return;
     final progress = _progressFor(session.questions);
-    final canFinish = progress.unanswered == 0 || _remainingSeconds <= 15 * 60;
-    if (!canFinish) {
+    if (_remainingSeconds > 15 * 60) {
       _showMessage(
-        'Lengkapi seluruh soal atau tunggu hingga 15 menit terakhir sebelum mengumpulkan ujian.',
+        'Ujian baru dapat dikumpulkan pada 15 menit terakhir. Gunakan waktu yang tersedia untuk memeriksa kembali jawaban.',
         error: true,
       );
       return;

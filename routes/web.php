@@ -142,6 +142,7 @@ use App\Http\Controllers\UjianSayaController;
 use App\Http\Controllers\UjianTerpusatController;
 use App\Http\Controllers\UnitBarangController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
+use App\Http\Controllers\WaktuTambahanPesertaUjianCbtController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -481,6 +482,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('ujian-cbt/{ujianCbt}/hasil/analisis-soal', [AnalisisSoalCbtController::class, 'index'])->name('ujian-cbt.hasil.analisis-soal');
             Route::get('ujian-cbt/{ujianCbt}/hasil/analisis-soal/{soalUjianCbt}', [AnalisisSoalCbtController::class, 'show'])->name('ujian-cbt.hasil.rincian-soal');
         });
+        Route::patch('ujian-cbt/{ujianCbt}/peserta/{pesertaUjianCbt}/waktu-tambahan', [WaktuTambahanPesertaUjianCbtController::class, 'update'])
+            ->middleware(['izin:cbt.panitia,cbt.kelola', 'akses_ujian_cbt'])
+            ->name('ujian-cbt.waktu-tambahan.update');
         Route::middleware(['izin:cbt.asesmen_kelola,cbt.soal_kelola,cbt.kelola', 'akses_ujian_cbt'])->group(function () {
             Route::post('ujian-cbt/{ujianCbt}/koreksi-otomatis', [KoreksiOtomatisUjianCbtController::class, 'store'])->name('ujian-cbt.koreksi-otomatis.store');
             Route::get('ujian-cbt/{ujianCbt}/koreksi-manual', [KoreksiManualUjianCbtController::class, 'index'])->name('ujian-cbt.koreksi-manual.index');

@@ -136,6 +136,17 @@ class UjianSayaApiTest extends TestCase
             ->postJson(route('api.v1.ujian-saya.selesai', $data['peserta']), [
                 'perangkat' => 'NUSA Android A',
             ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ujian');
+
+        $this->assertSame('sedang_mengerjakan', $data['peserta']->fresh()->status);
+
+        Carbon::setTestNow('2026-09-05 08:15:00');
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.ujian-saya.selesai', $data['peserta']), [
+                'perangkat' => 'NUSA Android A',
+            ])
             ->assertOk()
             ->assertJsonPath('data.mode', 'selesai')
             ->assertJsonPath('data.kemajuan.terjawab', 2)

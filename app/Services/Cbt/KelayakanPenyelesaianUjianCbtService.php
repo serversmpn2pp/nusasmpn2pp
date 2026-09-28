@@ -41,16 +41,16 @@ class KelayakanPenyelesaianUjianCbtService
             'batas_pengumpulan_detik' => self::BATAS_PENGUMPULAN_DETIK,
             'semua_lengkap' => $semuaLengkap,
             'dalam_batas_akhir' => $dalamBatasAkhir,
-            'boleh_selesai' => $semuaLengkap || $dalamBatasAkhir,
+            'boleh_selesai' => $dalamBatasAkhir,
         ];
     }
 
     public function pesanPenolakan(): string
     {
-        return 'Ujian belum dapat dikumpulkan. Lengkapi seluruh soal atau tunggu hingga 15 menit terakhir sebelum waktu ujian berakhir.';
+        return 'Ujian baru dapat dikumpulkan pada 15 menit terakhir sebelum waktu ujian berakhir. Gunakan waktu yang tersedia untuk memeriksa kembali jawaban.';
     }
 
-    private function statusJawaban(SoalUjianCbt $relasiSoal, ?JawabanPesertaUjianCbt $jawaban): array
+    public function statusJawaban(SoalUjianCbt $relasiSoal, ?JawabanPesertaUjianCbt $jawaban): array
     {
         $soal = $relasiSoal->soalCbt;
 

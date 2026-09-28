@@ -106,7 +106,7 @@
                 @endif
                 @if ($finalisasiHasil)
                     @if ($finalisasiHasil['dapat_finalisasi'])
-                        <form action="{{ route('ujian-cbt.hasil.finalisasi', $ujianCbt) }}" method="POST" onsubmit="return confirm('Finalisasi hasil peserta yang sudah selesai? Peserta yang menunggu susulan tidak akan diberi nilai 0 dan tetap dapat mengikuti susulan.')">
+                        <form action="{{ route('ujian-cbt.hasil.finalisasi', $ujianCbt) }}" method="POST" onsubmit="return confirm('Finalisasi hanya mengunci hasil dan belum menampilkannya kepada siswa. Lanjutkan finalisasi? Peserta yang menunggu susulan tidak akan diberi nilai 0 dan tetap dapat mengikuti susulan.')">
                             @csrf
                             @method('PATCH')
                             <button type="submit" class="button button-dark">Finalisasi hasil</button>
@@ -166,7 +166,7 @@
             <div style="display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
                 <div>
                     <h2 class="panel-title">Finalisasi & publikasi</h2>
-                    <p class="help-text" style="margin-top: 6px;">Finalisasi mengunci hasil yang sudah tersedia. Peserta susulan tetap dapat mengerjakan dan nilainya akan menyusul tanpa menjadi 0.</p>
+                    <p class="help-text" style="margin-top: 6px;">Finalisasi hanya mengunci hasil dan belum menampilkannya kepada siswa. Setelah finalisasi, tekan <strong>Publikasikan</strong> agar nilai terlihat di Ujian Saya. Peserta susulan tetap dapat mengerjakan dan nilainya akan menyusul tanpa menjadi 0.</p>
                 </div>
                 <span class="badge {{ $finalisasiHasil['status'] === 'dipublikasikan' ? 'badge-active' : ($finalisasiHasil['status'] === 'final' ? 'badge-warning' : 'badge-muted') }}">
                     {{ $finalisasiHasil['label_status'] }}
@@ -185,7 +185,7 @@
             @if ($finalisasiHasil['status'] === 'draf' && $kesiapan['peserta_dapat_diselesaikan_otomatis'] > 0)
                 <p class="help-text" style="margin-top: 14px; color: #166534;">
                     <strong>{{ $kesiapan['peserta_dapat_diselesaikan_otomatis'] }} pengerjaan sudah melewati batas waktu.</strong>
-                    Jawaban yang tersimpan akan dipertahankan, pengerjaan ditutup otomatis, lalu dikoreksi ketika tombol Finalisasi hasil ditekan.
+                    Jawaban yang tersimpan dipertahankan. Saat waktu habis, pengerjaan ditutup dan jawaban objektif dikoreksi otomatis; finalisasi tetap digunakan untuk mengunci seluruh hasil.
                 </p>
             @endif
             @if ($kesiapan['peserta_susulan_tertunda'] > 0)

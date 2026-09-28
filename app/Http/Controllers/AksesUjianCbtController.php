@@ -6,6 +6,7 @@ use App\Models\JawabanPesertaUjianCbt;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
+use App\Services\Cbt\BatasWaktuPesertaUjianCbtService;
 use App\Services\Cbt\JawabanBerkasUjianCbtService;
 use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\KelayakanPenyelesaianUjianCbtService;
@@ -24,6 +25,7 @@ class AksesUjianCbtController extends Controller
         private readonly PengacakPenyajianCbt $pengacakPenyajianCbt,
         private readonly JawabanBerkasUjianCbtService $jawabanBerkas,
         private readonly KelayakanPenyelesaianUjianCbtService $kelayakanPenyelesaian,
+        private readonly BatasWaktuPesertaUjianCbtService $batasWaktu,
     ) {}
 
     public function masukDariAkunSiswa(Request $request, PesertaUjianCbt $pesertaUjianCbt)
@@ -134,6 +136,8 @@ class AksesUjianCbtController extends Controller
                 'status' => 'selesai',
                 'waktu_selesai' => now(),
                 'menit_tersisa' => 0,
+                'selesai_otomatis_pada' => now(),
+                'cara_selesai' => 'waktu_habis',
             ]));
             $peserta->refresh();
             $koreksiOtomatisCbtService->koreksiPeserta($peserta);
@@ -153,9 +157,15 @@ class AksesUjianCbtController extends Controller
                 $relasiSoal,
             ),
         ]);
+        $statusJawaban = $soalUjian->mapWithKeys(fn (SoalUjianCbt $relasiSoal) => [
+            $relasiSoal->id => $this->kelayakanPenyelesaian->statusJawaban(
+                $relasiSoal,
+                $jawabanTersimpan->get($relasiSoal->id),
+            ),
+        ]);
         $kelayakanSelesai = $this->kelayakanPenyelesaian->ringkasan($peserta, $soalUjian, $sisaDetik);
 
-        return view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'sisaDetik', 'kelayakanSelesai'));
+        return view('cbt.kerjakan', compact('peserta', 'soalUjian', 'jawabanTersimpan', 'pilihanJawaban', 'statusJawaban', 'sisaDetik', 'kelayakanSelesai'));
     }
 
     public function aktivitasKeamanan(Request $request, KeamananUjianService $service): JsonResponse
@@ -272,10 +282,14 @@ class AksesUjianCbtController extends Controller
                     return;
                 }
 
+                $sisaDetik = $this->hitungSisaDetik($peserta);
+                $waktuHabis = $sisaDetik <= 0;
                 $peserta->update($this->dataPenyelesaian($peserta, [
                     'status' => 'selesai',
                     'waktu_selesai' => now(),
-                    'menit_tersisa' => max(0, (int) ceil($this->hitungSisaDetik($peserta) / 60)),
+                    'menit_tersisa' => max(0, (int) ceil($sisaDetik / 60)),
+                    'selesai_otomatis_pada' => $waktuHabis ? now() : null,
+                    'cara_selesai' => $waktuHabis ? 'waktu_habis' : 'manual',
                 ]));
             }
         });
@@ -315,6 +329,8 @@ class AksesUjianCbtController extends Controller
                 'status' => 'selesai',
                 'waktu_selesai' => now(),
                 'menit_tersisa' => 0,
+                'selesai_otomatis_pada' => now(),
+                'cara_selesai' => 'waktu_habis',
             ]));
             $peserta->refresh();
             $koreksiOtomatisCbtService->koreksiPeserta($peserta);
@@ -367,9 +383,13 @@ class AksesUjianCbtController extends Controller
 
         });
 
+        $statusJawaban = $this->kelayakanPenyelesaian->statusJawaban($relasiSoal, $jawaban);
+
         return response()->json([
             'message' => 'Jawaban tersimpan.',
             'terjawab' => $jawaban->jawaban !== null,
+            'jawaban_lengkap' => $statusJawaban['lengkap'],
+            'jawaban_sebagian' => $statusJawaban['sebagian'],
             'ragu' => $jawaban->ragu,
             'tersimpan_pada' => now()->format('H:i:s'),
         ]);
@@ -412,6 +432,8 @@ class AksesUjianCbtController extends Controller
         return response()->json([
             'message' => 'Berkas jawaban berhasil diunggah.',
             'terjawab' => true,
+            'jawaban_lengkap' => true,
+            'jawaban_sebagian' => false,
             'ragu' => (bool) $jawaban->ragu,
             'berkas' => $this->jawabanBerkas->metadata($jawaban),
             'tersimpan_pada' => now()->format('H:i:s'),
@@ -534,7 +556,8 @@ class AksesUjianCbtController extends Controller
         }
 
         $susulanAktif = $peserta->susulanDijadwalkan();
-        $statusPaketDiizinkan = $susulanAktif
+        $waktuTambahanAktif = $this->batasWaktu->waktuTambahanAktif($peserta);
+        $statusPaketDiizinkan = $susulanAktif || $waktuTambahanAktif
             ? ['terjadwal', 'berlangsung', 'selesai']
             : ['terjadwal', 'berlangsung'];
 
@@ -544,12 +567,16 @@ class AksesUjianCbtController extends Controller
             ]);
         }
 
-        $mulai = $susulanAktif
+        $mulai = $waktuTambahanAktif
+            ? null
+            : ($susulanAktif
             ? $peserta->susulan_mulai
-            : ($peserta->sesiUjianCbt?->waktu_mulai ?: $ujian->tanggal_mulai);
-        $selesai = $susulanAktif
+            : ($peserta->sesiUjianCbt?->waktu_mulai ?: $ujian->tanggal_mulai));
+        $selesai = $waktuTambahanAktif
+            ? $peserta->waktu_tambahan_sampai
+            : ($susulanAktif
             ? $peserta->susulan_selesai
-            : ($peserta->sesiUjianCbt?->waktu_selesai ?: $ujian->tanggal_selesai);
+            : ($peserta->sesiUjianCbt?->waktu_selesai ?: $ujian->tanggal_selesai));
 
         if ($mulai && now()->lt($mulai)) {
             throw ValidationException::withMessages([
@@ -563,7 +590,7 @@ class AksesUjianCbtController extends Controller
             ]);
         }
 
-        if (! $susulanAktif && $peserta->sesiUjianCbt && $peserta->sesiUjianCbt->status === 'nonaktif') {
+        if (! $susulanAktif && ! $waktuTambahanAktif && $peserta->sesiUjianCbt && $peserta->sesiUjianCbt->status === 'nonaktif') {
             throw ValidationException::withMessages([
                 'token' => 'Sesi peserta tidak aktif.',
             ]);
@@ -607,26 +634,24 @@ class AksesUjianCbtController extends Controller
 
     private function hitungSisaDetik(PesertaUjianCbt $peserta): int
     {
-        if (! $peserta->waktu_mulai) {
-            return $peserta->ujianCbt->durasi_menit * 60;
-        }
-
-        $selesaiPengerjaan = $peserta->waktu_mulai->copy()->addMinutes($peserta->ujianCbt->durasi_menit);
-        $batasPaket = $peserta->susulanDijadwalkan()
-            ? $peserta->susulan_selesai
-            : ($peserta->sesiUjianCbt?->waktu_selesai ?: $peserta->ujianCbt->tanggal_selesai);
-
-        if ($batasPaket && $batasPaket->lt($selesaiPengerjaan)) {
-            $selesaiPengerjaan = $batasPaket;
-        }
-
-        return (int) max(0, now()->diffInSeconds($selesaiPengerjaan, false));
+        return $this->batasWaktu->sisaDetik($peserta);
     }
 
     private function dataPenyelesaian(PesertaUjianCbt $peserta, array $data): array
     {
         if ($peserta->susulanDijadwalkan()) {
             $data['status_susulan'] = 'selesai';
+        } elseif (($data['cara_selesai'] ?? null) === 'waktu_habis'
+            && $peserta->status_susulan === 'menunggu_jadwal') {
+            $data['status_susulan'] = null;
+        }
+
+        if (($data['cara_selesai'] ?? null) === 'waktu_habis'
+            && in_array($peserta->status_kehadiran_ujian, [null, 'belum_absen', 'alfa'], true)) {
+            $data['status_kehadiran_ujian'] = 'hadir';
+            $catatan = trim((string) $peserta->catatan_kehadiran_ujian);
+            $tambahan = 'Kehadiran diselaraskan otomatis karena peserta tercatat telah memulai ujian.';
+            $data['catatan_kehadiran_ujian'] = $catatan === '' ? $tambahan : $catatan.' '.$tambahan;
         }
 
         return $data;
