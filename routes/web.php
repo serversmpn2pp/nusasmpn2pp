@@ -18,6 +18,7 @@ use App\Http\Controllers\BuktiPelaksanaanSanksiController;
 use App\Http\Controllers\CadanganDatabaseController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenPoinSiswaController;
+use App\Http\Controllers\ExportHasilUjianCbtController;
 use App\Http\Controllers\FinalisasiHasilUjianTerpusatController;
 use App\Http\Controllers\FotoIdentitasController;
 use App\Http\Controllers\GuruMataPelajaranController;
@@ -483,6 +484,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('ujian-cbt/{ujianCbt}/hasil/analisis-soal', [AnalisisSoalCbtController::class, 'index'])->name('ujian-cbt.hasil.analisis-soal');
             Route::get('ujian-cbt/{ujianCbt}/hasil/analisis-soal/{soalUjianCbt}', [AnalisisSoalCbtController::class, 'show'])->name('ujian-cbt.hasil.rincian-soal');
         });
+        Route::get('ujian-cbt/{ujianCbt}/hasil/export-excel', ExportHasilUjianCbtController::class)
+            ->middleware(['izin:cbt.asesmen_kelola,cbt.soal_kelola,cbt.kelola', 'akses_ujian_cbt'])
+            ->name('ujian-cbt.hasil.export-excel');
         Route::patch('ujian-cbt/{ujianCbt}/peserta/{pesertaUjianCbt}/waktu-tambahan', [WaktuTambahanPesertaUjianCbtController::class, 'update'])
             ->middleware(['izin:cbt.panitia,cbt.kelola', 'akses_ujian_cbt'])
             ->name('ujian-cbt.waktu-tambahan.update');

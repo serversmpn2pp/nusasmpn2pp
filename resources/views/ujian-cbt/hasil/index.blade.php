@@ -59,6 +59,22 @@
             vertical-align: top;
         }
 
+        .hasil-export {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .hasil-export-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
         @media (max-width: 1100px) {
             .hasil-filter-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -67,6 +83,16 @@
 
         @media (max-width: 680px) {
             .hasil-filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hasil-export {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .hasil-export-actions {
+                display: grid;
                 grid-template-columns: 1fr;
             }
         }
@@ -318,6 +344,25 @@
             </div>
         </div>
     </form>
+
+    @if ($kelasDapatDiekspor->isNotEmpty())
+        <section class="panel panel-pad hasil-export">
+            <div>
+                <h2 class="panel-title">Export hasil per kelas</h2>
+                <p class="help-text" style="margin-top: 6px;">
+                    File Excel memuat nilai, status kehadiran, rincian jawaban, waktu pengerjaan, dan ringkasan kelas.
+                </p>
+            </div>
+            <div class="hasil-export-actions" aria-label="Pilihan kelas untuk export Excel">
+                @foreach ($kelasDapatDiekspor as $kelasUjian)
+                    <a
+                        href="{{ route('ujian-cbt.hasil.export-excel', ['ujianCbt' => $ujianCbt, 'kelas_id' => $kelasUjian->kelas_id]) }}"
+                        class="button button-dark"
+                    >Excel {{ $kelasUjian->kelas?->nama ?: '-' }}</a>
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     <section class="panel">
         <div class="desktop-only table-wrap">

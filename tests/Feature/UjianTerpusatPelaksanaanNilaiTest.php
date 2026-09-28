@@ -11,6 +11,7 @@ use App\Models\JawabanPesertaUjianCbt;
 use App\Models\JenisUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
+use App\Models\KelasUjianCbt;
 use App\Models\MataPelajaran;
 use App\Models\PanitiaUjianCbt;
 use App\Models\Pegawai;
@@ -1943,6 +1944,77 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_export_excel_hasil_dibatasi_per_kelas_yang_diampu_guru_mapel(): void
+    {
+        $data = $this->buatFondasi();
+        $jadwal = $this->terbitkanPaketUntukSusulan($data, 'SOAL-EXPORT-HASIL');
+        $paket = $jadwal->ujianCbt;
+        $peserta = $paket->pesertaUjianCbt()->orderBy('id')->firstOrFail();
+        $soalUjian = $paket->soalUjianCbt()->firstOrFail();
+
+        $peserta->update([
+            'status' => 'selesai',
+            'status_kehadiran_ujian' => 'hadir',
+            'waktu_mulai' => '2026-09-15 07:30:00',
+            'waktu_selesai' => '2026-09-15 08:00:00',
+            'cara_selesai' => 'manual',
+        ]);
+        JawabanPesertaUjianCbt::create([
+            'peserta_ujian_cbt_id' => $peserta->id,
+            'soal_ujian_cbt_id' => $soalUjian->id,
+            'soal_cbt_id' => $soalUjian->soal_cbt_id,
+            'jawaban' => ['B'],
+            'skor' => 1,
+            'benar' => true,
+            'waktu_dijawab' => '2026-09-15 07:55:00',
+        ]);
+
+        $kelasLain = Kelas::create([
+            'tahun_pelajaran_id' => $data['tahun']->id,
+            'nama' => 'VII.B',
+            'tingkat' => 7,
+            'kapasitas' => 32,
+            'aktif' => true,
+        ]);
+        KelasUjianCbt::create([
+            'ujian_cbt_id' => $paket->id,
+            'kelas_id' => $kelasLain->id,
+        ]);
+
+        $this->actingAs($data['akun_guru'])
+            ->get(route('ujian-cbt.hasil.index', $paket))
+            ->assertOk()
+            ->assertSeeText('Export hasil per kelas')
+            ->assertSeeText('Excel VII.A')
+            ->assertDontSeeText('Excel VII.B');
+
+        $responsGuru = $this->get(route('ujian-cbt.hasil.export-excel', [
+            'ujianCbt' => $paket,
+            'kelas_id' => $data['kelas']->id,
+        ]));
+        $responsGuru->assertOk();
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $responsGuru->headers->get('content-type'),
+        );
+        $this->assertStringContainsString(
+            'hasil-cbt-matematika-vii-a',
+            (string) $responsGuru->headers->get('content-disposition'),
+        );
+
+        $this->get(route('ujian-cbt.hasil.export-excel', [
+            'ujianCbt' => $paket,
+            'kelas_id' => $kelasLain->id,
+        ]))->assertForbidden();
+
+        $this->actingAs($data['admin'])
+            ->get(route('ujian-cbt.hasil.export-excel', [
+                'ujianCbt' => $paket,
+                'kelas_id' => $kelasLain->id,
+            ]))
+            ->assertOk();
     }
 
     private function terbitkanPaketUntukSusulan(array $data, string $kodeSoal): JadwalUjianCbt
