@@ -74,6 +74,11 @@
         .retake-details > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; color:var(--primary-dark); font-weight:800; }
         .retake-shell { display:grid; gap:14px; margin-top:12px; }
         .retake-intro { margin:0; padding:11px 13px; border-left:4px solid var(--primary); background:#eef5fb; color:#36516c; font-size:.8rem; line-height:1.5; }
+        .retake-manual { border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
+        .retake-manual > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; cursor:pointer; color:var(--primary-dark); font-weight:800; }
+        .retake-manual[open] > summary { border-bottom:1px solid var(--line); }
+        .retake-manual-form { display:grid; gap:12px; padding:14px; }
+        .retake-manual-copy { margin:0; color:var(--muted); font-size:.78rem; line-height:1.5; }
         .retake-form { display:grid; gap:14px; }
         .retake-candidates { border:1px solid var(--line); border-radius:7px; overflow:hidden; }
         .retake-candidate { display:grid; grid-template-columns:32px minmax(180px,1.2fr) minmax(90px,.45fr) minmax(120px,.55fr); gap:10px; align-items:center; min-height:54px; padding:10px 12px; border-bottom:1px solid var(--line); background:#fff; }
@@ -177,13 +182,19 @@
                 $paketSiap = $paket && in_array($paket->status, ['terjadwal', 'berlangsung', 'selesai'], true);
                 $belumMulai = max(0, ($paket?->peserta_ujian_cbt_count ?? 0) - ($paket?->peserta_sedang_count ?? 0) - ($paket?->peserta_selesai_count ?? 0));
                 $pesertaTidakHadir = $item->pesertaSusulan ?? collect();
-                $calonSusulan = $pesertaTidakHadir->filter(fn ($peserta) =>
-                    in_array($peserta->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true)
-                    && ! in_array($peserta->status, ['sedang_mengerjakan', 'selesai'], true)
-                    && $peserta->status_susulan !== 'dijadwalkan'
-                    && ! $peserta->nilai_siswa_id
-                    && (int) $peserta->jawaban_peserta_ujian_cbt_count === 0
-                );
+                $calonManual = $item->pesertaCalonSusulanManual ?? collect();
+                $calonSusulan = $pesertaTidakHadir->filter(function ($peserta) {
+                    $belumPernahMulai = in_array($peserta->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true)
+                        && ! in_array($peserta->status, ['sedang_mengerjakan', 'selesai'], true)
+                        && (int) $peserta->jawaban_peserta_ujian_cbt_count === 0;
+                    $lanjutanWaktuHabis = $peserta->status === 'selesai'
+                        && $peserta->cara_selesai === 'waktu_habis'
+                        && $peserta->status_susulan === 'menunggu_jadwal';
+
+                    return ($belumPernahMulai || $lanjutanWaktuHabis)
+                        && $peserta->status_susulan !== 'dijadwalkan'
+                        && ! $peserta->nilai_siswa_id;
+                });
                 $susulanAktif = $pesertaTidakHadir->where('status_susulan', 'dijadwalkan');
                 $riwayatSusulan = $pesertaTidakHadir->whereIn('status_susulan', ['selesai', 'dibatalkan']);
             @endphp
@@ -223,18 +234,77 @@
                         @endif
                     </div>
 
-                    @if (! $halamanHasil && $paketSiap && $pesertaTidakHadir->isNotEmpty())
+                    @if (! $halamanHasil && $paketSiap && ($pesertaTidakHadir->isNotEmpty() || $calonManual->isNotEmpty()))
                         <details class="retake-details" {{ $susulanAktif->isNotEmpty() || $calonSusulan->isNotEmpty() ? 'open' : '' }}>
                             <summary>
                                 <span>Ketidakhadiran & ujian susulan</span>
                                 <span class="badge {{ $susulanAktif->isNotEmpty() ? 'badge-warning' : 'badge-muted' }}">
-                                    {{ $calonSusulan->count() }} belum dijadwalkan · {{ $susulanAktif->count() }} terjadwal
+                                    {{ $calonSusulan->count() }} belum dijadwalkan · {{ $susulanAktif->count() }} terjadwal · {{ $calonManual->count() }} dapat dipilih manual
                                 </span>
                             </summary>
                             <div class="retake-shell">
                                 <p class="retake-intro">
                                     Status Sakit, Izin, atau Alfa tetap tersimpan sebagai riwayat ujian utama. Panitia dapat memilih siswa yang diizinkan mengikuti susulan. Paket soal dan komponen nilainya tetap sama.
                                 </p>
+
+                                @if ($bolehAturSusulan && $calonManual->isNotEmpty())
+                                    <details class="retake-manual">
+                                        <summary>
+                                            <span>Tambahkan calon secara manual</span>
+                                            <span class="badge badge-muted">{{ $calonManual->count() }} siswa dapat dipilih</span>
+                                        </summary>
+                                        <form class="retake-manual-form" method="POST" action="{{ route('ujian-terpusat.susulan.calon-manual', [$kegiatan, $item]) }}" data-retake-manual>
+                                            @csrf
+                                            <p class="retake-manual-copy">Pilih siswa yang belum pernah membuka ujian atau siswa yang selesai otomatis karena waktu habis. Jawaban siswa yang waktu habis tetap dipertahankan saat susulan.</p>
+                                            <div class="field">
+                                                <label for="cari_calon_manual_{{ $item->id }}">Cari siswa</label>
+                                                <input id="cari_calon_manual_{{ $item->id }}" class="input" type="search" placeholder="Ketik nama, NISN, atau kelas" autocomplete="off" data-retake-manual-search>
+                                            </div>
+                                            <div class="retake-candidates">
+                                                @foreach ($calonManual as $pesertaManual)
+                                                    <label class="retake-candidate" data-retake-manual-row data-search="{{ str(($pesertaManual->anggotaKelas?->siswa?->nama_lengkap ?? '').' '.($pesertaManual->anggotaKelas?->siswa?->nisn ?? '').' '.($pesertaManual->kelasUjianCbt?->kelas?->nama ?? ''))->lower() }}">
+                                                        <input type="checkbox" name="peserta_manual_ids[]" value="{{ $pesertaManual->id }}" @checked(in_array($pesertaManual->id, old('peserta_manual_ids', [])))>
+                                                        <span>
+                                                            <strong>{{ $pesertaManual->anggotaKelas?->siswa?->nama_lengkap ?: 'Nama siswa tidak ditemukan' }}</strong>
+                                                            <span>NISN {{ $pesertaManual->anggotaKelas?->siswa?->nisn ?: '-' }}</span>
+                                                        </span>
+                                                        <span><strong>{{ $pesertaManual->kelasUjianCbt?->kelas?->nama ?: '-' }}</strong><span>Kelas</span></span>
+                                                        <span>
+                                                            @if ($pesertaManual->status === 'selesai' && $pesertaManual->cara_selesai === 'waktu_habis')
+                                                                <span class="badge badge-warning">Waktu habis</span>
+                                                                <span>{{ $pesertaManual->jawaban_peserta_ujian_cbt_count }} jawaban tersimpan</span>
+                                                            @else
+                                                                <span class="badge badge-muted">Belum pernah mulai</span>
+                                                            @endif
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                            <div class="retake-fields">
+                                                <div class="field">
+                                                    <label for="alasan_manual_{{ $item->id }}">Alasan penambahan manual</label>
+                                                    <select id="alasan_manual_{{ $item->id }}" name="alasan_manual" class="input" required>
+                                                        <option value="">Pilih alasan</option>
+                                                        <option value="sakit" @selected(old('alasan_manual') === 'sakit')>Sakit</option>
+                                                        <option value="izin" @selected(old('alasan_manual') === 'izin')>Izin</option>
+                                                        <option value="alfa" @selected(old('alasan_manual') === 'alfa')>Alfa</option>
+                                                        <option value="gangguan_perangkat" @selected(old('alasan_manual') === 'gangguan_perangkat')>Gangguan perangkat</option>
+                                                        <option value="gangguan_jaringan" @selected(old('alasan_manual') === 'gangguan_jaringan')>Gangguan jaringan</option>
+                                                        <option value="lainnya" @selected(old('alasan_manual') === 'lainnya')>Lainnya</option>
+                                                    </select>
+                                                </div>
+                                                <div class="field is-wide">
+                                                    <label for="catatan_manual_{{ $item->id }}">Catatan <span class="help-text">(opsional)</span></label>
+                                                    <input id="catatan_manual_{{ $item->id }}" name="catatan_manual" class="input" maxlength="1000" value="{{ old('catatan_manual') }}" placeholder="Contoh: surat izin sudah diterima">
+                                                </div>
+                                            </div>
+                                            <div class="retake-form-actions">
+                                                <p>Setelah ditambahkan, nama siswa masuk ke daftar penjadwalan susulan di bawah.</p>
+                                                <button type="submit" class="button button-primary">Tambahkan ke calon susulan</button>
+                                            </div>
+                                        </form>
+                                    </details>
+                                @endif
 
                                 @if ($bolehAturSusulan && $calonSusulan->isNotEmpty())
                                     <form class="retake-form" method="POST" action="{{ route('ujian-terpusat.susulan.store', [$kegiatan, $item]) }}">
@@ -449,6 +519,17 @@
                     control.addEventListener('change', () => {
                         control.closest('[data-supervisor-row]')?.classList.add('is-dirty');
                         actions?.classList.add('has-dirty');
+                    });
+                });
+            });
+
+            document.querySelectorAll('[data-retake-manual]').forEach((form) => {
+                const search = form.querySelector('[data-retake-manual-search]');
+                const rows = Array.from(form.querySelectorAll('[data-retake-manual-row]'));
+                search?.addEventListener('input', () => {
+                    const query = search.value.trim().toLocaleLowerCase('id-ID');
+                    rows.forEach((row) => {
+                        row.hidden = query !== '' && ! row.dataset.search.includes(query);
                     });
                 });
             });

@@ -466,6 +466,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas', [PelaksanaanNilaiUjianTerpusatController::class, 'updatePengawasMassal'])->name('ujian-terpusat.pengawas.massal');
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas/{ruangKegiatanUjianCbt}', [PelaksanaanNilaiUjianTerpusatController::class, 'updatePengawas'])->name('ujian-terpusat.pengawas.update');
             Route::patch('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas/{ruangKegiatanUjianCbt}/ganti', [PelaksanaanNilaiUjianTerpusatController::class, 'gantiPengawas'])->name('ujian-terpusat.pengawas.ganti');
+            Route::post('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/susulan/calon-manual', [PelaksanaanNilaiUjianTerpusatController::class, 'tambahkanCalonSusulanManual'])->name('ujian-terpusat.susulan.calon-manual');
             Route::post('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/susulan', [PelaksanaanNilaiUjianTerpusatController::class, 'jadwalkanSusulan'])->name('ujian-terpusat.susulan.store');
             Route::patch('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/susulan/{pesertaUjianCbt}/batalkan', [PelaksanaanNilaiUjianTerpusatController::class, 'batalkanSusulan'])->name('ujian-terpusat.susulan.batalkan');
         });

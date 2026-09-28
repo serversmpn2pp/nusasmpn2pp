@@ -1254,6 +1254,109 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         }
     }
 
+    public function test_panitia_dapat_menambahkan_calon_susulan_manual_yang_belum_memulai(): void
+    {
+        Carbon::setTestNow('2026-09-15 06:30:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $jadwal = $this->terbitkanPaketUntukSusulan($data, 'SOAL-SUSULAN-MANUAL-001');
+            $paket = $jadwal->ujianCbt;
+            $peserta = $paket->pesertaUjianCbt()
+                ->where('anggota_kelas_id', $data['anggota'][0]->id)
+                ->firstOrFail();
+            $pesertaSudahMulai = $paket->pesertaUjianCbt()
+                ->where('anggota_kelas_id', $data['anggota'][1]->id)
+                ->firstOrFail();
+
+            $this->actingAs($data['admin'])
+                ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+                ->assertOk()
+                ->assertSeeText('Tambahkan calon secara manual')
+                ->assertSeeText('Alya');
+
+            $this->post(route('ujian-terpusat.susulan.calon-manual', [$data['kegiatan'], $jadwal]), [
+                'peserta_manual_ids' => [$peserta->id],
+                'alasan_manual' => 'izin',
+                'catatan_manual' => 'Disetujui panitia untuk mengikuti susulan.',
+            ])->assertSessionHasNoErrors()
+                ->assertSessionHas('berhasil')
+                ->assertRedirect();
+
+            $peserta->refresh();
+            $this->assertSame('izin', $peserta->status_kehadiran_ujian);
+            $this->assertSame('menunggu_jadwal', $peserta->status_susulan);
+            $this->assertStringContainsString('Disetujui panitia', (string) $peserta->catatan_kehadiran_ujian);
+            $this->assertStringContainsString('Ditambahkan manual', (string) $peserta->catatan_kehadiran_ujian);
+
+            $this->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+                ->assertOk()
+                ->assertSeeText('1 belum dijadwalkan')
+                ->assertSeeText('Menunggu jadwal susulan');
+
+            $pesertaSudahMulai->update([
+                'status' => 'sedang_mengerjakan',
+                'waktu_mulai' => now(),
+            ]);
+
+            $this->post(route('ujian-terpusat.susulan.calon-manual', [$data['kegiatan'], $jadwal]), [
+                'peserta_manual_ids' => [$pesertaSudahMulai->id],
+                'alasan_manual' => 'gangguan_perangkat',
+            ])->assertSessionHasErrors('peserta_manual_ids');
+
+            $this->assertNull($pesertaSudahMulai->fresh()->status_susulan);
+
+            $relasiSoal = $paket->soalUjianCbt()->firstOrFail();
+            $pesertaSudahMulai->update([
+                'status' => 'selesai',
+                'status_kehadiran_ujian' => 'hadir',
+                'waktu_selesai' => now(),
+                'menit_tersisa' => 0,
+                'selesai_otomatis_pada' => now(),
+                'cara_selesai' => 'waktu_habis',
+            ]);
+            JawabanPesertaUjianCbt::create([
+                'peserta_ujian_cbt_id' => $pesertaSudahMulai->id,
+                'soal_ujian_cbt_id' => $relasiSoal->id,
+                'soal_cbt_id' => $relasiSoal->soal_cbt_id,
+                'jawaban' => ['B'],
+                'skor' => 1,
+                'benar' => true,
+                'waktu_dijawab' => now(),
+            ]);
+
+            $this->post(route('ujian-terpusat.susulan.calon-manual', [$data['kegiatan'], $jadwal]), [
+                'peserta_manual_ids' => [$pesertaSudahMulai->id],
+                'alasan_manual' => 'gangguan_perangkat',
+                'catatan_manual' => 'HP berhenti merespons saat ujian utama.',
+            ])->assertSessionHasNoErrors()
+                ->assertRedirect();
+
+            $pesertaSudahMulai->refresh();
+            $this->assertSame('hadir', $pesertaSudahMulai->status_kehadiran_ujian);
+            $this->assertSame('menunggu_jadwal', $pesertaSudahMulai->status_susulan);
+
+            $this->post(route('ujian-terpusat.susulan.store', [$data['kegiatan'], $jadwal]), [
+                'peserta_ids' => [$pesertaSudahMulai->id],
+                'susulan_mulai' => '2026-09-15 09:15:00',
+                'susulan_selesai' => '2026-09-15 10:15:00',
+                'ruang_susulan_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                'pengawas_susulan_pegawai_id' => $data['akun_guru']->pegawai_id,
+            ])->assertSessionHasNoErrors()
+                ->assertRedirect();
+
+            $pesertaSudahMulai->refresh();
+            $this->assertSame('aktif', $pesertaSudahMulai->status);
+            $this->assertSame('dijadwalkan', $pesertaSudahMulai->status_susulan);
+            $this->assertNull($pesertaSudahMulai->waktu_mulai);
+            $this->assertNull($pesertaSudahMulai->cara_selesai);
+            $this->assertSame(['B'], $pesertaSudahMulai->jawabanPesertaUjianCbt()->firstOrFail()->jawaban);
+            $this->assertNull($pesertaSudahMulai->jawabanPesertaUjianCbt()->firstOrFail()->skor);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_susulan_hanya_untuk_siswa_tidak_hadir_dan_dapat_dibatalkan_sebelum_dimulai(): void
     {
         Carbon::setTestNow('2026-09-22 08:00:00');

@@ -147,6 +147,43 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                     ))
                     ->values()
                 : collect());
+            $item->setRelation('pesertaCalonSusulanManual', $paket
+                ? $paket->pesertaUjianCbt()
+                    ->with([
+                        'anggotaKelas.siswa',
+                        'kelasUjianCbt.kelas',
+                    ])
+                    ->withCount('jawabanPesertaUjianCbt')
+                    ->whereNull('nilai_siswa_id')
+                    ->where(function ($query) {
+                        $query->whereNull('status_kehadiran_ujian')
+                            ->orWhereNotIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa']);
+                    })
+                    ->where(function ($query) {
+                        $query->whereNull('status_susulan')
+                            ->orWhere('status_susulan', 'dibatalkan');
+                    })
+                    ->where(function ($query) {
+                        $query->where(function ($belumMulai) {
+                            $belumMulai->where('status', 'aktif')
+                                ->whereNull('waktu_mulai')
+                                ->whereDoesntHave('jawabanPesertaUjianCbt', function ($jawaban) {
+                                    $jawaban->whereNotNull('jawaban')
+                                        ->orWhereNotNull('waktu_dijawab');
+                                });
+                        })->orWhere(function ($waktuHabis) {
+                            $waktuHabis->where('status', 'selesai')
+                                ->where('cara_selesai', 'waktu_habis');
+                        });
+                    })
+                    ->get()
+                    ->sortBy(fn (PesertaUjianCbt $peserta) => sprintf(
+                        '%s|%s',
+                        $peserta->kelasUjianCbt?->kelas?->nama ?? '',
+                        $peserta->anggotaKelas?->siswa?->nama_lengkap ?? '',
+                    ))
+                    ->values()
+                : collect());
         });
 
         $paket = $jadwal->pluck('ujianCbt')->filter();
@@ -249,6 +286,115 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
         ]);
     }
 
+    public function tambahkanCalonSusulanManual(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        JadwalUjianCbt $jadwalUjianCbt,
+    ) {
+        $this->pastikanBolehAturSusulan($request, $kegiatanUjianCbt, $jadwalUjianCbt);
+
+        $data = $request->validate([
+            'peserta_manual_ids' => ['required', 'array', 'min:1'],
+            'peserta_manual_ids.*' => ['required', 'integer', 'distinct'],
+            'alasan_manual' => ['required', Rule::in(['sakit', 'izin', 'alfa', 'gangguan_perangkat', 'gangguan_jaringan', 'lainnya'])],
+            'catatan_manual' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'peserta_manual_ids.required' => 'Pilih minimal satu siswa yang akan ditambahkan ke calon ujian susulan.',
+            'alasan_manual.required' => 'Pilih alasan siswa mengikuti ujian susulan.',
+            'alasan_manual.in' => 'Alasan ujian susulan tidak dikenali.',
+        ]);
+
+        $pesertaIds = collect($data['peserta_manual_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $peserta = DB::transaction(function () use ($data, $jadwalUjianCbt, $pesertaIds, $request) {
+            $daftar = PesertaUjianCbt::query()
+                ->where('ujian_cbt_id', $jadwalUjianCbt->ujian_cbt_id)
+                ->whereIn('id', $pesertaIds)
+                ->with('anggotaKelas.siswa')
+                ->lockForUpdate()
+                ->get();
+
+            if ($daftar->count() !== $pesertaIds->count()) {
+                throw ValidationException::withMessages([
+                    'peserta_manual_ids' => 'Ada siswa yang tidak termasuk dalam paket ujian ini.',
+                ]);
+            }
+
+            foreach ($daftar as $item) {
+                $nama = $item->anggotaKelas?->siswa?->nama_lengkap ?: 'Siswa';
+                $memilikiJawabanNyata = $item->jawabanPesertaUjianCbt()
+                    ->where(function ($query) {
+                        $query->whereNotNull('jawaban')
+                            ->orWhereNotNull('waktu_dijawab');
+                    })
+                    ->exists();
+                $belumPernahMulai = $item->status === 'aktif'
+                    && ! $item->waktu_mulai
+                    && ! $memilikiJawabanNyata;
+                $selesaiKarenaWaktu = $item->status === 'selesai'
+                    && $item->cara_selesai === 'waktu_habis';
+
+                if (! $belumPernahMulai && ! $selesaiKarenaWaktu) {
+                    throw ValidationException::withMessages([
+                        'peserta_manual_ids' => "{$nama} tidak dapat dimasukkan ke susulan manual. Pastikan siswa belum pernah mulai atau selesai otomatis karena waktu habis.",
+                    ]);
+                }
+
+                if ($item->nilai_siswa_id) {
+                    throw ValidationException::withMessages([
+                        'peserta_manual_ids' => "Nilai {$nama} sudah diterapkan dan tidak dapat dimasukkan ke ujian susulan.",
+                    ]);
+                }
+
+                if ($item->status_susulan === 'dijadwalkan') {
+                    throw ValidationException::withMessages([
+                        'peserta_manual_ids' => "{$nama} sudah memiliki jadwal ujian susulan.",
+                    ]);
+                }
+            }
+
+            foreach ($daftar as $item) {
+                $labelAlasan = match ($data['alasan_manual']) {
+                    'sakit' => 'Sakit',
+                    'izin' => 'Izin',
+                    'alfa' => 'Alfa',
+                    'gangguan_perangkat' => 'Gangguan perangkat',
+                    'gangguan_jaringan' => 'Gangguan jaringan',
+                    default => 'Lainnya',
+                };
+                $catatan = collect([
+                    trim((string) $item->catatan_kehadiran_ujian),
+                    trim((string) ($data['catatan_manual'] ?? '')),
+                    "Alasan penambahan manual: {$labelAlasan}.",
+                    'Ditambahkan manual ke calon ujian susulan oleh '.($request->user()->nama ?: 'panitia').' pada '.now()->format('d-m-Y H:i').'.',
+                ])->filter()->join(' ');
+
+                $perubahan = [
+                    'status_susulan' => 'menunggu_jadwal',
+                    'catatan_kehadiran_ujian' => $catatan,
+                ];
+
+                if ($item->status === 'aktif' && ! $item->waktu_mulai) {
+                    $perubahan['status_kehadiran_ujian'] = in_array($data['alasan_manual'], ['sakit', 'izin', 'alfa'], true)
+                        ? $data['alasan_manual']
+                        : 'izin';
+                }
+
+                $item->update($perubahan);
+            }
+
+            return $daftar;
+        });
+
+        return back()->with(
+            'berhasil',
+            $peserta->count().' siswa ditambahkan ke calon ujian susulan. Silakan tentukan jadwal, ruang, dan pengawasnya.',
+        );
+    }
+
     public function jadwalkanSusulan(
         Request $request,
         KegiatanUjianCbt $kegiatanUjianCbt,
@@ -333,7 +479,11 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             }
 
             foreach ($daftar as $item) {
-                if (! in_array($item->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true)) {
+                $lanjutanWaktuHabis = $item->status === 'selesai'
+                    && $item->cara_selesai === 'waktu_habis'
+                    && $item->status_susulan === 'menunggu_jadwal';
+
+                if (! $lanjutanWaktuHabis && ! in_array($item->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true)) {
                     throw ValidationException::withMessages([
                         'peserta_ids' => "{$item->anggotaKelas?->siswa?->nama_lengkap} tidak tercatat Sakit, Izin, atau Alfa.",
                     ]);
@@ -346,9 +496,13 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                     })
                     ->exists();
 
-                if (in_array($item->status, ['sedang_mengerjakan', 'selesai'], true)
-                    || $memilikiJawabanNyata
-                    || $item->nilai_siswa_id) {
+                if ($item->nilai_siswa_id) {
+                    throw ValidationException::withMessages([
+                        'peserta_ids' => "Nilai {$item->anggotaKelas?->siswa?->nama_lengkap} sudah diterapkan.",
+                    ]);
+                }
+
+                if (! $lanjutanWaktuHabis && (in_array($item->status, ['sedang_mengerjakan', 'selesai'], true) || $memilikiJawabanNyata)) {
                     throw ValidationException::withMessages([
                         'peserta_ids' => "{$item->anggotaKelas?->siswa?->nama_lengkap} sudah mulai atau sudah menyelesaikan ujian.",
                     ]);
@@ -356,10 +510,22 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             }
 
             foreach ($daftar as $item) {
-                $item->jawabanPesertaUjianCbt()
-                    ->whereNull('jawaban')
-                    ->whereNull('waktu_dijawab')
-                    ->delete();
+                $lanjutanWaktuHabis = $item->status === 'selesai'
+                    && $item->cara_selesai === 'waktu_habis'
+                    && $item->status_susulan === 'menunggu_jadwal';
+
+                if ($lanjutanWaktuHabis) {
+                    $item->jawabanPesertaUjianCbt()->update([
+                        'skor' => null,
+                        'benar' => null,
+                    ]);
+                } else {
+                    $item->jawabanPesertaUjianCbt()
+                        ->whereNull('jawaban')
+                        ->whereNull('waktu_dijawab')
+                        ->delete();
+                }
+
                 $item->update([
                     'status' => 'aktif',
                     'status_susulan' => 'dijadwalkan',
@@ -376,6 +542,9 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                     'waktu_mulai' => null,
                     'waktu_selesai' => null,
                     'menit_tersisa' => $item->ujianCbt?->durasi_menit,
+                    'waktu_tambahan_sampai' => null,
+                    'selesai_otomatis_pada' => null,
+                    'cara_selesai' => null,
                 ]);
             }
 
