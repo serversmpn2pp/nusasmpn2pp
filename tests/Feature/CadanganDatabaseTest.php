@@ -41,7 +41,10 @@ class CadanganDatabaseTest extends TestCase
             ->assertSee('nusa-db-20260822-010000.dump')
             ->assertSee('Buat backup sekarang')
             ->assertSee('Pulihkan dari perangkat')
-            ->assertSee('Cadangan ini mencakup seluruh data yang tersimpan di PostgreSQL', false);
+            ->assertSee('Setiap backup diperiksa agar memuat seluruh tabel PostgreSQL', false)
+            ->assertSee('Restore mengganti seluruh struktur database dalam satu transaksi', false)
+            ->assertSee('Data yang baru dicatat setelah tanggal backup tidak termasuk di dalam backup lama', false)
+            ->assertSee('psql');
     }
 
     public function test_administrator_dapat_membuat_cadangan_manual(): void
@@ -174,6 +177,61 @@ class CadanganDatabaseTest extends TestCase
         );
     }
 
+    public function test_metadata_dan_penghapusan_cadangan_menyertakan_manifest_tabel(): void
+    {
+        Storage::fake('local');
+        $lokasi = 'cadangan-database/berkas/nusa-db-20260928-010000.dump';
+        Storage::disk('local')->put($lokasi, 'PGDMP data-uji-valid');
+        Storage::disk('local')->put($lokasi.'.json', json_encode([
+            'format' => 1,
+            'jumlah_tabel' => 137,
+            'tabel' => ['migrations', 'pengguna'],
+        ]));
+        $service = app(CadanganDatabaseService::class);
+
+        $metadata = $service->metadataCadangan(basename($lokasi));
+
+        $this->assertTrue($metadata['tabel_terverifikasi']);
+        $this->assertSame(137, $metadata['jumlah_tabel']);
+
+        $service->hapus(basename($lokasi));
+        Storage::disk('local')->assertMissing($lokasi);
+        Storage::disk('local')->assertMissing($lokasi.'.json');
+    }
+
+    public function test_daftar_cadangan_mengabaikan_berkas_dump_dengan_nama_asing(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('cadangan-database/berkas/nusa-db-20260928-020000.dump', 'PGDMP data-uji-valid');
+        Storage::disk('local')->put('cadangan-database/berkas/diagnostik.dump', 'PGDMP data-uji-valid');
+
+        $daftar = app(CadanganDatabaseService::class)->daftarCadangan();
+
+        $this->assertCount(1, $daftar);
+        $this->assertSame('nusa-db-20260928-020000.dump', $daftar->first()['nama_file']);
+    }
+
+    public function test_lingkungan_postgres_membawa_variabel_sistem_windows_yang_diperlukan(): void
+    {
+        $service = app(CadanganDatabaseService::class);
+        $metode = new \ReflectionMethod($service, 'lingkunganPostgres');
+        $lingkungan = $metode->invoke($service, [
+            'password' => 'kata-sandi-uji',
+            'sslmode' => 'prefer',
+        ]);
+
+        $this->assertSame('kata-sandi-uji', $lingkungan['PGPASSWORD']);
+        $this->assertSame('prefer', $lingkungan['PGSSLMODE']);
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            foreach (['SystemRoot', 'PATH', 'TEMP', 'TMP'] as $nama) {
+                if (getenv($nama) !== false) {
+                    $this->assertSame(getenv($nama), $lingkungan[$nama] ?? null);
+                }
+            }
+        }
+    }
+
     private function mockServiceDasar(): CadanganDatabaseService&MockInterface
     {
         return $this->mock(CadanganDatabaseService::class, function (MockInterface $mock) {
@@ -182,6 +240,7 @@ class CadanganDatabaseTest extends TestCase
                 'database' => 'nusa',
                 'pg_dump' => 'C:\\PostgreSQL\\bin\\pg_dump.exe',
                 'pg_restore' => 'C:\\PostgreSQL\\bin\\pg_restore.exe',
+                'psql' => 'C:\\PostgreSQL\\bin\\psql.exe',
                 'siap_backup' => true,
                 'siap_restore' => true,
                 'otomatis_aktif' => true,

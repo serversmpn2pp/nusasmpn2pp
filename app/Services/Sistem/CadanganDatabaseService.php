@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
@@ -21,14 +22,16 @@ class CadanganDatabaseService
         $koneksi = $this->konfigurasiKoneksi();
         $pgDump = $this->cariExecutable('pg_dump', config('cadangan_database.pg_dump_path'));
         $pgRestore = $this->cariExecutable('pg_restore', config('cadangan_database.pg_restore_path'));
+        $psql = $this->cariExecutable('psql', config('cadangan_database.psql_path'));
 
         return [
             'driver' => $koneksi['driver'],
             'database' => $koneksi['database'],
             'pg_dump' => $pgDump,
             'pg_restore' => $pgRestore,
-            'siap_backup' => $koneksi['driver'] === 'pgsql' && filled($pgDump),
-            'siap_restore' => $koneksi['driver'] === 'pgsql' && filled($pgDump) && filled($pgRestore),
+            'psql' => $psql,
+            'siap_backup' => $koneksi['driver'] === 'pgsql' && filled($pgDump) && filled($pgRestore),
+            'siap_restore' => $koneksi['driver'] === 'pgsql' && filled($pgDump) && filled($pgRestore) && filled($psql),
             'otomatis_aktif' => (bool) config('cadangan_database.otomatis_aktif', true),
             'jadwal_otomatis' => (string) config('cadangan_database.jadwal_otomatis', '01:00'),
             'retensi_hari' => (int) config('cadangan_database.retensi_otomatis_hari', 30),
@@ -42,22 +45,8 @@ class CadanganDatabaseService
         $disk->makeDirectory($direktori);
 
         return collect($disk->files($direktori))
-            ->filter(fn (string $lokasi) => str_ends_with(strtolower($lokasi), '.dump'))
-            ->map(function (string $lokasi) use ($disk) {
-                $namaFile = basename($lokasi);
-                $waktu = Carbon::createFromTimestamp($disk->lastModified($lokasi));
-                $ukuran = $disk->size($lokasi);
-
-                return [
-                    'nama_file' => $namaFile,
-                    'lokasi' => $lokasi,
-                    'jenis' => $this->jenisDariNamaFile($namaFile),
-                    'ukuran' => $ukuran,
-                    'ukuran_label' => $this->formatUkuran($ukuran),
-                    'waktu' => $waktu,
-                    'valid' => $this->berkasMemilikiHeaderPgDump($disk->path($lokasi)),
-                ];
-            })
+            ->filter(fn (string $lokasi) => preg_match('/\Anusa-db-[a-z0-9._-]+\.dump\z/i', basename($lokasi)) === 1)
+            ->map(fn (string $lokasi) => $this->metadataCadangan(basename($lokasi)))
             ->sortByDesc(fn (array $item) => $item['waktu']->getTimestamp())
             ->values();
     }
@@ -84,7 +73,7 @@ class CadanganDatabaseService
         $status = $this->status();
 
         if (! $status['siap_backup']) {
-            throw new RuntimeException($this->pesanExecutableTidakSiap('pg_dump'));
+            throw new RuntimeException($this->pesanAlatBelumSiap($status, ['pg_dump', 'pg_restore']));
         }
 
         $this->longgarkanWaktuEksekusi();
@@ -136,7 +125,21 @@ class CadanganDatabaseService
             throw new RuntimeException($pesan);
         }
 
+        try {
+            $ringkasanCadangan = $this->pastikanCadanganMemuatTabel(
+                $pathSementara,
+                $status['pg_restore'],
+                $this->daftarTabelPublik($koneksi['nama_koneksi']),
+            );
+        } catch (RuntimeException $exception) {
+            $disk->delete($lokasiSementara);
+            $this->catatAktivitas('backup', $namaFile, 'gagal', $pengguna, $exception->getMessage());
+
+            throw $exception;
+        }
+
         $disk->move($lokasiSementara, $lokasi);
+        $this->simpanManifest($lokasi, $ringkasanCadangan);
         $metadata = $this->metadataCadangan($namaFile);
         $this->catatAktivitas('backup', $namaFile, 'berhasil', $pengguna, 'Cadangan database berhasil dibuat.');
 
@@ -164,6 +167,24 @@ class CadanganDatabaseService
             throw new RuntimeException('Berkas yang diunggah bukan cadangan PostgreSQL NUSA yang valid. Gunakan berkas .dump dari fitur ini.');
         }
 
+        $status = $this->status();
+
+        $ringkasanCadangan = null;
+
+        if ($status['driver'] === 'pgsql' && filled($status['pg_restore'])) {
+            try {
+                $ringkasanCadangan = $this->pastikanCadanganNusa($disk->path($lokasi), $status['pg_restore']);
+            } catch (RuntimeException $exception) {
+                $disk->delete($lokasi);
+
+                throw $exception;
+            }
+        }
+
+        if ($ringkasanCadangan) {
+            $this->simpanManifest($lokasi, $ringkasanCadangan);
+        }
+
         $this->catatAktivitas('unggah', $namaFile, 'berhasil', $pengguna, 'Cadangan dari perangkat berhasil diunggah.');
 
         return $this->metadataCadangan($namaFile);
@@ -174,7 +195,7 @@ class CadanganDatabaseService
         $status = $this->status();
 
         if (! $status['siap_restore']) {
-            throw new RuntimeException($this->pesanExecutableTidakSiap('pg_restore'));
+            throw new RuntimeException($this->pesanAlatBelumSiap($status, ['pg_dump', 'pg_restore', 'psql']));
         }
 
         $cadangan = $this->metadataCadangan($namaFile);
@@ -184,40 +205,27 @@ class CadanganDatabaseService
         }
 
         $this->longgarkanWaktuEksekusi();
-        $cadanganPengaman = $this->buatCadangan('pra-pemulihan', $pengguna);
         $koneksi = $this->konfigurasiKoneksi();
         $path = Storage::disk('local')->path($cadangan['lokasi']);
+        $ringkasanCadangan = $this->pastikanCadanganNusa($path, $status['pg_restore']);
+        $this->simpanManifest($cadangan['lokasi'], $ringkasanCadangan);
+        $tabelAplikasi = $this->daftarTabelPublik($koneksi['nama_koneksi']);
+        $cadanganPengaman = $this->buatCadangan('pra-pemulihan', $pengguna);
         $modePemeliharaanAktif = false;
+        $databaseDiganti = false;
 
         try {
             Artisan::call('down', ['--retry' => 60]);
             $modePemeliharaanAktif = true;
             DB::disconnect($koneksi['nama_koneksi']);
 
-            $proses = new Process([
-                $status['pg_restore'],
-                '--clean',
-                '--if-exists',
-                '--exit-on-error',
-                '--single-transaction',
-                '--no-owner',
-                '--no-privileges',
-                '--host='.$koneksi['host'],
-                '--port='.(string) $koneksi['port'],
-                '--username='.$koneksi['username'],
-                '--dbname='.$koneksi['database'],
-                $path,
-            ], base_path(), $this->lingkunganPostgres($koneksi));
-            $proses->setTimeout($this->timeoutDetik());
-            $proses->run();
-
-            if (! $proses->isSuccessful()) {
-                throw new RuntimeException($this->pesanProsesGagal('Pemulihan database', $proses));
-            }
+            $this->pulihkanSchemaPublik($path, $ringkasanCadangan, $status, $koneksi);
+            $databaseDiganti = true;
 
             DB::purge($koneksi['nama_koneksi']);
             DB::reconnect($koneksi['nama_koneksi']);
             Artisan::call('migrate', ['--force' => true]);
+            $this->pastikanTabelDatabaseLengkap($tabelAplikasi, $koneksi['nama_koneksi']);
 
             $this->catatAktivitas(
                 'restore',
@@ -232,6 +240,24 @@ class CadanganDatabaseService
                 'cadangan_pengaman' => $cadanganPengaman,
             ];
         } catch (Throwable $exception) {
+            $databaseAwalDikembalikan = false;
+
+            if ($databaseDiganti) {
+                try {
+                    $pathPengaman = Storage::disk('local')->path($cadanganPengaman['lokasi']);
+                    $ringkasanPengaman = $this->pastikanCadanganNusa($pathPengaman, $status['pg_restore']);
+                    DB::disconnect($koneksi['nama_koneksi']);
+                    $this->pulihkanSchemaPublik($pathPengaman, $ringkasanPengaman, $status, $koneksi);
+                    DB::purge($koneksi['nama_koneksi']);
+                    DB::reconnect($koneksi['nama_koneksi']);
+                    Artisan::call('migrate', ['--force' => true]);
+                    $this->pastikanTabelDatabaseLengkap($tabelAplikasi, $koneksi['nama_koneksi']);
+                    $databaseAwalDikembalikan = true;
+                } catch (Throwable) {
+                    // Cadangan pengaman tetap tersedia untuk pemulihan manual.
+                }
+            }
+
             try {
                 DB::purge($koneksi['nama_koneksi']);
                 DB::reconnect($koneksi['nama_koneksi']);
@@ -239,8 +265,10 @@ class CadanganDatabaseService
                 // Koneksi akan dicoba kembali oleh permintaan berikutnya.
             }
 
-            $pesan = 'Pemulihan gagal. Database tidak dinyatakan berhasil dipulihkan. Cadangan pengaman tersedia sebagai '
-                .$cadanganPengaman['nama_file'].'. '.$exception->getMessage();
+            $pesan = $databaseAwalDikembalikan
+                ? 'Pemulihan gagal, tetapi database sebelum pemulihan berhasil dikembalikan otomatis dari '.$cadanganPengaman['nama_file'].'. '
+                : 'Pemulihan gagal. Cadangan pengaman tersedia sebagai '.$cadanganPengaman['nama_file'].'. ';
+            $pesan .= $exception->getMessage();
             $this->catatAktivitas('restore', $namaFile, 'gagal', $pengguna, $pesan);
 
             throw new RuntimeException($pesan, previous: $exception);
@@ -255,9 +283,13 @@ class CadanganDatabaseService
     {
         $cadangan = $this->metadataCadangan($namaFile);
 
-        if (! Storage::disk('local')->delete($cadangan['lokasi'])) {
+        $disk = Storage::disk('local');
+
+        if (! $disk->delete($cadangan['lokasi'])) {
             throw new RuntimeException('Cadangan tidak dapat dihapus dari penyimpanan server.');
         }
+
+        $disk->delete($this->lokasiManifest($cadangan['lokasi']));
 
         $this->catatAktivitas('hapus', $namaFile, 'berhasil', $pengguna, 'Cadangan dihapus dari server.');
     }
@@ -280,6 +312,7 @@ class CadanganDatabaseService
         }
 
         $ukuran = $disk->size($lokasi);
+        $manifest = $this->bacaManifest($lokasi);
 
         return [
             'nama_file' => $namaFile,
@@ -289,6 +322,8 @@ class CadanganDatabaseService
             'ukuran_label' => $this->formatUkuran($ukuran),
             'waktu' => Carbon::createFromTimestamp($disk->lastModified($lokasi)),
             'valid' => $this->berkasMemilikiHeaderPgDump($disk->path($lokasi)),
+            'jumlah_tabel' => $manifest['jumlah_tabel'] ?? null,
+            'tabel_terverifikasi' => is_array($manifest),
         ];
     }
 
@@ -304,6 +339,7 @@ class CadanganDatabaseService
             }
 
             if (Storage::disk('local')->delete($cadangan['lokasi'])) {
+                Storage::disk('local')->delete($this->lokasiManifest($cadangan['lokasi']));
                 $jumlah++;
             }
         }
@@ -403,10 +439,36 @@ class CadanganDatabaseService
 
     private function lingkunganPostgres(array $koneksi): array
     {
-        return [
-            'PGPASSWORD' => $koneksi['password'],
-            'PGSSLMODE' => $koneksi['sslmode'] ?: 'prefer',
-        ];
+        $lingkungan = [];
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            foreach ([
+                'SystemRoot',
+                'windir',
+                'ComSpec',
+                'PATH',
+                'PATHEXT',
+                'OS',
+                'TEMP',
+                'TMP',
+                'USERPROFILE',
+                'LOCALAPPDATA',
+                'APPDATA',
+                'HOMEDRIVE',
+                'HOMEPATH',
+            ] as $nama) {
+                $nilai = getenv($nama);
+
+                if ($nilai !== false) {
+                    $lingkungan[$nama] = $nilai;
+                }
+            }
+        }
+
+        $lingkungan['PGPASSWORD'] = $koneksi['password'];
+        $lingkungan['PGSSLMODE'] = $koneksi['sslmode'] ?: 'prefer';
+
+        return $lingkungan;
     }
 
     private function pesanExecutableTidakSiap(string $executable): string
@@ -416,6 +478,184 @@ class CadanganDatabaseService
         }
 
         return $executable.' belum ditemukan. Isi NUSA_PG_BIN_PATH pada .env dengan lokasi folder bin PostgreSQL, lalu jalankan php artisan optimize:clear.';
+    }
+
+    private function pesanAlatBelumSiap(array $status, array $alat): string
+    {
+        foreach ($alat as $nama) {
+            if (! filled($status[$nama] ?? null)) {
+                return $this->pesanExecutableTidakSiap($nama);
+            }
+        }
+
+        return $this->pesanExecutableTidakSiap($alat[0]);
+    }
+
+    /**
+     * @return array{tabel: array<int, string>, memuat_schema_public: bool}
+     */
+    private function ringkasanCadangan(string $path, string $pgRestore): array
+    {
+        $proses = new Process([$pgRestore, '--list', $path], base_path());
+        $proses->setTimeout($this->timeoutDetik());
+        $proses->run();
+
+        if (! $proses->isSuccessful()) {
+            throw new RuntimeException($this->pesanProsesGagal('Pemeriksaan isi cadangan', $proses));
+        }
+
+        $tabel = [];
+        $memuatSchemaPublic = false;
+
+        foreach (preg_split('/\R/', $proses->getOutput()) ?: [] as $baris) {
+            if (preg_match('/;\s+\d+\s+\d+\s+TABLE\s+public\s+([^\s]+)\s+/i', $baris, $cocok)) {
+                $tabel[] = trim($cocok[1], '"');
+            }
+
+            if (preg_match('/;\s+\d+\s+\d+\s+SCHEMA\s+-\s+public\s+/i', $baris)) {
+                $memuatSchemaPublic = true;
+            }
+        }
+
+        $tabel = array_values(array_unique($tabel));
+        sort($tabel);
+
+        return ['tabel' => $tabel, 'memuat_schema_public' => $memuatSchemaPublic];
+    }
+
+    private function pastikanCadanganNusa(string $path, string $pgRestore): array
+    {
+        $ringkasan = $this->ringkasanCadangan($path, $pgRestore);
+        $wajib = ['migrations', 'pegawai', 'pengguna', 'siswa', 'tahun_pelajaran'];
+        $kurang = array_values(array_diff($wajib, $ringkasan['tabel']));
+
+        if ($kurang !== []) {
+            throw new RuntimeException('Cadangan tidak dikenali sebagai database NUSA yang lengkap. Tabel inti tidak ditemukan: '.implode(', ', $kurang).'.');
+        }
+
+        return $ringkasan;
+    }
+
+    private function pastikanCadanganMemuatTabel(string $path, string $pgRestore, array $tabelWajib): array
+    {
+        $ringkasan = $this->pastikanCadanganNusa($path, $pgRestore);
+        $kurang = array_values(array_diff($tabelWajib, $ringkasan['tabel']));
+
+        if ($kurang !== []) {
+            $contoh = implode(', ', array_slice($kurang, 0, 8));
+            $tambahan = count($kurang) > 8 ? ' dan '.(count($kurang) - 8).' tabel lainnya' : '';
+
+            throw new RuntimeException('Backup dibatalkan karena tidak memuat seluruh tabel database saat ini: '.$contoh.$tambahan.'.');
+        }
+
+        return $ringkasan;
+    }
+
+    private function simpanManifest(string $lokasiCadangan, array $ringkasan): void
+    {
+        Storage::disk('local')->put($this->lokasiManifest($lokasiCadangan), json_encode([
+            'format' => 1,
+            'diperiksa_pada' => now()->toIso8601String(),
+            'jumlah_tabel' => count($ringkasan['tabel']),
+            'tabel' => $ringkasan['tabel'],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
+
+    private function bacaManifest(string $lokasiCadangan): ?array
+    {
+        $disk = Storage::disk('local');
+        $lokasi = $this->lokasiManifest($lokasiCadangan);
+
+        if (! $disk->exists($lokasi)) {
+            return null;
+        }
+
+        $manifest = json_decode($disk->get($lokasi), true);
+
+        return is_array($manifest) && isset($manifest['jumlah_tabel'], $manifest['tabel']) ? $manifest : null;
+    }
+
+    private function lokasiManifest(string $lokasiCadangan): string
+    {
+        return $lokasiCadangan.'.json';
+    }
+
+    private function daftarTabelPublik(string $namaKoneksi): array
+    {
+        return collect(DB::connection($namaKoneksi)->select(
+            "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' ORDER BY tablename"
+        ))
+            ->pluck('tablename')
+            ->map(fn ($nama) => (string) $nama)
+            ->values()
+            ->all();
+    }
+
+    private function pastikanTabelDatabaseLengkap(array $tabelWajib, string $namaKoneksi): void
+    {
+        $kurang = array_values(array_diff($tabelWajib, $this->daftarTabelPublik($namaKoneksi)));
+
+        if ($kurang !== []) {
+            throw new RuntimeException('Pemeriksaan setelah pemulihan menemukan tabel yang belum tersedia: '.implode(', ', array_slice($kurang, 0, 10)).'.');
+        }
+    }
+
+    private function pulihkanSchemaPublik(string $path, array $ringkasan, array $status, array $koneksi): void
+    {
+        $disk = Storage::disk('local');
+        $penanda = Str::lower(Str::random(12));
+        $lokasiSql = $this->direktori().'/pemulihan-'.$penanda.'.sql';
+        $lokasiReset = $this->direktori().'/reset-'.$penanda.'.sql';
+        $pathSql = $disk->path($lokasiSql);
+        $pathReset = $disk->path($lokasiReset);
+
+        try {
+            $ekstrak = new Process([
+                $status['pg_restore'],
+                '--no-owner',
+                '--no-privileges',
+                '--schema=public',
+                '--file='.$pathSql,
+                $path,
+            ], base_path());
+            $ekstrak->setTimeout($this->timeoutDetik());
+            $ekstrak->run();
+
+            if (! $ekstrak->isSuccessful()) {
+                throw new RuntimeException($this->pesanProsesGagal('Persiapan berkas pemulihan', $ekstrak));
+            }
+
+            $reset = "DROP SCHEMA IF EXISTS public CASCADE;\n";
+
+            if (! $ringkasan['memuat_schema_public']) {
+                $reset .= "CREATE SCHEMA public;\nGRANT USAGE ON SCHEMA public TO PUBLIC;\n";
+            }
+
+            if (file_put_contents($pathReset, $reset, LOCK_EX) === false) {
+                throw new RuntimeException('Berkas persiapan pemulihan tidak dapat dibuat.');
+            }
+
+            $pulihkan = new Process([
+                $status['psql'],
+                '--no-psqlrc',
+                '--set=ON_ERROR_STOP=1',
+                '--single-transaction',
+                '--host='.$koneksi['host'],
+                '--port='.(string) $koneksi['port'],
+                '--username='.$koneksi['username'],
+                '--dbname='.$koneksi['database'],
+                '--file='.$pathReset,
+                '--file='.$pathSql,
+            ], base_path(), $this->lingkunganPostgres($koneksi));
+            $pulihkan->setTimeout($this->timeoutDetik());
+            $pulihkan->run();
+
+            if (! $pulihkan->isSuccessful()) {
+                throw new RuntimeException($this->pesanProsesGagal('Pemulihan database', $pulihkan));
+            }
+        } finally {
+            $disk->delete([$lokasiSql, $lokasiReset]);
+        }
     }
 
     private function pesanProsesGagal(string $proses, Process $process): string

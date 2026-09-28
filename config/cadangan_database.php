@@ -7,6 +7,7 @@ return [
     'pg_bin_path' => env('NUSA_PG_BIN_PATH'),
     'pg_dump_path' => env('NUSA_PG_DUMP_PATH'),
     'pg_restore_path' => env('NUSA_PG_RESTORE_PATH'),
+    'psql_path' => env('NUSA_PSQL_PATH'),
 
     'timeout_detik' => (int) env('NUSA_BACKUP_TIMEOUT', 900),
     'maksimal_unggahan_mb' => (int) env('NUSA_BACKUP_MAX_UPLOAD_MB', 250),

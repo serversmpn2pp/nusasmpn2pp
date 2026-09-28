@@ -297,7 +297,7 @@
 
     <div class="alert" style="margin-bottom:18px;">
         <strong>Cadangan database:</strong>
-        Cadangan ini mencakup seluruh data yang tersimpan di PostgreSQL, seperti siswa, pegawai, nilai, presensi, dan inventaris. Foto serta dokumen PDF tidak termasuk dan perlu dicadangkan sebagai berkas secara terpisah.
+        Setiap backup diperiksa agar memuat seluruh tabel PostgreSQL yang tersedia saat dibuat, termasuk CBT, analisis soal, rapor STS, siswa, pegawai, nilai, presensi, dan inventaris. Foto serta dokumen PDF tidak termasuk dan perlu dicadangkan sebagai berkas secara terpisah.
     </div>
 
     <div class="stats-grid">
@@ -349,8 +349,13 @@
                         <div>
                             <strong style="font-size:.86rem;">{{ $cadangan['ukuran_label'] }}</strong><br>
                             <span class="badge {{ $cadangan['valid'] ? 'badge-active' : 'badge-danger' }}" style="margin-top:5px;">
-                                {{ $cadangan['valid'] ? 'Valid' : 'Tidak valid' }}
+                                {{ $cadangan['valid'] ? 'Format valid' : 'Tidak valid' }}
                             </span>
+                            @if ($cadangan['tabel_terverifikasi'] ?? false)
+                                <span class="badge badge-active" style="margin-top:5px;">{{ $cadangan['jumlah_tabel'] }} tabel terverifikasi</span>
+                            @else
+                                <span class="badge badge-warning" style="margin-top:5px;">Diperiksa saat dipulihkan</span>
+                            @endif
                         </div>
                         <div class="actions" style="justify-content:flex-end;">
                             <a href="{{ route('cadangan-database.download', $cadangan['nama_file']) }}" class="button button-muted button-sm">Unduh</a>
@@ -392,6 +397,7 @@
                         <div class="database-backup-status-item"><span>Driver</span><strong>{{ strtoupper($statusServer['driver'] ?: '-') }}</strong></div>
                         <div class="database-backup-status-item"><span>pg_dump</span><strong>{{ $statusServer['pg_dump'] ?: 'Belum ditemukan' }}</strong></div>
                         <div class="database-backup-status-item"><span>pg_restore</span><strong>{{ $statusServer['pg_restore'] ?: 'Belum ditemukan' }}</strong></div>
+                        <div class="database-backup-status-item"><span>psql</span><strong>{{ $statusServer['psql'] ?: 'Belum ditemukan' }}</strong></div>
                     </div>
 
                     @if (! $statusServer['siap_restore'])
@@ -401,7 +407,10 @@
                     @endif
 
                     <p class="database-backup-copy">
-                        Backup otomatis menyimpan cadangan selama {{ $statusServer['retensi_hari'] }} hari dan berjalan bila Laravel Scheduler server aktif.
+                        Restore mengganti seluruh struktur database dalam satu transaksi, menjalankan migrasi terbaru, lalu memeriksa kembali kelengkapan tabel. Backup otomatis disimpan selama {{ $statusServer['retensi_hari'] }} hari bila Laravel Scheduler aktif.
+                    </p>
+                    <p class="database-backup-copy" style="margin-top:8px;">
+                        Jika backup lama dipulihkan, tabel fitur yang lebih baru akan dibuat kembali melalui migrasi. Data yang baru dicatat setelah tanggal backup tidak termasuk di dalam backup lama.
                     </p>
                 </div>
             </section>
