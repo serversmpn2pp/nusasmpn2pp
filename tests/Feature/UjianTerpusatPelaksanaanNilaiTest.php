@@ -1971,6 +1971,35 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
         }
     }
 
+    public function test_halaman_hasil_saat_ujian_berlangsung_menampilkan_peringatan_tanpa_error(): void
+    {
+        Carbon::setTestNow('2026-09-15 08:00:00');
+
+        try {
+            $data = $this->buatFondasi();
+            $jadwal = $this->terbitkanPaketUntukSusulan($data, 'SOAL-HASIL-BERLANGSUNG');
+            $paket = $jadwal->ujianCbt;
+            $peserta = $paket->pesertaUjianCbt()->orderBy('id')->firstOrFail();
+
+            $peserta->update([
+                'status' => 'sedang_mengerjakan',
+                'status_kehadiran_ujian' => 'hadir',
+                'waktu_mulai' => '2026-09-15 07:45:00',
+                'menit_tersisa' => 75,
+            ]);
+
+            $this->actingAs($data['admin'])
+                ->get(route('ujian-cbt.hasil.index', $paket))
+                ->assertOk()
+                ->assertViewHas('ujianSedangBerlangsung', true)
+                ->assertSeeText('Ujian masih berlangsung')
+                ->assertSeeText('Hasil pada halaman ini masih bersifat sementara')
+                ->assertSeeText('Buka monitoring');
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_export_excel_hasil_dibatasi_per_kelas_yang_diampu_guru_mapel(): void
     {
         $data = $this->buatFondasi();

@@ -64,6 +64,16 @@ class RekapHasilUjianCbtController extends Controller
             && $ujianCbt->jadwalUjianCbt->contains(fn ($item) => $item->kegiatanUjianCbt)
                 ? $finalisasiHasil->ringkasan($request->user(), $ujianCbt)
                 : null;
+        $dalamJadwal = $ujianCbt->tanggal_mulai
+            && $ujianCbt->tanggal_selesai
+            && now()->between($ujianCbt->tanggal_mulai, $ujianCbt->tanggal_selesai, true);
+        $pesertaMasihAktif = (int) data_get(
+            $dataTampilan,
+            'finalisasiHasil.kesiapan.peserta_masih_aktif',
+            0,
+        ) > 0;
+        $dataTampilan['ujianSedangBerlangsung'] = ! $ujianCbt->hasil_difinalisasi_pada
+            && ($dalamJadwal || $pesertaMasihAktif);
 
         if ($ujianCbt->asesmenKelas()) {
             return view('asesmen-kelas-cbt.hasil', $dataTampilan);

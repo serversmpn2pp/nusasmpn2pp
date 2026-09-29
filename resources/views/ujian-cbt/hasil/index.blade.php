@@ -75,6 +75,25 @@
             justify-content: flex-end;
         }
 
+        .hasil-live-alert {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding: 16px 18px;
+            border: 1px solid #e3bd35;
+            border-left: 4px solid #d9a900;
+            border-radius: 8px;
+            background: #fff9df;
+            color: #5f4b00;
+        }
+
+        .hasil-live-alert p {
+            margin: 4px 0 0;
+            color: #6b5a1b;
+        }
+
         @media (max-width: 1100px) {
             .hasil-filter-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -87,6 +106,11 @@
             }
 
             .hasil-export {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .hasil-live-alert {
                 align-items: stretch;
                 flex-direction: column;
             }
@@ -182,6 +206,16 @@
     @endif
     @if ($errors->any())
         <div class="alert alert-danger">{{ $errors->first() }}</div>
+    @endif
+
+    @if ($ujianSedangBerlangsung)
+        <section class="hasil-live-alert" role="alert">
+            <div>
+                <strong>Ujian masih berlangsung</strong>
+                <p>Hasil pada halaman ini masih bersifat sementara dan dapat berubah sampai seluruh peserta selesai serta koreksi diselesaikan.</p>
+            </div>
+            <a href="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" class="button button-muted">Buka monitoring</a>
+        </section>
     @endif
 
     @if ($finalisasiHasil)

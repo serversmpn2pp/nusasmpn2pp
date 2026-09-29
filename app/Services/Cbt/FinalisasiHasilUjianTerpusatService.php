@@ -234,7 +234,7 @@ class FinalisasiHasilUjianTerpusatService
         $peserta = $ujian->pesertaUjianCbt()
             ->with('sesiUjianCbt:id,waktu_selesai')
             ->get([
-                'id', 'sesi_ujian_cbt_id', 'status', 'status_kehadiran_ujian',
+                'id', 'ujian_cbt_id', 'sesi_ujian_cbt_id', 'status', 'status_kehadiran_ujian',
                 'status_susulan', 'susulan_selesai', 'waktu_mulai', 'waktu_tambahan_sampai',
             ]);
         $tidakHadir = $peserta->whereIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa']);

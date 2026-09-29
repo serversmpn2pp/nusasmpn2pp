@@ -19,7 +19,7 @@ class BatasWaktuPesertaUjianCbtService
             ? $peserta->susulan_selesai
             : ($peserta->sesiUjianCbt?->waktu_selesai ?: $peserta->ujianCbt?->tanggal_selesai);
 
-        if (! $peserta->waktu_mulai) {
+        if (! $peserta->waktu_mulai || ! $peserta->ujianCbt) {
             return $batasJadwal?->copy();
         }
 
@@ -32,8 +32,10 @@ class BatasWaktuPesertaUjianCbtService
 
     public function sisaDetik(PesertaUjianCbt $peserta): int
     {
+        $peserta->loadMissing('ujianCbt');
+
         if (! $peserta->waktu_mulai) {
-            return max(0, (int) $peserta->ujianCbt->durasi_menit * 60);
+            return max(0, (int) ($peserta->ujianCbt?->durasi_menit ?? 0) * 60);
         }
 
         $batas = $this->batasAkses($peserta);
