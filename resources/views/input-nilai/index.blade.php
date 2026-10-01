@@ -92,7 +92,7 @@
                 return '';
             }
 
-            return rtrim(rtrim(number_format((float) $nilai, 2, '.', ''), '0'), '.');
+            return number_format((float) $nilai, 2, ',', '');
         };
         $ambilPredikat = function ($siswaId) use ($predikatLama, $nilaiTersimpan) {
             if (array_key_exists($siswaId, $predikatLama)) {
@@ -275,7 +275,12 @@
                                         <th>No. absen</th>
                                         <th>Siswa</th>
                                         <th>NIS/NISN</th>
-                                        <th>{{ $penilaianPredikat ? 'Predikat' : 'Nilai' }}</th>
+                                        <th>
+                                            {{ $penilaianPredikat ? 'Predikat' : 'Nilai' }}
+                                            @unless($penilaianPredikat)
+                                                <span class="help-text">0-100; koma atau titik, maksimal 2 desimal</span>
+                                            @endunless
+                                        </th>
                                         <th>Catatan</th>
                                     </tr>
                                 </thead>
@@ -323,13 +328,13 @@
                                                     <input
                                                         id="nilai_{{ $siswaId }}"
                                                         name="nilai[{{ $siswaId }}]"
-                                                        type="number"
-                                                        min="0"
-                                                        max="100"
-                                                        step="0.01"
+                                                        type="text"
+                                                        inputmode="decimal"
+                                                        pattern="(?:100(?:[.,]0{1,2})?|[0-9]{1,2}(?:[.,][0-9]{1,2})?)"
                                                         value="{{ $ambilNilai($siswaId) }}"
                                                         class="input input-sm @error('nilai.' . $siswaId) is-invalid @enderror"
-                                                        placeholder="0-100"
+                                                        placeholder="Contoh: 87,50"
+                                                        title="Gunakan angka 0 sampai 100 dengan maksimal 2 angka desimal."
                                                     >
                                                     @error('nilai.' . $siswaId)
                                                         <p class="error-text">{{ $message }}</p>

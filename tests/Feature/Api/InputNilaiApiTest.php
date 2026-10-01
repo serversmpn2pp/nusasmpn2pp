@@ -90,7 +90,7 @@ class InputNilaiApiTest extends TestCase
             ->postJson(route('api.v1.input-nilai.store'), [
                 'komponen_nilai_id' => $data['komponen']->id,
                 'nilai' => [
-                    (string) $data['siswa_1']->id => 91.25,
+                    (string) $data['siswa_1']->id => '91,25',
                     (string) $data['siswa_2']->id => 78,
                 ],
                 'catatan' => [
@@ -107,6 +107,14 @@ class InputNilaiApiTest extends TestCase
             'nilai' => 91.25,
             'catatan' => 'Sangat baik',
         ]);
+
+        $this->withToken($token)
+            ->postJson(route('api.v1.input-nilai.store'), [
+                'komponen_nilai_id' => $data['komponen']->id,
+                'nilai' => [(string) $data['siswa_1']->id => '91,257'],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('nilai.'.$data['siswa_1']->id);
 
         $this->withToken($token)
             ->patchJson(route('api.v1.input-nilai.publikasikan', [

@@ -34,6 +34,9 @@ class InputNilaiController extends Controller
             $request->user(),
             $awal['komponen_nilai_id'],
         );
+        $request->merge([
+            'nilai' => $service->normalisasiNilaiMasukan($request->input('nilai')),
+        ]);
         $data = $request->validate(
             $service->aturanValidasi($komponen),
             $service->pesanValidasi(),

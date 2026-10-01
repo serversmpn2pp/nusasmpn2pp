@@ -63,7 +63,7 @@ class InputNilaiService
         if ($menggunakanPredikat) {
             $aturan['predikat.*'] = ['nullable', Rule::in(MataPelajaran::PREDIKAT_NILAI)];
         } else {
-            $aturan['nilai.*'] = ['nullable', 'numeric', 'min:0', 'max:100'];
+            $aturan['nilai.*'] = ['nullable', 'numeric', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'min:0', 'max:100'];
         }
 
         return $aturan;
@@ -73,10 +73,30 @@ class InputNilaiService
     {
         return [
             'nilai.*.numeric' => 'Nilai harus berupa angka.',
+            'nilai.*.regex' => 'Nilai maksimal menggunakan 2 angka di belakang koma.',
             'nilai.*.min' => 'Nilai minimal 0.',
             'nilai.*.max' => 'Nilai maksimal 100.',
             'predikat.*.in' => 'Predikat harus SB, B, C, atau K.',
         ];
+    }
+
+    public function normalisasiNilaiMasukan(mixed $nilai): mixed
+    {
+        if (! is_array($nilai)) {
+            return $nilai;
+        }
+
+        return collect($nilai)
+            ->map(function (mixed $item): mixed {
+                if (! is_string($item)) {
+                    return $item;
+                }
+
+                $item = trim($item);
+
+                return $item === '' ? '' : str_replace(',', '.', $item);
+            })
+            ->all();
     }
 
     public function simpan(

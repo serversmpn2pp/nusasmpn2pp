@@ -1467,7 +1467,7 @@ class UjianCbtTest extends TestCase
         $relasiUpload = $ujianCbt->soalUjianCbt()->create([
             'soal_cbt_id' => $soalUpload->id,
             'nomor_urut' => 2,
-            'bobot' => 3,
+            'bobot' => 4,
         ]);
 
         $this->actingAs($administrator)
@@ -1524,13 +1524,13 @@ class UjianCbtTest extends TestCase
         $this->assertTrue($jawaban->benar);
         $this->assertEquals(2.0, (float) $jawaban->skor);
         $jawabanUpload->refresh();
-        $this->assertTrue($jawabanUpload->benar);
+        $this->assertFalse($jawabanUpload->benar);
         $this->assertEquals(3.0, (float) $jawabanUpload->skor);
 
         $this->actingAs($administrator)
             ->get(route('ujian-cbt.hasil.index', $ujianCbt))
             ->assertOk()
-            ->assertSee('100,00')
+            ->assertSee('83,33')
             ->assertSee('Tuntas')
             ->assertDontSee('<span class="badge badge-warning">Perlu koreksi manual</span>', false);
 
@@ -1545,7 +1545,7 @@ class UjianCbtTest extends TestCase
             ->where('siswa_id', $peserta->anggotaKelas->siswa_id)
             ->firstOrFail();
 
-        $this->assertEquals(100.0, (float) $nilaiSiswa->nilai);
+        $this->assertEquals(83.33, (float) $nilaiSiswa->nilai);
         $this->assertSame('Diterapkan dari CBT CBT-UJI-001.', $nilaiSiswa->catatan);
         $this->assertSame($nilaiSiswa->id, $peserta->fresh()->nilai_siswa_id);
         $this->assertNotNull($peserta->fresh()->nilai_diterapkan_pada);

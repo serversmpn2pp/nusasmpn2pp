@@ -334,6 +334,36 @@ class PublikasiNilaiSiswaTest extends TestCase
             ->assertDontSee('Matematika');
     }
 
+    public function test_input_nilai_web_menerima_koma_dan_menampilkan_dua_desimal(): void
+    {
+        $data = $this->dataDasar();
+
+        $this->actingAs($data['akun_guru'])
+            ->get(route('input-nilai.index', ['komponen_nilai_id' => $data['komponen']['formatif']->id]))
+            ->assertOk()
+            ->assertSee('koma atau titik, maksimal 2 desimal')
+            ->assertSee('inputmode="decimal"', false)
+            ->assertSee('placeholder="Contoh: 87,50"', false);
+
+        $this->actingAs($data['akun_guru'])
+            ->post(route('input-nilai.store'), [
+                'komponen_nilai_id' => $data['komponen']['formatif']->id,
+                'nilai' => [$data['siswa']->id => '87,50'],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('nilai_siswa', [
+            'komponen_nilai_id' => $data['komponen']['formatif']->id,
+            'siswa_id' => $data['siswa']->id,
+            'nilai' => 87.50,
+        ]);
+
+        $this->actingAs($data['akun_guru'])
+            ->get(route('input-nilai.index', ['komponen_nilai_id' => $data['komponen']['formatif']->id]))
+            ->assertOk()
+            ->assertSee('value="87,50"', false);
+    }
+
     public function test_nilai_tidak_dapat_dipublikasikan_jika_belum_ada_isinya(): void
     {
         $data = $this->dataDasar();
