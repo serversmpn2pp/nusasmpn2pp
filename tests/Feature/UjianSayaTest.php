@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AktivitasKeamananUjianCbt;
 use App\Models\AnggotaKelas;
 use App\Models\JadwalUjianCbt;
 use App\Models\JenisUjianCbt;
@@ -365,6 +366,7 @@ class UjianSayaTest extends TestCase
             'token' => 'MASUK1',
             'jumlah_soal' => 2,
             'deteksi_pindah_tab' => true,
+            'blokir_tangkapan_layar' => true,
             'toleransi_pindah_aplikasi_detik' => 3,
             'batas_pindah_aplikasi' => 3,
             'tindakan_pindah_aplikasi' => 'tahan',
@@ -484,6 +486,7 @@ class UjianSayaTest extends TestCase
                     'visibility' => 'visible',
                     'pemicu' => 'timer',
                     'fullscreen' => false,
+                    'layar_ganda' => false,
                     'online' => true,
                     'waktu_klien' => '2026-12-01T08:00:00+07:00',
                 ],
@@ -502,7 +505,7 @@ class UjianSayaTest extends TestCase
         Carbon::setTestNow(now()->addSeconds(4));
         $this->postJson(route('cbt.ujian.aktivitas-keamanan'), [
             'peristiwa' => 'kembali',
-            'metadata' => ['visibility' => 'visible', 'pemicu' => 'visibilitychange'],
+            'metadata' => ['visibility' => 'visible', 'pemicu' => 'window-blur', 'layar_ganda' => true],
         ])
             ->assertOk()
             ->assertJsonPath('data.kejadian_dihitung', true)
@@ -516,6 +519,10 @@ class UjianSayaTest extends TestCase
             'durasi_detik' => 4,
             'dihitung' => true,
         ]);
+        $this->assertTrue((bool) data_get(
+            AktivitasKeamananUjianCbt::query()->where('peserta_ujian_cbt_id', $peserta->id)->firstOrFail()->metadata,
+            'layar_ganda',
+        ));
 
         $this->post(route('cbt.logout'))
             ->assertRedirect(route('ujian-saya.index'))
@@ -539,9 +546,14 @@ class UjianSayaTest extends TestCase
             ->assertSee('Soal 1 dari 2')
             ->assertSee('Jawaban disimpan otomatis')
             ->assertSee('Sisa waktu')
+            ->assertSee('<meta name="google" content="notranslate">', false)
+            ->assertSee('translate="no"', false)
             ->assertSee('data-security-detection="1"', false)
+            ->assertSee('data-content-protection="1"', false)
             ->assertSee('data-security-held="0"', false)
             ->assertSee(route('cbt.ujian.aktivitas-keamanan'), false)
+            ->assertSee("window.addEventListener('blur'", false)
+            ->assertSee("document.addEventListener('contextmenu'", false)
             ->assertSee('Peringatan aktivitas ujian')
             ->assertSee('Ujian sementara ditahan')
             ->assertSee('Kumpulkan Ujian');

@@ -1,9 +1,55 @@
 @extends('cbt.layout')
 
 @section('title', 'Mengerjakan Ujian - CBT NUSA')
+@section('html_attributes', 'translate="no" class="notranslate"')
+
+@push('meta')
+    <meta name="google" content="notranslate">
+@endpush
 
 @push('styles')
     <style>
+        .exam-protected-content,
+        .exam-protected-content * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .exam-protected-content input,
+        .exam-protected-content textarea,
+        .exam-protected-content select,
+        .exam-protected-content [contenteditable="true"] {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .exam-protected-content img {
+            -webkit-user-drag: none;
+            user-drag: none;
+        }
+
+        .content-protection-notice {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 90;
+            width: min(390px, calc(100vw - 36px));
+            border: 1px solid #e5c84c;
+            border-radius: 7px;
+            background: #fffbea;
+            box-shadow: var(--shadow);
+            padding: 11px 13px;
+            color: #594800;
+            font-size: .84rem;
+            font-weight: 750;
+            line-height: 1.45;
+        }
+
+        .content-protection-notice[hidden] {
+            display: none;
+        }
+
         .exam-top-status {
             display: flex;
             flex: 0 0 auto;
@@ -661,12 +707,17 @@
             <div class="alert alert-danger">{{ $errors->first() }}</div>
         @endif
 
+        <div id="contentProtectionNotice" class="content-protection-notice" role="status" aria-live="polite" hidden></div>
+
         <form
             id="formUjian"
+            class="notranslate{{ $ujian->blokir_tangkapan_layar ? ' exam-protected-content' : '' }}"
+            translate="no"
             action="{{ route('cbt.ujian.simpan') }}"
             method="POST"
             data-security-endpoint="{{ route('cbt.ujian.aktivitas-keamanan') }}"
             data-security-detection="{{ $peserta->ujianCbt->deteksi_pindah_tab ? '1' : '0' }}"
+            data-content-protection="{{ $ujian->blokir_tangkapan_layar ? '1' : '0' }}"
             data-security-held="{{ $peserta->status === 'terblokir' ? '1' : '0' }}"
             @if ($peserta->status === 'terblokir') inert @endif
         >
@@ -1062,6 +1113,7 @@
             const securityHoldTimer = document.getElementById('securityHoldTimer');
             const securityHoldStatus = document.getElementById('securityHoldStatus');
             const checkSecurityStatus = document.getElementById('checkSecurityStatus');
+            const contentProtectionNotice = document.getElementById('contentProtectionNotice');
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             const autosaveUrl = @json(route('cbt.ujian.jawaban'));
             const fileUploadUrl = @json(route('cbt.ujian.jawaban-berkas'));
@@ -1070,6 +1122,7 @@
             const finishThresholdSeconds = 15 * 60;
             const securityEndpoint = formUjian.dataset.securityEndpoint;
             const securityDetectionEnabled = formUjian.dataset.securityDetection === '1';
+            const contentProtectionEnabled = formUjian.dataset.contentProtection === '1';
             const securityHeartbeatIntervalMs = 15000;
             const saveTimers = new Map();
             const saveQueues = new Map();
@@ -1083,6 +1136,8 @@
             let securityStopped = false;
             let securityRequestQueue = Promise.resolve();
             let isExamHeld = formUjian.dataset.securityHeld === '1';
+            let systemDialogBlurAllowedUntil = 0;
+            let protectionNoticeTimer = null;
 
             function formatTwoDigits(value) {
                 return String(value).padStart(2, '0');
@@ -1092,11 +1147,46 @@
                 return finalSubmitStarted || automaticSubmitStarted;
             }
 
+            function isEditableTarget(target) {
+                return target instanceof Element
+                    && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
+            }
+
+            function showContentProtectionNotice(message) {
+                if (!contentProtectionNotice) return;
+
+                contentProtectionNotice.textContent = message;
+                contentProtectionNotice.hidden = false;
+                clearTimeout(protectionNoticeTimer);
+                protectionNoticeTimer = setTimeout(() => {
+                    contentProtectionNotice.hidden = true;
+                }, 3200);
+            }
+
+            function blockProtectedShortcut(event) {
+                if (!contentProtectionEnabled) return;
+
+                const key = event.key.toLowerCase();
+                const commandKey = event.ctrlKey || event.metaKey;
+                const mayEditOwnAnswer = isEditableTarget(event.target) && ['c', 'x'].includes(key);
+                const blockedCommand = commandKey && ['c', 'f', 'l', 'n', 'p', 'r', 's', 't', 'u', 'w'].includes(key);
+                const blockedDeveloperTool = event.key === 'F12'
+                    || (commandKey && event.shiftKey && ['c', 'i', 'j'].includes(key));
+                const blockedVisualSearch = event.altKey && event.shiftKey && key === 's';
+
+                if ((blockedCommand && !mayEditOwnAnswer) || blockedDeveloperTool || blockedVisualSearch) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    showContentProtectionNotice('Pencarian, penyalinan soal, dan menu browser dinonaktifkan selama ujian.');
+                }
+            }
+
             function securityMetadata(trigger) {
                 return {
                     visibility: document.visibilityState || (document.hidden ? 'hidden' : 'visible'),
                     pemicu: trigger,
                     fullscreen: Boolean(document.fullscreenElement),
+                    layar_ganda: Boolean(window.screen?.isExtended),
                     online: navigator.onLine,
                     waktu_klien: new Date().toISOString(),
                 };
@@ -1590,6 +1680,42 @@
                 });
             });
 
+            document.querySelectorAll('[data-file-button]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    systemDialogBlurAllowedUntil = Date.now() + 2000;
+                });
+            });
+
+            document.addEventListener('contextmenu', (event) => {
+                if (!contentProtectionEnabled) return;
+
+                event.preventDefault();
+                showContentProtectionNotice('Klik kanan dan pencarian web dinonaktifkan selama ujian.');
+            });
+            document.addEventListener('selectstart', (event) => {
+                if (!contentProtectionEnabled || isEditableTarget(event.target)) return;
+
+                event.preventDefault();
+                showContentProtectionNotice('Teks soal tidak dapat dipilih atau disalin selama ujian.');
+            });
+            document.addEventListener('copy', (event) => {
+                if (!contentProtectionEnabled || isEditableTarget(event.target)) return;
+
+                event.preventDefault();
+                showContentProtectionNotice('Teks soal tidak dapat disalin selama ujian.');
+            });
+            document.addEventListener('cut', (event) => {
+                if (!contentProtectionEnabled || isEditableTarget(event.target)) return;
+
+                event.preventDefault();
+            });
+            document.addEventListener('dragstart', (event) => {
+                if (!contentProtectionEnabled || isEditableTarget(event.target)) return;
+
+                event.preventDefault();
+            });
+            document.addEventListener('keydown', blockProtectedShortcut, true);
+
             navigationButtons.forEach((button) => {
                 button.addEventListener('click', () => {
                     queueSave(currentQuestion);
@@ -1667,7 +1793,16 @@
             window.addEventListener('pageshow', () => {
                 if (!document.hidden) reportSecurityReturn('pageshow');
             });
+            window.addEventListener('blur', () => {
+                if (Date.now() <= systemDialogBlurAllowedUntil) return;
+
+                questionCards.forEach((card, index) => {
+                    if (card.dataset.dirty === '1') queueSave(index);
+                });
+                reportSecurityAway('window-blur');
+            });
             window.addEventListener('focus', () => {
+                systemDialogBlurAllowedUntil = 0;
                 if (!document.hidden) reportSecurityReturn('focus');
             });
 
@@ -1713,6 +1848,9 @@
             questionCards.forEach((card, index) => refreshCardState(index));
             showQuestion(0, false);
             setSaveStatus('saved', 'Jawaban disimpan otomatis');
+            if (securityDetectionEnabled && window.screen?.isExtended) {
+                showContentProtectionNotice('Lebih dari satu layar terdeteksi. Perpindahan fokus ke layar lain akan dicatat oleh Mode Aman.');
+            }
             if (isExamHeld) {
                 setExamHeld({
                     mode: 'ditahan',

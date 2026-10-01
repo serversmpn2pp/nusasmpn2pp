@@ -372,6 +372,7 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'selesai_pada' => now()->subMinutes(2)->addSeconds(4),
             'durasi_detik' => 4,
             'dihitung' => true,
+            'metadata' => ['pemicu' => 'window-blur', 'layar_ganda' => true],
         ]);
         AktivitasKeamananUjianCbt::create([
             'peserta_ujian_cbt_id' => $pesertaDitahan->id,
@@ -400,6 +401,8 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('12 detik')
             ->assertSeeText('Di bawah batas toleransi')
             ->assertSeeText('Dihitung sebagai kejadian')
+            ->assertSeeText('Fokus berpindah ke jendela atau layar lain')
+            ->assertSeeText('Perangkat terdeteksi memakai lebih dari satu layar')
             ->assertSee($ruteBukaModeAman, false);
         if (getenv('CBT_SUPERVISOR_FIXTURE')) {
             file_put_contents(storage_path('logs/cbt-supervisor-mode-aman-history.html'), $halamanRiwayat->getContent());

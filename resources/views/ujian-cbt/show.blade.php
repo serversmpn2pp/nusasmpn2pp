@@ -129,7 +129,7 @@
                     <div class="detail-item"><dt>Keluar halaman</dt><dd>{{ $ujianCbt->deteksi_pindah_tab ? 'Dicatat setelah '.$ujianCbt->toleransi_pindah_aplikasi_detik.' detik' : 'Tidak dicatat' }}</dd></div>
                     <div class="detail-item"><dt>Mode Aman</dt><dd>{{ ! $ujianCbt->deteksi_pindah_tab ? 'Tidak aktif' : ($ujianCbt->tindakan_pindah_aplikasi === 'tahan' ? 'Tahan setelah '.$ujianCbt->batas_pindah_aplikasi.' kejadian' : 'Hanya mencatat') }}</dd></div>
                     <div class="detail-item"><dt>Layar penuh</dt><dd>{{ $ujianCbt->wajib_fullscreen ? 'Kebijakan aplikasi; web tidak dipaksa' : 'Tidak diwajibkan' }}</dd></div>
-                    <div class="detail-item"><dt>Tangkapan layar</dt><dd>{{ $ujianCbt->blokir_tangkapan_layar ? 'Kebijakan aplikasi; web tidak diblokir' : 'Tidak dibatasi' }}</dd></div>
+                    <div class="detail-item"><dt>Proteksi konten</dt><dd>{{ $ujianCbt->blokir_tangkapan_layar ? 'Batasi salin, seleksi, dan menu konteks; tangkapan layar web tidak dapat dijamin' : 'Tidak dibatasi' }}</dd></div>
                     <div class="detail-item"><dt>Hasil siswa</dt><dd>{{ $ujianCbt->tampilkan_hasil ? 'Ditampilkan' : 'Tidak ditampilkan' }}</dd></div>
                     <div class="detail-item span-2"><dt>Petunjuk</dt><dd style="white-space: pre-line;">{{ $teks($ujianCbt->petunjuk) }}</dd></div>
                     <div class="detail-item span-2"><dt>Catatan internal</dt><dd style="white-space: pre-line;">{{ $teks($ujianCbt->keterangan) }}</dd></div>

@@ -178,10 +178,11 @@ class AksesUjianCbtController extends Controller
         );
         $data = $request->validate([
             'peristiwa' => ['required', 'in:keluar,kembali,heartbeat'],
-            'metadata' => ['nullable', 'array:visibility,pemicu,fullscreen,online,waktu_klien'],
+            'metadata' => ['nullable', 'array:visibility,pemicu,fullscreen,layar_ganda,online,waktu_klien'],
             'metadata.visibility' => ['nullable', 'string', 'max:20'],
             'metadata.pemicu' => ['nullable', 'string', 'max:30'],
             'metadata.fullscreen' => ['nullable', 'boolean'],
+            'metadata.layar_ganda' => ['nullable', 'boolean'],
             'metadata.online' => ['nullable', 'boolean'],
             'metadata.waktu_klien' => ['nullable', 'string', 'max:40'],
         ]);

@@ -80,6 +80,22 @@
                                 Di bawah batas toleransi · {{ $item->durasi_detik }} detik di luar halaman.
                             @endif
                         </p>
+                        @php
+                            $pemicu = match (data_get($item->metadata, 'pemicu')) {
+                                'window-blur' => 'Fokus berpindah ke jendela atau layar lain',
+                                'visibilitychange' => 'Tab berganti atau halaman disembunyikan',
+                                'pagehide' => 'Halaman ditutup atau ditinggalkan',
+                                default => null,
+                            };
+                        @endphp
+                        @if($pemicu || data_get($item->metadata, 'layar_ganda') === true)
+                            <p>
+                                {{ $pemicu ?: 'Perpindahan halaman terdeteksi' }}
+                                @if(data_get($item->metadata, 'layar_ganda') === true)
+                                    · Perangkat terdeteksi memakai lebih dari satu layar.
+                                @endif
+                            </p>
+                        @endif
                     @endif
                 </div>
             </article>
