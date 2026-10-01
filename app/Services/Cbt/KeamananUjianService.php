@@ -5,11 +5,16 @@ namespace App\Services\Cbt;
 use App\Models\AktivitasKeamananUjianCbt;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class KeamananUjianService
 {
+    private const JENDELA_POLA_KELUAR_SINGKAT_DETIK = 60;
+
+    private const MINIMAL_POLA_KELUAR_SINGKAT = 3;
+
     public function catat(
         Pengguna $pengguna,
         PesertaUjianCbt $peserta,
@@ -22,6 +27,7 @@ class KeamananUjianService
         $perangkat = trim($perangkat);
         $dihitung = false;
         $durasi = 0;
+        $polaKeluarSingkat = null;
 
         DB::transaction(function () use (
             $peserta,
@@ -31,6 +37,7 @@ class KeamananUjianService
             $metadata,
             &$dihitung,
             &$durasi,
+            &$polaKeluarSingkat,
         ): void {
             $terkunci = PesertaUjianCbt::query()
                 ->with('ujianCbt')
@@ -98,6 +105,21 @@ class KeamananUjianService
             ]);
 
             if (! $dihitung) {
+                $polaKeluarSingkat = $this->buatPolaKeluarSingkatJikaPerlu(
+                    $terkunci,
+                    $selesai,
+                    $batasToleransi,
+                    $perangkat,
+                    $ip,
+                );
+
+                if ($polaKeluarSingkat) {
+                    $dihitung = true;
+                    $durasi = $polaKeluarSingkat['durasi_total_detik'];
+                }
+            }
+
+            if (! $dihitung) {
                 return;
             }
 
@@ -126,7 +148,8 @@ class KeamananUjianService
             'waktu_server' => now()->toISOString(),
             'kejadian_dihitung' => $dihitung,
             'durasi_kejadian_detik' => $durasi,
-            'pesan' => $this->pesan($keamanan, $dihitung),
+            'pola_keluar_singkat' => $polaKeluarSingkat,
+            'pesan' => $this->pesan($keamanan, $dihitung, $polaKeluarSingkat),
             'keamanan' => $keamanan,
         ];
     }
@@ -243,7 +266,78 @@ class KeamananUjianService
                 ->exists();
     }
 
-    private function pesan(array $keamanan, bool $dihitung): ?string
+    private function buatPolaKeluarSingkatJikaPerlu(
+        PesertaUjianCbt $peserta,
+        CarbonInterface $selesai,
+        int $batasToleransi,
+        string $perangkat,
+        ?string $ip,
+    ): ?array {
+        $idBatasRangkaianTerakhir = (int) AktivitasKeamananUjianCbt::query()
+            ->where('peserta_ujian_cbt_id', $peserta->id)
+            ->where(function ($query) {
+                $query->whereIn('jenis', ['pola_keluar_singkat', 'buka_mode_aman'])
+                    ->orWhere(function ($query) {
+                        $query->where('jenis', 'keluar_aplikasi')->where('dihitung', true);
+                    });
+            })
+            ->max('id');
+        $aktivitasSingkat = AktivitasKeamananUjianCbt::query()
+            ->where('peserta_ujian_cbt_id', $peserta->id)
+            ->where('jenis', 'keluar_aplikasi')
+            ->where('id', '>', $idBatasRangkaianTerakhir)
+            ->whereNotNull('selesai_pada')
+            ->where('selesai_pada', '>=', $selesai->copy()->subSeconds(self::JENDELA_POLA_KELUAR_SINGKAT_DETIK))
+            ->where('dihitung', false)
+            ->where('durasi_detik', '<', $batasToleransi)
+            ->orderBy('selesai_pada')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+        $jumlah = $aktivitasSingkat->count();
+        $durasiTotal = (int) $aktivitasSingkat->sum('durasi_detik');
+
+        if ($jumlah < self::MINIMAL_POLA_KELUAR_SINGKAT && $durasiTotal < $batasToleransi) {
+            return null;
+        }
+
+        $pola = AktivitasKeamananUjianCbt::create([
+            'peserta_ujian_cbt_id' => $peserta->id,
+            'jenis' => 'pola_keluar_singkat',
+            'mulai_pada' => $aktivitasSingkat->first()?->mulai_pada ?? $selesai,
+            'selesai_pada' => $selesai,
+            'durasi_detik' => $durasiTotal,
+            'dihitung' => true,
+            'perangkat' => $perangkat ?: null,
+            'ip' => $ip,
+            'metadata' => [
+                'jumlah_aktivitas_singkat' => $jumlah,
+                'durasi_total_detik' => $durasiTotal,
+                'jendela_detik' => self::JENDELA_POLA_KELUAR_SINGKAT_DETIK,
+                'ambang_jumlah' => self::MINIMAL_POLA_KELUAR_SINGKAT,
+                'ambang_durasi_detik' => $batasToleransi,
+                'sumber_aktivitas_ids' => $aktivitasSingkat->pluck('id')->map(fn ($id) => (int) $id)->all(),
+            ],
+        ]);
+
+        $aktivitasSingkat->each(function (AktivitasKeamananUjianCbt $aktivitas) use ($pola): void {
+            $aktivitas->update([
+                'metadata' => array_merge($aktivitas->metadata ?? [], [
+                    'bagian_pola_keluar_singkat' => true,
+                    'aktivitas_pola_id' => $pola->id,
+                ]),
+            ]);
+        });
+
+        return [
+            'aktivitas_id' => (int) $pola->id,
+            'jumlah_aktivitas' => $jumlah,
+            'durasi_total_detik' => $durasiTotal,
+            'jendela_detik' => self::JENDELA_POLA_KELUAR_SINGKAT_DETIK,
+        ];
+    }
+
+    private function pesan(array $keamanan, bool $dihitung, ?array $polaKeluarSingkat = null): ?string
     {
         if ($keamanan['ditahan']) {
             return 'Ujian ditahan karena batas keluar aplikasi tercapai. Minta pengawas membuka ujian.';
@@ -251,6 +345,13 @@ class KeamananUjianService
 
         if (! $dihitung) {
             return null;
+        }
+
+        if ($polaKeluarSingkat) {
+            $jumlah = $polaKeluarSingkat['jumlah_aktivitas'];
+            $durasi = $polaKeluarSingkat['durasi_total_detik'];
+
+            return "Peringatan {$keamanan['jumlah_kejadian']} dari {$keamanan['batas_kejadian']}: pola keluar singkat berulang ({$jumlah} kali, total {$durasi} detik) dihitung sebagai 1 kejadian.";
         }
 
         if ($keamanan['tindakan'] === 'tahan') {

@@ -69,11 +69,20 @@
                         <h3>Akses ujian dibuka</h3>
                         <p>Oleh {{ $item->dibukaOleh?->nama ?: data_get($item->metadata, 'nama_petugas', 'Petugas') }}</p>
                         <p class="security-entry-note">{{ $item->catatan ?: 'Alasan tidak dicatat saat akses dibuka.' }}</p>
+                    @elseif($item->jenis === 'pola_keluar_singkat')
+                        <h3>Pola keluar singkat berulang</h3>
+                        <p>
+                            {{ (int) data_get($item->metadata, 'jumlah_aktivitas_singkat', 0) }} kali berpindah dalam
+                            {{ (int) data_get($item->metadata, 'jendela_detik', 60) }} detik · total {{ $item->durasi_detik }} detik di luar halaman.
+                        </p>
+                        <p class="security-entry-note">Dihitung sebagai 1 kejadian Mode Aman. Catatan sumber tidak dihitung lagi secara terpisah.</p>
                     @else
                         <h3>{{ $item->selesai_pada === null ? 'Siswa keluar dari halaman ujian' : 'Siswa kembali ke halaman ujian' }}</h3>
                         <p>
                             @if($item->selesai_pada === null)
                                 Belum ada waktu kembali yang tercatat.
+                            @elseif(data_get($item->metadata, 'bagian_pola_keluar_singkat') === true)
+                                Bagian dari pola keluar singkat berulang · {{ $item->durasi_detik }} detik di luar halaman.
                             @elseif($item->dihitung)
                                 Dihitung sebagai kejadian · {{ $item->durasi_detik }} detik di luar halaman.
                             @else

@@ -657,6 +657,135 @@ class UjianSayaTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_keluar_singkat_berulang_digabung_menjadi_satu_kejadian_mode_aman(): void
+    {
+        Carbon::setTestNow('2026-12-01 08:00:00');
+
+        $tahun = TahunPelajaran::create([
+            'nama' => '2026/2027 Pola Singkat',
+            'tanggal_mulai' => '2026-07-01',
+            'tanggal_selesai' => '2027-06-30',
+            'aktif' => true,
+        ]);
+        $kelas = $this->buatKelas($tahun, 'VIII.POLA');
+        [, $anggota, $akun] = $this->buatSiswaBerakun($kelas, 'Siswa Pola Singkat', '0131201199');
+        $mataPelajaran = MataPelajaran::create([
+            'kode' => 'POLA8',
+            'nama' => 'Uji Pola Mode Aman',
+            'tingkat' => 8,
+            'kkm' => 75,
+            'aktif' => true,
+        ]);
+        $jenis = JenisUjianCbt::firstOrCreate(
+            ['kode' => 'STS'],
+            [
+                'nama' => 'Sumatif Tengah Semester',
+                'memerlukan_token' => true,
+                'dapat_diterapkan_ke_nilai' => true,
+                'urutan' => 1,
+                'aktif' => true,
+            ],
+        );
+        $ujian = $this->buatUjian(
+            $jenis,
+            $tahun,
+            $mataPelajaran,
+            'CBT-POLA-SINGKAT',
+            'CBT Pola Keluar Singkat',
+            '2026-12-01 07:30:00',
+            '2026-12-01 09:30:00',
+            'berlangsung',
+        );
+        $ujian->update([
+            'deteksi_pindah_tab' => true,
+            'toleransi_pindah_aplikasi_detik' => 3,
+            'batas_pindah_aplikasi' => 3,
+            'tindakan_pindah_aplikasi' => 'tahan',
+        ]);
+        $kelasUjian = KelasUjianCbt::create([
+            'ujian_cbt_id' => $ujian->id,
+            'kelas_id' => $kelas->id,
+        ]);
+        $peserta = $this->buatPeserta($ujian, $kelasUjian, $anggota, 'POLA-001', 'sedang_mengerjakan');
+        $peserta->update(['waktu_mulai' => now()]);
+
+        $this->actingAs($akun)->withSession([
+            'cbt_peserta_ujian_id' => $peserta->id,
+            'cbt_pengguna_id' => $akun->id,
+        ]);
+
+        foreach (range(1, 2) as $urutan) {
+            $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'keluar'])->assertOk();
+            Carbon::setTestNow(now()->addSecond());
+            $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'kembali'])
+                ->assertOk()
+                ->assertJsonPath('data.kejadian_dihitung', false)
+                ->assertJsonPath('data.keamanan.jumlah_kejadian', 0);
+            Carbon::setTestNow(now()->addSeconds(5));
+        }
+
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'keluar'])->assertOk();
+        Carbon::setTestNow(now()->addSecond());
+        $responsPolaPertama = $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'kembali'])
+            ->assertOk()
+            ->assertJsonPath('data.kejadian_dihitung', true)
+            ->assertJsonPath('data.durasi_kejadian_detik', 3)
+            ->assertJsonPath('data.pola_keluar_singkat.jumlah_aktivitas', 3)
+            ->assertJsonPath('data.pola_keluar_singkat.durasi_total_detik', 3)
+            ->assertJsonPath('data.keamanan.jumlah_kejadian', 1);
+        $this->assertStringContainsString('pola keluar singkat berulang', $responsPolaPertama->json('data.pesan'));
+
+        $polaPertama = AktivitasKeamananUjianCbt::query()
+            ->where('peserta_ujian_cbt_id', $peserta->id)
+            ->where('jenis', 'pola_keluar_singkat')
+            ->firstOrFail();
+        $this->assertTrue($polaPertama->dihitung);
+        $this->assertSame(3, data_get($polaPertama->metadata, 'jumlah_aktivitas_singkat'));
+        $this->assertCount(3, data_get($polaPertama->metadata, 'sumber_aktivitas_ids'));
+        $this->assertTrue(
+            AktivitasKeamananUjianCbt::query()
+                ->where('peserta_ujian_cbt_id', $peserta->id)
+                ->where('jenis', 'keluar_aplikasi')
+                ->get()
+                ->every(fn ($item) => $item->dihitung === false
+                    && data_get($item->metadata, 'aktivitas_pola_id') === $polaPertama->id),
+        );
+
+        Carbon::setTestNow(now()->addSeconds(5));
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'keluar'])->assertOk();
+        Carbon::setTestNow(now()->addSecond());
+        $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'kembali'])
+            ->assertOk()
+            ->assertJsonPath('data.kejadian_dihitung', false)
+            ->assertJsonPath('data.keamanan.jumlah_kejadian', 1);
+        $this->assertSame(1, AktivitasKeamananUjianCbt::query()
+            ->where('peserta_ujian_cbt_id', $peserta->id)
+            ->where('jenis', 'pola_keluar_singkat')
+            ->count());
+
+        Carbon::setTestNow(now()->addSeconds(61));
+        foreach (range(1, 2) as $urutan) {
+            $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'keluar'])->assertOk();
+            Carbon::setTestNow(now()->addSeconds(2));
+            $respons = $this->postJson(route('cbt.ujian.aktivitas-keamanan'), ['peristiwa' => 'kembali'])->assertOk();
+
+            if ($urutan === 1) {
+                $respons->assertJsonPath('data.kejadian_dihitung', false);
+                Carbon::setTestNow(now()->addSeconds(5));
+            }
+        }
+        $respons
+            ->assertJsonPath('data.kejadian_dihitung', true)
+            ->assertJsonPath('data.pola_keluar_singkat.jumlah_aktivitas', 2)
+            ->assertJsonPath('data.pola_keluar_singkat.durasi_total_detik', 4)
+            ->assertJsonPath('data.keamanan.jumlah_kejadian', 2);
+
+        $peserta->refresh();
+        $this->assertSame(2, $peserta->jumlah_pindah_aplikasi);
+        $this->assertSame(7, $peserta->durasi_di_luar_aplikasi_detik);
+        $this->assertSame('sedang_mengerjakan', $peserta->status);
+    }
+
     private function buatKelas(TahunPelajaran $tahun, string $nama): Kelas
     {
         return Kelas::create([

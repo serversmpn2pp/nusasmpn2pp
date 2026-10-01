@@ -381,6 +381,19 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             'selesai_pada' => now()->subMinute()->addSeconds(2),
             'durasi_detik' => 2,
             'dihitung' => false,
+            'metadata' => ['bagian_pola_keluar_singkat' => true],
+        ]);
+        AktivitasKeamananUjianCbt::create([
+            'peserta_ujian_cbt_id' => $pesertaDitahan->id,
+            'jenis' => 'pola_keluar_singkat',
+            'mulai_pada' => now()->subSeconds(30),
+            'selesai_pada' => now()->subSeconds(25),
+            'durasi_detik' => 3,
+            'dihitung' => true,
+            'metadata' => [
+                'jumlah_aktivitas_singkat' => 3,
+                'jendela_detik' => 60,
+            ],
         ]);
         $ruteBukaModeAman = route('tugas-pengawas-ujian.mode-aman.buka', [$ruangOperasional, $pesertaDitahan]);
         $ruteRiwayatModeAman = route('tugas-pengawas-ujian.mode-aman.riwayat', [$ruangOperasional, $pesertaDitahan]);
@@ -399,8 +412,10 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('Riwayat Mode Aman')
             ->assertSeeText('3 kali')
             ->assertSeeText('12 detik')
-            ->assertSeeText('Di bawah batas toleransi')
+            ->assertSeeText('Bagian dari pola keluar singkat berulang')
             ->assertSeeText('Dihitung sebagai kejadian')
+            ->assertSeeText('Pola keluar singkat berulang')
+            ->assertSeeText('Dihitung sebagai 1 kejadian Mode Aman')
             ->assertSeeText('Fokus berpindah ke jendela atau layar lain')
             ->assertSeeText('Perangkat terdeteksi memakai lebih dari satu layar')
             ->assertSee($ruteBukaModeAman, false);
