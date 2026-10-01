@@ -119,10 +119,92 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             Carbon::setTestNow();
         }
 
-        $this->actingAs($data['admin'])
-            ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']))
+        if (getenv('CBT_EXECUTION_FIXTURE')) {
+            $ruangKedua = RuangKegiatanUjianCbt::create([
+                'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+                'kode' => 'R02',
+                'nama' => 'Ruang 2',
+                'lokasi' => 'Lantai 2',
+                'kapasitas' => 20,
+                'urutan' => 2,
+                'aktif' => true,
+            ]);
+            app(BagiPesertaUjianTerpusat::class)->bagi(
+                $data['kegiatan'],
+                7,
+                $data['sesi']->id,
+                [$data['kelas']->id],
+                [$data['ruang']->id, $ruangKedua->id],
+                $data['admin'],
+            );
+            PengawasRuangUjianTerpusat::create([
+                'jadwal_ujian_cbt_id' => $data['jadwal']->id,
+                'ruang_kegiatan_ujian_cbt_id' => $data['ruang']->id,
+                'pengawas_utama_pegawai_id' => $data['akun_guru']->pegawai_id,
+                'ditugaskan_oleh_pengguna_id' => $data['admin']->id,
+            ]);
+            $mapelKedua = MataPelajaran::create([
+                'kode' => 'BIN8',
+                'nama' => 'Bahasa Indonesia',
+                'tingkat' => 8,
+                'kkm' => 75,
+                'aktif' => true,
+            ]);
+            $kelasKedua = Kelas::create([
+                'tahun_pelajaran_id' => $data['tahun']->id,
+                'nama' => 'VIII.A',
+                'tingkat' => 8,
+                'kapasitas' => 32,
+                'aktif' => true,
+            ]);
+            $jadwalKedua = JadwalUjianCbt::create([
+                'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+                'sesi_kegiatan_ujian_cbt_id' => $data['sesi']->id,
+                'mata_pelajaran_id' => $mapelKedua->id,
+                'tanggal' => '2026-09-15',
+                'waktu_mulai' => '07:30',
+                'waktu_selesai' => '09:00',
+                'label_sesi' => 'Sesi Pagi',
+                'tingkat' => 8,
+                'urutan' => 2,
+                'status' => 'draft',
+            ]);
+            $jadwalKedua->kelas()->sync([$kelasKedua->id]);
+
+            $sesiKedua = SesiKegiatanUjianCbt::create([
+                'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+                'kode' => 'S02',
+                'nama' => 'Sesi Kedua',
+                'waktu_mulai' => '09:15',
+                'waktu_selesai' => '10:45',
+                'urutan' => 2,
+                'aktif' => true,
+            ]);
+            $jadwalKetiga = JadwalUjianCbt::create([
+                'kegiatan_ujian_cbt_id' => $data['kegiatan']->id,
+                'sesi_kegiatan_ujian_cbt_id' => $sesiKedua->id,
+                'mata_pelajaran_id' => $data['mapel']->id,
+                'tanggal' => '2026-09-15',
+                'waktu_mulai' => '09:15',
+                'waktu_selesai' => '10:45',
+                'label_sesi' => 'Sesi Kedua',
+                'tingkat' => 7,
+                'urutan' => 3,
+                'status' => 'draft',
+            ]);
+            $jadwalKetiga->kelas()->sync([$data['kelas']->id]);
+        }
+
+        $pelaksanaanResponse = $this->actingAs($data['admin'])
+            ->get(route('ujian-terpusat.pelaksanaan-nilai.index', $data['kegiatan']));
+        if (getenv('CBT_EXECUTION_FIXTURE')) {
+            file_put_contents(storage_path('logs/cbt-execution-settings-audit.html'), $pelaksanaanResponse->getContent());
+        }
+        $pelaksanaanResponse
             ->assertOk()
             ->assertSee('Pelaksanaan ujian')
+            ->assertSee('execution-session-divider', false)
+            ->assertSee('execution-card is-ready', false)
             ->assertSee('execution-flow-number">1</span><div><strong>Siapkan ruang', false)
             ->assertSee('Pantau ujian')
             ->assertSeeText('Nilai & hasil')

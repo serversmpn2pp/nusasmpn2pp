@@ -14,12 +14,28 @@
         .execution-flow-number { display:grid; width:34px; height:34px; margin:0; place-items:center; align-self:center; border-radius:50%; background:var(--primary-soft); color:var(--primary-dark); font-size:.78rem; font-weight:900; line-height:1; }
         .execution-flow-item > div > strong,.execution-flow-item > div > span { display:block; }
         .execution-flow-item > div > span { margin-top:2px; color:var(--muted); font-size:.76rem; font-weight:650; }
-        .execution-list { display:grid; gap:16px; }
+        .execution-list { display:grid; gap:12px; }
+        .execution-session-divider { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:12px; padding:11px 14px; border:1px solid #c7d9e8; border-left:4px solid var(--primary); border-radius:7px; background:#eaf2f8; }
+        .execution-session-divider:first-child { margin-top:0; }
+        .execution-session-copy strong,.execution-session-copy span { display:block; }
+        .execution-session-copy strong { color:var(--primary-dark); font-size:.92rem; }
+        .execution-session-copy span { margin-top:2px; color:#50667b; font-size:.76rem; font-weight:650; }
+        .execution-session-time { flex:0 0 auto; padding:6px 10px; border:1px solid #b8cede; border-radius:6px; background:#fff; color:var(--primary-dark); font-size:.8rem; font-weight:850; }
         .execution-summary { grid-template-columns:repeat(4,minmax(0,1fr)); }
-        .execution-card { overflow:hidden; padding:0; }
+        .execution-card { overflow:hidden; padding:0; border-left:5px solid #94a3b8; box-shadow:0 3px 10px rgba(15,52,96,.07); }
+        .execution-card.is-needs-setup { border-left-color:#d89a00; }
+        .execution-card.is-ready { border-left-color:#2563a8; }
+        .execution-card.is-running { border-left-color:#0f8a83; }
+        .execution-card.is-complete { border-left-color:#27864b; }
         .execution-card-head { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:start; padding:18px 20px; border-bottom:1px solid var(--line); }
+        .execution-card.is-needs-setup .execution-card-head { background:#fff9e8; }
+        .execution-card.is-ready .execution-card-head { background:#eef5fb; }
+        .execution-card.is-running .execution-card-head { background:#eaf8f6; }
+        .execution-card.is-complete .execution-card-head { background:#edf8f0; }
         .execution-card-title { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
         .execution-card-title h2 { margin:0; font-size:1.08rem; }
+        .execution-status-badge.is-running { background:#d6f1ed; color:#116b66; }
+        .execution-status-badge.is-complete { background:#dff1e5; color:#1f6d3b; }
         .execution-meta { margin:6px 0 0; color:var(--muted); font-size:.82rem; font-weight:650; }
         .execution-token { min-width:128px; text-align:right; }
         .execution-token span,.execution-token strong { display:block; }
@@ -27,20 +43,34 @@
         .execution-token strong { margin-top:2px; color:var(--primary-dark); font-size:1.2rem; }
         .execution-card-body { padding:18px 20px; }
         .execution-card-stats { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
-        .execution-stat { min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
+        .execution-stat { min-width:0; padding:10px 12px 11px; border:1px solid var(--line); border-top:3px solid #94a3b8; border-radius:7px; background:#f8fafc; }
+        .execution-stat.is-question { border-top-color:#315f91; background:#f3f7fb; }
+        .execution-stat.is-participant { border-top-color:#4f7f70; background:#f3f8f6; }
+        .execution-stat.is-pending { border-top-color:#d09a1d; background:#fffaf0; }
+        .execution-stat.is-progress { border-top-color:#168a9b; background:#eef9fa; }
+        .execution-stat.is-complete { border-top-color:#3d8a59; background:#f1f8f3; }
+        .execution-stat.is-review { border-top-color:#b7791f; background:#fff8eb; }
+        .execution-stat.is-score { border-top-color:#536fa8; background:#f1f4fa; }
         .execution-stat strong,.execution-stat span { display:block; }
         .execution-stat strong { color:var(--primary-dark); font-size:1.12rem; }
         .execution-stat span { margin-top:2px; color:var(--muted); font-size:.72rem; font-weight:700; }
         .execution-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
         .supervisor-details { margin-top:16px; border-top:1px solid var(--line); padding-top:14px; }
-        .supervisor-details > summary { cursor:pointer; color:var(--primary-dark); font-weight:800; }
+        .supervisor-details > summary { padding:11px 13px; border:1px solid #c8d8e6; border-radius:7px; background:#f4f8fb; cursor:pointer; color:var(--primary-dark); font-weight:800; list-style:none; }
+        .supervisor-details > summary::-webkit-details-marker { display:none; }
+        .supervisor-details[open] > summary { border-color:#9ebbd3; background:#eaf3fa; }
         .supervisor-summary { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .supervisor-summary > .help-text { display:inline-flex; align-items:center; gap:9px; color:var(--primary-dark); font-weight:800; }
+        .supervisor-summary > .help-text::after { content:'›'; font-size:1.12rem; line-height:1; transform:rotate(90deg); transition:transform .18s ease; }
+        .supervisor-details[open] .supervisor-summary > .help-text::after { transform:rotate(-90deg); }
         .supervisor-summary-copy { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
         .supervisor-batch-intro { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:12px; padding:11px 13px; border:1px solid #bfdbfe; border-left:4px solid var(--primary); border-radius:7px; background:#eff6ff; }
         .supervisor-batch-intro p { margin:0; color:#36516c; font-size:.78rem; line-height:1.45; }
         .supervisor-grid { display:grid; gap:10px; margin-top:12px; }
         .supervisor-entry { display:grid; gap:8px; }
-        .supervisor-row { display:grid; grid-template-columns:minmax(130px,.6fr) minmax(180px,1fr) minmax(180px,1fr) minmax(180px,.8fr) auto; gap:10px; align-items:end; padding:12px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; }
+        .supervisor-row { display:grid; grid-template-columns:minmax(130px,.6fr) minmax(180px,1fr) minmax(180px,1fr) minmax(180px,.8fr) auto; gap:10px; align-items:end; padding:12px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+        .supervisor-row.is-odd { border-color:#d5e0e9; box-shadow:inset 4px 0 0 #557fa6; }
+        .supervisor-row.is-even { border-color:#c9dde6; box-shadow:inset 4px 0 0 #4c918e; background:#eef7f8; }
         .supervisor-row.is-dirty { border-color:#eab308; box-shadow:inset 4px 0 0 #eab308; background:#fffdf4; }
         .supervisor-room strong,.supervisor-room span { display:block; }
         .supervisor-room span { margin-top:3px; color:var(--muted); font-size:.74rem; }
@@ -62,6 +92,8 @@
         .assigned-supervisor strong,.assigned-supervisor span { display:block; }
         .assigned-supervisor span { margin-top:2px; color:var(--muted); font-size:.7rem; }
         .supervisor-replacement { padding:11px 13px; border:1px solid #eab308; border-left:4px solid var(--accent); border-radius:7px; background:#fffbeb; }
+        .supervisor-replacement:not([open]) { width:max-content; max-width:100%; justify-self:start; padding:0; border:0; background:transparent; }
+        .supervisor-replacement:not([open]) > summary { padding:8px 11px; border:1px solid #e6bd45; border-radius:6px; background:#fff9e8; font-size:.78rem; }
         .supervisor-replacement > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; color:#713f12; font-weight:850; }
         .supervisor-replacement-copy { margin:8px 0 0; color:#854d0e; font-size:.78rem; }
         .replacement-form { display:grid; grid-template-columns:minmax(170px,.65fr) minmax(210px,1fr) minmax(230px,1.2fr) auto; gap:10px; align-items:end; margin-top:12px; }
@@ -102,7 +134,7 @@
         .empty-execution { padding:28px; text-align:center; color:var(--muted); }
         .central-wizard-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; }
         @media (max-width:1050px) { .execution-summary,.execution-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } .execution-card-stats { grid-template-columns:repeat(3,minmax(0,1fr)); } .supervisor-row,.replacement-form { grid-template-columns:repeat(2,minmax(0,1fr)); } .supervisor-room,.supervisor-row .actions { grid-column:1 / -1; } .replacement-form .button { width:100%; } .retake-scheduled-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row,.replacement-form { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button,.replacement-form .button { width:100%; } .supervisor-summary,.supervisor-batch-intro,.supervisor-batch-actions { align-items:stretch; flex-direction:column; } .supervisor-batch-intro .button,.supervisor-batch-actions .button { width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } .retake-candidate { grid-template-columns:28px minmax(0,1fr); } .retake-candidate > :nth-child(n+3) { grid-column:2; } .retake-fields,.retake-scheduled-row { grid-template-columns:1fr; } .retake-fields .field.is-wide { grid-column:auto; } .retake-form-actions { align-items:stretch; flex-direction:column; } .retake-form-actions .button { width:100%; } }
+        @media (max-width:680px) { .execution-hero { grid-template-columns:1fr; } .execution-hero-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; } .execution-flow,.execution-card-stats { grid-template-columns:1fr 1fr; } .execution-session-divider { align-items:flex-start; flex-direction:column; gap:8px; } .execution-card-head { grid-template-columns:1fr; } .execution-token { text-align:left; } .supervisor-row,.replacement-form { grid-template-columns:1fr; } .supervisor-room,.supervisor-row .actions { grid-column:auto; } .supervisor-row .button,.replacement-form .button { width:100%; } .supervisor-summary,.supervisor-batch-intro,.supervisor-batch-actions { align-items:stretch; flex-direction:column; } .supervisor-batch-intro .button,.supervisor-batch-actions .button { width:100%; } .supervisor-replacement:not([open]) { width:100%; justify-self:stretch; } .supervisor-replacement:not([open]) > summary { box-sizing:border-box; width:100%; } .proof-overview { align-items:flex-start; flex-direction:column; } .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; } .central-wizard-actions .button { width:100%; text-align:center; } .retake-candidate { grid-template-columns:28px minmax(0,1fr); } .retake-candidate > :nth-child(n+3) { grid-column:2; } .retake-fields,.retake-scheduled-row { grid-template-columns:1fr; } .retake-fields .field.is-wide { grid-column:auto; } .retake-form-actions { align-items:stretch; flex-direction:column; } .retake-form-actions .button { width:100%; } }
         @media (max-width:480px) { .execution-summary,.execution-flow { grid-template-columns:1fr; } }
     </style>
 
@@ -175,12 +207,47 @@
     </div>
 
     <div class="execution-list">
+        @php
+            $kelompokSesiSebelumnya = null;
+            $nomorKelompokSesi = 0;
+        @endphp
         @forelse ($jadwal as $item)
             @php
                 $paket = $item->ujianCbt;
                 $pengawas = $item->pengawasRuangUjianTerpusat->keyBy('ruang_kegiatan_ujian_cbt_id');
                 $paketSiap = $paket && in_array($paket->status, ['terjadwal', 'berlangsung', 'selesai'], true);
                 $belumMulai = max(0, ($paket?->peserta_ujian_cbt_count ?? 0) - ($paket?->peserta_sedang_count ?? 0) - ($paket?->peserta_selesai_count ?? 0));
+                $jumlahPesertaPaket = (int) ($paket?->peserta_ujian_cbt_count ?? 0);
+                $jumlahSedang = (int) ($paket?->peserta_sedang_count ?? 0);
+                $jumlahSelesai = (int) ($paket?->peserta_selesai_count ?? 0);
+                $statusPelaksanaan = match (true) {
+                    ! $paketSiap => 'needs-setup',
+                    $paket?->status === 'selesai' || ($jumlahPesertaPaket > 0 && $jumlahSelesai >= $jumlahPesertaPaket) => 'complete',
+                    $paket?->status === 'berlangsung' || $jumlahSedang > 0 => 'running',
+                    default => 'ready',
+                };
+                $labelStatusPelaksanaan = match ($statusPelaksanaan) {
+                    'complete' => 'Selesai',
+                    'running' => 'Sedang berlangsung',
+                    'ready' => 'Siap digunakan',
+                    default => $paket ? 'Paket masih draf' : 'Paket belum dibuat',
+                };
+                $kelasBadgePelaksanaan = match ($statusPelaksanaan) {
+                    'complete' => 'is-complete',
+                    'running' => 'is-running',
+                    'ready' => 'badge-active',
+                    default => 'badge-warning',
+                };
+                $kunciKelompokSesi = implode('|', [
+                    $item->tanggal?->format('Y-m-d') ?? '-',
+                    (string) $item->waktu_mulai,
+                    (string) $item->waktu_selesai,
+                ]);
+                $tampilkanPemisahSesi = $kunciKelompokSesi !== $kelompokSesiSebelumnya;
+                if ($tampilkanPemisahSesi) {
+                    $kelompokSesiSebelumnya = $kunciKelompokSesi;
+                    $nomorKelompokSesi++;
+                }
                 $pesertaTidakHadir = $item->pesertaSusulan ?? collect();
                 $calonManual = $item->pesertaCalonSusulanManual ?? collect();
                 $calonSusulan = $pesertaTidakHadir->filter(function ($peserta) {
@@ -198,26 +265,35 @@
                 $susulanAktif = $pesertaTidakHadir->where('status_susulan', 'dijadwalkan');
                 $riwayatSusulan = $pesertaTidakHadir->whereIn('status_susulan', ['selesai', 'dibatalkan']);
             @endphp
-            <section class="panel execution-card">
+            @if ($tampilkanPemisahSesi)
+                <div class="execution-session-divider" role="heading" aria-level="2">
+                    <div class="execution-session-copy">
+                        <strong>{{ $item->sesiKegiatanUjianCbt?->nama ?: 'Sesi '.$nomorKelompokSesi }}</strong>
+                        <span>{{ $item->tanggal?->locale('id')->translatedFormat('l, d F Y') }}</span>
+                    </div>
+                    <span class="execution-session-time">{{ $item->labelWaktu() }}</span>
+                </div>
+            @endif
+            <section class="panel execution-card is-{{ $statusPelaksanaan }}">
                 <div class="execution-card-head">
                     <div>
-                        <div class="execution-card-title"><h2>{{ $item->mataPelajaran?->nama }} · Tingkat {{ $item->tingkat }}</h2><span class="badge {{ $paketSiap ? 'badge-active' : 'badge-warning' }}">{{ $paketSiap ? 'Siap digunakan' : ($paket ? 'Paket masih draf' : 'Paket belum dibuat') }}</span></div>
+                        <div class="execution-card-title"><h2>{{ $item->mataPelajaran?->nama }} · Tingkat {{ $item->tingkat }}</h2><span class="badge execution-status-badge {{ $kelasBadgePelaksanaan }}">{{ $labelStatusPelaksanaan }}</span></div>
                         <p class="execution-meta">{{ $item->tanggal?->locale('id')->translatedFormat('l, d F Y') }} · {{ $item->labelWaktu() }} · {{ $item->kelas->pluck('nama')->join(', ') }}</p>
                     </div>
                     <div class="execution-token"><span>{{ $halamanHasil ? 'Status paket' : 'Token ujian' }}</span><strong>{{ $halamanHasil ? ($paket?->labelStatus() ?? 'Belum siap') : ($paket?->token ?: 'Tanpa token') }}</strong></div>
                 </div>
                 <div class="execution-card-body">
                     <div class="execution-card-stats">
-                        <div class="execution-stat"><strong>{{ $paket?->soal_ujian_cbt_count ?? 0 }}</strong><span>Soal</span></div>
-                        <div class="execution-stat"><strong>{{ $paket?->peserta_ujian_cbt_count ?? 0 }}</strong><span>Peserta</span></div>
+                        <div class="execution-stat is-question"><strong>{{ $paket?->soal_ujian_cbt_count ?? 0 }}</strong><span>Soal</span></div>
+                        <div class="execution-stat is-participant"><strong>{{ $paket?->peserta_ujian_cbt_count ?? 0 }}</strong><span>Peserta</span></div>
                         @if ($halamanHasil)
-                            <div class="execution-stat"><strong>{{ $paket?->peserta_selesai_count ?? 0 }}</strong><span>Selesai</span></div>
-                            <div class="execution-stat"><strong>{{ $item->perlu_koreksi_manual }}</strong><span>Perlu koreksi</span></div>
-                            <div class="execution-stat"><strong>{{ $paket?->nilai_diterapkan_count ?? 0 }}</strong><span>Nilai masuk</span></div>
+                            <div class="execution-stat is-complete"><strong>{{ $paket?->peserta_selesai_count ?? 0 }}</strong><span>Selesai</span></div>
+                            <div class="execution-stat is-review"><strong>{{ $item->perlu_koreksi_manual }}</strong><span>Perlu koreksi</span></div>
+                            <div class="execution-stat is-score"><strong>{{ $paket?->nilai_diterapkan_count ?? 0 }}</strong><span>Nilai masuk</span></div>
                         @else
-                            <div class="execution-stat"><strong>{{ $belumMulai }}</strong><span>Belum mulai</span></div>
-                            <div class="execution-stat"><strong>{{ $paket?->peserta_sedang_count ?? 0 }}</strong><span>Mengerjakan</span></div>
-                            <div class="execution-stat"><strong>{{ $paket?->peserta_selesai_count ?? 0 }}</strong><span>Selesai</span></div>
+                            <div class="execution-stat is-pending"><strong>{{ $belumMulai }}</strong><span>Belum mulai</span></div>
+                            <div class="execution-stat is-progress"><strong>{{ $paket?->peserta_sedang_count ?? 0 }}</strong><span>Mengerjakan</span></div>
+                            <div class="execution-stat is-complete"><strong>{{ $paket?->peserta_selesai_count ?? 0 }}</strong><span>Selesai</span></div>
                         @endif
                     </div>
 
@@ -406,7 +482,7 @@
                                     @endphp
                                     @if ($bolehAturPengawas)
                                         <div class="supervisor-entry">
-                                            <div class="supervisor-row" data-supervisor-row>
+                                            <div class="supervisor-row {{ $loop->odd ? 'is-odd' : 'is-even' }}" data-supervisor-row>
                                                 <div class="supervisor-room">
                                                     <strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span>
                                                     @if($ruangOperasional)<div class="supervisor-proof"><span class="badge {{ $kelasStatusBukti }}">{{ $ruangOperasional->labelStatusBukti() }}</span><span class="badge badge-muted">{{ $ruangOperasional->bukti_daftar_hadir_count }} hadir · {{ $ruangOperasional->bukti_berita_acara_count }} BA</span></div>@endif
@@ -468,7 +544,7 @@
                                             @endif
                                         </div>
                                     @else
-                                        <div class="supervisor-row">
+                                        <div class="supervisor-row {{ $loop->odd ? 'is-odd' : 'is-even' }}">
                                             <div class="supervisor-room">
                                                 <strong>{{ $ruang->nama }}</strong><span>{{ $ruang->lokasi ?: 'Lokasi belum dicatat' }}</span>
                                                 @if($ruangOperasional)<div class="supervisor-proof"><span class="badge {{ $kelasStatusBukti }}">{{ $ruangOperasional->labelStatusBukti() }}</span><span class="badge badge-muted">{{ $ruangOperasional->bukti_daftar_hadir_count }} hadir · {{ $ruangOperasional->bukti_berita_acara_count }} BA</span></div>@endif
