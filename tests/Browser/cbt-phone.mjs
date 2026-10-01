@@ -53,8 +53,23 @@ try {
             }
             if (mode === 'offline') return route.abort('internetdisconnected');
             if (mode === 'slow') await new Promise(resolve => { unblock = resolve; });
-            try { savedPayloads.push(route.request().postDataJSON()); } catch {}
-            return route.fulfill({ json:{ terjawab:true, ragu:false, tersimpan_pada:'10:00:00' } }).catch(() => {});
+            let savedPayload = {};
+            try {
+                savedPayload = route.request().postDataJSON();
+                savedPayloads.push(savedPayload);
+            } catch {}
+            const answer = savedPayload.jawaban || [];
+            const answeredParts = Object.values(answer).filter(value => String(value).trim() !== '');
+            const multipartAnswer = !Array.isArray(answer);
+            const answerComplete = multipartAnswer ? answeredParts.length >= 2 : answeredParts.length > 0;
+            const answerPartial = multipartAnswer && answeredParts.length === 1;
+            return route.fulfill({ json:{
+                terjawab:true,
+                ragu:false,
+                jawaban_lengkap:answerComplete,
+                jawaban_sebagian:answerPartial,
+                tersimpan_pada:'10:00:00',
+            } }).catch(() => {});
         }
         if (new URL(route.request().url()).pathname === '/audit') return route.fulfill({ contentType:'text/html', body:html });
         const pathname = decodeURIComponent(new URL(route.request().url()).pathname);
@@ -211,7 +226,14 @@ try {
     assert.deepEqual(unansweredIndices, [], `Semua nomor harus berubah menjadi terjawab; belum lengkap: ${unansweredIndices.join(', ')}`);
     assert.equal(new Set(savedPayloads.map(payload => payload.soal_ujian_cbt_id).filter(Boolean)).size, 12, 'Semua jawaban harus terkirim melalui autosave');
     const finishButton = page.locator('#openFinishDialog');
-    assert.equal(await finishButton.isEnabled(), true, 'Tombol kumpulkan harus aktif setelah semua soal lengkap');
+    assert.equal(await finishButton.isEnabled(), false, 'Jawaban lengkap tidak boleh membuka tombol sebelum 15 menit terakhir');
+    await page.evaluate(() => {
+        const actualNow = Date.now;
+        window.restoreActualNow = () => { Date.now = actualNow; };
+        Date.now = () => actualNow() + (6 * 60 * 1000);
+    });
+    await page.waitForTimeout(1100);
+    assert.equal(await finishButton.isEnabled(), true, 'Tombol kumpulkan harus aktif pada 15 menit terakhir');
     await finishButton.click();
     assert.equal(await page.locator('#finishDialog').evaluate(dialog => dialog.open), true, 'Dialog konfirmasi harus terbuka');
     assert.equal((await page.locator('#finishAnswered').textContent()).trim(), '12');
@@ -256,7 +278,7 @@ try {
 
     const exitsBeforeSubmit = securityPayloads.filter(payload => payload.peristiwa === 'keluar').length;
     await page.evaluate(() => document.getElementById('formUjian').addEventListener('submit', event => event.preventDefault(), { once:true }));
-    await finishButton.click();
+    await finishButton.evaluate(button => button.click());
     await page.locator('#confirmFinish').click();
     await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
     await page.waitForTimeout(100);

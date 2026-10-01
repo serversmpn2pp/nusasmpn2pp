@@ -91,6 +91,7 @@
                         </p>
                         @php
                             $pemicu = match (data_get($item->metadata, 'pemicu')) {
+                                'focus-guard' => 'Pemeriksaan berkala mendeteksi halaman ujian kehilangan fokus',
                                 'window-blur' => 'Fokus berpindah ke jendela atau layar lain',
                                 'visibilitychange' => 'Tab berganti atau halaman disembunyikan',
                                 'pagehide' => 'Halaman ditutup atau ditinggalkan',

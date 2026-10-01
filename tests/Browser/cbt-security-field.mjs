@@ -47,6 +47,25 @@ try {
     await page.goto('http://localhost/audit');
     await page.waitForTimeout(1200);
     assert.ok(events.some(event => event.peristiwa === 'heartbeat'), 'Heartbeat awal tidak terkirim');
+
+    const beforeFocusGuard = events.length;
+    await page.evaluate(() => {
+        Object.defineProperty(document, 'hasFocus', { configurable:true, value:() => false });
+    });
+    await page.waitForTimeout(2200);
+    const focusGuardAwayEvents = events.slice(beforeFocusGuard).filter(event => event.peristiwa === 'keluar');
+    assert.equal(focusGuardAwayEvents.length, 1, 'Focus guard harus mencatat tepat satu kejadian keluar selama fokus hilang');
+    assert.equal(focusGuardAwayEvents[0].metadata.pemicu, 'focus-guard', 'Kejadian harus ditandai berasal dari focus guard');
+
+    const beforeFocusReturn = events.length;
+    await page.evaluate(() => {
+        Object.defineProperty(document, 'hasFocus', { configurable:true, value:() => true });
+    });
+    await page.waitForTimeout(1200);
+    const focusGuardReturnEvents = events.slice(beforeFocusReturn).filter(event => event.peristiwa === 'kembali');
+    assert.equal(focusGuardReturnEvents.length, 1, 'Focus guard harus mencatat tepat satu kejadian kembali');
+    assert.equal(focusGuardReturnEvents[0].metadata.pemicu, 'focus-guard', 'Kejadian kembali harus ditandai berasal dari focus guard');
+
     const setVisibility = hidden => page.evaluate(value => {
         Object.defineProperty(document, 'hidden', { configurable:true, get:() => value });
         Object.defineProperty(document, 'visibilityState', { configurable:true, get:() => value ? 'hidden' : 'visible' });
@@ -84,7 +103,7 @@ try {
     assert.ok(events.slice(beforeReload).some(event => event.peristiwa === 'keluar'), 'Pemicu pagehide tidak mengirim catatan keluar');
     assert.ok(events.slice(beforeReload).some(event => event.peristiwa === 'kembali'), 'Muat ulang tidak menutup catatan keluar');
     assert.deepEqual(errors, []);
-    console.log('PASS: visibilitychange/pagehide tersimulasi, jaringan putus/pulih, muat ulang, heartbeat, tanpa peringatan palsu atau JS error.');
+    console.log('PASS: focus guard, visibilitychange/pagehide, jaringan putus/pulih, muat ulang, heartbeat, tanpa duplikasi atau JS error.');
 } finally {
     await browser.close();
 }

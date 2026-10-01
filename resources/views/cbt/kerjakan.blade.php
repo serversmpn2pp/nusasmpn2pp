@@ -1124,6 +1124,7 @@
             const securityDetectionEnabled = formUjian.dataset.securityDetection === '1';
             const contentProtectionEnabled = formUjian.dataset.contentProtection === '1';
             const securityHeartbeatIntervalMs = 15000;
+            const securityFocusGuardIntervalMs = 1000;
             const saveTimers = new Map();
             const saveQueues = new Map();
             const activeUploads = new Set();
@@ -1136,6 +1137,7 @@
             let securityStopped = false;
             let securityRequestQueue = Promise.resolve();
             let isExamHeld = formUjian.dataset.securityHeld === '1';
+            let systemDialogOpen = false;
             let systemDialogBlurAllowedUntil = 0;
             let protectionNoticeTimer = null;
 
@@ -1145,6 +1147,15 @@
 
             function isIntentionalExamExit() {
                 return finalSubmitStarted || automaticSubmitStarted;
+            }
+
+            function isSystemDialogFocusAllowed() {
+                return systemDialogOpen || Date.now() <= systemDialogBlurAllowedUntil;
+            }
+
+            function closeSystemDialogFocusAllowance() {
+                systemDialogOpen = false;
+                systemDialogBlurAllowedUntil = 0;
             }
 
             function isEditableTarget(target) {
@@ -1263,6 +1274,25 @@
                 if ((!securityDetectionEnabled && !isExamHeld) || securityAway || document.hidden || isIntentionalExamExit()) return;
 
                 return queueSecurityEvent('heartbeat', trigger);
+            }
+
+            function checkSecurityFocus() {
+                if (!securityDetectionEnabled || securityStopped || isIntentionalExamExit()) return;
+                if (isSystemDialogFocusAllowed()) return;
+
+                const documentHasFocus = typeof document.hasFocus !== 'function' || document.hasFocus();
+                if (document.hidden || !documentHasFocus) {
+                    if (!securityAway) {
+                        questionCards.forEach((card, index) => {
+                            if (card.dataset.dirty === '1') queueSave(index);
+                        });
+                    }
+                    reportSecurityAway('focus-guard');
+
+                    return;
+                }
+
+                reportSecurityReturn('focus-guard');
             }
 
             function setExamHeld(data) {
@@ -1676,12 +1706,15 @@
                     input.addEventListener(eventName, () => markDirty(index, delay));
                 });
                 card.querySelector('[data-answer-file-input]')?.addEventListener('change', (event) => {
+                    closeSystemDialogFocusAllowance();
                     uploadAnswerFile(card, index, event.currentTarget);
                 });
+                card.querySelector('[data-answer-file-input]')?.addEventListener('cancel', closeSystemDialogFocusAllowance);
             });
 
             document.querySelectorAll('[data-file-button]').forEach((button) => {
                 button.addEventListener('click', () => {
+                    systemDialogOpen = true;
                     systemDialogBlurAllowedUntil = Date.now() + 2000;
                 });
             });
@@ -1794,7 +1827,7 @@
                 if (!document.hidden) reportSecurityReturn('pageshow');
             });
             window.addEventListener('blur', () => {
-                if (Date.now() <= systemDialogBlurAllowedUntil) return;
+                if (isSystemDialogFocusAllowed()) return;
 
                 questionCards.forEach((card, index) => {
                     if (card.dataset.dirty === '1') queueSave(index);
@@ -1802,7 +1835,7 @@
                 reportSecurityAway('window-blur');
             });
             window.addEventListener('focus', () => {
-                systemDialogBlurAllowedUntil = 0;
+                closeSystemDialogFocusAllowance();
                 if (!document.hidden) reportSecurityReturn('focus');
             });
 
@@ -1872,6 +1905,7 @@
                 queueSecurityEvent('kembali', 'awal');
                 sendSecurityHeartbeat('awal');
             }, 1000);
+            setInterval(checkSecurityFocus, securityFocusGuardIntervalMs);
             setInterval(sendSecurityHeartbeat, securityHeartbeatIntervalMs);
         })();
     </script>
