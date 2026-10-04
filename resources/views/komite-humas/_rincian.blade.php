@@ -1,0 +1,2 @@
+<dl class="agenda-facts"><div><dt>Masa bakti</dt><dd>{{ $dataPeriode['tanggal_mulai'] }} s.d. {{ $dataPeriode['tanggal_selesai'] }}</dd></div><div><dt>Status kepengurusan</dt><dd>{{ \App\Models\PeriodeKomiteHumas::STATUS[$dataPeriode['status']] }}</dd></div><div><dt>Nomor SK</dt><dd>{{ $dataPeriode['nomor_sk'] ?: '-' }}</dd></div><div><dt>Tanggal SK</dt><dd>{{ $dataPeriode['tanggal_sk'] ?: '-' }}</dd></div></dl>
+@if ($dataPeriode['catatan'])<h3>Catatan kepengurusan</h3><div class="agenda-text">{{ $dataPeriode['catatan'] }}</div>@endif

@@ -111,6 +111,11 @@ class DatabaseSeeder extends Seeder
                 'deskripsi' => 'Monitoring perangkat ajar, nilai, guru mapel, dan kelengkapan kurikulum.',
             ],
             [
+                'nama' => 'Wakil Pimpinan Humas',
+                'kode' => 'wakil_pimpinan_humas',
+                'deskripsi' => 'Mengelola arsip, hubungan masyarakat, kemitraan, dan publikasi sekolah.',
+            ],
+            [
                 'nama' => 'Guru Mapel',
                 'kode' => 'guru_mapel',
                 'deskripsi' => 'Input dan melihat nilai sesuai mata pelajaran dan kelas yang diajar.',
@@ -314,6 +319,30 @@ class DatabaseSeeder extends Seeder
             ['kelompok' => 'Kurikulum', 'nama' => 'Kelola pernyataan survei pembelajaran', 'kode' => 'survei.pertanyaan_kelola', 'deskripsi' => 'Menambah, mengubah, mengurutkan, dan menonaktifkan pernyataan survei pembelajaran siswa.'],
             ['kelompok' => 'Kurikulum', 'nama' => 'Lihat hasil survei pembelajaran sendiri', 'kode' => 'survei.hasil_pribadi', 'deskripsi' => 'Melihat hasil survei anonim untuk mata pelajaran dan kelas yang diampu sendiri.'],
             ['kelompok' => 'Kurikulum', 'nama' => 'Monitoring survei pembelajaran', 'kode' => 'survei.monitor', 'deskripsi' => 'Memantau tingkat pengisian dan hasil anonim survei pembelajaran seluruh guru.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat dokumen Humas', 'kode' => 'dokumen_humas.lihat', 'deskripsi' => 'Melihat arsip dokumen Humas dan mengunduh berkas yang tersimpan.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola dokumen Humas', 'kode' => 'dokumen_humas.kelola', 'deskripsi' => 'Menambah, memperbarui, mengarsipkan, dan mengelola masa berlaku dokumen Humas.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat agenda Humas', 'kode' => 'agenda_humas.lihat', 'deskripsi' => 'Melihat agenda, kehadiran, notulen, dan tindak lanjut pertemuan Humas.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola agenda Humas', 'kode' => 'agenda_humas.kelola', 'deskripsi' => 'Mengelola jadwal, peserta, kehadiran, notulen, dan tindak lanjut pertemuan Humas.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat rekap buku tamu', 'kode' => 'buku_tamu.lihat', 'deskripsi' => 'Melihat riwayat, lampiran privat, dan mengekspor laporan kunjungan.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola buku tamu', 'kode' => 'buku_tamu.kelola', 'deskripsi' => 'Mencatat, mengoreksi, dan membatalkan kunjungan dengan jejak perubahan.'],
+            ['kelompok' => 'Humas', 'nama' => 'Catat tamu operasional', 'kode' => 'buku_tamu.catat', 'deskripsi' => 'Mencatat kedatangan, kepulangan, dan lampiran kunjungan operasional.'],
+            ['kelompok' => 'Humas', 'nama' => 'Catat tamu saat piket', 'kode' => 'buku_tamu.catat_piket', 'deskripsi' => 'Mencatat tamu operasional hanya saat jadwal guru piket aktif hari ini.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat kemitraan sekolah', 'kode' => 'kemitraan_humas.lihat', 'deskripsi' => 'Melihat mitra, MoU, masa berlaku, dan riwayat kegiatan kerja sama sekolah.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola mitra dan MoU', 'kode' => 'kemitraan_humas.kelola', 'deskripsi' => 'Mengelola mitra, perjanjian, pengingat, dokumen, dan hubungan agenda sekolah.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat publikasi Humas', 'kode' => 'publikasi_humas.lihat', 'deskripsi' => 'Melihat draf, pemeriksaan, dan bukti tayang publikasi sekolah.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola draf dan bukti tayang', 'kode' => 'publikasi_humas.kelola', 'deskripsi' => 'Menyiapkan, mengajukan, merevisi, dan mencatat publikasi yang telah tayang.'],
+            ['kelompok' => 'Humas', 'nama' => 'Periksa dan setujui konten', 'kode' => 'publikasi_humas.periksa', 'deskripsi' => 'Menyetujui konten atau meminta revisi sebelum ditayangkan.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat bank aset promosi', 'kode' => 'aset_promosi_humas.lihat', 'deskripsi' => 'Melihat aset promosi dan riwayat pemakaiannya.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola bank aset promosi', 'kode' => 'aset_promosi_humas.kelola', 'deskripsi' => 'Mengunggah, menghubungkan, memperbarui, dan mengarsipkan aset promosi.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat media resmi sekolah', 'kode' => 'media_resmi_humas.lihat', 'deskripsi' => 'Melihat daftar alamat media resmi sekolah dan penanggung jawabnya.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola media resmi sekolah', 'kode' => 'media_resmi_humas.kelola', 'deskripsi' => 'Mencatat alamat media, penanggung jawab, status, dan riwayat perubahan tanpa kredensial login.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat kliping berita sekolah', 'kode' => 'kliping_berita_humas.lihat', 'deskripsi' => 'Melihat arsip pemberitaan sekolah oleh media luar.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola kliping berita sekolah', 'kode' => 'kliping_berita_humas.kelola', 'deskripsi' => 'Mencatat sumber berita, bukti pemberitaan, dan riwayat perubahan kliping.'],
+            ['kelompok' => 'Humas', 'nama' => 'Pantau tiket aspirasi dan pengaduan', 'kode' => 'pengaduan_humas.lihat', 'deskripsi' => 'Memantau tiket internal tanpa akses identitas pelapor dan lampiran privat.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola tiket dan identitas pelapor', 'kode' => 'pengaduan_humas.kelola', 'deskripsi' => 'Mencatat, mendisposisikan, memverifikasi, dan mengelola data privat tiket.'],
+            ['kelompok' => 'Humas', 'nama' => 'Tangani tiket yang ditugaskan', 'kode' => 'pengaduan_humas.tangani', 'deskripsi' => 'Melihat dan menindaklanjuti hanya tiket yang ditugaskan kepada akun pegawai sendiri.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat kepengurusan komite sekolah', 'kode' => 'komite_humas.lihat', 'deskripsi' => 'Melihat susunan pengurus, masa bakti, SK, dan riwayat kepengurusan komite.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola kepengurusan komite sekolah', 'kode' => 'komite_humas.kelola', 'deskripsi' => 'Mengelola kepengurusan, kontak privat, masa bakti, dan SK komite sekolah.'],
         ];
     }
 
@@ -324,21 +353,28 @@ class DatabaseSeeder extends Seeder
                 || in_array($kode, ['beranda.akses', 'nilai.rekap', 'absensi.laporan', 'laporan.export'], true);
         }));
 
-        return [
+        $peta = [
             'administrator' => $semuaKodeIzin,
-            'pimpinan' => $izinLihat,
+            'pimpinan' => array_merge($izinLihat, ['publikasi_humas.periksa']),
             'wakil_pimpinan_kesiswaan' => ['beranda.akses', 'siswa.lihat', 'kartu_pelajar.lihat', 'kartu_pelajar.cetak', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'piket_guru.kelola', 'ibadah.pengaturan_kelola', 'ibadah.scan', 'ibadah.rekap', 'ibadah.koreksi', 'bk.lihat', 'bk.kelola', 'bk.penugasan_tingkat_kelola', 'poin_siswa.sahkan_wakil', 'laporan.export'],
             'wakil_pimpinan_sarana_prasarana' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
             'wakil_pimpinan_kurikulum' => ['beranda.akses', 'tahun_pelajaran.lihat', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'guru_mapel.kelola', 'jadwal.lihat', 'jadwal.kelola', 'nilai.lihat', 'nilai.rekap', 'cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'perangkat_ajar.lihat', 'perangkat_ajar.periksa', 'perangkat_ajar.jenis_kelola', 'survei.pertanyaan_kelola', 'survei.monitor', 'laporan.export'],
-            'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.pribadi', 'piket_guru.lihat_pribadi', 'piket_guru.catat_kehadiran', 'ibadah.scan', 'ibadah.rekap', 'ibadah.koreksi', 'nilai.lihat', 'nilai.komponen_kelola', 'nilai.input', 'nilai.rekap', 'survei.hasil_pribadi', 'cbt.lihat', 'cbt.soal_kelola', 'cbt.presensi', 'perangkat_ajar.upload'],
+            'wakil_pimpinan_humas' => ['beranda.akses', 'dokumen_humas.lihat', 'dokumen_humas.kelola', 'agenda_humas.lihat', 'agenda_humas.kelola', 'buku_tamu.lihat', 'buku_tamu.kelola', 'kemitraan_humas.lihat', 'kemitraan_humas.kelola', 'publikasi_humas.lihat', 'publikasi_humas.kelola', 'aset_promosi_humas.lihat', 'aset_promosi_humas.kelola', 'media_resmi_humas.lihat', 'media_resmi_humas.kelola', 'kliping_berita_humas.lihat', 'kliping_berita_humas.kelola'],
+            'guru_mapel' => ['beranda.akses', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'jadwal.pribadi', 'piket_guru.lihat_pribadi', 'piket_guru.catat_kehadiran', 'buku_tamu.catat_piket', 'ibadah.scan', 'ibadah.rekap', 'ibadah.koreksi', 'nilai.lihat', 'nilai.komponen_kelola', 'nilai.input', 'nilai.rekap', 'survei.hasil_pribadi', 'cbt.lihat', 'cbt.soal_kelola', 'cbt.presensi', 'perangkat_ajar.upload'],
             'wali_kelas' => ['beranda.akses', 'siswa.lihat', 'kelas.lihat', 'jadwal.lihat', 'nilai.lihat', 'nilai.rekap', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'bk.lihat', 'akun_siswa.lihat', 'akun_siswa.cetak', 'akun_orang_tua.lihat', 'akun_orang_tua.cetak'],
             'bk' => ['beranda.akses', 'siswa.lihat', 'absensi.lihat', 'bk.lihat', 'bk.kelola', 'laporan.export'],
             'pegawai' => ['beranda.akses', 'pegawai.profil', 'absensi_pegawai.pribadi', 'poin_siswa.lapor'],
             'siswa' => ['beranda.akses'],
             'orang_tua' => ['beranda.akses'],
-            'satpam' => ['beranda.akses', 'absensi.scan', 'absensi.lihat', 'keamanan.lihat', 'keamanan.kelola'],
+            'satpam' => ['beranda.akses', 'absensi.scan', 'absensi.lihat', 'keamanan.lihat', 'keamanan.kelola', 'buku_tamu.catat'],
             'petugas_kebersihan' => ['beranda.akses', 'absensi.scan', 'sarpras.lihat', 'kebersihan.lihat', 'kebersihan.kelola'],
             'petugas_inventaris' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
         ];
+        $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'komite_humas.lihat', 'komite_humas.kelola']);
+        foreach (['pegawai', 'guru_mapel', 'bk', 'pimpinan', 'wakil_pimpinan_kesiswaan', 'wakil_pimpinan_kurikulum', 'wakil_pimpinan_sarana_prasarana', 'wakil_pimpinan_humas'] as $role) {
+            $peta[$role][] = 'pengaduan_humas.tangani';
+        }
+
+        return $peta;
     }
 }

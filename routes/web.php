@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgendaHumasController;
 use App\Http\Controllers\AkademikAnakController;
 use App\Http\Controllers\AksesUjianCbtController;
 use App\Http\Controllers\AktivitasLoginController;
@@ -9,14 +10,17 @@ use App\Http\Controllers\AkunSiswaController;
 use App\Http\Controllers\AnalisisSoalCbtController;
 use App\Http\Controllers\AnggotaKelasController;
 use App\Http\Controllers\AsesmenKelasCbtController;
+use App\Http\Controllers\AsetPromosiHumasController;
 use App\Http\Controllers\AturanSanksiPoinController;
 use App\Http\Controllers\AutentikasiController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\BuktiLaporanPembinaanController;
 use App\Http\Controllers\BuktiPelaksanaanSanksiController;
+use App\Http\Controllers\BukuTamuController;
 use App\Http\Controllers\CadanganDatabaseController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
+use App\Http\Controllers\DokumenHumasController;
 use App\Http\Controllers\DokumenPoinSiswaController;
 use App\Http\Controllers\ExportHasilUjianCbtController;
 use App\Http\Controllers\FinalisasiHasilUjianTerpusatController;
@@ -43,8 +47,11 @@ use App\Http\Controllers\KategoriPembinaanSiswaController;
 use App\Http\Controllers\KegiatanIbadahController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KelasWaliController;
+use App\Http\Controllers\KemitraanHumasController;
 use App\Http\Controllers\KenaikanKelasController;
 use App\Http\Controllers\KlarifikasiSiswaPembinaanController;
+use App\Http\Controllers\KlipingBeritaHumasController;
+use App\Http\Controllers\KomiteHumasController;
 use App\Http\Controllers\KomponenNilaiController;
 use App\Http\Controllers\KonfirmasiBerhalanganIbadahController;
 use App\Http\Controllers\KoreksiKegiatanIbadahController;
@@ -58,6 +65,7 @@ use App\Http\Controllers\LaporanPembinaanSiswaController;
 use App\Http\Controllers\LegerStsController;
 use App\Http\Controllers\LokasiBarangController;
 use App\Http\Controllers\MataPelajaranController;
+use App\Http\Controllers\MediaResmiHumasController;
 use App\Http\Controllers\MonitoringSurveiController;
 use App\Http\Controllers\MonitoringUjianCbtController;
 use App\Http\Controllers\MutasiStokBarangController;
@@ -76,6 +84,8 @@ use App\Http\Controllers\PeminjamanBarangController;
 use App\Http\Controllers\PendampinganSiswaController;
 use App\Http\Controllers\PenempatanSiswaController;
 use App\Http\Controllers\PenerimaanBarangController;
+use App\Http\Controllers\PengaduanHumasController;
+use App\Http\Controllers\PengaduanOrangTuaController;
 use App\Http\Controllers\PengajuanBarangController;
 use App\Http\Controllers\PengajuanBarangSayaController;
 use App\Http\Controllers\PengaturanAbsensiController;
@@ -97,11 +107,13 @@ use App\Http\Controllers\PertanyaanSurveiPembelajaranController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\PiketKehadiranSiswaController;
 use App\Http\Controllers\PresensiAnakController;
+use App\Http\Controllers\PresensiPertemuanHumasController;
 use App\Http\Controllers\PresensiUjianCbtController;
 use App\Http\Controllers\ProfilOrangTuaController;
 use App\Http\Controllers\ProfilPegawaiController;
 use App\Http\Controllers\ProfilSiswaController;
 use App\Http\Controllers\ProgressKasusSiswaController;
+use App\Http\Controllers\PublikasiHumasController;
 use App\Http\Controllers\PublikasiNilaiController;
 use App\Http\Controllers\PusatCbtController;
 use App\Http\Controllers\PusatVerifikasiPelanggaranController;
@@ -159,6 +171,9 @@ Route::middleware('guest')->group(function () {
     Route::post('login', [AutentikasiController::class, 'storeLogin'])->name('login.store');
 });
 
+Route::get('presensi-pertemuan/{token}', [PresensiPertemuanHumasController::class, 'masuk'])
+    ->where('token', '[A-Za-z0-9]{64}')->name('presensi-pertemuan.masuk');
+
 Route::middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default'])
     ->prefix('cbt')
     ->name('cbt.')
@@ -196,6 +211,19 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
 
         Route::get('presensi-anak', [PresensiAnakController::class, 'index'])
             ->name('presensi-anak.index');
+        Route::prefix('pengaduan-saya')->name('pengaduan-saya.')->controller(PengaduanOrangTuaController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/tambah', 'create')->name('create');
+            Route::post('/', 'store')->middleware('throttle:10,10,pengaduan-orang-tua:')->name('store');
+            Route::get('/{tiket}', 'show')->whereNumber('tiket')->name('show');
+            Route::post('/{tiket}/informasi', 'informasi')->whereNumber('tiket')->middleware('throttle:20,10,pengaduan-informasi:')->name('informasi');
+            Route::get('/{tiket}/lampiran/{lampiran}', 'lampiran')->whereNumber(['tiket', 'lampiran'])->name('lampiran');
+        });
+        Route::get('pertemuan-saya', [PresensiPertemuanHumasController::class, 'indexOrangTua'])->name('pertemuan-saya.index');
+        Route::get('pertemuan-saya/{token}', [PresensiPertemuanHumasController::class, 'showOrangTua'])
+            ->where('token', '[A-Za-z0-9]{64}')->name('pertemuan-saya.show');
+        Route::post('pertemuan-saya/{token}/hadir', [PresensiPertemuanHumasController::class, 'konfirmasi'])
+            ->where('token', '[A-Za-z0-9]{64}')->middleware('throttle:30,1')->name('pertemuan-saya.hadir');
         Route::get('akademik-anak', [AkademikAnakController::class, 'index'])
             ->name('akademik-anak.index');
         Route::get('pembinaan-poin-anak', [PembinaanPoinAnakController::class, 'index'])
@@ -566,6 +594,184 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::middleware('izin:perangkat_ajar.periksa')->group(function () {
             Route::get('pemeriksaan-perangkat-ajar/dokumen/{perangkatAjar}/edit', [PemeriksaanPerangkatAjarController::class, 'edit'])->name('pemeriksaan-perangkat-ajar.edit');
             Route::put('pemeriksaan-perangkat-ajar/dokumen/{perangkatAjar}', [PemeriksaanPerangkatAjarController::class, 'update'])->name('pemeriksaan-perangkat-ajar.update');
+        });
+
+        Route::prefix('komite-humas')->name('komite-humas.')->controller(KomiteHumasController::class)->group(function () {
+            Route::middleware('izin:komite_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::get('/pilihan-dokumen', 'dokumen')->name('dokumen');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{periode}/edit', 'edit')->name('edit');
+                Route::put('/{periode}', 'update')->name('update');
+            });
+            Route::middleware('izin:komite_humas.lihat,komite_humas.kelola')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{periode}', 'show')->name('show');
+                Route::get('/{periode}/berkas/{berkas}', 'berkas')->name('berkas');
+            });
+        });
+
+        Route::prefix('pengaduan-humas')->name('pengaduan-humas.')->controller(PengaduanHumasController::class)->group(function () {
+            Route::middleware('izin:pengaduan_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{tiket}/edit', 'edit')->name('edit');
+                Route::put('/{tiket}', 'update')->name('update');
+                Route::post('/{tiket}/lampiran', 'tambahLampiran')->name('lampiran.store');
+                Route::get('/{tiket}/lampiran/{lampiran}', 'berkas')->name('berkas');
+                Route::post('/{tiket}/balasan', 'balasan')->middleware('throttle:30,1,pengaduan-balasan:')->name('balasan');
+            });
+            Route::middleware('izin:pengaduan_humas.lihat,pengaduan_humas.kelola,pengaduan_humas.tangani')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{tiket}', 'show')->name('show');
+                Route::post('/{tiket}/tindakan/{aksi}', 'tindakan')->whereIn('aksi', ['disposisi', 'tarik', 'proses', 'menunggu', 'usulkan-selesai', 'selesaikan', 'tutup', 'buka-kembali'])->name('tindakan');
+            });
+        });
+
+        Route::prefix('kliping-berita-humas')->name('kliping-berita-humas.')->controller(KlipingBeritaHumasController::class)->group(function () {
+            Route::middleware('izin:kliping_berita_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::get('/pilihan-dokumen', 'dokumen')->name('dokumen');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{kliping}/edit', 'edit')->name('edit');
+                Route::put('/{kliping}', 'update')->name('update');
+            });
+            Route::middleware('izin:kliping_berita_humas.lihat,kliping_berita_humas.kelola')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{kliping}', 'show')->name('show');
+                Route::get('/{kliping}/berkas/{berkas}', 'berkas')->name('berkas');
+            });
+        });
+
+        Route::prefix('media-resmi-humas')->name('media-resmi-humas.')->controller(MediaResmiHumasController::class)->group(function () {
+            Route::middleware('izin:media_resmi_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{media}/edit', 'edit')->name('edit');
+                Route::put('/{media}', 'update')->name('update');
+            });
+            Route::middleware('izin:media_resmi_humas.lihat,media_resmi_humas.kelola')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{media}', 'show')->name('show');
+            });
+        });
+
+        Route::prefix('aset-promosi-humas')->name('aset-promosi-humas.')->controller(AsetPromosiHumasController::class)->group(function () {
+            Route::middleware('izin:aset_promosi_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::get('/pilihan-dokumen', 'dokumen')->name('dokumen');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{aset}/edit', 'edit')->name('edit');
+                Route::put('/{aset}', 'update')->name('update');
+            });
+            Route::middleware('izin:aset_promosi_humas.lihat,aset_promosi_humas.kelola')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{aset}', 'show')->name('show');
+                Route::get('/{aset}/berkas/{berkas}', 'berkas')->name('berkas');
+            });
+        });
+
+        Route::prefix('publikasi-humas')->name('publikasi-humas.')->controller(PublikasiHumasController::class)->group(function () {
+            Route::middleware('izin:publikasi_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{publikasi}/edit', 'edit')->name('edit');
+                Route::get('/pilihan-aset', 'pilihanAset')->name('pilihan-aset');
+                Route::put('/{publikasi}', 'update')->name('update');
+                Route::post('/{publikasi}/tindakan/{aksi}', 'ubahStatus')->whereIn('aksi', ['ajukan', 'tarik', 'buka-revisi', 'tayang'])->name('tindakan');
+            });
+            Route::post('/{publikasi}/pemeriksaan/{aksi}', 'ubahStatus')->whereIn('aksi', ['setujui', 'minta-revisi'])
+                ->middleware('izin:publikasi_humas.periksa')->name('pemeriksaan');
+            Route::middleware('izin:publikasi_humas.lihat,publikasi_humas.kelola,publikasi_humas.periksa')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{publikasi}', 'show')->name('show');
+                Route::get('/{publikasi}/lampiran/{lampiran}', 'berkas')->name('berkas');
+                Route::get('/{publikasi}/naskah', 'naskah')->name('naskah');
+            });
+        });
+
+        Route::prefix('kemitraan-humas')->name('kemitraan-humas.')->controller(KemitraanHumasController::class)->group(function () {
+            Route::middleware('izin:kemitraan_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{mitra}/edit', 'edit')->name('edit');
+                Route::put('/{mitra}', 'update')->name('update');
+                Route::get('/{mitra}/mou/tambah', 'createMou')->name('mou.create');
+                Route::post('/{mitra}/mou', 'storeMou')->name('mou.store');
+                Route::get('/{mitra}/mou/{mou}/edit', 'editMou')->name('mou.edit');
+                Route::put('/{mitra}/mou/{mou}', 'updateMou')->name('mou.update');
+                Route::middleware('izin:agenda_humas.lihat,agenda_humas.kelola')->group(function () {
+                    Route::post('/{mitra}/agenda', 'hubungkanAgenda')->name('agenda.store');
+                    Route::delete('/{mitra}/agenda/{agenda}', 'lepasAgenda')->name('agenda.destroy');
+                });
+            });
+            Route::middleware('izin:kemitraan_humas.lihat,kemitraan_humas.kelola')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/cetak', 'cetak')->name('cetak');
+                Route::get('/export', 'export')->name('export');
+                Route::get('/{mitra}', 'show')->name('show');
+                Route::get('/{mitra}/mou/{mou}', 'showMou')->name('mou.show');
+            });
+        });
+
+        Route::prefix('buku-tamu')->name('buku-tamu.')->controller(BukuTamuController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/tambah', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/export', 'export')->name('export');
+            Route::get('/cetak', 'cetak')->name('cetak');
+            Route::get('/{tamu}', 'show')->name('show');
+            Route::get('/{tamu}/edit', 'edit')->name('edit');
+            Route::put('/{tamu}', 'update')->name('update');
+            Route::patch('/{tamu}/pulang', 'pulang')->name('pulang');
+            Route::patch('/{tamu}/batalkan', 'batalkan')->name('batalkan');
+            Route::post('/{tamu}/lampiran', 'tambahLampiran')->name('lampiran.store');
+            Route::get('/{tamu}/lampiran/{lampiran}/unduh', 'unduh')->name('lampiran.unduh');
+            Route::get('/{tamu}/lampiran/{lampiran}/pratinjau', 'pratinjau')->name('lampiran.pratinjau');
+            Route::delete('/{tamu}/lampiran/{lampiran}', 'hapusLampiran')->name('lampiran.destroy');
+        });
+
+        Route::middleware('izin:agenda_humas.kelola')->group(function () {
+            Route::get('agenda-humas/tambah', [AgendaHumasController::class, 'create'])->name('agenda-humas.create');
+            Route::post('agenda-humas', [AgendaHumasController::class, 'store'])->name('agenda-humas.store');
+            Route::get('agenda-humas/{agendaHumas}/edit', [AgendaHumasController::class, 'edit'])->name('agenda-humas.edit');
+            Route::put('agenda-humas/{agendaHumas}', [AgendaHumasController::class, 'update'])->name('agenda-humas.update');
+            Route::patch('agenda-humas/{agendaHumas}/status', [AgendaHumasController::class, 'ubahStatus'])->name('agenda-humas.status');
+            Route::put('agenda-humas/{agendaHumas}/notulen', [AgendaHumasController::class, 'simpanNotulen'])->name('agenda-humas.notulen');
+            Route::post('agenda-humas/{agendaHumas}/peserta', [AgendaHumasController::class, 'tambahPeserta'])->name('agenda-humas.peserta.store');
+            Route::put('agenda-humas/{agendaHumas}/presensi', [AgendaHumasController::class, 'simpanPresensi'])->name('agenda-humas.presensi');
+            Route::get('agenda-humas/{agendaHumas}/undangan-orang-tua', [PresensiPertemuanHumasController::class, 'undangan'])->name('agenda-humas.undangan');
+            Route::post('agenda-humas/{agendaHumas}/undangan-orang-tua', [PresensiPertemuanHumasController::class, 'simpanUndangan'])->name('agenda-humas.undangan.store');
+            Route::patch('agenda-humas/{agendaHumas}/akses-presensi', [PresensiPertemuanHumasController::class, 'ubahAkses'])->name('agenda-humas.akses-presensi');
+            Route::delete('agenda-humas/{agendaHumas}/peserta/{pesertaPertemuanHumas}', [AgendaHumasController::class, 'hapusPeserta'])->name('agenda-humas.peserta.destroy');
+            Route::post('agenda-humas/{agendaHumas}/tindak-lanjut', [AgendaHumasController::class, 'tambahTindakLanjut'])->name('agenda-humas.tindak-lanjut.store');
+            Route::put('agenda-humas/{agendaHumas}/tindak-lanjut/{tindakLanjutAgendaHumas}', [AgendaHumasController::class, 'perbaruiTindakLanjut'])->name('agenda-humas.tindak-lanjut.update');
+            Route::middleware('izin:dokumen_humas.lihat,dokumen_humas.kelola')->group(function () {
+                Route::post('agenda-humas/{agendaHumas}/dokumen', [AgendaHumasController::class, 'hubungkanDokumen'])->name('agenda-humas.dokumen.store');
+                Route::delete('agenda-humas/{agendaHumas}/dokumen/{dokumenHumas}', [AgendaHumasController::class, 'lepasDokumen'])->name('agenda-humas.dokumen.destroy');
+            });
+        });
+        Route::middleware('izin:agenda_humas.lihat,agenda_humas.kelola')->group(function () {
+            Route::get('agenda-humas', [AgendaHumasController::class, 'index'])->name('agenda-humas.index');
+            Route::get('agenda-humas/{agendaHumas}', [AgendaHumasController::class, 'show'])->name('agenda-humas.show');
+            Route::get('agenda-humas/{agendaHumas}/cetak', [AgendaHumasController::class, 'cetak'])->name('agenda-humas.cetak');
+            Route::get('agenda-humas/{agendaHumas}/pantau-presensi', [PresensiPertemuanHumasController::class, 'pantau'])->name('agenda-humas.pantau-presensi');
+            Route::get('agenda-humas/{agendaHumas}/cetak-qr', [PresensiPertemuanHumasController::class, 'cetak'])->name('agenda-humas.cetak-qr');
+        });
+
+        Route::middleware('izin:dokumen_humas.kelola')->group(function () {
+            Route::get('dokumen-humas/tambah', [DokumenHumasController::class, 'create'])->name('dokumen-humas.create');
+            Route::post('dokumen-humas', [DokumenHumasController::class, 'store'])->name('dokumen-humas.store');
+            Route::get('dokumen-humas/{dokumenHumas}/edit', [DokumenHumasController::class, 'edit'])->name('dokumen-humas.edit');
+            Route::put('dokumen-humas/{dokumenHumas}', [DokumenHumasController::class, 'update'])->name('dokumen-humas.update');
+            Route::patch('dokumen-humas/{dokumenHumas}/status', [DokumenHumasController::class, 'ubahStatus'])->name('dokumen-humas.status');
+        });
+        Route::middleware('izin:dokumen_humas.lihat,dokumen_humas.kelola')->group(function () {
+            Route::get('dokumen-humas', [DokumenHumasController::class, 'index'])->name('dokumen-humas.index');
+            Route::get('dokumen-humas/{dokumenHumas}', [DokumenHumasController::class, 'show'])->name('dokumen-humas.show');
+            Route::get('dokumen-humas/{dokumenHumas}/unduh', [DokumenHumasController::class, 'unduh'])->name('dokumen-humas.unduh');
+            Route::get('dokumen-humas/{dokumenHumas}/riwayat/{riwayatDokumenHumas}/unduh', [DokumenHumasController::class, 'unduhRiwayat'])
+                ->name('dokumen-humas.riwayat.unduh');
         });
 
         Route::resource('barang', BarangController::class)

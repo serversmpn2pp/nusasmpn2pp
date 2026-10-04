@@ -59,9 +59,10 @@ class AutentikasiController extends Controller
             'terakhir_login_pada' => $waktuLogin,
         ])->save();
 
-        $redirect = $request->user()->administrator()
-            ? redirect()->intended(route('beranda'))
-            : redirect()->route('beranda');
+        $tokenPresensi = $request->session()->get('humas.presensi_token');
+        $redirect = $tokenPresensi && $request->user()->akunOrangTua()
+            ? redirect()->route('pertemuan-saya.show', $tokenPresensi)
+            : ($request->user()->administrator() ? redirect()->intended(route('beranda')) : redirect()->route('beranda'));
 
         return $redirect->with('berhasil', 'Selamat datang di NUSA.');
     }
@@ -98,8 +99,11 @@ class AutentikasiController extends Controller
             'wajib_ganti_kata_sandi' => false,
         ])->save();
 
+        $tokenPresensi = $request->session()->get('humas.presensi_token');
+
         return redirect()
-            ->route('beranda')
+            ->route($tokenPresensi && $request->user()->akunOrangTua() ? 'pertemuan-saya.show' : 'beranda',
+                $tokenPresensi && $request->user()->akunOrangTua() ? ['token' => $tokenPresensi] : [])
             ->with('berhasil', 'Kata sandi berhasil diganti. Anda sekarang dapat menggunakan NUSA.');
     }
 }

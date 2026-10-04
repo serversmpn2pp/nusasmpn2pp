@@ -1,0 +1,1 @@
+<div class="publikasi-upload" data-upload-state role="status" aria-live="polite" hidden><strong data-upload-label></strong><progress max="100" value="0" aria-label="Kemajuan penyimpanan"></progress></div>

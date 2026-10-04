@@ -1855,6 +1855,7 @@
                 'wakil_pimpinan_kesiswaan',
                 'wakil_pimpinan_sarana_prasarana',
                 'wakil_pimpinan_kurikulum',
+                'wakil_pimpinan_humas',
                 'bk',
                 'satpam',
                 'petugas_kebersihan',
@@ -1913,6 +1914,22 @@
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PS', 'izin' => 'perangkat_ajar.upload', 'pegawai_only' => true, 'subgroup' => 'Perangkat Ajar'],
                         ['label' => 'Pemeriksaan Perangkat Ajar', 'route' => 'pemeriksaan-perangkat-ajar.index', 'active' => ['pemeriksaan-perangkat-ajar.*'], 'initial' => 'PP', 'izin' => ['perangkat_ajar.lihat', 'perangkat_ajar.periksa'], 'subgroup' => 'Perangkat Ajar'],
                         ['label' => 'Jenis Perangkat Ajar', 'route' => 'jenis-perangkat-ajar.index', 'active' => ['jenis-perangkat-ajar.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.jenis_kelola', 'subgroup' => 'Perangkat Ajar'],
+                    ],
+                ],
+                [
+                    'id' => 'humas',
+                    'title' => 'Humas',
+                    'items' => [
+                        ['label' => 'Pusat Dokumen Humas', 'route' => 'dokumen-humas.index', 'active' => ['dokumen-humas.*'], 'initial' => 'DH', 'izin' => ['dokumen_humas.lihat', 'dokumen_humas.kelola']],
+                        ['label' => 'Komite Sekolah', 'route' => 'komite-humas.index', 'active' => ['komite-humas.*'], 'initial' => 'KS', 'izin' => ['komite_humas.lihat', 'komite_humas.kelola']],
+                        ['label' => 'Agenda & Pertemuan', 'route' => 'agenda-humas.index', 'active' => ['agenda-humas.*'], 'initial' => 'AP', 'izin' => ['agenda_humas.lihat', 'agenda_humas.kelola']],
+                        ['label' => 'Buku Tamu Digital', 'route' => 'buku-tamu.index', 'active' => ['buku-tamu.*'], 'initial' => 'BT', 'izin' => null, 'buku_tamu_only' => true],
+                        ['label' => 'Kemitraan & MoU', 'route' => 'kemitraan-humas.index', 'active' => ['kemitraan-humas.*'], 'initial' => 'KM', 'izin' => ['kemitraan_humas.lihat', 'kemitraan_humas.kelola']],
+                        ['label' => 'Publikasi & Persetujuan', 'route' => 'publikasi-humas.index', 'active' => ['publikasi-humas.*'], 'initial' => 'PP', 'izin' => ['publikasi_humas.lihat', 'publikasi_humas.kelola', 'publikasi_humas.periksa']],
+                        ['label' => 'Bank Aset Promosi', 'route' => 'aset-promosi-humas.index', 'active' => ['aset-promosi-humas.*'], 'initial' => 'AP', 'izin' => ['aset_promosi_humas.lihat', 'aset_promosi_humas.kelola']],
+                        ['label' => 'Daftar Media Resmi', 'route' => 'media-resmi-humas.index', 'active' => ['media-resmi-humas.*'], 'initial' => 'MR', 'izin' => ['media_resmi_humas.lihat', 'media_resmi_humas.kelola']],
+                        ['label' => 'Kliping Berita', 'route' => 'kliping-berita-humas.index', 'active' => ['kliping-berita-humas.*'], 'initial' => 'KB', 'izin' => ['kliping_berita_humas.lihat', 'kliping_berita_humas.kelola']],
+                        ['label' => 'Aspirasi & Pengaduan', 'route' => 'pengaduan-humas.index', 'active' => ['pengaduan-humas.*'], 'initial' => 'AD', 'izin' => ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'pengaduan_humas.tangani']],
                     ],
                 ],
                 [
@@ -2014,6 +2031,20 @@
                         ['label' => 'Dashboard', 'route' => 'beranda', 'active' => ['beranda'], 'initial' => 'DB', 'izin' => 'beranda.akses'],
                         ['label' => 'Laporkan Kejadian', 'route' => 'laporan-pembinaan-siswa.create', 'active' => ['laporan-pembinaan-siswa.create'], 'initial' => 'LK', 'izin' => 'poin_siswa.lapor', 'pegawai_only' => true],
                         ['label' => 'Laporan Saya', 'route' => 'laporan-saya.index', 'active' => ['laporan-saya.*'], 'initial' => 'LS', 'izin' => 'poin_siswa.lapor', 'pegawai_only' => true],
+                    ],
+                ],
+                [
+                    'id' => 'layanan-humas',
+                    'title' => 'Humas',
+                    'items' => [
+                        ['label' => 'Komite Sekolah', 'route' => 'komite-humas.index', 'active' => ['komite-humas.*'], 'initial' => 'KS', 'izin' => ['komite_humas.lihat', 'komite_humas.kelola']],
+                        ['label' => 'Publikasi & Persetujuan', 'route' => 'publikasi-humas.index', 'active' => ['publikasi-humas.*'], 'initial' => 'PP', 'izin' => ['publikasi_humas.lihat', 'publikasi_humas.kelola', 'publikasi_humas.periksa']],
+                        ['label' => 'Bank Aset Promosi', 'route' => 'aset-promosi-humas.index', 'active' => ['aset-promosi-humas.*'], 'initial' => 'AP', 'izin' => ['aset_promosi_humas.lihat', 'aset_promosi_humas.kelola']],
+                        ['label' => 'Daftar Media Resmi', 'route' => 'media-resmi-humas.index', 'active' => ['media-resmi-humas.*'], 'initial' => 'MR', 'izin' => ['media_resmi_humas.lihat', 'media_resmi_humas.kelola']],
+                        ['label' => 'Kliping Berita', 'route' => 'kliping-berita-humas.index', 'active' => ['kliping-berita-humas.*'], 'initial' => 'KB', 'izin' => ['kliping_berita_humas.lihat', 'kliping_berita_humas.kelola']],
+                        ['label' => 'Aspirasi & Pengaduan', 'route' => 'pengaduan-humas.index', 'active' => ['pengaduan-humas.*'], 'initial' => 'AD', 'izin' => ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'pengaduan_humas.tangani']],
+                        ['label' => 'Kemitraan & MoU', 'route' => 'kemitraan-humas.index', 'active' => ['kemitraan-humas.*'], 'initial' => 'KM', 'izin' => ['kemitraan_humas.lihat', 'kemitraan_humas.kelola']],
+                        ['label' => 'Buku Tamu Digital', 'route' => 'buku-tamu.index', 'active' => ['buku-tamu.*'], 'initial' => 'BT', 'izin' => null, 'buku_tamu_only' => true],
                     ],
                 ],
                 [
@@ -2167,6 +2198,8 @@
                     'title' => 'Informasi Anak',
                     'items' => [
                         ['label' => 'Presensi Anak', 'route' => 'presensi-anak.index', 'active' => ['presensi-anak.*'], 'initial' => 'PA', 'izin' => null],
+                        ['label' => 'Pertemuan Saya', 'route' => 'pertemuan-saya.index', 'active' => ['pertemuan-saya.*'], 'initial' => 'PT', 'izin' => null],
+                        ['label' => 'Aspirasi & Pengaduan Saya', 'route' => 'pengaduan-saya.index', 'active' => ['pengaduan-saya.*'], 'initial' => 'AD', 'izin' => null],
                         ['label' => 'Akademik Anak', 'route' => 'akademik-anak.index', 'active' => ['akademik-anak.*'], 'initial' => 'AA', 'izin' => null],
                         ['label' => 'Pembinaan & Poin', 'route' => 'pembinaan-poin-anak.index', 'active' => ['pembinaan-poin-anak.*'], 'initial' => 'PP', 'izin' => null],
                     ],
@@ -2231,6 +2264,10 @@
                             }
 
                             if (($item['pelaksanaan_sanksi_only'] ?? false) && ! $dapatMelaksanakanSanksi) {
+                                return false;
+                            }
+
+                            if (($item['buku_tamu_only'] ?? false) && ! app(\App\Services\Humas\AksesBukuTamuService::class)->bolehMembuka($penggunaAktif)) {
                                 return false;
                             }
 

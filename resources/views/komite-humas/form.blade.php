@@ -1,0 +1,33 @@
+@extends('layouts.app')
+@section('title', ($periode->exists ? 'Edit kepengurusan komite' : 'Tambah kepengurusan komite').' - NUSA')
+@section('content')
+@include('komite-humas._style')
+<div class="publikasi-page komite-page">
+    <div class="page-header"><div><p class="eyebrow">Humas / Komite Sekolah</p><h1 class="page-title">{{ $periode->exists ? 'Edit kepengurusan' : 'Tambah kepengurusan' }}</h1></div><a class="button button-muted" href="{{ $periode->exists ? route('komite-humas.show', $periode) : route('komite-humas.index') }}">Kembali</a></div>
+    @include('agenda-humas._messages')
+    <form method="POST" enctype="multipart/form-data" action="{{ $periode->exists ? route('komite-humas.update', $periode) : route('komite-humas.store') }}" data-komite-form data-publikasi-upload data-upload-noun="kepengurusan" data-sk-tersimpan="{{ $periode->riwayat_dokumen_humas_id ? 1 : 0 }}">
+        @csrf
+        @if ($periode->exists)@method('PUT')<input type="hidden" name="versi" value="{{ old('versi', $periode->versi) }}">@else<input type="hidden" name="token_pembuatan" value="{{ old('token_pembuatan', $tokenPembuatan) }}">@endif
+        <section class="agenda-section"><h2>Periode kepengurusan</h2><div class="agenda-field-grid"><div class="field span-2"><label for="nama">Nama periode</label><input class="input" id="nama" name="nama" required maxlength="180" value="{{ old('nama', $periode->nama) }}" placeholder="Kepengurusan Komite 2026-2029"></div><div class="field"><label for="tanggal_mulai">Awal masa bakti</label><input class="input" type="date" id="tanggal_mulai" name="tanggal_mulai" required value="{{ old('tanggal_mulai', $periode->tanggal_mulai?->format('Y-m-d')) }}"></div><div class="field"><label for="tanggal_selesai">Akhir masa bakti</label><input class="input" type="date" id="tanggal_selesai" name="tanggal_selesai" required value="{{ old('tanggal_selesai', $periode->tanggal_selesai?->format('Y-m-d')) }}"></div><div class="field"><label for="status">Status kepengurusan</label><select class="select" id="status" name="status" required>@foreach (\App\Models\PeriodeKomiteHumas::STATUS as $key => $label)<option value="{{ $key }}" @selected(old('status', $periode->status) === $key)>{{ $label }}</option>@endforeach</select></div><div class="field"><label for="catatan">Catatan (opsional)</label><textarea class="textarea" id="catatan" name="catatan" rows="2" maxlength="2000">{{ old('catatan', $periode->catatan) }}</textarea></div></div></section>
+        <section class="agenda-section"><h2>SK pengangkatan</h2><div class="agenda-field-grid" style="margin-bottom:20px"><div class="field"><label for="nomor_sk">Nomor SK</label><input class="input" id="nomor_sk" name="nomor_sk" maxlength="150" value="{{ old('nomor_sk', $periode->nomor_sk) }}"></div><div class="field"><label for="tanggal_sk">Tanggal SK</label><input class="input" type="date" id="tanggal_sk" name="tanggal_sk" max="{{ today()->format('Y-m-d') }}" value="{{ old('tanggal_sk', $periode->tanggal_sk?->format('Y-m-d')) }}"></div></div>
+            @php($metode = old('metode', $periode->exists ? 'tetap' : 'tanpa'))
+            <fieldset class="komite-source"><legend class="sr-only">Berkas SK</legend>
+                @if ($periode->exists)<label><input type="radio" name="metode" value="tetap" @checked($metode === 'tetap')>Tidak mengganti SK</label>@else<label><input type="radio" name="metode" value="tanpa" @checked($metode === 'tanpa')>Belum ada SK</label>@endif
+                @izin('dokumen_humas.kelola')<label><input type="radio" name="metode" value="unggah" @checked($metode === 'unggah')>Unggah SK</label>@endizin
+                @if ($bolehDokumen)<label><input type="radio" name="metode" value="dokumen" @checked($metode === 'dokumen')>Pilih dari dokumen Humas</label>@endif
+                @if ($periode->exists && $periode->riwayat_dokumen_humas_id)<label><input type="radio" name="metode" value="lepas" @checked($metode === 'lepas')>Lepaskan SK</label>@endif
+            </fieldset>
+            @if ($periode->exists)<p class="agenda-muted" data-sk-lama>{{ $periode->riwayat_dokumen_humas_id ? ($bolehDokumen ? $periode->berkas?->nama_file_asli : 'SK tersimpan privat') : 'Belum ada berkas SK.' }}</p>@endif
+            @izin('dokumen_humas.kelola')<div class="field" data-komite-source="unggah" @if ($metode !== 'unggah') hidden @endif><label for="berkas">SK PDF, JPG, PNG, WebP &middot; maksimal 20 MB</label><input class="file-input" id="berkas" name="berkas" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" @disabled($metode !== 'unggah')><div data-komite-preview style="margin-top:14px"></div></div>@endizin
+            @if ($bolehDokumen)<div data-komite-source="dokumen" @if ($metode !== 'dokumen') hidden @endif><div class="field"><label for="cari_dokumen">Cari arsip SK komite</label><input class="input" id="cari_dokumen" type="search" maxlength="120" data-dokumen-search="{{ route('komite-humas.dokumen') }}" @disabled($metode !== 'dokumen')></div><div class="field" style="margin-top:14px"><label for="dokumen_humas_id">Dokumen kategori Komite sekolah</label><select class="select" id="dokumen_humas_id" name="dokumen_humas_id" @disabled($metode !== 'dokumen')><option value="">Pilih dokumen</option>@foreach ($dokumen as $item)<option value="{{ $item->id }}" @selected(old('dokumen_humas_id') == $item->id)>{{ $item->judul }}</option>@endforeach</select><p class="agenda-muted" data-dokumen-state role="status"></p></div></div>@endif
+        </section>
+        <section class="agenda-section"><h2>Susunan pengurus</h2><div data-komite-members>@foreach ($rows as $index => $row)@include('komite-humas._pengurus-row')@endforeach</div><div class="agenda-actions"><button class="button button-muted" type="button" data-add-member>Tambah pengurus</button><span class="agenda-muted" data-member-count></span></div></section>
+        @if ($periode->exists)<section class="agenda-section"><div class="field"><label for="catatan_perubahan">Alasan perubahan</label><textarea class="textarea" id="catatan_perubahan" name="catatan_perubahan" rows="3" required minlength="5" maxlength="2000">{{ old('catatan_perubahan') }}</textarea></div></section>@endif
+        @include('publikasi-humas._upload-state')
+        <div class="agenda-actions"><button class="button button-primary" type="submit">Simpan kepengurusan</button><a class="button button-muted" href="{{ $periode->exists ? route('komite-humas.show', $periode) : route('komite-humas.index') }}">Batal</a></div>
+    </form>
+    <template data-member-template>@include('komite-humas._pengurus-row', ['index' => 0, 'row' => ['jabatan' => 'anggota', 'aktif' => true]])</template>
+</div>
+@include('publikasi-humas._scripts')
+@include('komite-humas._scripts')
+@endsection

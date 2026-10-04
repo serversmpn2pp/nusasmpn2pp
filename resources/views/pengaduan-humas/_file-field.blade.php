@@ -1,0 +1,1 @@
+<div class="field"><label for="lampiran">PDF, JPG, PNG, WebP &middot; maksimal 3 berkas, masing-masing 10 MB</label><input class="file-input" id="lampiran" name="lampiran[]" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" data-pengaduan-files></div><ul class="agenda-muted" data-file-list aria-live="polite"></ul>
