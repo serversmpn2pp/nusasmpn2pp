@@ -19,7 +19,9 @@ use App\Http\Controllers\BerandaController;
 use App\Http\Controllers\BuktiLaporanPembinaanController;
 use App\Http\Controllers\BuktiPelaksanaanSanksiController;
 use App\Http\Controllers\BukuTamuController;
+use App\Http\Controllers\BundelPertemuanHumasController;
 use App\Http\Controllers\CadanganDatabaseController;
+use App\Http\Controllers\DashboardHumasController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenHumasController;
 use App\Http\Controllers\DokumenPoinSiswaController;
@@ -108,6 +110,7 @@ use App\Http\Controllers\PeringatanDiniSiswaController;
 use App\Http\Controllers\PertanyaanSurveiPembelajaranController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\PiketKehadiranSiswaController;
+use App\Http\Controllers\PortofolioAkreditasiHumasController;
 use App\Http\Controllers\PresensiAnakController;
 use App\Http\Controllers\PresensiPertemuanHumasController;
 use App\Http\Controllers\PresensiUjianCbtController;
@@ -158,6 +161,8 @@ use App\Http\Controllers\TugasPengawasUjianController;
 use App\Http\Controllers\UjianCbtController;
 use App\Http\Controllers\UjianSayaController;
 use App\Http\Controllers\UjianTerpusatController;
+use App\Http\Controllers\UmpanBalikHumasController;
+use App\Http\Controllers\UmpanBalikOrangTuaController;
 use App\Http\Controllers\UnitBarangController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use App\Http\Controllers\WaktuTambahanPesertaUjianCbtController;
@@ -216,6 +221,11 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
 
         Route::get('presensi-anak', [PresensiAnakController::class, 'index'])
             ->name('presensi-anak.index');
+        Route::prefix('umpan-balik-saya')->name('umpan-balik-saya.')->controller(UmpanBalikOrangTuaController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{formulir}', 'show')->name('show');
+            Route::post('/{formulir}', 'store')->middleware('throttle:15,1')->name('store');
+        });
         Route::prefix('pengaduan-saya')->name('pengaduan-saya.')->controller(PengaduanOrangTuaController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/tambah', 'create')->name('create');
@@ -601,6 +611,53 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::put('pemeriksaan-perangkat-ajar/dokumen/{perangkatAjar}', [PemeriksaanPerangkatAjarController::class, 'update'])->name('pemeriksaan-perangkat-ajar.update');
         });
 
+        Route::middleware('izin:dashboard_humas.lihat')->group(function () {
+            Route::get('dashboard-humas', [DashboardHumasController::class, 'index'])->name('dashboard-humas.index');
+            Route::get('dashboard-humas/cetak', [DashboardHumasController::class, 'cetak'])->name('dashboard-humas.cetak');
+        });
+
+        Route::prefix('portofolio-akreditasi-humas')->name('akreditasi-humas.')->controller(PortofolioAkreditasiHumasController::class)->group(function () {
+            Route::middleware('izin:akreditasi_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{portofolio}/edit', 'edit')->name('edit');
+                Route::put('/{portofolio}', 'update')->name('update');
+                Route::post('/{portofolio}/status', 'status')->name('status');
+                Route::get('/{portofolio}/butir/tambah', 'tambahButir')->name('butir.create');
+                Route::post('/{portofolio}/butir', 'simpanButir')->name('butir.store');
+                Route::put('/{portofolio}/butir/{butir}', 'simpanButir')->name('butir.update');
+                Route::delete('/{portofolio}/butir/{butir}', 'hapusButir')->name('butir.destroy');
+                Route::post('/{portofolio}/butir/{butir}/periksa', 'periksa')->name('butir.periksa');
+                Route::post('/{portofolio}/butir/{butir}/bukti', 'tambahBukti')->name('bukti.store');
+                Route::delete('/{portofolio}/butir/{butir}/bukti/{bukti}', 'lepasBukti')->name('bukti.destroy');
+            });
+            Route::post('/{portofolio}/bundel', 'export')->middleware('izin:akreditasi_humas.ekspor')->name('export');
+            Route::middleware('izin:akreditasi_humas.lihat,akreditasi_humas.kelola')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{portofolio}', 'show')->name('show');
+                Route::get('/{portofolio}/cetak', 'cetak')->name('cetak');
+                Route::get('/{portofolio}/butir/{butir}', 'butir')->name('butir');
+                Route::get('/{portofolio}/butir/{butir}/bukti/{bukti}', 'berkas')->name('bukti.unduh');
+            });
+        });
+
+        Route::prefix('umpan-balik-humas')->name('umpan-balik-humas.')->controller(UmpanBalikHumasController::class)->group(function () {
+            Route::middleware('izin:umpan_balik_humas.kelola')->group(function () {
+                Route::get('/tambah', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{formulir}/edit', 'edit')->name('edit');
+                Route::put('/{formulir}', 'update')->name('update');
+                Route::post('/{formulir}/status', 'status')->name('status');
+                Route::post('/{formulir}/tindak-lanjut', 'tindak')->name('tindak.store');
+                Route::put('/{formulir}/tindak-lanjut/{tindak}', 'tindak')->name('tindak.update');
+            });
+            Route::middleware('izin:umpan_balik_humas.lihat,umpan_balik_humas.kelola')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{formulir}', 'show')->name('show');
+                Route::get('/{formulir}/cetak', 'cetak')->name('cetak');
+            });
+        });
+
         Route::prefix('prestasi-sekolah')->name('prestasi-sekolah.')->controller(PrestasiSekolahController::class)->group(function () {
             Route::middleware('izin:prestasi_sekolah.kelola')->group(function () {
                 Route::get('/tambah', 'create')->name('create');
@@ -841,6 +898,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('agenda-humas/{agendaHumas}/cetak', [AgendaHumasController::class, 'cetak'])->name('agenda-humas.cetak');
             Route::get('agenda-humas/{agendaHumas}/pantau-presensi', [PresensiPertemuanHumasController::class, 'pantau'])->name('agenda-humas.pantau-presensi');
             Route::get('agenda-humas/{agendaHumas}/cetak-qr', [PresensiPertemuanHumasController::class, 'cetak'])->name('agenda-humas.cetak-qr');
+            Route::get('agenda-humas/{agendaHumas}/bundel', [BundelPertemuanHumasController::class, 'show'])->name('agenda-humas.bundel');
+            Route::post('agenda-humas/{agendaHumas}/bundel/cetak', [BundelPertemuanHumasController::class, 'cetak'])->middleware('throttle:30,1')->name('agenda-humas.bundel.cetak');
+            Route::post('agenda-humas/{agendaHumas}/bundel/unduh', [BundelPertemuanHumasController::class, 'export'])->middleware(['izin:agenda_humas.bundel', 'throttle:6,1'])->name('agenda-humas.bundel.export');
         });
 
         Route::middleware('izin:dokumen_humas.kelola')->group(function () {

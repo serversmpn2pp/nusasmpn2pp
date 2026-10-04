@@ -145,6 +145,22 @@ return [
         ],
     ],
     [
+        'kode' => 'humas',
+        'label' => 'Humas',
+        'deskripsi' => 'Agenda, komunikasi sekolah, arsip, dan layanan orang tua.',
+        'ikon' => 'humas',
+        'items' => [
+            ['kode' => 'dashboard-humas', 'label' => 'Dashboard Humas', 'inisial' => 'DH', 'izin' => 'dashboard_humas.lihat', 'staff_only' => true, 'status' => 'tersedia', 'rute' => '/humas'],
+            ['kode' => 'agenda-humas', 'label' => 'Agenda & Pertemuan', 'inisial' => 'AP', 'izin' => ['agenda_humas.lihat', 'agenda_humas.kelola'], 'staff_only' => true, 'status' => 'tersedia', 'rute' => '/humas/agenda'],
+            ['kode' => 'dokumen-humas', 'label' => 'Pusat Dokumen Humas', 'inisial' => 'DH', 'izin' => ['dokumen_humas.lihat', 'dokumen_humas.kelola'], 'staff_only' => true, 'status' => 'tersedia', 'rute' => '/humas/dokumen'],
+            ['kode' => 'pengaduan-humas', 'label' => 'Aspirasi & Pengaduan', 'inisial' => 'AP', 'izin' => ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'pengaduan_humas.tangani'], 'staff_only' => true, 'status' => 'tersedia', 'rute' => '/humas/pengaduan'],
+            ['kode' => 'umpan-balik-humas', 'label' => 'Rekap Umpan Balik', 'inisial' => 'UB', 'izin' => ['umpan_balik_humas.lihat', 'umpan_balik_humas.kelola'], 'staff_only' => true, 'status' => 'tersedia', 'rute' => '/humas/umpan-balik'],
+            ['kode' => 'pertemuan-saya', 'label' => 'Undangan Pertemuan Saya', 'inisial' => 'UP', 'parent_only' => true, 'status' => 'tersedia', 'rute' => '/humas/pertemuan-saya'],
+            ['kode' => 'pengaduan-saya', 'label' => 'Aspirasi & Pengaduan Saya', 'inisial' => 'PS', 'parent_only' => true, 'status' => 'tersedia', 'rute' => '/humas/pengaduan-saya'],
+            ['kode' => 'umpan-balik-saya', 'label' => 'Umpan Balik Saya', 'inisial' => 'US', 'parent_only' => true, 'status' => 'tersedia', 'rute' => '/humas/umpan-balik-saya'],
+        ],
+    ],
+    [
         'kode' => 'sistem',
         'label' => 'Sistem',
         'deskripsi' => 'Akun, role, hak akses, aktivitas login, dan pencadangan.',

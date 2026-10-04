@@ -1,0 +1,3 @@
+<table class="hd-table hd-month-table"><thead><tr><th>Bulan</th>@foreach($kolomBulanan as $label)<th class="hd-number">{{ $label }}</th>@endforeach</tr></thead><tbody>
+    @foreach($bulan as $baris)<tr><td data-label="Bulan">{{ $baris['label'] }}</td>@foreach($kolomBulanan as $kode => $label)<td class="hd-number" data-label="{{ $label }}">{{ $baris['jumlah'][$kode] }}</td>@endforeach</tr>@endforeach
+</tbody><tfoot><tr><td data-label="Bulan"><strong>Total</strong></td>@foreach($kolomBulanan as $kode => $label)<td class="hd-number" data-label="{{ $label }}"><strong>{{ array_sum(array_column(array_column($bulan, 'jumlah'), $kode)) }}</strong></td>@endforeach</tr></tfoot></table>

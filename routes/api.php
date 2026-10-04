@@ -150,6 +150,8 @@ Route::prefix('v1')
         'kata_sandi_api_bukan_default',
     ])
     ->group(function () {
+        require __DIR__.'/api_humas.php';
+
         Route::get('/beranda', BerandaController::class)
             ->middleware('izin:beranda.akses')
             ->name('beranda');

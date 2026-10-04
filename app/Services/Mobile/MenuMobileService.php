@@ -141,6 +141,7 @@ class MenuMobileService
             'wakil_pimpinan_kesiswaan' => ['rekap-presensi-siswa', 'pemeriksaan-pengesahan', 'peringatan-dini-siswa', 'rekap-poin-siswa'],
             'wakil_pimpinan_sarana_prasarana' => ['dashboard-sarpras', 'inventaris-barang', 'peminjaman-barang', 'barang-datang'],
             'petugas_inventaris' => ['dashboard-sarpras', 'inventaris-barang', 'peminjaman-barang', 'barang-datang'],
+            'wakil_pimpinan_humas' => ['dashboard-humas', 'agenda-humas', 'pengaduan-humas', 'dokumen-humas'],
             'satpam' => ['scan-presensi-siswa', 'scan-presensi-pegawai', 'laporkan-kejadian'],
         ];
         $peran = $pengguna->daftarPeran
@@ -203,6 +204,11 @@ class MenuMobileService
 
     private function bolehDilihat(array $item, Pengguna $pengguna): bool
     {
+        if (($item['staff_only'] ?? false)
+            && ($pengguna->akunOrangTua() || $pengguna->akunSiswa())) {
+            return false;
+        }
+
         if (($item['pegawai_only'] ?? false)
             && ! $pengguna->pegawai_id
             && ! (($item['administrator_allowed'] ?? false) && $pengguna->administrator())) {

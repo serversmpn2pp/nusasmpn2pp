@@ -1,0 +1,1 @@
+<header class="header"><img src="{{ $logoKota }}" alt="Logo Padang Panjang"><div><h1>SMP NEGERI 2 PADANG PANJANG</h1><p>WAKIL PIMPINAN BIDANG HUMAS</p></div><img src="{{ $logoSekolah }}" alt="Logo sekolah"></header>

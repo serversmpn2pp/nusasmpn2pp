@@ -14,6 +14,24 @@ class TujuanNotifikasiMobileService
             return null;
         }
 
+        foreach ([
+            '/dashboard-humas' => '/humas',
+            '/agenda-humas' => '/humas/agenda',
+            '/dokumen-humas' => '/humas/dokumen',
+            '/pengaduan-humas' => '/humas/pengaduan',
+            '/umpan-balik-humas' => '/humas/umpan-balik',
+            '/pertemuan-saya' => '/humas/pertemuan-saya',
+            '/pengaduan-saya' => '/humas/pengaduan-saya',
+            '/umpan-balik-saya' => '/humas/umpan-balik-saya',
+        ] as $asal => $tujuan) {
+            if ($path === $asal) {
+                return $tujuan;
+            }
+            if ($detail = $this->denganId($path, $asal, $tujuan)) {
+                return $detail;
+            }
+        }
+
         if ($path === '/tugas-pengawas-ujian') {
             return '/tugas-pengawas-ujian';
         }

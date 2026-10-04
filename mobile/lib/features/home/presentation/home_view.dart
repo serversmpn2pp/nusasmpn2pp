@@ -240,5 +240,6 @@ String nusaMenuGroupDestination(MenuGroup group) {
       group.items.any((item) => item.code == 'dashboard-sarpras')) {
     return '/dashboard-sarpras';
   }
+  if (group.code == 'humas') return '/humas';
   return '/menu/${group.code}';
 }

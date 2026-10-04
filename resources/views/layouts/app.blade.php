@@ -1920,6 +1920,9 @@
                     'id' => 'humas',
                     'title' => 'Humas',
                     'items' => [
+                        ['label' => 'Dashboard Humas', 'route' => 'dashboard-humas.index', 'active' => ['dashboard-humas.*'], 'initial' => 'DB', 'izin' => 'dashboard_humas.lihat'],
+                        ['label' => 'Portofolio Akreditasi', 'route' => 'akreditasi-humas.index', 'active' => ['akreditasi-humas.*'], 'initial' => 'PA', 'izin' => ['akreditasi_humas.lihat', 'akreditasi_humas.kelola']],
+                        ['label' => 'Umpan Balik Orang Tua', 'route' => 'umpan-balik-humas.index', 'active' => ['umpan-balik-humas.*'], 'initial' => 'UB', 'izin' => ['umpan_balik_humas.lihat', 'umpan_balik_humas.kelola']],
                         ['label' => 'Pusat Dokumen Humas', 'route' => 'dokumen-humas.index', 'active' => ['dokumen-humas.*'], 'initial' => 'DH', 'izin' => ['dokumen_humas.lihat', 'dokumen_humas.kelola']],
                         ['label' => 'Program Kerja Humas', 'route' => 'program-kerja-humas.index', 'active' => ['program-kerja-humas.*'], 'initial' => 'PH', 'izin' => ['program_kerja_humas.lihat', 'program_kerja_humas.kelola']],
                         ['label' => 'Database Alumni', 'route' => 'alumni-humas.index', 'active' => ['alumni-humas.*'], 'initial' => 'DA', 'izin' => ['alumni_humas.lihat', 'alumni_humas.kelola']],
@@ -2040,6 +2043,9 @@
                     'id' => 'layanan-humas',
                     'title' => 'Humas',
                     'items' => [
+                        ['label' => 'Dashboard Humas', 'route' => 'dashboard-humas.index', 'active' => ['dashboard-humas.*'], 'initial' => 'DB', 'izin' => 'dashboard_humas.lihat'],
+                        ['label' => 'Portofolio Akreditasi', 'route' => 'akreditasi-humas.index', 'active' => ['akreditasi-humas.*'], 'initial' => 'PA', 'izin' => ['akreditasi_humas.lihat', 'akreditasi_humas.kelola']],
+                        ['label' => 'Umpan Balik Orang Tua', 'route' => 'umpan-balik-humas.index', 'active' => ['umpan-balik-humas.*'], 'initial' => 'UB', 'izin' => ['umpan_balik_humas.lihat', 'umpan_balik_humas.kelola']],
                         ['label' => 'Program Kerja Humas', 'route' => 'program-kerja-humas.index', 'active' => ['program-kerja-humas.*'], 'initial' => 'PH', 'izin' => ['program_kerja_humas.lihat', 'program_kerja_humas.kelola']],
                         ['label' => 'Database Alumni', 'route' => 'alumni-humas.index', 'active' => ['alumni-humas.*'], 'initial' => 'DA', 'izin' => ['alumni_humas.lihat', 'alumni_humas.kelola']],
                         ['label' => 'Database Prestasi', 'route' => 'prestasi-sekolah.index', 'active' => ['prestasi-sekolah.*'], 'initial' => 'DP', 'izin' => ['prestasi_sekolah.lihat', 'prestasi_sekolah.kelola']],
@@ -2205,6 +2211,7 @@
                     'items' => [
                         ['label' => 'Presensi Anak', 'route' => 'presensi-anak.index', 'active' => ['presensi-anak.*'], 'initial' => 'PA', 'izin' => null],
                         ['label' => 'Pertemuan Saya', 'route' => 'pertemuan-saya.index', 'active' => ['pertemuan-saya.*'], 'initial' => 'PT', 'izin' => null],
+                        ['label' => 'Umpan Balik Saya', 'route' => 'umpan-balik-saya.index', 'active' => ['umpan-balik-saya.*'], 'initial' => 'UB', 'izin' => null],
                         ['label' => 'Aspirasi & Pengaduan Saya', 'route' => 'pengaduan-saya.index', 'active' => ['pengaduan-saya.*'], 'initial' => 'AD', 'izin' => null],
                         ['label' => 'Akademik Anak', 'route' => 'akademik-anak.index', 'active' => ['akademik-anak.*'], 'initial' => 'AA', 'izin' => null],
                         ['label' => 'Pembinaan & Poin', 'route' => 'pembinaan-poin-anak.index', 'active' => ['pembinaan-poin-anak.*'], 'initial' => 'PP', 'izin' => null],

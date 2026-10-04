@@ -2,6 +2,7 @@
 
 namespace App\Services\Humas;
 
+use App\Models\LampiranPengaduanHumas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -10,6 +11,17 @@ use Throwable;
 
 class LampiranPengaduanHumasService
 {
+    public function unduh(LampiranPengaduanHumas $lampiran)
+    {
+        $root = realpath(Storage::disk('local')->path('pengaduan-humas'));
+        $path = realpath(Storage::disk('local')->path($lampiran->lokasi_file));
+        abort_unless($root && $path && str_starts_with(strtolower($path), strtolower($root.DIRECTORY_SEPARATOR)) && is_file($path), 404);
+
+        return Storage::disk('local')->download($lampiran->lokasi_file, $lampiran->nama_file_asli, [
+            'Content-Type' => $lampiran->tipe_file, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     public function aturan(bool $required = false): array
     {
         return ['lampiran' => [$required ? 'required' : 'nullable', 'array', 'min:1', 'max:3'],

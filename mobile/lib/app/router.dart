@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nusa/core/security/password_change_gate.dart';
+import 'package:nusa/features/humas/domain/humas.dart';
+import 'package:nusa/features/humas/presentation/humas_hub_view.dart';
+import 'package:nusa/features/humas/presentation/humas_list_view.dart';
+import 'package:nusa/features/humas/presentation/humas_detail_view.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/auth/presentation/ganti_kata_sandi_view.dart';
 import 'package:nusa/features/auth/presentation/login_view.dart';
@@ -359,6 +363,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/humas',
+        builder: (context, state) => const HumasHubView(),
+      ),
+      for (final module in HumasModule.values)
+        GoRoute(
+          path: module.route,
+          builder: (context, state) => HumasListView(module: module),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (context, state) => HumasDetailView(
+                module: module,
+                id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+              ),
+            ),
+          ],
+        ),
       GoRoute(
         path: AppRoutes.startup,
         name: 'startup',
@@ -1452,7 +1474,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.menuGroup,
         name: 'menu-group',
         builder: (context, state) =>
-            MenuGroupView(groupCode: state.pathParameters['groupCode']!),
+            state.pathParameters['groupCode'] == 'humas'
+            ? const HumasHubView()
+            : MenuGroupView(groupCode: state.pathParameters['groupCode']!),
       ),
     ],
   );

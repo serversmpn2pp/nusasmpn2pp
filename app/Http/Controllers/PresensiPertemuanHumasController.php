@@ -7,13 +7,11 @@ use App\Models\Kelas;
 use App\Models\OrangTuaWali;
 use App\Models\PesertaPertemuanHumas;
 use App\Models\TahunPelajaran;
+use App\Services\Humas\PresensiPertemuanHumasService;
 use App\Services\Humas\UndanganOrangTuaHumasService;
 use App\Support\QrCodeSvg;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class PresensiPertemuanHumasController extends Controller
 {
@@ -38,18 +36,10 @@ class PresensiPertemuanHumasController extends Controller
 
     public function ubahAkses(Request $request, AgendaHumas $agendaHumas)
     {
-        $data = $request->validate(['dibuka' => ['required', 'boolean']]);
-        DB::transaction(function () use ($agendaHumas, $request, $data) {
-            $agenda = AgendaHumas::lockForUpdate()->findOrFail($agendaHumas->id);
-            if ($data['dibuka'] && ($agenda->status !== 'terjadwal' || ! $agenda->peserta()->whereNotNull('orang_tua_wali_id')->exists())) {
-                throw ValidationException::withMessages(['presensi' => 'Tambahkan undangan orang tua pada agenda terjadwal sebelum membuka presensi QR.']);
-            }
-            $agenda->forceFill(['presensi_dibuka' => (bool) $data['dibuka'], 'presensi_diubah_pada' => now(),
-                'token_presensi' => $agenda->token_presensi ?? Str::random(64), 'diubah_oleh_pengguna_id' => $request->user()->id])->save();
-        });
+        app(PresensiPertemuanHumasService::class)->ubahAkses($request, $agendaHumas);
 
         return redirect()->route('agenda-humas.show', [$agendaHumas, 'tab' => 'qr'])
-            ->with('berhasil', $data['dibuka'] ? 'Presensi QR dibuka.' : 'Presensi QR ditutup.');
+            ->with('berhasil', $request->boolean('dibuka') ? 'Presensi QR dibuka.' : 'Presensi QR ditutup.');
     }
 
     public function pantau(AgendaHumas $agendaHumas)
@@ -108,25 +98,7 @@ class PresensiPertemuanHumasController extends Controller
 
     public function konfirmasi(Request $request, string $token)
     {
-        $wali = $this->wali($request);
-        DB::transaction(function () use ($request, $wali, $token) {
-            $agenda = AgendaHumas::where('token_presensi', $token)->lockForUpdate()->firstOrFail();
-            $peserta = $agenda->peserta()->where('orang_tua_wali_id', $wali->id)->lockForUpdate()->first();
-            if (! $peserta || ! $this->masihTerhubung($wali, $peserta)) {
-                throw ValidationException::withMessages(['presensi' => 'Akun Anda tidak terdaftar dalam undangan ini. Hubungi petugas Humas.']);
-            }
-            if ($peserta->status_kehadiran === 'hadir') {
-                return;
-            }
-            if (! $agenda->menerimaPresensiQr()) {
-                throw ValidationException::withMessages(['presensi' => 'Presensi sudah ditutup atau belum dibuka oleh Humas.']);
-            }
-            if ($peserta->status_kehadiran !== 'belum_dicatat') {
-                throw ValidationException::withMessages(['presensi' => 'Kehadiran Anda sudah dicatat petugas. Hubungi Humas bila perlu koreksi.']);
-            }
-            $peserta->update(['status_kehadiran' => 'hadir', 'hadir_pada' => now(), 'sumber_kehadiran' => 'qr',
-                'dicatat_oleh_pengguna_id' => $request->user()->id, 'versi_presensi' => $peserta->versi_presensi + 1]);
-        });
+        app(PresensiPertemuanHumasService::class)->konfirmasi($request, $token);
 
         return redirect()->route('pertemuan-saya.show', $token)->with('berhasil', 'Kehadiran Anda telah tercatat. Terima kasih.');
     }

@@ -323,6 +323,7 @@ class DatabaseSeeder extends Seeder
             ['kelompok' => 'Humas', 'nama' => 'Kelola dokumen Humas', 'kode' => 'dokumen_humas.kelola', 'deskripsi' => 'Menambah, memperbarui, mengarsipkan, dan mengelola masa berlaku dokumen Humas.'],
             ['kelompok' => 'Humas', 'nama' => 'Lihat agenda Humas', 'kode' => 'agenda_humas.lihat', 'deskripsi' => 'Melihat agenda, kehadiran, notulen, dan tindak lanjut pertemuan Humas.'],
             ['kelompok' => 'Humas', 'nama' => 'Kelola agenda Humas', 'kode' => 'agenda_humas.kelola', 'deskripsi' => 'Mengelola jadwal, peserta, kehadiran, notulen, dan tindak lanjut pertemuan Humas.'],
+            ['kelompok' => 'Humas', 'nama' => 'Unduh bundel pertemuan Humas', 'kode' => 'agenda_humas.bundel', 'deskripsi' => 'Notulen, kehadiran, lampiran, dan rekap sesuai izin sumber data.'],
             ['kelompok' => 'Humas', 'nama' => 'Lihat rekap buku tamu', 'kode' => 'buku_tamu.lihat', 'deskripsi' => 'Melihat riwayat, lampiran privat, dan mengekspor laporan kunjungan.'],
             ['kelompok' => 'Humas', 'nama' => 'Kelola buku tamu', 'kode' => 'buku_tamu.kelola', 'deskripsi' => 'Mencatat, mengoreksi, dan membatalkan kunjungan dengan jejak perubahan.'],
             ['kelompok' => 'Humas', 'nama' => 'Catat tamu operasional', 'kode' => 'buku_tamu.catat', 'deskripsi' => 'Mencatat kedatangan, kepulangan, dan lampiran kunjungan operasional.'],
@@ -348,6 +349,12 @@ class DatabaseSeeder extends Seeder
             ['kelompok' => 'Humas', 'nama' => 'Lihat database dan statistik alumni', 'kode' => 'alumni_humas.lihat', 'deskripsi' => 'Identitas alumni, angkatan, sekolah lanjutan, statistik, dan cetak tanpa kontak privat.'],
             ['kelompok' => 'Humas', 'nama' => 'Kelola alumni dan kontak privat', 'kode' => 'alumni_humas.kelola', 'deskripsi' => 'Pendataan kelulusan, penelusuran, kontak privat, dan riwayat alumni tanpa mengubah data siswa.'],
             ['kelompok' => 'Humas', 'nama' => 'Ekspor database alumni', 'kode' => 'alumni_humas.ekspor', 'deskripsi' => 'Ekspor sesuai filter. Penyertaan kontak juga memerlukan izin kelola alumni.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat dashboard dan ringkasan kinerja Humas', 'kode' => 'dashboard_humas.lihat', 'deskripsi' => 'Ringkasan kinerja sesuai izin sumber data, tanpa identitas pengaduan atau kontak privat.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat portofolio akreditasi Humas', 'kode' => 'akreditasi_humas.lihat', 'deskripsi' => 'Lihat butir dan kesiapan portofolio. Bukti mengikuti izin dokumen.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola portofolio akreditasi Humas', 'kode' => 'akreditasi_humas.kelola', 'deskripsi' => 'Kelola butir, bukti, pemeriksaan, dan revisi portofolio.'],
+            ['kelompok' => 'Humas', 'nama' => 'Unduh bundel akreditasi Humas', 'kode' => 'akreditasi_humas.ekspor', 'deskripsi' => 'Unduh bundel siap, dengan izin dokumen Humas.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat rekap umpan balik orang tua', 'kode' => 'umpan_balik_humas.lihat', 'deskripsi' => 'Rekap evaluasi tanpa nama akun dan tindak lanjut.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola instrumen umpan balik orang tua', 'kode' => 'umpan_balik_humas.kelola', 'deskripsi' => 'Formulir, sasaran, periode pengisian, dan tindak lanjut.'],
             ['kelompok' => 'Humas', 'nama' => 'Lihat database prestasi sekolah', 'kode' => 'prestasi_sekolah.lihat', 'deskripsi' => 'Prestasi siswa, guru/pegawai, dan sekolah beserta statistik serta cetak.'],
             ['kelompok' => 'Humas', 'nama' => 'Kelola dan verifikasi prestasi sekolah', 'kode' => 'prestasi_sekolah.kelola', 'deskripsi' => 'Pendataan penerima, verifikasi bukti, koreksi, dan arsip prestasi.'],
             ['kelompok' => 'Humas', 'nama' => 'Ekspor prestasi sekolah', 'kode' => 'prestasi_sekolah.ekspor', 'deskripsi' => 'Ekspor catatan prestasi sesuai filter tanpa membuka berkas privat.'],
@@ -379,7 +386,11 @@ class DatabaseSeeder extends Seeder
             'petugas_inventaris' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
         ];
         $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'komite_humas.lihat', 'komite_humas.kelola', 'program_kerja_humas.lihat', 'program_kerja_humas.kelola', 'alumni_humas.lihat', 'alumni_humas.kelola', 'alumni_humas.ekspor']);
-        $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['prestasi_sekolah.lihat', 'prestasi_sekolah.kelola', 'prestasi_sekolah.ekspor']);
+        $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['prestasi_sekolah.lihat', 'prestasi_sekolah.kelola', 'prestasi_sekolah.ekspor', 'dashboard_humas.lihat']);
+        $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['akreditasi_humas.lihat', 'akreditasi_humas.kelola', 'akreditasi_humas.ekspor']);
+        $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['umpan_balik_humas.lihat', 'umpan_balik_humas.kelola']);
+        $peta['wakil_pimpinan_humas'][] = 'agenda_humas.bundel';
+        $peta['pimpinan'][] = 'agenda_humas.bundel';
         foreach (['pegawai', 'guru_mapel', 'bk', 'pimpinan', 'wakil_pimpinan_kesiswaan', 'wakil_pimpinan_kurikulum', 'wakil_pimpinan_sarana_prasarana', 'wakil_pimpinan_humas'] as $role) {
             $peta[$role][] = 'pengaduan_humas.tangani';
         }

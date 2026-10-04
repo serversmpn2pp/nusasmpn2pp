@@ -11,6 +11,7 @@ IconData nusaMenuGroupIcon(String icon) {
     'counseling' => Icons.groups_rounded,
     'inventory' => Icons.inventory_2_rounded,
     'security' => Icons.security_rounded,
+    'humas' => Icons.forum_rounded,
     _ => Icons.apps_rounded,
   };
 }
@@ -22,6 +23,7 @@ Color nusaMenuGroupColor(String code) {
     'kesiswaan-bk' => const Color(0xFF7A56B3),
     'sarana-prasarana' => const Color(0xFF2B8793),
     'sistem' => const Color(0xFF536A86),
+    'humas' => NusaColors.primaryLight,
     _ => const Color(0xFF2676C8),
   };
 }
@@ -107,6 +109,11 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'katalog-barang' => Icons.storefront_rounded,
     'pengajuan-saya' => Icons.request_page_rounded,
     'dashboard-sarpras' => Icons.dashboard_rounded,
+    'dashboard-humas' => Icons.dashboard_rounded,
+    'agenda-humas' || 'pertemuan-saya' => Icons.event_available_rounded,
+    'dokumen-humas' => Icons.folder_copy_rounded,
+    'pengaduan-humas' || 'pengaduan-saya' => Icons.support_agent_rounded,
+    'umpan-balik-humas' || 'umpan-balik-saya' => Icons.rate_review_rounded,
     'inventaris-barang' => Icons.inventory_2_rounded,
     'unit-aset' => Icons.qr_code_2_rounded,
     'label-inventaris' => Icons.label_rounded,
