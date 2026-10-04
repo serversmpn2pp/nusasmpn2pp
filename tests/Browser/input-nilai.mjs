@@ -52,6 +52,16 @@ try {
                 });
                 assert.ok(layout.below && layout.fullWidth, `Tabel harus di bawah dan selebar halaman ${name}@${width}`);
                 assert.ok(layout.noHorizontalScroll, `Tabel masih perlu gulir ke kanan ${name}@${width}`);
+                const borders = await page.locator('.grade-overview').evaluate(overview => {
+                    const head = getComputedStyle(overview.querySelector('.grade-overview-head'));
+                    const facts = getComputedStyle(overview.querySelector('.grade-facts'));
+                    const second = getComputedStyle(overview.querySelector('.grade-facts > div:nth-child(2)'));
+                    return {accent:head.borderLeftWidth,top:facts.borderTopWidth,bottom:facts.borderBottomWidth,separator:second.borderLeftWidth};
+                });
+                assert.equal(borders.accent,'3px');
+                assert.equal(borders.top,'1px');
+                assert.equal(borders.bottom,'1px');
+                if (width > 1100) assert.equal(borders.separator,'1px');
                 const clippedGrade = await page.locator('.grade-overview, .grade-entry-head, .grade-table td, .grade-table th, .grade-save-actions .button:visible').evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2).map(el => el.textContent.trim().slice(0,80)));
                 assert.deepEqual(clippedGrade,[],`Teks/kolom terpotong ${name}@${width}`);
                 if (width > 900) {

@@ -27,12 +27,18 @@
 
         .grade-workspace { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; }
         .grade-overview { padding:0 0 20px; border-bottom:1px solid var(--line); }
-        .grade-overview-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+        .grade-overview-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; border-left:3px solid var(--primary); padding-left:12px; }
         .grade-overview-head > div { min-width:0; }
         .grade-overview-head h2 { margin:0; font-size:1.15rem; line-height:1.4; overflow-wrap:anywhere; }
         .grade-overview-head p { margin:4px 0 0; color:var(--muted); font-size:.9rem; }
         .grade-overview-head .badge { flex-shrink:0; }
-        .grade-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.4fr) minmax(0,.8fr) minmax(0,1fr); gap:16px; margin:18px 0 0; font-size:.88rem; }
+        .grade-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.4fr) minmax(0,.8fr) minmax(0,1fr); gap:16px; margin:18px 0 0; padding:14px 12px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:#fff; font-size:.88rem; }
+        .grade-facts > div { min-width:0; }
+        @media(min-width:1101px) {
+            .grade-facts { column-gap:0; }
+            .grade-facts > div + div { border-left:1px solid var(--line); padding-left:16px; }
+            .grade-facts > div:not(:last-child) { padding-right:16px; }
+        }
         .grade-facts dt { color:var(--muted); margin-bottom:4px; }
         .grade-facts dd { margin:0; font-weight:700; overflow-wrap:anywhere; }
         .grade-entry { min-width:0; }
