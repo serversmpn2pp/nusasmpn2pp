@@ -26,7 +26,7 @@
         }
 
         .grade-workspace { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; }
-        .grade-overview { padding:0 0 20px; border-bottom:1px solid var(--line); }
+        .grade-overview { min-width:0; padding:20px; border:1px solid #b9cde2; border-radius:8px; background:#fff; }
         .grade-overview-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; border-left:3px solid var(--primary); padding-left:12px; }
         .grade-overview-head > div { min-width:0; }
         .grade-overview-head h2 { margin:0; font-size:1.15rem; line-height:1.4; overflow-wrap:anywhere; }
@@ -101,6 +101,7 @@
             .grade-table td { padding:8px 0; }
         }
         @media(max-width:600px) {
+            .grade-overview { padding:16px; }
             .grade-facts { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
             .grade-overview-head { flex-wrap:wrap; gap:10px; }
             .publication-box { grid-template-columns:minmax(0,1fr); gap:14px; }

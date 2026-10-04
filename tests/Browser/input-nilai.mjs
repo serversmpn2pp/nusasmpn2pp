@@ -53,11 +53,15 @@ try {
                 assert.ok(layout.below && layout.fullWidth, `Tabel harus di bawah dan selebar halaman ${name}@${width}`);
                 assert.ok(layout.noHorizontalScroll, `Tabel masih perlu gulir ke kanan ${name}@${width}`);
                 const borders = await page.locator('.grade-overview').evaluate(overview => {
+                    const card = getComputedStyle(overview);
                     const head = getComputedStyle(overview.querySelector('.grade-overview-head'));
                     const facts = getComputedStyle(overview.querySelector('.grade-facts'));
                     const second = getComputedStyle(overview.querySelector('.grade-facts > div:nth-child(2)'));
-                    return {accent:head.borderLeftWidth,top:facts.borderTopWidth,bottom:facts.borderBottomWidth,separator:second.borderLeftWidth};
+                    return {outer:[card.borderTopWidth,card.borderRightWidth,card.borderBottomWidth,card.borderLeftWidth],radius:card.borderRadius,background:card.backgroundColor,accent:head.borderLeftWidth,top:facts.borderTopWidth,bottom:facts.borderBottomWidth,separator:second.borderLeftWidth};
                 });
+                assert.deepEqual(borders.outer,['1px','1px','1px','1px']);
+                assert.equal(borders.radius,'8px');
+                assert.equal(borders.background,'rgb(255, 255, 255)');
                 assert.equal(borders.accent,'3px');
                 assert.equal(borders.top,'1px');
                 assert.equal(borders.bottom,'1px');
