@@ -10,6 +10,7 @@
     <form method="POST" action="{{ $agendaHumas->exists ? route('agenda-humas.update', $agendaHumas) : route('agenda-humas.store') }}" data-agenda-submit>
         @csrf @if ($agendaHumas->exists) @method('PUT') @endif
         @if (isset($mitraTerkait))<input type="hidden" name="mitra_humas_id" value="{{ $mitraTerkait->id }}"><p class="help-text">Mitra: {{ $mitraTerkait->nama }}</p>@endif
+        @if (isset($programTerkait))<input type="hidden" name="program_komite_humas_id" value="{{ $programTerkait->id }}"><div class="agenda-actions"><span>Program komite:</span><a href="{{ route('komite-humas.program.show', [$programTerkait->periode, $programTerkait]) }}">{{ $programTerkait->nama }}</a><span class="agenda-muted">{{ $programTerkait->periode->nama }}</span></div>@endif
         <section class="agenda-section">
             <h2>Jadwal pertemuan</h2>
             <div class="agenda-field-grid">

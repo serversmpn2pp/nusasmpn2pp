@@ -341,8 +341,16 @@ class DatabaseSeeder extends Seeder
             ['kelompok' => 'Humas', 'nama' => 'Pantau tiket aspirasi dan pengaduan', 'kode' => 'pengaduan_humas.lihat', 'deskripsi' => 'Memantau tiket internal tanpa akses identitas pelapor dan lampiran privat.'],
             ['kelompok' => 'Humas', 'nama' => 'Kelola tiket dan identitas pelapor', 'kode' => 'pengaduan_humas.kelola', 'deskripsi' => 'Mencatat, mendisposisikan, memverifikasi, dan mengelola data privat tiket.'],
             ['kelompok' => 'Humas', 'nama' => 'Tangani tiket yang ditugaskan', 'kode' => 'pengaduan_humas.tangani', 'deskripsi' => 'Melihat dan menindaklanjuti hanya tiket yang ditugaskan kepada akun pegawai sendiri.'],
-            ['kelompok' => 'Humas', 'nama' => 'Lihat kepengurusan komite sekolah', 'kode' => 'komite_humas.lihat', 'deskripsi' => 'Melihat susunan pengurus, masa bakti, SK, dan riwayat kepengurusan komite.'],
-            ['kelompok' => 'Humas', 'nama' => 'Kelola kepengurusan komite sekolah', 'kode' => 'komite_humas.kelola', 'deskripsi' => 'Mengelola kepengurusan, kontak privat, masa bakti, dan SK komite sekolah.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat administrasi komite sekolah', 'kode' => 'komite_humas.lihat', 'deskripsi' => 'Melihat kepengurusan, SK, program kerja, dan riwayat komite. Rincian rapat mengikuti izin agenda.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola administrasi komite sekolah', 'kode' => 'komite_humas.kelola', 'deskripsi' => 'Mengelola kepengurusan, kontak privat, SK, dan program kerja. Pengaitan rapat juga memerlukan izin kelola agenda.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat program kerja dan laporan Humas', 'kode' => 'program_kerja_humas.lihat', 'deskripsi' => 'Program Waka Humas, target, realisasi, evaluasi, dan cetak laporan.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola program kerja dan laporan Humas', 'kode' => 'program_kerja_humas.kelola', 'deskripsi' => 'Mencatat program dan laporan pelaksanaan, finalisasi, revisi, serta bukti sesuai izin dokumen.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat database dan statistik alumni', 'kode' => 'alumni_humas.lihat', 'deskripsi' => 'Identitas alumni, angkatan, sekolah lanjutan, statistik, dan cetak tanpa kontak privat.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola alumni dan kontak privat', 'kode' => 'alumni_humas.kelola', 'deskripsi' => 'Pendataan kelulusan, penelusuran, kontak privat, dan riwayat alumni tanpa mengubah data siswa.'],
+            ['kelompok' => 'Humas', 'nama' => 'Ekspor database alumni', 'kode' => 'alumni_humas.ekspor', 'deskripsi' => 'Ekspor sesuai filter. Penyertaan kontak juga memerlukan izin kelola alumni.'],
+            ['kelompok' => 'Humas', 'nama' => 'Lihat database prestasi sekolah', 'kode' => 'prestasi_sekolah.lihat', 'deskripsi' => 'Prestasi siswa, guru/pegawai, dan sekolah beserta statistik serta cetak.'],
+            ['kelompok' => 'Humas', 'nama' => 'Kelola dan verifikasi prestasi sekolah', 'kode' => 'prestasi_sekolah.kelola', 'deskripsi' => 'Pendataan penerima, verifikasi bukti, koreksi, dan arsip prestasi.'],
+            ['kelompok' => 'Humas', 'nama' => 'Ekspor prestasi sekolah', 'kode' => 'prestasi_sekolah.ekspor', 'deskripsi' => 'Ekspor catatan prestasi sesuai filter tanpa membuka berkas privat.'],
         ];
     }
 
@@ -370,7 +378,8 @@ class DatabaseSeeder extends Seeder
             'petugas_kebersihan' => ['beranda.akses', 'absensi.scan', 'sarpras.lihat', 'kebersihan.lihat', 'kebersihan.kelola'],
             'petugas_inventaris' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
         ];
-        $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'komite_humas.lihat', 'komite_humas.kelola']);
+        $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'komite_humas.lihat', 'komite_humas.kelola', 'program_kerja_humas.lihat', 'program_kerja_humas.kelola', 'alumni_humas.lihat', 'alumni_humas.kelola', 'alumni_humas.ekspor']);
+        $peta['wakil_pimpinan_humas'] = array_merge($peta['wakil_pimpinan_humas'], ['prestasi_sekolah.lihat', 'prestasi_sekolah.kelola', 'prestasi_sekolah.ekspor']);
         foreach (['pegawai', 'guru_mapel', 'bk', 'pimpinan', 'wakil_pimpinan_kesiswaan', 'wakil_pimpinan_kurikulum', 'wakil_pimpinan_sarana_prasarana', 'wakil_pimpinan_humas'] as $role) {
             $peta[$role][] = 'pengaduan_humas.tangani';
         }

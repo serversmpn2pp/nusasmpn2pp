@@ -1921,6 +1921,9 @@
                     'title' => 'Humas',
                     'items' => [
                         ['label' => 'Pusat Dokumen Humas', 'route' => 'dokumen-humas.index', 'active' => ['dokumen-humas.*'], 'initial' => 'DH', 'izin' => ['dokumen_humas.lihat', 'dokumen_humas.kelola']],
+                        ['label' => 'Program Kerja Humas', 'route' => 'program-kerja-humas.index', 'active' => ['program-kerja-humas.*'], 'initial' => 'PH', 'izin' => ['program_kerja_humas.lihat', 'program_kerja_humas.kelola']],
+                        ['label' => 'Database Alumni', 'route' => 'alumni-humas.index', 'active' => ['alumni-humas.*'], 'initial' => 'DA', 'izin' => ['alumni_humas.lihat', 'alumni_humas.kelola']],
+                        ['label' => 'Database Prestasi', 'route' => 'prestasi-sekolah.index', 'active' => ['prestasi-sekolah.*'], 'initial' => 'DP', 'izin' => ['prestasi_sekolah.lihat', 'prestasi_sekolah.kelola']],
                         ['label' => 'Komite Sekolah', 'route' => 'komite-humas.index', 'active' => ['komite-humas.*'], 'initial' => 'KS', 'izin' => ['komite_humas.lihat', 'komite_humas.kelola']],
                         ['label' => 'Agenda & Pertemuan', 'route' => 'agenda-humas.index', 'active' => ['agenda-humas.*'], 'initial' => 'AP', 'izin' => ['agenda_humas.lihat', 'agenda_humas.kelola']],
                         ['label' => 'Buku Tamu Digital', 'route' => 'buku-tamu.index', 'active' => ['buku-tamu.*'], 'initial' => 'BT', 'izin' => null, 'buku_tamu_only' => true],
@@ -2037,6 +2040,9 @@
                     'id' => 'layanan-humas',
                     'title' => 'Humas',
                     'items' => [
+                        ['label' => 'Program Kerja Humas', 'route' => 'program-kerja-humas.index', 'active' => ['program-kerja-humas.*'], 'initial' => 'PH', 'izin' => ['program_kerja_humas.lihat', 'program_kerja_humas.kelola']],
+                        ['label' => 'Database Alumni', 'route' => 'alumni-humas.index', 'active' => ['alumni-humas.*'], 'initial' => 'DA', 'izin' => ['alumni_humas.lihat', 'alumni_humas.kelola']],
+                        ['label' => 'Database Prestasi', 'route' => 'prestasi-sekolah.index', 'active' => ['prestasi-sekolah.*'], 'initial' => 'DP', 'izin' => ['prestasi_sekolah.lihat', 'prestasi_sekolah.kelola']],
                         ['label' => 'Komite Sekolah', 'route' => 'komite-humas.index', 'active' => ['komite-humas.*'], 'initial' => 'KS', 'izin' => ['komite_humas.lihat', 'komite_humas.kelola']],
                         ['label' => 'Publikasi & Persetujuan', 'route' => 'publikasi-humas.index', 'active' => ['publikasi-humas.*'], 'initial' => 'PP', 'izin' => ['publikasi_humas.lihat', 'publikasi_humas.kelola', 'publikasi_humas.periksa']],
                         ['label' => 'Bank Aset Promosi', 'route' => 'aset-promosi-humas.index', 'active' => ['aset-promosi-humas.*'], 'initial' => 'AP', 'izin' => ['aset_promosi_humas.lihat', 'aset_promosi_humas.kelola']],

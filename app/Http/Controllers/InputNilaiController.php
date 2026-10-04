@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\AnggotaKelas;
+use App\Models\Kelas;
 use App\Models\KomponenNilai;
 use App\Models\NilaiSiswa;
 use App\Models\PublikasiNilaiSiswa;
+use App\Models\TahunPelajaran;
 use App\Services\Nilai\InputNilaiService;
+use App\Support\FilterInputNilai;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class InputNilaiController extends Controller
 {
@@ -15,9 +19,36 @@ class InputNilaiController extends Controller
 
     public function index(Request $request)
     {
+        $request->validate(['komponen_nilai_id' => ['nullable', 'integer', 'min:1']]);
         $komponenNilaiId = old('komponen_nilai_id', $request->input('komponen_nilai_id'));
-        $daftarKomponenNilai = $this->ambilDaftarKomponenNilai($request);
-        $komponenDipilih = null;
+        $komponenNilaiId = is_scalar($komponenNilaiId) && ctype_digit((string) $komponenNilaiId) ? (int) $komponenNilaiId : null;
+        $komponenDipilih = $komponenNilaiId ? $this->ambilKomponenDipilih($request, $komponenNilaiId) : null;
+        $filter = FilterInputNilai::validasi($request);
+        $filterLama = old('filter');
+        if (is_array($filterLama) && Validator::make($filterLama, FilterInputNilai::aturan())->passes()) {
+            $filter = array_replace($filter, Validator::make($filterLama, FilterInputNilai::aturan())->validated());
+        }
+        $penugasan = $this->inputNilai->queryGuruMataPelajaranDalamCakupan($request->user())->where('aktif', true);
+        $tahunPelajaran = TahunPelajaran::whereIn('id', (clone $penugasan)->select('tahun_pelajaran_id'))
+            ->orderByDesc('aktif')->orderByDesc('tanggal_mulai')->orderByDesc('id')->get();
+        $filter = array_replace([
+            'tahun_pelajaran_id' => $komponenDipilih?->guruMataPelajaran?->tahun_pelajaran_id ?? $tahunPelajaran->first()?->id,
+            'semester' => $komponenDipilih?->semester ?? (now()->month >= 7 ? 'ganjil' : 'genap'),
+            'kelas_id' => $komponenDipilih?->guruMataPelajaran?->kelas_id,
+            'jenis_komponen' => $komponenDipilih?->jenis_komponen ?? 'semua',
+        ], $filter);
+        $filter['semester'] ??= 'semua';
+        $filter['jenis_komponen'] ??= 'semua';
+        $kelas = Kelas::whereIn('id', (clone $penugasan)
+            ->when($filter['tahun_pelajaran_id'], fn ($q, $id) => $q->where('tahun_pelajaran_id', $id))->select('kelas_id'))
+            ->orderBy('tingkat')->orderBy('nama')->orderBy('id')->get();
+        abort_if($filter['tahun_pelajaran_id'] && ! $tahunPelajaran->contains('id', $filter['tahun_pelajaran_id']), 404);
+        abort_if($filter['kelas_id'] && ! $kelas->contains('id', $filter['kelas_id']), 404);
+        $daftarKomponenNilai = $this->ambilDaftarKomponenNilai($request, $filter);
+        if ($komponenDipilih && ! $daftarKomponenNilai->contains('id', $komponenDipilih->id)) {
+            $komponenDipilih = null;
+            $komponenNilaiId = null;
+        }
         $anggotaKelas = collect();
         $nilaiTersimpan = collect();
         $penilaianPredikat = false;
@@ -27,7 +58,6 @@ class InputNilaiController extends Controller
         $targetNilaiPublikasi = 0;
 
         if ($komponenNilaiId) {
-            $komponenDipilih = $this->ambilKomponenDipilih($request, $komponenNilaiId);
             $penilaianPredikat = $komponenDipilih
                 ->guruMataPelajaran?->mataPelajaran?->menggunakanPredikat() ?? false;
             $kelasId = $komponenDipilih->guruMataPelajaran?->kelas_id;
@@ -90,11 +120,15 @@ class InputNilaiController extends Controller
             'jumlahKomponenPublikasi',
             'jumlahNilaiPublikasi',
             'targetNilaiPublikasi',
+            'filter',
+            'tahunPelajaran',
+            'kelas',
         ));
     }
 
     public function store(Request $request)
     {
+        $filter = FilterInputNilai::validasi($request, true);
         $request->validate([
             'komponen_nilai_id' => ['required', 'exists:komponen_nilai,id'],
         ]);
@@ -117,7 +151,7 @@ class InputNilaiController extends Controller
         );
 
         return redirect()
-            ->route('input-nilai.index', ['komponen_nilai_id' => $komponenDipilih->id])
+            ->route('input-nilai.index', ['komponen_nilai_id' => $komponenDipilih->id, ...$filter])
             ->with(
                 'berhasil',
                 $publikasiDibatalkan
@@ -126,7 +160,7 @@ class InputNilaiController extends Controller
             );
     }
 
-    private function ambilDaftarKomponenNilai(Request $request)
+    private function ambilDaftarKomponenNilai(Request $request, array $filter)
     {
         return $this->queryKomponenDalamCakupan($request)
             ->with([
@@ -139,6 +173,10 @@ class InputNilaiController extends Controller
             ->whereHas('guruMataPelajaran', function ($query) {
                 $query->where('aktif', true);
             })
+            ->when($filter['tahun_pelajaran_id'], fn ($q, $id) => $q->whereHas('guruMataPelajaran', fn ($q) => $q->where('tahun_pelajaran_id', $id)))
+            ->when($filter['kelas_id'], fn ($q, $id) => $q->whereHas('guruMataPelajaran', fn ($q) => $q->where('kelas_id', $id)))
+            ->when($filter['semester'] !== 'semua', fn ($q) => $q->where('semester', $filter['semester']))
+            ->when($filter['jenis_komponen'] !== 'semua', fn ($q) => $q->where('jenis_komponen', $filter['jenis_komponen']))
             ->orderBy('semester')
             ->orderBy('jenis_komponen')
             ->orderBy('urutan')

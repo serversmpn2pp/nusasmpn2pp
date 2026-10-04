@@ -77,6 +77,11 @@ class AgendaHumas extends Model
         return $this->belongsToMany(MitraHumas::class, 'mitra_humas_agenda')->withTimestamps();
     }
 
+    public function programKomite(): BelongsToMany
+    {
+        return $this->belongsToMany(ProgramKomiteHumas::class, 'program_komite_humas_agenda', 'agenda_humas_id', 'program_komite_humas_id')->withTimestamps();
+    }
+
     public function labelWaktu(): string
     {
         if ($this->status !== 'terjadwal') {

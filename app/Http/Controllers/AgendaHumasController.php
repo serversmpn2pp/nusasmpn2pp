@@ -6,8 +6,11 @@ use App\Models\AgendaHumas;
 use App\Models\DokumenHumas;
 use App\Models\MitraHumas;
 use App\Models\PesertaPertemuanHumas;
+use App\Models\ProgramKomiteHumas;
 use App\Models\TindakLanjutAgendaHumas;
 use App\Services\Humas\KelolaKemitraanHumasService;
+use App\Services\Humas\KelolaKomiteHumasService;
+use App\Services\Humas\KelolaProgramKomiteHumasService;
 use App\Support\QrCodeSvg;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -50,25 +53,38 @@ class AgendaHumasController extends Controller
 
     public function create(Request $request)
     {
-        $data = $request->validate(['mitra_humas_id' => ['nullable', 'integer', 'exists:mitra_humas,id']]);
+        $data = $request->validate(['mitra_humas_id' => ['nullable', 'integer', 'exists:mitra_humas,id', 'prohibits:program_komite_humas_id'],
+            'program_komite_humas_id' => ['nullable', 'integer', 'exists:program_komite_humas,id']]);
+        $program = $this->programUntukRapat($request, $data['program_komite_humas_id'] ?? null);
         $mitra = ! empty($data['mitra_humas_id']) ? MitraHumas::findOrFail($data['mitra_humas_id']) : null;
         if ($mitra) {
             abort_unless($request->user()->memilikiIzin('kemitraan_humas.kelola'), 403);
             app(KelolaKemitraanHumasService::class)->pastikanMitraAktif($mitra);
         }
 
-        return view('agenda-humas.form', ['agendaHumas' => new AgendaHumas(['jenis' => $mitra ? 'kemitraan' : null, 'sasaran' => $mitra?->nama]), 'mitraTerkait' => $mitra]);
+        return view('agenda-humas.form', ['agendaHumas' => new AgendaHumas(['jenis' => $program ? 'komite' : ($mitra ? 'kemitraan' : null),
+            'judul' => $program ? mb_substr('Rapat - '.$program->nama, 0, 180) : null, 'sasaran' => $program ? 'Pengurus komite sekolah' : $mitra?->nama,
+            'topik' => $program?->target_hasil]), 'mitraTerkait' => $mitra, 'programTerkait' => $program]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate($this->aturanAgenda() + ['mitra_humas_id' => ['nullable', 'integer', 'exists:mitra_humas,id']]);
+        $data = $request->validate($this->aturanAgenda() + ['mitra_humas_id' => ['nullable', 'integer', 'exists:mitra_humas,id', 'prohibits:program_komite_humas_id'],
+            'program_komite_humas_id' => ['nullable', 'integer', 'exists:program_komite_humas,id']]);
+        $programId = $data['program_komite_humas_id'] ?? null;
+        $this->programUntukRapat($request, $programId);
         $mitraId = $data['mitra_humas_id'] ?? null;
         if ($mitraId) {
             abort_unless($request->user()->memilikiIzin('kemitraan_humas.kelola'), 403);
         }
-        unset($data['mitra_humas_id']);
-        $agenda = DB::transaction(function () use ($request, $data, $mitraId) {
+        unset($data['mitra_humas_id'], $data['program_komite_humas_id']);
+        $agenda = DB::transaction(function () use ($request, $data, $mitraId, $programId) {
+            $program = null;
+            if ($programId) {
+                $periodeId = ProgramKomiteHumas::findOrFail($programId)->periode_komite_humas_id;
+                app(KelolaProgramKomiteHumasService::class)->kunciPeriode($periodeId);
+                $program = ProgramKomiteHumas::lockForUpdate()->findOrFail($programId);
+            }
             $mitra = $mitraId ? MitraHumas::lockForUpdate()->findOrFail($mitraId) : null;
             if ($mitra) {
                 app(KelolaKemitraanHumasService::class)->pastikanMitraAktif($mitra);
@@ -77,6 +93,9 @@ class AgendaHumasController extends Controller
                 'status' => 'terjadwal', 'dibuat_oleh_pengguna_id' => $request->user()->id,
                 'diubah_oleh_pengguna_id' => $request->user()->id,
             ]);
+            if ($program) {
+                app(KelolaProgramKomiteHumasService::class)->hubungkan($program, $agenda, $request, 'Rapat dibuat dari program kerja komite.');
+            }
             if ($mitra) {
                 $mitra->agenda()->attach($agenda);
                 app(KelolaKemitraanHumasService::class)->catat($mitra, null, 'Agenda dibuat', null, ['agenda' => $agenda->judul, 'agenda_humas_id' => $agenda->id], $request->user());
@@ -100,6 +119,8 @@ class AgendaHumasController extends Controller
             'agendaHumas' => $agendaHumas, 'tab' => $tab,
             'mitraTerkait' => $request->user()->memilikiIzin(['kemitraan_humas.lihat', 'kemitraan_humas.kelola'])
                 ? $agendaHumas->mitra()->get(['mitra_humas.id', 'nama']) : collect(),
+            'programKomiteTerkait' => $request->user()->memilikiIzin(['komite_humas.lihat', 'komite_humas.kelola']) && ! $request->user()->akunOrangTua() && ! $request->user()->akunSiswa()
+                ? $agendaHumas->programKomite()->with('periode:id,nama')->get(['program_komite_humas.id', 'nama', 'periode_komite_humas_id']) : collect(),
             'rekapPresensi' => $agendaHumas->rekapPresensi(),
             'jumlahUndanganQr' => $tab === 'qr' ? $agendaHumas->peserta()->whereNotNull('orang_tua_wali_id')->count() : 0,
             'qrSvg' => $tab === 'qr' && $agendaHumas->token_presensi
@@ -121,7 +142,14 @@ class AgendaHumasController extends Controller
     public function update(Request $request, AgendaHumas $agendaHumas)
     {
         $data = $request->validate($this->aturanAgenda());
-        $agendaHumas->update($data + ['diubah_oleh_pengguna_id' => $request->user()->id]);
+        DB::transaction(function () use ($request, $agendaHumas, $data) {
+            // Match the lock order used when programs link or unlink meetings.
+            app(KelolaKomiteHumasService::class)->kunciPeriode();
+            $agenda = AgendaHumas::lockForUpdate()->findOrFail($agendaHumas->id);
+            $agenda->fill($data);
+            app(KelolaProgramKomiteHumasService::class)->validasiPerubahanAgenda($agenda);
+            $agenda->fill(['diubah_oleh_pengguna_id' => $request->user()->id])->save();
+        });
 
         return $this->kembali($agendaHumas, 'ringkasan', 'Informasi agenda berhasil diperbarui.');
     }
@@ -318,6 +346,20 @@ class AgendaHumasController extends Controller
             'notulis' => ['nullable', 'string', 'max:180'],
             'topik' => ['required', 'string', 'max:10000'],
         ];
+    }
+
+    private function programUntukRapat(Request $request, ?int $id): ?ProgramKomiteHumas
+    {
+        if (! $id) {
+            return null;
+        }
+        abort_unless($request->user()->memilikiIzin('komite_humas.kelola') && $request->user()->aktif && ! $request->user()->akunOrangTua() && ! $request->user()->akunSiswa(), 403);
+        $program = ProgramKomiteHumas::with('periode')->findOrFail($id);
+        if ($program->periode->status === 'arsip' || $program->status === 'dibatalkan') {
+            throw ValidationException::withMessages(['program_komite_humas_id' => 'Program dibatalkan atau kepengurusan diarsipkan. Rapat baru tidak dapat ditambahkan.']);
+        }
+
+        return $program;
     }
 
     private function aturanTindakLanjut(): array

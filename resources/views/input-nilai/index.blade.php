@@ -4,13 +4,25 @@
 
 @section('content')
     <style>
-        .input-nilai-filter {
-            grid-template-columns: minmax(0, 1fr) auto;
-        }
-
-        .input-nilai-filter .actions {
-            align-self: end;
-            justify-content: flex-end;
+        .grade-filter { margin-bottom:24px; padding:20px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+        .input-nilai-filter { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+        .input-nilai-filter .field, .grade-component .field { min-width:0; }
+        .grade-component { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:16px; padding-top:18px; margin-top:18px; border-top:1px solid var(--line); }
+        .grade-component .actions { display:flex; flex-wrap:wrap; gap:8px; }
+        .grade-component-label { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:6px; }
+        .grade-component-label label { margin-bottom:0; }
+        .grade-component-count { color:#52525b; font-size:.8rem; white-space:nowrap; }
+        .grade-filter .select { min-width:0; text-overflow:ellipsis; }
+        .grade-filter[aria-busy="true"] { pointer-events:none; opacity:.7; }
+        .grade-filter-state { margin:10px 0 0; color:var(--primary); font-size:.85rem; }
+        .grade-unsaved { color:#854d0e; font-size:.85rem; font-weight:700; }
+        .grade-filter [hidden], .grade-unsaved[hidden] { display:none !important; }
+        @media(max-width:1000px) { .input-nilai-filter { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media(max-width:600px) {
+            .input-nilai-filter, .grade-component { grid-template-columns:minmax(0,1fr); gap:12px; }
+            .grade-component .actions { display:grid; grid-template-columns:minmax(0,1fr) auto; }
+            .grade-component .button { justify-content:center; }
+            .grade-component-label { flex-wrap:wrap; }
         }
 
         .publication-box {
@@ -53,27 +65,18 @@
             width: 100%;
         }
 
-        @media (max-width: 900px) {
-            .input-nilai-filter {
-                grid-template-columns: 1fr;
-            }
-
-            .input-nilai-filter .actions {
-                align-self: stretch;
-            }
-        }
     </style>
 
     @php
-        $labelKomponen = function ($item) {
+        $labelKomponen = function ($item) use ($filter) {
             $guruMapel = $item->guruMataPelajaran;
 
             return collect([
-                $guruMapel?->tahunPelajaran?->nama,
-                $guruMapel?->kelas?->nama,
+                $filter['tahun_pelajaran_id'] ? null : $guruMapel?->tahunPelajaran?->nama,
+                $filter['kelas_id'] ? null : $guruMapel?->kelas?->nama,
                 $guruMapel?->mataPelajaran?->nama,
-                $item->labelJenis(),
-                ucfirst($item->semester),
+                $filter['jenis_komponen'] === 'semua' ? $item->labelJenis() : null,
+                $filter['semester'] === 'semua' ? ucfirst($item->semester) : null,
                 $item->nama,
             ])->filter()->join(' - ');
         };
@@ -127,7 +130,7 @@
 
     @if ($errors->any())
         <div class="alert alert-danger">
-            <strong>Ada nilai yang perlu diperbaiki.</strong>
+            <strong>Ada isian yang perlu diperbaiki.</strong>
             <ul>
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -136,14 +139,54 @@
         </div>
     @endif
 
-    <form action="{{ route('input-nilai.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
-        <div class="filter-grid input-nilai-filter">
+    <form id="filter-input-nilai" action="{{ route('input-nilai.index') }}" method="GET" class="grade-filter">
+        <div class="input-nilai-filter">
             <div class="field">
-                <label for="komponen_nilai_id">Komponen nilai</label>
-                <select id="komponen_nilai_id" name="komponen_nilai_id" class="select" required>
+                <label for="tahun_pelajaran_id">Tahun pelajaran</label>
+                <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select" data-grade-filter>
+                    <option value="">Semua tahun pelajaran</option>
+                    @foreach ($tahunPelajaran as $tahun)
+                        <option value="{{ $tahun->id }}" @selected((string) $filter['tahun_pelajaran_id'] === (string) $tahun->id)>{{ $tahun->nama }}{{ $tahun->aktif ? ' (aktif)' : '' }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field">
+                <label for="semester">Semester</label>
+                <select id="semester" name="semester" class="select" data-grade-filter>
+                    @foreach (['semua' => 'Semua semester', 'ganjil' => 'Ganjil', 'genap' => 'Genap'] as $key => $label)
+                        <option value="{{ $key }}" @selected($filter['semester'] === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field">
+                <label for="kelas_id">Kelas</label>
+                <select id="kelas_id" name="kelas_id" class="select" data-grade-filter>
+                    <option value="">Semua kelas</option>
+                    @foreach ($kelas as $item)
+                        <option value="{{ $item->id }}" @selected((string) $filter['kelas_id'] === (string) $item->id)>{{ $item->nama }}{{ ! $filter['tahun_pelajaran_id'] ? ' - '.$tahunPelajaran->firstWhere('id', $item->tahun_pelajaran_id)?->nama : '' }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field">
+                <label for="jenis_komponen">Jenis penilaian</label>
+                <select id="jenis_komponen" name="jenis_komponen" class="select" data-grade-filter>
+                    <option value="semua" @selected($filter['jenis_komponen'] === 'semua')>Semua jenis penilaian</option>
+                    @foreach (\App\Support\FilterInputNilai::JENIS as $key => $label)
+                        <option value="{{ $key }}" @selected($filter['jenis_komponen'] === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        <div class="grade-component">
+            <div class="field">
+                <div class="grade-component-label">
+                    <label for="komponen_nilai_id">Komponen nilai</label>
+                    <span class="grade-component-count">{{ $daftarKomponenNilai->count() }} komponen tersedia</span>
+                </div>
+                <select id="komponen_nilai_id" name="komponen_nilai_id" class="select">
                     <option value="">Pilih komponen nilai</option>
                     @foreach ($daftarKomponenNilai as $item)
-                        <option value="{{ $item->id }}" @selected((string) $komponenNilaiId === (string) $item->id)>
+                        <option value="{{ $item->id }}" data-tahun="{{ $item->guruMataPelajaran?->tahun_pelajaran_id }}" data-kelas="{{ $item->guruMataPelajaran?->kelas_id }}" data-semester="{{ $item->semester }}" data-jenis="{{ $item->jenis_komponen }}" title="{{ $labelKomponen($item) }}" @selected((string) $komponenNilaiId === (string) $item->id)>
                             {{ $labelKomponen($item) }}
                         </option>
                     @endforeach
@@ -151,21 +194,22 @@
             </div>
 
             <div class="actions">
-                <button type="submit" class="button button-dark">Tampilkan</button>
+                <button type="submit" class="button button-primary">Buka nilai</button>
                 <a href="{{ route('input-nilai.index') }}" class="button button-muted">Reset</a>
             </div>
         </div>
+        <p class="grade-filter-state" data-filter-state role="status" hidden>Memuat komponen nilai...</p>
     </form>
 
     @if ($daftarKomponenNilai->isEmpty())
         <section class="panel panel-pad">
-            <h2 class="panel-title">Belum ada komponen nilai aktif</h2>
-            <p class="help-text" style="margin-top: 8px;">Buat komponen nilai terlebih dahulu agar halaman input nilai bisa menampilkan daftar siswa.</p>
+            <h2 class="panel-title">Tidak ada komponen nilai yang sesuai</h2>
+            <p class="help-text" style="margin-top: 8px;">Belum ada komponen nilai aktif untuk pilihan ini.</p>
         </section>
     @elseif (! $komponenDipilih)
         <section class="panel panel-pad">
             <h2 class="panel-title">Pilih komponen nilai</h2>
-            <p class="help-text" style="margin-top: 8px;">Nilai diinput per komponen, misalnya Formatif 1, Sumatif 1, STS, atau SAS/SAJ.</p>
+            <p class="help-text" style="margin-top: 8px;">{{ $daftarKomponenNilai->count() }} komponen nilai tersedia sesuai pilihan Anda.</p>
         </section>
     @else
         <div class="stats-grid">
@@ -241,6 +285,7 @@
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="komponen_nilai_id" value="{{ $komponenDipilih->id }}">
+                            @include('input-nilai._filter-fields')
                             <button type="submit" class="button button-muted">Jadikan draf</button>
                         </form>
                     @else
@@ -252,6 +297,7 @@
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="komponen_nilai_id" value="{{ $komponenDipilih->id }}">
+                            @include('input-nilai._filter-fields')
                             <button type="submit" class="button button-primary" @disabled($jumlahNilaiPublikasi === 0)>
                                 Publikasikan nilai
                             </button>
@@ -264,9 +310,10 @@
                 @if ($anggotaKelas->isEmpty())
                     <div class="empty-state">Belum ada siswa aktif di kelas ini.</div>
                 @else
-                    <form action="{{ route('input-nilai.store') }}" method="POST">
+                    <form action="{{ route('input-nilai.store') }}" method="POST" data-grade-form>
                         @csrf
                         <input type="hidden" name="komponen_nilai_id" value="{{ $komponenDipilih->id }}">
+                        @include('input-nilai._filter-fields')
 
                         <div class="table-wrap">
                             <table class="employee-table placement-table" style="min-width: 1000px;">
@@ -306,6 +353,7 @@
                                                     <select
                                                         id="predikat_{{ $siswaId }}"
                                                         name="predikat[{{ $siswaId }}]"
+                                                        data-grade-value data-saved-value="{{ $nilaiTersimpan->get($siswaId)?->predikat }}"
                                                         class="select input-sm @error('predikat.' . $siswaId) is-invalid @enderror"
                                                     >
                                                         <option value="">Belum dinilai</option>
@@ -332,6 +380,7 @@
                                                         inputmode="decimal"
                                                         pattern="(?:100(?:[.,]0{1,2})?|[0-9]{1,2}(?:[.,][0-9]{1,2})?)"
                                                         value="{{ $ambilNilai($siswaId) }}"
+                                                        data-grade-value data-saved-value="{{ $nilaiTersimpan->get($siswaId)?->nilai === null ? '' : number_format((float) $nilaiTersimpan->get($siswaId)->nilai, 2, ',', '') }}"
                                                         class="input input-sm @error('nilai.' . $siswaId) is-invalid @enderror"
                                                         placeholder="Contoh: 87,50"
                                                         title="Gunakan angka 0 sampai 100 dengan maksimal 2 angka desimal."
@@ -347,6 +396,7 @@
                                                     name="catatan[{{ $siswaId }}]"
                                                     type="text"
                                                     value="{{ $ambilCatatan($siswaId) }}"
+                                                    data-grade-value data-saved-value="{{ $nilaiTersimpan->get($siswaId)?->catatan }}"
                                                     class="input input-sm"
                                                     placeholder="Opsional"
                                                 >
@@ -358,6 +408,7 @@
                         </div>
 
                         <div class="form-actions" style="border-top: 1px solid var(--line); padding: 16px;">
+                            <span class="grade-unsaved" data-grade-unsaved role="status" hidden></span>
                             <button type="submit" class="button button-primary">Simpan sebagai draf</button>
                         </div>
                     </form>
@@ -366,3 +417,7 @@
         </div>
     @endif
 @endsection
+
+@push('scripts')
+    @include('input-nilai._scripts')
+@endpush

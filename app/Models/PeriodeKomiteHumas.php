@@ -29,6 +29,11 @@ class PeriodeKomiteHumas extends Model
         return $this->hasMany(PengurusKomiteHumas::class)->orderBy('id');
     }
 
+    public function program(): HasMany
+    {
+        return $this->hasMany(ProgramKomiteHumas::class, 'periode_komite_humas_id');
+    }
+
     public function riwayat(): HasMany
     {
         return $this->hasMany(RiwayatKomiteHumas::class)->latest('id');

@@ -13,6 +13,7 @@
     </div>
     @include('agenda-humas._messages')
     @if ($mitraTerkait->isNotEmpty())<div class="agenda-actions" style="margin:0 0 18px"><span class="agenda-muted">Mitra terkait:</span>@foreach ($mitraTerkait as $mitra)<a href="{{ route('kemitraan-humas.show', $mitra) }}">{{ $mitra->nama }}</a>@endforeach</div>@endif
+    @if ($programKomiteTerkait->isNotEmpty())<div class="agenda-actions" style="margin:0 0 18px"><span class="agenda-muted">Program komite:</span>@foreach ($programKomiteTerkait as $program)<a href="{{ route('komite-humas.program.show', [$program->periode, $program]) }}">{{ $program->nama }}</a>@endforeach</div>@endif
     @if ($agendaHumas->status === 'dibatalkan')<div class="alert alert-warning"><strong>Agenda dibatalkan.</strong> {{ $agendaHumas->alasan_pembatalan }}</div>@endif
     <nav class="agenda-tabs" aria-label="Bagian agenda">
         @foreach (['ringkasan' => 'Ringkasan', 'peserta' => 'Peserta & Kehadiran', 'qr' => 'E-Presensi QR', 'notulen' => 'Notulen', 'tindak-lanjut' => 'Tindak Lanjut', 'dokumen' => 'Dokumen'] as $kode => $nama)

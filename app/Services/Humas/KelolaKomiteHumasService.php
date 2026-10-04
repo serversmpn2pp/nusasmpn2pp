@@ -79,6 +79,10 @@ class KelolaKomiteHumasService
 
     public function pastikanAktif(PeriodeKomiteHumas $periode): void
     {
+        app(KelolaProgramKomiteHumasService::class)->pastikanJadwalPeriode($periode);
+        if ($periode->exists && $periode->status === 'draf' && $periode->program()->whereIn('status', ['berjalan', 'selesai'])->exists()) {
+            throw ValidationException::withMessages(['status' => 'Kepengurusan memiliki program yang telah berjalan atau selesai. Arsipkan untuk menyimpan riwayat, bukan mengubahnya menjadi draf.']);
+        }
         if ($periode->status !== 'aktif') {
             return;
         }
