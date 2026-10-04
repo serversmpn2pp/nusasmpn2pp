@@ -25,24 +25,45 @@
             .grade-component-label { flex-wrap:wrap; }
         }
 
-        .publication-box {
-            margin-top: 18px;
-            padding: 14px;
-            border: 1px solid #d8e2eb;
-            border-left: 4px solid #f1c40f;
-            border-radius: 7px;
-            background: #f8fafc;
-        }
+        .grade-workspace { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; }
+        .grade-overview { padding:0 0 20px; border-bottom:1px solid var(--line); }
+        .grade-overview-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+        .grade-overview-head > div { min-width:0; }
+        .grade-overview-head h2 { margin:0; font-size:1.15rem; line-height:1.4; overflow-wrap:anywhere; }
+        .grade-overview-head p { margin:4px 0 0; color:var(--muted); font-size:.9rem; }
+        .grade-overview-head .badge { flex-shrink:0; }
+        .grade-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.4fr) minmax(0,.8fr) minmax(0,1fr); gap:16px; margin:18px 0 0; font-size:.88rem; }
+        .grade-facts dt { color:var(--muted); margin-bottom:4px; }
+        .grade-facts dd { margin:0; font-weight:700; overflow-wrap:anywhere; }
+        .grade-entry { min-width:0; }
+        .grade-entry-head { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px; border-bottom:1px solid var(--line); }
+        .grade-entry-head h2 { margin:0; font-size:1rem; }
+        .grade-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; margin:0; }
+        .grade-metrics dt { color:var(--muted); font-size:.8rem; }
+        .grade-metrics dd { margin:3px 0 0; font-size:1.1rem; font-weight:800; font-variant-numeric:tabular-nums; }
+        .grade-table.placement-table { min-width:0; table-layout:fixed; }
+        .grade-col-absence { width:80px; }
+        .grade-col-student { width:30%; }
+        .grade-col-identifier { width:16%; }
+        .grade-col-score { width:140px; }
+        .grade-table--predikat .grade-col-score { width:180px; }
+        .grade-table th, .grade-table td { padding:12px; overflow-wrap:anywhere; }
+        .grade-table .input, .grade-table .select { min-width:0; max-width:100%; }
+        .grade-table th .help-text { display:block; font-size:.72rem; line-height:1.4; font-weight:400; text-transform:none; margin-top:4px; }
+        .grade-table .person-name, .grade-table .person-meta { overflow-wrap:anywhere; }
+        .grade-save-actions { border-top:1px solid var(--line); padding:16px; align-items:center; }
+        .grade-save-actions .grade-unsaved { margin-right:auto; }
+        .publication-box { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:20px; margin-top:18px; padding:14px; border-left:3px solid #f1c40f; background:#fafafa; }
+        .publication-copy { min-width:0; }
 
         .publication-box.is-published {
             border-left-color: #16a34a;
-            background: #f1faf4;
         }
 
         .publication-head {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 10px;
         }
 
@@ -58,11 +79,29 @@
         }
 
         .publication-box form {
-            margin-top: 12px;
+            margin:0;
         }
 
-        .publication-box .button {
-            width: 100%;
+        @media(max-width:1100px) {
+            .grade-facts { grid-template-columns:repeat(3,minmax(0,1fr)); }
+            .grade-col-student { width:28%; }
+            .grade-col-identifier { width:18%; }
+            .grade-col-score { width:130px; }
+            .grade-table--predikat .grade-col-score { width:160px; }
+        }
+        @media(max-width:900px) {
+            .grade-table.placement-table { table-layout:auto; }
+            .grade-table colgroup { display:none; }
+            .grade-table td { padding:8px 0; }
+        }
+        @media(max-width:600px) {
+            .grade-facts { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+            .grade-overview-head { flex-wrap:wrap; gap:10px; }
+            .publication-box { grid-template-columns:minmax(0,1fr); gap:14px; }
+            .publication-head { flex-wrap:wrap; }
+            .grade-entry-head { align-items:stretch; flex-direction:column; }
+            .grade-metrics { gap:12px; }
+            .grade-save-actions { align-items:stretch; }
         }
 
     </style>
@@ -212,34 +251,17 @@
             <p class="help-text" style="margin-top: 8px;">{{ $daftarKomponenNilai->count() }} komponen nilai tersedia sesuai pilihan Anda.</p>
         </section>
     @else
-        <div class="stats-grid">
-            <div class="panel stat">
-                <p class="stat-label">Siswa</p>
-                <p class="stat-value">{{ $jumlahSiswa }}</p>
-            </div>
-            <div class="panel stat active">
-                <p class="stat-label">Sudah terisi</p>
-                <p class="stat-value">{{ $jumlahTerisi }}</p>
-            </div>
-            <div class="panel stat inactive">
-                <p class="stat-label">{{ $penilaianPredikat ? 'Skala nilai' : 'Rata-rata' }}</p>
-                <p class="stat-value">{{ $penilaianPredikat ? 'SB-K' : ($rataRata === null ? '-' : number_format($rataRata, 2, ',', '.')) }}</p>
-            </div>
-        </div>
-
-        <div class="detail-shell">
-            <aside class="panel panel-pad">
-                <div class="detail-profile">
-                    <div class="avatar avatar-lg">IN</div>
-                    <h2>{{ $komponenDipilih->nama }}</h2>
-                    <p>{{ $komponenDipilih->labelJenis() }} - {{ ucfirst($komponenDipilih->semester) }}</p>
-
-                    <div style="margin-top: 16px;">
-                        <span class="badge badge-active">{{ $komponenDipilih->guruMataPelajaran?->kelas?->nama ?: '-' }}</span>
+        <div class="grade-workspace">
+            <section class="grade-overview" aria-labelledby="grade-summary-title">
+                <div class="grade-overview-head">
+                    <div>
+                        <h2 id="grade-summary-title">{{ $komponenDipilih->nama }}</h2>
+                        <p>{{ $komponenDipilih->labelJenis() }} - {{ ucfirst($komponenDipilih->semester) }}</p>
                     </div>
+                    <span class="badge badge-active">{{ $komponenDipilih->guruMataPelajaran?->kelas?->nama ?: '-' }}</span>
                 </div>
 
-                <dl class="quick-facts" style="margin-top: 20px;">
+                <dl class="grade-facts">
                     <div>
                         <dt>Tahun</dt>
                         <dd>{{ $komponenDipilih->guruMataPelajaran?->tahunPelajaran?->nama ?: '-' }}</dd>
@@ -266,18 +288,24 @@
                     $sudahDipublikasikan = $publikasiNilai?->dipublikasikan === true;
                 @endphp
                 <div class="publication-box {{ $sudahDipublikasikan ? 'is-published' : '' }}">
-                    <div class="publication-head">
-                        <strong>Publikasi nilai</strong>
-                        <span class="badge {{ $sudahDipublikasikan ? 'badge-active' : 'badge-warning' }}">
-                            {{ $sudahDipublikasikan ? 'Dipublikasikan' : 'Draf' }}
-                        </span>
+                    <div class="publication-copy">
+                        <div class="publication-head">
+                            <strong>Publikasi nilai</strong>
+                            <span class="badge {{ $sudahDipublikasikan ? 'badge-active' : 'badge-warning' }}">
+                                {{ $sudahDipublikasikan ? 'Dipublikasikan' : 'Draf' }}
+                            </span>
+                        </div>
+                        <p>
+                            {{ $jumlahNilaiPublikasi }} dari {{ $targetNilaiPublikasi }} entri terisi
+                            pada {{ $jumlahKomponenPublikasi }} komponen semester ini.
+                        </p>
+                        @if ($sudahDipublikasikan)
+                            <p>Dirilis {{ $publikasiNilai->dipublikasikan_pada?->locale('id')->translatedFormat('d F Y, H:i') }}.</p>
+                        @else
+                            <p>Nilai belum dapat dilihat siswa. Simpan perubahan terlebih dahulu sebelum mempublikasikan.</p>
+                        @endif
                     </div>
-                    <p>
-                        {{ $jumlahNilaiPublikasi }} dari {{ $targetNilaiPublikasi }} entri terisi
-                        pada {{ $jumlahKomponenPublikasi }} komponen semester ini.
-                    </p>
                     @if ($sudahDipublikasikan)
-                        <p>Dirilis {{ $publikasiNilai->dipublikasikan_pada?->locale('id')->translatedFormat('d F Y, H:i') }}.</p>
                         <form
                             method="POST"
                             action="{{ route('publikasi-nilai.jadikan-draf', [$komponenDipilih->guruMataPelajaran, $komponenDipilih->semester]) }}"
@@ -289,7 +317,6 @@
                             <button type="submit" class="button button-muted">Jadikan draf</button>
                         </form>
                     @else
-                        <p>Nilai belum dapat dilihat siswa. Simpan perubahan terlebih dahulu sebelum mempublikasikan.</p>
                         <form
                             method="POST"
                             action="{{ route('publikasi-nilai.publikasikan', [$komponenDipilih->guruMataPelajaran, $komponenDipilih->semester]) }}"
@@ -304,9 +331,17 @@
                         </form>
                     @endif
                 </div>
-            </aside>
+            </section>
 
-            <section class="panel">
+            <section class="panel grade-entry" aria-labelledby="grade-entry-title">
+                <div class="grade-entry-head">
+                    <h2 id="grade-entry-title">Daftar nilai siswa</h2>
+                    <dl class="grade-metrics">
+                        <div><dt>Siswa</dt><dd>{{ $jumlahSiswa }}</dd></div>
+                        <div><dt>Sudah terisi</dt><dd>{{ $jumlahTerisi }}</dd></div>
+                        <div><dt>{{ $penilaianPredikat ? 'Skala nilai' : 'Rata-rata' }}</dt><dd>{{ $penilaianPredikat ? 'SB-K' : ($rataRata === null ? '-' : number_format($rataRata, 2, ',', '.')) }}</dd></div>
+                    </dl>
+                </div>
                 @if ($anggotaKelas->isEmpty())
                     <div class="empty-state">Belum ada siswa aktif di kelas ini.</div>
                 @else
@@ -316,7 +351,14 @@
                         @include('input-nilai._filter-fields')
 
                         <div class="table-wrap">
-                            <table class="employee-table placement-table" style="min-width: 1000px;">
+                            <table class="employee-table placement-table grade-table {{ $penilaianPredikat ? 'grade-table--predikat' : '' }}">
+                                <colgroup>
+                                    <col class="grade-col-absence">
+                                    <col class="grade-col-student">
+                                    <col class="grade-col-identifier">
+                                    <col class="grade-col-score">
+                                    <col>
+                                </colgroup>
                                 <thead>
                                     <tr>
                                         <th>No. absen</th>
@@ -337,7 +379,7 @@
                                             $siswaId = $anggota->siswa_id;
                                         @endphp
                                         <tr>
-                                            <td data-label="No. absen" style="width: 120px;">
+                                            <td data-label="No. absen">
                                                 <span class="badge badge-active">No. {{ $anggota->nomor_absen ?: '-' }}</span>
                                             </td>
                                             <td data-label="Siswa">
@@ -348,7 +390,7 @@
                                                 <p class="person-name">{{ $anggota->siswa?->nis ?: '-' }}</p>
                                                 <p class="person-meta">NISN: {{ $anggota->siswa?->nisn ?: '-' }}</p>
                                             </td>
-                                            <td data-label="{{ $penilaianPredikat ? 'Predikat' : 'Nilai' }}" style="width: 160px;">
+                                            <td data-label="{{ $penilaianPredikat ? 'Predikat' : 'Nilai' }}">
                                                 @if ($penilaianPredikat)
                                                     <select
                                                         id="predikat_{{ $siswaId }}"
@@ -407,7 +449,7 @@
                             </table>
                         </div>
 
-                        <div class="form-actions" style="border-top: 1px solid var(--line); padding: 16px;">
+                        <div class="form-actions grade-save-actions">
                             <span class="grade-unsaved" data-grade-unsaved role="status" hidden></span>
                             <button type="submit" class="button button-primary">Simpan sebagai draf</button>
                         </div>

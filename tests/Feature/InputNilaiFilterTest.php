@@ -202,6 +202,35 @@ class InputNilaiFilterTest extends TestCase
             ->assertViewHas('tahunPelajaran', fn ($items) => $items->isEmpty());
     }
 
+    public function test_keterangan_horizontal_dan_tabel_penuh_tetap_memuat_nilai_dan_publikasi(): void
+    {
+        $d = $this->data();
+        $d['formatif']->update(['nama' => 'Sumatif Tengah Semester Semester Ganjil 2026/2027']);
+        $d['mapelA']->pegawai->update(['nama_lengkap' => 'Antonius Pitra Dana Arista, M.T.']);
+        for ($i = 2; $i <= 32; $i++) {
+            $siswa = $this->siswa($d['tahun'], $d['kelasA'], 'Siswa dengan Nama Lengkap yang Panjang Nomor '.$i, '270'.str_pad((string) $i, 2, '0', STR_PAD_LEFT), $i);
+            $siswa->update(['nisn' => '013'.str_pad((string) $i, 7, '0', STR_PAD_LEFT)]);
+            NilaiSiswa::create(['komponen_nilai_id' => $d['formatif']->id, 'siswa_id' => $siswa->id, 'nilai' => 49.76, 'catatan' => 'Nilai hasil ujian STS yang sudah difinalisasi.']);
+        }
+        $response = $this->actingAs($d['guru'])->get(route('input-nilai.index', ['komponen_nilai_id' => $d['formatif']->id]))
+            ->assertOk()->assertViewHas('jumlahSiswa', 32)->assertViewHas('jumlahTerisi', 32)
+            ->assertSee('class="grade-workspace"', false)->assertSee('class="grade-overview"', false)
+            ->assertSee('class="panel grade-entry"', false)->assertSee('Daftar nilai siswa')
+            ->assertDontSee('class="detail-shell"', false)->assertDontSee('min-width: 1000px', false)
+            ->assertSee('value="49,76"', false)->assertViewHas('targetNilaiPublikasi', 64)->assertSee('32 dari 64 entri terisi');
+        $this->capture('wide', $response->getContent());
+        PublikasiNilaiSiswa::create(['guru_mata_pelajaran_id' => $d['mapelA']->id, 'semester' => 'ganjil', 'dipublikasikan' => true, 'dipublikasikan_pada' => now()]);
+        $response = $this->get(route('input-nilai.index', ['komponen_nilai_id' => $d['formatif']->id]))->assertOk()->assertSee('Jadikan draf');
+        $this->capture('wide-published', $response->getContent());
+        $d['mapelA']->mataPelajaran->update(['nama' => 'Pramuka', 'kelompok' => 'Ekstrakurikuler']);
+        $response = $this->get(route('input-nilai.index', ['komponen_nilai_id' => $d['formatif']->id]))->assertOk()
+            ->assertSee('Predikat (SB/B/C/K)')->assertSee('grade-table--predikat');
+        $this->capture('predikat', $response->getContent());
+        AnggotaKelas::where('kelas_id', $d['kelasA']->id)->delete();
+        $response = $this->get(route('input-nilai.index', ['komponen_nilai_id' => $d['formatif']->id]))->assertOk()->assertSee('Belum ada siswa aktif di kelas ini.');
+        $this->capture('no-students', $response->getContent());
+    }
+
     private function capture(string $name, string $html): void
     {
         if (! getenv('NUSA_CAPTURE_NILAI_UI')) {
@@ -267,10 +296,10 @@ class InputNilaiFilterTest extends TestCase
         return KomponenNilai::create(['guru_mata_pelajaran_id' => $penugasan->id, 'semester' => $semester, 'jenis_komponen' => $jenis, 'nama' => $nama, 'aktif' => true, 'urutan' => 1]);
     }
 
-    private function siswa(TahunPelajaran $tahun, Kelas $kelas, string $nama, string $nis): Siswa
+    private function siswa(TahunPelajaran $tahun, Kelas $kelas, string $nama, string $nis, int $nomorAbsen = 1): Siswa
     {
         $siswa = Siswa::create(['nama_lengkap' => $nama, 'nis' => $nis, 'aktif' => true]);
-        AnggotaKelas::create(['tahun_pelajaran_id' => $tahun->id, 'kelas_id' => $kelas->id, 'siswa_id' => $siswa->id, 'nomor_absen' => 1, 'status_keanggotaan' => 'aktif']);
+        AnggotaKelas::create(['tahun_pelajaran_id' => $tahun->id, 'kelas_id' => $kelas->id, 'siswa_id' => $siswa->id, 'nomor_absen' => $nomorAbsen, 'status_keanggotaan' => 'aktif']);
 
         return $siswa;
     }

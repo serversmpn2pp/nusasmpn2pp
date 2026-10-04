@@ -28,9 +28,10 @@ try {
         try { return route.fulfill({body:await readFile(path),contentType:({'.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.woff2':'font/woff2'})[extname(path)] || 'application/octet-stream'}); }
         catch { return route.fulfill({status:404,body:''}); }
     });
-    for (const [width,height] of [[320,740],[390,844],[768,900],[1366,900]]) {
+    const sizes = [[320,740],[390,844],[768,900],[901,900],[981,900],[1024,900],[1280,900],[1366,900],[1920,1080]];
+    for (const [width,height] of sizes) {
         await page.setViewportSize({width,height});
-        for (const name of ['index','filtered','empty','selected','published','unsaved']) {
+        for (const name of ['index','filtered','empty','selected','published','unsaved','wide','wide-published','predikat','no-students']) {
             await page.goto(`http://localhost/audit/${name}`);
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Halaman melebar ${name}@${width}`);
             assert.ok(await page.locator('.grade-filter').evaluate(el => el.scrollWidth <= el.clientWidth + 1), `Filter melebar ${name}@${width}`);
@@ -39,14 +40,48 @@ try {
             assert.equal(await page.locator('#komponen_nilai_id').evaluate(el => el.required),false);
             const clipped = await page.locator('.grade-filter .button:visible, .grade-filter label, .grade-component-count').evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2).map(el => el.textContent.trim()));
             assert.deepEqual(clipped,[],`Teks terpotong ${name}@${width}`);
-            if (['selected','published','unsaved'].includes(name)) {
+            if (['selected','published','unsaved','wide','wide-published','predikat'].includes(name)) {
                 assert.ok(await page.locator('[data-grade-form]').isVisible());
                 assert.equal(await page.locator('[data-grade-form] [name^="filter["]').count(),4);
                 assert.equal(await page.locator('[data-grade-unsaved]').isVisible(),name === 'unsaved');
+                const layout = await page.locator('.grade-workspace').evaluate(workspace => {
+                    const overview = workspace.querySelector('.grade-overview'), entry = workspace.querySelector('.grade-entry');
+                    const overviewBox = overview.getBoundingClientRect(), entryBox = entry.getBoundingClientRect();
+                    const wrap = entry.querySelector('.table-wrap');
+                    return {below:entryBox.top >= overviewBox.bottom,fullWidth:Math.abs(entryBox.width - workspace.clientWidth) <= 2,noHorizontalScroll:wrap.scrollWidth <= wrap.clientWidth + 1};
+                });
+                assert.ok(layout.below && layout.fullWidth, `Tabel harus di bawah dan selebar halaman ${name}@${width}`);
+                assert.ok(layout.noHorizontalScroll, `Tabel masih perlu gulir ke kanan ${name}@${width}`);
+                const clippedGrade = await page.locator('.grade-overview, .grade-entry-head, .grade-table td, .grade-table th, .grade-save-actions .button:visible').evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2).map(el => el.textContent.trim().slice(0,80)));
+                assert.deepEqual(clippedGrade,[],`Teks/kolom terpotong ${name}@${width}`);
+                if (width > 900) {
+                    const bounds = await page.locator('.grade-table').evaluate(table => {
+                        const row = table.querySelector('tbody tr'), value = row.querySelector('[data-grade-value]'), note = row.querySelector('[name^="catatan["]');
+                        const tableRect = table.getBoundingClientRect();
+                        return [value,note].every(el => {const rect = el.getBoundingClientRect();return rect.width >= 65 && rect.left >= tableRect.left && rect.right <= tableRect.right;});
+                    });
+                    assert.ok(bounds,`Nilai dan catatan harus tampak penuh ${name}@${width}`);
+                }
             }
             if ([390,1366].includes(width) && ['index','selected','empty'].includes(name)) {
                 await page.evaluate(() => document.querySelector('.app-content').scrollTop = 0);
                 await page.screenshot({path:`${output}/${name}-${width}.png`});
+            }
+            if ([390,981,1366].includes(width) && ['wide','wide-published','predikat'].includes(name)) {
+                await page.evaluate(() => {
+                    const parent = document.querySelector('.app-content'), summary = document.querySelector('.grade-overview'), topbar = document.querySelector('.app-topbar');
+                    const distance = summary.getBoundingClientRect().top - topbar.getBoundingClientRect().height - 16;
+                    if (getComputedStyle(parent).overflowY === 'auto') parent.scrollTop += distance;
+                    else window.scrollBy(0,distance);
+                });
+                await page.screenshot({path:`${output}/${name}-${width}.png`});
+                if (width === 390) {
+                    await page.evaluate(() => {
+                        const entry = document.querySelector('.grade-entry'), topbar = document.querySelector('.app-topbar');
+                        window.scrollBy(0,entry.getBoundingClientRect().top - topbar.getBoundingClientRect().height - 16);
+                    });
+                    await page.screenshot({path:`${output}/${name}-table-${width}.png`});
+                }
             }
         }
     }
@@ -114,6 +149,12 @@ try {
     await page.locator('#jenis_komponen').selectOption('sas_saj');
     await navigation;
     await page.getByText('Tidak ada komponen nilai yang sesuai',{exact:true}).waitFor();
+    await page.goto('http://localhost/audit/predikat');
+    await page.locator('[name^="predikat["]').first().selectOption('SB');
+    assert.equal(await page.locator('[data-grade-unsaved]').innerText(),'1 perubahan belum disimpan');
+    const predikatPost = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname === '/input-nilai');
+    await page.getByRole('button',{name:'Simpan sebagai draf',exact:true}).click();
+    assert.ok([...new URLSearchParams((await predikatPost).postData())].some(([key,value]) => key.startsWith('predikat[') && value === 'SB'));
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({result:'passed',widths:[320,390,768,1366],pages:6,checks:['filters','direct-component','empty-state','no-overflow','dependent-year-class','unsaved-cancel','unsaved-confirm','save-filters','decimal-input','publication-guard']}));
+    console.log(JSON.stringify({result:'passed',widths:sizes.map(([width]) => width),pages:10,checks:['filters','direct-component','empty-state','no-overflow','horizontal-overview','full-width-table','no-table-horizontal-scroll','32-students','predikat-input','dependent-year-class','unsaved-cancel','unsaved-confirm','save-filters','decimal-input','publication-guard']}));
 } finally { await browser.close(); }
