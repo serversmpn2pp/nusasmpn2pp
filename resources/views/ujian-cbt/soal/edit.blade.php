@@ -45,7 +45,7 @@
             margin-top: 8px;
         }
 
-        @media (max-width: 760px) {
+        @media (max-width: 900px) {
             .package-question-head {
                 display: block;
             }
@@ -147,6 +147,7 @@
                             <th>Kesulitan</th>
                             <th>Nomor</th>
                             <th>Skor</th>
+                            <th>Pratinjau</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -179,10 +180,13 @@
                                 <td>
                                     <strong>{{ number_format((float) $item->skor_maksimal, 0, ',', '.') }}</strong>
                                 </td>
+                                <td>
+                                    <button type="button" class="button button-muted" data-question-preview data-preview-source="preview-soal-{{ $item->id }}" aria-label="Pratinjau soal {{ $item->kode }}">Pratinjau</button>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="empty-state">Belum ada soal siap untuk mata pelajaran dan tingkat paket ini.</td>
+                                <td colspan="6" class="empty-state">Belum ada soal siap untuk mata pelajaran dan tingkat paket ini.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -220,6 +224,9 @@
                             <span class="badge badge-muted">Skor {{ number_format((float) $item->skor_maksimal, 0, ',', '.') }}</span>
                             <span class="badge {{ $bisaDipilih ? 'badge-active' : 'badge-inactive' }}">{{ $item->labelStatus() }}</span>
                         </div>
+                        <div class="actions" style="margin-top: 12px;">
+                            <button type="button" class="button button-muted" data-question-preview data-preview-source="preview-soal-{{ $item->id }}" aria-label="Pratinjau soal {{ $item->kode }}">Pratinjau</button>
+                        </div>
                     </article>
                 @empty
                     <div class="empty-state">Belum ada soal siap untuk mata pelajaran dan tingkat paket ini.</div>
@@ -233,13 +240,28 @@
         </div>
     </form>
 
+    @include('soal-cbt.partials.preview-styles')
+    @foreach ($soalCbt as $item)
+        @include('soal-cbt.partials.preview-source')
+    @endforeach
+    <dialog class="question-preview-dialog" data-question-preview-dialog aria-label="Pratinjau soal">
+        <div class="question-preview-head">
+            <h2>Pratinjau soal</h2>
+            <button type="button" class="button button-muted" data-close-question-preview>Tutup</button>
+        </div>
+        <div class="question-preview-body" data-question-preview-body></div>
+    </dialog>
+    @push('scripts')
+        @vite('resources/js/soal-editor.js')
+    @endpush
+
     <script>
         (() => {
             const checks = document.querySelectorAll('[data-question-check]');
             const counter = document.querySelector('[data-selected-count]');
             const score = document.querySelector('[data-selected-score]');
             const layouts = document.querySelectorAll('[data-form-layout]');
-            const media = window.matchMedia('(max-width: 760px)');
+            const media = window.matchMedia('(max-width: 900px)');
 
             const layoutAktif = (layout) => {
                 if (! layout) {

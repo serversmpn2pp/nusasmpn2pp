@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AnggotaKelas;
+use App\Models\FolderSoalCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\Kelas;
 use App\Models\KomponenNilai;
@@ -11,6 +12,7 @@ use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\Siswa;
+use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
 use PDO;
@@ -115,6 +117,76 @@ class AsesmenKelasCbtTest extends TestCase
         $this->assertDatabaseCount('peserta_ujian_cbt', 0);
         $this->assertDatabaseCount('komponen_nilai', 0);
         $this->assertNotSame($kelasGuru->id, $kelasLain->id);
+    }
+
+    public function test_pilihan_soal_asesmen_memuat_pratinjau_semua_jenis_tanpa_mengubah_pilihan(): void
+    {
+        [$tahun, $mapel, $kelas, , $guru, , $akunGuru] = $this->buatDataDasar();
+        $kelompok = implode('-', [$guru->id, $mapel->id, 7]);
+        $this->actingAs($akunGuru)
+            ->post(route('asesmen-kelas-cbt.store'), $this->dataAsesmen($kelompok, $kelas->id))
+            ->assertRedirect();
+        $asesmen = UjianCbt::query()->firstOrFail();
+        $folder = FolderSoalCbt::create([
+            'mata_pelajaran_id' => $mapel->id,
+            'tingkat' => 7,
+            'nama' => 'Bilangan dan operasi',
+        ]);
+        $soal = collect(SoalCbt::DAFTAR_JENIS)->map(function ($label, $jenis) use ($tahun, $mapel, $akunGuru) {
+            return SoalCbt::create([
+                'tahun_pelajaran_id' => $tahun->id,
+                'mata_pelajaran_id' => $mapel->id,
+                'tingkat' => 7,
+                'kode' => 'REVIEW-'.$jenis,
+                'jenis_soal' => $jenis,
+                'tingkat_kesulitan' => 'sedang',
+                'kategori' => 'mots',
+                'stimulus' => 'Perhatikan operasi \\(2^{3}\\) berikut.',
+                'pertanyaan' => 'Soal '.$label.': tentukan hasil \\(\\frac{8}{2}\\).',
+                'opsi' => match ($jenis) {
+                    'pilihan_ganda', 'pilihan_ganda_kompleks' => ['pilihan' => ['A' => '\\(2^{2}\\)', 'B' => '8', 'C' => '16', 'D' => '32']],
+                    'benar_salah' => ['pernyataan' => [['teks' => '\\(2^{3} = 8\\)'], ['teks' => 'Delapan dibagi dua adalah empat.']]],
+                    'menjodohkan' => ['pasangan' => [['kiri' => 'Dua pangkat tiga', 'kanan' => '8'], ['kiri' => 'Delapan dibagi dua', 'kanan' => '4']], 'pengecoh' => ['16']],
+                    default => [],
+                },
+                'media' => [
+                    'gambar' => ['path' => 'soal-cbt/preview-fixture.png', 'alt' => 'Ilustrasi operasi bilangan', 'keterangan' => 'Gambar pendukung soal'],
+                    'tabel' => ['judul' => 'Data bilangan', 'baris' => [['Bilangan', 'Hasil'], ['2 pangkat 3', '8']]],
+                    'rumus' => ['latex' => '\\frac{8}{2}', 'keterangan' => 'Pembagian bilangan'],
+                ],
+                'skor_maksimal' => 2,
+                'kunci_jawaban' => ['jawaban' => 'KUNCI-RAHASIA-ASESMEN'],
+                'pembahasan' => 'PEMBAHASAN-RAHASIA-ASESMEN',
+                'status' => 'siap',
+                'aktif' => true,
+                'dibuat_oleh_pengguna_id' => $akunGuru->id,
+            ]);
+        });
+        foreach (['pilihan_ganda', 'pilihan_ganda_kompleks'] as $index => $jenis) {
+            $soal[$jenis]->folders()->attach($folder);
+            $asesmen->soalUjianCbt()->create(['soal_cbt_id' => $soal[$jenis]->id, 'nomor_urut' => $index + 1, 'bobot' => 2]);
+        }
+        $tersembunyi = $soal['pilihan_ganda']->replicate();
+        $tersembunyi->fill(['kode' => 'SOAL-TINGKAT-LAIN', 'tingkat' => 9])->save();
+        $draft = $soal['pilihan_ganda']->replicate();
+        $draft->fill(['kode' => 'SOAL-DRAFT-BELUM-DIPILIH', 'status' => 'draft'])->save();
+
+        $response = $this->actingAs($akunGuru)->get(route('ujian-cbt.soal.edit', $asesmen));
+        $response->assertOk()->assertSee('Pratinjau soal')
+            ->assertSee('Ilustrasi operasi bilangan')->assertSee('Data bilangan')
+            ->assertSee('data-question-preview-dialog', false)
+            ->assertDontSee('KUNCI-RAHASIA-ASESMEN')->assertDontSee('PEMBAHASAN-RAHASIA-ASESMEN')
+            ->assertDontSee('SOAL-TINGKAT-LAIN')->assertDontSee('SOAL-DRAFT-BELUM-DIPILIH');
+        foreach ($soal as $item) {
+            $this->assertSame(2, substr_count($response->getContent(), 'data-preview-source="preview-soal-'.$item->id.'"'));
+            $this->assertSame(1, substr_count($response->getContent(), '<template id="preview-soal-'.$item->id.'">'));
+        }
+        $this->assertSame(2, $asesmen->soalUjianCbt()->count());
+        $this->assertDatabaseHas('soal_ujian_cbt', ['ujian_cbt_id' => $asesmen->id, 'soal_cbt_id' => $soal['pilihan_ganda']->id, 'nomor_urut' => 1, 'bobot' => 2]);
+
+        if (getenv('ASESMEN_PREVIEW_FIXTURE')) {
+            file_put_contents(storage_path('logs/asesmen-preview.html'), $response->getContent());
+        }
     }
 
     public function test_komponen_otomatis_yang_sudah_ada_dipakai_ulang_tanpa_error(): void
