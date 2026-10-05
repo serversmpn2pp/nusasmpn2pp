@@ -19,6 +19,15 @@ class TerapkanNilaiCbtService
 
     public function terapkan(UjianCbt $ujianCbt, ?int $penggunaId): array
     {
+        return DB::transaction(function () use ($ujianCbt, $penggunaId): array {
+            $ujian = UjianCbt::query()->lockForUpdate()->findOrFail($ujianCbt->id);
+
+            return $this->terapkanTerkunci($ujian, $penggunaId);
+        });
+    }
+
+    private function terapkanTerkunci(UjianCbt $ujianCbt, ?int $penggunaId): array
+    {
         if ($ujianCbt->jenisUjianCbt?->kode === 'SIMULASI_CBT') {
             throw ValidationException::withMessages(['nilai' => 'Hasil Simulasi CBT hanya untuk latihan dan tidak masuk nilai akademik.']);
         }
@@ -60,10 +69,11 @@ class TerapkanNilaiCbtService
                     $soalUjianIds,
                 ),
             ])
-            ->get();
+            ->lockForUpdate()->get();
         $ringkasan = [
             'diterapkan' => 0,
             'belum_selesai' => 0,
+            'susulan_tertunda' => 0,
             'perlu_koreksi_otomatis' => 0,
             'perlu_koreksi_manual' => 0,
             'tujuan_tidak_valid' => 0,
@@ -84,6 +94,12 @@ class TerapkanNilaiCbtService
             foreach ($pesertaUjian as $peserta) {
                 $komponenNilai = $peserta->kelasUjianCbt?->komponenNilai;
                 $siswaId = $peserta->anggotaKelas?->siswa_id;
+
+                if ($peserta->menungguPenyelesaianSusulan()) {
+                    $ringkasan['susulan_tertunda']++;
+
+                    continue;
+                }
 
                 if ($peserta->status !== 'selesai') {
                     $ringkasan['belum_selesai']++;
@@ -131,7 +147,7 @@ class TerapkanNilaiCbtService
                     ))
                     ->sum(fn (JawabanPesertaUjianCbt $item) => (float) ($item->skor ?? 0));
                 $nilai = max(0, min(100, round(($skorTotal / $bobotTotal) * 100, 2)));
-                $nilaiSiswa = NilaiSiswa::query()->firstOrNew([
+                $nilaiSiswa = NilaiSiswa::query()->lockForUpdate()->firstOrNew([
                     'komponen_nilai_id' => $komponenNilai->id,
                     'siswa_id' => $siswaId,
                 ]);
@@ -176,6 +192,9 @@ class TerapkanNilaiCbtService
 
         if ($ringkasan['belum_selesai']) {
             $pesan .= " {$ringkasan['belum_selesai']} peserta dilewati karena belum selesai.";
+        }
+        if ($ringkasan['susulan_tertunda']) {
+            $pesan .= " {$ringkasan['susulan_tertunda']} peserta dilewati karena masih menunggu penyelesaian ujian susulan.";
         }
         if ($ringkasan['perlu_koreksi_otomatis']) {
             $pesan .= " {$ringkasan['perlu_koreksi_otomatis']} peserta dilewati karena masih perlu koreksi otomatis.";

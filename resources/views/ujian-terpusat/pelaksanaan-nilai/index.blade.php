@@ -250,13 +250,13 @@
                 }
                 $pesertaTidakHadir = $item->pesertaSusulan ?? collect();
                 $calonManual = $item->pesertaCalonSusulanManual ?? collect();
+                $calonBukaSusulan = $item->pesertaBukaSusulan ?? collect();
+                $riwayatPembukaan = $item->riwayatPembukaanSusulan ?? collect();
                 $calonSusulan = $pesertaTidakHadir->filter(function ($peserta) {
                     $belumPernahMulai = in_array($peserta->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true)
                         && ! in_array($peserta->status, ['sedang_mengerjakan', 'selesai'], true)
-                        && (int) $peserta->jawaban_peserta_ujian_cbt_count === 0;
-                    $lanjutanWaktuHabis = $peserta->status === 'selesai'
-                        && $peserta->cara_selesai === 'waktu_habis'
-                        && $peserta->status_susulan === 'menunggu_jadwal';
+                        && (int) $peserta->jawaban_nyata_count === 0;
+                    $lanjutanWaktuHabis = $peserta->susulanLanjutanMenungguJadwal();
 
                     return ($belumPernahMulai || $lanjutanWaktuHabis)
                         && $peserta->status_susulan !== 'dijadwalkan'
@@ -310,7 +310,7 @@
                         @endif
                     </div>
 
-                    @if (! $halamanHasil && $paketSiap && ($pesertaTidakHadir->isNotEmpty() || $calonManual->isNotEmpty()))
+                    @if (! $halamanHasil && $paketSiap && ($pesertaTidakHadir->isNotEmpty() || $calonManual->isNotEmpty() || $calonBukaSusulan->isNotEmpty() || $riwayatPembukaan->isNotEmpty()))
                         <details class="retake-details" {{ $susulanAktif->isNotEmpty() || $calonSusulan->isNotEmpty() ? 'open' : '' }}>
                             <summary>
                                 <span>Ketidakhadiran & ujian susulan</span>
@@ -322,6 +322,46 @@
                                 <p class="retake-intro">
                                     Status Sakit, Izin, atau Alfa tetap tersimpan sebagai riwayat ujian utama. Panitia dapat memilih siswa yang diizinkan mengikuti susulan. Paket soal dan komponen nilainya tetap sama.
                                 </p>
+
+                                @if ($bolehAturSusulan && $calonBukaSusulan->isNotEmpty())
+                                    <details class="retake-manual">
+                                        <summary><span>Buka untuk Susulan</span><span class="badge badge-warning">Nilai sudah diterapkan</span></summary>
+                                        <form class="retake-manual-form" method="POST" action="{{ route('ujian-terpusat.susulan.buka', [$kegiatan, $item]) }}">
+                                            @csrf
+                                            <p class="retake-manual-copy">Gunakan hanya atas persetujuan panitia, misalnya karena gangguan HP. Penerapan nilai siswa yang dipilih dibatalkan, nilai lama masuk riwayat, dan jawaban tersimpan tetap dipertahankan. Nilai siswa lain tidak diubah. Publikasi nilai akademik mapel kembali menjadi draf.</p>
+                                            <div class="field">
+                                                <label for="peserta_buka_{{ $item->id }}">Siswa yang diizinkan susulan</label>
+                                                <select id="peserta_buka_{{ $item->id }}" name="peserta_buka_id" class="input" required>
+                                                    <option value="">Pilih siswa</option>
+                                                    @foreach ($calonBukaSusulan as $pesertaBuka)
+                                                        <option value="{{ $pesertaBuka->id }}" @selected((string) old('peserta_buka_id') === (string) $pesertaBuka->id)>{{ $pesertaBuka->anggotaKelas?->siswa?->nama_lengkap }} · {{ $pesertaBuka->kelasUjianCbt?->kelas?->nama }} · NISN {{ $pesertaBuka->anggotaKelas?->siswa?->nisn }} · Nilai {{ $pesertaBuka->nilaiSiswa?->nilai ?? '-' }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="field">
+                                                <label for="alasan_buka_{{ $item->id }}">Alasan pembukaan susulan</label>
+                                                <textarea id="alasan_buka_{{ $item->id }}" name="alasan" class="input" rows="3" minlength="10" maxlength="1000" required placeholder="Contoh: HP bermasalah sehingga jawaban tidak tersimpan; disetujui panitia.">{{ old('alasan') }}</textarea>
+                                            </div>
+                                            <label class="help-text"><input type="checkbox" name="konfirmasi" value="1" required> Saya menyetujui pembatalan penerapan nilai khusus siswa yang dipilih untuk ujian susulan.</label>
+                                            <div class="retake-form-actions"><p>Setelah dibuka, pilih siswa pada daftar penjadwalan susulan di bawah. Hasil susulan perlu dikoreksi dan diterapkan kembali.</p><button type="submit" class="button button-primary">Buka untuk Susulan</button></div>
+                                        </form>
+                                    </details>
+                                @endif
+
+                                @if ($bolehAturSusulan && $riwayatPembukaan->isNotEmpty())
+                                    <details class="retake-manual">
+                                        <summary><span>Riwayat pembukaan susulan</span><span class="badge badge-muted">{{ $riwayatPembukaan->count() }} pembukaan</span></summary>
+                                        <div class="retake-scheduled">
+                                            @foreach ($riwayatPembukaan as $riwayat)
+                                                <div class="retake-scheduled-row">
+                                                    <div><strong>{{ $riwayat->pesertaUjianCbt?->anggotaKelas?->siswa?->nama_lengkap }}</strong><span>Nilai sebelumnya: {{ data_get($riwayat->nilai_sebelumnya, 'nilai', '-') }}</span></div>
+                                                    <div><strong>{{ $riwayat->created_at?->format('d-m-Y H:i') }}</strong><span>{{ $riwayat->dibukaOleh?->nama ?: 'Petugas' }}</span></div>
+                                                    <div><span>Alasan</span><strong>{{ $riwayat->alasan }}</strong></div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </details>
+                                @endif
 
                                 @if ($bolehAturSusulan && $calonManual->isNotEmpty())
                                     <details class="retake-manual">

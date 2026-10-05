@@ -134,6 +134,7 @@ class DaftarUjianSiswaService
         };
 
         [$labelStatus, $nadaStatus] = match (true) {
+            $peserta->status_susulan === 'menunggu_jadwal' => ['Menunggu jadwal susulan', 'menunggu'],
             $peserta->status_susulan === 'dibatalkan' => ['Susulan dibatalkan', 'bahaya'],
             $jadwalDibatalkan && ! $susulanTerjadwal => ['Dibatalkan', 'bahaya'],
             $sesiNonaktif => ['Sesi tidak aktif', 'bahaya'],
@@ -160,7 +161,7 @@ class DaftarUjianSiswaService
             'label_status' => $labelStatus,
             'nada_status' => $nadaStatus,
             'susulan' => $susulanTerjadwal || filled($peserta->status_susulan),
-            'hasil_cbt' => $peserta->status === 'selesai' && $ujian?->ujianTerpusat()
+            'hasil_cbt' => $peserta->status === 'selesai' && ! $peserta->menungguPenyelesaianSusulan() && $ujian?->ujianTerpusat()
                 ? $this->hasilCbt($peserta)
                 : null,
         ];

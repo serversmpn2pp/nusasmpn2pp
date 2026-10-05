@@ -22,6 +22,12 @@ abstract interface class CentralExamExecutionRemoteDataSource {
     required String? reason,
   });
   Future<void> unlockSafeMode(int participantId);
+  Future<String> reopenForRetake({
+    required int eventId,
+    required int scheduleId,
+    required int participantId,
+    required String reason,
+  });
 }
 
 final class DioCentralExamExecutionRemoteDataSource
@@ -95,6 +101,25 @@ final class DioCentralExamExecutionRemoteDataSource
       await _dio.post<Map<String, dynamic>>(
         'keamanan-ujian/peserta/$participantId/buka',
       );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<String> reopenForRetake({
+    required int eventId,
+    required int scheduleId,
+    required int participantId,
+    required String reason,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        'pelaksanaan-ujian-terpusat/$eventId/jadwal/$scheduleId/peserta/$participantId/buka-susulan',
+        data: {'alasan': reason.trim(), 'konfirmasi': true},
+      );
+      return response.data?['pesan'] as String? ??
+          'Siswa masuk ke daftar penjadwalan susulan.';
     } on DioException catch (exception) {
       throw mapDioException(exception);
     }

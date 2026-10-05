@@ -16,6 +16,8 @@ void main() {
     expect(detail.participants.items.first.staleHeartbeat, isTrue);
     expect(detail.alerts.single.type, 'mode_aman');
     expect(detail.capabilities.canManageSupervisors, isTrue);
+    expect(detail.participants.items[1].canReopenForRetake, isTrue);
+    expect(detail.participants.items[1].appliedScore, '0.00');
   });
 
   testWidgets('pusat pelaksanaan rapi di layar sempit dan membuka Mode Aman', (
@@ -87,11 +89,69 @@ void main() {
     expect(find.text('Jadwal & Ruang'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+    'buka susulan memerlukan alasan dan menampilkan status menunggu',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final remote = _FakeCentralExamExecutionRemoteDataSource();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            centralExamExecutionRemoteDataSourceProvider.overrideWithValue(
+              remote,
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const CentralExamExecutionDetailView(eventId: 7),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('central-exam-auto-refresh')));
+      await tester.pump();
+      final reopen = find.byKey(const Key('reopen-central-exam-32'));
+      await tester.scrollUntilVisible(
+        reopen,
+        500,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(reopen);
+      await tester.pumpAndSettle();
+      final confirm = find.byKey(const Key('confirm-central-exam-retake'));
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(find.text('Tuliskan alasan minimal 10 karakter.'), findsOneWidget);
+      expect(remote.reopenCalls, 0);
+      await tester.enterText(
+        find.byKey(const Key('central-exam-retake-reason')),
+        'HP siswa bermasalah sehingga jawaban tidak tersimpan.',
+      );
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(remote.reopenCalls, 1);
+      expect(remote.lastParticipantId, 32);
+      expect(
+        remote.lastReason,
+        'HP siswa bermasalah sehingga jawaban tidak tersimpan.',
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(reopen, findsNothing);
+      expect(find.text('Menunggu jadwal'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 class _FakeCentralExamExecutionRemoteDataSource
     implements CentralExamExecutionRemoteDataSource {
   int unlockCalls = 0;
+  int reopenCalls = 0;
+  int? lastParticipantId;
+  String? lastReason;
 
   @override
   Future<CentralExamExecutionPage> fetchEvents({
@@ -114,7 +174,17 @@ class _FakeCentralExamExecutionRemoteDataSource
   @override
   Future<CentralExamExecutionDetail> fetchDetail(
     CentralExamExecutionRequest request,
-  ) async => CentralExamExecutionDetail.fromJson(_detailJson());
+  ) async {
+    final data = _detailJson();
+    if (reopenCalls > 0) {
+      final participant =
+          ((data['peserta'] as Map<String, dynamic>)['items'] as List)[1]
+              as Map<String, dynamic>;
+      participant['dapat_dibuka_susulan'] = false;
+      participant['label_status_susulan'] = 'Menunggu jadwal';
+    }
+    return CentralExamExecutionDetail.fromJson(data);
+  }
 
   @override
   Future<String> assignSupervisor({
@@ -129,6 +199,19 @@ class _FakeCentralExamExecutionRemoteDataSource
   @override
   Future<void> unlockSafeMode(int participantId) async {
     unlockCalls++;
+  }
+
+  @override
+  Future<String> reopenForRetake({
+    required int eventId,
+    required int scheduleId,
+    required int participantId,
+    required String reason,
+  }) async {
+    reopenCalls++;
+    lastParticipantId = participantId;
+    lastReason = reason;
+    return 'Siswa masuk ke daftar penjadwalan susulan.';
   }
 }
 
@@ -225,6 +308,8 @@ Map<String, dynamic> _detailJson() => {
             : null,
         'heartbeat_terlambat': index == 0,
         'dapat_dibuka_mode_aman': index == 0,
+        'dapat_dibuka_susulan': index == 1,
+        'nilai_diterapkan': index == 1 ? '0.00' : null,
       },
     ),
     'filter': {

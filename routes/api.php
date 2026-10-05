@@ -444,6 +444,9 @@ Route::prefix('v1')
         Route::patch('/pelaksanaan-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/ruang/{ruangKegiatanUjianCbt}/pengawas', [PelaksanaanUjianTerpusatController::class, 'aturPengawas'])
             ->middleware('izin:cbt.panitia,cbt.kelola')
             ->name('pelaksanaan-ujian-terpusat.pengawas.update');
+        Route::post('/pelaksanaan-ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/peserta/{pesertaUjianCbt}/buka-susulan', [PelaksanaanUjianTerpusatController::class, 'bukaUntukSusulan'])
+            ->middleware('izin:cbt.panitia,cbt.kelola')
+            ->name('pelaksanaan-ujian-terpusat.susulan.buka');
 
         Route::get('/hasil-ujian-terpusat', [HasilUjianTerpusatController::class, 'index'])
             ->middleware('izin:cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola')

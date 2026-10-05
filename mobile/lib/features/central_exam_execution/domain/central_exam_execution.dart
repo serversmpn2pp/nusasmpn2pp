@@ -397,6 +397,9 @@ class CentralExamParticipant {
     required this.appSwitchCount,
     required this.staleHeartbeat,
     required this.canUnlockSafeMode,
+    this.canReopenForRetake = false,
+    this.appliedScore,
+    this.retakeStatusLabel,
     this.nisn,
     this.roomId,
     this.scheduleId,
@@ -420,6 +423,9 @@ class CentralExamParticipant {
         lastHeartbeat: json['heartbeat_terakhir_pada'] as String?,
         staleHeartbeat: json['heartbeat_terlambat'] as bool? ?? false,
         canUnlockSafeMode: json['dapat_dibuka_mode_aman'] as bool? ?? false,
+        canReopenForRetake: json['dapat_dibuka_susulan'] as bool? ?? false,
+        appliedScore: json['nilai_diterapkan']?.toString(),
+        retakeStatusLabel: json['label_status_susulan'] as String?,
       );
   final int id;
   final String name;
@@ -437,6 +443,9 @@ class CentralExamParticipant {
   final String? lastHeartbeat;
   final bool staleHeartbeat;
   final bool canUnlockSafeMode;
+  final bool canReopenForRetake;
+  final String? appliedScore;
+  final String? retakeStatusLabel;
 }
 
 class CentralExamAlert {

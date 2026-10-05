@@ -8,6 +8,7 @@ import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/central_exam_execution/application/central_exam_execution_controller.dart';
 import 'package:nusa/features/central_exam_execution/domain/central_exam_execution.dart';
+import 'package:nusa/features/central_exam_execution/presentation/widgets/central_exam_retake_dialog.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
 class CentralExamExecutionDetailView extends ConsumerStatefulWidget {
@@ -31,6 +32,7 @@ class _CentralExamExecutionDetailViewState
   int _page = 1;
   bool _autoRefresh = true;
   final Set<int> _unlocking = {};
+  final Set<int> _reopening = {};
 
   CentralExamExecutionRequest get _request => (
     eventId: widget.eventId,
@@ -200,6 +202,12 @@ class _CentralExamExecutionDetailViewState
                         key: Key('central-exam-participant-${participant.id}'),
                         participant: participant,
                         unlocking: _unlocking.contains(participant.id),
+                        reopening: _reopening.contains(participant.id),
+                        onReopen:
+                            participant.canReopenForRetake &&
+                                participant.scheduleId != null
+                            ? () => _reopenForRetake(participant)
+                            : null,
                         onUnlock:
                             data.capabilities.canUnlockSafeMode &&
                                 participant.canUnlockSafeMode
@@ -286,6 +294,35 @@ class _CentralExamExecutionDetailViewState
       if (mounted) _snack(_message(error, 'Ujian belum dapat dibuka.'));
     } finally {
       if (mounted) setState(() => _unlocking.remove(participantId));
+    }
+  }
+
+  Future<void> _reopenForRetake(CentralExamParticipant participant) async {
+    if (_reopening.contains(participant.id)) return;
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (_) => CentralExamRetakeDialog(participant: participant),
+    );
+    if (reason == null || !mounted) return;
+    setState(() => _reopening.add(participant.id));
+    try {
+      final message = await ref
+          .read(centralExamExecutionActionsProvider)
+          .reopenForRetake(
+            eventId: widget.eventId,
+            scheduleId: participant.scheduleId!,
+            participantId: participant.id,
+            reason: reason,
+          );
+      if (!mounted) return;
+      _snack(message);
+      await _refresh();
+    } catch (error) {
+      if (mounted) {
+        _snack(_message(error, 'Siswa belum dapat dibuka untuk susulan.'));
+      }
+    } finally {
+      if (mounted) setState(() => _reopening.remove(participant.id));
     }
   }
 
@@ -999,11 +1036,15 @@ class _ParticipantCard extends StatelessWidget {
   const _ParticipantCard({
     required this.participant,
     required this.unlocking,
+    this.reopening = false,
+    this.onReopen,
     this.onUnlock,
     super.key,
   });
   final CentralExamParticipant participant;
   final bool unlocking;
+  final bool reopening;
+  final VoidCallback? onReopen;
   final VoidCallback? onUnlock;
 
   @override
@@ -1077,6 +1118,11 @@ class _ParticipantCard extends StatelessWidget {
                     'Koneksi perlu diperiksa',
                     color: Colors.red,
                   ),
+                if (participant.retakeStatusLabel != null)
+                  _Info(
+                    Icons.event_repeat_rounded,
+                    participant.retakeStatusLabel!,
+                  ),
               ],
             ),
             if (onUnlock != null) ...[
@@ -1094,6 +1140,37 @@ class _ParticipantCard extends StatelessWidget {
                       : const Icon(Icons.lock_open_rounded),
                   label: const Text('Buka Mode Aman'),
                 ),
+              ),
+            ],
+            if (onReopen != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Nilai diterapkan: ${participant.appliedScore ?? '-'}',
+                style: const TextStyle(
+                  color: NusaColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  key: Key('reopen-central-exam-${participant.id}'),
+                  onPressed: reopening ? null : onReopen,
+                  icon: reopening
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.event_repeat_rounded),
+                  label: const Text('Buka untuk Susulan'),
+                ),
+              ),
+            ],
+            if (participant.retakeStatusLabel == 'Menunggu jadwal') ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Atur waktu, ruang, dan pengawas susulan melalui halaman Pelaksanaan Ujian Terpusat di web.',
+                style: TextStyle(color: NusaColors.textSecondary, fontSize: 12),
               ),
             ],
           ],

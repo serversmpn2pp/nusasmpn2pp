@@ -342,7 +342,8 @@ class UjianSayaMobileService
         $bobotTotal = (float) $soal->sum(fn (SoalUjianCbt $item) => (float) $item->bobot);
         $skorTotal = (float) $jawaban->sum(fn ($item) => (float) ($item->skor ?? 0));
         $nilai = $bobotTotal > 0 ? round(($skorTotal / $bobotTotal) * 100, 2) : 0.0;
-        $bolehTampil = (bool) $peserta->ujianCbt->tampilkan_hasil && $menungguKoreksi === 0;
+        $bolehTampil = (bool) $peserta->ujianCbt->tampilkan_hasil && $menungguKoreksi === 0
+            && $peserta->status === 'selesai' && ! $peserta->menungguPenyelesaianSusulan();
 
         return [
             'mode' => 'selesai',

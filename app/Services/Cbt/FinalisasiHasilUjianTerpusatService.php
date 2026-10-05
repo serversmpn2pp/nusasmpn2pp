@@ -303,7 +303,7 @@ class FinalisasiHasilUjianTerpusatService
 
     private function pesertaDikecualikan(PesertaUjianCbt $peserta): bool
     {
-        if ($peserta->status === 'nonaktif') {
+        if ($peserta->status === 'nonaktif' || $peserta->menungguPenyelesaianSusulan()) {
             return true;
         }
 
@@ -356,6 +356,8 @@ class FinalisasiHasilUjianTerpusatService
         $siswaIds = PesertaUjianCbt::query()
             ->where('ujian_cbt_id', $ujian->id)
             ->where('status', 'selesai')
+            ->where(fn ($query) => $query->whereNull('status_susulan')
+                ->orWhereNotIn('status_susulan', ['menunggu_jadwal', 'dijadwalkan']))
             ->whereHas('anggotaKelas.siswa')
             ->with('anggotaKelas:id,siswa_id')
             ->get()

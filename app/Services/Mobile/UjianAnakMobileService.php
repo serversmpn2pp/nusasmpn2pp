@@ -133,7 +133,7 @@ class UjianAnakMobileService
         $ujian = $peserta->ujianCbt;
         $kkm = $ujian?->kkm;
 
-        if ($peserta->status !== 'selesai') {
+        if ($peserta->status !== 'selesai' || $peserta->menungguPenyelesaianSusulan()) {
             return [
                 'ditampilkan' => false,
                 'menunggu_koreksi' => false,

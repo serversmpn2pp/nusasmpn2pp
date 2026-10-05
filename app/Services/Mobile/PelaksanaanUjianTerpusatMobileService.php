@@ -151,7 +151,7 @@ class PelaksanaanUjianTerpusatMobileService
 
         $pesertaQuery = PesertaUjianCbt::query()->whereIn('ujian_cbt_id', $paketIds);
         $ringkasan = $this->ringkasanPeserta(clone $pesertaQuery);
-        $peserta = $this->peserta($pesertaQuery, $filter);
+        $peserta = $this->peserta($pesertaQuery, $filter, $bolehMengelola);
         $peringatan = $this->peringatan($ruang, $paketIds);
 
         return [
@@ -383,7 +383,7 @@ class PelaksanaanUjianTerpusatMobileService
             ->mapWithKeys(fn (string $kolom) => [$kolom => (int) ($baris->{$kolom} ?? 0)])->all();
     }
 
-    private function peserta(Builder $query, array $filter): array
+    private function peserta(Builder $query, array $filter, bool $bolehMengelola): array
     {
         $status = (string) ($filter['status_peserta'] ?? 'semua');
         $jadwalId = isset($filter['jadwal_id']) ? (int) $filter['jadwal_id'] : null;
@@ -391,7 +391,7 @@ class PelaksanaanUjianTerpusatMobileService
         $kataKunci = trim((string) ($filter['kata_kunci_peserta'] ?? ''));
         $halaman = (int) ($filter['halaman_peserta'] ?? 1);
 
-        $query->with(['anggotaKelas.siswa', 'kelasUjianCbt.kelas', 'ruangUjianCbt', 'ujianCbt.jadwalUjianCbt.mataPelajaran'])
+        $query->with(['anggotaKelas.siswa', 'kelasUjianCbt.kelas', 'ruangUjianCbt', 'ujianCbt.jadwalUjianCbt.mataPelajaran', 'nilaiSiswa'])
             ->withCount([
                 'jawabanPesertaUjianCbt as jawaban_tersimpan_count' => fn (Builder $query) => $query
                     ->whereNotNull('jawaban'),
@@ -411,7 +411,7 @@ class PelaksanaanUjianTerpusatMobileService
             ->paginate(30, ['*'], 'halaman_peserta', $halaman);
 
         return [
-            'items' => collect($paginator->items())->map(function (PesertaUjianCbt $item): array {
+            'items' => collect($paginator->items())->map(function (PesertaUjianCbt $item) use ($bolehMengelola): array {
                 $jadwal = $item->ujianCbt?->jadwalUjianCbt?->first();
                 $terlambatHeartbeat = $item->status === 'sedang_mengerjakan'
                     && $item->heartbeat_terakhir_pada
@@ -434,6 +434,10 @@ class PelaksanaanUjianTerpusatMobileService
                     'heartbeat_terakhir_pada' => $item->heartbeat_terakhir_pada?->toISOString(),
                     'heartbeat_terlambat' => (bool) $terlambatHeartbeat,
                     'dapat_dibuka_mode_aman' => $item->status === 'terblokir',
+                    'dapat_dibuka_susulan' => $bolehMengelola && $item->dapatDibukaUntukSusulan(),
+                    'nilai_diterapkan' => $bolehMengelola && $item->nilaiSiswa ? $item->nilaiSiswa->nilai : null,
+                    'status_susulan' => $item->status_susulan,
+                    'label_status_susulan' => $item->status_susulan ? $item->labelStatusSusulan() : null,
                 ];
             })->values(),
             'filter' => [

@@ -119,6 +119,22 @@ class CentralExamExecutionActions {
         .unlockSafeMode(participantId),
   );
 
+  Future<String> reopenForRetake({
+    required int eventId,
+    required int scheduleId,
+    required int participantId,
+    required String reason,
+  }) => _guard(
+    () => ref
+        .read(centralExamExecutionRepositoryProvider)
+        .reopenForRetake(
+          eventId: eventId,
+          scheduleId: scheduleId,
+          participantId: participantId,
+          reason: reason,
+        ),
+  );
+
   Future<T> _guard<T>(Future<T> Function() operation) async {
     try {
       return await operation();

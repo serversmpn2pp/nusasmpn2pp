@@ -178,6 +178,29 @@ class PesertaUjianCbt extends Model
         return $this->hasMany(RiwayatWaktuTambahanUjianCbt::class);
     }
 
+    public function riwayatPembukaanSusulanCbt(): HasMany
+    {
+        return $this->hasMany(RiwayatPembukaanSusulanCbt::class);
+    }
+
+    public function menungguPenyelesaianSusulan(): bool
+    {
+        return $this->status_susulan === 'menunggu_jadwal'
+            || ($this->status_susulan === 'dijadwalkan' && $this->status !== 'selesai');
+    }
+
+    public function susulanLanjutanMenungguJadwal(): bool
+    {
+        // Status menunggu ditetapkan panitia; jangan mengubah riwayat cara selesai ujian utama.
+        return $this->status === 'selesai' && $this->status_susulan === 'menunggu_jadwal';
+    }
+
+    public function dapatDibukaUntukSusulan(): bool
+    {
+        return $this->status === 'selesai' && $this->nilai_siswa_id
+            && $this->status_susulan !== 'dijadwalkan';
+    }
+
     public function absenUjianOleh(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'absen_ujian_oleh_pengguna_id');

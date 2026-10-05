@@ -123,7 +123,7 @@ class RekapHasilUjianCbtService
         $jawabanDikoreksi = $jawaban->filter(fn ($item) => ! is_null($item->skor))->count();
         $benar = $jawaban->filter(fn ($item) => $item->benar === true)->count();
         $skorTotal = round($jawaban->sum(fn ($item) => (float) ($item->skor ?? 0)), 2);
-        $nilaiTersedia = $peserta->status === 'selesai';
+        $nilaiTersedia = $peserta->status === 'selesai' && ! $peserta->menungguPenyelesaianSusulan();
         $nilai = $nilaiTersedia && $bobotTotal > 0
             ? round(($skorTotal / $bobotTotal) * 100, 2)
             : null;
@@ -166,6 +166,15 @@ class RekapHasilUjianCbtService
         int $belumDikoreksiOtomatis,
         int $perluKoreksiManual,
     ): array {
+        if ($peserta->menungguPenyelesaianSusulan()) {
+            return [
+                'kode_status_hasil' => 'belum_selesai',
+                'label_status_hasil' => $peserta->status_susulan === 'menunggu_jadwal'
+                    ? 'Menunggu jadwal susulan' : 'Menunggu penyelesaian susulan',
+                'badge_status_hasil' => 'badge-warning',
+            ];
+        }
+
         if ($peserta->status !== 'selesai') {
             $statusKehadiran = $peserta->status_kehadiran_ujian ?: 'belum_absen';
 

@@ -7,6 +7,7 @@ use App\Models\JadwalUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\PesertaUjianCbt;
 use App\Models\RuangKegiatanUjianCbt;
+use App\Services\Cbt\BukaSusulanPesertaCbtService;
 use App\Services\Mobile\PelaksanaanUjianTerpusatMobileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,6 +71,23 @@ class PelaksanaanUjianTerpusatController extends Controller
                 : 'Pengawas berhasil ditugaskan.',
             'data' => $hasil,
         ]);
+    }
+
+    public function bukaUntukSusulan(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        JadwalUjianCbt $jadwalUjianCbt,
+        PesertaUjianCbt $pesertaUjianCbt,
+        BukaSusulanPesertaCbtService $service,
+    ): JsonResponse {
+        $data = $request->validate([
+            'alasan' => ['required', 'string', 'min:10', 'max:1000'],
+            'konfirmasi' => ['accepted'],
+        ]);
+
+        return $this->tanpaCache($service->buka(
+            $request->user(), $kegiatanUjianCbt, $jadwalUjianCbt, $pesertaUjianCbt, $data['alasan'],
+        ));
     }
 
     private function tanpaCache(array $data): JsonResponse

@@ -10,9 +10,11 @@ use App\Models\Pegawai;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
+use App\Models\RiwayatPembukaanSusulanCbt;
 use App\Models\RiwayatPergantianPengawasUjian;
 use App\Models\RuangKegiatanUjianCbt;
 use App\Models\RuangUjianCbt;
+use App\Services\Cbt\BukaSusulanPesertaCbtService;
 use App\Services\Cbt\FinalisasiHasilUjianTerpusatService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\NotifikasiUjianTerpusatService;
@@ -111,7 +113,7 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             ->values();
         $kelompokPerTingkat = $kegiatanUjianCbt->kelompokPesertaKegiatanUjianCbt->keyBy('tingkat');
 
-        $jadwal->each(function (JadwalUjianCbt $item) use ($kelompokPerTingkat, $request) {
+        $jadwal->each(function (JadwalUjianCbt $item) use ($kelompokPerTingkat, $request, $aksesPenuh) {
             $paket = $item->ujianCbt;
             $kelompok = $kelompokPerTingkat->get($item->tingkat);
             $item->setRelation('ruangPelaksanaan', $kelompok?->ruangKegiatanUjianCbt ?? collect());
@@ -134,7 +136,8 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                         'kelasUjianCbt.kelas',
                         'pengawasSusulan:id,nama_lengkap,nip',
                     ])
-                    ->withCount('jawabanPesertaUjianCbt')
+                    ->withCount(['jawabanPesertaUjianCbt', 'jawabanPesertaUjianCbt as jawaban_nyata_count' => fn ($query) => $query
+                        ->where(fn ($query) => $query->whereNotNull('jawaban')->orWhereNotNull('waktu_dijawab'))])
                     ->where(function ($query) {
                         $query->whereIn('status_kehadiran_ujian', ['sakit', 'izin', 'alfa'])
                             ->orWhereNotNull('status_susulan');
@@ -183,6 +186,19 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
                         $peserta->anggotaKelas?->siswa?->nama_lengkap ?? '',
                     ))
                     ->values()
+                : collect());
+            $item->setRelation('pesertaBukaSusulan', $paket && $aksesPenuh && $request->user()->memilikiIzin(['cbt.panitia', 'cbt.kelola'])
+                ? $paket->pesertaUjianCbt()
+                    ->with(['anggotaKelas.siswa', 'kelasUjianCbt.kelas', 'nilaiSiswa'])
+                    ->where('status', 'selesai')->whereNotNull('nilai_siswa_id')
+                    ->where(fn ($query) => $query->whereNull('status_susulan')
+                        ->orWhere('status_susulan', '!=', 'dijadwalkan'))
+                    ->get()->sortBy(fn ($peserta) => ($peserta->kelasUjianCbt?->kelas?->nama ?? '').'|'.($peserta->anggotaKelas?->siswa?->nama_lengkap ?? ''))->values()
+                : collect());
+            $item->setRelation('riwayatPembukaanSusulan', $paket && $aksesPenuh && $request->user()->memilikiIzin(['cbt.panitia', 'cbt.kelola'])
+                ? RiwayatPembukaanSusulanCbt::query()
+                    ->whereHas('pesertaUjianCbt', fn ($query) => $query->where('ujian_cbt_id', $paket->id))
+                    ->with(['pesertaUjianCbt.anggotaKelas.siswa', 'dibukaOleh'])->latest()->get()
                 : collect());
         });
 
@@ -284,6 +300,23 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             'daftarStatusKehadiran' => PesertaUjianCbt::DAFTAR_STATUS_KEHADIRAN,
             'routeKembali' => route('ujian-terpusat.pelaksanaan-nilai.index', $kegiatanUjianCbt),
         ]);
+    }
+
+    public function bukaUntukSusulan(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        JadwalUjianCbt $jadwalUjianCbt,
+        BukaSusulanPesertaCbtService $service,
+    ) {
+        $data = $request->validate([
+            'peserta_buka_id' => ['required', 'integer', 'exists:peserta_ujian_cbt,id'],
+            'alasan' => ['required', 'string', 'min:10', 'max:1000'],
+            'konfirmasi' => ['accepted'],
+        ]);
+        $pesertaUjianCbt = PesertaUjianCbt::query()->findOrFail($data['peserta_buka_id']);
+        $hasil = $service->buka($request->user(), $kegiatanUjianCbt, $jadwalUjianCbt, $pesertaUjianCbt, $data['alasan']);
+
+        return back()->with('berhasil', $hasil['pesan']);
     }
 
     public function tambahkanCalonSusulanManual(
@@ -479,9 +512,7 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             }
 
             foreach ($daftar as $item) {
-                $lanjutanWaktuHabis = $item->status === 'selesai'
-                    && $item->cara_selesai === 'waktu_habis'
-                    && $item->status_susulan === 'menunggu_jadwal';
+                $lanjutanWaktuHabis = $item->susulanLanjutanMenungguJadwal();
 
                 if (! $lanjutanWaktuHabis && ! in_array($item->status_kehadiran_ujian, ['sakit', 'izin', 'alfa'], true)) {
                     throw ValidationException::withMessages([
@@ -510,9 +541,7 @@ class PelaksanaanNilaiUjianTerpusatController extends Controller
             }
 
             foreach ($daftar as $item) {
-                $lanjutanWaktuHabis = $item->status === 'selesai'
-                    && $item->cara_selesai === 'waktu_habis'
-                    && $item->status_susulan === 'menunggu_jadwal';
+                $lanjutanWaktuHabis = $item->susulanLanjutanMenungguJadwal();
 
                 if ($lanjutanWaktuHabis) {
                     $item->jawabanPesertaUjianCbt()->update([

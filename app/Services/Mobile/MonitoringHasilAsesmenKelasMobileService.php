@@ -355,6 +355,11 @@ class MonitoringHasilAsesmenKelasMobileService
         int $belumOtomatis,
         int $perluManual,
     ): array {
+        if ($peserta->menungguPenyelesaianSusulan()) {
+            return ['belum_selesai', $peserta->status_susulan === 'menunggu_jadwal'
+                ? 'Menunggu jadwal susulan' : 'Menunggu penyelesaian susulan', 'peringatan'];
+        }
+
         if ($peserta->status !== 'selesai') {
             return ['belum_selesai', 'Belum selesai', 'netral'];
         }

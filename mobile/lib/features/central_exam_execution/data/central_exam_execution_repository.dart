@@ -34,6 +34,18 @@ class CentralExamExecutionRepository {
 
   Future<void> unlockSafeMode(int participantId) =>
       _remote.unlockSafeMode(participantId);
+
+  Future<String> reopenForRetake({
+    required int eventId,
+    required int scheduleId,
+    required int participantId,
+    required String reason,
+  }) => _remote.reopenForRetake(
+    eventId: eventId,
+    scheduleId: scheduleId,
+    participantId: participantId,
+    reason: reason,
+  );
 }
 
 final centralExamExecutionRepositoryProvider =
