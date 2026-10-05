@@ -1038,6 +1038,8 @@ Route::prefix('v1')
         Route::post('/input-nilai', [InputNilaiController::class, 'store'])
             ->middleware('izin:nilai.input')
             ->name('input-nilai.store');
+        Route::patch('/input-nilai/{komponenNilai}/sts-manual', [InputNilaiController::class, 'stsManual'])
+            ->where('komponenNilai', '[0-9]{1,18}')->middleware('izin:nilai.input')->name('input-nilai.sts-manual');
         Route::patch('/input-nilai/publikasi/{guruMataPelajaran}/{semester}', [InputNilaiController::class, 'publikasikan'])
             ->middleware('izin:nilai.input')
             ->name('input-nilai.publikasikan');

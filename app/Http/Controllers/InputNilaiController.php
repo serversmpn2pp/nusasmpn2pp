@@ -9,6 +9,7 @@ use App\Models\NilaiSiswa;
 use App\Models\PublikasiNilaiSiswa;
 use App\Models\TahunPelajaran;
 use App\Services\Nilai\InputNilaiService;
+use App\Services\Nilai\StsManualService;
 use App\Support\FilterInputNilai;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -56,6 +57,7 @@ class InputNilaiController extends Controller
         $jumlahKomponenPublikasi = 0;
         $jumlahNilaiPublikasi = 0;
         $targetNilaiPublikasi = 0;
+        $stsManual = null;
 
         if ($komponenNilaiId) {
             $penilaianPredikat = $komponenDipilih
@@ -105,6 +107,9 @@ class InputNilaiController extends Controller
             : $nilaiTersimpan
                 ->filter(fn (NilaiSiswa $nilaiSiswa) => $nilaiSiswa->nilai !== null)
                 ->avg('nilai');
+        if ($komponenDipilih?->jenis_komponen === 'sts' && ! $penilaianPredikat) {
+            $stsManual = app(StsManualService::class)->respons(app(StsManualService::class)->konteks($komponenDipilih, $anggotaKelas, $nilaiTersimpan));
+        }
 
         return view('input-nilai.index', compact(
             'daftarKomponenNilai',
@@ -123,6 +128,7 @@ class InputNilaiController extends Controller
             'filter',
             'tahunPelajaran',
             'kelas',
+            'stsManual',
         ));
     }
 
@@ -144,20 +150,36 @@ class InputNilaiController extends Controller
             $this->inputNilai->aturanValidasi($komponenDipilih),
             $this->inputNilai->pesanValidasi(),
         );
+        $sebelumnyaFinalSts = $komponenDipilih->sts_manual_difinalisasi_pada !== null;
         $publikasiDibatalkan = $this->inputNilai->simpan(
             $request->user(),
             $komponenDipilih,
             $data,
         );
+        $finalStsDibatalkan = $sebelumnyaFinalSts && $komponenDipilih->fresh()->sts_manual_difinalisasi_pada === null;
+        $pesan = $publikasiDibatalkan
+            ? 'Nilai siswa berhasil disimpan. Karena ada perubahan, nilai kembali menjadi draf dan perlu dipublikasikan ulang.'
+            : 'Nilai siswa berhasil disimpan sebagai draf.';
+        if ($finalStsDibatalkan) {
+            $pesan .= ' Nilai STS manual perlu difinalisasi ulang sebelum digunakan pada rapor.';
+        }
 
         return redirect()
             ->route('input-nilai.index', ['komponen_nilai_id' => $komponenDipilih->id, ...$filter])
-            ->with(
-                'berhasil',
-                $publikasiDibatalkan
-                    ? 'Nilai siswa berhasil disimpan. Karena ada perubahan, nilai kembali menjadi draf dan perlu dipublikasikan ulang.'
-                    : 'Nilai siswa berhasil disimpan sebagai draf.',
-            );
+            ->with('berhasil', $pesan);
+    }
+
+    public function stsManual(Request $request, KomponenNilai $komponenNilai, StsManualService $service)
+    {
+        $filter = FilterInputNilai::validasi($request, true);
+        $komponen = $this->inputNilai->ambilKomponenDalamCakupan($request->user(), $komponenNilai->id);
+        $data = $request->validate(['sidik' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/D'], 'difinalisasi' => ['required', 'boolean']]);
+        $service->tetapkan($request->user(), $komponen, $data['sidik'], $request->boolean('difinalisasi'));
+
+        return redirect()->route('input-nilai.index', ['komponen_nilai_id' => $komponen->id, ...$filter])
+            ->with('berhasil', $request->boolean('difinalisasi')
+                ? 'Nilai STS manual difinalisasi untuk rapor dan leger. Publikasi kepada siswa tetap terpisah.'
+                : 'Finalisasi STS manual dibatalkan. Nilai tidak digunakan pada rapor sampai difinalisasi ulang.');
     }
 
     private function ambilDaftarKomponenNilai(Request $request, array $filter)

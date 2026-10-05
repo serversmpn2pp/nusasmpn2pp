@@ -72,8 +72,25 @@
         .sts-unsaved-warning { padding: 14px 24px; border-top: 1px solid #e7cd89; background: #fff8e8; font-size: .85rem; flex: 0 0 auto; }
         .sts-unsaved-warning p { margin: 0 0 10px; }
         .sts-unsaved-warning .actions { justify-content: flex-end; }
+        .sts-subject-section > details > summary { display:list-item; cursor:pointer; padding:4px 0; }
+        .sts-subject-section > details > summary > span { display:inline-flex; flex-direction:column; gap:5px; vertical-align:middle; margin:0 14px 0 4px; }
+        .sts-subject-section > details > summary > .sts-badge { display:inline-flex; }
+        .sts-subject-scope { font-size:.8rem; color:var(--muted); }
+        .sts-subject-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:24px; margin:16px 0; }
+        .sts-subject-option { display:grid; grid-template-columns:18px minmax(0,1fr) auto; align-items:center; gap:10px; border-bottom:1px solid var(--line); padding:14px 0; margin:0; cursor:pointer; font-size:.85rem; }
+        .sts-subject-option input { width:18px; height:18px; margin:0; accent-color:var(--primary); }
+        .sts-subject-option strong { display:block; overflow-wrap:anywhere; }
+        .sts-subject-option:has(input:not(:checked)) strong { color:var(--muted); }
+        .sts-subject-required { color:#236443; font-size:.75rem; }
+        .sts-subject-footer { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:20px; }
+        .sts-subject-footer textarea { width:100%; resize:vertical; }
+        .sts-subject-history { margin-top:12px; font-size:.8rem; }
+        .sts-subject-history summary { cursor:pointer; }
+        .sts-subject-history li { padding:8px 0; }
+        .sts-subject-history p { margin:5px 0 0; overflow-wrap:anywhere; }
+        .sts-subject-section [hidden] { display:none !important; }
         @media (max-width: 950px) { .sts-dates { grid-template-columns: repeat(2, minmax(150px, 1fr)); } }
-        @media (max-width: 640px) { .sts-filters, .sts-dates { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) { .sts-filters, .sts-dates, .sts-subject-list, .sts-subject-footer { grid-template-columns: 1fr; } .sts-subject-section > details > summary > .sts-badge { margin-top:10px; } }
     </style>
     <div class="page-header">
         <div><p class="eyebrow">Penilaian</p><h1 class="page-title">Rapor STS</h1></div>
@@ -99,6 +116,7 @@
             $siap = $baris->where('siap', true)->count();
             $diperiksa = $baris->where('diperiksa', true)->count();
         @endphp
+        @include('rapor-sts._mapel')
         <section class="sts-section">
             <h2>1. Periode dan tanggal rapor</h2>
             <form method="POST" action="{{ route('rapor-sts.pengaturan', [$kegiatan, $kelas]) }}" class="sts-dates" id="sts-periode-form">
@@ -108,7 +126,7 @@
                 <div class="field"><label for="sts-tanggal">Tanggal pembagian rapor</label><input class="input" id="sts-tanggal" type="date" name="tanggal_rapor" value="{{ old('tanggal_rapor', $pengaturan->tanggal_rapor->toDateString()) }}" required></div>
                 <button class="button button-primary">Simpan periode</button>
             </form>
-            <p class="help-text">Wali kelas: {{ $kelas->waliKelas?->nama_lengkap ?? 'Belum ditetapkan' }} · Nilai: hasil final CBT pada kegiatan STS ini.</p>
+            <p class="help-text">Wali kelas: {{ $kelas->waliKelas?->nama_lengkap ?? 'Belum ditetapkan' }} · Nilai: hasil final CBT atau STS manual untuk mapel non-CBT.</p>
             @if (! $pengaturan->exists)<p class="sts-notice">Periode belum disimpan. Pemeriksaan kehadiran dan cetak final belum tersedia.</p>@endif
             @if ($pengaturan->tanggal_akhir_presensi->isFuture())<p class="sts-notice">Periode presensi belum berakhir. Rapor final belum dapat dicetak.</p>@endif
         </section>
@@ -253,6 +271,10 @@
             if (!form) return;
             const checks = [...form.querySelectorAll('[data-sts-reviewed]')];
             const all = document.getElementById('sts-periksa-semua');
+            const mapelForm = document.getElementById('sts-mapel-form');
+            const mapelChecks = [...document.querySelectorAll('[data-sts-mapel-choice]')];
+            let mapelDirty = false;
+            let submitting = false;
             const dialog = document.getElementById('sts-grade-dialog');
             const content = document.getElementById('sts-grade-content');
             let gradeTrigger = null;
@@ -281,6 +303,33 @@
             dialog.addEventListener('close', () => gradeTrigger?.focus({ preventScroll: true }));
             let dirty = false;
             let exceptionDirty = false;
+            const syncMapel = () => {
+                if (!mapelForm) return;
+                const count = mapelChecks.filter(c => c.checked).length;
+                mapelDirty = mapelChecks.some(c => c.checked !== (c.dataset.saved === '1')) || mapelForm.elements.alasan_mapel.value.trim() !== '';
+                mapelForm.querySelector('[data-sts-mapel-count]').textContent = `${count} mapel diikutkan · ${mapelChecks.length - count} dikecualikan`;
+                mapelForm.querySelector('[data-sts-mapel-unsaved]').hidden = !mapelDirty;
+                mapelForm.querySelector('button[type="submit"], button:not([type])').disabled = count === 0;
+            };
+            mapelForm?.addEventListener('input', syncMapel);
+            syncMapel();
+            mapelForm?.addEventListener('submit', event => {
+                const warning = dirty || exceptionDirty ? 'Perubahan periode, kehadiran, atau keterangan siswa yang belum disimpan akan ditinggalkan. ' : '';
+                if (!confirm(warning + `Simpan pilihan mapel untuk seluruh kelas tingkat ${mapelForm.dataset.tingkat}? Rapor, leger, statistik, dan ranking akan diperbarui.`)) {
+                    event.preventDefault();
+                    return;
+                }
+                submitting = true;
+            });
+            [form, document.getElementById('sts-periode-form')].forEach(other => other?.addEventListener('submit', event => {
+                if (mapelDirty && !confirm('Pilihan mapel belum disimpan. Tinggalkan perubahan pilihan mapel dan simpan formulir ini?')) event.preventDefault();
+                else submitting = true;
+            }));
+            window.addEventListener('beforeunload', event => {
+                if (submitting || !mapelDirty) return;
+                event.preventDefault(); event.returnValue = '';
+            });
+            window.addEventListener('pageshow', () => { submitting = false; syncMapel(); });
             content.addEventListener('change', event => {
                 if (!event.target.matches('[data-sts-exempt]')) return;
                 const field = event.target.closest('[data-sts-exception]').querySelector('.sts-exception-reason');
@@ -335,7 +384,7 @@
                 changed();
             }));
             document.querySelectorAll('[data-sts-print]').forEach(link => link.addEventListener('click', event => {
-                if (dirty) { event.preventDefault(); alert('Simpan perubahan periode dan pemeriksaan kehadiran sebelum mencetak rapor.'); }
+                if (dirty || mapelDirty) { event.preventDefault(); alert('Simpan perubahan pilihan mapel, periode, dan pemeriksaan kehadiran sebelum mencetak rapor.'); }
             }));
             sync();
             if (dialog.dataset.stsReopen) {

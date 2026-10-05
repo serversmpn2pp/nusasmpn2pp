@@ -7,13 +7,19 @@
         const controls = [...filterForm.querySelectorAll('select')];
         const initialFilter = new Map(controls.map(field => [field, field.value]));
         const status = gradeForm?.querySelector('[data-grade-unsaved]');
+        const stsForm = document.querySelector('[data-sts-manual-form]');
+        const stsCommand = stsForm?.querySelector('[data-sts-command]');
+        const stsUnsaved = document.querySelector('[data-sts-unsaved]');
         let leaving = false;
         const countChanges = () => fields.filter(field => field.value !== field.dataset.savedValue).length;
         const refreshStatus = () => {
-            if (!status) return;
             const count = countChanges();
-            status.hidden = count === 0;
-            status.textContent = `${count} perubahan belum disimpan`;
+            if (status) {
+                status.hidden = count === 0;
+                status.textContent = `${count} perubahan belum disimpan`;
+            }
+            if (stsCommand) stsCommand.disabled = count > 0;
+            if (stsUnsaved) stsUnsaved.hidden = count === 0;
         };
         const confirmLeave = () => leaving || countChanges() === 0 || window.confirm('Ada nilai atau catatan yang belum disimpan. Tinggalkan perubahan dan lanjutkan?');
         const restoreFilter = () => initialFilter.forEach((value, field) => { field.value = value; });
@@ -42,6 +48,14 @@
             if (form === gradeForm) {
                 leaving = true;
                 return;
+            }
+            if (form === stsForm) {
+                if (countChanges() > 0 || !window.confirm(stsForm.dataset.confirm)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    refreshStatus();
+                    return;
+                }
             }
             if (!confirmLeave()) {
                 event.preventDefault();

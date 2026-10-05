@@ -61,6 +61,13 @@
         .grade-save-actions .grade-unsaved { margin-right:auto; }
         .publication-box { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:20px; margin-top:18px; padding:14px; border-left:3px solid #f1c40f; background:#fafafa; }
         .publication-copy { min-width:0; }
+        .sts-manual { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:16px; margin-top:18px; padding-top:18px; border-top:1px solid var(--line); }
+        .sts-manual-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+        .sts-manual p, .sts-manual ul { margin:8px 0 0; font-size:.8rem; color:var(--muted); line-height:1.5; }
+        .sts-manual ul { padding-left:18px; }
+        .sts-manual form { margin:0; }
+        .sts-manual .grade-unsaved { color:#854d0e; }
+        .sts-manual [hidden] { display:none !important; }
 
         .publication-box.is-published {
             border-left-color: #16a34a;
@@ -104,7 +111,7 @@
             .grade-overview { padding:16px; }
             .grade-facts { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
             .grade-overview-head { flex-wrap:wrap; gap:10px; }
-            .publication-box { grid-template-columns:minmax(0,1fr); gap:14px; }
+            .publication-box, .sts-manual { grid-template-columns:minmax(0,1fr); gap:14px; }
             .publication-head { flex-wrap:wrap; }
             .grade-entry-head { align-items:stretch; flex-direction:column; }
             .grade-metrics { gap:12px; }
@@ -290,6 +297,48 @@
                         <dd>{{ $komponenDipilih->guruMataPelajaran?->mataPelajaran?->labelJenisPenilaian() }}</dd>
                     </div>
                 </dl>
+
+                @if ($stsManual)
+                    <div class="sts-manual" data-sts-manual>
+                        <div>
+                            <div class="sts-manual-head">
+                                <strong>Nilai STS untuk rapor</strong>
+                                <span class="badge {{ $stsManual['difinalisasi'] || $stsManual['menggunakan_cbt'] ? 'badge-active' : 'badge-warning' }}">
+                                    {{ $stsManual['menggunakan_cbt'] ? 'Sumber CBT' : ($stsManual['difinalisasi'] ? 'Final manual' : ($stsManual['berubah'] ? 'Perlu finalisasi ulang' : 'Belum final manual')) }}
+                                </span>
+                            </div>
+                            <p>{{ $stsManual['jumlah_terisi'] }} dari {{ $stsManual['jumlah_siswa'] }} siswa memiliki nilai STS.</p>
+                            @if ($stsManual['difinalisasi'])
+                                <p>Final {{ $komponenDipilih->sts_manual_difinalisasi_pada?->locale('id')->translatedFormat('d F Y, H:i') }}. Publikasi kepada siswa: {{ $publikasiNilai?->dipublikasikan ? 'sudah dirilis' : 'belum dirilis' }}.</p>
+                            @elseif ($stsManual['hambatan'])
+                                <ul>
+                                    @foreach ($stsManual['hambatan'] as $hambatan)
+                                        <li>{{ $hambatan }}</li>
+                                    @endforeach
+                                </ul>
+                            @else
+                                <p>Nilai rapor belum final. Publikasi kepada siswa tetap terpisah.</p>
+                            @endif
+                            @if ($stsManual['jumlah_terisi'] < $stsManual['jumlah_siswa'])
+                                <p>{{ $stsManual['jumlah_siswa'] - $stsManual['jumlah_terisi'] }} siswa belum memiliki nilai; rapornya belum lengkap.</p>
+                            @endif
+                            <p class="grade-unsaved" data-sts-unsaved role="status" hidden>Perubahan nilai belum disimpan.</p>
+                        </div>
+                        @if ($stsManual['dapat_finalisasi'] || $komponenDipilih->sts_manual_difinalisasi_pada)
+                            <form method="POST" action="{{ route('input-nilai.sts-manual', $komponenDipilih) }}" data-sts-manual-form
+                                data-confirm="{{ $stsManual['difinalisasi'] ? 'Batalkan finalisasi STS? Nilai tidak akan digunakan pada rapor sampai difinalisasi ulang.' : 'Finalisasikan nilai STS yang sudah tersimpan untuk rapor dan leger?' }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="sidik" value="{{ $stsManual['sidik'] }}">
+                                <input type="hidden" name="difinalisasi" value="{{ $stsManual['difinalisasi'] || ! $stsManual['dapat_finalisasi'] ? '0' : '1' }}">
+                                @include('input-nilai._filter-fields')
+                                <button type="submit" class="button {{ $stsManual['difinalisasi'] || ! $stsManual['dapat_finalisasi'] ? 'button-muted' : 'button-primary' }}" data-sts-command>
+                                    {{ $stsManual['difinalisasi'] || ! $stsManual['dapat_finalisasi'] ? 'Jadikan draf STS' : 'Finalisasi STS manual' }}
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                @endif
 
                 @php
                     $sudahDipublikasikan = $publikasiNilai?->dipublikasikan === true;

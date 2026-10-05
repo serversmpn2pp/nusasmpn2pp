@@ -126,7 +126,14 @@ class InputNilaiService
             ]);
         }
 
-        DB::transaction(function () use ($komponenNilai, $siswaIds, $data, $menggunakanPredikat) {
+        DB::transaction(function () use ($pengguna, $komponenNilai, $siswaIds, $data, $menggunakanPredikat, $kelasId) {
+            $terkunci = KomponenNilai::lockForUpdate()->findOrFail($komponenNilai->id);
+            $terkunci->load('guruMataPelajaran');
+            $this->komponenNilai->pastikanBolehAksesKomponen($pengguna, $terkunci);
+            if (! $terkunci->aktif || $terkunci->guru_mata_pelajaran_id !== $komponenNilai->guru_mata_pelajaran_id
+                || $terkunci->semester !== $komponenNilai->semester || $terkunci->jenis_komponen !== $komponenNilai->jenis_komponen) {
+                throw ValidationException::withMessages(['komponen_nilai_id' => 'Komponen nilai telah berubah. Muat ulang sebelum menyimpan.']);
+            }
             foreach ($siswaIds as $siswaId) {
                 $nilaiMentah = $data['nilai'][$siswaId] ?? $data['nilai'][(string) $siswaId] ?? null;
                 $predikatMentah = $data['predikat'][$siswaId] ?? $data['predikat'][(string) $siswaId] ?? null;
@@ -159,6 +166,12 @@ class InputNilaiService
                         'catatan' => $catatan ?: null,
                     ],
                 );
+            }
+            if ($terkunci->sts_manual_difinalisasi_pada !== null) {
+                $sidik = app(StsManualService::class)->sidik($terkunci, $this->ambilAnggotaKelas((int) $kelasId), $terkunci->nilaiSiswa()->get());
+                if (! hash_equals((string) $terkunci->sts_manual_sidik_final, $sidik)) {
+                    $terkunci->batalkanFinalisasiStsManual();
+                }
             }
         });
 

@@ -22,6 +22,10 @@ try {
             submissions.push({method:request.method(),body:request.postData()});
             name = 'selected';
         }
+        if (/^\/input-nilai\/\d+\/sts-manual$/.test(url.pathname)) {
+            submissions.push({method:request.method(),body:request.postData()});
+            name = 'manual-final';
+        }
         if (name) return route.fulfill({contentType:'text/html',body:await readFile(`storage/framework/testing/input-nilai/${name}.html`,'utf8')});
         const root = resolve('public'), path = resolve(root, '.' + decodeURIComponent(url.pathname));
         if (!path.startsWith(root + sep)) return route.abort();
@@ -31,7 +35,7 @@ try {
     const sizes = [[320,740],[390,844],[768,900],[901,900],[981,900],[1024,900],[1280,900],[1366,900],[1920,1080]];
     for (const [width,height] of sizes) {
         await page.setViewportSize({width,height});
-        for (const name of ['index','filtered','empty','selected','published','unsaved','wide','wide-published','predikat','no-students']) {
+        for (const name of ['index','filtered','empty','selected','published','unsaved','wide','wide-published','predikat','no-students','manual-draft','manual-final','manual-cbt']) {
             await page.goto(`http://localhost/audit/${name}`);
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Halaman melebar ${name}@${width}`);
             assert.ok(await page.locator('.grade-filter').evaluate(el => el.scrollWidth <= el.clientWidth + 1), `Filter melebar ${name}@${width}`);
@@ -40,7 +44,7 @@ try {
             assert.equal(await page.locator('#komponen_nilai_id').evaluate(el => el.required),false);
             const clipped = await page.locator('.grade-filter .button:visible, .grade-filter label, .grade-component-count').evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2).map(el => el.textContent.trim()));
             assert.deepEqual(clipped,[],`Teks terpotong ${name}@${width}`);
-            if (['selected','published','unsaved','wide','wide-published','predikat'].includes(name)) {
+            if (['selected','published','unsaved','wide','wide-published','predikat','manual-draft','manual-final','manual-cbt'].includes(name)) {
                 assert.ok(await page.locator('[data-grade-form]').isVisible());
                 assert.equal(await page.locator('[data-grade-form] [name^="filter["]').count(),4);
                 assert.equal(await page.locator('[data-grade-unsaved]').isVisible(),name === 'unsaved');
@@ -81,7 +85,7 @@ try {
                 await page.evaluate(() => document.querySelector('.app-content').scrollTop = 0);
                 await page.screenshot({path:`${output}/${name}-${width}.png`});
             }
-            if ([390,981,1366].includes(width) && ['wide','wide-published','predikat'].includes(name)) {
+            if ([390,981,1366].includes(width) && ['wide','wide-published','predikat','manual-draft','manual-final','manual-cbt'].includes(name)) {
                 await page.evaluate(() => {
                     const parent = document.querySelector('.app-content'), summary = document.querySelector('.grade-overview'), topbar = document.querySelector('.app-topbar');
                     const distance = summary.getBoundingClientRect().top - topbar.getBoundingClientRect().height - 16;
@@ -169,6 +173,32 @@ try {
     const predikatPost = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname === '/input-nilai');
     await page.getByRole('button',{name:'Simpan sebagai draf',exact:true}).click();
     assert.ok([...new URLSearchParams((await predikatPost).postData())].some(([key,value]) => key.startsWith('predikat[') && value === 'SB'));
+    await page.goto('http://localhost/audit/manual-draft');
+    const finalButton = page.getByRole('button',{name:'Finalisasi STS manual',exact:true});
+    assert.ok(await finalButton.isEnabled());
+    const manualGrade = page.locator('[name^="nilai["]').first();
+    await manualGrade.fill('89,75');
+    assert.ok(await finalButton.isDisabled());
+    assert.ok(await page.locator('[data-sts-unsaved]').isVisible());
+    const beforeManual = submissions.length;
+    const denied = await page.locator('[data-sts-manual-form]').evaluate(form => !form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.equal(denied,true);
+    assert.equal(submissions.length,beforeManual);
+    await manualGrade.fill('88,50');
+    assert.ok(await finalButton.isEnabled());
+    page.once('dialog',dialog => dialog.dismiss());
+    await finalButton.click();
+    assert.equal(submissions.length,beforeManual);
+    page.once('dialog',dialog => dialog.accept());
+    const manualPost = page.waitForRequest(request => /\/input-nilai\/\d+\/sts-manual$/.test(new URL(request.url()).pathname));
+    await finalButton.click();
+    const manualBody = new URLSearchParams((await manualPost).postData());
+    assert.equal(manualBody.get('_method'),'PATCH');
+    assert.equal(manualBody.get('difinalisasi'),'1');
+    assert.match(manualBody.get('sidik'),/^[a-f0-9]{64}$/);
+    assert.equal(manualBody.get('filter[jenis_komponen]'),'sts');
+    await page.goto('http://localhost/audit/manual-final');
+    assert.ok(await page.getByRole('button',{name:'Jadikan draf STS',exact:true}).isVisible());
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({result:'passed',widths:sizes.map(([width]) => width),pages:10,checks:['filters','direct-component','empty-state','no-overflow','horizontal-overview','full-width-table','no-table-horizontal-scroll','32-students','predikat-input','dependent-year-class','unsaved-cancel','unsaved-confirm','save-filters','decimal-input','publication-guard']}));
+    console.log(JSON.stringify({result:'passed',widths:sizes.map(([width]) => width),pages:13,checks:['filters','direct-component','empty-state','no-overflow','horizontal-overview','full-width-table','no-table-horizontal-scroll','32-students','predikat-input','dependent-year-class','unsaved-cancel','unsaved-confirm','save-filters','decimal-input','publication-guard','sts-manual-dirty-guard','sts-manual-confirmation','sts-manual-submit']}));
 } finally { await browser.close(); }

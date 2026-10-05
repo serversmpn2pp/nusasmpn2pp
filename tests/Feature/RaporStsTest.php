@@ -10,7 +10,9 @@ use App\Models\KegiatanUjianCbt;
 use App\Models\KehadiranRaporSts;
 use App\Models\Kelas;
 use App\Models\KelasUjianCbt;
+use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
+use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
 use App\Models\PengecualianRaporSts;
 use App\Models\Pengguna;
@@ -25,6 +27,7 @@ use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use App\Services\Nilai\LegerStsService;
 use App\Services\Nilai\RaporStsService;
+use App\Services\Nilai\StsManualService;
 use Carbon\Carbon;
 use PDO;
 use Tests\TestCase;
@@ -78,6 +81,31 @@ class RaporStsTest extends TestCase
             ->assertDontSeeText('DRAF PRATINJAU')->assertSeeText('Cetak / Simpan PDF')
             ->assertViewHas('baris', fn ($b) => $b->count() === 2 && $b[0]['kehadiran']['sakit'] === 2 && $b->every(fn ($r) => $r['siap']));
         $this->assertFalse($d['ujian']->fresh()->tampilkan_hasil);
+    }
+
+    public function test_cetak_rapor_menggabungkan_final_cbt_dengan_praktik_sts_manual(): void
+    {
+        $d = $this->fondasi();
+        $mapel = MataPelajaran::create(['nama' => 'Keminangkabauan', 'urutan' => 2, 'aktif' => true]);
+        $penugasan = GuruMataPelajaran::create(['tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelas']->id, 'mata_pelajaran_id' => $mapel->id, 'pegawai_id' => $d['guru']->id, 'jenis_penugasan' => 'pengampu', 'aktif' => true]);
+        $komponen = KomponenNilai::create(['guru_mata_pelajaran_id' => $penugasan->id, 'semester' => 'ganjil', 'jenis_komponen' => 'sts', 'nama' => 'Ujian Praktik KMT tentang Adat Sopan Santun', 'aktif' => true]);
+        foreach ([88.5, 90] as $i => $nilai) {
+            NilaiSiswa::create(['komponen_nilai_id' => $komponen->id, 'siswa_id' => $d['anggota'][$i]->siswa_id, 'nilai' => $nilai]);
+        }
+        $service = app(StsManualService::class);
+        $service->tetapkan($d['admin'], $komponen, $service->konteks($komponen)['sidik'], true);
+        $this->actingAs($d['admin']);
+        $this->simpanPeriode($d);
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $this->payload($d))->assertSessionHasNoErrors();
+        $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas']]))->assertOk()
+            ->assertSeeText('Keminangkabauan')->assertSee('88,50')->assertSee('94,25')
+            ->assertDontSeeText('DRAF PRATINJAU')->assertViewHas('baris', fn ($baris) => $baris->every(fn ($r) => $r['siap']));
+        $laporan = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(100.0, $laporan['baris'][0]['nilai'][0]['nilai']);
+        $this->assertSame('cbt', $laporan['baris'][0]['nilai'][0]['sumber_nilai']);
+        $this->assertSame('manual', $laporan['baris'][0]['nilai'][1]['sumber_nilai']);
+        $this->assertSame(94.25, $laporan['baris'][0]['rata']);
+        $this->assertSame(45.0, $laporan['baris'][1]['rata']);
     }
 
     public function test_leger_kelas_menghitung_ranking_ringkasan_dan_statistik_mapel(): void

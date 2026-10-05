@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\GuruMataPelajaran;
+use App\Models\KomponenNilai;
 use App\Services\Mobile\InputNilaiMobileService;
 use App\Services\Nilai\InputNilaiService;
+use App\Services\Nilai\StsManualService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,6 +43,7 @@ class InputNilaiController extends Controller
             $service->aturanValidasi($komponen),
             $service->pesanValidasi(),
         );
+        $sebelumnyaFinalSts = $komponen->sts_manual_difinalisasi_pada !== null;
         $publikasiDibatalkan = $service->simpan(
             $request->user(),
             $komponen,
@@ -53,7 +56,20 @@ class InputNilaiController extends Controller
                 : 'Nilai berhasil disimpan sebagai draf.',
             'data' => [
                 'publikasi_dibatalkan' => $publikasiDibatalkan,
+                'finalisasi_sts_dibatalkan' => $sebelumnyaFinalSts && $komponen->fresh()->sts_manual_difinalisasi_pada === null,
             ],
+        ]);
+    }
+
+    public function stsManual(Request $request, KomponenNilai $komponenNilai, StsManualService $service, InputNilaiService $input): JsonResponse
+    {
+        $komponen = $input->ambilKomponenDalamCakupan($request->user(), $komponenNilai->id);
+        $data = $request->validate(['sidik' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/D'], 'difinalisasi' => ['required', 'boolean']]);
+        $hasil = $service->tetapkan($request->user(), $komponen, $data['sidik'], $request->boolean('difinalisasi'));
+
+        return $this->tanpaCache([
+            'pesan' => $request->boolean('difinalisasi') ? 'Nilai STS manual difinalisasi untuk rapor.' : 'Finalisasi STS manual dibatalkan.',
+            'data' => $service->respons($hasil),
         ]);
     }
 

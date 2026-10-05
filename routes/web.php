@@ -1036,6 +1036,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::middleware('izin:nilai.input')->group(function () {
             Route::get('input-nilai', [InputNilaiController::class, 'index'])->name('input-nilai.index');
             Route::post('input-nilai', [InputNilaiController::class, 'store'])->name('input-nilai.store');
+            Route::patch('input-nilai/{komponenNilai}/sts-manual', [InputNilaiController::class, 'stsManual'])
+                ->where('komponenNilai', '[0-9]{1,18}')->name('input-nilai.sts-manual');
             Route::patch('publikasi-nilai/{guruMataPelajaran}/{semester}/publikasikan', [PublikasiNilaiController::class, 'publikasikan'])
                 ->name('publikasi-nilai.publikasikan');
             Route::patch('publikasi-nilai/{guruMataPelajaran}/{semester}/jadikan-draf', [PublikasiNilaiController::class, 'jadikanDraf'])
@@ -1049,6 +1051,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('leger-sts/penghargaan', [LegerStsController::class, 'penghargaan'])->name('leger-sts.penghargaan');
             Route::get('leger-sts', [LegerStsController::class, 'index'])->name('leger-sts.index');
             Route::get('rapor-sts', [RaporStsController::class, 'index'])->name('rapor-sts.index');
+            Route::put('rapor-sts/{kegiatan}/{kelas}/mapel', [RaporStsController::class, 'mapel'])->name('rapor-sts.mapel');
             Route::put('rapor-sts/{kegiatan}/{kelas}/pengaturan', [RaporStsController::class, 'pengaturan'])->name('rapor-sts.pengaturan');
             Route::put('rapor-sts/{kegiatan}/{kelas}/kehadiran', [RaporStsController::class, 'kehadiran'])->name('rapor-sts.kehadiran');
             Route::put('rapor-sts/{kegiatan}/{kelas}/pengecualian', [RaporStsController::class, 'pengecualian'])->name('rapor-sts.pengecualian');

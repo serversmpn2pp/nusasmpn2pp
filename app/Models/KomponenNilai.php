@@ -25,7 +25,19 @@ class KomponenNilai extends Model
         'tanggal_penilaian' => 'date',
         'urutan' => 'integer',
         'aktif' => 'boolean',
+        'sts_manual_difinalisasi_pada' => 'datetime',
     ];
+
+    public function batalkanFinalisasiStsManual(): void
+    {
+        if ($this->sts_manual_difinalisasi_pada !== null) {
+            $this->forceFill([
+                'sts_manual_difinalisasi_pada' => null,
+                'sts_manual_difinalisasi_oleh_pengguna_id' => null,
+                'sts_manual_sidik_final' => null,
+            ])->save();
+        }
+    }
 
     public function guruMataPelajaran(): BelongsTo
     {

@@ -6,6 +6,7 @@ use App\Models\AbsensiSiswa;
 use App\Models\JadwalUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
+use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
@@ -68,9 +69,11 @@ class RaporStsService
         $jadwal = $kegiatan->jadwalUjianCbt()->where('status', '!=', 'dibatalkan')
             ->whereHas('kelas', fn ($q) => $q->where('kelas.id', $kelas->id))
             ->with(['mataPelajaran', 'ujianCbt.soalUjianCbt.soalCbt'])->get();
-        // Include assigned subjects even when their STS package is missing, so an incomplete report is not presented as final.
+        // Missing STS sources remain incomplete unless the subject is explicitly excluded for this grade.
         $mapelIds = $kelas->guruMataPelajaran()->where('aktif', true)->pluck('mata_pelajaran_id')
             ->merge($jadwal->pluck('mata_pelajaran_id'))->unique();
+        $mapelDikecualikan = app(MapelRaporStsService::class)->dikecualikan($kegiatan, (int) $kelas->tingkat);
+        $mapelIds = $mapelIds->diff($mapelDikecualikan);
         $mapel = MataPelajaran::whereIn('id', $mapelIds)->orderBy('urutan')->orderBy('nama')->get()
             ->reject(fn ($item) => $item->menggunakanPredikat())->values();
         $peserta = PesertaUjianCbt::whereIn('ujian_cbt_id', $jadwal->pluck('ujian_cbt_id')->filter())
@@ -84,20 +87,41 @@ class RaporStsService
         $koreksi = $pengaturan->exists ? $pengaturan->kehadiran()->with('pemeriksa')->get()->keyBy('anggota_kelas_id') : collect();
         $pengecualian = $pengaturan->exists ? $pengaturan->pengecualian()->with('penetap')->get()->groupBy('anggota_kelas_id') : collect();
         $jadwalMapel = $jadwal->groupBy('mata_pelajaran_id');
-        $baris = $anggota->map(function ($siswa) use ($pengaturan, $mapel, $jadwalMapel, $peserta, $presensi, $koreksi, $pengecualian, $kelas) {
-            $nilai = $mapel->map(function ($pelajaran) use ($jadwalMapel, $peserta, $pengecualian, $siswa) {
+        $komponenManual = KomponenNilai::where('aktif', true)->where('jenis_komponen', 'sts')->where('semester', $kegiatan->semester)
+            ->whereHas('guruMataPelajaran', fn ($q) => $q->whereNotIn('mata_pelajaran_id', $jadwalMapel->keys()))
+            ->whereHas('guruMataPelajaran', fn ($q) => $q->where('aktif', true)->where('kelas_id', $kelas->id)->where('tahun_pelajaran_id', $kegiatan->tahun_pelajaran_id))
+            ->with(['guruMataPelajaran.kelas', 'guruMataPelajaran.mataPelajaran',
+                'nilaiSiswa' => fn ($q) => $q->whereIn('siswa_id', $anggota->pluck('siswa_id'))])->get()
+            ->groupBy(fn ($c) => $c->guruMataPelajaran->mata_pelajaran_id);
+        $manual = $komponenManual->map(function ($komponen) use ($anggota) {
+            if ($komponen->count() !== 1) {
+                return ['komponen' => null, 'konteks' => null];
+            }
+            $c = $komponen->first();
+
+            return ['komponen' => $c, 'konteks' => app(StsManualService::class)->konteks($c, $anggota, $c->nilaiSiswa)];
+        });
+        $baris = $anggota->map(function ($siswa) use ($pengaturan, $mapel, $jadwalMapel, $peserta, $presensi, $koreksi, $pengecualian, $kelas, $manual) {
+            $nilai = $mapel->map(function ($pelajaran) use ($jadwalMapel, $peserta, $pengecualian, $siswa, $manual) {
                 $jadwal = $jadwalMapel->get($pelajaran->id, collect());
                 $hasil = ['nilai' => null, 'status' => 'Belum ada paket STS'];
+                $sumberNilai = null;
+                $komponenId = null;
                 $pesertaSiswa = null;
                 $dapatDikecualikan = false;
                 $sidikKondisi = null;
                 if ($jadwal->count() > 1) {
                     $hasil['status'] = 'Ada beberapa jadwal STS; periksa sumber nilai';
                 } elseif ($jadwal->count() === 1 && $ujian = $jadwal->first()->ujianCbt) {
+                    $sumberNilai = 'cbt';
                     $pesertaSiswa = $peserta->get($siswa->id, collect())->firstWhere('ujian_cbt_id', $ujian->id);
                     $hasil = $this->nilaiPeserta($ujian, $pesertaSiswa);
                     $dapatDikecualikan = $this->dapatDikecualikan($jadwal->first(), $pesertaSiswa);
                     $sidikKondisi = $this->sidikKondisi($jadwal->first(), $pesertaSiswa);
+                } elseif ($jadwal->isEmpty() && $m = $manual->get($pelajaran->id)) {
+                    $sumberNilai = 'manual';
+                    $komponenId = $m['komponen']?->id;
+                    $hasil = $this->nilaiManual($m['konteks'], $siswa->siswa_id);
                 }
                 $catatan = $pengecualian->get($siswa->id, collect())->firstWhere('mata_pelajaran_id', $pelajaran->id);
                 $dikecualikan = $dapatDikecualikan && $catatan?->aktif
@@ -108,6 +132,7 @@ class RaporStsService
                 }
 
                 return ['mapel' => $pelajaran, ...$hasil,
+                    'sumber_nilai' => $sumberNilai, 'komponen_nilai_id' => $komponenId,
                     'keterangan' => $dikecualikan ? 'Tidak mengikuti STS' : $this->keterangan($hasil['nilai']),
                     'dapat_dikecualikan' => $dapatDikecualikan, 'dikecualikan' => (bool) $dikecualikan,
                     'pengecualian' => $catatan, 'sidik_kondisi' => $sidikKondisi,
@@ -149,6 +174,23 @@ class RaporStsService
     public function sidikSumber(array $sumber): string
     {
         return hash('sha256', json_encode($sumber));
+    }
+
+    private function nilaiManual(?array $konteks, int $siswaId): array
+    {
+        if ($konteks === null) {
+            return ['nilai' => null, 'status' => 'Komponen STS manual perlu diperiksa'];
+        }
+        if (! $konteks['difinalisasi']) {
+            return ['nilai' => null, 'status' => $konteks['berubah']
+                ? 'Nilai STS manual berubah; finalisasi ulang'
+                : 'Nilai STS manual belum difinalisasi'];
+        }
+        $nilai = $konteks['nilai']->get($siswaId)?->nilai;
+
+        return $nilai !== null
+            ? ['nilai' => round((float) $nilai, 2), 'status' => 'Final manual']
+            : ['nilai' => null, 'status' => 'Belum ada nilai STS manual'];
     }
 
     private function dapatDikecualikan(JadwalUjianCbt $jadwal, ?PesertaUjianCbt $peserta): bool

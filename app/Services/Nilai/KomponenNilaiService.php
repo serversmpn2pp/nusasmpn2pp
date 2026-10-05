@@ -51,6 +51,9 @@ class KomponenNilaiService
                 'semester' => $komponen->semester,
             ];
             $komponen->update($data);
+            if ($komponen->wasChanged(array_keys($data))) {
+                $komponen->batalkanFinalisasiStsManual();
+            }
             $this->publikasiNilai->tandaiDraf(
                 $cakupanLama['guru_mata_pelajaran_id'],
                 $cakupanLama['semester'],
@@ -65,6 +68,7 @@ class KomponenNilaiService
 
         DB::transaction(function () use ($komponen) {
             $komponen->update(['aktif' => false]);
+            $komponen->batalkanFinalisasiStsManual();
             $this->tandaiPublikasiDraf($komponen);
         });
     }

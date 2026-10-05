@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
 use App\Models\RaporStsKelas;
+use App\Services\Nilai\MapelRaporStsService;
 use App\Services\Nilai\RaporStsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,8 +27,26 @@ class RaporStsController extends Controller
         $kelas = isset($data['kelas_id']) ? $daftarKelas->firstWhere('id', $data['kelas_id']) : $daftarKelas->first();
         abort_if(isset($data['kelas_id']) && ! $kelas, 404);
         $laporan = $kelas && $kegiatan ? $service->bangun($kegiatan, $kelas) : null;
+        $pilihanMapel = $laporan ? app(MapelRaporStsService::class)->konteks($kegiatan, (int) $kelas->tingkat) : null;
+        $dapatMengaturMapel = MapelRaporStsService::dapatMengatur($request->user());
 
-        return view('rapor-sts.index', compact('daftarKegiatan', 'daftarKelas', 'kegiatan', 'kelas', 'laporan'));
+        return view('rapor-sts.index', compact('daftarKegiatan', 'daftarKelas', 'kegiatan', 'kelas', 'laporan', 'pilihanMapel', 'dapatMengaturMapel'));
+    }
+
+    public function mapel(Request $request, KegiatanUjianCbt $kegiatan, Kelas $kelas, RaporStsService $rapor, MapelRaporStsService $service)
+    {
+        abort_unless(MapelRaporStsService::dapatMengatur($request->user()), 403);
+        $rapor->pastikanCakupan($request->user(), $kegiatan, $kelas);
+        $data = $request->validate([
+            'versi_mapel' => ['required', 'integer', 'min:0'],
+            'sidik_mapel' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/D'],
+            'mapel_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'mapel_ids.*' => ['required', 'integer', 'min:1', 'distinct'],
+            'alasan_mapel' => ['required', 'string', 'max:500', 'regex:/\S/'],
+        ]);
+        $service->simpan($request->user(), $kegiatan, (int) $kelas->tingkat, $data);
+
+        return $this->kembali($kegiatan, $kelas)->with('berhasil', 'Pilihan mapel STS disimpan untuk seluruh kelas tingkat '.$kelas->tingkat.'. Rapor, leger, statistik, dan ranking mengikuti pilihan yang sama.');
     }
 
     public function pengaturan(Request $request, KegiatanUjianCbt $kegiatan, Kelas $kelas, RaporStsService $service)

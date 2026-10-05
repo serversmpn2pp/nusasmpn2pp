@@ -10,6 +10,7 @@ use App\Models\Pengguna;
 use App\Models\PublikasiNilaiSiswa;
 use App\Models\TahunPelajaran;
 use App\Services\Nilai\InputNilaiService;
+use App\Services\Nilai\StsManualService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -82,6 +83,8 @@ class InputNilaiMobileService
                 'komponen_nilai_id' => $komponenDipilih?->id,
             ],
             'mode_penilaian' => $menggunakanPredikat ? 'predikat' : 'angka',
+            'sts_manual' => $komponenDipilih?->jenis_komponen === 'sts' && ! $menggunakanPredikat
+                ? app(StsManualService::class)->respons(app(StsManualService::class)->konteks($komponenDipilih, $anggotaKelas, $nilaiTersimpan)) : null,
             'opsi_predikat' => ['SB', 'B', 'C', 'K'],
             'hak_akses' => [
                 'dapat_input' => $pengguna->memilikiIzin('nilai.input'),
@@ -118,7 +121,7 @@ class InputNilaiMobileService
     ): Collection {
         return $this->inputNilai
             ->queryKomponenDalamCakupan($pengguna)
-            ->with('guruMataPelajaran.kelas:id,nama,tingkat')
+            ->with('guruMataPelajaran.kelas', 'guruMataPelajaran.mataPelajaran')
             ->where('guru_mata_pelajaran_id', $guruMataPelajaranId)
             ->where('semester', $semester)
             ->where('aktif', true)
