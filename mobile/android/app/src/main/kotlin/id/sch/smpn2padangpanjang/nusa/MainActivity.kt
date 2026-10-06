@@ -31,6 +31,18 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "id.sch.smpn2padangpanjang.nusa/push_notifications",
+        ).setMethodCallHandler { call, result ->
+            if (call.method == "clearNotifications") {
+                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                manager.cancelAll()
+                result.success(null)
+            } else {
+                result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, examSecurityChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

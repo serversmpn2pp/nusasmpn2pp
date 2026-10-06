@@ -51,6 +51,15 @@ class Pengguna extends Authenticatable
 
     protected static function booted(): void
     {
+        static::updated(function (Pengguna $pengguna) {
+            if (($pengguna->wasChanged('aktif') && ! $pengguna->aktif)
+                || ($pengguna->wasChanged('wajib_ganti_kata_sandi') && $pengguna->wajib_ganti_kata_sandi)) {
+                $pengguna->perangkatNotifikasiPush()
+                    ->where('aktif', true)
+                    ->update(['aktif' => false]);
+            }
+        });
+
         static::deleting(function (Pengguna $pengguna) {
             if ($pengguna->akun_sistem) {
                 throw new RuntimeException('Akun sistem tidak dapat dihapus.');

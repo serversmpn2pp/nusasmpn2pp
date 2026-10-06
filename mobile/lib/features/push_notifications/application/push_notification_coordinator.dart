@@ -1,151 +1,191 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nusa/app/app_keys.dart';
-import 'package:nusa/app/router.dart';
-import 'package:nusa/features/home/application/home_controller.dart';
-import 'package:nusa/features/home/data/home_repository.dart';
-import 'package:nusa/features/push_notifications/application/push_device_service.dart';
+import 'package:nusa/features/push_notifications/application/push_notification_runtime.dart';
+import 'package:nusa/features/push_notifications/data/push_notification_remote_data_source.dart';
 
 final class PushNotificationCoordinator {
-  PushNotificationCoordinator(this._ref);
+  PushNotificationCoordinator(this._runtime, this._remote);
 
-  final Ref _ref;
+  final PushNotificationRuntime _runtime;
+  final PushNotificationRemoteDataSource _remote;
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
   StreamSubscription<String>? _tokenSubscription;
+  Future<void>? _startFuture;
   RemoteMessage? _pendingMessage;
-  bool _started = false;
-  bool _authenticated = false;
+  int? _userId;
+  int _sessionVersion = 0;
+  bool _disposed = false;
+  final _opening = <(int, int)>{};
 
-  Future<void> start() async {
-    if (_started || !_ref.read(pushDeviceServiceProvider).available) return;
-    _started = true;
+  Future<void> start() => _startFuture ??= _start();
 
-    _foregroundSubscription = FirebaseMessaging.onMessage.listen(
-      _handleForegroundMessage,
+  Future<void> _start() async {
+    if (!_runtime.available || _disposed) return;
+    _foregroundSubscription = _runtime.foregroundMessages.listen(
+      (message) => unawaited(_handleForegroundMessage(message)),
     );
-    _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
-      _queueOrOpen,
+    _openedSubscription = _runtime.openedMessages.listen(_queueOrOpen);
+    _tokenSubscription = _runtime.tokenRefreshes.listen(
+      (token) => unawaited(_handleTokenRefresh(token)),
     );
-    _tokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
-      _handleTokenRefresh,
-    );
-
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) _queueOrOpen(initialMessage);
-  }
-
-  Future<void> authenticated() async {
-    _authenticated = true;
-    await start();
-    await _ref.read(pushDeviceServiceProvider).synchronizeCurrentDevice();
-
-    final pending = _pendingMessage;
-    if (pending != null) {
-      _pendingMessage = null;
-      await _open(pending);
+    try {
+      final message = await _runtime.initialMessage();
+      if (!_disposed && message != null) _queueOrOpen(message);
+    } catch (_) {
+      // No unverified navigation if Firebase cannot provide its initial message.
     }
   }
 
+  Future<void> authenticated(int userId) async {
+    if (_disposed || userId <= 0) return;
+    if (_userId != userId) {
+      if (_userId != null) {
+        _pendingMessage = null;
+        _clearNotifications();
+      }
+      _userId = userId;
+      _sessionVersion++;
+    }
+    final version = _sessionVersion;
+    await start();
+    if (!_current(version)) return;
+    try {
+      await _runtime.synchronizeDevice();
+    } catch (_) {
+      // Registration failure does not replace server ownership verification.
+    }
+    if (!_current(version)) return;
+    final pending = _pendingMessage;
+    _pendingMessage = null;
+    if (pending != null) await _open(pending);
+  }
+
   void loggedOut() {
-    _authenticated = false;
+    _userId = null;
+    _pendingMessage = null;
+    _sessionVersion++;
+    _clearNotifications();
+  }
+
+  void _clearNotifications() {
+    _runtime.hideForegroundNotification();
+    if (_runtime.available) unawaited(_clearDisplayedNotifications());
+  }
+
+  Future<void> _clearDisplayedNotifications() async {
+    try {
+      await _runtime.clearDisplayedNotifications();
+    } catch (_) {
+      // Offline/older Android builds must still be able to log out safely.
+    }
   }
 
   Future<void> dispose() async {
+    _disposed = true;
+    _pendingMessage = null;
+    _userId = null;
+    _sessionVersion++;
     await _foregroundSubscription?.cancel();
     await _openedSubscription?.cancel();
     await _tokenSubscription?.cancel();
   }
 
+  bool _current(int version) =>
+      !_disposed && _userId != null && _sessionVersion == version;
+
   void _queueOrOpen(RemoteMessage message) {
-    if (!_authenticated) {
+    if (_disposed) return;
+    if (_userId == null) {
+      // Cold start is deferred, but ownership will be checked by the API.
       _pendingMessage = message;
       return;
     }
-
     unawaited(_open(message));
   }
 
   Future<void> _handleTokenRefresh(String token) async {
-    if (!_authenticated) return;
-
+    if (_userId == null || _disposed) return;
     try {
-      await _ref.read(pushDeviceServiceProvider).synchronizeToken(token);
+      await _runtime.synchronizeToken(token);
     } catch (_) {
-      // Akan dicoba lagi ketika aplikasi dibuka atau token diperbarui berikutnya.
+      // Retry through the existing device registration flow.
     }
   }
 
-  void _handleForegroundMessage(RemoteMessage message) {
-    _ref.invalidate(homeControllerProvider);
+  int? _notificationId(RemoteMessage message) =>
+      int.tryParse(message.data['notifikasi_id']?.toString() ?? '');
 
-    final title = message.notification?.title ?? 'Notifikasi NUSA';
-    final body = message.notification?.body;
-    final destination = _destination(message);
-    final messenger = nusaScaffoldMessengerKey.currentState;
-
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(body == null || body.isEmpty ? title : '$title\n$body'),
-          action: SnackBarAction(
-            label: 'Buka',
-            onPressed: () => unawaited(_openDestination(message, destination)),
-          ),
-        ),
-      );
-  }
-
-  Future<void> _open(RemoteMessage message) {
-    return _openDestination(message, _destination(message));
-  }
-
-  Future<void> _openDestination(
+  Future<PushNotificationTarget?> _verify(
     RemoteMessage message,
-    String destination,
+    int version,
   ) async {
-    final notificationId = int.tryParse(message.data['notifikasi_id'] ?? '');
-
-    if (notificationId != null) {
-      try {
-        await _ref
-            .read(homeRepositoryProvider)
-            .markNotificationRead(notificationId);
-      } catch (_) {
-        // Navigasi tetap dilanjutkan; status baca dapat disinkronkan kemudian.
-      }
-    }
-
-    _ref.invalidate(homeControllerProvider);
-
+    if (!_current(version)) return null;
+    final id = _notificationId(message);
+    if (id == null || id <= 0) return null;
     try {
-      _ref.read(appRouterProvider).push(destination);
+      final target = await _remote.inspectNotification(id);
+      return _current(version) && target.id == id ? target : null;
     } catch (_) {
-      _ref.read(appRouterProvider).go('/beranda?tab=notifikasi');
+      // Fail closed for 401/403/404/428, offline, and malformed responses.
+      return null;
     }
   }
 
-  String _destination(RemoteMessage message) {
-    final destination = message.data['tujuan']?.trim();
+  Future<void> _handleForegroundMessage(RemoteMessage message) async {
+    final version = _sessionVersion;
+    if (await _verify(message, version) == null || !_current(version)) return;
+    _runtime.refreshInbox();
+    _runtime.showNotification(() async {
+      if (_current(version)) await _open(message);
+    });
+  }
 
+  Future<void> _open(RemoteMessage message) async {
+    final version = _sessionVersion;
+    final id = _notificationId(message);
+    if (id == null || !_current(version)) return;
+    final key = (version, id);
+    if (!_opening.add(key)) return;
+    try {
+      final target = await _verify(message, version);
+      if (target == null || !_current(version)) return;
+      await _remote.markNotificationRead(target.id);
+      if (!_current(version)) return;
+      _runtime.refreshInbox();
+      // The server's verified route wins; payload 'tujuan' is never trusted.
+      _runtime.openDestination(_destination(target.destination));
+    } catch (_) {
+      // A rejected read must not continue to navigation or mark another account.
+    } finally {
+      _opening.remove(key);
+    }
+  }
+
+  String _destination(String? value) {
+    final destination = value?.trim();
+    final uri = Uri.tryParse(destination ?? '');
     if (destination == null ||
-        destination.isEmpty ||
         !destination.startsWith('/') ||
-        destination.startsWith('//')) {
+        destination.startsWith('//') ||
+        destination.contains('\\') ||
+        uri == null ||
+        uri.hasScheme ||
+        uri.hasAuthority) {
       return '/beranda?tab=notifikasi';
     }
-
     return destination;
   }
 }
 
 final pushNotificationCoordinatorProvider =
     Provider<PushNotificationCoordinator>((ref) {
-      final coordinator = PushNotificationCoordinator(ref);
+      final coordinator = PushNotificationCoordinator(
+        ref.read(pushNotificationRuntimeProvider),
+        ref.read(pushNotificationRemoteDataSourceProvider),
+      );
       ref.onDispose(() => unawaited(coordinator.dispose()));
       return coordinator;
     });

@@ -165,6 +165,7 @@ import 'package:nusa/features/worship_recap/presentation/worship_correction_view
 import 'package:nusa/features/worship_recap/presentation/worship_recap_view.dart';
 
 abstract final class AppRoutes {
+  static const humas = '/humas';
   static const startup = '/startup';
   static const login = '/login';
   static const gantiKataSandi = '/ganti-kata-sandi';
@@ -364,7 +365,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(
-        path: '/humas',
+        path: AppRoutes.humas,
         builder: (context, state) => const HumasHubView(),
       ),
       for (final module in HumasModule.values)
@@ -1473,10 +1474,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.menuGroup,
         name: 'menu-group',
-        builder: (context, state) =>
+        redirect: (context, state) =>
             state.pathParameters['groupCode'] == 'humas'
-            ? const HumasHubView()
-            : MenuGroupView(groupCode: state.pathParameters['groupCode']!),
+            ? AppRoutes.humas
+            : null,
+        builder: (context, state) =>
+            MenuGroupView(groupCode: state.pathParameters['groupCode']!),
       ),
     ],
   );

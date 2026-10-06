@@ -164,6 +164,9 @@ Route::prefix('v1')
             ->name('notifikasi.perangkat.store');
         Route::delete('/notifikasi/perangkat', [PerangkatNotifikasiPushController::class, 'destroy'])
             ->name('notifikasi.perangkat.destroy');
+        Route::get('/notifikasi/{notifikasiPengguna}/tujuan', [NotifikasiController::class, 'tujuan'])
+            ->whereNumber('notifikasiPengguna')
+            ->name('notifikasi.tujuan');
 
         Route::get('/dashboard-sarpras', DashboardSarprasController::class)
             ->middleware('izin:barang.lihat,barang.kelola,barang.peminjaman_kelola')

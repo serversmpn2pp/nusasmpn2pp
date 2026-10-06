@@ -359,3 +359,49 @@ notifikasi (Android 13+), mendaftarkan token perangkat ke Laravel, memperbarui
 token jika berubah, serta menonaktifkannya saat logout. Notifikasi yang diketuk
 akan ditandai sudah dibaca dan diarahkan ke halaman native yang sesuai. Token
 yang dinyatakan `UNREGISTERED` oleh FCM dinonaktifkan otomatis.
+
+### Keamanan push dan pergantian akun
+
+Push sistem dan SnackBar memakai teks umum: **“Ada pembaruan di NUSA. Buka
+aplikasi untuk melihat detail.”** Nama siswa, nilai, saldo poin, sanksi, dan
+catatan privat tidak disalin dari database ke title/body FCM. Detail notifikasi
+di dalam NUSA tidak diubah. Android memakai visibility `PRIVATE` sebagai lapisan
+tambahan, bukan pengganti redaksi pesan.
+
+Sebelum menampilkan SnackBar atau membuka push, aplikasi memverifikasi ID ke
+`GET /api/v1/notifikasi/{id}/tujuan`. Endpoint ini memakai guard Sanctum,
+ability mobile, akun aktif, kewajiban ganti sandi, dan kepemilikan notifikasi;
+respons hanya berisi `data.id` dan `data.tautan_mobile`, tidak menandai baca,
+serta memakai `Cache-Control: private, no-store`. Setelah verifikasi, ketukan
+memakai endpoint baca yang sudah ada. Penolakan 401/403/404/428 atau gangguan
+server menghentikan alur; tujuan mentah dari payload FCM tidak digunakan.
+
+Logout/pergantian akun membuang pesan tertunda, menutup SnackBar, membersihkan
+notifikasi Android yang sudah tampil, dan membatalkan efek hasil async sesi
+lama. Cold start hanya boleh membuka notifikasi yang terverifikasi milik akun
+yang berhasil login. Gate ganti sandi juga menghentikan pemrosesan push.
+
+Worker memeriksa ulang status akun, kewajiban ganti sandi, status/umur perangkat,
+dan pemilik token sebelum pengiriman. Akun yang dicabut atau kembali wajib
+ganti sandi memiliki registrasi push yang dinonaktifkan. Pemeriksaan ini memakai
+kontrak identitas dan aturan sandi yang sudah ada, bukan inferensi dari role.
+
+Untuk menerapkan perubahan keamanan ini, deploy backend **lebih dahulu**, lalu
+jalankan `php artisan optimize:clear` dan `php artisan queue:restart`. Pastikan
+pengelola worker benar-benar menjalankan worker baru. Perubahan ini tidak
+menambahkan migrasi database atau memerlukan penggantian proyek/key Firebase.
+Build ulang dan pasang APK/AAB baru agar verifikasi tujuan, penjagaan sesi, dan
+pembersihan notifikasi ikut terpasang. Jika APK baru memakai backend lama yang
+belum menyediakan endpoint tujuan, alur push ditolak secara aman; notifikasi
+tetap dapat dibuka dari tab Notifikasi di aplikasi.
+
+Regression test utama:
+
+```powershell
+flutter test test/push_notification_security_test.dart --no-pub
+php -d memory_limit=1024M vendor/phpunit/phpunit/phpunit tests/Feature/FirebaseCloudMessagingTest.php tests/Feature/Api/NotifikasiApiTest.php tests/Feature/Api/PerangkatNotifikasiPushApiTest.php
+```
+
+Perintah Flutter dijalankan dari `mobile`, PHP dari root Laravel. Tes otomatis
+memakai Firebase/HTTP palsu; uji HP fisik tetap wajib untuk foreground,
+background, cold start, logout/login akun lain, dan perubahan status akun.

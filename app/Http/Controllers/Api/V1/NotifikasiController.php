@@ -4,11 +4,26 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\NotifikasiPengguna;
+use App\Services\Mobile\TujuanNotifikasiMobileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NotifikasiController extends Controller
 {
+    public function tujuan(
+        Request $request,
+        NotifikasiPengguna $notifikasiPengguna,
+        TujuanNotifikasiMobileService $tujuan,
+    ): JsonResponse {
+        abort_unless((int) $notifikasiPengguna->pengguna_id === (int) $request->user()->id, 403);
+
+        // Validasi push tidak menandai baca dan tidak mengembalikan teks privat.
+        return response()->json(['data' => [
+            'id' => (int) $notifikasiPengguna->id,
+            'tautan_mobile' => $tujuan->untuk($notifikasiPengguna),
+        ]])->header('Cache-Control', 'private, no-store');
+    }
+
     public function baca(Request $request, NotifikasiPengguna $notifikasiPengguna): JsonResponse
     {
         abort_unless(

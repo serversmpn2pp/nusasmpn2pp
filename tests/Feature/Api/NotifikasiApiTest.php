@@ -6,11 +6,46 @@ use App\Models\NotifikasiPengguna;
 use App\Models\Pengguna;
 use App\Services\Mobile\TujuanNotifikasiMobileService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class NotifikasiApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_tujuan_push_hanya_untuk_pemilik_tanpa_teks_privat_dan_tidak_menandai_baca(): void
+    {
+        $pengguna = Pengguna::where('username', 'administrator')->firstOrFail();
+        $notifikasi = $this->buatNotifikasi($pengguna, 'Nama siswa dan rincian privat');
+        $notifikasi->update(['tautan' => '/nilai-saya']);
+        $this->withToken($this->token($pengguna))
+            ->getJson(route('api.v1.notifikasi.tujuan', $notifikasi))
+            ->assertOk()->assertExactJson(['data' => [
+                'id' => $notifikasi->id, 'tautan_mobile' => '/nilai-saya',
+            ]])->assertHeader('Cache-Control', 'no-store, private');
+        $this->assertNull($notifikasi->fresh()->dibaca_pada);
+
+        Auth::forgetGuards();
+        $this->withToken($this->token($this->buatPengguna('akun-push-lain')))
+            ->getJson(route('api.v1.notifikasi.tujuan', $notifikasi))->assertForbidden();
+        $this->assertNull($notifikasi->fresh()->dibaca_pada);
+    }
+
+    public function test_tujuan_push_memerlukan_sesi_akun_aktif_dan_sandi_bukan_default(): void
+    {
+        $pengguna = $this->buatPengguna('akun-push-status');
+        $notifikasi = $this->buatNotifikasi($pengguna, 'Pesan status');
+        $url = route('api.v1.notifikasi.tujuan', $notifikasi);
+        $this->getJson($url)->assertUnauthorized();
+
+        $pengguna->update(['wajib_ganti_kata_sandi' => true]);
+        $token = $this->token($pengguna);
+        $this->withToken($token)->getJson($url)->assertStatus(428);
+
+        $pengguna->update(['wajib_ganti_kata_sandi' => false, 'aktif' => false]);
+        $this->withToken($token)->getJson($url)->assertUnauthorized();
+        $this->assertNull($notifikasi->fresh()->dibaca_pada);
+    }
 
     public function test_pengguna_dapat_menandai_notifikasi_miliknya_sudah_dibaca(): void
     {

@@ -7,8 +7,10 @@ import 'package:nusa/features/humas/data/humas_repository.dart';
 import 'package:nusa/features/humas/domain/humas.dart';
 import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
 import 'package:nusa/features/menu/application/menu_controller.dart';
-import 'package:nusa/features/menu/presentation/menu_visuals.dart';
+import 'package:nusa/features/menu/domain/menu_catalog.dart';
+import 'package:nusa/features/menu/presentation/widgets/menu_cards.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
+import 'package:nusa/shared/widgets/nusa_section_title.dart';
 
 class HumasHubView extends ConsumerStatefulWidget {
   const HumasHubView({super.key});
@@ -34,11 +36,13 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
     if (!mounted) return;
     final request = ++_request;
     final user = ref.read(authControllerProvider).value?.session?.pengguna;
-    if (user == null ||
-        humasParentUser(user) ||
-        humasStudentUser(user) ||
-        !(user.administrator || user.izin.contains('dashboard_humas.lihat'))) {
-      if (mounted) setState(() => _loading = false);
+    if (!humasCanViewDashboard(user)) {
+      setState(() {
+        _data = null;
+        _references = {};
+        _error = null;
+        _loading = false;
+      });
       return;
     }
     setState(() {
@@ -70,28 +74,56 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
     }
   }
 
+  Future<void> _refresh() async {
+    await Future.wait([
+      ref.read(menuControllerProvider.notifier).refresh(),
+      _load(),
+    ]);
+  }
+
+  Future<void> _openMenu(MenuEntry item) async {
+    final module = HumasModule.fromMenuCode(item.code);
+    final user = ref.read(authControllerProvider).value?.session?.pengguna;
+    if (module == null || !module.canOpen(user) || !item.isAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Menu ini belum tersedia untuk akun Anda. Muat ulang menu atau hubungi admin.',
+          ),
+        ),
+      );
+      return;
+    }
+    await context.push(module.route);
+    if (mounted) await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authControllerProvider).value?.session?.pengguna;
+    final canViewDashboard = humasCanViewDashboard(user);
     final menu = ref.watch(menuControllerProvider);
     final group = menu.value?.groupByCode('humas');
     final items =
-        group?.items.where((m) => m.code != 'dashboard-humas').toList() ?? [];
+        group?.items.where((item) {
+          final module = HumasModule.fromMenuCode(item.code);
+          return module != null && module.canOpen(user);
+        }).toList() ??
+        [];
     return Scaffold(
       appBar: AppBar(
         title: const Text('Humas'),
         actions: [
           IconButton(
-            onPressed: () {
-              ref.read(menuControllerProvider.notifier).refresh();
-              _load();
-            },
+            tooltip: 'Muat ulang Humas',
+            onPressed: _refresh,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: _refresh,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
@@ -105,51 +137,38 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
                 ),
               ),
               if (menu.isLoading) const LinearProgressIndicator(),
-              if (menu.hasError)
-                HumasErrorView(
-                  menu.error!,
-                  onRetry: () =>
-                      ref.read(menuControllerProvider.notifier).refresh(),
-                ),
-              LayoutBuilder(
-                builder: (context, constraints) => Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    for (final item in items)
-                      SizedBox(
-                        width: (constraints.maxWidth - 12) / 2,
-                        child: Card(
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () => context.push(item.route!),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    nusaMenuEntryIcon(item),
-                                    size: 30,
-                                    color: NusaColors.primary,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    item.label,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+              if (menu.hasError) HumasErrorView(menu.error!, onRetry: _refresh),
+              if (items.isNotEmpty) ...[
+                const NusaSectionTitle(title: 'Menu Humas'),
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = constraints.maxWidth < 340 ? 2 : 3;
+                    final textScale = MediaQuery.textScalerOf(context).scale(1);
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        mainAxisExtent: 132 * textScale.clamp(1.0, 2.0),
                       ),
-                  ],
+                      itemCount: items.length,
+                      itemBuilder: (context, index) => NusaMenuEntryCard(
+                        item: items[index],
+                        color: NusaColors.primary,
+                        onTap: () => _openMenu(items[index]),
+                      ),
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
+              ],
+              if (canViewDashboard) ...[
+                const NusaSectionTitle(title: 'Ringkasan Humas'),
+                const SizedBox(height: 12),
+              ],
               if (_references.isNotEmpty) ...[
                 NusaDropdownField<String>(
                   fieldKey: const Key('humas-dashboard-year'),
@@ -201,7 +220,10 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
                   ),
                 ),
               if (_error != null) HumasErrorView(_error!, onRetry: _load),
-              if (_data != null && !_loading) ...[
+              if (canViewDashboard &&
+                  _data != null &&
+                  !_loading &&
+                  _error == null) ...[
                 Text(
                   humasText(_data!['label_periode']),
                   style: const TextStyle(fontWeight: FontWeight.w700),
@@ -239,12 +261,18 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
                     title: humasText(agenda['judul']),
                     subtitle:
                         '${humasDate(agenda['waktu_mulai'])}\n${humasText(agenda['tempat'])}',
-                    onTap: () => context.push('/humas/agenda/${agenda['id']}'),
+                    onTap: () async {
+                      await context.push('/humas/agenda/${agenda['id']}');
+                      if (mounted) await _load();
+                    },
                   ),
                 if (humasItems(_data!['agenda']).isEmpty)
                   const Text('Tidak ada agenda mendatang pada periode ini.'),
               ],
-              if (items.isEmpty && !menu.isLoading && !menu.hasError)
+              if (!canViewDashboard &&
+                  items.isEmpty &&
+                  !menu.isLoading &&
+                  !menu.hasError)
                 const Text('Belum ada menu Humas untuk akun ini.'),
             ],
           ),

@@ -7,6 +7,12 @@ typedef HumasData = Map<String, dynamic>;
 bool humasParentUser(Pengguna? user) => user?.jenisAkun == 'Orang tua';
 bool humasStudentUser(Pengguna? user) => user?.jenisAkun == 'Siswa';
 
+bool humasCanViewDashboard(Pengguna? user) =>
+    user != null &&
+    !humasParentUser(user) &&
+    !humasStudentUser(user) &&
+    (user.administrator || user.izin.contains('dashboard_humas.lihat'));
+
 HumasData humasMap(Object? value) =>
     value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
 List<HumasData> humasItems(Object? value) => value is List
@@ -48,6 +54,23 @@ enum HumasModule {
   final String title;
   final String permission;
   String get route => '/humas/$path';
+  String get menuCode => switch (this) {
+    agenda => 'agenda-humas',
+    documents => 'dokumen-humas',
+    complaints => 'pengaduan-humas',
+    feedback => 'umpan-balik-humas',
+    invitations => 'pertemuan-saya',
+    myComplaints => 'pengaduan-saya',
+    myFeedback => 'umpan-balik-saya',
+  };
+
+  static HumasModule? fromMenuCode(String code) {
+    for (final module in values) {
+      if (module.menuCode == code) return module;
+    }
+    return null;
+  }
+
   bool get parentOnly => permission.isEmpty;
   bool canOpen(Pengguna? user) {
     if (user == null) return false;

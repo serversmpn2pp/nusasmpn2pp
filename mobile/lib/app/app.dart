@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/app/app_keys.dart';
 import 'package:nusa/app/router.dart';
 import 'package:nusa/core/theme/app_theme.dart';
+import 'package:nusa/core/security/password_change_gate.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/push_notifications/application/push_notification_coordinator.dart';
 
@@ -20,22 +21,31 @@ class _NusaAppState extends ConsumerState<NusaApp> {
   void initState() {
     super.initState();
 
-    ref.listenManual(authControllerProvider, (previous, next) {
-      final auth = next.value;
-      final session = auth?.session;
-      final coordinator = ref.read(pushNotificationCoordinatorProvider);
-
-      if (session == null ||
-          auth!.isSubmitting ||
-          session.pengguna.wajibGantiKataSandi) {
-        coordinator.loggedOut();
-        return;
-      }
-
-      unawaited(coordinator.authenticated());
-    }, fireImmediately: true);
+    ref.listenManual(
+      authControllerProvider,
+      (_, _) => _syncPushSession(),
+      fireImmediately: true,
+    );
+    ref.listenManual(passwordChangeGateProvider, (_, _) => _syncPushSession());
 
     unawaited(ref.read(pushNotificationCoordinatorProvider).start());
+  }
+
+  void _syncPushSession() {
+    final authAsync = ref.read(authControllerProvider);
+    final auth = authAsync.value;
+    final user = auth?.session?.pengguna;
+    final coordinator = ref.read(pushNotificationCoordinatorProvider);
+    if (authAsync.isLoading ||
+        authAsync.hasError ||
+        user == null ||
+        auth!.isSubmitting ||
+        user.wajibGantiKataSandi ||
+        ref.read(passwordChangeGateProvider)) {
+      coordinator.loggedOut();
+      return;
+    }
+    unawaited(coordinator.authenticated(user.id));
   }
 
   @override

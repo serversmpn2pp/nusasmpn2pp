@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart' hide MenuController;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nusa/app/router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
@@ -245,27 +246,176 @@ void main() {
   });
   test('kategori Humas langsung membuka ringkasan', () {
     expect(nusaMenuGroupDestination(_catalog.groups.single), '/humas');
+    for (final module in HumasModule.values) {
+      expect(HumasModule.fromMenuCode(module.menuCode), module);
+    }
+    expect(HumasModule.fromMenuCode('menu-tidak-dikenal'), isNull);
+    expect(humasCanViewDashboard(_staff), isTrue);
+    expect(humasCanViewDashboard(_parent), isFalse);
   });
-  testWidgets('dashboard 320px memiliki menu ikon dan ringkasan', (
+  testWidgets('tautan menu Humas lama diarahkan ke dashboard native', (
+    tester,
+  ) async {
+    final container = await _mount(
+      tester,
+      const SizedBox.shrink(),
+      _FakeRepo(),
+      _staff,
+      route: '/menu/humas',
+    );
+    expect(
+      container.read(appRouterProvider).routeInformationProvider.value.uri.path,
+      '/humas',
+    );
+    expect(find.byType(HumasHubView), findsOneWidget);
+    expect(find.text('Ringkasan Humas'), findsOneWidget);
+    expect(find.text('5 sub-menu · 5 tersedia'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+  for (final module in HumasModule.values) {
+    testWidgets('kartu ${module.menuCode} membuka daftar dan detail native', (
+      tester,
+    ) async {
+      final repo = _FakeRepo();
+      await _mount(
+        tester,
+        const SizedBox.shrink(),
+        repo,
+        module.parentOnly ? _parent : _staff,
+        route: '/humas',
+      );
+      final card = find.byKey(Key('menu-item-${module.menuCode}'));
+      await tester.ensureVisible(card);
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+      expect(find.byType(HumasListView), findsOneWidget);
+      expect(repo.paths, contains(module.path));
+      expect(
+        tester.widget<HumasListView>(find.byType(HumasListView)).module,
+        module,
+      );
+      await tester.ensureVisible(find.text('Pertemuan orang tua'));
+      await tester.tap(find.text('Pertemuan orang tua'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HumasDetailView), findsOneWidget);
+      expect(repo.paths, contains('${module.path}/4'));
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('ringkasan diperbarui setelah kembali dari submenu', (
     tester,
   ) async {
     final repo = _FakeRepo();
-    await _mount(
+    final container = await _mount(
       tester,
-      const HumasHubView(),
+      const SizedBox.shrink(),
       repo,
       _staff,
-      size: const Size(320, 640),
+      route: '/humas',
     );
-    expect(find.text('Agenda & Pertemuan'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('menu-item-agenda-humas')));
+    await tester.pumpAndSettle();
+    repo.dashboardValue = 8;
+    container.read(appRouterProvider).pop();
+    await tester.pumpAndSettle();
+    expect(repo.paths.where((path) => path == 'dashboard'), hasLength(2));
     await tester.scrollUntilVisible(
       find.text('Pertemuan selesai'),
       250,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('3'), findsOneWidget);
+    expect(find.text('8'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('tarik muat ulang memperbarui katalog dan ringkasan', (
+    tester,
+  ) async {
+    final repo = _FakeRepo();
+    final menu = _FakeMenu();
+    await _mount(tester, const HumasHubView(), repo, _staff, menu: menu);
+    final indicator = tester.widget<RefreshIndicator>(
+      find.byType(RefreshIndicator),
+    );
+    await indicator.onRefresh();
+    await tester.pumpAndSettle();
+    expect(menu.refreshCount, 1);
+    expect(repo.paths.where((path) => path == 'dashboard'), hasLength(2));
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('menu orang tua tidak menampilkan kartu atau ringkasan petugas', (
+    tester,
+  ) async {
+    final repo = _FakeRepo();
+    await _mount(tester, const HumasHubView(), repo, _parent);
+    expect(find.byKey(const Key('menu-item-pertemuan-saya')), findsOneWidget);
+    expect(find.byKey(const Key('menu-item-pengaduan-saya')), findsOneWidget);
+    expect(find.byKey(const Key('menu-item-umpan-balik-saya')), findsOneWidget);
+    expect(find.byKey(const Key('menu-item-agenda-humas')), findsNothing);
+    expect(find.text('Ringkasan Humas'), findsNothing);
+    expect(repo.paths, isEmpty);
+  });
+  testWidgets('kartu tanpa rute tidak menimbulkan error ketika ditekan', (
+    tester,
+  ) async {
+    const unavailable = MenuEntry(
+      code: 'dokumen-humas',
+      label: 'Pusat Dokumen Humas',
+      description: '',
+      initials: 'DH',
+      subgroup: null,
+      icon: null,
+      status: 'segera_hadir',
+      route: null,
+    );
+    final menu = _FakeMenu(
+      MenuCatalog(
+        generatedAt: _catalog.generatedAt,
+        itemCount: 1,
+        groups: [
+          _catalog.groups.single.copyWithItems([unavailable]),
+        ],
+      ),
+    );
+    await _mount(tester, const HumasHubView(), _FakeRepo(), _staff, menu: menu);
+    await tester.tap(find.byKey(const Key('menu-item-dokumen-humas')));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Menu ini belum tersedia untuk akun Anda.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+  for (final textScale in [1.0, 2.0]) {
+    testWidgets('dashboard 320px dengan skala teks $textScale tanpa overflow', (
+      tester,
+    ) async {
+      await _mount(
+        tester,
+        const HumasHubView(),
+        _FakeRepo(),
+        _staff,
+        size: const Size(320, 640),
+        textScale: textScale,
+      );
+      await tester.scrollUntilVisible(
+        find.text('Agenda & Pertemuan'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Agenda & Pertemuan'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Pertemuan selesai'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('3'), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).first, const Offset(0, 2000));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('pencarian menunggu 550ms dan tidak mengirim setiap huruf', (
     tester,
   ) async {
@@ -414,33 +564,43 @@ void main() {
   );
 }
 
-Future<void> _mount(
+Future<ProviderContainer> _mount(
   WidgetTester tester,
   Widget child,
   _FakeRepo repo,
   Pengguna user, {
   Size size = const Size(390, 780),
+  String? route,
+  _FakeMenu? menu,
+  double textScale = 1,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   final container = ProviderContainer(
     overrides: [
       authControllerProvider.overrideWith(() => _FakeAuth(user)),
       humasRepositoryProvider.overrideWithValue(repo),
-      menuControllerProvider.overrideWith(_FakeMenu.new),
+      menuControllerProvider.overrideWith(() => menu ?? _FakeMenu()),
+      splashGateProvider.overrideWith((ref) async {}),
     ],
   );
   await container.read(authControllerProvider.future);
+  await container.read(splashGateProvider.future);
   addTearDown(container.dispose);
+  final router = route == null ? null : container.read(appRouterProvider);
+  if (route != null) router!.go(route);
+  final app = route == null
+      ? MaterialApp(theme: AppTheme.light, home: child)
+      : MaterialApp.router(theme: AppTheme.light, routerConfig: router);
   await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(theme: AppTheme.light, home: child),
-    ),
+    UncontrolledProviderScope(container: container, child: app),
   );
   await tester.pumpAndSettle();
+  return container;
 }
 
 class _FakeAuth extends AuthController {
@@ -453,21 +613,29 @@ class _FakeAuth extends AuthController {
 }
 
 class _FakeMenu extends MenuController {
+  _FakeMenu([MenuCatalog? catalog]) : catalog = catalog ?? _catalog;
+  final MenuCatalog catalog;
+  int refreshCount = 0;
   @override
-  Future<MenuCatalog> build() async => _catalog;
+  Future<MenuCatalog> build() async => catalog;
+  @override
+  Future<void> refresh() async {
+    refreshCount++;
+    state = AsyncData(catalog);
+  }
 }
 
 final _catalog = MenuCatalog(
   generatedAt: DateTime(2026, 10, 5),
-  itemCount: 2,
+  itemCount: 8,
   groups: [
-    const MenuGroup(
+    MenuGroup(
       code: 'humas',
       label: 'Humas',
       description: '',
       icon: 'humas',
       items: [
-        MenuEntry(
+        const MenuEntry(
           code: 'dashboard-humas',
           label: 'Dashboard Humas',
           description: '',
@@ -477,16 +645,17 @@ final _catalog = MenuCatalog(
           status: 'tersedia',
           route: '/humas',
         ),
-        MenuEntry(
-          code: 'agenda-humas',
-          label: 'Agenda & Pertemuan',
-          description: '',
-          initials: 'AP',
-          subgroup: null,
-          icon: null,
-          status: 'tersedia',
-          route: '/humas/agenda',
-        ),
+        for (final module in HumasModule.values)
+          MenuEntry(
+            code: module.menuCode,
+            label: module.title,
+            description: '',
+            initials: '',
+            subgroup: null,
+            icon: null,
+            status: 'tersedia',
+            route: module.route,
+          ),
       ],
     ),
   ],
@@ -507,6 +676,7 @@ class _FakeRepo extends HumasRepository {
   bool failOnceSend = false;
   final sent = <HumasData>[];
   final sentForms = <FormData>[];
+  int dashboardValue = 3;
   @override
   Future<HumasData> send(
     String path,
@@ -545,7 +715,7 @@ class _FakeRepo extends HumasRepository {
         'metrik': {
           'agenda': {
             'label': 'Pertemuan selesai',
-            'jumlah': 3,
+            'jumlah': dashboardValue,
             'dasar': 'Periode aktif',
           },
         },
@@ -559,7 +729,13 @@ class _FakeRepo extends HumasRepository {
         pending[key] = Completer<HumasData>();
         return pending[key]!.future;
       }
-      return _list('Pertemuan orang tua');
+      final result = _list('Pertemuan orang tua');
+      if (path == 'pertemuan-saya') {
+        result['items'] = [
+          {'agenda': humasItems(result['items']).single, 'kehadiran': {}},
+        ];
+      }
+      return result;
     }
     final record = <String, dynamic>{
       'id': 4,

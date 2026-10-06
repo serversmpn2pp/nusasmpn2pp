@@ -2,7 +2,9 @@
 
 Base path: `/api/v1/humas`. Tersedia 70 endpoint (50 tahap pertama dan 20 dashboard/arsip),
 menggunakan tabel Humas yang sudah ada.
-Tidak ada migrasi baru untuk penambahan API ini. Layar/menu Android Humas belum ditambahkan.
+Tidak ada migrasi baru untuk penambahan API ini. Layar/menu Android Humas tersedia
+secara native; lihat `docs/mobile-humas.md` untuk cakupan fitur, hak akses, dan
+langkah pemasangan APK terbaru.
 
 ## Autentikasi Dan Akses
 

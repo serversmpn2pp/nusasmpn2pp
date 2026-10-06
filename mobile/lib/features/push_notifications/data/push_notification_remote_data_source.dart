@@ -3,7 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/network/api_exception_mapper.dart';
 import 'package:nusa/core/network/dio_provider.dart';
 
+final class PushNotificationTarget {
+  const PushNotificationTarget({required this.id, this.destination});
+  final int id;
+  final String? destination;
+}
+
 abstract interface class PushNotificationRemoteDataSource {
+  Future<PushNotificationTarget> inspectNotification(int notificationId);
+  Future<void> markNotificationRead(int notificationId);
+
   Future<void> registerDevice({
     required String token,
     required String platform,
@@ -18,6 +27,34 @@ final class DioPushNotificationRemoteDataSource
   DioPushNotificationRemoteDataSource(this._dio);
 
   final Dio _dio;
+
+  @override
+  Future<PushNotificationTarget> inspectNotification(int notificationId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        'notifikasi/$notificationId/tujuan',
+      );
+      final data = response.data?['data'];
+      if (data is! Map || data['id'] != notificationId) {
+        throw const FormatException('Respons tujuan notifikasi tidak valid.');
+      }
+      return PushNotificationTarget(
+        id: notificationId,
+        destination: data['tautan_mobile'] as String?,
+      );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<void> markNotificationRead(int notificationId) async {
+    try {
+      await _dio.patch<void>('notifikasi/$notificationId/baca');
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
 
   @override
   Future<void> registerDevice({

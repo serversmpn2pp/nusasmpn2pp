@@ -7,7 +7,6 @@ use App\Models\NotifikasiPengguna;
 use App\Services\Mobile\TujuanNotifikasiMobileService;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use RuntimeException;
 
 class FirebaseCloudMessagingService
@@ -56,8 +55,10 @@ class FirebaseCloudMessagingService
         return [
             'token' => $tokenPerangkat,
             'notification' => [
-                'title' => Str::limit(strip_tags($notifikasi->judul), 120),
-                'body' => Str::limit(strip_tags($notifikasi->pesan), 500),
+                // Fail closed untuk semua jenis, termasuk modul baru dan job lama.
+                // Rincian hanya boleh dibaca di NUSA melalui sesi/izin API.
+                'title' => 'NUSA',
+                'body' => 'Ada pembaruan di NUSA. Buka aplikasi untuk melihat detail.',
             ],
             'data' => [
                 'notifikasi_id' => (string) $notifikasi->id,
@@ -70,6 +71,7 @@ class FirebaseCloudMessagingService
                 'notification' => [
                     'channel_id' => 'nusa_notifications',
                     'sound' => 'default',
+                    'visibility' => 'PRIVATE',
                 ],
             ],
         ];

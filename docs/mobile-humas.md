@@ -90,6 +90,23 @@ php artisan optimize:clear
 Jangan menjalankan ulang seluruh seeder di server produksi hanya untuk menu.
 Bangun/pasang APK baru dari komputer pengembang agar halaman Flutter tersedia.
 API dan konfigurasi menu juga harus sudah terpasang di server yang dipilih.
+
+### Pembukaan dan penyegaran menu native
+
+Kategori Humas dan tautan lama `/menu/humas` membuka dashboard yang sama
+di `/humas`. Dashboard tidak lagi menjadi kartu perantara; ringkasannya
+langsung tampil bersama menu Agenda, Dokumen, Pengaduan, dan Umpan Balik.
+Kartu menggunakan komponen dan ikon NUSA yang sama dengan menu lain.
+Kode kartu dipetakan ke modul native dan diperiksa lagi terhadap identitas
+serta izin akun. Kartu tanpa rute/berstatus belum tersedia tidak menyebabkan
+crash. Tarik muat ulang dan tombol refresh memperbarui katalog serta ringkasan;
+ringkasan juga diperbarui setelah pengguna kembali dari submenu.
+
+Tes widget memakai router aplikasi untuk memverifikasi klik semua kartu
+petugas/orang tua sampai daftar dan detail, pengalihan tautan lama, penyegaran,
+serta pemisahan menu petugas dan orang tua. Perubahan penyegaran/menu ini
+tidak menambah migrasi atau mengubah API/backend.
+
 Uji dengan petugas Humas, petugas penanganan yang ditugaskan, serta dua akun
 orang tua berbeda. Uji kamera QR dan unggah/unduh di HP sungguhan; tes widget
 tidak membuktikan perilaku kamera/izin penyimpanan setiap perangkat.
