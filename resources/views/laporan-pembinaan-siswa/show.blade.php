@@ -6,6 +6,7 @@
     @php
         $teks = fn (mixed $value) => filled($value) ? $value : '-';
         $pengguna = auth()->user();
+        $bolehKoreksiPoinPresensi = app(\App\Services\Pembinaan\AksesLaporanPembinaanService::class)->bolehKoreksiPoinPresensi($pengguna, $laporanPembinaanSiswa);
         $statusFinal = in_array($laporanPembinaanSiswa->status_verifikasi, ['disahkan','ditetapkan_pembinaan','tidak_terbukti','dibatalkan'], true);
         $menungguPengesahanWakil = in_array($laporanPembinaanSiswa->status_verifikasi, \App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_WAKIL, true);
         $dalamAntreanBk = in_array($laporanPembinaanSiswa->status_verifikasi, \App\Services\Pembinaan\AntreanVerifikasiPelanggaranService::STATUS_BK, true);
@@ -79,7 +80,9 @@
     @if($modeBacaBk)
         <div class="alert"><strong>Mode lihat saja.</strong> Laporan siswa tingkat {{ $laporanPembinaanSiswa->kelas?->tingkat ?: '-' }} ini ditangani Guru BK tingkat lain. Anda tetap dapat melihat seluruh perkembangan, tetapi tidak dapat mengubah atau memprosesnya.</div>
     @endif
-    @if($laporanPembinaanSiswa->berasalDariAbsensi())
+    @if($laporanPembinaanSiswa->kunci_presensi_otomatis)
+        <div class="alert"><strong>Poin presensi otomatis.</strong> {{ $laporanPembinaanSiswa->jenis_presensi_otomatis === 'alfa' ? 'Alfa setelah hari sekolah berakhir.' : 'Terlambat melewati jam masuk.' }} Tidak menunggu persetujuan Wakil Kesiswaan.</div>
+    @elseif($laporanPembinaanSiswa->berasalDariAbsensi())
         <div class="alert"><strong>Laporan otomatis dari presensi.</strong> Tercatat terlambat {{ $laporanPembinaanSiswa->menit_terlambat_tercatat }} menit. Perubahan waktu dilakukan melalui koreksi rekap presensi.</div>
     @endif
     @if($laporanMirip->isNotEmpty())
@@ -97,7 +100,16 @@
         <aside class="panel panel-pad">
             <div class="detail-profile"><div class="avatar avatar-lg">{{ str($laporanPembinaanSiswa->siswa?->nama_lengkap)->substr(0,2)->upper() }}</div><h2>{{ $laporanPembinaanSiswa->siswa?->nama_lengkap }}</h2><p>NISN {{ $laporanPembinaanSiswa->siswa?->nisn ?: '-' }}</p></div>
             <dl class="quick-facts" style="margin-top:20px"><div><dt>Kelas</dt><dd>{{ $laporanPembinaanSiswa->kelas?->nama ?: '-' }}</dd></div><div><dt>Tahun</dt><dd>{{ $laporanPembinaanSiswa->tahunPelajaran?->nama ?: '-' }}</dd></div><div><dt>Wali kelas</dt><dd>{{ $laporanPembinaanSiswa->waliKelasPegawai?->nama_lengkap ?: 'Belum ditentukan' }}</dd></div><div><dt>Guru wali</dt><dd>{{ $laporanPembinaanSiswa->guruWaliPegawai?->nama_lengkap ?: 'Belum ditugaskan' }}</dd></div></dl>
-            @izin('bk.kelola')@if($bolehMengubahLaporan && $laporanPembinaanSiswa->status!=='dibatalkan' && !$menungguPengesahanWakil)<form action="{{ route('laporan-pembinaan-siswa.destroy',$laporanPembinaanSiswa) }}" method="POST" style="margin-top:20px" onsubmit="return confirm('Batalkan laporan dan koreksi poinnya?')">@csrf @method('DELETE')<button class="button button-danger button-full">Batalkan laporan</button></form>@endif @endizin
+            @if($bolehKoreksiPoinPresensi && !$laporanPembinaanSiswa->poin_dikecualikan_pada)
+                <form method="POST" action="{{ route('poin-presensi.koreksi', $laporanPembinaanSiswa) }}" style="border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px;" onsubmit="return confirm('Terima alasan siswa dan batalkan poin kejadian ini?')">
+                    @csrf
+                    <div class="field"><label for="alasan-poin">Alasan koreksi poin</label><textarea id="alasan-poin" class="textarea" name="alasan" rows="3" maxlength="2000" required>{{ old('alasan') }}</textarea></div>
+                    <button class="button button-muted button-full" style="margin-top:12px;">Terima alasan dan batalkan poin</button>
+                </form>
+            @elseif($laporanPembinaanSiswa->poin_dikecualikan_pada)
+                <p class="help-text">Alasan diterima pada {{ $laporanPembinaanSiswa->poin_dikecualikan_pada->format('d/m/Y H:i') }}.</p>
+            @endif
+            @izin('bk.kelola')@if(!$laporanPembinaanSiswa->kunci_presensi_otomatis && $bolehMengubahLaporan && $laporanPembinaanSiswa->status!=='dibatalkan' && !$menungguPengesahanWakil)<form action="{{ route('laporan-pembinaan-siswa.destroy',$laporanPembinaanSiswa) }}" method="POST" style="margin-top:20px" onsubmit="return confirm('Batalkan laporan dan koreksi poinnya?')">@csrf @method('DELETE')<button class="button button-danger button-full">Batalkan laporan</button></form>@endif @endizin
         </aside>
 
         <div class="section-stack">

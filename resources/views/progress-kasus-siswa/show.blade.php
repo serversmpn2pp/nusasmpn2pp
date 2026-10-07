@@ -67,7 +67,7 @@
                             </div>
                             <div class="case-info">
                                 <span>Sumber</span>
-                                <strong>{{ $laporan->berasalDariAbsensi() ? 'Presensi keterlambatan' : 'Laporan pegawai' }}</strong>
+                                <strong>{{ $laporan->berasalDariAbsensi() ? 'Presensi siswa' : 'Laporan pegawai' }}</strong>
                             </div>
                         </div>
                         <div class="case-narrative">{{ $laporan->kronologi }}</div>

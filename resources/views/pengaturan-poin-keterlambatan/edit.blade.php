@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Atur Poin Keterlambatan - NUSA')
+@section('title', 'Atur Poin Presensi - NUSA')
 
 @section('content')
     @php
@@ -31,7 +31,7 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">Kesiswaan & BK</p>
-            <h1 class="page-title">Atur poin keterlambatan</h1>
+            <h1 class="page-title">Atur poin presensi</h1>
             <p class="page-subtitle">Tahun pelajaran {{ $tahunPelajaran->nama }}</p>
         </div>
         <a href="{{ route('pengaturan-poin-keterlambatan.index') }}" class="button button-muted">Kembali</a>
@@ -51,17 +51,33 @@
         <section class="panel panel-pad">
             <div class="late-settings-head">
                 <div>
-                    <h2 class="panel-title">Otomatisasi laporan</h2>
-                    <p class="help-text">Laporan keterlambatan tetap menunggu keputusan BK sebelum poin ditetapkan.</p>
+                    <h2 class="panel-title">Otomatisasi presensi</h2>
                 </div>
                 <label class="late-toggle">
                     <input type="checkbox" name="aktif" value="1" @checked(old('aktif', $pengaturan->aktif))>
-                    <span><strong>Aktif</strong><span class="help-text">Gunakan aturan ini pada rekap presensi.</span></span>
+                    <span><strong>Aktif</strong></span>
                 </label>
             </div>
         </section>
 
         <section class="panel panel-pad" style="margin-top: 18px;">
+            <input type="hidden" name="otomatis_langsung" value="0">
+            <label class="late-toggle" for="otomatis_langsung">
+                <input id="otomatis_langsung" type="checkbox" name="otomatis_langsung" value="1" @checked(old('otomatis_langsung', $pengaturan->otomatis_langsung))>
+                <span><strong>Poin langsung tanpa persetujuan</strong></span>
+            </label>
+            <dl class="quick-facts" style="margin: 16px 0;">
+                <div><dt>Tanggal aktivasi</dt><dd>{{ $pengaturan->berlaku_mulai?->format('d/m/Y') ?? 'Tanggal penyimpanan pertama' }}</dd></div>
+                <div><dt>Batas keterlambatan</dt><dd>Mulai 1 detik setelah jam masuk</dd></div>
+                <div><dt>Penetapan alfa</dt><dd>Setelah hari sekolah berakhir</dd></div>
+            </dl>
+            <div class="form-grid">
+                <div class="field"><label for="poin_terlambat">Poin terlambat per kejadian</label><input id="poin_terlambat" class="input" name="poin_terlambat" type="number" min="1" max="500" value="{{ old('poin_terlambat', $pengaturan->poin_terlambat ?? 15) }}" required></div>
+                <div class="field"><label for="poin_alfa">Poin alfa per hari</label><input id="poin_alfa" class="input" name="poin_alfa" type="number" min="1" max="500" value="{{ old('poin_alfa', $pengaturan->poin_alfa ?? 25) }}" required></div>
+            </div>
+        </section>
+
+        <section class="panel panel-pad" id="legacy-late-settings" style="margin-top: 18px;">
             <h2 class="panel-title">Rentang menit dan poin</h2>
             <p class="help-text">Gunakan 0 poin sebagai toleransi. Rentang terakhir tidak memiliki batas akhir.</p>
 
@@ -112,6 +128,11 @@
             const container = document.getElementById('late-rules');
             const template = document.getElementById('late-rule-template');
             const addButton = document.getElementById('add-late-rule');
+            const mode = document.getElementById('otomatis_langsung');
+            const legacy = document.getElementById('legacy-late-settings');
+            const syncMode = () => { legacy.hidden = mode.checked; };
+            mode.addEventListener('change', syncMode);
+            syncMode();
 
             const reindex = () => {
                 const rows = [...container.querySelectorAll('[data-late-row]')];

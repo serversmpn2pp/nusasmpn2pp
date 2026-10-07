@@ -34,6 +34,9 @@
         ];
         $statusPoinKeterlambatan = function ($absensi, $laporan): array {
             if ($laporan) {
+                if ($laporan->kunci_presensi_otomatis && $laporan->status_verifikasi === 'disahkan') {
+                    return ['Poin otomatis', 'badge badge-active'];
+                }
                 return match ($laporan->status_verifikasi) {
                     'diajukan', 'pemeriksaan_bk', 'perlu_klarifikasi', 'dikembalikan_bk' => ['Menunggu BK', 'badge badge-warning'],
                     'menunggu_pengesahan_wakil' => ['Menunggu Wakil Kesiswaan', 'badge badge-warning'],
@@ -47,6 +50,7 @@
             }
 
             return match ($absensi?->status_poin_keterlambatan) {
+                'pengecualian_presensi' => ['Pengecualian presensi', 'badge badge-muted'],
                 'toleransi' => ['Toleransi 0 poin', 'badge badge-muted'],
                 'otomatis_nonaktif' => ['Otomatis nonaktif', 'badge badge-muted'],
                 'laporan_dibatalkan' => ['Dibatalkan', 'badge badge-muted'],

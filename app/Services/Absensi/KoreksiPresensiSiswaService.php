@@ -4,9 +4,12 @@ namespace App\Services\Absensi;
 
 use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
+use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
 use App\Models\Pengguna;
 use App\Models\RiwayatPerubahanAbsensiSiswa;
+use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
+use App\Services\Pembinaan\PoinPresensiOtomatisService;
 use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -79,8 +82,15 @@ class KoreksiPresensiSiswaService
         abort_unless($akses['dapat'], 403, $akses['alasan']);
 
         $this->pastikanDataValid($data, $akses['terbatas_hari_ini']);
+        $ketat = app(PengaturanPoinKeterlambatanService::class)->langsungPada($anggotaKelas->tahun_pelajaran_id, $tanggal);
+        $adaPoin = LaporanPembinaanSiswa::where('siswa_id', $anggotaKelas->siswa_id)
+            ->where('tahun_pelajaran_id', $anggotaKelas->tahun_pelajaran_id)->whereDate('tanggal_kejadian', $tanggal)
+            ->whereNotNull('kunci_presensi_otomatis')->exists();
+        if (($ketat || $adaPoin) && blank($data['catatan'] ?? null)) {
+            throw ValidationException::withMessages(['catatan' => 'Alasan koreksi presensi berpoin wajib diisi.']);
+        }
 
-        $absensi = DB::transaction(function () use ($pengguna, $anggotaKelas, $data, $tanggal) {
+        $absensi = DB::transaction(function () use ($pengguna, $anggotaKelas, $data, $tanggal, $ketat) {
             $pengaturan = $this->ambilPengaturan($tanggal);
             $status = $data['status_kehadiran'];
             $jamMasuk = $status === 'hadir' ? ($data['jam_masuk'] ?? null) : null;
@@ -91,7 +101,7 @@ class KoreksiPresensiSiswaService
             $menitPulangCepat = 0;
 
             if ($status === 'hadir') {
-                [$statusMasuk, $menitTerlambat] = $this->hitungStatusMasuk($jamMasuk, $pengaturan);
+                [$statusMasuk, $menitTerlambat] = $this->hitungStatusMasuk($jamMasuk, $pengaturan, $ketat);
                 [$statusPulang, $menitPulangCepat] = $this->hitungStatusPulang(
                     $jamPulang,
                     $pengaturan,
@@ -139,7 +149,11 @@ class KoreksiPresensiSiswaService
             return $absensi->refresh();
         });
 
-        $this->prosesPoinKeterlambatan->sinkronkanAbsensi($absensi, $pengguna->id);
+        if ($ketat || $adaPoin) {
+            app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($absensi, $pengguna->id);
+        } else {
+            $this->prosesPoinKeterlambatan->sinkronkanAbsensi($absensi, $pengguna->id);
+        }
 
         return $absensi->refresh();
     }
@@ -167,7 +181,7 @@ class KoreksiPresensiSiswaService
         return PengaturanAbsensi::query()->where('hari', $hari)->where('aktif', true)->first();
     }
 
-    private function hitungStatusMasuk(?string $jam, ?PengaturanAbsensi $pengaturan): array
+    private function hitungStatusMasuk(?string $jam, ?PengaturanAbsensi $pengaturan, bool $ketat = false): array
     {
         if (! $jam) {
             return [null, 0];
@@ -175,7 +189,7 @@ class KoreksiPresensiSiswaService
         if (! $pengaturan) {
             return ['manual', 0];
         }
-        $terlambat = max(0, $this->menit($jam) - $this->menit($pengaturan->formatJam($pengaturan->jam_masuk)));
+        $terlambat = app(HitungKeterlambatanSiswaService::class)->menit($jam, $pengaturan->jam_masuk, $ketat);
 
         return [$terlambat > 0 ? 'terlambat' : 'tepat_waktu', $terlambat];
     }

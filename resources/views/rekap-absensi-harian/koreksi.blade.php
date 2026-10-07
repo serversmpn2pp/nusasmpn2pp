@@ -112,7 +112,7 @@
 
                     <div class="field">
                         <label for="jam_masuk">Jam masuk</label>
-                        <input id="jam_masuk" type="time" name="jam_masuk" value="{{ old('jam_masuk', $formatJam($absensi?->jam_masuk)) }}" class="input @error('jam_masuk') is-invalid @enderror">
+                        <input id="jam_masuk" type="time" step="1" name="jam_masuk" value="{{ old('jam_masuk', $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 8) : '') }}" class="input @error('jam_masuk') is-invalid @enderror">
                         <p class="help-text">Wajib diisi jika status hadir.</p>
                         @error('jam_masuk')
                             <p class="error-text">{{ $message }}</p>
@@ -121,7 +121,7 @@
 
                     <div class="field">
                         <label for="jam_pulang">Jam pulang</label>
-                        <input id="jam_pulang" type="time" name="jam_pulang" value="{{ old('jam_pulang', $formatJam($absensi?->jam_pulang)) }}" class="input @error('jam_pulang') is-invalid @enderror">
+                        <input id="jam_pulang" type="time" step="1" name="jam_pulang" value="{{ old('jam_pulang', $absensi?->jam_pulang ? substr($absensi->jam_pulang, 0, 8) : '') }}" class="input @error('jam_pulang') is-invalid @enderror">
                         <p class="help-text">Boleh dikosongkan jika siswa belum scan pulang.</p>
                         @error('jam_pulang')
                             <p class="error-text">{{ $message }}</p>

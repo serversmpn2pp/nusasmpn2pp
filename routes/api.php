@@ -113,6 +113,7 @@ use App\Http\Controllers\Api\V1\TugasPengawasUjianController;
 use App\Http\Controllers\Api\V1\UjianAnakController;
 use App\Http\Controllers\Api\V1\UjianSayaController;
 use App\Http\Controllers\Api\V1\UnitBarangController;
+use App\Http\Controllers\KoreksiPoinPresensiController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use Illuminate\Support\Facades\Route;
 
@@ -1184,6 +1185,9 @@ Route::prefix('v1')
         Route::put('/pengaturan-poin-keterlambatan/{tahunPelajaran}', [PengaturanPoinKeterlambatanController::class, 'update'])
             ->middleware('izin:poin_siswa.pengaturan')
             ->name('pengaturan-poin-keterlambatan.update');
+        Route::post('/poin-presensi/{laporanPembinaanSiswa}/koreksi', [KoreksiPoinPresensiController::class, 'store'])
+            ->middleware('izin:poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil')
+            ->name('poin-presensi.koreksi');
 
         Route::get('/pengaturan-peringatan-dini-poin', [PengaturanPeringatanDiniPoinController::class, 'index'])
             ->middleware('izin:poin_siswa.pengaturan')

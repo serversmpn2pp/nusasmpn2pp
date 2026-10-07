@@ -132,8 +132,8 @@ class RekapAbsensiHarianController extends Controller
         $data = $request->validate([
             'tanggal' => ['required', 'date'],
             'status_kehadiran' => ['required', Rule::in(['hadir', 'izin', 'sakit', 'alfa'])],
-            'jam_masuk' => ['nullable', 'date_format:H:i'],
-            'jam_pulang' => ['nullable', 'date_format:H:i'],
+            'jam_masuk' => ['nullable', 'date_format:H:i,H:i:s'],
+            'jam_pulang' => ['nullable', 'date_format:H:i,H:i:s'],
             'catatan' => [$koreksiHariIniTerbatas ? 'required' : 'nullable', 'string', 'max:2000'],
         ], [
             'catatan.required' => 'Catatan koreksi wajib diisi oleh Guru PL.',
@@ -239,11 +239,14 @@ class RekapAbsensiHarianController extends Controller
             ->get()
             ->groupBy('absensi_siswa_id')
             ->map(fn ($items) => $items->first(fn ($item) => $item->status_verifikasi !== 'dibatalkan') ?? $items->first());
+        $poinPresensi = LaporanPembinaanSiswa::where('tahun_pelajaran_id', $tahunPelajaranId)
+            ->whereDate('tanggal_kejadian', $tanggal)->whereNotNull('kunci_presensi_otomatis')
+            ->whereIn('siswa_id', $anggotaKelas->pluck('siswa_id'))->get()->keyBy('siswa_id');
 
         $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
         $hariAktif = $aturanAlfa->hariAktif();
 
-        return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($absensiPerAnggota, $absensiPerSiswa, $laporanPerAbsensi, $tanggal, $aturanAlfa, $hariAktif) {
+        return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($absensiPerAnggota, $absensiPerSiswa, $laporanPerAbsensi, $poinPresensi, $tanggal, $aturanAlfa, $hariAktif) {
             $absen = $absensiPerAnggota->get($anggota->id) ?? $absensiPerSiswa->get($anggota->siswa_id);
             $alfaOtomatis = ! $absen && $aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggota);
             $pengecualian = $aturanAlfa->pengecualianPada($tanggal, $anggota);
@@ -252,7 +255,7 @@ class RekapAbsensiHarianController extends Controller
             return [
                 'anggota_kelas' => $anggota,
                 'absensi' => $absen,
-                'laporan_keterlambatan' => $absen ? $laporanPerAbsensi->get($absen->id) : null,
+                'laporan_keterlambatan' => $poinPresensi->get($anggota->siswa_id) ?? ($absen ? $laporanPerAbsensi->get($absen->id) : null),
                 'status_kehadiran' => $statusKehadiran,
                 'status_sumber' => $absen ? 'catatan' : ($pengecualian ? 'pengecualian' : ($alfaOtomatis ? 'otomatis' : 'inferensi')),
                 'pengecualian' => $pengecualian,

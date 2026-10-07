@@ -61,6 +61,14 @@ class AksesLaporanPembinaanService
             && $this->penugasanBk->bolehMemproses($pengguna, $laporan);
     }
 
+    public function bolehKoreksiPoinPresensi(?Pengguna $pengguna, LaporanPembinaanSiswa $laporan): bool
+    {
+        return (bool) ($laporan->kunci_presensi_otomatis && $pengguna?->aktif
+            && ! $pengguna->akunSiswa() && ! $pengguna->akunOrangTua()
+            && $pengguna->memilikiIzin(['poin_siswa.verifikasi_bk', 'poin_siswa.sahkan_wakil'])
+            && $this->bolehMemprosesBk($pengguna, $laporan));
+    }
+
     public function modeBacaBk(?Pengguna $pengguna, LaporanPembinaanSiswa $laporan): bool
     {
         return $this->bolehLihat($pengguna, $laporan)

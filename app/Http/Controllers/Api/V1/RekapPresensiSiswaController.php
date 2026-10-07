@@ -57,8 +57,8 @@ class RekapPresensiSiswaController extends Controller
         $data = $request->validate([
             'tanggal' => ['required', 'date'],
             'status_kehadiran' => ['required', Rule::in(['hadir', 'izin', 'sakit', 'alfa'])],
-            'jam_masuk' => ['nullable', 'date_format:H:i'],
-            'jam_pulang' => ['nullable', 'date_format:H:i'],
+            'jam_masuk' => ['nullable', 'date_format:H:i,H:i:s'],
+            'jam_pulang' => ['nullable', 'date_format:H:i,H:i:s'],
             'catatan' => ['required', 'string', 'min:3', 'max:2000'],
         ]);
         $absensi = $service->koreksi($request->user(), $anggotaKelas, $data);

@@ -62,6 +62,9 @@ class LaporanPembinaanSiswa extends Model
         'rentang_poin_keterlambatan_id',
         'menit_terlambat_tercatat',
         'diproses_otomatis_pada',
+        'kunci_presensi_otomatis',
+        'jenis_presensi_otomatis',
+        'poin_dikecualikan_pada',
         'pelapor_pegawai_id',
         'wali_kelas_pegawai_id',
         'guru_wali_pegawai_id',
@@ -89,6 +92,7 @@ class LaporanPembinaanSiswa extends Model
         'rentang_poin_keterlambatan_id' => 'integer',
         'menit_terlambat_tercatat' => 'integer',
         'diproses_otomatis_pada' => 'datetime',
+        'poin_dikecualikan_pada' => 'datetime',
         'pelapor_pegawai_id' => 'integer',
         'wali_kelas_pegawai_id' => 'integer',
         'guru_wali_pegawai_id' => 'integer',
@@ -215,6 +219,10 @@ class LaporanPembinaanSiswa extends Model
 
     public function labelStatusVerifikasi(): string
     {
+        if ($this->kunci_presensi_otomatis && $this->status_verifikasi === 'disahkan') {
+            return 'Poin otomatis';
+        }
+
         return self::DAFTAR_STATUS_VERIFIKASI[$this->status_verifikasi] ?? str($this->status_verifikasi)->headline()->toString();
     }
 

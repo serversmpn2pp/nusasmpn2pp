@@ -5,6 +5,7 @@ namespace App\Services\Mobile;
 use App\Models\PengaturanPoinKeterlambatan;
 use App\Models\RentangPoinKeterlambatan;
 use App\Models\TahunPelajaran;
+use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -72,6 +73,7 @@ class PengaturanPoinKeterlambatanMobileService
         $this->pastikanRentangValid($rentang);
 
         DB::transaction(function () use ($tahun, $data, $penggunaId, $rentang) {
+            TahunPelajaran::lockForUpdate()->findOrFail($tahun->id);
             $pengaturan = PengaturanPoinKeterlambatan::updateOrCreate(
                 ['tahun_pelajaran_id' => $tahun->id],
                 [
@@ -79,6 +81,8 @@ class PengaturanPoinKeterlambatanMobileService
                     'diperbarui_oleh_pengguna_id' => $penggunaId,
                 ],
             );
+
+            app(PengaturanPoinKeterlambatanService::class)->simpanModeLangsung($pengaturan, $data);
 
             $pengaturan->rentangPoinKeterlambatan()->delete();
             $pengaturan->rentangPoinKeterlambatan()->createMany(
@@ -104,6 +108,10 @@ class PengaturanPoinKeterlambatanMobileService
             ],
             'tersimpan' => $pengaturan !== null,
             'otomatis_aktif' => (bool) ($pengaturan?->aktif ?? false),
+            'otomatis_langsung' => (bool) ($pengaturan?->otomatis_langsung ?? false),
+            'berlaku_mulai' => $pengaturan?->berlaku_mulai?->toDateString(),
+            'poin_terlambat' => (int) ($pengaturan?->poin_terlambat ?? 15),
+            'poin_alfa' => (int) ($pengaturan?->poin_alfa ?? 25),
             'rentang' => $rentang
                 ->map(fn ($item) => [
                     'id' => $item->exists ? (int) $item->id : null,

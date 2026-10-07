@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Poin Keterlambatan - NUSA')
+@section('title', 'Poin Presensi - NUSA')
 
 @section('content')
     <style>
@@ -12,7 +12,7 @@
     <div class="page-header">
         <div>
             <p class="eyebrow">Kesiswaan & BK</p>
-            <h1 class="page-title">Poin keterlambatan</h1>
+            <h1 class="page-title">Poin presensi</h1>
             <p class="page-subtitle">Aturan otomatis berdasarkan tahun pelajaran.</p>
         </div>
     </div>
@@ -47,7 +47,10 @@
                                 </span>
                             </td>
                             <td>
-                                @if ($pengaturan?->rentangPoinKeterlambatan?->isNotEmpty())
+                                @if ($pengaturan?->otomatis_langsung)
+                                    <div class="late-rule-list"><span class="late-rule-chip">Terlambat: {{ $pengaturan->poin_terlambat }} poin</span><span class="late-rule-chip">Alfa: {{ $pengaturan->poin_alfa }} poin</span></div>
+                                    <p class="person-meta">Langsung tercatat mulai {{ $pengaturan->berlaku_mulai?->format('d/m/Y') }}</p>
+                                @elseif ($pengaturan?->rentangPoinKeterlambatan?->isNotEmpty())
                                     <div class="late-rule-list">
                                         @foreach ($pengaturan->rentangPoinKeterlambatan as $rentang)
                                             <span class="late-rule-chip {{ $rentang->poin === 0 ? 'zero' : '' }}">{{ $rentang->labelRentang() }}: {{ $rentang->poin }} poin</span>
@@ -86,7 +89,10 @@
                         <span class="badge {{ $pengaturan?->aktif ? 'badge-active' : 'badge-muted' }}">{{ $pengaturan?->aktif ? 'Aktif' : 'Belum aktif' }}</span>
                     </div>
 
-                    @if ($pengaturan?->rentangPoinKeterlambatan?->isNotEmpty())
+                    @if ($pengaturan?->otomatis_langsung)
+                        <p class="person-meta">Mulai {{ $pengaturan->berlaku_mulai?->format('d/m/Y') }}</p>
+                        <div class="late-rule-list" style="margin-top: 13px;"><span class="late-rule-chip">Terlambat: {{ $pengaturan->poin_terlambat }} poin</span><span class="late-rule-chip">Alfa: {{ $pengaturan->poin_alfa }} poin</span></div>
+                    @elseif ($pengaturan?->rentangPoinKeterlambatan?->isNotEmpty())
                         <div class="late-rule-list" style="margin-top: 13px;">
                             @foreach ($pengaturan->rentangPoinKeterlambatan as $rentang)
                                 <span class="late-rule-chip {{ $rentang->poin === 0 ? 'zero' : '' }}">{{ $rentang->labelRentang() }}: {{ $rentang->poin }} poin</span>

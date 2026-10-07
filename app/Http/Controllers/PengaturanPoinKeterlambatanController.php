@@ -38,6 +38,9 @@ class PengaturanPoinKeterlambatanController extends Controller
     {
         $data = $request->validate([
             'aktif' => ['nullable', 'boolean'],
+            'otomatis_langsung' => ['sometimes', 'boolean'],
+            'poin_terlambat' => ['sometimes', 'integer', 'min:1', 'max:500'],
+            'poin_alfa' => ['sometimes', 'integer', 'min:1', 'max:500'],
             'rentang' => ['required', 'array', 'min:1', 'max:20'],
             'rentang.*.menit_mulai' => ['required', 'integer', 'min:1', 'max:1440'],
             'rentang.*.menit_selesai' => ['nullable', 'integer', 'min:1', 'max:1440'],
@@ -55,7 +58,8 @@ class PengaturanPoinKeterlambatanController extends Controller
 
         $this->pastikanRentangValid($rentang);
 
-        DB::transaction(function () use ($request, $tahunPelajaran, $rentang) {
+        DB::transaction(function () use ($request, $tahunPelajaran, $rentang, $data) {
+            TahunPelajaran::lockForUpdate()->findOrFail($tahunPelajaran->id);
             $pengaturan = PengaturanPoinKeterlambatan::updateOrCreate(
                 ['tahun_pelajaran_id' => $tahunPelajaran->id],
                 [
@@ -63,6 +67,8 @@ class PengaturanPoinKeterlambatanController extends Controller
                     'diperbarui_oleh_pengguna_id' => $request->user()?->id,
                 ],
             );
+
+            $this->pengaturanService->simpanModeLangsung($pengaturan, $data);
 
             $pengaturan->rentangPoinKeterlambatan()->delete();
             $pengaturan->rentangPoinKeterlambatan()->createMany(

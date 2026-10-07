@@ -6,6 +6,7 @@ use App\Models\AbsensiSiswa;
 use App\Models\JenisPelanggaranSiswa;
 use App\Models\KategoriPembinaanSiswa;
 use App\Models\LaporanPembinaanSiswa;
+use App\Models\PengaturanPoinKeterlambatan;
 use App\Models\PenugasanGuruWaliSiswa;
 use App\Models\RentangPoinKeterlambatan;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
@@ -32,6 +33,9 @@ class ProsesPoinKeterlambatanService
         bool $paksa = false,
     ): array {
         $tanggal = $tanggal instanceof CarbonImmutable ? $tanggal : CarbonImmutable::parse($tanggal);
+        if ($tahunPelajaranId && PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $tahunPelajaranId)->where('otomatis_langsung', true)->exists()) {
+            return app(PoinPresensiOtomatisService::class)->prosesTanggal($tanggal->toDateString(), $tahunPelajaranId, $kelasId, $penggunaId);
+        }
         $absensiIds = AbsensiSiswa::query()
             ->whereDate('tanggal', $tanggal->toDateString())
             ->when($tahunPelajaranId, fn ($query) => $query->where('tahun_pelajaran_id', $tahunPelajaranId))
@@ -74,6 +78,11 @@ class ProsesPoinKeterlambatanService
         bool $kirimNotifikasi = true,
     ): array {
         $absensiId = $absensi instanceof AbsensiSiswa ? $absensi->id : $absensi;
+        $catatan = $absensi instanceof AbsensiSiswa ? $absensi : AbsensiSiswa::findOrFail($absensiId);
+        if (PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $catatan->tahun_pelajaran_id)->where('otomatis_langsung', true)->exists()
+            || LaporanPembinaanSiswa::where('absensi_siswa_id', $absensiId)->whereNotNull('kunci_presensi_otomatis')->exists()) {
+            return app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($catatan, $penggunaId);
+        }
 
         $hasil = DB::transaction(function () use ($absensiId, $penggunaId) {
             $absensi = AbsensiSiswa::query()
@@ -355,6 +364,7 @@ class ProsesPoinKeterlambatanService
     {
         LaporanPembinaanSiswa::query()
             ->with('kelas:id,nama,tingkat')
+            ->whereNull('kunci_presensi_otomatis')
             ->whereIn('id', $laporanIds)
             ->get()
             ->groupBy(fn (LaporanPembinaanSiswa $laporan) => $this->penugasanBk->tingkatLaporan($laporan) ?? 'tanpa-tingkat')

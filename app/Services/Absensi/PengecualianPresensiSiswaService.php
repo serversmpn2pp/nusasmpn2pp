@@ -8,6 +8,7 @@ use App\Models\Kelas;
 use App\Models\PengecualianPresensiSiswa;
 use App\Models\Pengguna;
 use App\Models\TahunPelajaran;
+use App\Services\Pembinaan\PoinPresensiOtomatisService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
@@ -55,7 +56,7 @@ class PengecualianPresensiSiswaService
             throw ValidationException::withMessages(['token' => 'Pratinjau kedaluwarsa atau bukan milik akun ini. Buat pratinjau kembali.']);
         }
 
-        return DB::transaction(function () use ($isi, $pengguna) {
+        $pengecualian = DB::transaction(function () use ($isi, $pengguna) {
             // Serialize scope changes for the same school year, including global/class overlaps.
             TahunPelajaran::lockForUpdate()->findOrFail($isi['data']['tahun_pelajaran_id']);
             if ($tersimpan = PengecualianPresensiSiswa::where('kunci_pratinjau', $isi['kunci'])->first()) {
@@ -75,6 +76,9 @@ class PengecualianPresensiSiswaService
                 'dampak_pratinjau' => $hasil['dampak'], 'dibuat_oleh_pengguna_id' => $pengguna->id,
             ]);
         });
+        app(PoinPresensiOtomatisService::class)->sinkronkanPengecualian($pengecualian, $pengguna->id);
+
+        return $pengecualian;
     }
 
     public function batalkan(Pengguna $pengguna, PengecualianPresensiSiswa $pengecualian, string $alasan): void
@@ -88,6 +92,7 @@ class PengecualianPresensiSiswaService
                     'dibatalkan_oleh_pengguna_id' => $pengguna->id, 'alasan_pembatalan' => trim($alasan)]);
             }
         });
+        app(PoinPresensiOtomatisService::class)->sinkronkanPengecualian($pengecualian->fresh(), $pengguna->id);
     }
 
     private function hitung(array $data): array

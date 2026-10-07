@@ -9,6 +9,8 @@ use App\Models\PengaturanAbsensi;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Services\Notifikasi\NotifikasiAbsensiSiswaService;
+use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
+use App\Services\Pembinaan\PoinPresensiOtomatisService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -235,9 +237,16 @@ class ProsesScanAbsensi
             );
         }
 
-        return $jenisScan === 'masuk'
+        $hasil = $jenisScan === 'masuk'
             ? $this->prosesMasuk($isiScan, $parsed, $waktuScan, $siswa, $tahunPelajaran, $anggotaKelas, $pengaturanAbsensi, $ipAddress, $userAgent)
             : $this->prosesPulang($isiScan, $parsed, $waktuScan, $siswa, $tahunPelajaran, $anggotaKelas, $pengaturanAbsensi, $ipAddress, $userAgent);
+        if ($hasil['berhasil'] && $jenisScan === 'masuk'
+            && app(PengaturanPoinKeterlambatanService::class)->langsungPada($tahunPelajaran->id, $waktuScan->toDateString())) {
+            app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($hasil['absensi']);
+            $hasil['absensi']->refresh();
+        }
+
+        return $hasil;
     }
 
     private function prosesMasuk(
@@ -286,9 +295,8 @@ class ProsesScanAbsensi
                 );
             }
 
-            $menitScan = $this->menitDariJam($waktuScan->format('H:i'));
-            $menitMasuk = $this->menitDariJam($pengaturanAbsensi->formatJam($pengaturanAbsensi->jam_masuk));
-            $menitTerlambat = max(0, $menitScan - $menitMasuk);
+            $ketat = app(PengaturanPoinKeterlambatanService::class)->langsungPada($tahunPelajaran->id, $waktuScan->toDateString());
+            $menitTerlambat = app(HitungKeterlambatanSiswaService::class)->menit($waktuScan->format('H:i:s'), $pengaturanAbsensi->jam_masuk, $ketat);
             $statusMasuk = $menitTerlambat > 0 ? 'terlambat' : 'tepat_waktu';
 
             $absensi->update([

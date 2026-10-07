@@ -5,6 +5,7 @@ namespace App\Services\Mobile;
 use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
+use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
 use App\Models\Pengguna;
 use App\Models\RiwayatPerubahanAbsensiSiswa;
@@ -13,6 +14,7 @@ use App\Models\TahunPelajaran;
 use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\KoreksiPresensiSiswaService;
 use App\Services\Absensi\RangkumanWhatsappPresensiSiswaService;
+use App\Services\Pembinaan\AksesLaporanPembinaanService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -53,6 +55,9 @@ class RekapPresensiSiswaMobileService
             ->paginate(30, ['*'], 'halaman', $halaman);
         $anggota = collect($paginator->items());
         $absensi = $this->absensiPerSiswa($tanggal, $anggota->pluck('siswa_id'));
+        $poinPresensi = LaporanPembinaanSiswa::whereNotNull('kunci_presensi_otomatis')
+            ->where('tahun_pelajaran_id', $tahunId)->whereDate('tanggal_kejadian', $tanggal)
+            ->whereIn('siswa_id', $anggota->pluck('siswa_id'))->get()->keyBy('siswa_id');
 
         return [
             'tanggal' => $tanggal,
@@ -64,6 +69,7 @@ class RekapPresensiSiswaMobileService
                 $tanggal,
                 $absensi->get($item->siswa_id),
                 $hariAktif,
+                $poinPresensi->get($item->siswa_id),
             ))->values(),
             'ringkasan' => $this->ringkasan($tahunId, $kelasId, $cakupanWali ? $kelasWaliIds : null, $tanggal, $hariAktif),
             'tahun_pelajaran' => $tahun->map(fn (TahunPelajaran $item) => [
@@ -116,11 +122,14 @@ class RekapPresensiSiswaMobileService
             ->get();
 
         $jadwalPulang = $pengaturan?->jadwalPulangUntuk($anggotaKelas->siswa?->jenis_kelamin);
+        $poinPresensi = LaporanPembinaanSiswa::whereNotNull('kunci_presensi_otomatis')
+            ->where('tahun_pelajaran_id', $anggotaKelas->tahun_pelajaran_id)->where('siswa_id', $anggotaKelas->siswa_id)
+            ->whereDate('tanggal_kejadian', $tanggal)->first();
 
         return [
             'tanggal' => $tanggal,
             'tanggal_label' => Carbon::parse($tanggal)->locale('id')->translatedFormat('l, d F Y'),
-            'item' => $this->item($pengguna, $anggotaKelas, $tanggal, $absensi, $this->aturanAlfa->hariAktif()),
+            'item' => $this->item($pengguna, $anggotaKelas, $tanggal, $absensi, $this->aturanAlfa->hariAktif(), $poinPresensi),
             'jadwal_presensi' => $pengaturan ? [
                 'tersedia' => true,
                 'jam_masuk' => $pengaturan->formatJam($pengaturan->jam_masuk),
@@ -342,7 +351,7 @@ class RekapPresensiSiswaMobileService
         ];
     }
 
-    private function item(Pengguna $pengguna, AnggotaKelas $anggota, string $tanggal, ?AbsensiSiswa $absensi, array $hariAktif): array
+    private function item(Pengguna $pengguna, AnggotaKelas $anggota, string $tanggal, ?AbsensiSiswa $absensi, array $hariAktif, ?LaporanPembinaanSiswa $poinPresensi = null): array
     {
         $siswa = $anggota->siswa;
         $foto = $siswa && filled($siswa->foto) && Storage::disk('public')->exists($siswa->foto);
@@ -383,6 +392,12 @@ class RekapPresensiSiswaMobileService
                 'belum_pulang' => $status === 'hadir' && $absensi?->jam_masuk && ! $absensi?->jam_pulang,
             ],
             'koreksi' => $akses,
+            'poin_presensi' => $poinPresensi ? [
+                'laporan_id' => $poinPresensi->id, 'jenis' => $poinPresensi->jenis_presensi_otomatis,
+                'poin' => (int) $poinPresensi->total_poin, 'status' => $poinPresensi->labelStatusVerifikasi(),
+                'alasan_diterima' => $poinPresensi->poin_dikecualikan_pada !== null,
+                'dapat_koreksi' => app(AksesLaporanPembinaanService::class)->bolehKoreksiPoinPresensi($pengguna, $poinPresensi),
+            ] : null,
         ];
     }
 

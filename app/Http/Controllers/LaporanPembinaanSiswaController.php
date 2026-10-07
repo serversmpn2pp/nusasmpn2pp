@@ -394,6 +394,7 @@ class LaporanPembinaanSiswaController extends Controller
 
     public function destroy(Request $request, LaporanPembinaanSiswa $laporanPembinaanSiswa)
     {
+        abort_if($laporanPembinaanSiswa->kunci_presensi_otomatis, 422, 'Gunakan koreksi poin presensi dan catat alasan siswa.');
         $this->pastikanBolehAksesLaporan($request, $laporanPembinaanSiswa);
         abort_unless($this->aksesLaporan->bolehMengubahLaporan($request->user(), $laporanPembinaanSiswa), 403);
         abort_if(

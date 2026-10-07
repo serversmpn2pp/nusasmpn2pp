@@ -63,7 +63,7 @@
                                     <span class="case-number">{{ $item->nomor_laporan }}</span>
                                     <span class="case-status {{ $status['warna'] }}">{{ $status['label'] }}</span>
                                 </div>
-                                <h2>{{ $item->berasalDariAbsensi() ? 'Catatan keterlambatan dari presensi' : 'Laporan kejadian siswa' }}</h2>
+                                <h2>{{ $item->berasalDariAbsensi() ? 'Catatan presensi' : 'Laporan kejadian siswa' }}</h2>
                                 <p>{{ $status['deskripsi'] }}</p>
                                 <div class="case-facts">
                                     <span>{{ $item->tanggal_kejadian?->locale('id')->translatedFormat('d F Y') }}</span>

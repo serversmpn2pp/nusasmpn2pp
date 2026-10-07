@@ -60,6 +60,7 @@ use App\Http\Controllers\KonfirmasiBerhalanganIbadahController;
 use App\Http\Controllers\KoreksiKegiatanIbadahController;
 use App\Http\Controllers\KoreksiManualUjianCbtController;
 use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
+use App\Http\Controllers\KoreksiPoinPresensiController;
 use App\Http\Controllers\LabelBarcodeInventarisController;
 use App\Http\Controllers\LaporanAbsensiController;
 use App\Http\Controllers\LaporanAbsensiPegawaiBulananController;
@@ -1243,6 +1244,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/verifikasi-bk', [VerifikasiPelanggaranSiswaController::class, 'verifikasiBk'])
             ->middleware('izin:poin_siswa.verifikasi_bk')
             ->name('verifikasi-pelanggaran.bk');
+        Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/koreksi-poin-presensi', [KoreksiPoinPresensiController::class, 'store'])
+            ->middleware('izin:poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil')
+            ->name('poin-presensi.koreksi');
         Route::post('laporan-pembinaan-siswa/{laporanPembinaanSiswa}/pengesahan-wakil', [VerifikasiPelanggaranSiswaController::class, 'pengesahanWakil'])
             ->middleware('izin:poin_siswa.sahkan_wakil')
             ->name('verifikasi-pelanggaran.wakil');

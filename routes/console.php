@@ -55,6 +55,10 @@ Schedule::command('pembinaan:proses-poin-keterlambatan')
     ->everyFifteenMinutes()
     ->withoutOverlapping();
 
+Schedule::command('pembinaan:proses-poin-presensi')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();
+
 Schedule::command('pembinaan:proses-peringatan-dini')
     ->dailyAt('05:30')
     ->withoutOverlapping();
