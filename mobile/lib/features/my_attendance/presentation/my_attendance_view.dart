@@ -7,6 +7,37 @@ import 'package:nusa/features/my_attendance/domain/my_attendance.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_section_title.dart';
 
+/// Independent scope: a notification for child B must not show child A.
+class MyAttendanceNotificationView extends StatelessWidget {
+  const MyAttendanceNotificationView({
+    this.studentId,
+    this.month,
+    this.pageTitle,
+    super.key,
+  });
+  final int? studentId;
+  final String? month;
+  final String? pageTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = MyAttendanceView(pageTitle: pageTitle);
+    if (studentId == null && month == null) return child;
+    return ProviderScope(
+      key: ValueKey((studentId, month)),
+      overrides: [
+        myAttendanceControllerProvider.overrideWith(
+          () => MyAttendanceController(
+            initialStudentId: studentId,
+            initialMonth: month,
+          ),
+        ),
+      ],
+      child: child,
+    );
+  }
+}
+
 class MyAttendanceView extends ConsumerWidget {
   const MyAttendanceView({this.pageTitle, super.key});
 

@@ -44,6 +44,8 @@ class FirebaseCloudMessagingTest extends TestCase
 
         [$notifikasi, $perangkat] = $this->buatData('/nilai-saya');
 
+        $notifikasi->update(['kunci_unik' => 'nilai-dipublikasikan:1:20261006']);
+
         (new KirimPushNotification($notifikasi->id))->handle(
             app(FirebaseCloudMessagingService::class),
         );
@@ -54,8 +56,8 @@ class FirebaseCloudMessagingTest extends TestCase
                     === 'https://fcm.googleapis.com/v1/projects/nusa-sekolah/messages:send'
                 && $request->hasHeader('Authorization', 'Bearer token-akses-google')
                 && $request['message']['token'] === $perangkat->token
-                && $request['message']['notification']['title'] === 'NUSA'
-                && $request['message']['notification']['body'] === 'Ada pembaruan di NUSA. Buka aplikasi untuk melihat detail.'
+                && $request['message']['notification']['title'] === $notifikasi->judul
+                && $request['message']['notification']['body'] === $notifikasi->pesan
                 && $request['message']['data']['notifikasi_id'] === (string) $notifikasi->id
                 && $request['message']['data']['tujuan'] === '/nilai-saya'
                 && $request['message']['android']['notification']['channel_id']
@@ -157,7 +159,7 @@ class FirebaseCloudMessagingTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_push_selalu_umum_tanpa_mengubah_detail_notifikasi_di_database(): void
+    public function test_push_tidak_dikenal_tetap_umum_tanpa_mengubah_detail_di_database(): void
     {
         Http::fake(['fcm.googleapis.com/*' => Http::response(['name' => 'projects/nusa/messages/1'])]);
         [$notifikasi] = $this->buatData(null);
@@ -193,6 +195,28 @@ class FirebaseCloudMessagingTest extends TestCase
     private function jalankanJob(NotifikasiPengguna $notifikasi): void
     {
         (new KirimPushNotification($notifikasi->id))->handle(app(FirebaseCloudMessagingService::class));
+    }
+
+    public function test_payload_fcm_sensitif_diredaksi_dan_presensi_tidak_memuat_identitas_anak(): void
+    {
+        Http::fake(['fcm.googleapis.com/*' => Http::response(['name' => 'projects/nusa/messages/1'])]);
+        [$notifikasi] = $this->buatData('/sanksi-poin-siswa/1');
+        foreach (['/sanksi-poin-siswa/1', '/konfirmasi-berhalangan-ibadah/2', '/presensi-anak?siswa_id=3&bulan=2026-10'] as $tautan) {
+            $notifikasi->update(['tautan' => $tautan,
+                'kunci_unik' => str_starts_with($tautan, '/presensi-anak') ? 'presensi-masuk-orang-tua:1' : null,
+                'judul' => 'Nadia catatan rahasia', 'pesan' => 'Nadia rincian rahasia 125 poin',
+                'data_tambahan' => ['catatan' => 'rahasia', 'jam_masuk' => '06:54', 'menit_terlambat' => 0],
+            ]);
+            $this->jalankanJob($notifikasi);
+        }
+        Http::assertSentCount(3);
+        foreach (Http::recorded() as [$request]) {
+            $this->assertStringNotContainsString('Nadia', $request->body());
+            $this->assertStringNotContainsString('rahasia', $request->body());
+            $this->assertStringNotContainsString('125', $request->body());
+            $this->assertSame(['notifikasi_id', 'jenis', 'tujuan'], array_keys($request['message']['data']));
+        }
+        Http::assertSent(fn (Request $request) => $request['message']['notification']['body'] === 'Anak Anda tercatat hadir tepat waktu pukul 06.54 WIB.');
     }
 
     private function penggunaLain(): Pengguna
@@ -235,6 +259,7 @@ class FirebaseCloudMessagingTest extends TestCase
             'judul' => 'Nilai telah dipublikasikan',
             'pesan' => 'Nilai terbaru sudah dapat dilihat di NUSA.',
             'tautan' => $tautan,
+            'kunci_unik' => $tautan === '/nilai-saya' ? 'nilai-dipublikasikan:1:20261006' : null,
         ]);
         $perangkat = PerangkatNotifikasiPush::create([
             'pengguna_id' => $pengguna->id,

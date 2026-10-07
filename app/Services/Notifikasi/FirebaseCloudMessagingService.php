@@ -14,6 +14,7 @@ class FirebaseCloudMessagingService
     public function __construct(
         private readonly FirebaseAccessTokenProvider $accessTokenProvider,
         private readonly TujuanNotifikasiMobileService $tujuanNotifikasi,
+        private readonly IsiPushNotifikasiService $isiPush,
     ) {}
 
     /**
@@ -54,12 +55,7 @@ class FirebaseCloudMessagingService
     {
         return [
             'token' => $tokenPerangkat,
-            'notification' => [
-                // Fail closed untuk semua jenis, termasuk modul baru dan job lama.
-                // Rincian hanya boleh dibaca di NUSA melalui sesi/izin API.
-                'title' => 'NUSA',
-                'body' => 'Ada pembaruan di NUSA. Buka aplikasi untuk melihat detail.',
-            ],
+            'notification' => $this->isiPush->untuk($notifikasi),
             'data' => [
                 'notifikasi_id' => (string) $notifikasi->id,
                 'jenis' => (string) $notifikasi->jenis,

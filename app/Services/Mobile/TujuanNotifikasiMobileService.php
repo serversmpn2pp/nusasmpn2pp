@@ -14,6 +14,26 @@ class TujuanNotifikasiMobileService
             return null;
         }
 
+        if ($path === '/presensi-anak') {
+            $path = '/kehadiran-anak-saya';
+        } elseif ($path === '/notifikasi' && str_starts_with((string) $notifikasi->kunci_unik, 'presensi-masuk-siswa:')) {
+            $path = '/kehadiran-saya';
+        }
+
+        if (in_array($path, ['/kehadiran-saya', '/kehadiran-anak-saya'], true)) {
+            $parameter = [];
+            $siswa = $this->query($notifikasi->tautan, 'siswa_id');
+            $bulan = $this->query($notifikasi->tautan, 'bulan');
+            if ($siswa && preg_match('/^[1-9][0-9]*$/', $siswa)) {
+                $parameter['siswa_id'] = $siswa;
+            }
+            if ($bulan && preg_match('/^[0-9]{4}-(?:0[1-9]|1[0-2])$/', $bulan)) {
+                $parameter['bulan'] = $bulan;
+            }
+
+            return $path.($parameter ? '?'.http_build_query($parameter) : '');
+        }
+
         foreach ([
             '/dashboard-humas' => '/humas',
             '/agenda-humas' => '/humas/agenda',

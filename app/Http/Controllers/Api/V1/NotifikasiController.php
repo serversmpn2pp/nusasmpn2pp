@@ -17,10 +17,13 @@ class NotifikasiController extends Controller
     ): JsonResponse {
         abort_unless((int) $notifikasiPengguna->pengguna_id === (int) $request->user()->id, 403);
 
-        // Validasi push tidak menandai baca dan tidak mengembalikan teks privat.
+        // Teks asli hanya dikembalikan setelah sesi, status akun, dan pemilik lolos.
+        // Verifikasi tidak menandai baca; payload FCM bukan sumber detail.
         return response()->json(['data' => [
             'id' => (int) $notifikasiPengguna->id,
             'tautan_mobile' => $tujuan->untuk($notifikasiPengguna),
+            'judul' => $notifikasiPengguna->judul,
+            'pesan' => $notifikasiPengguna->pesan,
         ]])->header('Cache-Control', 'private, no-store');
     }
 

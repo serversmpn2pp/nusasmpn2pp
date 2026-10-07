@@ -12,9 +12,17 @@ Daftar mapel yang diikutkan dapat ditetapkan admin/waka kurikulum melalui [pemil
 
 Finalisasi manual bukan publikasi kepada siswa. **Publikasikan nilai** tetap mengatur publikasi komponen semester. Tombol finalisasi dinonaktifkan selama ada perubahan nilai/catatan yang belum disimpan.
 
+## Cetak dengan nilai belum lengkap
+
+- Rapor STS dapat dicetak per siswa maupun seluruh kelas tanpa menunggu seluruh nilai lengkap, termasuk jika semua nilai siswa belum tersedia.
+- Periode rapor harus disimpan dan periode presensi sudah berakhir, wali kelas telah ditetapkan, serta pemeriksaan kehadiran siswa yang akan dicetak telah disimpan. Persyaratan ini tidak berubah.
+- Nilai yang belum tersedia dicetak sebagai `-` dengan keterangan **Belum tersedia**, bukan nol. Nilai yang sudah tersedia, termasuk nilai nol yang sah, tetap ditampilkan.
+- Jumlah dan rata-rata tetap `-` selama ada nilai/keterangan yang belum lengkap. Ranking keseluruhan tetap hanya untuk siswa dengan nilai lengkap; izin cetak tidak membuat nilai menjadi final atau mempublikasikannya.
+- Keterangan **Tidak mengikuti STS** yang sebelumnya ditetapkan secara sah tetap berlaku. Tidak ada penandaan otomatis berdasarkan nilai kosong.
+
 ## Pengaman
 
-- Hasil CBT tetap menjadi sumber jika mapel memiliki jadwal STS CBT yang tidak dibatalkan untuk kelas tersebut. Nilai manual tidak dapat melewati paket CBT yang belum siap, hasil yang belum final, atau peserta yang belum selesai.
+- Hasil CBT tetap menjadi sumber jika mapel memiliki jadwal STS CBT yang tidak dibatalkan untuk kelas tersebut. Setelah diterapkan, rapor membaca nilai terbaru pada komponen tujuan, termasuk koreksi yang sudah disimpan di Input Nilai; lihat [koreksi nilai CBT pada rapor](koreksi-nilai-cbt-rapor.md). Nilai manual tidak dapat melewati paket CBT yang belum siap, hasil yang belum final, atau peserta yang belum selesai.
 - Komponen yang sudah dihubungkan ke CBT tidak dapat difinalisasi manual.
 - Pemilihan berdasarkan penugasan kelas/mapel/tahun dan semester, bukan nama komponen. Tidak ada perataan atau pemilihan sembarang apabila ditemukan beberapa komponen STS aktif untuk cakupan yang sama.
 - Finalisasi dapat dilakukan bila setidaknya satu siswa aktif memiliki nilai. Nilai siswa yang kosong tetap belum tersedia, bukan nol. Rapor siswa tersebut belum lengkap dan belum memenuhi syarat ranking keseluruhan.

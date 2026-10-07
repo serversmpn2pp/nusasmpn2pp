@@ -180,7 +180,7 @@ class RaporStsController extends Controller
         abort_if($laporan['baris']->isEmpty(), 404);
         $pratinjau = (bool) ($data['pratinjau'] ?? false);
         if (! $pratinjau && ! $laporan['baris']->every(fn ($siswa) => $siswa['siap'])) {
-            return $this->kembali($kegiatan, $kelas)->withErrors(['cetak' => 'Rapor belum siap dicetak. Lengkapi nilai final STS atau keterangan tidak mengikuti STS yang sah, wali kelas, dan pemeriksaan kehadiran. Periode presensi harus sudah berakhir.']);
+            return $this->kembali($kegiatan, $kelas)->withErrors(['cetak' => 'Rapor belum siap dicetak. Simpan periode rapor, tetapkan wali kelas, dan simpan pemeriksaan kehadiran seluruh siswa yang akan dicetak. Periode presensi harus sudah berakhir.']);
         }
 
         return response()->view('rapor-sts.cetak', [...$laporan, 'pratinjau' => $pratinjau])

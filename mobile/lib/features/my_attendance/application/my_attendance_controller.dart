@@ -5,6 +5,10 @@ import 'package:nusa/features/my_attendance/data/my_attendance_repository.dart';
 import 'package:nusa/features/my_attendance/domain/my_attendance.dart';
 
 class MyAttendanceController extends AsyncNotifier<MyAttendancePage> {
+  MyAttendanceController({int? initialStudentId, String? initialMonth})
+    : _studentId = initialStudentId,
+      _month = initialMonth;
+
   int? _studentId;
   int? _academicYearId;
   String? _month;

@@ -4,17 +4,24 @@ namespace Tests\Feature\Api;
 
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
+use App\Models\JenisUjianCbt;
 use App\Models\Kelas;
+use App\Models\KelasUjianCbt;
 use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
+use App\Models\PesertaUjianCbt;
 use App\Models\Siswa;
 use App\Models\SkemaBobotNilai;
+use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
+use App\Models\UjianCbt;
+use App\Services\Cbt\TerapkanNilaiCbtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class RekapNilaiRaporApiTest extends TestCase
@@ -118,6 +125,72 @@ class RekapNilaiRaporApiTest extends TestCase
             ->assertJsonPath('data.ringkasan.jumlah_lengkap', 0)
             ->assertJsonPath('data.siswa.0.status', 'Skema belum ada')
             ->assertJsonCount(2, 'data.peringatan');
+    }
+
+    #[DataProvider('ujianAkhirSemester')]
+    public function test_koreksi_nilai_sas_saj_dari_cbt_terbaca_di_rekap_web_dan_api(string $kode, int $tingkat, string $semester): void
+    {
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $d = $this->dataAkademik();
+        $d['kelas']->update(['tingkat' => $tingkat]);
+        $komponen = KomponenNilai::create([
+            'guru_mata_pelajaran_id' => $d['penugasan']->id,
+            'semester' => $semester, 'jenis_komponen' => 'sas_saj', 'nama' => 'Nilai '.$kode, 'aktif' => true,
+        ]);
+        SkemaBobotNilai::create([
+            'tahun_pelajaran_id' => $d['tahun']->id, 'semester' => $semester, 'tingkat' => $tingkat,
+            'bobot_formatif' => 0, 'bobot_sumatif' => 0, 'bobot_sts' => 0, 'bobot_sas_saj' => 100, 'aktif' => true,
+        ]);
+        $ujian = UjianCbt::create([
+            'jenis_ujian_cbt_id' => JenisUjianCbt::where('kode', $kode)->value('id'),
+            'tahun_pelajaran_id' => $d['tahun']->id, 'mata_pelajaran_id' => $d['penugasan']->mata_pelajaran_id,
+            'kode' => 'REKAP-'.$kode, 'nama' => 'Ujian '.$kode, 'alur' => 'terpusat',
+            'semester' => $semester, 'tingkat' => $tingkat, 'jumlah_soal' => 1, 'acak_soal' => false,
+            'status' => 'selesai', 'hasil_difinalisasi_pada' => now(),
+        ]);
+        $kelasUjian = KelasUjianCbt::create([
+            'ujian_cbt_id' => $ujian->id, 'kelas_id' => $d['kelas']->id, 'komponen_nilai_id' => $komponen->id,
+        ]);
+        $soal = SoalCbt::create([
+            'tahun_pelajaran_id' => $d['tahun']->id, 'mata_pelajaran_id' => $ujian->mata_pelajaran_id,
+            'tingkat' => $tingkat, 'kode' => 'SOAL-'.$kode, 'jenis_soal' => 'pilihan_ganda',
+            'tingkat_kesulitan' => 'sedang', 'pertanyaan' => 'Hasil satu ditambah satu?',
+            'opsi' => ['pilihan' => ['A' => '2', 'B' => '3']], 'kunci_jawaban' => ['jawaban' => 'A'],
+            'skor_maksimal' => 2, 'aktif' => true, 'status' => 'siap',
+        ]);
+        $relasi = $ujian->soalUjianCbt()->create(['soal_cbt_id' => $soal->id, 'nomor_urut' => 1, 'bobot' => 2]);
+        foreach ([$d['siswa_1'], $d['siswa_2']] as $index => $siswa) {
+            $peserta = PesertaUjianCbt::create([
+                'ujian_cbt_id' => $ujian->id, 'kelas_ujian_cbt_id' => $kelasUjian->id,
+                'anggota_kelas_id' => AnggotaKelas::where('kelas_id', $d['kelas']->id)->where('siswa_id', $siswa->id)->value('id'),
+                'nomor_peserta' => $kode.'-'.$index, 'status' => 'selesai',
+            ]);
+            $peserta->jawabanPesertaUjianCbt()->create([
+                'soal_ujian_cbt_id' => $relasi->id, 'soal_cbt_id' => $soal->id, 'jawaban' => [$index ? 'B' : 'A'],
+            ]);
+        }
+        $hasil = app(TerapkanNilaiCbtService::class)->terapkan($ujian, $admin->id);
+        $this->assertSame(2, $hasil['ringkasan']['diterapkan']);
+        $jawabanAsli = $ujian->pesertaUjianCbt()->with('jawabanPesertaUjianCbt')->get()->pluck('jawabanPesertaUjianCbt')->toArray();
+        $this->withToken($this->token($admin))->postJson(route('api.v1.input-nilai.store'), [
+            'komponen_nilai_id' => $komponen->id,
+            'nilai' => [$d['siswa_1']->id => '80,25', $d['siswa_2']->id => '91,50'],
+        ])->assertOk();
+        $filter = ['guru_mata_pelajaran_id' => $d['penugasan']->id, 'semester' => $semester];
+        $this->getJson(route('api.v1.rekap-nilai-rapor.index', $filter))->assertOk()
+            ->assertJsonPath('data.label_nilai_akhir', $kode)
+            ->assertJsonPath('data.siswa.0.kategori.sas_saj.rata', 80.25)
+            ->assertJsonPath('data.siswa.0.nilai_akhir', 80.25)
+            ->assertJsonPath('data.siswa.1.nilai_akhir', 91.5)
+            ->assertJsonPath('data.ringkasan.rata_rata_akhir', 85.88);
+        $this->actingAs($admin)->get(route('rekap-nilai-rapor.index', $filter))->assertOk()
+            ->assertViewHas('rekapNilai', fn ($r) => $r->pluck('nilai_akhir')->all() === [80.25, 91.5]);
+        $this->assertSame($jawabanAsli, $ujian->pesertaUjianCbt()->with('jawabanPesertaUjianCbt')->get()->pluck('jawabanPesertaUjianCbt')->toArray());
+    }
+
+    public static function ujianAkhirSemester(): array
+    {
+        return ['SAS ganjil' => ['SAS', 8, 'ganjil'], 'SAS genap' => ['SAS', 8, 'genap'], 'SAJ' => ['SAJ', 9, 'genap']];
     }
 
     public function test_guru_mapel_hanya_melihat_rekap_mata_pelajaran_yang_diampunya(): void

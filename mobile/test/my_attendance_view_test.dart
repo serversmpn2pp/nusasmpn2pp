@@ -8,6 +8,34 @@ import 'package:nusa/features/my_attendance/presentation/my_attendance_view.dart
 
 void main() {
   testWidgets(
+    'notifikasi langsung memilih anak dan bulan tanpa menampilkan anak lain',
+    (tester) async {
+      final remote = _FakeMyAttendanceRemoteDataSource();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            myAttendanceRemoteDataSourceProvider.overrideWithValue(remote),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const MyAttendanceNotificationView(
+              studentId: 102,
+              month: '2026-08',
+              pageTitle: 'Kehadiran Anak Saya',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(remote.studentIds, [102]);
+      expect(remote.months, ['2026-08']);
+      expect(find.text('Bima Kehadiran'), findsWidgets);
+      expect(find.text('Alya Kehadiran'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Kehadiran Anak Saya tampil responsif beserta rekap dan riwayat',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 700));

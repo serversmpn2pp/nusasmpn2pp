@@ -362,17 +362,28 @@ yang dinyatakan `UNREGISTERED` oleh FCM dinonaktifkan otomatis.
 
 ### Keamanan push dan pergantian akun
 
-Push sistem dan SnackBar memakai teks umum: **“Ada pembaruan di NUSA. Buka
-aplikasi untuk melihat detail.”** Nama siswa, nilai, saldo poin, sanksi, dan
-catatan privat tidak disalin dari database ke title/body FCM. Detail notifikasi
-di dalam NUSA tidak diubah. Android memakai visibility `PRIVATE` sebagai lapisan
-tambahan, bukan pengganti redaksi pesan.
+Pola pesan dibedakan antara dalam aplikasi dan layar kunci:
+
+- **Dalam aplikasi:** inbox dan SnackBar menampilkan judul/pesan asli yang
+  dikembalikan API setelah sesi dan kepemilikan notifikasi diverifikasi.
+  Judul/pesan dari payload FCM, termasuk payload lama, tidak pernah dipercaya.
+- **Push rutin:** pesan jelas sesuai penerima, misalnya kehadiran anak pukul
+  06.54 WIB, publikasi nilai/hasil ujian siswa atau anak, dan hasil survei guru.
+  Angka nilai dan identitas anak tidak ditambahkan ke ringkasan presensi.
+- **Push sensitif:** BK, sanksi, dan berhalangan ibadah menggunakan ringkasan
+  tanpa nama siswa, saldo poin, rincian sanksi, atau catatan privat.
+- Modul dengan catatan bebas (pemeriksaan perangkat ajar, tiket Humas, dll.)
+  memakai ringkasan sesuai modul. Jenis yang belum dikenali tetap memakai pesan
+  umum sampai kebijakan eksplisit ditambahkan di `IsiPushNotifikasiService`.
+
+Detail database tidak diubah. Android memakai visibility `PRIVATE` sebagai
+lapisan tambahan, bukan pengganti redaksi pesan.
 
 Sebelum menampilkan SnackBar atau membuka push, aplikasi memverifikasi ID ke
 `GET /api/v1/notifikasi/{id}/tujuan`. Endpoint ini memakai guard Sanctum,
 ability mobile, akun aktif, kewajiban ganti sandi, dan kepemilikan notifikasi;
-respons hanya berisi `data.id` dan `data.tautan_mobile`, tidak menandai baca,
-serta memakai `Cache-Control: private, no-store`. Setelah verifikasi, ketukan
+respons berisi `data.id`, `data.tautan_mobile`, `data.judul`, dan `data.pesan`,
+tidak menandai baca, serta memakai `Cache-Control: private, no-store`. Setelah verifikasi, ketukan
 memakai endpoint baca yang sudah ada. Penolakan 401/403/404/428 atau gangguan
 server menghentikan alur; tujuan mentah dari payload FCM tidak digunakan.
 
@@ -395,11 +406,34 @@ pembersihan notifikasi ikut terpasang. Jika APK baru memakai backend lama yang
 belum menyediakan endpoint tujuan, alur push ditolak secara aman; notifikasi
 tetap dapat dibuka dari tab Notifikasi di aplikasi.
 
+### Notifikasi kedatangan siswa melalui NUSA
+
+Scan masuk mesin sekolah membuat notifikasi untuk akun siswa dan akun orang tua
+aktif yang benar-benar terhubung melalui relasi identitas. Role orang tua saja,
+nomor WhatsApp, atau username tidak menjadi bukti hubungan dengan siswa.
+Orang tua menerima waktu scan dan status tepat waktu/terlambat; ketukan di mobile
+membuka Kehadiran Anak Saya dengan anak dan bulan yang sesuai. Data halaman
+tetap diperiksa oleh API kehadiran, bukan dipercaya dari parameter tautan.
+
+Notifikasi unik per presensi dan penerima: scan/pemanggilan ulang tidak mengirim
+push ganda. Scan tetap berhasil bila belum ada akun penerima. Catatan kanal baru
+memakai `nusa` dengan status `tersimpan` (tersimpan di inbox, **bukan bukti FCM
+diterima HP**). Push tetap memerlukan Firebase aktif, registrasi perangkat, izin
+notifikasi HP, koneksi internet, dan worker yang berjalan.
+
+Pengiriman WhatsApp otomatis dihentikan, termasuk job lama yang masih mengantre.
+Riwayat WhatsApp terdahulu tidak dihapus dan tidak dikirim ulang. Fitur salin
+pesan grup WhatsApp yang digunakan secara manual tidak diubah. Tidak perlu
+migrasi baru, nomor WhatsApp, atau perubahan key Firebase untuk penerapan ini.
+Sesudah pull di server, jalankan `php artisan optimize:clear` dan
+`php artisan queue:restart`; pastikan Task Scheduler menjalankan worker baru.
+Build/pasang APK baru untuk tampilan SnackBar dan pemilihan anak dari push.
+
 Regression test utama:
 
 ```powershell
 flutter test test/push_notification_security_test.dart --no-pub
-php -d memory_limit=1024M vendor/phpunit/phpunit/phpunit tests/Feature/FirebaseCloudMessagingTest.php tests/Feature/Api/NotifikasiApiTest.php tests/Feature/Api/PerangkatNotifikasiPushApiTest.php
+php -d memory_limit=1024M vendor/phpunit/phpunit/phpunit tests/Feature/FirebaseCloudMessagingTest.php tests/Feature/IsiPushNotifikasiTest.php tests/Feature/NotifikasiPresensiNusaTest.php tests/Feature/Api/NotifikasiApiTest.php tests/Feature/Api/PerangkatNotifikasiPushApiTest.php
 ```
 
 Perintah Flutter dijalankan dari `mobile`, PHP dari root Laravel. Tes otomatis

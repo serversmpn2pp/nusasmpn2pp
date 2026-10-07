@@ -4,9 +4,16 @@ import 'package:nusa/core/network/api_exception_mapper.dart';
 import 'package:nusa/core/network/dio_provider.dart';
 
 final class PushNotificationTarget {
-  const PushNotificationTarget({required this.id, this.destination});
+  const PushNotificationTarget({
+    required this.id,
+    this.destination,
+    this.title,
+    this.body,
+  });
   final int id;
   final String? destination;
+  final String? title;
+  final String? body;
 }
 
 abstract interface class PushNotificationRemoteDataSource {
@@ -41,6 +48,8 @@ final class DioPushNotificationRemoteDataSource
       return PushNotificationTarget(
         id: notificationId,
         destination: data['tautan_mobile'] as String?,
+        title: data['judul'] as String?,
+        body: data['pesan'] as String?,
       );
     } on DioException catch (exception) {
       throw mapDioException(exception);

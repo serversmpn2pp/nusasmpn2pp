@@ -9,6 +9,7 @@ import 'package:nusa/app/app_keys.dart';
 import 'package:nusa/app/router.dart';
 import 'package:nusa/features/home/application/home_controller.dart';
 import 'package:nusa/features/push_notifications/application/push_device_service.dart';
+import 'package:nusa/features/push_notifications/data/push_notification_remote_data_source.dart';
 
 /// Platform/UI boundary: tests do not need a live Firebase project.
 abstract interface class PushNotificationRuntime {
@@ -21,7 +22,10 @@ abstract interface class PushNotificationRuntime {
   Future<void> synchronizeToken(String token);
   Future<void> clearDisplayedNotifications();
   void hideForegroundNotification();
-  void showNotification(Future<void> Function() onOpen);
+  void showNotification(
+    PushNotificationTarget target,
+    Future<void> Function() onOpen,
+  );
   void refreshInbox();
   void openDestination(String destination);
 }
@@ -66,14 +70,36 @@ final class NusaPushNotificationRuntime implements PushNotificationRuntime {
   }
 
   @override
-  void showNotification(Future<void> Function() onOpen) {
-    // Never render legacy FCM title/body, even after ownership verification.
+  void showNotification(
+    PushNotificationTarget target,
+    Future<void> Function() onOpen,
+  ) {
+    // Only the authenticated API supplies text; never render raw FCM title/body.
+    final title = target.title?.trim();
+    final body = target.body?.trim();
     nusaScaffoldMessengerKey.currentState
       ?..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: const Text(
-            'Ada pembaruan di NUSA. Buka aplikasi untuk melihat detail.',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (title != null && title.isNotEmpty)
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              Text(
+                body == null || body.isEmpty
+                    ? 'Ada pembaruan di NUSA. Buka aplikasi untuk melihat detail.'
+                    : body,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
           action: SnackBarAction(
             label: 'Buka',

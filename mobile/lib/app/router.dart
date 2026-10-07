@@ -1126,13 +1126,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.myAttendance,
         name: 'my-attendance',
-        builder: (context, state) => const MyAttendanceView(),
+        builder: (context, state) => MyAttendanceNotificationView(
+          studentId: int.tryParse(state.uri.queryParameters['siswa_id'] ?? ''),
+          month: state.uri.queryParameters['bulan'],
+        ),
       ),
       GoRoute(
         path: AppRoutes.parentChildAttendance,
         name: 'parent-child-attendance',
-        builder: (context, state) =>
-            const MyAttendanceView(pageTitle: 'Kehadiran Anak Saya'),
+        builder: (context, state) => MyAttendanceNotificationView(
+          pageTitle: 'Kehadiran Anak Saya',
+          studentId: int.tryParse(state.uri.queryParameters['siswa_id'] ?? ''),
+          month: state.uri.queryParameters['bulan'],
+        ),
       ),
       GoRoute(
         path: AppRoutes.myWorship,

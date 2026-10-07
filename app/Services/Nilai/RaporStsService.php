@@ -3,6 +3,7 @@
 namespace App\Services\Nilai;
 
 use App\Models\AbsensiSiswa;
+use App\Models\AnggotaKelas;
 use App\Models\JadwalUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
@@ -11,6 +12,7 @@ use App\Models\MataPelajaran;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\RaporStsKelas;
+use App\Models\UjianCbt;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use Carbon\Carbon;
@@ -78,7 +80,9 @@ class RaporStsService
             ->reject(fn ($item) => $item->menggunakanPredikat())->values();
         $peserta = PesertaUjianCbt::whereIn('ujian_cbt_id', $jadwal->pluck('ujian_cbt_id')->filter())
             ->whereIn('anggota_kelas_id', $anggota->pluck('id'))
-            ->with('jawabanPesertaUjianCbt')->get()->groupBy('anggota_kelas_id');
+            ->with(['jawabanPesertaUjianCbt', 'kelasUjianCbt.komponenNilai.guruMataPelajaran',
+                'kelasUjianCbt.komponenNilai.nilaiSiswa' => fn ($q) => $q->whereIn('siswa_id', $anggota->pluck('siswa_id'))])
+            ->get()->groupBy('anggota_kelas_id');
         $presensi = AbsensiSiswa::where('tahun_pelajaran_id', $kegiatan->tahun_pelajaran_id)
             ->whereIn('siswa_id', $anggota->pluck('siswa_id'))
             ->whereDate('tanggal', '>=', $pengaturan->tanggal_awal_presensi)
@@ -115,7 +119,7 @@ class RaporStsService
                 } elseif ($jadwal->count() === 1 && $ujian = $jadwal->first()->ujianCbt) {
                     $sumberNilai = 'cbt';
                     $pesertaSiswa = $peserta->get($siswa->id, collect())->firstWhere('ujian_cbt_id', $ujian->id);
-                    $hasil = $this->nilaiPeserta($ujian, $pesertaSiswa);
+                    $hasil = $this->nilaiPeserta($ujian, $pesertaSiswa, $siswa);
                     $dapatDikecualikan = $this->dapatDikecualikan($jadwal->first(), $pesertaSiswa);
                     $sidikKondisi = $this->sidikKondisi($jadwal->first(), $pesertaSiswa);
                 } elseif ($jadwal->isEmpty() && $m = $manual->get($pelajaran->id)) {
@@ -163,7 +167,7 @@ class RaporStsService
                 'sumber' => $sumber, 'sidik_sumber' => $this->sidikSumber($sumber), 'koreksi' => $koreksiSiswa,
                 'kehadiran' => $kehadiran, 'diperiksa' => (bool) $diperiksa,
                 'sumber_berubah' => $koreksiSiswa && $koreksiSiswa->rekap_sumber !== $sumber,
-                'siap' => $pengaturan->exists && $tuntas && $diperiksa && $kelas->waliKelas !== null
+                'siap' => $pengaturan->exists && $diperiksa && $kelas->waliKelas !== null
                     && ! $pengaturan->tanggal_akhir_presensi->isFuture(),
             ];
         });
@@ -217,13 +221,17 @@ class RaporStsService
         ]));
     }
 
-    private function nilaiPeserta($ujian, ?PesertaUjianCbt $peserta): array
+    private function nilaiPeserta(UjianCbt $ujian, ?PesertaUjianCbt $peserta, AnggotaKelas $anggota): array
     {
         if (! $ujian->hasil_difinalisasi_pada) {
             return ['nilai' => null, 'status' => 'Belum difinalisasi guru mapel'];
         }
         if (! $peserta || $peserta->status !== 'selesai') {
             return ['nilai' => null, 'status' => 'Belum mengikuti / menyelesaikan STS'];
+        }
+        // Applied component grades are authoritative, including subsequent teacher corrections or blanks.
+        if ($peserta->nilai_diterapkan_pada !== null || $peserta->nilai_siswa_id !== null) {
+            return $this->nilaiDiterapkan($ujian, $peserta, $anggota);
         }
         $soal = app(PengacakPenyajianCbt::class)->urutkanSoal($ujian, $peserta, $ujian->soalUjianCbt)
             ->take($ujian->jumlah_soal);
@@ -247,6 +255,31 @@ class RaporStsService
         return $maksimal > 0
             ? ['nilai' => round($skor / $maksimal * 100, 2), 'status' => 'Final']
             : ['nilai' => null, 'status' => 'Belum ada soal bernilai'];
+    }
+
+    private function nilaiDiterapkan(UjianCbt $ujian, PesertaUjianCbt $peserta, AnggotaKelas $anggota): array
+    {
+        $kelasUjian = $peserta->kelasUjianCbt;
+        $komponen = $kelasUjian?->komponenNilai;
+        $guru = $komponen?->guruMataPelajaran;
+        if (! $komponen?->aktif || ! $guru?->aktif || $komponen->jenis_komponen !== 'sts'
+            || $komponen->semester !== $ujian->semester
+            || (int) $kelasUjian->ujian_cbt_id !== (int) $ujian->id
+            || (int) $kelasUjian->kelas_id !== (int) $anggota->kelas_id
+            || (int) $guru->kelas_id !== (int) $anggota->kelas_id
+            || (int) $guru->tahun_pelajaran_id !== (int) $ujian->tahun_pelajaran_id
+            || (int) $guru->mata_pelajaran_id !== (int) $ujian->mata_pelajaran_id) {
+            return ['nilai' => null, 'status' => 'Komponen nilai STS tujuan perlu diperiksa'];
+        }
+        $nilai = $komponen->nilaiSiswa->firstWhere('siswa_id', $anggota->siswa_id)?->nilai;
+        if ($nilai === null) {
+            return ['nilai' => null, 'status' => 'Nilai STS pada Input Nilai belum tersedia'];
+        }
+        if (! is_numeric($nilai) || ! is_finite((float) $nilai) || (float) $nilai < 0 || (float) $nilai > 100) {
+            return ['nilai' => null, 'status' => 'Nilai STS pada Input Nilai perlu diperiksa'];
+        }
+
+        return ['nilai' => round((float) $nilai, 2), 'status' => 'Final'];
     }
 
     private function keterangan(?float $nilai): string

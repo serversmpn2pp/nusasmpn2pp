@@ -243,6 +243,9 @@ Perintah ini tidak dijalankan dalam audit dan tidak otomatis membuat signing rel
 
 ## 8. Tindak lanjut R03–R05 — keamanan push
 
+Bagian ini mencatat verifikasi perbaikan awal. Kebijakan presentasi kemudian
+disempurnakan atas permintaan pengguna; lihat bagian 9 dan README mobile.
+
 Perubahan terbatas pada pengiriman, verifikasi, presentasi, dan lifecycle push.
 Kontrak identitas siswa/orang tua/pegawai, relasi identitas, RBAC, dan aturan
 `harusMenggantiKataSandi()` tidak diubah. Perubahan Humas sebelumnya dipertahankan.
@@ -292,3 +295,39 @@ sekolah tidak dideploy dan push nyata tidak dikirim. Notifikasi yang sudah
 terkirim sebelum deployment tidak dapat ditarik kembali dari FCM. Pengujian
 HP fisik R06, PostgreSQL, signing/AAB R01, dan kebijakan privasi R02 tetap perlu
 diselesaikan sebelum rekomendasi rilis publik berubah.
+
+## 9. Penyempurnaan pesan dan notifikasi presensi — 6 Oktober 2026
+
+Atas permintaan pengguna, notifikasi tidak lagi diseragamkan menjadi kalimat
+umum untuk semua jenis. Kontrak identitas, guard sesi/status/ganti sandi,
+pemeriksaan kepemilikan perangkat, dan penjagaan pergantian akun tidak diubah.
+
+- SnackBar memakai judul/pesan asli **dari API setelah verifikasi pemilik**.
+  Endpoint tujuan menambahkan `judul`/`pesan` tanpa menandai baca dan tetap
+  `private, no-store`. Teks dan tujuan dari payload FCM tidak dipercaya.
+- Push rutin nilai/hasil ujian dan survei memakai teks sesuai penerima. Presensi
+  memakai waktu dan status scan tanpa nama/NISN anak. Modul dengan catatan bebas
+  memakai ringkasan sesuai modul, bukan salinan catatan.
+- BK, sanksi, dan berhalangan ibadah tetap diredaksi tanpa rincian pribadi.
+  Kategori sensitif diperiksa lebih dahulu; jenis yang belum dikenal tetap
+  umum. `data_tambahan` tidak disalin ke payload FCM.
+- Scan masuk siswa memberi notifikasi NUSA kepada siswa dan orang tua aktif
+  melalui relasi identitas, bukan berdasarkan role/nomor WhatsApp. Ketukan
+  mobile memilih anak dan bulan yang sesuai; API tetap membatasi akses anak.
+- Pengiriman WhatsApp otomatis dihentikan, termasuk job lama yang belum
+  selesai. Riwayat terdahulu dan salin pesan grup manual tidak dihapus.
+  Scan ulang tidak menggandakan notifikasi, dan scan tanpa akun penerima tetap
+  berhasil. Status `tersimpan` tidak diklaim sebagai bukti FCM diterima HP.
+
+Tidak ada migrasi database atau perubahan secret Firebase. Deploy backend
+lebih dahulu, kosongkan cache, restart worker, lalu build/pasang APK baru.
+Bukti verifikasi penyempurnaan ini: **1.306 tes Laravel lulus dengan 16.960
+assertion, seluruh 370 tes Flutter lulus, analyzer bersih, dan APK debug
+berhasil dibangun** menggunakan API HTTPS sekolah. Regression mencakup redaksi
+payload FCM, teks asli API hanya untuk pemilik, status akun/perangkat, scan
+terlambat/ulang, penerima berdasarkan relasi, job WhatsApp lama, dan pemilihan
+anak dari notifikasi. Tidak ada error/failure/skipped pada suite Laravel;
+JUnit tersimpan lokal di `storage/logs/regression-push-junit.xml`.
+Tes memakai HTTP/Firebase palsu; belum ada deployment atau pengiriman push
+nyata dari perubahan ini. Uji server sekolah/HP fisik serta hambatan rilis
+signing dan privasi tetap wajib diselesaikan.

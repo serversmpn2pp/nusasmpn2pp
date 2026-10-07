@@ -71,6 +71,9 @@ void main() {
     expect(remote.inspected, [10]);
     expect(remote.read, isEmpty);
     expect(runtime.shown, 1);
+    expect(runtime.lastTarget!.title, 'Judul asli dari API');
+    expect(runtime.lastTarget!.body, 'Detail terverifikasi dari API');
+    expect(runtime.lastTarget!.body, isNot('Catatan privat lama'));
     await runtime.action!();
     expect(remote.read, [10]);
     expect(runtime.destinations, ['/nilai-saya']);
@@ -285,7 +288,10 @@ void main() {
         ),
       );
       final actualRuntime = container.read(pushNotificationRuntimeProvider);
-      actualRuntime.showNotification(() async {});
+      actualRuntime.showNotification(
+        const PushNotificationTarget(id: 10),
+        () async {},
+      );
       await tester.pump();
       expect(
         find.text('Ada pembaruan di NUSA. Buka aplikasi untuk melihat detail.'),
@@ -352,6 +358,38 @@ void main() {
     );
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('runtime menampilkan detail API terverifikasi pada layar kecil', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        scaffoldMessengerKey: nusaScaffoldMessengerKey,
+        home: const Scaffold(body: Text('Beranda')),
+      ),
+    );
+    final actualRuntime = container.read(pushNotificationRuntimeProvider);
+    actualRuntime.showNotification(
+      const PushNotificationTarget(
+        id: 10,
+        title: 'Kehadiran anak Anda tercatat',
+        body: 'Anak Anda, Nadia, tercatat hadir tepat waktu pukul 06.54 WIB.',
+      ),
+      () async {},
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Kehadiran anak Anda tercatat'), findsOneWidget);
+    expect(find.textContaining('06.54 WIB'), findsOneWidget);
+    expect(find.textContaining('Catatan privat lama'), findsNothing);
+    expect(find.text('Buka'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    actualRuntime.hideForegroundNotification();
+    await tester.pumpAndSettle();
+  });
 }
 
 final class FakePushRuntime implements PushNotificationRuntime {
@@ -361,6 +399,7 @@ final class FakePushRuntime implements PushNotificationRuntime {
   RemoteMessage? initial;
   int shown = 0, hidden = 0, cleared = 0, refreshes = 0, synchronized = 0;
   Future<void> Function()? action;
+  PushNotificationTarget? lastTarget;
   final destinations = <String>[];
   @override
   bool get available => true;
@@ -391,8 +430,12 @@ final class FakePushRuntime implements PushNotificationRuntime {
   }
 
   @override
-  void showNotification(Future<void> Function() onOpen) {
+  void showNotification(
+    PushNotificationTarget target,
+    Future<void> Function() onOpen,
+  ) {
     shown++;
+    lastTarget = target;
     action = onOpen;
   }
 
@@ -433,6 +476,8 @@ final class FakePushRemote implements PushNotificationRemoteDataSource {
     return PushNotificationTarget(
       id: responseId ?? id,
       destination: destination,
+      title: 'Judul asli dari API',
+      body: 'Detail terverifikasi dari API',
     );
   }
 

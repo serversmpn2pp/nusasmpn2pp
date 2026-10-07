@@ -13,7 +13,7 @@ class NotifikasiApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_tujuan_push_hanya_untuk_pemilik_tanpa_teks_privat_dan_tidak_menandai_baca(): void
+    public function test_detail_push_hanya_untuk_pemilik_dan_tidak_menandai_baca(): void
     {
         $pengguna = Pengguna::where('username', 'administrator')->firstOrFail();
         $notifikasi = $this->buatNotifikasi($pengguna, 'Nama siswa dan rincian privat');
@@ -22,12 +22,14 @@ class NotifikasiApiTest extends TestCase
             ->getJson(route('api.v1.notifikasi.tujuan', $notifikasi))
             ->assertOk()->assertExactJson(['data' => [
                 'id' => $notifikasi->id, 'tautan_mobile' => '/nilai-saya',
+                'judul' => $notifikasi->judul, 'pesan' => $notifikasi->pesan,
             ]])->assertHeader('Cache-Control', 'no-store, private');
         $this->assertNull($notifikasi->fresh()->dibaca_pada);
 
         Auth::forgetGuards();
         $this->withToken($this->token($this->buatPengguna('akun-push-lain')))
-            ->getJson(route('api.v1.notifikasi.tujuan', $notifikasi))->assertForbidden();
+            ->getJson(route('api.v1.notifikasi.tujuan', $notifikasi))->assertForbidden()
+            ->assertDontSee($notifikasi->judul)->assertDontSee($notifikasi->pesan);
         $this->assertNull($notifikasi->fresh()->dibaca_pada);
     }
 
@@ -36,14 +38,14 @@ class NotifikasiApiTest extends TestCase
         $pengguna = $this->buatPengguna('akun-push-status');
         $notifikasi = $this->buatNotifikasi($pengguna, 'Pesan status');
         $url = route('api.v1.notifikasi.tujuan', $notifikasi);
-        $this->getJson($url)->assertUnauthorized();
+        $this->getJson($url)->assertUnauthorized()->assertDontSee($notifikasi->judul);
 
         $pengguna->update(['wajib_ganti_kata_sandi' => true]);
         $token = $this->token($pengguna);
-        $this->withToken($token)->getJson($url)->assertStatus(428);
+        $this->withToken($token)->getJson($url)->assertStatus(428)->assertDontSee($notifikasi->judul);
 
         $pengguna->update(['wajib_ganti_kata_sandi' => false, 'aktif' => false]);
-        $this->withToken($token)->getJson($url)->assertUnauthorized();
+        $this->withToken($token)->getJson($url)->assertUnauthorized()->assertDontSee($notifikasi->judul);
         $this->assertNull($notifikasi->fresh()->dibaca_pada);
     }
 
@@ -98,6 +100,9 @@ class NotifikasiApiTest extends TestCase
         $service = app(TujuanNotifikasiMobileService::class);
 
         $kasus = [
+            ['/presensi-anak?siswa_id=12&bulan=2026-10&catatan=privat', 'presensi-masuk-orang-tua:1', '/kehadiran-anak-saya?siswa_id=12&bulan=2026-10'],
+            ['/notifikasi?siswa_id=13&bulan=2026-09', 'presensi-masuk-siswa:1', '/kehadiran-saya?siswa_id=13&bulan=2026-09'],
+            ['/kehadiran-anak-saya?siswa_id[]=12&bulan=2026-99', null, '/kehadiran-anak-saya'],
             ['/pengajuan-barang/12', null, '/pengajuan-barang/12'],
             ['/pengajuan-barang-saya/13', null, '/pengajuan-saya/13'],
             ['/tugas-pengawas-ujian/14?kembali=panitia', null, '/tugas-pengawas-ujian/14'],

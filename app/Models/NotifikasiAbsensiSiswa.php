@@ -10,10 +10,16 @@ class NotifikasiAbsensiSiswa extends Model
     protected $table = 'notifikasi_absensi_siswa';
 
     public const STATUS_MENUNGGU = 'menunggu';
+
     public const STATUS_SIMULASI = 'simulasi';
+
     public const STATUS_TERKIRIM = 'terkirim';
+
     public const STATUS_GAGAL = 'gagal';
+
     public const STATUS_DILEWATI = 'dilewati';
+
+    public const STATUS_TERSIMPAN = 'tersimpan';
 
     public const DAFTAR_STATUS = [
         self::STATUS_MENUNGGU => 'Menunggu',
@@ -21,6 +27,7 @@ class NotifikasiAbsensiSiswa extends Model
         self::STATUS_TERKIRIM => 'Terkirim',
         self::STATUS_GAGAL => 'Gagal',
         self::STATUS_DILEWATI => 'Dilewati',
+        self::STATUS_TERSIMPAN => 'Tersimpan di NUSA',
     ];
 
     protected $fillable = [

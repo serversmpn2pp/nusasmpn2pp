@@ -110,7 +110,7 @@
         @unless ($pratinjau)
             <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
         @endunless
-        <span>{{ $baris->count() }} siswa · A4 portrait · {{ $pratinjau ? 'Pratinjau draf' : 'Rapor final' }}</span>
+        <span>{{ $baris->count() }} siswa · A4 portrait · {{ $pratinjau ? 'Pratinjau draf' : ($baris->every(fn ($item) => $item['nilai_tuntas']) ? 'Rekap nilai lengkap' : 'Memuat nilai belum tersedia') }}</span>
     </nav>
 
     @foreach ($baris as $item)
@@ -174,9 +174,12 @@
                 </tbody>
             </table>
 
-            @if ($item['jumlah_pengecualian'])
-                <p class="exception-note">{{ $item['jumlah_pengecualian'] }} mata pelajaran berstatus Tidak mengikuti STS.
-                    @if ($item['jumlah_bernilai'])
+            @if (! $item['nilai_tuntas'] || $item['jumlah_pengecualian'])
+                <p class="exception-note">
+                    @if ($item['jumlah_pengecualian']){{ $item['jumlah_pengecualian'] }} mata pelajaran berstatus Tidak mengikuti STS.@endif
+                    @if (! $item['nilai_tuntas'])
+                        {{ $item['nilai']->whereNull('nilai')->where('dikecualikan', false)->count() }} mata pelajaran belum tersedia. Jumlah dan rata-rata belum dihitung; nilai kosong tidak dianggap nol.
+                    @elseif ($item['jumlah_bernilai'])
                         Jumlah dan rata-rata dihitung dari {{ $item['jumlah_bernilai'] }} mata pelajaran yang memiliki nilai.
                     @else
                         Jumlah dan rata-rata tidak dihitung karena belum ada nilai STS.

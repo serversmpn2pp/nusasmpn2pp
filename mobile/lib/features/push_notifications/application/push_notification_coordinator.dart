@@ -136,9 +136,10 @@ final class PushNotificationCoordinator {
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
     final version = _sessionVersion;
-    if (await _verify(message, version) == null || !_current(version)) return;
+    final target = await _verify(message, version);
+    if (target == null || !_current(version)) return;
     _runtime.refreshInbox();
-    _runtime.showNotification(() async {
+    _runtime.showNotification(target, () async {
       if (_current(version)) await _open(message);
     });
   }

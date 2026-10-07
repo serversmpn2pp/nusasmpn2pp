@@ -127,8 +127,8 @@
                 <button class="button button-primary">Simpan periode</button>
             </form>
             <p class="help-text">Wali kelas: {{ $kelas->waliKelas?->nama_lengkap ?? 'Belum ditetapkan' }} · Nilai: hasil final CBT atau STS manual untuk mapel non-CBT.</p>
-            @if (! $pengaturan->exists)<p class="sts-notice">Periode belum disimpan. Pemeriksaan kehadiran dan cetak final belum tersedia.</p>@endif
-            @if ($pengaturan->tanggal_akhir_presensi->isFuture())<p class="sts-notice">Periode presensi belum berakhir. Rapor final belum dapat dicetak.</p>@endif
+            @if (! $pengaturan->exists)<p class="sts-notice">Periode belum disimpan. Pemeriksaan kehadiran dan cetak rapor belum tersedia.</p>@endif
+            @if ($pengaturan->tanggal_akhir_presensi->isFuture())<p class="sts-notice">Periode presensi belum berakhir. Rapor belum dapat dicetak.</p>@endif
         </section>
         <div class="sts-summary">
             <div><strong>{{ $baris->count() }}</strong><span>Siswa</span></div>
@@ -258,6 +258,7 @@
                 @else<button class="button button-primary" disabled>Cetak seluruh kelas</button>@endif
             </div>
             <p class="help-text">{{ $baris->count() - $siap }} siswa belum siap cetak · A4, satu halaman per siswa.</p>
+            @if ($baris->contains(fn ($item) => ! $item['nilai_tuntas']))<p class="help-text">{{ $baris->where('nilai_tuntas', false)->count() }} siswa memiliki nilai yang belum tersedia.</p>@endif
         </section>
     @else
         <p class="sts-notice">Belum ada kegiatan STS atau kelas dalam kewenangan Anda.</p>
