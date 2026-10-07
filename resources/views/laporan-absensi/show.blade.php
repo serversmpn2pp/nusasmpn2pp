@@ -10,7 +10,7 @@
             'periode' => $laporan['periode'], 'tanggal' => $laporan['tanggal'], 'bulan' => $laporan['bulan'],
             'semester' => $laporan['semester'], 'tanggal_mulai' => $laporan['tanggalMulai'], 'tanggal_selesai' => $laporan['tanggalSelesai'],
         ], fn ($nilai) => filled($nilai));
-        $labelFilter = ['semua' => 'Semua hari', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa', 'terlambat' => 'Terlambat', 'hadir' => 'Hadir', 'belum_scan' => 'Belum dikonfirmasi'];
+        $labelFilter = ['semua' => 'Semua hari', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa', 'terlambat' => 'Terlambat', 'hadir' => 'Hadir', 'belum_scan' => 'Belum dikonfirmasi', 'pengecualian' => 'Pengecualian presensi'];
         $badgeStatus = fn ($status) => match ($status) {
             'hadir' => 'badge-active', 'sakit' => 'badge-warning', 'izin' => 'presensi-badge-izin', 'alfa' => 'badge-danger', default => 'badge-muted',
         };
@@ -44,6 +44,7 @@
         .presensi-detail-table .person-meta { font-size: .82rem; }
         .presensi-detail-table .date-cell { min-width: 155px; }
         .presensi-source { margin: 6px 0 0; color: var(--muted); font-size: .8rem; max-width: 185px; }
+        .presensi-history .badge { white-space: normal; text-align: left; }
         .presensi-badge-izin { color: #176144; background: #eaf7ef; }
         .presensi-late { color: #946200; font-weight: 800; white-space: nowrap; }
         .presensi-note { margin: 0; overflow-wrap: anywhere; font-size: .88rem; }

@@ -174,13 +174,15 @@ class RekapPresensiSiswaMobileService
         $rekap = $anggota->map(function (AnggotaKelas $item) use ($absensiPerAnggota, $absensiPerSiswa, $tanggal, $hariAktif) {
             $presensi = $absensiPerAnggota->get($item->id) ?? $absensiPerSiswa->get($item->siswa_id);
             $alfaOtomatis = ! $presensi && $this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $item);
-            $status = $presensi?->status_kehadiran ?? ($alfaOtomatis ? 'alfa' : 'belum_scan');
+            $pengecualian = $this->aturanAlfa->pengecualianPada($tanggal, $item);
+            $status = $presensi?->status_kehadiran ?? $this->aturanAlfa->statusTanpaCatatan($tanggal, $hariAktif, $item);
 
             return [
                 'anggota_kelas' => $item,
                 'absensi' => $presensi,
                 'status_kehadiran' => $status,
-                'status_sumber' => $presensi ? 'catatan' : ($alfaOtomatis ? 'otomatis' : 'inferensi'),
+                'status_sumber' => $presensi ? 'catatan' : ($pengecualian ? 'pengecualian' : ($alfaOtomatis ? 'otomatis' : 'inferensi')),
+                'pengecualian' => $pengecualian,
                 'terlambat' => (int) ($presensi?->menit_terlambat ?? 0),
                 'pulang_cepat' => (int) ($presensi?->menit_pulang_cepat ?? 0),
                 'belum_pulang' => $status === 'hadir' && $presensi?->jam_masuk && ! $presensi?->jam_pulang,
@@ -267,23 +269,29 @@ class RekapPresensiSiswaMobileService
     private function terapkanStatus(Builder $query, string $status, string $tanggal, array $hariAktif): void
     {
         if ($status === 'belum_scan') {
+            $this->aturanAlfa->batasiPengecualian($query, $tanggal, false);
             $query->whereDoesntHave('siswa.absensiSiswa', fn (Builder $query) => $query->whereDate('tanggal', $tanggal));
-            if ($this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif)) {
+            if ($this->aturanAlfa->hariWajibYangTelahBerakhir($tanggal, $hariAktif)) {
                 $otomatis = AnggotaKelas::query();
                 $this->aturanAlfa->batasiKeanggotaan($otomatis, $tanggal);
+                $this->aturanAlfa->batasiPengecualian($otomatis, $tanggal, false);
                 $query->whereNotIn('id', $otomatis->select('id'));
             }
         } elseif ($status === 'alfa') {
             $query->where(function (Builder $query) use ($tanggal, $hariAktif) {
                 $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query
                     ->whereDate('tanggal', $tanggal)->where('status_kehadiran', 'alfa'));
-                if ($this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif)) {
+                if ($this->aturanAlfa->hariWajibYangTelahBerakhir($tanggal, $hariAktif)) {
                     $query->orWhere(function (Builder $query) use ($tanggal) {
                         $query->whereDoesntHave('siswa.absensiSiswa', fn (Builder $q) => $q->whereDate('tanggal', $tanggal));
                         $this->aturanAlfa->batasiKeanggotaan($query, $tanggal);
+                        $this->aturanAlfa->batasiPengecualian($query, $tanggal, false);
                     });
                 }
             });
+        } elseif ($status === 'pengecualian') {
+            $query->whereDoesntHave('siswa.absensiSiswa', fn (Builder $query) => $query->whereDate('tanggal', $tanggal));
+            $this->aturanAlfa->batasiPengecualian($query, $tanggal, true);
         } elseif (in_array($status, ['hadir', 'izin', 'sakit'], true)) {
             $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query
                 ->whereDate('tanggal', $tanggal)->where('status_kehadiran', $status));
@@ -316,6 +324,8 @@ class RekapPresensiSiswaMobileService
         $siswaTercatat = (clone $absensi)->pluck('siswa_id');
         $alfaOtomatis = $anggota->whereNotIn('siswa_id', $siswaTercatat)
             ->filter(fn ($item) => $this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $item))->count();
+        $pengecualian = $anggota->whereNotIn('siswa_id', $siswaTercatat)
+            ->filter(fn ($item) => $this->aturanAlfa->pengecualianPada($tanggal, $item))->count();
 
         return [
             'total' => $total,
@@ -323,7 +333,8 @@ class RekapPresensiSiswaMobileService
             'izin' => (clone $absensi)->where('status_kehadiran', 'izin')->count(),
             'sakit' => (clone $absensi)->where('status_kehadiran', 'sakit')->count(),
             'alfa' => (clone $absensi)->where('status_kehadiran', 'alfa')->count() + $alfaOtomatis,
-            'belum_scan' => max($total - $tercatat - $alfaOtomatis, 0),
+            'belum_scan' => max($total - $tercatat - $alfaOtomatis - $pengecualian, 0),
+            'pengecualian' => $pengecualian,
             'terlambat' => (clone $absensi)->where('menit_terlambat', '>', 0)->count(),
             'pulang_cepat' => (clone $absensi)->where('menit_pulang_cepat', '>', 0)->count(),
             'belum_pulang' => (clone $absensi)->where('status_kehadiran', 'hadir')
@@ -337,7 +348,8 @@ class RekapPresensiSiswaMobileService
         $foto = $siswa && filled($siswa->foto) && Storage::disk('public')->exists($siswa->foto);
         $akses = $this->koreksi->evaluasiAkses($pengguna, $anggota, $tanggal, $absensi);
         $alfaOtomatis = ! $absensi && $this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggota);
-        $status = $absensi?->status_kehadiran ?? ($alfaOtomatis ? 'alfa' : 'belum_scan');
+        $pengecualian = $this->aturanAlfa->pengecualianPada($tanggal, $anggota);
+        $status = $absensi?->status_kehadiran ?? $this->aturanAlfa->statusTanpaCatatan($tanggal, $hariAktif, $anggota);
 
         return [
             'anggota_kelas_id' => (int) $anggota->id,
@@ -357,9 +369,10 @@ class RekapPresensiSiswaMobileService
             'presensi' => [
                 'id' => $absensi?->id ? (int) $absensi->id : null,
                 'status' => $status,
-                'status_label' => $this->labelStatus($status),
-                'sumber' => $absensi?->sumber ?? ($alfaOtomatis ? 'otomatis' : 'inferensi'),
-                'sumber_label' => $absensi ? $this->labelSumber($absensi->sumber) : ($alfaOtomatis ? 'Hari berakhir tanpa konfirmasi' : 'Belum ada catatan'),
+                'status_label' => $status === 'pengecualian' ? $pengecualian->label() : $this->labelStatus($status),
+                'sumber' => $absensi?->sumber ?? ($pengecualian ? 'pengecualian' : ($alfaOtomatis ? 'otomatis' : 'inferensi')),
+                'sumber_label' => $absensi ? $this->labelSumber($absensi->sumber) : ($pengecualian ? $pengecualian->label() : ($alfaOtomatis ? 'Hari berakhir tanpa konfirmasi' : 'Belum ada catatan')),
+                'pengecualian' => $pengecualian ? ['id' => $pengecualian->id, 'jenis' => $pengecualian->jenis, 'alasan' => $pengecualian->alasan] : null,
                 'jam_masuk' => $this->formatJam($absensi?->jam_masuk),
                 'status_masuk' => $absensi?->status_masuk,
                 'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),

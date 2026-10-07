@@ -4,6 +4,7 @@ namespace App\Services\Absensi;
 
 use App\Models\AnggotaKelas;
 use App\Models\PengaturanAbsensi;
+use App\Models\PengecualianPresensiSiswa;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
@@ -12,6 +13,37 @@ use Illuminate\Support\Collection;
 
 class AturanAlfaOtomatisSiswaService
 {
+    private ?Collection $pengecualian = null;
+
+    public function pengecualianPada(string $tanggal, ?AnggotaKelas $anggota = null): ?PengecualianPresensiSiswa
+    {
+        $this->pengecualian ??= PengecualianPresensiSiswa::where('aktif', true)->orderBy('id')->get();
+
+        return $this->pengecualian->first(fn ($p) => $p->tanggal_mulai->toDateString() <= $tanggal
+            && $p->tanggal_selesai->toDateString() >= $tanggal
+            && (! $anggota || (int) $p->tahun_pelajaran_id === (int) $anggota->tahun_pelajaran_id)
+            && ($p->kelas_id === null || ($anggota && (int) $p->kelas_id === (int) $anggota->kelas_id)));
+    }
+
+    public function statusTanpaCatatan(string $tanggal, array $hariAktif, ?AnggotaKelas $anggota = null, string $menunggu = 'belum_scan'): string
+    {
+        return $this->pengecualianPada($tanggal, $anggota) ? 'pengecualian'
+            : ($this->menjadiAlfa($tanggal, $hariAktif, $anggota) ? 'alfa' : $menunggu);
+    }
+
+    public function batasiPengecualian(Builder $query, string $tanggal, bool $dikecualikan): void
+    {
+        $query->whereExists(function ($q) use ($tanggal) {
+            $q->selectRaw('1')->from('pengecualian_presensi_siswa as pengecualian')
+                ->where('pengecualian.aktif', true)
+                ->whereColumn('pengecualian.tahun_pelajaran_id', 'anggota_kelas.tahun_pelajaran_id')
+                ->where(fn ($q) => $q->whereNull('pengecualian.kelas_id')
+                    ->orWhereColumn('pengecualian.kelas_id', 'anggota_kelas.kelas_id'))
+                ->whereDate('pengecualian.tanggal_mulai', '<=', $tanggal)
+                ->whereDate('pengecualian.tanggal_selesai', '>=', $tanggal);
+        }, 'and', ! $dikecualikan);
+    }
+
     public function hariAktif(): array
     {
         return PengaturanAbsensi::where('aktif', true)->pluck('hari')->all();
@@ -41,10 +73,19 @@ class AturanAlfaOtomatisSiswaService
         $tahun = $anggota?->tahunPelajaran;
 
         return $hari->lt(now()->startOfDay()) && in_array($kodeHari, $hariAktif, true)
+            && ! $this->pengecualianPada($tanggal, $anggota)
             && (! $anggota?->tanggal_masuk || $hari->gte($anggota->tanggal_masuk))
             && (! $anggota?->tanggal_keluar || $hari->lte($anggota->tanggal_keluar))
             && (! $tahun?->tanggal_mulai || $hari->gte($tahun->tanggal_mulai))
             && (! $tahun?->tanggal_selesai || $hari->lte($tahun->tanggal_selesai));
+    }
+
+    public function hariWajibYangTelahBerakhir(string $tanggal, array $hariAktif): bool
+    {
+        $hari = Carbon::parse($tanggal)->startOfDay();
+        $kodeHari = array_keys(PengaturanAbsensi::DAFTAR_HARI)[$hari->isoWeekday() - 1];
+
+        return $hari->lt(now()->startOfDay()) && in_array($kodeHari, $hariAktif, true);
     }
 
     public function batasiKeanggotaan(Builder $query, string $tanggal): void

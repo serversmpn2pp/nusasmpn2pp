@@ -8,7 +8,7 @@
 - Tanggal mendatang, hari presensi nonaktif, tanggal di luar tahun pelajaran, dan tanggal di luar masa keanggotaan siswa tidak menghasilkan alfa otomatis.
 - Catatan scan atau manual tetap diutamakan. Konfirmasi/koreksi petugas yang berwenang setelahnya menggantikan alfa otomatis; riwayat koreksi tetap dicatat oleh fitur koreksi presensi.
 
-Aturan ini **tetap berlaku ketika scanner bermasalah** jika tidak ada konfirmasi petugas. Hari libur khusus yang jatuh pada hari presensi aktif belum memiliki kalender pengecualian tanggal pada modul ini; periksa dan koreksi rekap agar sesuai kebijakan sekolah.
+Aturan ini **tetap berlaku ketika scanner bermasalah** jika tidak ada konfirmasi petugas atau penetapan pengecualian. Untuk PJJ, libur khusus, keadaan darurat, dan gangguan scanner, pengelola dapat menetapkan rentang tanggal melalui **Pengaturan Presensi > Pengecualian presensi**. Alfa otomatis tidak dihitung pada cakupan penetapan aktif tersebut; catatan manual tetap berlaku. Lihat [panduan pengecualian](pengecualian-presensi-siswa.md).
 
 ## Perhitungan dan koreksi
 
@@ -20,7 +20,7 @@ Perubahan pengaturan hari aktif mempengaruhi perhitungan hari tanpa catatan dala
 
 ## Pembaruan server
 
-Tidak ada migrasi database baru. Setelah pembaruan kode, jalankan `php artisan optimize:clear`. Jika layanan PHP memakai OPcache tanpa pemeriksaan perubahan file, mulai ulang layanan PHP pada waktu pemeliharaan. Periksa zona waktu aplikasi dan lakukan pemeriksaan ulang rekap rapor yang sumbernya berubah.
+Fitur alfa otomatis awal tidak memerlukan migrasi, tetapi fitur pengecualian tanggal menambahkan tabel baru. Untuk pembaruan yang mencakup pengecualian, jalankan `php artisan migrate --force` lalu `php artisan optimize:clear`. Jika layanan PHP memakai OPcache tanpa pemeriksaan perubahan file, mulai ulang layanan PHP pada waktu pemeliharaan. Periksa zona waktu aplikasi dan lakukan pemeriksaan ulang rekap rapor yang sumbernya berubah.
 
 ## Verifikasi
 

@@ -25,6 +25,7 @@ class RekapAbsensiHarianController extends Controller
         'sakit' => 'Sakit',
         'alfa' => 'Alfa',
         'belum_scan' => 'Belum dikonfirmasi',
+        'pengecualian' => 'Pengecualian presensi',
         'terlambat' => 'Terlambat',
         'pulang_cepat' => 'Pulang cepat',
         'belum_pulang' => 'Belum pulang',
@@ -245,14 +246,16 @@ class RekapAbsensiHarianController extends Controller
         return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($absensiPerAnggota, $absensiPerSiswa, $laporanPerAbsensi, $tanggal, $aturanAlfa, $hariAktif) {
             $absen = $absensiPerAnggota->get($anggota->id) ?? $absensiPerSiswa->get($anggota->siswa_id);
             $alfaOtomatis = ! $absen && $aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggota);
-            $statusKehadiran = $absen?->status_kehadiran ?? ($alfaOtomatis ? 'alfa' : 'belum_scan');
+            $pengecualian = $aturanAlfa->pengecualianPada($tanggal, $anggota);
+            $statusKehadiran = $absen?->status_kehadiran ?? $aturanAlfa->statusTanpaCatatan($tanggal, $hariAktif, $anggota);
 
             return [
                 'anggota_kelas' => $anggota,
                 'absensi' => $absen,
                 'laporan_keterlambatan' => $absen ? $laporanPerAbsensi->get($absen->id) : null,
                 'status_kehadiran' => $statusKehadiran,
-                'status_sumber' => $absen ? 'catatan' : ($alfaOtomatis ? 'otomatis' : 'inferensi'),
+                'status_sumber' => $absen ? 'catatan' : ($pengecualian ? 'pengecualian' : ($alfaOtomatis ? 'otomatis' : 'inferensi')),
+                'pengecualian' => $pengecualian,
                 'terlambat' => (int) ($absen?->menit_terlambat ?? 0),
                 'pulang_cepat' => (int) ($absen?->menit_pulang_cepat ?? 0),
                 'belum_pulang' => $statusKehadiran === 'hadir' && $absen?->jam_masuk && ! $absen?->jam_pulang,
@@ -338,7 +341,7 @@ class RekapAbsensiHarianController extends Controller
     private function saringStatus($rekapAbsensi, string $status)
     {
         return match ($status) {
-            'hadir', 'izin', 'sakit', 'alfa', 'belum_scan' => $rekapAbsensi
+            'hadir', 'izin', 'sakit', 'alfa', 'belum_scan', 'pengecualian' => $rekapAbsensi
                 ->where('status_kehadiran', $status)
                 ->values(),
             'terlambat' => $rekapAbsensi->where('terlambat', '>', 0)->values(),

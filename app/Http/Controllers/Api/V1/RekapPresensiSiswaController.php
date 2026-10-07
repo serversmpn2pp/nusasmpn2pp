@@ -19,7 +19,7 @@ class RekapPresensiSiswaController extends Controller
             'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'status' => ['nullable', Rule::in([
-                'semua', 'hadir', 'izin', 'sakit', 'alfa', 'belum_scan', 'terlambat', 'pulang_cepat', 'belum_pulang',
+                'semua', 'hadir', 'izin', 'sakit', 'alfa', 'belum_scan', 'pengecualian', 'terlambat', 'pulang_cepat', 'belum_pulang',
             ])],
             'cari' => ['nullable', 'string', 'max:100'],
             'halaman' => ['nullable', 'integer', 'min:1'],

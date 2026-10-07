@@ -52,6 +52,7 @@ class PresensiAnakController extends Controller
             $tahunPelajaran,
             $tanggalMulai,
             $tanggalSelesai,
+            $anggotaKelas,
         );
         [$riwayatIbadah, $ringkasanIbadah] = $this->dataPresensiIbadah(
             $siswa,
@@ -147,6 +148,7 @@ class PresensiAnakController extends Controller
         ?TahunPelajaran $tahunPelajaran,
         ?Carbon $tanggalMulai,
         ?Carbon $tanggalSelesai,
+        ?AnggotaKelas $anggotaKelas,
     ): array {
         $ringkasanKosong = [
             'hari_terjadwal' => 0,
@@ -193,15 +195,17 @@ class PresensiAnakController extends Controller
         $riwayat = $tanggalTerjadwal
             ->unique()
             ->sortDesc()
-            ->map(function (string $tanggal) use ($absensi, $aturanAlfa, $hariPresensiAktif) {
+            ->map(function (string $tanggal) use ($absensi, $aturanAlfa, $hariPresensiAktif, $anggotaKelas) {
                 $catatan = $absensi->get($tanggal);
-                $status = $catatan?->status_kehadiran ?: ($aturanAlfa->menjadiAlfa($tanggal, $hariPresensiAktif) ? 'alfa' : 'belum_tercatat');
+                $pengecualian = $aturanAlfa->pengecualianPada($tanggal, $anggotaKelas);
+                $status = $catatan?->status_kehadiran ?: $aturanAlfa->statusTanpaCatatan($tanggal, $hariPresensiAktif, $anggotaKelas, 'belum_tercatat');
 
                 return [
                     'tanggal' => Carbon::parse($tanggal),
                     'absensi' => $catatan,
                     'status' => $status,
-                    'label_status' => $this->labelStatusSekolah($status),
+                    'label_status' => $status === 'pengecualian' ? $pengecualian->label() : $this->labelStatusSekolah($status),
+                    'pengecualian' => $pengecualian,
                 ];
             })
             ->values();

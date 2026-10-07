@@ -33,6 +33,11 @@ class RangkumanWhatsappPresensiSiswaService
             'Belum scan: '.$belumScan->count(),
         ];
 
+        $pengecualian = $rekapAbsensi->where('status_kehadiran', 'pengecualian');
+        if ($pengecualian->isNotEmpty()) {
+            $baris[] = 'Pengecualian scan (bukan alfa): '.$pengecualian->count();
+        }
+
         $this->tambahkanBagian($baris, 'Terlambat', $terlambat, fn (array $item) => $this->barisSiswa($item, $this->formatJam($item['absensi']?->jam_masuk).' - terlambat '.$item['terlambat'].' menit'));
         $this->tambahkanBagian($baris, 'Sakit', $sakit, fn (array $item) => $this->barisSiswa($item, $item['absensi']?->catatan ?: 'Sakit'));
         $this->tambahkanBagian($baris, 'Izin', $izin, fn (array $item) => $this->barisSiswa($item, $item['absensi']?->catatan ?: 'Izin'));

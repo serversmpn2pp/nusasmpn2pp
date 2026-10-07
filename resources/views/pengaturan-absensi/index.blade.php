@@ -10,7 +10,7 @@
         </div>
 
         @izin('absensi.pengaturan_kelola')
-            <a href="{{ route('pengaturan-absensi.create') }}" class="button button-primary">Tambah pengaturan</a>
+            <div class="actions"><a href="{{ route('pengecualian-presensi.index') }}" class="button button-muted">Pengecualian presensi</a><a href="{{ route('pengaturan-absensi.create') }}" class="button button-primary">Tambah pengaturan</a></div>
         @endizin
     </div>
 

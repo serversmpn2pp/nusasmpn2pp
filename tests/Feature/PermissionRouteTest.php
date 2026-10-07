@@ -7,6 +7,13 @@ use Tests\TestCase;
 
 class PermissionRouteTest extends TestCase
 {
+    public function test_pengecualian_presensi_memakai_izin_pengaturan(): void
+    {
+        foreach (['index', 'pratinjau', 'store', 'batalkan'] as $aksi) {
+            $this->assertRouteMemakaiMiddleware('pengecualian-presensi.'.$aksi, 'izin:absensi.pengaturan_kelola');
+        }
+    }
+
     public function test_route_siswa_memisahkan_izin_lihat_dan_kelola(): void
     {
         $this->assertRouteMemakaiMiddleware('siswa.index', 'izin:siswa.lihat,siswa.kelola');

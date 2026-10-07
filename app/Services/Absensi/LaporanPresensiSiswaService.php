@@ -105,7 +105,8 @@ class LaporanPresensiSiswaService
         $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
         $rincian = collect($tanggalEfektif)->map(function ($tanggal) use ($absensi, $aturanAlfa, $anggota, $laporan) {
             $presensi = $absensi->get($tanggal);
-            $status = $presensi?->status_kehadiran ?? ($aturanAlfa->menjadiAlfa($tanggal, $laporan['hariAktif'], $anggota) ? 'alfa' : 'belum_scan');
+            $pengecualian = $aturanAlfa->pengecualianPada($tanggal, $anggota);
+            $status = $presensi?->status_kehadiran ?? $aturanAlfa->statusTanpaCatatan($tanggal, $laporan['hariAktif'], $anggota);
             $hari = Carbon::parse($tanggal)->locale('id');
 
             return [
@@ -113,7 +114,8 @@ class LaporanPresensiSiswaService
                 'hari_label' => $hari->translatedFormat('l'), 'tanggal_panjang' => $hari->translatedFormat('d F Y'),
                 'status' => $status,
                 'status_label' => match ($status) {
-                    'hadir' => 'Hadir', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa', default => 'Belum dikonfirmasi',
+                    'hadir' => 'Hadir', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa',
+                    'pengecualian' => $pengecualian->label(), default => 'Belum dikonfirmasi',
                 },
                 'inferensi' => $presensi === null, 'alfa_otomatis' => $presensi === null && $status === 'alfa',
                 'jam_masuk' => $presensi?->jam_masuk ? mb_substr($presensi->jam_masuk, 0, 5) : null,
@@ -123,8 +125,9 @@ class LaporanPresensiSiswaService
                 'menit_pulang_cepat' => (int) ($presensi?->menit_pulang_cepat ?? 0),
                 'sumber' => $presensi?->sumber,
                 'sumber_label' => $presensi ? ($presensi->sumber === 'scan' ? 'Scan presensi' : 'Catatan petugas')
-                    : ($status === 'alfa' ? 'Alfa otomatis: hari berakhir tanpa konfirmasi' : 'Belum ada catatan'),
-                'catatan' => $presensi?->catatan,
+                    : ($status === 'pengecualian' ? 'Pengecualian presensi' : ($status === 'alfa' ? 'Alfa otomatis: hari berakhir tanpa konfirmasi' : 'Belum ada catatan')),
+                'catatan' => $presensi?->catatan ?? ($status === 'pengecualian' ? $pengecualian->alasan : null),
+                'pengecualian' => $pengecualian ? ['id' => $pengecualian->id, 'jenis' => $pengecualian->jenis, 'alasan' => $pengecualian->alasan] : null,
             ];
         })->values();
 

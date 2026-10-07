@@ -99,6 +99,7 @@ use App\Http\Controllers\PengaturanBerhalanganIbadahController;
 use App\Http\Controllers\PengaturanInventarisController;
 use App\Http\Controllers\PengaturanPeringatanDiniPoinController;
 use App\Http\Controllers\PengaturanPoinKeterlambatanController;
+use App\Http\Controllers\PengecualianPresensiController;
 use App\Http\Controllers\PengembalianBarangController;
 use App\Http\Controllers\PenguranganPoinSiswaController;
 use App\Http\Controllers\PenugasanGuruBkTingkatController;
@@ -1060,6 +1061,12 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         });
         Route::resource('pengaturan-absensi', PengaturanAbsensiController::class)
             ->middleware('izin:absensi.pengaturan_kelola');
+        Route::middleware('izin:absensi.pengaturan_kelola')->group(function () {
+            Route::get('pengecualian-presensi', [PengecualianPresensiController::class, 'index'])->name('pengecualian-presensi.index');
+            Route::post('pengecualian-presensi/pratinjau', [PengecualianPresensiController::class, 'pratinjau'])->name('pengecualian-presensi.pratinjau');
+            Route::post('pengecualian-presensi', [PengecualianPresensiController::class, 'store'])->name('pengecualian-presensi.store');
+            Route::post('pengecualian-presensi/{pengecualian}/batalkan', [PengecualianPresensiController::class, 'batalkan'])->name('pengecualian-presensi.batalkan');
+        });
         Route::resource('pengaturan-absensi-pegawai', PengaturanAbsensiPegawaiController::class)
             ->middleware('izin:absensi.pengaturan_kelola');
         Route::resource('kegiatan-ibadah', KegiatanIbadahController::class)

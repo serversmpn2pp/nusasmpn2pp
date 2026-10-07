@@ -13,6 +13,7 @@
             'sakit' => 'Sakit',
             'alfa' => 'Alfa',
             'belum_scan' => 'Belum dikonfirmasi',
+            'pengecualian' => 'Pengecualian presensi',
         ];
         $badgeStatus = fn (string $status) => match ($status) {
             'hadir' => 'badge badge-active',
@@ -223,6 +224,7 @@
             </button>
             @izin('absensi.pengaturan_kelola')
                 <a href="{{ route('pengaturan-absensi.index') }}" class="button button-muted">Jam presensi</a>
+                <a href="{{ route('pengecualian-presensi.index') }}" class="button button-muted">Pengecualian presensi</a>
             @endizin
             @if (auth()->user()?->memilikiIzin(['poin_siswa.pengaturan', 'poin_siswa.verifikasi_bk']))
                 <form method="POST" action="{{ route('rekap-absensi-harian.proses-poin-keterlambatan') }}">
@@ -403,7 +405,9 @@
                                 <td data-label="Kelas">{{ $anggota->kelas?->nama ?: '-' }}</td>
                                 <td data-label="Status">
                                     <span class="{{ $badgeStatus($status) }}">{{ $labelStatus[$status] ?? ucfirst($status) }}</span>
-                                    @if ($item['status_sumber'] === 'inferensi')
+                                    @if ($item['status_sumber'] === 'pengecualian')
+                                        <p class="person-meta">{{ $item['pengecualian']->label() }}</p><p class="person-meta">{{ $item['pengecualian']->alasan }}</p>
+                                    @elseif ($item['status_sumber'] === 'inferensi')
                                         <p class="person-meta">Belum ada catatan</p>
                                     @elseif ($item['status_sumber'] === 'otomatis')
                                         <p class="person-meta">Otomatis: hari berakhir tanpa konfirmasi</p>
@@ -485,7 +489,9 @@
                             <span class="{{ $badgeStatus($status) }}">{{ $labelStatus[$status] ?? ucfirst($status) }}</span>
                         </div>
 
-                        @if ($item['status_sumber'] === 'otomatis')
+                        @if ($item['status_sumber'] === 'pengecualian')
+                            <p class="person-meta">{{ $item['pengecualian']->label() }}</p><p class="person-meta">{{ $item['pengecualian']->alasan }}</p>
+                        @elseif ($item['status_sumber'] === 'otomatis')
                             <p class="person-meta">Otomatis: hari berakhir tanpa konfirmasi</p>
                         @elseif ($item['status_sumber'] === 'inferensi')
                             <p class="person-meta">Belum ada catatan</p>

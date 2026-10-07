@@ -8,6 +8,8 @@ Filter **Status / kejadian** memilih semua hari, sakit, izin, alfa, terlambat, h
 
 Alfa tanpa konfirmasi pada hari aktif yang sudah berakhir diberi penanda **Alfa otomatis**. Alfa yang dicatat petugas tidak diberi penanda otomatis. Hari ini yang belum memiliki catatan tetap belum dikonfirmasi. Hari nonaktif dan tanggal mendatang tidak muncul. Scan datang tanpa scan pulang tetap hadir, dengan keterangan **Belum scan pulang**. Halaman ini hanya membaca data; koreksi presensi tetap melalui rekap harian.
 
+Hari tanpa catatan yang memiliki penetapan pengecualian aktif ditampilkan sebagai **PJJ / pengecualian - scan sekolah tidak diwajibkan**, beserta alasannya. Filter **Pengecualian presensi** memilih hari tersebut. Tidak dihitung sebagai alfa otomatis atau hadir; catatan manual tetap diutamakan.
+
 Rute web `/laporan-absensi/{anggotaKelas}/rincian` memakai izin `absensi.laporan` dan cakupan kelas yang sama dengan laporan utama. Wali kelas tidak bisa membuka rincian siswa di luar kelasnya. Web dan API memakai perhitungan rincian yang sama. Kontrak API lama dipertahankan dengan tambahan label hari, tanggal panjang, sumber, penanda alfa otomatis, dan status belum scan pulang.
 
 Tidak ada migrasi database atau perubahan scheduler. Setelah pembaruan kode di server, jalankan `php artisan optimize:clear`. Mulai ulang layanan PHP bila OPcache tidak memeriksa perubahan file, pada waktu pemeliharaan.

@@ -19,7 +19,7 @@ class LaporanAbsensiController extends Controller
 
     public function show(Request $request, AnggotaKelas $anggotaKelas)
     {
-        $data = $request->validate(['status_rincian' => ['nullable', Rule::in(['semua', 'hadir', 'sakit', 'izin', 'alfa', 'terlambat', 'belum_scan'])]]);
+        $data = $request->validate(['status_rincian' => ['nullable', Rule::in(['semua', 'hadir', 'sakit', 'izin', 'alfa', 'terlambat', 'belum_scan', 'pengecualian'])]]);
         $detail = $this->laporan->rincian($request, $anggotaKelas);
         $statusRincian = $data['status_rincian'] ?? 'semua';
         $semuaRincian = $detail['rincian'];
