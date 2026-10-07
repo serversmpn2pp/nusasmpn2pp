@@ -170,7 +170,7 @@
             <h2 class="panel-title">{{ $labelPeriode }}</h2>
             <p class="help-text" style="margin-top: 6px;">
                 {{ $kelasDipilih ? 'Kelas ' . $kelasDipilih->nama : (($cakupanWaliKelas ?? false) ? 'Semua kelas wali' : 'Semua kelas') }}.
-                Alfa otomatis dihitung dari hari efektif yang tidak memiliki catatan presensi.
+                Alfa otomatis dihitung dari hari presensi aktif yang sudah berakhir tanpa catatan atau konfirmasi. Hari ini masih menunggu konfirmasi; tanggal mendatang tidak dihitung.
             </p>
         </div>
 

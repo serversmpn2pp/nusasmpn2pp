@@ -74,6 +74,22 @@ class PresensiAnakTest extends TestCase
             ->assertDontSee($siswaLain->nama_lengkap);
     }
 
+    public function test_presensi_anak_menampilkan_alfa_setelah_hari_tanpa_konfirmasi_berakhir(): void
+    {
+        $this->travelTo(Carbon::parse('2031-08-14 23:59:59'));
+        [$siswa] = $this->buatDataSiswa();
+        $this->buatPengaturanAbsensi(Carbon::parse('2031-08-14'));
+        $akun = $this->akunOrangTua($siswa);
+        $url = route('presensi-anak.index', ['bulan' => '2031-08']);
+        $this->actingAs($akun)->get($url)->assertOk()
+            ->assertViewHas('riwayatSekolah', fn ($r) => $r->first()['status'] === 'belum_tercatat');
+        $this->travelTo(Carbon::parse('2031-08-15 00:00:00'));
+        $this->get($url)->assertOk()
+            ->assertViewHas('riwayatSekolah', fn ($r) => $r->first()['status'] === 'alfa')
+            ->assertViewHas('ringkasanSekolah', fn ($r) => $r['alfa'] === 2 && $r['belum_tercatat'] === 0);
+        $this->assertDatabaseCount('absensi_siswa', 0);
+    }
+
     public function test_tab_ibadah_menampilkan_presensi_dan_status_berhalangan_tanpa_catatan_privat(): void
     {
         $this->travelTo(Carbon::parse('2031-08-20 10:00:00'));

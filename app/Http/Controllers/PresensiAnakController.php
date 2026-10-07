@@ -11,6 +11,7 @@ use App\Models\PresensiBerhalanganIbadah;
 use App\Models\PresensiKegiatanIbadah;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -187,12 +188,14 @@ class PresensiAnakController extends Controller
 
         $absensi->keys()->each(fn (string $tanggal) => $tanggalTerjadwal->push($tanggal));
 
+        $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
+        $hariPresensiAktif = $hariAktif->keys()->all();
         $riwayat = $tanggalTerjadwal
             ->unique()
             ->sortDesc()
-            ->map(function (string $tanggal) use ($absensi) {
+            ->map(function (string $tanggal) use ($absensi, $aturanAlfa, $hariPresensiAktif) {
                 $catatan = $absensi->get($tanggal);
-                $status = $catatan?->status_kehadiran ?: 'belum_tercatat';
+                $status = $catatan?->status_kehadiran ?: ($aturanAlfa->menjadiAlfa($tanggal, $hariPresensiAktif) ? 'alfa' : 'belum_tercatat');
 
                 return [
                     'tanggal' => Carbon::parse($tanggal),

@@ -15,7 +15,8 @@ class RangkumanWhatsappPresensiSiswaService
         $izin = $rekapAbsensi->where('status_kehadiran', 'izin');
         $sakit = $rekapAbsensi->where('status_kehadiran', 'sakit');
         $alfa = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'alfa' && $item['status_sumber'] !== 'inferensi');
-        $belumScan = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'alfa' && $item['status_sumber'] === 'inferensi');
+        $belumScan = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'belum_scan'
+            || ($item['status_kehadiran'] === 'alfa' && $item['status_sumber'] === 'inferensi'));
 
         $baris = [
             '*REKAP KEHADIRAN SISWA*',

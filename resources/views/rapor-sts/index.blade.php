@@ -128,7 +128,7 @@
             </form>
             <p class="help-text">Wali kelas: {{ $kelas->waliKelas?->nama_lengkap ?? 'Belum ditetapkan' }} · Nilai: hasil final CBT atau STS manual untuk mapel non-CBT.</p>
             @if (! $pengaturan->exists)<p class="sts-notice">Periode belum disimpan. Pemeriksaan kehadiran dan cetak rapor belum tersedia.</p>@endif
-            @if ($pengaturan->tanggal_akhir_presensi->isFuture())<p class="sts-notice">Periode presensi belum berakhir. Rapor belum dapat dicetak.</p>@endif
+            @if (! $pengaturan->tanggal_akhir_presensi->copy()->endOfDay()->isPast())<p class="sts-notice">Periode presensi belum berakhir. Rapor belum dapat dicetak.</p>@endif
         </section>
         <div class="sts-summary">
             <div><strong>{{ $baris->count() }}</strong><span>Siswa</span></div>
@@ -138,7 +138,7 @@
         </div>
         <section class="sts-section">
             <h2>2. Pemeriksaan nilai dan kehadiran</h2>
-            <p class="sts-notice">Rekap awal diambil dari presensi sekolah yang tercatat. Hari tanpa catatan tidak otomatis dihitung alfa. Koreksi di sini hanya berlaku pada rapor, tidak mengubah presensi harian.</p>
+            <p class="sts-notice">Rekap awal mengikuti presensi sekolah. Hari presensi aktif tanpa catatan atau konfirmasi dihitung alfa setelah hari berakhir. Koreksi di sini hanya berlaku pada rapor, tidak mengubah presensi harian.</p>
             <form method="POST" action="{{ route('rapor-sts.kehadiran', [$kegiatan, $kelas]) }}" id="sts-kehadiran-form">
                 @csrf @method('PUT')<input type="hidden" name="versi" value="{{ $pengaturan->versi }}">
                 <div class="sts-actions">

@@ -14,6 +14,7 @@ use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\NilaiSiswa;
 use App\Models\Pegawai;
+use App\Models\PengaturanAbsensi;
 use App\Models\PengecualianRaporSts;
 use App\Models\Pengguna;
 use App\Models\Peran;
@@ -23,6 +24,7 @@ use App\Models\Siswa;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use App\Services\Absensi\KoreksiPresensiSiswaService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use App\Services\Cbt\TerapkanNilaiCbtService;
@@ -82,6 +84,67 @@ class RaporStsTest extends TestCase
             ->assertDontSeeText('DRAF PRATINJAU')->assertSeeText('Cetak / Simpan PDF')
             ->assertViewHas('baris', fn ($b) => $b->count() === 2 && $b[0]['kehadiran']['sakit'] === 2 && $b->every(fn ($r) => $r['siap']));
         $this->assertFalse($d['ujian']->fresh()->tampilkan_hasil);
+    }
+
+    public function test_rapor_menghitung_alfa_otomatis_dan_meminta_pemeriksaan_ulang_setelah_konfirmasi(): void
+    {
+        $d = $this->fondasi();
+        foreach (['senin', 'selasa', 'rabu', 'kamis', 'jumat'] as $i => $hari) {
+            PengaturanAbsensi::create(['hari' => $hari, 'urutan_hari' => $i + 1, 'jam_scan_masuk_mulai' => '06:00', 'jam_masuk' => '07:00', 'jam_scan_masuk_selesai' => '08:00', 'jam_scan_pulang_mulai' => '13:00', 'jam_pulang' => '14:00', 'jam_scan_pulang_selesai' => '15:00', 'aktif' => true]);
+        }
+        $d['anggota'][1]->update(['tanggal_masuk' => '2026-09-17']);
+        foreach (['2026-09-14' => 'hadir', '2026-09-15' => 'izin', '2026-09-16' => 'sakit', '2026-09-17' => 'alfa'] as $tanggal => $status) {
+            AbsensiSiswa::create(['tanggal' => $tanggal, 'tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelas']->id,
+                'anggota_kelas_id' => $d['anggota'][0]->id, 'siswa_id' => $d['anggota'][0]->siswa_id, 'status_kehadiran' => $status, 'sumber' => 'manual']);
+        }
+        $this->simpanPeriode($d, ['tanggal_awal_presensi' => '2026-09-14', 'tanggal_akhir_presensi' => '2026-09-20']);
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(['sakit' => 1, 'izin' => 1, 'alfa' => 2], $r['baris'][0]['kehadiran']);
+        $this->assertSame(2, $r['baris'][1]['sumber']['alfa']);
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $this->payload($d))->assertSessionHasNoErrors();
+        $cetak = route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'anggota_id' => $d['anggota'][0]->id]);
+        $this->get($cetak)->assertOk()->assertViewHas('baris', fn ($b) => $b[0]['kehadiran']['alfa'] === 2);
+        if (getenv('NUSA_CAPTURE_ALFA_UI')) {
+            $dir = storage_path('framework/testing/alfa-otomatis');
+            if (! is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            $index = $this->get(route('rapor-sts.index'))->assertOk();
+            file_put_contents($dir.'/rapor.html', $index->getContent());
+        }
+        app(KoreksiPresensiSiswaService::class)->koreksi($d['admin'], $d['anggota'][0], ['tanggal' => '2026-09-18', 'status_kehadiran' => 'hadir', 'jam_masuk' => '06:50', 'catatan' => 'Scanner terganggu; hadir dikonfirmasi petugas.']);
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(1, $r['baris'][0]['sumber']['alfa']);
+        $this->assertTrue($r['baris'][0]['sumber_berubah']);
+        $this->get($cetak)->assertRedirect()->assertSessionHasErrors('cetak');
+        $payload = $this->payload($d);
+        $payload['siswa'][$d['anggota'][0]->id]['alfa'] = 1;
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $payload)->assertSessionHasNoErrors();
+        $this->get($cetak)->assertOk()->assertViewHas('baris', fn ($b) => $b[0]['kehadiran']['alfa'] === 1);
+    }
+
+    public function test_rapor_menunggu_hari_batas_berakhir_sebelum_mencetak_alfa_otomatis(): void
+    {
+        Carbon::setTestNow('2026-09-25 23:59:59');
+        $d = $this->fondasi();
+        PengaturanAbsensi::create(['hari' => 'jumat', 'urutan_hari' => 5, 'jam_scan_masuk_mulai' => '06:00', 'jam_masuk' => '07:00', 'jam_scan_masuk_selesai' => '08:00', 'jam_scan_pulang_mulai' => '13:00', 'jam_pulang' => '14:00', 'jam_scan_pulang_selesai' => '15:00', 'aktif' => true]);
+        $this->simpanPeriode($d, ['tanggal_awal_presensi' => '2026-09-25', 'tanggal_akhir_presensi' => '2026-09-25']);
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(0, $r['baris'][1]['sumber']['alfa']);
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $this->payload($d))->assertSessionHasNoErrors();
+        $cetak = route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'anggota_id' => $d['anggota'][1]->id]);
+        $this->get($cetak)->assertRedirect()->assertSessionHasErrors('cetak');
+        $this->get(route('rapor-sts.index'))->assertSeeText('Periode presensi belum berakhir.');
+
+        Carbon::setTestNow('2026-09-26 00:00:00');
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(1, $r['baris'][1]['sumber']['alfa']);
+        $this->assertTrue($r['baris'][1]['sumber_berubah']);
+        $this->assertFalse($r['baris'][1]['diperiksa']);
+        $payload = $this->payload($d);
+        $payload['siswa'][$d['anggota'][1]->id]['alfa'] = 1;
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $payload)->assertSessionHasNoErrors();
+        $this->get($cetak)->assertOk()->assertViewHas('baris', fn ($b) => $b[0]['kehadiran']['alfa'] === 1);
     }
 
     public function test_cetak_per_siswa_dan_seluruh_kelas_tetap_tersedia_saat_nilai_belum_lengkap(): void
@@ -242,6 +305,154 @@ class RaporStsTest extends TestCase
             'cakupan' => 'kelas', 'kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $d['kelas']->id,
             'kategori' => 'mapel', 'mapel_id' => $d['mapel']->id, 'batas' => 1,
         ]))->assertOk()->assertViewHas('penghargaan', fn ($p) => $p['kandidat']->first()['anggota']->id === $d['anggota'][1]->id);
+    }
+
+    public function test_nilai_input_manual_siswa_tidak_ikut_cbt_muncul_di_rapor_cetak_dan_leger(): void
+    {
+        $d = $this->fondasi();
+        $this->tidakMengikuti($d);
+        $komponen = $this->hubungkanKomponenStsFondasi($d);
+        $diterapkan = app(TerapkanNilaiCbtService::class)->terapkan($d['ujian'], $d['admin']->id);
+        $this->assertSame(1, $diterapkan['ringkasan']['diterapkan']);
+        $this->assertSame(1, $diterapkan['ringkasan']['belum_selesai']);
+        $pesertaAsli = $d['peserta'][1]->fresh()->toArray();
+        $jawabanAsli = $d['peserta']->map(fn ($p) => $p->jawabanPesertaUjianCbt()->get()->toArray())->all();
+        $guru = $this->akunGuru($d['guru'], 'guru_mapel');
+        $this->actingAs($guru)->post(route('input-nilai.store'), [
+            'komponen_nilai_id' => $komponen->id,
+            'nilai' => [$d['anggota'][0]->siswa_id => '80,25', $d['anggota'][1]->siswa_id => '91,50'],
+            'catatan' => [$d['anggota'][1]->siswa_id => 'Nilai tugas pengganti STS.'],
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame([80.25, 91.5], $r['baris']->pluck('rata')->all());
+        $this->assertFalse($r['baris'][1]['nilai'][0]['dapat_dikecualikan']);
+        $this->assertSame('Sangat Baik', $r['baris'][1]['nilai'][0]['keterangan']);
+        $leger = app(LegerStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame($d['anggota'][1]->id, $leger['baris']->first()['anggota']->id);
+        $this->assertSame(1, $leger['baris']->first()['ranking']);
+        $this->assertSame(85.88, $leger['ringkasan']['rata_kelas']);
+        $this->assertSame(85.88, $leger['statistik_mapel'][0]['rata']);
+        $tingkat = app(LegerStsService::class)->bangunTingkat($d['kegiatan'], collect([$d['kelas']]), 9);
+        $this->assertSame([91.5, 80.25], $tingkat['baris']->pluck('rata_leger')->all());
+        $this->assertSame($pesertaAsli, $d['peserta'][1]->fresh()->toArray());
+        $this->assertSame($jawabanAsli, $d['peserta']->map(fn ($p) => $p->jawabanPesertaUjianCbt()->get()->toArray())->all());
+        $this->assertNull($d['peserta'][1]->fresh()->nilai_diterapkan_pada);
+        $this->assertNull($d['peserta'][1]->fresh()->nilai_siswa_id);
+        $this->assertFalse($d['ujian']->fresh()->tampilkan_hasil);
+
+        $this->simpanPeriode($d);
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $this->payload($d))->assertSessionHasNoErrors();
+        $this->get(route('rapor-sts.index', ['kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $d['kelas']->id]))
+            ->assertOk()->assertViewHas('laporan', fn ($r) => $r['baris']->pluck('rata')->all() === [80.25, 91.5]);
+        $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'anggota_id' => $d['anggota'][1]->id]))
+            ->assertOk()->assertSee('91,50')->assertDontSeeText('Tidak mengikuti STS')
+            ->assertDontSeeText('DRAF PRATINJAU');
+    }
+
+    public function test_nilai_manual_siswa_tidak_ikut_cbt_menerima_nol_dan_tidak_menganggap_kosong_sebagai_nol(): void
+    {
+        $d = $this->fondasi();
+        $this->tidakMengikuti($d);
+        $komponen = $this->hubungkanKomponenStsFondasi($d);
+        foreach ([['0', 0.0], ['', null], ['87,65', 87.65], ['', null]] as [$input, $hasil]) {
+            $this->actingAs($d['admin'])->post(route('input-nilai.store'), [
+                'komponen_nilai_id' => $komponen->id,
+                'nilai' => [$d['anggota'][1]->siswa_id => $input],
+                'catatan' => [$d['anggota'][1]->siswa_id => 'Catatan penilaian manual.'],
+            ])->assertSessionHasNoErrors();
+            $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+            $this->assertSame($hasil, $r['baris'][1]['rata']);
+            $this->assertSame($hasil, $r['baris'][1]['nilai'][0]['nilai']);
+            $this->assertSame($hasil === null ? 'Belum tersedia' : ($hasil === 0.0 ? 'Perlu Bimbingan' : 'Baik'), $r['baris'][1]['nilai'][0]['keterangan']);
+        }
+        $this->assertSame('aktif', $d['peserta'][1]->fresh()->status);
+        $this->assertNull($d['peserta'][1]->fresh()->nilai_diterapkan_pada);
+        $this->assertDatabaseCount('jawaban_peserta_ujian_cbt', 1);
+    }
+
+    public function test_nilai_manual_di_komponen_cbt_tetap_terbaca_tanpa_baris_peserta_ujian(): void
+    {
+        $d = $this->fondasi();
+        $komponen = $this->hubungkanKomponenStsFondasi($d);
+        $d['peserta'][1]->jawabanPesertaUjianCbt()->delete();
+        $d['peserta'][1]->delete();
+        $this->actingAs($d['admin'])->post(route('input-nilai.store'), [
+            'komponen_nilai_id' => $komponen->id, 'nilai' => [$d['anggota'][1]->siswa_id => '88,50'],
+        ])->assertSessionHasNoErrors();
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(88.5, $r['baris'][1]['rata']);
+        $this->assertSame('Baik', $r['baris'][1]['nilai'][0]['keterangan']);
+        $this->assertNull($r['baris'][1]['nilai'][0]['peserta_id']);
+        $this->assertFalse($r['baris'][1]['nilai'][0]['dapat_dikecualikan']);
+        $this->assertSame(100.0, $r['baris'][0]['rata']);
+        $d['ujian']->kelasUjianCbt()->update(['komponen_nilai_id' => null]);
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertNull($r['baris'][1]['rata']);
+        $this->assertDatabaseCount('peserta_ujian_cbt', 1);
+    }
+
+    public function test_nilai_manual_siswa_tidak_ikut_cbt_tetap_memeriksa_finalisasi_dan_cakupan(): void
+    {
+        $d = $this->fondasi();
+        $this->tidakMengikuti($d);
+        $komponen = $this->hubungkanKomponenStsFondasi($d);
+        NilaiSiswa::create(['komponen_nilai_id' => $komponen->id, 'siswa_id' => $d['anggota'][1]->siswa_id, 'nilai' => 89.25]);
+        $d['ujian']->update(['hasil_difinalisasi_pada' => null]);
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertNull($r['baris'][1]['rata']);
+        $this->assertSame('Belum difinalisasi guru mapel', $r['baris'][1]['nilai'][0]['status']);
+        $d['ujian']->update(['hasil_difinalisasi_pada' => now()]);
+        $d['peserta'][1]->update(['status' => 'sedang_mengerjakan']);
+        $this->assertNull(app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas'])['baris'][1]['rata']);
+        $d['peserta'][1]->update(['status' => 'nonaktif']);
+        $this->assertSame(89.25, app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas'])['baris'][1]['rata']);
+        $guru = $komponen->guruMataPelajaran;
+        $kelasLain = Kelas::create(['tahun_pelajaran_id' => $d['tahun']->id, 'nama' => 'IX.B', 'tingkat' => 9, 'aktif' => true]);
+        $tahunLain = TahunPelajaran::create(['nama' => '2027/2028', 'aktif' => false]);
+        $mapelLain = MataPelajaran::create(['kode' => 'MANUAL-IPA', 'nama' => 'IPA', 'aktif' => true]);
+        foreach ([
+            [$komponen, 'semester', 'genap'], [$komponen, 'jenis_komponen', 'sas_saj'], [$komponen, 'aktif', false],
+            [$guru, 'kelas_id', $kelasLain->id], [$guru, 'tahun_pelajaran_id', $tahunLain->id],
+            [$guru, 'mata_pelajaran_id', $mapelLain->id], [$guru, 'aktif', false],
+            [$d['peserta'][1]->kelasUjianCbt, 'kelas_id', $kelasLain->id],
+        ] as [$model, $kolom, $nilai]) {
+            $asli = $model->getAttribute($kolom);
+            $model->update([$kolom => $nilai]);
+            $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+            $hasil = $r['baris'][1]['nilai']->firstWhere('mapel.id', $d['mapel']->id);
+            $this->assertNull($hasil['nilai'], 'Nilai tidak boleh melewati batas '.$kolom);
+            $this->assertSame('Komponen nilai STS tujuan perlu diperiksa', $hasil['status']);
+            $model->update([$kolom => $asli]);
+        }
+        $komponen->nilaiSiswa()->where('siswa_id', $d['anggota'][1]->siswa_id)->update(['nilai' => 101]);
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertNull($r['baris'][1]['rata']);
+        $this->assertSame('Nilai STS pada Input Nilai perlu diperiksa', $r['baris'][1]['nilai'][0]['status']);
+    }
+
+    public function test_nilai_manual_menggantikan_tampilan_pengecualian_tidak_mengikuti_sts(): void
+    {
+        $d = $this->fondasi();
+        $this->tidakMengikuti($d);
+        $komponen = $this->hubungkanKomponenStsFondasi($d);
+        $this->simpanPeriode($d);
+        $url = route('rapor-sts.pengecualian', [$d['kegiatan'], $d['kelas']]);
+        $this->put($url, $this->payloadPengecualian($d))->assertSessionHasNoErrors();
+        $pengecualianAsli = PengecualianRaporSts::firstOrFail()->toArray();
+        $this->post(route('input-nilai.store'), [
+            'komponen_nilai_id' => $komponen->id, 'nilai' => [$d['anggota'][1]->siswa_id => '75,50'],
+        ])->assertSessionHasNoErrors();
+        $r = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(75.5, $r['baris'][1]['rata']);
+        $this->assertSame(0, $r['baris'][1]['jumlah_pengecualian']);
+        $this->assertSame('Cukup', $r['baris'][1]['nilai'][0]['keterangan']);
+        $this->assertFalse($r['baris'][1]['nilai'][0]['dikecualikan']);
+        $mid = $d['mapel']->id;
+        $this->put($url, $this->payloadPengecualian($d))->assertSessionHasErrors("pengecualian.$mid.tidak_mengikuti");
+        $this->assertSame($pengecualianAsli, PengecualianRaporSts::firstOrFail()->toArray());
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $this->payload($d))->assertSessionHasNoErrors();
+        $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'anggota_id' => $d['anggota'][1]->id]))
+            ->assertOk()->assertSee('75,50')->assertDontSeeText('Tidak mengikuti STS');
     }
 
     public function test_nilai_diterapkan_yang_dikosongkan_tidak_kembali_ke_skor_asli_dan_bisa_diisi_ulang(): void
@@ -964,13 +1175,20 @@ class RaporStsTest extends TestCase
 
     private function terapkanNilaiFondasi(array $d): KomponenNilai
     {
+        $komponen = $this->hubungkanKomponenStsFondasi($d);
+        $hasil = app(TerapkanNilaiCbtService::class)->terapkan($d['ujian'], $d['admin']->id);
+        $this->assertSame(2, $hasil['ringkasan']['diterapkan']);
+
+        return $komponen;
+    }
+
+    private function hubungkanKomponenStsFondasi(array $d): KomponenNilai
+    {
         $komponen = KomponenNilai::create([
             'guru_mata_pelajaran_id' => $d['kelas']->guruMataPelajaran()->firstOrFail()->id,
             'semester' => 'ganjil', 'jenis_komponen' => 'sts', 'nama' => $d['kegiatan']->nama, 'aktif' => true,
         ]);
         $d['ujian']->kelasUjianCbt()->update(['komponen_nilai_id' => $komponen->id]);
-        $hasil = app(TerapkanNilaiCbtService::class)->terapkan($d['ujian'], $d['admin']->id);
-        $this->assertSame(2, $hasil['ringkasan']['diterapkan']);
 
         return $komponen;
     }

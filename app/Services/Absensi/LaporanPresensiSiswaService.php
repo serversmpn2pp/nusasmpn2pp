@@ -8,7 +8,6 @@ use App\Models\Kelas;
 use App\Models\PengaturanAbsensi;
 use App\Models\TahunPelajaran;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -47,7 +46,11 @@ class LaporanPresensiSiswaService
         $semester = $data['semester'] ?? $this->semesterSaatIni();
         $rentang = $this->ambilRentangTanggal($data, $periode, $semester, $tahunPelajaran);
         $hariAktif = PengaturanAbsensi::query()->where('aktif', true)->pluck('hari')->all();
-        $tanggalEfektif = $this->ambilTanggalEfektif($rentang['mulai'], $rentang['selesai'], $hariAktif);
+        $tanggalEfektif = app(AturanAlfaOtomatisSiswaService::class)->tanggalEfektif(
+            $tahunPelajaran?->tanggal_mulai ? $rentang['mulai']->copy()->max($tahunPelajaran->tanggal_mulai) : $rentang['mulai'],
+            $tahunPelajaran?->tanggal_selesai ? $rentang['selesai']->copy()->min($tahunPelajaran->tanggal_selesai) : $rentang['selesai'],
+            $hariAktif,
+        );
         $laporanAbsensi = $tahunPelajaranId
             ? $this->ambilLaporanAbsensi($tahunPelajaranId, $kelasId, $tanggalEfektif, $cakupanWaliKelas ? $kelasWaliIds : null)
             : collect();
@@ -159,26 +162,9 @@ class LaporanPresensiSiswaService
         return $mulai->isSameDay($selesai) ? $this->formatTanggal($mulai) : $this->formatTanggal($mulai).' s.d. '.$this->formatTanggal($selesai);
     }
 
-    private function ambilTanggalEfektif(Carbon $mulai, Carbon $selesai, array $hariAktif): array
-    {
-        if ($mulai->greaterThan($selesai) || empty($hariAktif)) {
-            return [];
-        }
-
-        $hariAktif = array_flip($hariAktif);
-        $hasil = [];
-        foreach (CarbonPeriod::create($mulai->toDateString(), $selesai->toDateString()) as $tanggal) {
-            if (isset($hariAktif[$this->hariDariTanggal($tanggal->isoWeekday())])) {
-                $hasil[] = $tanggal->toDateString();
-            }
-        }
-
-        return $hasil;
-    }
-
     private function ambilLaporanAbsensi(int $tahunId, ?int $kelasId, array $tanggalEfektif, ?array $kelasIds = null)
     {
-        $anggota = AnggotaKelas::query()->with(['kelas', 'siswa'])
+        $anggota = AnggotaKelas::query()->with(['kelas', 'siswa', 'tahunPelajaran'])
             ->where('tahun_pelajaran_id', $tahunId)->where('status_keanggotaan', 'aktif')
             ->when(is_array($kelasIds), fn ($query) => $query->whereIn('kelas_id', $kelasIds))
             ->whereHas('siswa', fn ($query) => $query->where('aktif', true))
@@ -198,8 +184,10 @@ class LaporanPresensiSiswaService
                 ->groupBy('siswa_id');
         }
         $jumlahHari = count($tanggalEfektif);
+        $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
+        $hariAktif = $aturanAlfa->hariAktif();
 
-        return $anggota->map(function (AnggotaKelas $item) use ($perSiswa, $jumlahHari) {
+        return $anggota->map(function (AnggotaKelas $item) use ($perSiswa, $jumlahHari, $tanggalEfektif, $aturanAlfa, $hariAktif) {
             $absensi = $perSiswa->get($item->siswa_id, collect());
             $hadir = $absensi->where('status_kehadiran', 'hadir')->count();
             $terlambat = $absensi->where('menit_terlambat', '>', 0);
@@ -209,7 +197,7 @@ class LaporanPresensiSiswaService
                 'anggota_kelas' => $item, 'hari_efektif' => $jumlahHari, 'hadir' => $hadir,
                 'izin' => $absensi->where('status_kehadiran', 'izin')->count(),
                 'sakit' => $absensi->where('status_kehadiran', 'sakit')->count(),
-                'alfa' => $absensi->where('status_kehadiran', 'alfa')->count() + max(0, $jumlahHari - $absensi->count()),
+                'alfa' => $absensi->where('status_kehadiran', 'alfa')->count() + $aturanAlfa->jumlah($absensi, $tanggalEfektif, $hariAktif, $item),
                 'terlambat' => $terlambat->count(), 'menit_terlambat' => (int) round((float) $terlambat->sum('menit_terlambat')),
                 'pulang_cepat' => $pulangCepat->count(), 'menit_pulang_cepat' => (int) round((float) $pulangCepat->sum('menit_pulang_cepat')),
                 'persentase_hadir' => $jumlahHari > 0 ? round(($hadir / $jumlahHari) * 100, 1) : 0,
@@ -236,10 +224,5 @@ class LaporanPresensiSiswaService
     private function formatTanggal(Carbon $tanggal): string
     {
         return $tanggal->copy()->locale('id')->translatedFormat('d F Y');
-    }
-
-    private function hariDariTanggal(int $hari): string
-    {
-        return [1 => 'senin', 2 => 'selasa', 3 => 'rabu', 4 => 'kamis', 5 => 'jumat', 6 => 'sabtu', 7 => 'minggu'][$hari];
     }
 }

@@ -6,6 +6,7 @@ use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\Pengguna;
 use App\Models\Siswa;
+use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\LaporanPresensiSiswaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -84,6 +85,9 @@ class LaporanPresensiSiswaMobileService
             ->filter(fn (AbsensiSiswa $item) => in_array($item->tanggal->toDateString(), $laporan['tanggalEfektif'], true))
             ->keyBy(fn (AbsensiSiswa $presensi) => $presensi->tanggal->toDateString());
 
+        $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
+        $hariAktif = $aturanAlfa->hariAktif();
+
         return [
             'siswa' => $this->identitas($anggotaKelas),
             'periode' => [
@@ -92,9 +96,9 @@ class LaporanPresensiSiswaMobileService
                 'jumlah_hari_efektif' => $laporan['jumlahHariEfektif'],
             ],
             'ringkasan' => $this->ringkasanItem($item),
-            'rincian' => collect($laporan['tanggalEfektif'])->map(function (string $tanggal) use ($absensi) {
+            'rincian' => collect($laporan['tanggalEfektif'])->map(function (string $tanggal) use ($absensi, $anggotaKelas, $aturanAlfa, $hariAktif) {
                 $presensi = $absensi->get($tanggal);
-                $status = $presensi?->status_kehadiran ?? 'alfa';
+                $status = $presensi?->status_kehadiran ?? ($aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggotaKelas) ? 'alfa' : 'belum_scan');
 
                 return [
                     'tanggal' => $tanggal,
@@ -168,7 +172,7 @@ class LaporanPresensiSiswaMobileService
     private function labelStatus(string $status): string
     {
         return match ($status) {
-            'hadir' => 'Hadir', 'izin' => 'Izin', 'sakit' => 'Sakit', default => 'Alfa'
+            'hadir' => 'Hadir', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alfa' => 'Alfa', default => 'Belum dikonfirmasi'
         };
     }
 

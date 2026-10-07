@@ -7,12 +7,14 @@ use App\Models\AnggotaKelas;
 use App\Models\JadwalUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
+use App\Models\KelasUjianCbt;
 use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\RaporStsKelas;
 use App\Models\UjianCbt;
+use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
 use Carbon\Carbon;
@@ -66,11 +68,15 @@ class RaporStsService
     {
         $pengaturan ??= $this->pengaturan($kegiatan, $kelas);
         $kelas->loadMissing('waliKelas');
-        $anggota = $kelas->anggotaKelas()->with('siswa')->where('status_keanggotaan', 'aktif')
+        $anggota = $kelas->anggotaKelas()->with(['siswa', 'tahunPelajaran'])->where('status_keanggotaan', 'aktif')
             ->orderByRaw('nomor_absen IS NULL')->orderBy('nomor_absen')->orderBy('id')->get();
         $jadwal = $kegiatan->jadwalUjianCbt()->where('status', '!=', 'dibatalkan')
             ->whereHas('kelas', fn ($q) => $q->where('kelas.id', $kelas->id))
-            ->with(['mataPelajaran', 'ujianCbt.soalUjianCbt.soalCbt'])->get();
+            ->with(['mataPelajaran', 'ujianCbt.soalUjianCbt.soalCbt',
+                'ujianCbt.kelasUjianCbt' => fn ($q) => $q->where('kelas_id', $kelas->id)
+                    ->with(['komponenNilai.guruMataPelajaran',
+                        'komponenNilai.nilaiSiswa' => fn ($q) => $q->whereIn('siswa_id', $anggota->pluck('siswa_id'))]),
+            ])->get();
         // Missing STS sources remain incomplete unless the subject is explicitly excluded for this grade.
         $mapelIds = $kelas->guruMataPelajaran()->where('aktif', true)->pluck('mata_pelajaran_id')
             ->merge($jadwal->pluck('mata_pelajaran_id'))->unique();
@@ -88,6 +94,14 @@ class RaporStsService
             ->whereDate('tanggal', '>=', $pengaturan->tanggal_awal_presensi)
             ->whereDate('tanggal', '<=', $pengaturan->tanggal_akhir_presensi)
             ->get(['siswa_id', 'tanggal', 'status_kehadiran'])->groupBy('siswa_id');
+        $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
+        $hariAktif = $aturanAlfa->hariAktif();
+        $tahun = $kegiatan->tahunPelajaran;
+        $tanggalEfektif = $aturanAlfa->tanggalEfektif(
+            $pengaturan->tanggal_awal_presensi->copy()->max($tahun->tanggal_mulai),
+            $pengaturan->tanggal_akhir_presensi->copy()->min($tahun->tanggal_selesai ?? $pengaturan->tanggal_akhir_presensi),
+            $hariAktif,
+        );
         $koreksi = $pengaturan->exists ? $pengaturan->kehadiran()->with('pemeriksa')->get()->keyBy('anggota_kelas_id') : collect();
         $pengecualian = $pengaturan->exists ? $pengaturan->pengecualian()->with('penetap')->get()->groupBy('anggota_kelas_id') : collect();
         $jadwalMapel = $jadwal->groupBy('mata_pelajaran_id');
@@ -105,7 +119,7 @@ class RaporStsService
 
             return ['komponen' => $c, 'konteks' => app(StsManualService::class)->konteks($c, $anggota, $c->nilaiSiswa)];
         });
-        $baris = $anggota->map(function ($siswa) use ($pengaturan, $mapel, $jadwalMapel, $peserta, $presensi, $koreksi, $pengecualian, $kelas, $manual) {
+        $baris = $anggota->map(function ($siswa) use ($pengaturan, $mapel, $jadwalMapel, $peserta, $presensi, $koreksi, $pengecualian, $kelas, $manual, $aturanAlfa, $hariAktif, $tanggalEfektif) {
             $nilai = $mapel->map(function ($pelajaran) use ($jadwalMapel, $peserta, $pengecualian, $siswa, $manual) {
                 $jadwal = $jadwalMapel->get($pelajaran->id, collect());
                 $hasil = ['nilai' => null, 'status' => 'Belum ada paket STS'];
@@ -120,7 +134,7 @@ class RaporStsService
                     $sumberNilai = 'cbt';
                     $pesertaSiswa = $peserta->get($siswa->id, collect())->firstWhere('ujian_cbt_id', $ujian->id);
                     $hasil = $this->nilaiPeserta($ujian, $pesertaSiswa, $siswa);
-                    $dapatDikecualikan = $this->dapatDikecualikan($jadwal->first(), $pesertaSiswa);
+                    $dapatDikecualikan = $hasil['nilai'] === null && $this->dapatDikecualikan($jadwal->first(), $pesertaSiswa);
                     $sidikKondisi = $this->sidikKondisi($jadwal->first(), $pesertaSiswa);
                 } elseif ($jadwal->isEmpty() && $m = $manual->get($pelajaran->id)) {
                     $sumberNilai = 'manual';
@@ -149,7 +163,7 @@ class RaporStsService
                 'akhir' => $pengaturan->tanggal_akhir_presensi->toDateString(),
                 'sakit' => $rekaman->where('status_kehadiran', 'sakit')->count(),
                 'izin' => $rekaman->where('status_kehadiran', 'izin')->count(),
-                'alfa' => $rekaman->where('status_kehadiran', 'alfa')->count(),
+                'alfa' => $rekaman->where('status_kehadiran', 'alfa')->count() + $aturanAlfa->jumlah($rekaman, $tanggalEfektif, $hariAktif, $siswa),
                 'hari_tercatat' => $rekaman->count(),
             ];
             $koreksiSiswa = $koreksi->get($siswa->id);
@@ -168,7 +182,7 @@ class RaporStsService
                 'kehadiran' => $kehadiran, 'diperiksa' => (bool) $diperiksa,
                 'sumber_berubah' => $koreksiSiswa && $koreksiSiswa->rekap_sumber !== $sumber,
                 'siap' => $pengaturan->exists && $diperiksa && $kelas->waliKelas !== null
-                    && ! $pengaturan->tanggal_akhir_presensi->isFuture(),
+                    && $pengaturan->tanggal_akhir_presensi->copy()->endOfDay()->isPast(),
             ];
         });
 
@@ -226,12 +240,17 @@ class RaporStsService
         if (! $ujian->hasil_difinalisasi_pada) {
             return ['nilai' => null, 'status' => 'Belum difinalisasi guru mapel'];
         }
-        if (! $peserta || $peserta->status !== 'selesai') {
+        if ($peserta && ! in_array($peserta->status, ['selesai', 'aktif', 'nonaktif'], true)) {
             return ['nilai' => null, 'status' => 'Belum mengikuti / menyelesaikan STS'];
         }
-        // Applied component grades are authoritative, including subsequent teacher corrections or blanks.
-        if ($peserta->nilai_diterapkan_pada !== null || $peserta->nilai_siswa_id !== null) {
-            return $this->nilaiDiterapkan($ujian, $peserta, $anggota);
+        $kelasUjian = $peserta ? $peserta->kelasUjianCbt : $ujian->kelasUjianCbt->firstWhere('kelas_id', $anggota->kelas_id);
+        $nilaiInput = $kelasUjian?->komponenNilai?->nilaiSiswa->firstWhere('siswa_id', $anggota->siswa_id)?->nilai;
+        // Linked component grades also cover manual entries for students who did not take CBT.
+        if ($nilaiInput !== null || $peserta?->nilai_diterapkan_pada !== null || $peserta?->nilai_siswa_id !== null) {
+            return $this->nilaiDiterapkan($ujian, $kelasUjian, $anggota);
+        }
+        if (! $peserta || $peserta->status !== 'selesai') {
+            return ['nilai' => null, 'status' => 'Belum mengikuti / menyelesaikan STS'];
         }
         $soal = app(PengacakPenyajianCbt::class)->urutkanSoal($ujian, $peserta, $ujian->soalUjianCbt)
             ->take($ujian->jumlah_soal);
@@ -257,9 +276,8 @@ class RaporStsService
             : ['nilai' => null, 'status' => 'Belum ada soal bernilai'];
     }
 
-    private function nilaiDiterapkan(UjianCbt $ujian, PesertaUjianCbt $peserta, AnggotaKelas $anggota): array
+    private function nilaiDiterapkan(UjianCbt $ujian, ?KelasUjianCbt $kelasUjian, AnggotaKelas $anggota): array
     {
-        $kelasUjian = $peserta->kelasUjianCbt;
         $komponen = $kelasUjian?->komponenNilai;
         $guru = $komponen?->guruMataPelajaran;
         if (! $komponen?->aktif || ! $guru?->aktif || $komponen->jenis_komponen !== 'sts'

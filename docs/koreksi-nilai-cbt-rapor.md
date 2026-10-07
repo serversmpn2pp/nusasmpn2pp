@@ -2,11 +2,12 @@
 
 ## Sumber nilai
 
-- Sebelum nilai STS diterapkan, Rapor STS tetap membaca skor CBT yang sudah final untuk peserta yang selesai.
-- Setelah diterapkan, nilai pada komponen tujuan di Input Nilai menjadi acuan akademik. Koreksi yang sudah disimpan otomatis terbaca pada Rapor STS, pratinjau/cetak, leger kelas/tingkat, statistik, ranking, dan kandidat penghargaan.
+- Sebelum ada nilai pada komponen tujuan maupun riwayat penerapan nilai, Rapor STS membaca skor CBT yang sudah final untuk peserta yang selesai.
+- Nilai yang sudah tersimpan pada komponen tujuan di Input Nilai menjadi acuan akademik, termasuk isian manual untuk siswa yang tidak mengikuti CBT. Nilai otomatis terbaca pada Rapor STS, pratinjau/cetak, leger kelas/tingkat, statistik, ranking, dan kandidat penghargaan.
 - Komponen tujuan dipilih melalui hubungan kelas ujian, bukan nama komponen atau komponen STS lain. Kelas, mapel, tahun pelajaran, semester, jenis STS, serta status aktif penugasan dan komponen harus sesuai.
 - Nilai nol tetap sah. Nilai yang dikosongkan/dihapus setelah penerapan menjadi belum lengkap; rapor tidak kembali diam-diam ke skor asli CBT. Nilai yang diisi kembali dibaca dari komponen dan siswa yang sesuai, meskipun ID nilai berubah.
-- Finalisasi CBT dan status peserta selesai tetap diperlukan. Koreksi akademik tidak dapat melewati hasil CBT yang dijadikan draf atau peserta yang belum selesai.
+- Paket CBT tetap harus sudah difinalisasi. Peserta yang masih sedang mengerjakan tidak ditampilkan sebagai nilai final. Siswa berstatus aktif/nonaktif yang tidak mengerjakan CBT boleh mendapat nilai akademik melalui Input Nilai tanpa mengubah status ujiannya menjadi selesai. Siswa yang belum memiliki baris peserta ujian juga dapat dibaca dari komponen tujuan kelas ujian yang sesuai.
+- Keterangan pengecualian "Tidak mengikuti STS" tidak digunakan ketika sudah ada nilai manual yang sah. Riwayat pengecualiannya tetap disimpan; nilai manual tidak menghapus alasan atau rekam ujian.
 - Jawaban, skor asli CBT, dan hasil analisis soal tidak diubah oleh koreksi melalui Input Nilai.
 
 ## Alur guru
@@ -17,6 +18,8 @@
 4. Publikasi nilai kepada siswa tetap terpisah. Perubahan melalui Input Nilai menjadikan publikasi komponen semester sebagai draf; publikasikan kembali apabila nilai hendak dibuka kepada siswa.
 
 Menekan **Terapkan nilai** lagi menjalankan ulang penyalinan skor CBT dan dapat menimpa koreksi pada komponen. Jangan menggunakannya sekadar untuk memperbarui rapor.
+
+Untuk siswa yang tidak mengikuti CBT, isi nilai pada **komponen STS tujuan yang sama**, lalu simpan dan muat ulang rapor. Tidak perlu membuat komponen tambahan, mengubah status peserta, atau menerapkan ulang CBT. Nilai yang sudah terlanjur disimpan akan terbaca setelah pembaruan kode. Isian kosong tetap "Belum tersedia"; angka nol merupakan nilai yang sah.
 
 Untuk STS praktik/non-CBT, alur [finalisasi STS manual](sts-manual.md) tetap berlaku. Koreksi nilai manual non-CBT perlu difinalisasi ulang sebelum muncul sebagai nilai final pada rapor.
 

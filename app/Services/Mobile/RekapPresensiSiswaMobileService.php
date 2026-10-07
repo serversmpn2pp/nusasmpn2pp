@@ -10,6 +10,7 @@ use App\Models\Pengguna;
 use App\Models\RiwayatPerubahanAbsensiSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\KoreksiPresensiSiswaService;
 use App\Services\Absensi\RangkumanWhatsappPresensiSiswaService;
 use Carbon\Carbon;
@@ -22,6 +23,7 @@ class RekapPresensiSiswaMobileService
     public function __construct(
         private readonly KoreksiPresensiSiswaService $koreksi,
         private readonly RangkumanWhatsappPresensiSiswaService $rangkumanWhatsapp,
+        private readonly AturanAlfaOtomatisSiswaService $aturanAlfa,
     ) {}
 
     public function daftar(Pengguna $pengguna, array $filter): array
@@ -37,10 +39,11 @@ class RekapPresensiSiswaMobileService
         $status = $filter['status'] ?? 'semua';
         $cari = trim((string) ($filter['cari'] ?? ''));
         $halaman = (int) ($filter['halaman'] ?? 1);
+        $hariAktif = $this->aturanAlfa->hariAktif();
 
         $query = $this->queryAnggota($tahunId, $kelasId, $cakupanWali ? $kelasWaliIds : null);
         $this->terapkanPencarian($query, $cari);
-        $this->terapkanStatus($query, $status, $tanggal);
+        $this->terapkanStatus($query, $status, $tanggal, $hariAktif);
         $paginator = $query
             ->with(['kelas:id,nama,tingkat', 'siswa:id,nama_lengkap,nis,nisn,foto'])
             ->orderBy('kelas_id')
@@ -60,8 +63,9 @@ class RekapPresensiSiswaMobileService
                 $item,
                 $tanggal,
                 $absensi->get($item->siswa_id),
+                $hariAktif,
             ))->values(),
-            'ringkasan' => $this->ringkasan($tahunId, $kelasId, $cakupanWali ? $kelasWaliIds : null, $tanggal),
+            'ringkasan' => $this->ringkasan($tahunId, $kelasId, $cakupanWali ? $kelasWaliIds : null, $tanggal, $hariAktif),
             'tahun_pelajaran' => $tahun->map(fn (TahunPelajaran $item) => [
                 'id' => (int) $item->id,
                 'nama' => $item->nama,
@@ -99,7 +103,7 @@ class RekapPresensiSiswaMobileService
         $tanggal = Carbon::parse($tanggal)->toDateString();
         $this->koreksi->pastikanTanggalDiizinkan($pengguna, $tanggal);
         abort_unless($pengguna->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id), 403);
-        $anggotaKelas->load(['tahunPelajaran:id,nama,aktif', 'kelas:id,nama,tingkat', 'siswa:id,nama_lengkap,nis,nisn,jenis_kelamin,foto']);
+        $anggotaKelas->load(['tahunPelajaran:id,nama,aktif,tanggal_mulai,tanggal_selesai', 'kelas:id,nama,tingkat', 'siswa:id,nama_lengkap,nis,nisn,jenis_kelamin,foto']);
         $absensi = $this->koreksi->ambilAbsensi($tanggal, $anggotaKelas);
         $akses = $this->koreksi->evaluasiAkses($pengguna, $anggotaKelas, $tanggal, $absensi);
         $hari = array_keys(PengaturanAbsensi::DAFTAR_HARI)[Carbon::parse($tanggal)->isoWeekday() - 1];
@@ -116,7 +120,7 @@ class RekapPresensiSiswaMobileService
         return [
             'tanggal' => $tanggal,
             'tanggal_label' => Carbon::parse($tanggal)->locale('id')->translatedFormat('l, d F Y'),
-            'item' => $this->item($pengguna, $anggotaKelas, $tanggal, $absensi),
+            'item' => $this->item($pengguna, $anggotaKelas, $tanggal, $absensi, $this->aturanAlfa->hariAktif()),
             'jadwal_presensi' => $pengaturan ? [
                 'tersedia' => true,
                 'jam_masuk' => $pengaturan->formatJam($pengaturan->jam_masuk),
@@ -166,15 +170,17 @@ class RekapPresensiSiswaMobileService
             ->get();
         $absensiPerAnggota = $absensi->whereNotNull('anggota_kelas_id')->keyBy('anggota_kelas_id');
         $absensiPerSiswa = $absensi->keyBy('siswa_id');
-        $rekap = $anggota->map(function (AnggotaKelas $item) use ($absensiPerAnggota, $absensiPerSiswa) {
+        $hariAktif = $this->aturanAlfa->hariAktif();
+        $rekap = $anggota->map(function (AnggotaKelas $item) use ($absensiPerAnggota, $absensiPerSiswa, $tanggal, $hariAktif) {
             $presensi = $absensiPerAnggota->get($item->id) ?? $absensiPerSiswa->get($item->siswa_id);
-            $status = $presensi?->status_kehadiran ?? 'alfa';
+            $alfaOtomatis = ! $presensi && $this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $item);
+            $status = $presensi?->status_kehadiran ?? ($alfaOtomatis ? 'alfa' : 'belum_scan');
 
             return [
                 'anggota_kelas' => $item,
                 'absensi' => $presensi,
                 'status_kehadiran' => $status,
-                'status_sumber' => $presensi ? 'catatan' : 'inferensi',
+                'status_sumber' => $presensi ? 'catatan' : ($alfaOtomatis ? 'otomatis' : 'inferensi'),
                 'terlambat' => (int) ($presensi?->menit_terlambat ?? 0),
                 'pulang_cepat' => (int) ($presensi?->menit_pulang_cepat ?? 0),
                 'belum_pulang' => $status === 'hadir' && $presensi?->jam_masuk && ! $presensi?->jam_pulang,
@@ -182,7 +188,7 @@ class RekapPresensiSiswaMobileService
         });
         $kelasDipilih = $kelasId ? $kelas->firstWhere('id', $kelasId) : null;
         $labelCakupan = $kelasDipilih ? 'Kelas '.$kelasDipilih->nama : 'Semua kelas wali';
-        $ringkasan = $this->ringkasan($tahunId, $kelasId, $cakupanWali ? $kelasWaliIds : null, $tanggal);
+        $ringkasan = $this->ringkasan($tahunId, $kelasId, $cakupanWali ? $kelasWaliIds : null, $tanggal, $hariAktif);
 
         return [
             'tanggal' => $tanggal,
@@ -237,6 +243,7 @@ class RekapPresensiSiswaMobileService
     private function queryAnggota(?int $tahunId, ?int $kelasId, ?array $kelasIds): Builder
     {
         return AnggotaKelas::query()
+            ->with('tahunPelajaran')
             ->when($tahunId, fn (Builder $query) => $query->where('tahun_pelajaran_id', $tahunId))
             ->when(! $tahunId, fn (Builder $query) => $query->whereRaw('1 = 0'))
             ->where('status_keanggotaan', 'aktif')
@@ -257,11 +264,27 @@ class RekapPresensiSiswaMobileService
             ->orWhereRaw("LOWER(COALESCE(nisn, '')) LIKE ?", [$pola]));
     }
 
-    private function terapkanStatus(Builder $query, string $status, string $tanggal): void
+    private function terapkanStatus(Builder $query, string $status, string $tanggal, array $hariAktif): void
     {
         if ($status === 'belum_scan') {
             $query->whereDoesntHave('siswa.absensiSiswa', fn (Builder $query) => $query->whereDate('tanggal', $tanggal));
-        } elseif (in_array($status, ['hadir', 'izin', 'sakit', 'alfa'], true)) {
+            if ($this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif)) {
+                $otomatis = AnggotaKelas::query();
+                $this->aturanAlfa->batasiKeanggotaan($otomatis, $tanggal);
+                $query->whereNotIn('id', $otomatis->select('id'));
+            }
+        } elseif ($status === 'alfa') {
+            $query->where(function (Builder $query) use ($tanggal, $hariAktif) {
+                $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query
+                    ->whereDate('tanggal', $tanggal)->where('status_kehadiran', 'alfa'));
+                if ($this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif)) {
+                    $query->orWhere(function (Builder $query) use ($tanggal) {
+                        $query->whereDoesntHave('siswa.absensiSiswa', fn (Builder $q) => $q->whereDate('tanggal', $tanggal));
+                        $this->aturanAlfa->batasiKeanggotaan($query, $tanggal);
+                    });
+                }
+            });
+        } elseif (in_array($status, ['hadir', 'izin', 'sakit'], true)) {
             $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query
                 ->whereDate('tanggal', $tanggal)->where('status_kehadiran', $status));
         } elseif ($status === 'terlambat') {
@@ -283,21 +306,24 @@ class RekapPresensiSiswaMobileService
             ->whereIn('siswa_id', $siswaIds)->get()->keyBy('siswa_id');
     }
 
-    private function ringkasan(?int $tahunId, ?int $kelasId, ?array $kelasIds, string $tanggal): array
+    private function ringkasan(?int $tahunId, ?int $kelasId, ?array $kelasIds, string $tanggal, array $hariAktif): array
     {
-        $anggota = $this->queryAnggota($tahunId, $kelasId, $kelasIds);
-        $total = (clone $anggota)->count();
-        $siswaIds = (clone $anggota)->pluck('siswa_id');
+        $anggota = $this->queryAnggota($tahunId, $kelasId, $kelasIds)->get();
+        $total = $anggota->count();
+        $siswaIds = $anggota->pluck('siswa_id');
         $absensi = AbsensiSiswa::query()->whereDate('tanggal', $tanggal)->whereIn('siswa_id', $siswaIds);
         $tercatat = (clone $absensi)->distinct('siswa_id')->count('siswa_id');
+        $siswaTercatat = (clone $absensi)->pluck('siswa_id');
+        $alfaOtomatis = $anggota->whereNotIn('siswa_id', $siswaTercatat)
+            ->filter(fn ($item) => $this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $item))->count();
 
         return [
             'total' => $total,
             'hadir' => (clone $absensi)->where('status_kehadiran', 'hadir')->count(),
             'izin' => (clone $absensi)->where('status_kehadiran', 'izin')->count(),
             'sakit' => (clone $absensi)->where('status_kehadiran', 'sakit')->count(),
-            'alfa' => (clone $absensi)->where('status_kehadiran', 'alfa')->count(),
-            'belum_scan' => max($total - $tercatat, 0),
+            'alfa' => (clone $absensi)->where('status_kehadiran', 'alfa')->count() + $alfaOtomatis,
+            'belum_scan' => max($total - $tercatat - $alfaOtomatis, 0),
             'terlambat' => (clone $absensi)->where('menit_terlambat', '>', 0)->count(),
             'pulang_cepat' => (clone $absensi)->where('menit_pulang_cepat', '>', 0)->count(),
             'belum_pulang' => (clone $absensi)->where('status_kehadiran', 'hadir')
@@ -305,12 +331,13 @@ class RekapPresensiSiswaMobileService
         ];
     }
 
-    private function item(Pengguna $pengguna, AnggotaKelas $anggota, string $tanggal, ?AbsensiSiswa $absensi): array
+    private function item(Pengguna $pengguna, AnggotaKelas $anggota, string $tanggal, ?AbsensiSiswa $absensi, array $hariAktif): array
     {
         $siswa = $anggota->siswa;
         $foto = $siswa && filled($siswa->foto) && Storage::disk('public')->exists($siswa->foto);
         $akses = $this->koreksi->evaluasiAkses($pengguna, $anggota, $tanggal, $absensi);
-        $status = $absensi?->status_kehadiran ?? 'belum_scan';
+        $alfaOtomatis = ! $absensi && $this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggota);
+        $status = $absensi?->status_kehadiran ?? ($alfaOtomatis ? 'alfa' : 'belum_scan');
 
         return [
             'anggota_kelas_id' => (int) $anggota->id,
@@ -331,8 +358,8 @@ class RekapPresensiSiswaMobileService
                 'id' => $absensi?->id ? (int) $absensi->id : null,
                 'status' => $status,
                 'status_label' => $this->labelStatus($status),
-                'sumber' => $absensi?->sumber ?? 'inferensi',
-                'sumber_label' => $absensi ? $this->labelSumber($absensi->sumber) : 'Belum ada catatan',
+                'sumber' => $absensi?->sumber ?? ($alfaOtomatis ? 'otomatis' : 'inferensi'),
+                'sumber_label' => $absensi ? $this->labelSumber($absensi->sumber) : ($alfaOtomatis ? 'Hari berakhir tanpa konfirmasi' : 'Belum ada catatan'),
                 'jam_masuk' => $this->formatJam($absensi?->jam_masuk),
                 'status_masuk' => $absensi?->status_masuk,
                 'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),

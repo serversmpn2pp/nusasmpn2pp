@@ -12,6 +12,7 @@
             'izin' => 'Izin',
             'sakit' => 'Sakit',
             'alfa' => 'Alfa',
+            'belum_scan' => 'Belum dikonfirmasi',
         ];
         $badgeStatus = fn (string $status) => match ($status) {
             'hadir' => 'badge badge-active',
@@ -404,6 +405,8 @@
                                     <span class="{{ $badgeStatus($status) }}">{{ $labelStatus[$status] ?? ucfirst($status) }}</span>
                                     @if ($item['status_sumber'] === 'inferensi')
                                         <p class="person-meta">Belum ada catatan</p>
+                                    @elseif ($item['status_sumber'] === 'otomatis')
+                                        <p class="person-meta">Otomatis: hari berakhir tanpa konfirmasi</p>
                                     @else
                                         <p class="person-meta">{{ ucfirst($absensi?->sumber ?: 'catatan') }}</p>
                                     @endif
@@ -481,6 +484,12 @@
 
                             <span class="{{ $badgeStatus($status) }}">{{ $labelStatus[$status] ?? ucfirst($status) }}</span>
                         </div>
+
+                        @if ($item['status_sumber'] === 'otomatis')
+                            <p class="person-meta">Otomatis: hari berakhir tanpa konfirmasi</p>
+                        @elseif ($item['status_sumber'] === 'inferensi')
+                            <p class="person-meta">Belum ada catatan</p>
+                        @endif
 
                         <dl class="quick-facts">
                             <div>

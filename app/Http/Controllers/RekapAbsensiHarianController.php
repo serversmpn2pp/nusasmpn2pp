@@ -8,6 +8,7 @@ use App\Models\Kelas;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
 use App\Models\TahunPelajaran;
+use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\KoreksiPresensiSiswaService;
 use App\Services\Absensi\RangkumanWhatsappPresensiSiswaService;
 use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
@@ -23,6 +24,7 @@ class RekapAbsensiHarianController extends Controller
         'izin' => 'Izin',
         'sakit' => 'Sakit',
         'alfa' => 'Alfa',
+        'belum_scan' => 'Belum dikonfirmasi',
         'terlambat' => 'Terlambat',
         'pulang_cepat' => 'Pulang cepat',
         'belum_pulang' => 'Belum pulang',
@@ -201,7 +203,7 @@ class RekapAbsensiHarianController extends Controller
     ) {
         $polaPencarian = '%'.mb_strtolower($cari).'%';
         $anggotaKelas = AnggotaKelas::query()
-            ->with(['kelas', 'siswa'])
+            ->with(['kelas', 'siswa', 'tahunPelajaran'])
             ->where('tahun_pelajaran_id', $tahunPelajaranId)
             ->where('status_keanggotaan', 'aktif')
             ->when(is_array($kelasIdsTerjangkau), fn ($query) => $query->whereIn('kelas_id', $kelasIdsTerjangkau))
@@ -237,16 +239,20 @@ class RekapAbsensiHarianController extends Controller
             ->groupBy('absensi_siswa_id')
             ->map(fn ($items) => $items->first(fn ($item) => $item->status_verifikasi !== 'dibatalkan') ?? $items->first());
 
-        return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($absensiPerAnggota, $absensiPerSiswa, $laporanPerAbsensi) {
+        $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
+        $hariAktif = $aturanAlfa->hariAktif();
+
+        return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($absensiPerAnggota, $absensiPerSiswa, $laporanPerAbsensi, $tanggal, $aturanAlfa, $hariAktif) {
             $absen = $absensiPerAnggota->get($anggota->id) ?? $absensiPerSiswa->get($anggota->siswa_id);
-            $statusKehadiran = $absen?->status_kehadiran ?? 'alfa';
+            $alfaOtomatis = ! $absen && $aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggota);
+            $statusKehadiran = $absen?->status_kehadiran ?? ($alfaOtomatis ? 'alfa' : 'belum_scan');
 
             return [
                 'anggota_kelas' => $anggota,
                 'absensi' => $absen,
                 'laporan_keterlambatan' => $absen ? $laporanPerAbsensi->get($absen->id) : null,
                 'status_kehadiran' => $statusKehadiran,
-                'status_sumber' => $absen ? 'catatan' : 'inferensi',
+                'status_sumber' => $absen ? 'catatan' : ($alfaOtomatis ? 'otomatis' : 'inferensi'),
                 'terlambat' => (int) ($absen?->menit_terlambat ?? 0),
                 'pulang_cepat' => (int) ($absen?->menit_pulang_cepat ?? 0),
                 'belum_pulang' => $statusKehadiran === 'hadir' && $absen?->jam_masuk && ! $absen?->jam_pulang,
@@ -332,7 +338,7 @@ class RekapAbsensiHarianController extends Controller
     private function saringStatus($rekapAbsensi, string $status)
     {
         return match ($status) {
-            'hadir', 'izin', 'sakit', 'alfa' => $rekapAbsensi
+            'hadir', 'izin', 'sakit', 'alfa', 'belum_scan' => $rekapAbsensi
                 ->where('status_kehadiran', $status)
                 ->values(),
             'terlambat' => $rekapAbsensi->where('terlambat', '>', 0)->values(),
