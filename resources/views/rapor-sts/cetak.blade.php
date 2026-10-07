@@ -59,12 +59,16 @@
         .grades .summary-label { padding-left: 4mm; }
 
         .exception-note { margin: 2.5mm 0 0; padding-left: 3mm; border-left: 2px solid var(--accent); color: var(--muted); font-size: 8pt; line-height: 1.35; }
-        .attendance { display: grid; grid-template-columns: 48mm minmax(0,1fr); align-items: center; margin-top: 4mm; border: 1px solid var(--line); }
-        .attendance-title { padding: 4mm; color: var(--navy-dark); font-weight: 700; text-align: center; }
+        .attendance { margin-top: 4mm; border: 1px solid var(--line); }
+        .attendance-row { display: grid; grid-template-columns: 48mm minmax(0,1fr); align-items: center; }
+        .attendance-row + .attendance-row { border-top: 1px solid var(--line-soft); }
+        .attendance-title { padding: 3mm 4mm; color: var(--navy-dark); font-weight: 700; text-align: center; }
         .attendance-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-left: 1px solid var(--line-soft); }
-        .attendance-item { display: grid; grid-template-columns: 1fr auto; gap: 2mm; align-items: center; padding: 3mm 4mm; }
+        .lateness-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .attendance-item { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2mm; align-items: center; padding: 2.5mm 3mm; }
         .attendance-item + .attendance-item { border-left: 1px solid var(--line-soft); }
-        .attendance-value { min-width: 11mm; padding: 1mm 2mm; border: 1px solid var(--line-soft); background: var(--header-soft); color: var(--navy-dark); text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .attendance-amount { display: inline-flex; align-items: center; gap: 1mm; white-space: nowrap; }
+        .attendance-value { display: inline-block; min-width: 11mm; padding: 1mm 2mm; border: 1px solid var(--line-soft); background: var(--header-soft); color: var(--navy-dark); text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
         .attendance-unit { color: var(--muted); font-size: 8pt; }
 
         .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 24mm; margin-top: 5mm; text-align: center; }
@@ -187,15 +191,30 @@
                 </p>
             @endif
 
-            <section class="attendance" aria-label="Ketidakhadiran siswa">
-                <div class="attendance-title">Ketidakhadiran (hari)</div>
-                <div class="attendance-list">
-                    @foreach (['sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa'] as $jenis => $label)
+            <section class="attendance" aria-label="Kehadiran dan keterlambatan siswa">
+                <div class="attendance-row">
+                    <div class="attendance-title">Ketidakhadiran (hari)</div>
+                    <div class="attendance-list">
+                        @foreach (['sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa'] as $jenis => $label)
+                            <div class="attendance-item">
+                                <span>{{ $label }}</span>
+                                <span class="attendance-amount"><span class="attendance-value">{{ $item['kehadiran'][$jenis] }}</span> <span class="attendance-unit">hari</span></span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="attendance-row">
+                    <div class="attendance-title">Keterlambatan</div>
+                    <div class="attendance-list lateness-list">
                         <div class="attendance-item">
-                            <span>{{ $label }}</span>
-                            <span><span class="attendance-value">{{ $item['kehadiran'][$jenis] }}</span> <span class="attendance-unit">hari</span></span>
+                            <span>Terlambat</span>
+                            <span class="attendance-amount"><span class="attendance-value" data-sts-late-count>{{ $item['keterlambatan']['jumlah'] }}</span> <span class="attendance-unit">kali</span></span>
                         </div>
-                    @endforeach
+                        <div class="attendance-item">
+                            <span>Total keterlambatan</span>
+                            <span class="attendance-amount"><span class="attendance-value" data-sts-late-minutes>{{ $item['keterlambatan']['total_menit'] }}</span> <span class="attendance-unit">menit</span></span>
+                        </div>
+                    </div>
                 </div>
             </section>
 

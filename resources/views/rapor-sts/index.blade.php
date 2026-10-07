@@ -30,6 +30,9 @@
         .sts-attendance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
         .sts-attendance label { display: block; margin-bottom: 7px; font-size: .78rem; color: #475569; font-weight: 600; text-align: center; }
         .sts-attendance .sts-original { text-align: center; }
+        .sts-lateness { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 0; padding-top: 10px; border-top: 1px solid #dbe2ea; }
+        .sts-lateness dt { color: #64748b; font-size: .75rem; line-height: 1.5; }
+        .sts-lateness dd { margin: 3px 0 0; font-size: .85rem; font-weight: 600; font-variant-numeric: tabular-nums; }
         .sts-check { display: flex; gap: 8px; align-items: center; font-size: .85rem; cursor: pointer; line-height: 1.4; margin: 0; }
         .sts-check input { width: 18px; height: 18px; margin: 0; flex: 0 0 auto; accent-color: var(--primary); }
         .sts-review { padding: 10px; border: 1px solid #cbd5e1; border-radius: 5px; background: #fff; min-height: 42px; }
@@ -167,6 +170,10 @@
                             @endforeach
                                 </div>
                                 <span class="sts-original">{{ $item['sumber']['hari_tercatat'] }} hari presensi tercatat</span>
+                                <dl class="sts-lateness" aria-label="Keterlambatan {{ $nama }}">
+                                    <div><dt>Terlambat</dt><dd><span data-sts-late-count>{{ $item['keterlambatan']['jumlah'] }}</span> kali</dd></div>
+                                    <div><dt>Total keterlambatan</dt><dd><span data-sts-late-minutes>{{ $item['keterlambatan']['total_menit'] }}</span> menit</dd></div>
+                                </dl>
                             </td>
                             <td><textarea class="input sts-note" name="siswa[{{ $id }}][catatan_koreksi]" maxlength="500" placeholder="Catatan koreksi..." aria-label="Alasan koreksi {{ $nama }}" @disabled(! $pengaturan->exists)>{{ old('siswa.'.$id.'.catatan_koreksi', $item['koreksi']?->catatan_koreksi) }}</textarea><button type="button" class="sts-reset" data-sts-reset @disabled(! $pengaturan->exists)>Kembalikan ke rekap awal</button></td>
                             <td>

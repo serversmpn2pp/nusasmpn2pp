@@ -25,6 +25,12 @@ try {
         await page.setViewportSize({width, height: 1000});
         await page.goto('http://localhost/audit/index');
         assert.equal(await page.locator('[data-sts-print]').count(), 3);
+        assert.equal(await page.locator('.sts-lateness').count(), 2);
+        assert.ok(await page.locator('.sts-lateness').evaluateAll(els => els.every(el => {
+            const attendance = el.parentElement.querySelector('.sts-attendance');
+            return el.getBoundingClientRect().top >= attendance.getBoundingClientRect().bottom
+                && el.scrollWidth <= el.clientWidth + 1 && !el.querySelector('input');
+        })), `Rekap keterlambatan @${width}`);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Luapan rekap @${width}`);
         await page.locator('[data-sts-row]').first().scrollIntoViewIfNeeded();
         await page.screenshot({path: `${output}/index-${width}.png`});
@@ -38,12 +44,25 @@ try {
     assert.equal(await page.evaluate(() => window.printCalls), 1);
 
     await page.setViewportSize({width: 1366, height: 1000});
-    for (const name of ['individual', 'class', 'dense']) {
+    for (const name of ['individual', 'class', 'dense', 'late', 'preview']) {
+        const single = name === 'individual' || name === 'preview';
+        const missing = name === 'individual' ? 10 : name === 'class' ? 20 : name === 'preview' ? 11 : 22;
         await page.goto(`http://localhost/audit/${name}`);
         await page.evaluate(() => document.fonts.ready);
         assert.ok(await page.locator('img').evaluateAll(els => els.every(el => el.complete && el.naturalWidth > 0)), `Logo ${name}`);
-        assert.equal(await page.locator('.description').filter({hasText: /^Belum tersedia$/}).count(), name === 'individual' ? 10 : name === 'class' ? 20 : 22);
-        assert.deepEqual(await page.locator('.summary-row .score').allTextContents(), name === 'individual' ? ['-', '-'] : ['-', '-', '-', '-']);
+        assert.equal(await page.locator('.description').filter({hasText: /^Belum tersedia$/}).count(), missing);
+        assert.deepEqual(await page.locator('.summary-row .score').allTextContents(), single ? ['-', '-'] : ['-', '-', '-', '-']);
+        assert.deepEqual(await page.locator('[data-sts-late-count]').allTextContents(), name === 'late' ? ['0', '2'] : name === 'preview' ? ['2'] : single ? ['0'] : ['0', '0']);
+        assert.deepEqual(await page.locator('[data-sts-late-minutes]').allTextContents(), name === 'late' ? ['0', '45'] : name === 'preview' ? ['45'] : single ? ['0'] : ['0', '0']);
+        assert.ok(await page.locator('.attendance').evaluateAll(els => els.every(el => {
+            const rows = el.querySelectorAll('.attendance-row');
+            return rows.length === 2 && rows[1].getBoundingClientRect().top >= rows[0].getBoundingClientRect().bottom - 1
+                && el.contains(el.querySelector('[data-sts-late-count]'))
+                && [...el.querySelectorAll('.attendance-item')].every(item => {
+                    const label = item.firstElementChild.getBoundingClientRect(), amount = item.lastElementChild.getBoundingClientRect();
+                    return label.right <= amount.left + 1 && item.scrollWidth <= item.clientWidth + 1;
+                });
+        })), `Keterlambatan di bawah ketidakhadiran ${name}`);
         await page.emulateMedia({media: 'print'});
         assert.ok(await page.locator('.toolbar').isHidden());
         const overflow = await page.locator('.sheet').evaluateAll(els => els.map(el => {
@@ -54,7 +73,7 @@ try {
         const pdf = await page.pdf({path: `${output}/${name}.pdf`, preferCSSPageSize: true, printBackground: true, displayHeaderFooter: false});
         const document = await pdfLib.PDFDocument.load(pdf);
         pages[name] = document.getPageCount();
-        assert.equal(pages[name], name === 'individual' ? 1 : 2, `Satu halaman per siswa ${name}`);
+        assert.equal(pages[name], single ? 1 : 2, `Satu halaman per siswa ${name}`);
         for (const sheet of document.getPages()) {
             assert.ok(Math.abs(sheet.getWidth() - 595.28) < 1 && Math.abs(sheet.getHeight() - 841.89) < 1, 'A4 portrait');
         }
@@ -62,5 +81,5 @@ try {
         await page.emulateMedia({media: 'screen'});
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({result: 'passed', pages, checks: ['partial-grades', 'print-links', 'desktop-mobile', 'print-button', 'logos', 'no-clipping', 'one-a4-per-student']}));
+    console.log(JSON.stringify({result: 'passed', pages, checks: ['partial-grades', 'print-links', 'desktop-mobile', 'print-button', 'logos', 'lateness-values', 'lateness-below-attendance', 'no-clipping', 'one-a4-per-student']}));
 } finally { await browser.close(); }

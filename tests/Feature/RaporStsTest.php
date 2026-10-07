@@ -53,6 +53,88 @@ class RaporStsTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_keterlambatan_rapor_mengikuti_periode_siswa_dan_tahun_pelajaran(): void
+    {
+        $d = $this->fondasi();
+        $tahunLain = TahunPelajaran::create(['nama' => '2025/2026', 'tanggal_mulai' => '2025-07-01', 'tanggal_selesai' => '2026-06-30', 'aktif' => false]);
+        foreach ([
+            ['2026-08-02', 'hadir', 500],
+            ['2026-08-03', 'hadir', 10],
+            ['2026-08-04', 'hadir', 0],
+            ['2026-08-05', 'hadir', 0],
+            ['2026-08-06', 'sakit', 11],
+            ['2026-08-07', 'izin', 13],
+            ['2026-08-08', 'alfa', 17],
+            ['2026-08-09', 'hadir', 123, $tahunLain->id],
+            ['2026-08-10', 'hadir', 25],
+            ['2026-08-11', 'hadir', 400],
+        ] as $record) {
+            [$tanggal, $status, $menit] = $record;
+            AbsensiSiswa::create(['tanggal' => $tanggal, 'tahun_pelajaran_id' => $record[3] ?? $d['tahun']->id,
+                'kelas_id' => $d['kelas']->id, 'anggota_kelas_id' => $d['anggota'][0]->id,
+                'siswa_id' => $d['anggota'][0]->siswa_id, 'status_kehadiran' => $status, 'menit_terlambat' => $menit]);
+        }
+        AbsensiSiswa::create(['tanggal' => '2026-08-03', 'tahun_pelajaran_id' => $d['tahun']->id,
+            'kelas_id' => $d['kelas']->id, 'anggota_kelas_id' => $d['anggota'][1]->id,
+            'siswa_id' => $d['anggota'][1]->siswa_id, 'status_kehadiran' => 'hadir', 'menit_terlambat' => 12]);
+        $sebelum = AbsensiSiswa::orderBy('id')->get()->toArray();
+        $this->simpanPeriode($d, ['tanggal_awal_presensi' => '2026-08-03', 'tanggal_akhir_presensi' => '2026-08-10']);
+        $laporan = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(['jumlah' => 2, 'total_menit' => 35], $laporan['baris'][0]['keterlambatan']);
+        $this->assertSame(['jumlah' => 1, 'total_menit' => 12], $laporan['baris'][1]['keterlambatan']);
+        $this->assertSame(['sakit' => 1, 'izin' => 1, 'alfa' => 1], $laporan['baris'][0]['kehadiran']);
+
+        $this->simpanPeriode($d, ['tanggal_awal_presensi' => '2026-08-07', 'tanggal_akhir_presensi' => '2026-08-10']);
+        $laporan = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(['jumlah' => 1, 'total_menit' => 25], $laporan['baris'][0]['keterlambatan']);
+        $this->assertSame(['jumlah' => 0, 'total_menit' => 0], $laporan['baris'][1]['keterlambatan']);
+        $this->assertSame($sebelum, AbsensiSiswa::orderBy('id')->get()->toArray());
+    }
+
+    public function test_keterlambatan_tampil_di_rekap_pratinjau_dan_cetak_serta_mengikuti_koreksi_presensi(): void
+    {
+        $d = $this->fondasi();
+        PengaturanAbsensi::create(['hari' => 'selasa', 'urutan_hari' => 2, 'jam_scan_masuk_mulai' => '06:00', 'jam_masuk' => '07:00', 'jam_scan_masuk_selesai' => '08:00', 'jam_scan_pulang_mulai' => '13:00', 'jam_pulang' => '14:00', 'jam_scan_pulang_selesai' => '15:00', 'aktif' => true]);
+        foreach (['2026-08-04' => 15, '2026-08-07' => 20] as $tanggal => $menit) {
+            AbsensiSiswa::create(['tanggal' => $tanggal, 'tahun_pelajaran_id' => $d['tahun']->id,
+                'kelas_id' => $d['kelas']->id, 'anggota_kelas_id' => $d['anggota'][0]->id,
+                'siswa_id' => $d['anggota'][0]->siswa_id, 'status_kehadiran' => 'hadir', 'status_masuk' => 'terlambat',
+                'jam_masuk' => '07:'.$menit, 'jam_pulang' => null, 'menit_terlambat' => $menit, 'sumber' => 'scan']);
+        }
+        $sebelum = AbsensiSiswa::orderBy('id')->get()->toArray();
+        $this->simpanPeriode($d, ['tanggal_awal_presensi' => '2026-08-04', 'tanggal_akhir_presensi' => '2026-08-07']);
+        $payload = $this->payload($d);
+        $payload['siswa'][$d['anggota'][0]->id]['sakit'] = 1;
+        $payload['siswa'][$d['anggota'][0]->id]['catatan_koreksi'] = 'Koreksi sakit khusus rapor.';
+        $payload['siswa'][$d['anggota'][0]->id]['keterlambatan'] = ['jumlah' => 999, 'total_menit' => 999];
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $payload)->assertSessionHasNoErrors();
+        $snapshot = KehadiranRaporSts::orderBy('id')->get()->toArray();
+        $this->assertSame(['awal' => '2026-08-04', 'akhir' => '2026-08-07', 'sakit' => 0, 'izin' => 0, 'alfa' => 0, 'hari_tercatat' => 2], $snapshot[0]['rekap_sumber']);
+
+        $index = $this->get(route('rapor-sts.index'))->assertOk()->assertSeeText('Total keterlambatan')
+            ->assertSee('<span data-sts-late-count>2</span> kali', false)
+            ->assertSee('<span data-sts-late-minutes>35</span> menit', false)
+            ->assertSee('<span data-sts-late-count>0</span> kali', false)
+            ->assertSee('<span data-sts-late-minutes>0</span> menit', false);
+        $url = route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'anggota_id' => $d['anggota'][0]->id]);
+        $cetak = $this->get($url)->assertOk()->assertSee('data-sts-late-count>2</span>', false)
+            ->assertSee('data-sts-late-minutes>35</span>', false)
+            ->assertViewHas('baris', fn ($baris) => $baris->count() === 1 && $baris[0]['siap'] && $baris[0]['kehadiran']['sakit'] === 1);
+        $pratinjau = $this->get($url.'&pratinjau=1')->assertOk()->assertSeeText('DRAF PRATINJAU')
+            ->assertViewHas('baris', fn ($baris) => $baris[0]['keterlambatan'] === ['jumlah' => 2, 'total_menit' => 35]);
+        $this->assertSame($sebelum, AbsensiSiswa::orderBy('id')->get()->toArray());
+        $this->assertSame($snapshot, KehadiranRaporSts::orderBy('id')->get()->toArray());
+
+        app(KoreksiPresensiSiswaService::class)->koreksi($d['admin'], $d['anggota'][0], [
+            'tanggal' => '2026-08-04', 'status_kehadiran' => 'hadir', 'jam_masuk' => '07:05',
+            'catatan' => 'Jam datang dikoreksi sesuai catatan petugas.',
+        ]);
+        $this->get($url)->assertOk()->assertSee('data-sts-late-minutes>25</span>', false)
+            ->assertViewHas('baris', fn ($baris) => $baris[0]['keterlambatan'] === ['jumlah' => 2, 'total_menit' => 25]
+                && $baris[0]['diperiksa'] && ! $baris[0]['sumber_berubah'] && $baris[0]['kehadiran']['sakit'] === 1);
+        $this->assertSame($snapshot, KehadiranRaporSts::orderBy('id')->get()->toArray());
+    }
+
     public function test_rekap_koreksi_dan_cetak_menjaga_presensi_asli_dan_nilai_sts(): void
     {
         $d = $this->fondasi();
@@ -197,6 +279,16 @@ class RaporStsTest extends TestCase
             $d['anggota'][1]->siswa->update(['nama_lengkap' => 'Bima Contoh Nama Siswa yang Lebih Panjang']);
             $padat = $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas']]))->assertOk();
             file_put_contents($dir.'/dense.html', $padat->getContent());
+            foreach (['2026-07-01' => 20, '2026-09-20' => 25] as $tanggal => $menit) {
+                AbsensiSiswa::create(['tanggal' => $tanggal, 'tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelas']->id,
+                    'anggota_kelas_id' => $d['anggota'][1]->id, 'siswa_id' => $d['anggota'][1]->siswa_id,
+                    'status_kehadiran' => 'hadir', 'menit_terlambat' => $menit]);
+            }
+            $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $this->payload($d))->assertSessionHasNoErrors();
+            $terlambat = $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas']]))->assertOk();
+            $pratinjau = $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'anggota_id' => $d['anggota'][1]->id, 'pratinjau' => 1]))->assertOk();
+            file_put_contents($dir.'/late.html', $terlambat->getContent());
+            file_put_contents($dir.'/preview.html', $pratinjau->getContent());
         }
     }
 

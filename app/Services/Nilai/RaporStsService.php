@@ -93,7 +93,7 @@ class RaporStsService
             ->whereIn('siswa_id', $anggota->pluck('siswa_id'))
             ->whereDate('tanggal', '>=', $pengaturan->tanggal_awal_presensi)
             ->whereDate('tanggal', '<=', $pengaturan->tanggal_akhir_presensi)
-            ->get(['siswa_id', 'tanggal', 'status_kehadiran'])->groupBy('siswa_id');
+            ->get(['siswa_id', 'tanggal', 'status_kehadiran', 'menit_terlambat'])->groupBy('siswa_id');
         $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
         $hariAktif = $aturanAlfa->hariAktif();
         $tahun = $kegiatan->tahunPelajaran;
@@ -158,6 +158,8 @@ class RaporStsService
                 ];
             });
             $rekaman = $presensi->get($siswa->siswa_id, collect())->unique(fn ($p) => $p->tanggal->toDateString());
+            $terlambat = $rekaman->where('status_kehadiran', 'hadir')->where('menit_terlambat', '>', 0);
+            $keterlambatan = ['jumlah' => $terlambat->count(), 'total_menit' => (int) $terlambat->sum('menit_terlambat')];
             $sumber = [
                 'awal' => $pengaturan->tanggal_awal_presensi->toDateString(),
                 'akhir' => $pengaturan->tanggal_akhir_presensi->toDateString(),
@@ -179,7 +181,7 @@ class RaporStsService
                 'jumlah' => $tuntas && $bernilai->isNotEmpty() ? round($bernilai->sum('nilai'), 2) : null,
                 'rata' => $tuntas && $bernilai->isNotEmpty() ? round($bernilai->avg('nilai'), 2) : null,
                 'sumber' => $sumber, 'sidik_sumber' => $this->sidikSumber($sumber), 'koreksi' => $koreksiSiswa,
-                'kehadiran' => $kehadiran, 'diperiksa' => (bool) $diperiksa,
+                'kehadiran' => $kehadiran, 'keterlambatan' => $keterlambatan, 'diperiksa' => (bool) $diperiksa,
                 'sumber_berubah' => $koreksiSiswa && $koreksiSiswa->rekap_sumber !== $sumber,
                 'siap' => $pengaturan->exists && $diperiksa && $kelas->waliKelas !== null
                     && $pengaturan->tanggal_akhir_presensi->copy()->endOfDay()->isPast(),
