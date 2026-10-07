@@ -1157,6 +1157,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('laporan-absensi/export', [LaporanAbsensiController::class, 'exportExcel'])
             ->middleware('izin:laporan.export')
             ->name('laporan-absensi.export');
+        Route::get('laporan-absensi/{anggotaKelas}/rincian', [LaporanAbsensiController::class, 'show'])
+            ->middleware('izin:absensi.laporan')
+            ->name('laporan-absensi.show');
         Route::get('laporan-absensi-pegawai-bulanan', [LaporanAbsensiPegawaiBulananController::class, 'index'])
             ->middleware('izin:absensi.laporan,absensi_pegawai.pribadi')
             ->name('laporan-absensi-pegawai-bulanan.index');

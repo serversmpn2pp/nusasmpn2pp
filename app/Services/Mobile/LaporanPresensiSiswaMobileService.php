@@ -2,13 +2,10 @@
 
 namespace App\Services\Mobile;
 
-use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\Pengguna;
 use App\Models\Siswa;
-use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\LaporanPresensiSiswaService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -68,25 +65,8 @@ class LaporanPresensiSiswaMobileService
 
     public function detail(Pengguna $pengguna, Request $request, AnggotaKelas $anggotaKelas): array
     {
-        $laporan = $this->laporan->bangun($request);
-        $item = $laporan['laporanAbsensi']->first(
-            fn (array $item) => (int) $item['anggota_kelas']->id === (int) $anggotaKelas->id,
-        );
-        abort_unless($item, 404, 'Siswa tidak ditemukan pada cakupan laporan ini.');
+        ['laporan' => $laporan, 'item' => $item, 'rincian' => $rincian] = $this->laporan->rincian($request, $anggotaKelas);
         $anggotaKelas = $item['anggota_kelas'];
-        $absensi = AbsensiSiswa::query()
-            ->where('siswa_id', $anggotaKelas->siswa_id)
-            ->where('tahun_pelajaran_id', $laporan['tahunPelajaranId'])
-            ->when(! empty($laporan['tanggalEfektif']), fn ($query) => $query
-                ->whereDate('tanggal', '>=', reset($laporan['tanggalEfektif']))
-                ->whereDate('tanggal', '<=', end($laporan['tanggalEfektif'])))
-            ->when(empty($laporan['tanggalEfektif']), fn ($query) => $query->whereRaw('1 = 0'))
-            ->get()
-            ->filter(fn (AbsensiSiswa $item) => in_array($item->tanggal->toDateString(), $laporan['tanggalEfektif'], true))
-            ->keyBy(fn (AbsensiSiswa $presensi) => $presensi->tanggal->toDateString());
-
-        $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
-        $hariAktif = $aturanAlfa->hariAktif();
 
         return [
             'siswa' => $this->identitas($anggotaKelas),
@@ -96,24 +76,7 @@ class LaporanPresensiSiswaMobileService
                 'jumlah_hari_efektif' => $laporan['jumlahHariEfektif'],
             ],
             'ringkasan' => $this->ringkasanItem($item),
-            'rincian' => collect($laporan['tanggalEfektif'])->map(function (string $tanggal) use ($absensi, $anggotaKelas, $aturanAlfa, $hariAktif) {
-                $presensi = $absensi->get($tanggal);
-                $status = $presensi?->status_kehadiran ?? ($aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggotaKelas) ? 'alfa' : 'belum_scan');
-
-                return [
-                    'tanggal' => $tanggal,
-                    'tanggal_label' => Carbon::parse($tanggal)->locale('id')->translatedFormat('D, d M Y'),
-                    'status' => $status,
-                    'status_label' => $this->labelStatus($status),
-                    'inferensi' => $presensi === null,
-                    'jam_masuk' => $this->formatJam($presensi?->jam_masuk),
-                    'jam_pulang' => $this->formatJam($presensi?->jam_pulang),
-                    'menit_terlambat' => (int) ($presensi?->menit_terlambat ?? 0),
-                    'menit_pulang_cepat' => (int) ($presensi?->menit_pulang_cepat ?? 0),
-                    'sumber' => $presensi?->sumber,
-                    'catatan' => $presensi?->catatan,
-                ];
-            })->values(),
+            'rincian' => $rincian,
             'hak_akses' => [
                 'cakupan_wali_kelas' => $laporan['cakupanWaliKelas'],
                 'dapat_export' => $pengguna->memilikiIzin('laporan.export'),
@@ -167,17 +130,5 @@ class LaporanPresensiSiswaMobileService
             ->map(fn (string $kata) => mb_substr($kata, 0, 1))->implode('');
 
         return mb_strtoupper($hasil ?: 'S');
-    }
-
-    private function labelStatus(string $status): string
-    {
-        return match ($status) {
-            'hadir' => 'Hadir', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alfa' => 'Alfa', default => 'Belum dikonfirmasi'
-        };
-    }
-
-    private function formatJam(?string $jam): ?string
-    {
-        return $jam ? mb_substr($jam, 0, 5) : null;
     }
 }

@@ -68,6 +68,7 @@ class PermissionRouteTest extends TestCase
         $this->assertRouteMemakaiMiddleware('rekap-absensi-pegawai-harian.index', 'izin:absensi.lihat,absensi.koreksi,absensi.laporan,absensi_pegawai.pribadi');
         $this->assertRouteMemakaiMiddleware('absensi-pegawai-saya.rekap', 'izin:absensi_pegawai.pribadi');
         $this->assertRouteMemakaiMiddleware('laporan-absensi.index', 'izin:absensi.laporan');
+        $this->assertRouteMemakaiMiddleware('laporan-absensi.show', 'izin:absensi.laporan');
         $this->assertRouteMemakaiMiddleware('notifikasi-absensi-siswa.index', 'izin:absensi.laporan');
         $this->assertRouteMemakaiMiddleware('jadwal-piket-guru.index', 'izin:piket_guru.kelola');
         $this->assertRouteMemakaiMiddleware('jadwal-piket-saya.index', 'izin:piket_guru.lihat_pribadi');

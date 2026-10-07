@@ -27,6 +27,10 @@
         .periode-fields.is-visible {
             display: block;
         }
+
+        .presensi-rincian-link { margin-top: 8px; gap: 6px; width: auto; }
+        .presensi-rincian-link img { width: 16px; height: 16px; flex: 0 0 16px; }
+        @media (max-width: 900px) { .presensi-rincian-link { width: 100%; margin-top: 14px; } }
     </style>
 
     <div class="page-header">
@@ -200,6 +204,9 @@
                             <td data-label="Siswa">
                                 <p class="person-name">{{ $anggota->siswa?->nama_lengkap ?: '-' }}</p>
                                 <p class="person-meta">NIS: {{ $anggota->siswa?->nis ?: '-' }} - NISN: {{ $anggota->siswa?->nisn ?: '-' }}</p>
+                                <a href="{{ route('laporan-absensi.show', ['anggotaKelas' => $anggota, ...$parameterExport]) }}" class="button button-muted button-sm presensi-rincian-link" data-presensi-rincian title="Rincian presensi {{ $anggota->siswa?->nama_lengkap }}">
+                                    <img src="{{ asset('images/icons/eye.svg') }}" alt="" aria-hidden="true"> Rincian
+                                </a>
                             </td>
                             <td data-label="Kelas">{{ $anggota->kelas?->nama ?: '-' }}</td>
                             <td data-label="Hadir">{{ $item['hadir'] }}</td>
@@ -270,6 +277,9 @@
                             <dd>{{ $item['pulang_cepat'] }} kali</dd>
                         </div>
                     </dl>
+                    <a href="{{ route('laporan-absensi.show', ['anggotaKelas' => $anggota, ...$parameterExport]) }}" class="button button-muted presensi-rincian-link" data-presensi-rincian title="Rincian presensi {{ $anggota->siswa?->nama_lengkap }}">
+                        <img src="{{ asset('images/icons/eye.svg') }}" alt="" aria-hidden="true"> Rincian
+                    </a>
                 </article>
             @empty
                 <div class="empty-state">Belum ada siswa aktif pada pilihan ini.</div>

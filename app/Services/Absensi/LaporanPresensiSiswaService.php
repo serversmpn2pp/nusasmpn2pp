@@ -87,6 +87,50 @@ class LaporanPresensiSiswaService
         return 'laporan-presensi-'.str($kelas)->slug('-')->toString().'-'.now()->format('Ymd-His').'.xlsx';
     }
 
+    public function rincian(Request $request, AnggotaKelas $anggotaKelas): array
+    {
+        $laporan = $this->bangun($request);
+        $item = $laporan['laporanAbsensi']->first(fn ($item) => (int) $item['anggota_kelas']->id === (int) $anggotaKelas->id);
+        abort_unless($item, 404, 'Siswa tidak ditemukan pada cakupan laporan ini.');
+        $anggota = $item['anggota_kelas'];
+        $tanggalEfektif = $laporan['tanggalEfektif'];
+        $absensi = AbsensiSiswa::where('siswa_id', $anggota->siswa_id)
+            ->where('tahun_pelajaran_id', $laporan['tahunPelajaranId'])
+            ->where('kelas_id', $anggota->kelas_id)
+            ->when(! empty($tanggalEfektif), fn ($q) => $q->whereDate('tanggal', '>=', reset($tanggalEfektif))
+                ->whereDate('tanggal', '<=', end($tanggalEfektif)))
+            ->when(empty($tanggalEfektif), fn ($q) => $q->whereRaw('1 = 0'))
+            ->get()->filter(fn ($presensi) => in_array($presensi->tanggal->toDateString(), $tanggalEfektif, true))
+            ->keyBy(fn ($presensi) => $presensi->tanggal->toDateString());
+        $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
+        $rincian = collect($tanggalEfektif)->map(function ($tanggal) use ($absensi, $aturanAlfa, $anggota, $laporan) {
+            $presensi = $absensi->get($tanggal);
+            $status = $presensi?->status_kehadiran ?? ($aturanAlfa->menjadiAlfa($tanggal, $laporan['hariAktif'], $anggota) ? 'alfa' : 'belum_scan');
+            $hari = Carbon::parse($tanggal)->locale('id');
+
+            return [
+                'tanggal' => $tanggal, 'tanggal_label' => $hari->translatedFormat('D, d M Y'),
+                'hari_label' => $hari->translatedFormat('l'), 'tanggal_panjang' => $hari->translatedFormat('d F Y'),
+                'status' => $status,
+                'status_label' => match ($status) {
+                    'hadir' => 'Hadir', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa', default => 'Belum dikonfirmasi',
+                },
+                'inferensi' => $presensi === null, 'alfa_otomatis' => $presensi === null && $status === 'alfa',
+                'jam_masuk' => $presensi?->jam_masuk ? mb_substr($presensi->jam_masuk, 0, 5) : null,
+                'jam_pulang' => $presensi?->jam_pulang ? mb_substr($presensi->jam_pulang, 0, 5) : null,
+                'belum_pulang' => $status === 'hadir' && $presensi?->jam_masuk && ! $presensi?->jam_pulang,
+                'menit_terlambat' => (int) ($presensi?->menit_terlambat ?? 0),
+                'menit_pulang_cepat' => (int) ($presensi?->menit_pulang_cepat ?? 0),
+                'sumber' => $presensi?->sumber,
+                'sumber_label' => $presensi ? ($presensi->sumber === 'scan' ? 'Scan presensi' : 'Catatan petugas')
+                    : ($status === 'alfa' ? 'Alfa otomatis: hari berakhir tanpa konfirmasi' : 'Belum ada catatan'),
+                'catatan' => $presensi?->catatan,
+            ];
+        })->values();
+
+        return compact('laporan', 'item', 'rincian');
+    }
+
     private function ambilTahunPelajaranId(?int $id, $daftar): ?int
     {
         if ($id && $daftar->contains('id', $id)) {
