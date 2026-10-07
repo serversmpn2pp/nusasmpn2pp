@@ -45,6 +45,8 @@
         .student strong { font-size:7.8pt; }
         .student span { margin-top:.7mm; color:var(--muted); font-size:6.6pt; }
         .status { font-size:6.5pt; font-weight:700; text-align:center; }
+        .progress { display:block; margin-top:.8mm; font-size:6pt; font-weight:400; color:var(--muted); }
+        .draft { display:block; font-size:5.8pt; font-weight:400; color:#805500; }
         .rank { color:var(--navy-dark); font-size:9pt; font-weight:700; text-align:center; }
         .legend { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1mm 5mm; margin-top:2.5mm; padding:2mm 2.5mm; border:1px solid var(--line-soft); color:var(--muted); font-size:6.8pt; }
         .legend strong { color:var(--navy-dark); }
@@ -107,8 +109,10 @@
             <div class="meta-item"><span class="meta-label">Rata-rata {{ $mode === 'kelas' ? 'kelas' : 'tingkat' }}</span><span class="meta-value">{{ $rataCakupan === null ? '-' : number_format($rataCakupan, 2, ',', '.') }}</span></div>
         </section>
 
-        @if ($ringkasan['belum_masuk_ranking'] > 0)
-            <p class="notice"><strong>Perhatian:</strong> {{ $ringkasan['belum_masuk_ranking'] }} siswa belum masuk ranking karena nilai belum lengkap atau tercatat tidak mengikuti STS. Dokumen tetap menampilkan status tersebut.</p>
+        @if ($mapel->isNotEmpty())
+            <p class="notice"><strong>{{ $leger['ranking_sementara'] ? 'Ranking sementara.' : 'Nilai lengkap dan final.' }}</strong> Rata-rata = jumlah nilai tersedia dibagi {{ $mapel->count() }} mapel yang ditetapkan{{ $mode === 'tingkat' ? ' untuk seluruh siswa paralel' : '' }}. {{ $ringkasan['lengkap_final'] }}/{{ $ringkasan['jumlah_siswa'] }} siswa lengkap dan final. @if ($leger['ranking_sementara'])Ranking dapat berubah; belum menjadi dasar penetapan penghargaan.@endif @if ($ringkasan['belum_masuk_ranking']){{ $ringkasan['belum_masuk_ranking'] }} siswa belum memiliki nilai dan tidak masuk ranking.@endif</p>
+        @else
+            <p class="notice">Belum ada mata pelajaran untuk perhitungan ranking.</p>
         @endif
 
         <div class="table-wrap">
@@ -145,11 +149,11 @@
                             <td class="student"><strong>{{ $item['anggota']->siswa->nama_lengkap }}</strong><span>NISN {{ $item['anggota']->siswa->nisn ?: '-' }}</span></td>
                             @if ($mode === 'tingkat')<td class="center"><strong>{{ $item['kelas']->nama }}</strong></td>@endif
                             @foreach ($item['nilai'] as $nilai)
-                                <td class="score">@if ($nilai['nilai'] !== null){{ number_format($nilai['nilai'], 2, ',', '.') }}@elseif ($nilai['dikecualikan'])TM @else-@endif</td>
+                                <td class="score">@if ($nilai['nilai'] !== null){{ number_format($nilai['nilai'], 2, ',', '.') }}@if ($nilai['draf'])<span class="draft">Draf</span>@endif @elseif ($nilai['dikecualikan'])TM @else-@endif</td>
                             @endforeach
                             <td class="score">{{ $item['jumlah_leger'] === null ? '-' : number_format($item['jumlah_leger'], 2, ',', '.') }}</td>
                             <td class="score">{{ $item['rata_leger'] === null ? '-' : number_format($item['rata_leger'], 2, ',', '.') }}</td>
-                            <td class="status">{{ $item['status_ranking'] }}</td>
+                            <td class="status">{{ $item['status_ranking'] }}<span class="progress">{{ $item['jumlah_nilai_tersedia'] }}/{{ $item['jumlah_mapel'] }} mapel · {{ $item['jumlah_nilai_final'] }} final · {{ $item['jumlah_nilai_draf'] }} draf</span></td>
                         </tr>
                     @empty
                         <tr><td class="center" colspan="30">Belum ada siswa aktif pada cakupan ini.</td></tr>
@@ -164,7 +168,7 @@
             @endforeach
         </section>
         <div class="notes">
-            <span>Ranking menggunakan rata-rata dua desimal; nilai sama memperoleh ranking yang sama.</span>
+            <span>Ranking menggunakan rata-rata dua desimal; nilai sama memperoleh ranking yang sama. Nilai kosong tetap belum tersedia.</span>
             <span>TM = Tidak mengikuti STS · Dicetak {{ now()->locale('id')->translatedFormat('d F Y H:i') }} WIB</span>
         </div>
 

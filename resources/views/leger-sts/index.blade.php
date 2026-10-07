@@ -67,8 +67,14 @@
         .leger-student span { margin-top:3px; color:var(--muted); font-size:.68rem; }
         .leger-score { font-weight:750; }
         .leger-score.is-empty { color:#a1aab4; font-weight:500; }
-        .leger-status { display:inline-flex; padding:4px 7px; border-radius:4px; background:#edf1f4; color:#526170; font-size:.68rem; font-weight:750; }
+        .leger-status { display:inline-flex; max-width:100%; padding:4px 7px; border-radius:4px; background:#edf1f4; color:#526170; font-size:.68rem; font-weight:750; line-height:1.4; }
         .leger-status.is-ranked { background:#e8f6ee; color:#146c3a; }
+        .leger-status.is-provisional { background:#fff5d9; color:#805500; }
+        .leger-progress { display:block; margin-top:5px; color:var(--muted); font-size:.68rem; line-height:1.5; }
+        .leger-draft { display:block; margin-top:3px; color:#805500; font-size:.65rem; font-weight:600; }
+        .leger-ranking-note { margin-bottom:18px; padding:12px 16px; border-left:3px solid var(--accent); background:#fff; font-size:.82rem; line-height:1.6; }
+        .leger-ranking-note strong { color:var(--primary-dark); }
+        .leger-ranking-note p { margin:4px 0 0; color:var(--muted); }
         .leger-empty { padding:30px; color:var(--muted); text-align:center; }
         .leger-footnote { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 18px; padding:12px 18px; border-top:1px solid var(--line); background:#fafbfc; color:var(--muted); font-size:.72rem; }
         @media (max-width:1180px) { .leger-summary,.leger-summary.is-level { grid-template-columns:repeat(3,minmax(0,1fr)); } }
@@ -85,7 +91,7 @@
             .leger-tab { min-width:0; }
             .leger-main-head { align-items:stretch; }
             .leger-search { width:100%; }
-            .leger-table .student-column { width:190px; min-width:190px; }
+            .leger-table .student-column { left:auto; width:190px; min-width:190px; box-shadow:none; }
         }
     </style>
 @endpush
@@ -95,7 +101,7 @@
         <div>
             <p class="eyebrow">Penilaian</p>
             <h1 class="page-title">Leger STS</h1>
-            <p class="help-text" style="margin-top:7px;">Rekap nilai final, ranking, dan statistik capaian per kelas maupun tingkat.</p>
+            <p class="help-text" style="margin-top:7px;">Rekap nilai, ranking, dan statistik capaian per kelas maupun tingkat.</p>
         </div>
         <div class="leger-header-actions">
             <a class="button button-muted" href="{{ route('rapor-sts.index', ['kegiatan_id' => $kegiatan?->id, 'kelas_id' => $kelas?->id]) }}">Buka Rapor STS</a>
@@ -147,6 +153,15 @@
         <button class="button button-primary" type="submit" @disabled($daftarKegiatan->isEmpty() || ($mode === 'tingkat' ? $daftarTingkat->isEmpty() : $daftarKelas->isEmpty()))>Terapkan</button>
     </form>
 
+    @php $legerAktif = $mode === 'tingkat' ? $legerTingkat : $leger; @endphp
+    @if ($legerAktif && $legerAktif['mapel']->isNotEmpty())
+        <section class="leger-ranking-note" aria-label="Dasar perhitungan ranking" data-leger-calculation>
+            <strong>{{ $legerAktif['ranking_sementara'] ? 'Ranking sementara' : 'Nilai lengkap dan final' }}</strong>
+            <p>Rata-rata = jumlah nilai tersedia dibagi {{ $legerAktif['mapel']->count() }} mapel yang ditetapkan{{ $mode === 'tingkat' ? ' untuk seluruh siswa paralel' : '' }}. Nilai kosong tetap belum tersedia, bukan nilai nol yang disimpan.</p>
+            <p>{{ $legerAktif['ringkasan']['lengkap_final'] }}/{{ $legerAktif['ringkasan']['jumlah_siswa'] }} siswa memiliki seluruh nilai final. @if ($legerAktif['ranking_sementara'])Ranking dapat berubah saat nilai masuk, dikoreksi, atau difinalisasi; belum menjadi dasar penetapan penghargaan.@endif</p>
+        </section>
+    @endif
+
     @if ($mode === 'tingkat')
         @include('leger-sts.tingkat')
     @elseif ($leger && $kelas && $kegiatan)
@@ -160,13 +175,13 @@
             <div class="panel stat is-primary"><p class="stat-label">Masuk ranking</p><p class="stat-value">{{ $ringkasan['masuk_ranking'] }}</p><p class="stat-note">{{ $ringkasan['belum_masuk_ranking'] }} siswa belum masuk ranking</p></div>
             <div class="panel stat"><p class="stat-label">Rata-rata kelas</p><p class="stat-value">{{ $ringkasan['rata_kelas'] === null ? '-' : number_format($ringkasan['rata_kelas'], 2, ',', '.') }}</p><p class="stat-note">Dari siswa yang masuk ranking</p></div>
             <div class="panel stat"><p class="stat-label">Rata-rata tertinggi</p><p class="stat-value">{{ $ringkasan['rata_tertinggi'] === null ? '-' : number_format($ringkasan['rata_tertinggi'], 2, ',', '.') }}</p><p class="stat-note">Terendah {{ $ringkasan['rata_terendah'] === null ? '-' : number_format($ringkasan['rata_terendah'], 2, ',', '.') }}</p></div>
-            <div class="panel stat is-accent"><p class="stat-label">Mapel tertinggi</p><p class="stat-value" style="font-size:1rem;">{{ $mapelTertinggi['mapel']->nama ?? '-' }}</p><p class="stat-note">{{ $mapelTertinggi ? 'Rata-rata '.number_format($mapelTertinggi['rata'], 2, ',', '.').' · '.$mapelTertinggi['jumlah_nilai'].' nilai final' : 'Belum ada nilai final' }}</p></div>
+            <div class="panel stat is-accent"><p class="stat-label">Mapel tertinggi</p><p class="stat-value" style="font-size:1rem;">{{ $mapelTertinggi['mapel']->nama ?? '-' }}</p><p class="stat-note">{{ $mapelTertinggi ? 'Rata-rata '.number_format($mapelTertinggi['rata'], 2, ',', '.').' · '.$mapelTertinggi['jumlah_nilai'].' nilai tersedia' : 'Belum ada nilai' }}</p></div>
         </section>
 
         <div class="leger-stat-layout">
             <section class="panel leger-stat-panel">
                 <h2>Sebaran capaian siswa</h2>
-                <p>Berdasarkan rata-rata siswa yang masuk ranking.</p>
+                <p>Berdasarkan rata-rata {{ $leger['ranking_sementara'] ? 'sementara ' : '' }}siswa yang memiliki nilai.</p>
                 <div class="leger-distribution">
                     @foreach ($leger['distribusi'] as $item)
                         <div class="leger-distribution-row" data-level="{{ $item['kode'] }}">
@@ -180,15 +195,15 @@
 
             <section class="panel leger-stat-panel">
                 <h2>Statistik mata pelajaran</h2>
-                <p>Rata-rata dihitung dari nilai final yang tersedia pada setiap mata pelajaran.</p>
+                <p>Rata-rata mapel dihitung dari nilai tersedia; nilai draf ditandai.</p>
                 <div class="leger-subject-wrap">
                     <table class="leger-subject-table">
-                        <thead><tr><th>Mata pelajaran</th><th class="numeric">Nilai final</th><th class="numeric">Rata-rata</th><th class="numeric">Tertinggi</th><th class="numeric">Terendah</th></tr></thead>
+                        <thead><tr><th>Mata pelajaran</th><th class="numeric">Nilai tersedia</th><th class="numeric">Rata-rata</th><th class="numeric">Tertinggi</th><th class="numeric">Terendah</th></tr></thead>
                         <tbody>
                             @forelse ($leger['statistik_mapel'] as $statistik)
                                 <tr>
                                     <td><span class="leger-subject-name">{{ $statistik['mapel']->nama }} @if ($statistik['tertinggi'])<span class="leger-top-badge">Tertinggi</span>@endif</span></td>
-                                    <td class="numeric">{{ $statistik['jumlah_nilai'] }}/{{ $statistik['jumlah_siswa'] }}</td>
+                                    <td class="numeric">{{ $statistik['jumlah_nilai'] }}/{{ $statistik['jumlah_siswa'] }}<span class="leger-progress">{{ $statistik['jumlah_final'] }} final · {{ $statistik['jumlah_draf'] }} draf</span></td>
                                     <td class="numeric"><strong>{{ $statistik['rata'] === null ? '-' : number_format($statistik['rata'], 2, ',', '.') }}</strong></td>
                                     <td class="numeric">{{ $statistik['tertinggi_nilai'] === null ? '-' : number_format($statistik['tertinggi_nilai'], 2, ',', '.') }}</td>
                                     <td class="numeric">{{ $statistik['terendah_nilai'] === null ? '-' : number_format($statistik['terendah_nilai'], 2, ',', '.') }}</td>
@@ -205,7 +220,7 @@
         <section class="panel leger-main">
             <div class="leger-main-head">
                 <div>
-                    <h2>Ranking kelas {{ $kelas->nama }}</h2>
+                    <h2>Ranking {{ $leger['ranking_sementara'] ? 'sementara ' : '' }}kelas {{ $kelas->nama }}</h2>
                     <p>{{ $kegiatan->nama }} · Tahun Pelajaran {{ $kegiatan->tahunPelajaran->nama }}</p>
                 </div>
                 <div class="field leger-search">
@@ -244,14 +259,14 @@
                                     </td>
                                     @foreach ($item['nilai'] as $nilai)
                                         <td class="subject-column" title="{{ $nilai['nilai'] === null ? $nilai['status'] : $nilai['keterangan'] }}">
-                                            @if ($nilai['nilai'] !== null)<span class="leger-score">{{ number_format($nilai['nilai'], 2, ',', '.') }}</span>
+                                            @if ($nilai['nilai'] !== null)<span class="leger-score">{{ number_format($nilai['nilai'], 2, ',', '.') }}</span>@if ($nilai['draf'])<small class="leger-draft">Draf</small>@endif
                                             @elseif ($nilai['dikecualikan'])<span class="leger-score is-empty">TM</span>
                                             @else<span class="leger-score is-empty">-</span>@endif
                                         </td>
                                     @endforeach
                                     <td class="result-column"><span class="leger-score">{{ $item['jumlah_leger'] === null ? '-' : number_format($item['jumlah_leger'], 2, ',', '.') }}</span></td>
                                     <td class="result-column"><span class="leger-score">{{ $item['rata_leger'] === null ? '-' : number_format($item['rata_leger'], 2, ',', '.') }}</span></td>
-                                    <td class="status-column"><span class="leger-status {{ $item['layak_ranking'] ? 'is-ranked' : '' }}">{{ $item['status_ranking'] }}</span></td>
+                                    <td class="status-column"><span class="leger-status {{ $item['nilai_final_lengkap'] ? 'is-ranked' : ($item['layak_ranking'] ? 'is-provisional' : '') }}">{{ $item['status_ranking'] }}</span><span class="leger-progress">{{ $item['jumlah_nilai_tersedia'] }}/{{ $item['jumlah_mapel'] }} mapel · {{ $item['jumlah_nilai_final'] }} final · {{ $item['jumlah_nilai_draf'] }} draf</span></td>
                                 </tr>
                             @endforeach
                         </tbody>

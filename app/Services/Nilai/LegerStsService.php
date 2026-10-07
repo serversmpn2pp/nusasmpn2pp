@@ -12,21 +12,10 @@ class LegerStsService
 
     public function bangun(KegiatanUjianCbt $kegiatan, Kelas $kelas): array
     {
-        $laporan = $this->raporSts->bangun($kegiatan, $kelas);
+        $laporan = $this->raporSts->bangun($kegiatan, $kelas, sertakanDraf: true);
         $jumlahMapel = $laporan['mapel']->count();
 
-        $baris = $laporan['baris']->map(function (array $item) use ($jumlahMapel) {
-            $layakRanking = $jumlahMapel > 0 && $item['nilai_lengkap'];
-
-            return [
-                ...$item,
-                'layak_ranking' => $layakRanking,
-                'jumlah_leger' => $layakRanking ? round($item['nilai']->sum('nilai'), 2) : null,
-                'rata_leger' => $layakRanking ? round($item['nilai']->avg('nilai'), 2) : null,
-                'ranking' => null,
-                'status_ranking' => $this->statusRanking($item, $jumlahMapel),
-            ];
-        });
+        $baris = $laporan['baris']->map(fn (array $item) => $this->nilaiRanking($item, $jumlahMapel));
 
         $baris = $this->terapkanRanking($baris);
 
@@ -45,6 +34,7 @@ class LegerStsService
             'jumlah_siswa' => $baris->count(),
             'masuk_ranking' => $rataSiswa->count(),
             'belum_masuk_ranking' => $baris->count() - $rataSiswa->count(),
+            'lengkap_final' => $baris->where('nilai_final_lengkap', true)->count(),
             'rata_kelas' => $rataSiswa->isNotEmpty() ? round($rataSiswa->avg(), 2) : null,
             'rata_tertinggi' => $rataSiswa->isNotEmpty() ? round($rataSiswa->max(), 2) : null,
             'rata_terendah' => $rataSiswa->isNotEmpty() ? round($rataSiswa->min(), 2) : null,
@@ -53,6 +43,7 @@ class LegerStsService
         return [
             ...$laporan,
             'baris' => $baris,
+            'ranking_sementara' => $jumlahMapel > 0 && $baris->contains(fn (array $item) => ! $item['nilai_final_lengkap']),
             'ringkasan' => $ringkasan,
             'distribusi' => $this->distribusi($rataSiswa),
             'statistik_mapel' => $statistikMapel,
@@ -64,7 +55,7 @@ class LegerStsService
     {
         $kelas = $daftarKelas->filter(fn (Kelas $item) => $item->tingkat === $tingkat)
             ->sortBy('nama', SORT_NATURAL)->values();
-        $laporanKelas = $kelas->map(fn (Kelas $item) => $this->raporSts->bangun($kegiatan, $item));
+        $laporanKelas = $kelas->map(fn (Kelas $item) => $this->raporSts->bangun($kegiatan, $item, sertakanDraf: true));
         $mapel = $laporanKelas->flatMap(fn (array $laporan) => $laporan['mapel'])
             ->unique('id')
             ->sort(function ($a, $b) {
@@ -79,6 +70,7 @@ class LegerStsService
                     return $nilaiAsli->get($pelajaran->id) ?? [
                         'mapel' => $pelajaran,
                         'nilai' => null,
+                        'draf' => false,
                         'status' => 'Mata pelajaran belum tersedia di kelas',
                         'keterangan' => 'Belum tersedia',
                         'dapat_dikecualikan' => false,
@@ -98,14 +90,7 @@ class LegerStsService
                     'jumlah_pengecualian' => $jumlahPengecualian,
                 ];
 
-                return [
-                    ...$barisTingkat,
-                    'layak_ranking' => $lengkap,
-                    'jumlah_leger' => $lengkap ? round($nilai->sum('nilai'), 2) : null,
-                    'rata_leger' => $lengkap ? round($nilai->avg('nilai'), 2) : null,
-                    'ranking' => null,
-                    'status_ranking' => $this->statusRanking($barisTingkat, $mapel->count()),
-                ];
+                return $this->nilaiRanking($barisTingkat, $mapel->count());
             });
         })->values();
         $baris = $this->terapkanRanking($baris);
@@ -143,6 +128,7 @@ class LegerStsService
             'kelas' => $kelas,
             'mapel' => $mapel,
             'baris' => $baris,
+            'ranking_sementara' => $mapel->isNotEmpty() && $baris->contains(fn (array $item) => ! $item['nilai_final_lengkap']),
             'statistik_kelas' => $statistikKelas,
             'statistik_mapel' => $statistikMapel,
             'mapel_tertinggi' => $mapelTertinggi,
@@ -152,6 +138,7 @@ class LegerStsService
                 'jumlah_siswa' => $baris->count(),
                 'masuk_ranking' => $rataSiswa->count(),
                 'belum_masuk_ranking' => $baris->count() - $rataSiswa->count(),
+                'lengkap_final' => $baris->where('nilai_final_lengkap', true)->count(),
                 'rata_tingkat' => $rataSiswa->isNotEmpty() ? round($rataSiswa->avg(), 2) : null,
                 'rata_tertinggi' => $rataSiswa->isNotEmpty() ? round($rataSiswa->max(), 2) : null,
                 'rata_terendah' => $rataSiswa->isNotEmpty() ? round($rataSiswa->min(), 2) : null,
@@ -169,24 +156,26 @@ class LegerStsService
         $peringkatMapel = $mapelTerpilih
             ? $this->peringkatMapel($leger['baris'], $mapelTerpilih, $kelasDefault)
             : collect();
+        // Award candidates use their own final-only ranking, never the provisional ranking.
+        $peringkatFinal = $this->terapkanRanking($leger['baris']->where('nilai_final_lengkap', true));
 
         $kandidat = $kategori === 'mapel'
             ? $peringkatMapel->where('ranking', '<=', $batas)->values()
-            : $leger['baris']->filter(fn (array $item) => $item['ranking'] !== null && $item['ranking'] <= $batas)
+            : $peringkatFinal->filter(fn (array $item) => $item['ranking'] !== null && $item['ranking'] <= $batas)
                 ->map(function (array $item) use ($kelasDefault) {
                     return [
                         'anggota' => $item['anggota'],
                         'kelas' => $item['kelas'] ?? $kelasDefault,
                         'ranking' => $item['ranking'],
                         'nilai' => $item['rata_leger'],
-                        'jumlah_nilai_final' => $item['nilai']->whereNotNull('nilai')->count(),
+                        'jumlah_nilai_final' => $item['jumlah_nilai_final'],
                         'jumlah_mapel' => $item['nilai']->count(),
                         'label_penghargaan' => $this->labelPenghargaan($item['ranking'], false),
                     ];
                 })->values();
         $jumlahTersedia = $kategori === 'mapel'
             ? $peringkatMapel->count()
-            : $leger['baris']->where('layak_ranking', true)->count();
+            : $peringkatFinal->count();
 
         $ringkasanMapel = $leger['mapel']->map(function ($pelajaran) use ($leger, $kelasDefault) {
             $peringkat = $this->peringkatMapel($leger['baris'], $pelajaran, $kelasDefault);
@@ -220,7 +209,7 @@ class LegerStsService
     {
         $bernilai = $baris->map(function (array $item) use ($pelajaran, $kelasDefault) {
             $nilai = $item['nilai']->firstWhere('mapel.id', $pelajaran->id);
-            if (($nilai['nilai'] ?? null) === null) {
+            if (($nilai['nilai'] ?? null) === null || ($nilai['draf'] ?? false)) {
                 return null;
             }
 
@@ -320,7 +309,7 @@ class LegerStsService
                 'jumlah_siswa' => $siswa->count(),
                 'masuk_ranking' => $rataSiswa->count(),
                 'belum_masuk_ranking' => $siswa->count() - $rataSiswa->count(),
-                'kelengkapan' => $siswa->isNotEmpty() ? round($rataSiswa->count() / $siswa->count() * 100, 2) : 0.0,
+                'kelengkapan' => $siswa->isNotEmpty() ? round($siswa->where('nilai_final_lengkap', true)->count() / $siswa->count() * 100, 2) : 0.0,
                 'rata' => $rataSiswa->isNotEmpty() ? round($rataSiswa->avg(), 2) : null,
                 'tertinggi' => $rataSiswa->isNotEmpty() ? round($rataSiswa->max(), 2) : null,
                 'terendah' => $rataSiswa->isNotEmpty() ? round($rataSiswa->min(), 2) : null,
@@ -352,33 +341,61 @@ class LegerStsService
         })->values();
     }
 
+    private function nilaiRanking(array $item, int $jumlahMapel): array
+    {
+        $tersedia = $item['nilai']->whereNotNull('nilai');
+        $jumlahDraf = $tersedia->where('draf', true)->count();
+        $jumlahFinal = $tersedia->count() - $jumlahDraf;
+        $layak = $jumlahMapel > 0 && $tersedia->isNotEmpty();
+        $jumlah = $layak ? round((float) $tersedia->sum('nilai'), 2) : null;
+
+        $item = [
+            ...$item,
+            'jumlah_mapel' => $jumlahMapel,
+            'jumlah_nilai_tersedia' => $tersedia->count(),
+            'jumlah_nilai_final' => $jumlahFinal,
+            'jumlah_nilai_draf' => $jumlahDraf,
+            'nilai_lengkap' => $jumlahMapel > 0 && $tersedia->count() === $jumlahMapel,
+            'nilai_final_lengkap' => $jumlahMapel > 0 && $jumlahFinal === $jumlahMapel,
+            'layak_ranking' => $layak,
+            'jumlah_leger' => $jumlah,
+            'rata_leger' => $layak ? round($jumlah / $jumlahMapel, 2) : null,
+            'ranking' => null,
+        ];
+
+        return [...$item, 'status_ranking' => $this->statusRanking($item, $jumlahMapel)];
+    }
+
     private function statusRanking(array $item, int $jumlahMapel): string
     {
         if ($jumlahMapel === 0) {
             return 'Belum ada mata pelajaran';
         }
-        if ($item['nilai_lengkap']) {
+        if ($item['nilai_final_lengkap']) {
             return 'Masuk ranking';
+        }
+        if ($item['layak_ranking']) {
+            return 'Ranking sementara';
         }
         if ($item['jumlah_pengecualian'] > 0) {
             return 'Tidak mengikuti STS';
         }
 
-        return 'Nilai belum lengkap';
+        return 'Belum ada nilai';
     }
 
     private function statistikMapel(Collection $mapel, Collection $baris): Collection
     {
         return $mapel->map(function ($pelajaran) use ($baris) {
-            $nilai = $baris->map(function (array $item) use ($pelajaran) {
-                $data = $item['nilai']->firstWhere('mapel.id', $pelajaran->id);
-
-                return $data['nilai'] ?? null;
-            })->reject(fn ($angka) => $angka === null)->values();
+            $dataNilai = $baris->map(fn (array $item) => $item['nilai']->firstWhere('mapel.id', $pelajaran->id))
+                ->filter(fn (?array $data) => ($data['nilai'] ?? null) !== null);
+            $nilai = $dataNilai->pluck('nilai');
 
             return [
                 'mapel' => $pelajaran,
                 'jumlah_nilai' => $nilai->count(),
+                'jumlah_draf' => $dataNilai->where('draf', true)->count(),
+                'jumlah_final' => $dataNilai->where('draf', false)->count(),
                 'jumlah_siswa' => $baris->count(),
                 'cakupan' => $baris->isNotEmpty() ? round($nilai->count() / $baris->count() * 100, 2) : 0.0,
                 'rata' => $nilai->isNotEmpty() ? round($nilai->avg(), 2) : null,

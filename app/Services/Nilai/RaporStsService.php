@@ -64,7 +64,7 @@ class RaporStsService
         ]);
     }
 
-    public function bangun(KegiatanUjianCbt $kegiatan, Kelas $kelas, ?RaporStsKelas $pengaturan = null): array
+    public function bangun(KegiatanUjianCbt $kegiatan, Kelas $kelas, ?RaporStsKelas $pengaturan = null, bool $sertakanDraf = false): array
     {
         $pengaturan ??= $this->pengaturan($kegiatan, $kelas);
         $kelas->loadMissing('waliKelas');
@@ -119,8 +119,8 @@ class RaporStsService
 
             return ['komponen' => $c, 'konteks' => app(StsManualService::class)->konteks($c, $anggota, $c->nilaiSiswa)];
         });
-        $baris = $anggota->map(function ($siswa) use ($pengaturan, $mapel, $jadwalMapel, $peserta, $presensi, $koreksi, $pengecualian, $kelas, $manual, $aturanAlfa, $hariAktif, $tanggalEfektif) {
-            $nilai = $mapel->map(function ($pelajaran) use ($jadwalMapel, $peserta, $pengecualian, $siswa, $manual) {
+        $baris = $anggota->map(function ($siswa) use ($pengaturan, $mapel, $jadwalMapel, $peserta, $presensi, $koreksi, $pengecualian, $kelas, $manual, $aturanAlfa, $hariAktif, $tanggalEfektif, $sertakanDraf) {
+            $nilai = $mapel->map(function ($pelajaran) use ($jadwalMapel, $peserta, $pengecualian, $siswa, $manual, $sertakanDraf) {
                 $jadwal = $jadwalMapel->get($pelajaran->id, collect());
                 $hasil = ['nilai' => null, 'status' => 'Belum ada paket STS'];
                 $sumberNilai = null;
@@ -133,13 +133,13 @@ class RaporStsService
                 } elseif ($jadwal->count() === 1 && $ujian = $jadwal->first()->ujianCbt) {
                     $sumberNilai = 'cbt';
                     $pesertaSiswa = $peserta->get($siswa->id, collect())->firstWhere('ujian_cbt_id', $ujian->id);
-                    $hasil = $this->nilaiPeserta($ujian, $pesertaSiswa, $siswa);
+                    $hasil = $this->nilaiPeserta($ujian, $pesertaSiswa, $siswa, $sertakanDraf);
                     $dapatDikecualikan = $hasil['nilai'] === null && $this->dapatDikecualikan($jadwal->first(), $pesertaSiswa);
                     $sidikKondisi = $this->sidikKondisi($jadwal->first(), $pesertaSiswa);
                 } elseif ($jadwal->isEmpty() && $m = $manual->get($pelajaran->id)) {
                     $sumberNilai = 'manual';
                     $komponenId = $m['komponen']?->id;
-                    $hasil = $this->nilaiManual($m['konteks'], $siswa->siswa_id);
+                    $hasil = $this->nilaiManual($m['konteks'], $siswa->siswa_id, $sertakanDraf);
                 }
                 $catatan = $pengecualian->get($siswa->id, collect())->firstWhere('mata_pelajaran_id', $pelajaran->id);
                 $dikecualikan = $dapatDikecualikan && $catatan?->aktif
@@ -150,6 +150,7 @@ class RaporStsService
                 }
 
                 return ['mapel' => $pelajaran, ...$hasil,
+                    'draf' => $hasil['draf'] ?? false,
                     'sumber_nilai' => $sumberNilai, 'komponen_nilai_id' => $komponenId,
                     'keterangan' => $dikecualikan ? 'Tidak mengikuti STS' : $this->keterangan($hasil['nilai']),
                     'dapat_dikecualikan' => $dapatDikecualikan, 'dikecualikan' => (bool) $dikecualikan,
@@ -196,12 +197,12 @@ class RaporStsService
         return hash('sha256', json_encode($sumber));
     }
 
-    private function nilaiManual(?array $konteks, int $siswaId): array
+    private function nilaiManual(?array $konteks, int $siswaId, bool $sertakanDraf): array
     {
         if ($konteks === null) {
             return ['nilai' => null, 'status' => 'Komponen STS manual perlu diperiksa'];
         }
-        if (! $konteks['difinalisasi']) {
+        if (! $konteks['difinalisasi'] && (! $sertakanDraf || $konteks['hambatan'] !== [])) {
             return ['nilai' => null, 'status' => $konteks['berubah']
                 ? 'Nilai STS manual berubah; finalisasi ulang'
                 : 'Nilai STS manual belum difinalisasi'];
@@ -209,7 +210,7 @@ class RaporStsService
         $nilai = $konteks['nilai']->get($siswaId)?->nilai;
 
         return $nilai !== null
-            ? ['nilai' => round((float) $nilai, 2), 'status' => 'Final manual']
+            ? ['nilai' => round((float) $nilai, 2), 'status' => $konteks['difinalisasi'] ? 'Final manual' : 'Draf STS manual', 'draf' => ! $konteks['difinalisasi']]
             : ['nilai' => null, 'status' => 'Belum ada nilai STS manual'];
     }
 
@@ -237,9 +238,10 @@ class RaporStsService
         ]));
     }
 
-    private function nilaiPeserta(UjianCbt $ujian, ?PesertaUjianCbt $peserta, AnggotaKelas $anggota): array
+    private function nilaiPeserta(UjianCbt $ujian, ?PesertaUjianCbt $peserta, AnggotaKelas $anggota, bool $sertakanDraf): array
     {
-        if (! $ujian->hasil_difinalisasi_pada) {
+        $draf = $ujian->hasil_difinalisasi_pada === null;
+        if ($draf && ! $sertakanDraf) {
             return ['nilai' => null, 'status' => 'Belum difinalisasi guru mapel'];
         }
         if ($peserta && ! in_array($peserta->status, ['selesai', 'aktif', 'nonaktif'], true)) {
@@ -249,7 +251,9 @@ class RaporStsService
         $nilaiInput = $kelasUjian?->komponenNilai?->nilaiSiswa->firstWhere('siswa_id', $anggota->siswa_id)?->nilai;
         // Linked component grades also cover manual entries for students who did not take CBT.
         if ($nilaiInput !== null || $peserta?->nilai_diterapkan_pada !== null || $peserta?->nilai_siswa_id !== null) {
-            return $this->nilaiDiterapkan($ujian, $kelasUjian, $anggota);
+            $hasil = $this->nilaiDiterapkan($ujian, $kelasUjian, $anggota);
+
+            return $draf && $hasil['nilai'] !== null ? [...$hasil, 'status' => 'Draf Input Nilai CBT', 'draf' => true] : $hasil;
         }
         if (! $peserta || $peserta->status !== 'selesai') {
             return ['nilai' => null, 'status' => 'Belum mengikuti / menyelesaikan STS'];
@@ -274,7 +278,7 @@ class RaporStsService
         }
 
         return $maksimal > 0
-            ? ['nilai' => round($skor / $maksimal * 100, 2), 'status' => 'Final']
+            ? ['nilai' => round($skor / $maksimal * 100, 2), 'status' => $draf ? 'Draf CBT' : 'Final', 'draf' => $draf]
             : ['nilai' => null, 'status' => 'Belum ada soal bernilai'];
     }
 

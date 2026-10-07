@@ -47,6 +47,11 @@ class MapelRaporStsTest extends TestCase
     {
         $d = $this->data();
         $sebelum = NilaiSiswa::get()->toArray();
+        $service = app(LegerStsService::class);
+        $awal = $service->bangun($d['kegiatan'], $d['kelas'][0]);
+        $this->assertTrue($awal['ranking_sementara']);
+        $this->assertSame(54.5, $awal['baris']->firstWhere('anggota.siswa.nama_lengkap', 'Alya VIII.A')['rata_leger']);
+        $this->assertTrue($service->bangunTingkat($d['kegiatan'], $d['kelas'], 8)['baris']->every(fn ($b) => $b['jumlah_mapel'] === 3));
         $this->simpan($d)->assertSessionHasNoErrors();
         foreach ($d['kelas'] as $kelas) {
             $r = $this->rapor($d, $kelas);
@@ -59,10 +64,13 @@ class MapelRaporStsTest extends TestCase
         $this->assertSame(81.75, $r['baris'][0]['rata']);
         $service = app(LegerStsService::class);
         $leger = $service->bangun($d['kegiatan'], $d['kelas'][0]);
+        $this->assertFalse($leger['ranking_sementara']);
         $this->assertSame(83.38, $leger['ringkasan']['rata_kelas']);
         $this->assertSame(2, $leger['baris']->firstWhere('anggota.siswa.nama_lengkap', 'Alya VIII.A')['ranking']);
         $this->assertSame(1, $leger['baris']->firstWhere('anggota.siswa.nama_lengkap', 'Bima VIII.A')['ranking']);
         $tingkat = $service->bangunTingkat($d['kegiatan'], $d['kelas'], 8);
+        $this->assertTrue($tingkat['baris']->every(fn ($b) => $b['jumlah_mapel'] === 2));
+        $this->assertFalse($tingkat['ranking_sementara']);
         $this->assertSame(76.69, $tingkat['ringkasan']['rata_tingkat']);
         $this->assertSame(4, $tingkat['ringkasan']['masuk_ranking']);
         $this->assertFalse($tingkat['statistik_mapel']->contains('mapel.id', $d['tanpa']->id));

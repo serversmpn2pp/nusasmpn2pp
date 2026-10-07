@@ -144,6 +144,9 @@
             $cakupanLabel = $cakupan === 'kelas' ? $kelas->nama : 'Tingkat '.$tingkat;
             $kategoriLabel = $kategori === 'mapel' ? $penghargaan['mapel_terpilih']?->nama : 'Nilai keseluruhan';
         @endphp
+        @if ($leger['ranking_sementara'])
+            <p class="help-text" style="margin-bottom:18px;">Leger masih memuat ranking sementara. Kandidat di sini hanya menggunakan nilai final; ranking keseluruhan dihitung ulang dari siswa yang seluruh nilainya lengkap dan final, bukan dari ranking sementara.</p>
+        @endif
         <section class="award-summary" aria-label="Ringkasan kandidat penghargaan">
             <div class="panel stat"><p class="stat-label">Cakupan</p><p class="stat-value" style="font-size:1rem;">{{ $cakupanLabel }}</p><p class="stat-note">{{ $kegiatan->nama }}</p></div>
             <div class="panel stat"><p class="stat-label">Kategori</p><p class="stat-value" style="font-size:1rem;">{{ $kategoriLabel }}</p><p class="stat-note">Peringkat 1 sampai {{ $batas }}</p></div>
