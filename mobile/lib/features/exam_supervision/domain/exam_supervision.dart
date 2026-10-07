@@ -183,6 +183,7 @@ class SupervisionParticipant {
     required this.deviceBound,
     required this.appSwitches,
     required this.awaySeconds,
+    this.reviewCount = 0,
     this.nisn,
     this.participantNumber,
     this.deskNumber,
@@ -216,6 +217,7 @@ class SupervisionParticipant {
         device: json['perangkat'] as String?,
         appSwitches: _integer(json['jumlah_pindah_aplikasi']),
         awaySeconds: _integer(json['durasi_di_luar_aplikasi_detik']),
+        reviewCount: _integer(json['jumlah_perlu_ditinjau']),
         lastHeartbeat: _date(json['heartbeat_terakhir_pada']),
         blockedAt: _date(json['ditahan_mode_aman_pada']),
       );
@@ -239,6 +241,7 @@ class SupervisionParticipant {
   final String? device;
   final int appSwitches;
   final int awaySeconds;
+  final int reviewCount;
   final DateTime? lastHeartbeat;
   final DateTime? blockedAt;
 }

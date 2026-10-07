@@ -250,6 +250,8 @@ class AssessmentMonitoringParticipant {
     required this.answerPercent,
     required this.appSwitchCount,
     required this.totalAwaySeconds,
+    this.reviewCount = 0,
+    this.canResetDevice = false,
     this.startedAt,
     this.finishedAt,
     this.remainingMinutes,
@@ -272,6 +274,8 @@ class AssessmentMonitoringParticipant {
         answerPercent: _integer(json['persen_jawaban']),
         appSwitchCount: _integer(json['jumlah_pindah_aplikasi']),
         totalAwaySeconds: _integer(json['durasi_di_luar_aplikasi_detik']),
+        reviewCount: _integer(json['jumlah_perlu_ditinjau']),
+        canResetDevice: json['dapat_reset_perangkat'] as bool? ?? false,
         startedAt: _date(json['waktu_mulai']),
         finishedAt: _date(json['waktu_selesai']),
         remainingMinutes: _nullableInteger(json['sisa_menit']),
@@ -292,6 +296,8 @@ class AssessmentMonitoringParticipant {
   final int answerPercent;
   final int appSwitchCount;
   final int totalAwaySeconds;
+  final int reviewCount;
+  final bool canResetDevice;
   final DateTime? startedAt;
   final DateTime? finishedAt;
   final int? remainingMinutes;

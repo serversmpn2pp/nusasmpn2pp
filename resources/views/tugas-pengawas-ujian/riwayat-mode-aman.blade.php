@@ -58,6 +58,18 @@
         <div><span>Total di luar halaman</span><strong>{{ $peserta->durasi_di_luar_aplikasi_detik }} detik</strong></div>
     </div>
 
+    @if($dapatResetPerangkat)
+        <section class="security-review">
+            <h2>Penggantian perangkat</h2>
+            <p>Pastikan siswa menutup sesi lama. Jawaban dan riwayat tetap disimpan; sesi berikutnya akan diikat ke perangkat yang disetujui. Reset ini tidak membuka tahanan Mode Aman.</p>
+            <form method="post" action="{{ route('keamanan-ujian.reset-perangkat', $peserta) }}">
+                @csrf
+                <label class="field"><span>Alasan penggantian perangkat</span><textarea name="alasan" minlength="10" maxlength="500" required></textarea></label>
+                <button class="button button-muted" type="submit">Reset perangkat</button>
+            </form>
+        </section>
+    @endif
+
     <section class="security-history">
         <h2>Riwayat aktivitas</h2>
         <p class="security-history-intro">Catatan perpindahan halaman adalah indikasi yang perlu diperiksa, bukan bukti otomatis kecurangan.</p>
@@ -69,6 +81,13 @@
                         <h3>Akses ujian dibuka</h3>
                         <p>Oleh {{ $item->dibukaOleh?->nama ?: data_get($item->metadata, 'nama_petugas', 'Petugas') }}</p>
                         <p class="security-entry-note">{{ $item->catatan ?: 'Alasan tidak dicatat saat akses dibuka.' }}</p>
+                    @elseif($item->jenis === 'reset_perangkat')
+                        <h3>Ikatan perangkat direset</h3>
+                        <p>Oleh {{ $item->dibukaOleh?->nama ?: 'Petugas' }} · {{ $item->catatan }}</p>
+                    @elseif($item->jenis === 'pemulihan_koneksi')
+                        <h3>Koneksi / sesi perlu ditinjau</h3>
+                        <p>{{ $item->catatan }}</p>
+                        <p class="security-entry-note">Tidak dihitung otomatis sebagai pelanggaran. Waktu klien hanya informasi pendukung.</p>
                     @elseif($item->jenis === 'pola_keluar_singkat')
                         <h3>Pola keluar singkat berulang</h3>
                         <p>
@@ -81,6 +100,8 @@
                         <p>
                             @if($item->selesai_pada === null)
                                 Belum ada waktu kembali yang tercatat.
+                            @elseif(data_get($item->metadata, 'perlu_ditinjau') === true)
+                                Waktu kembali dipulihkan setelah gangguan koneksi. Perlu ditinjau, tidak dihitung otomatis.
                             @elseif(data_get($item->metadata, 'bagian_pola_keluar_singkat') === true)
                                 Bagian dari pola keluar singkat berulang · {{ $item->durasi_detik }} detik di luar halaman.
                             @elseif($item->dihitung)

@@ -48,15 +48,20 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "setSecureScreen" -> {
                         val enabled = call.argument<Boolean>("enabled") ?: false
+                        val active = call.argument<Boolean>("active") ?: enabled
                         runOnUiThread {
                             if (enabled) {
                                 window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                             } else {
                                 window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                             }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                window.setHideOverlayWindows(active)
+                            }
                         }
                         result.success(null)
                     }
+                    "isMultiWindow" -> result.success(isInMultiWindowMode)
                     else -> result.notImplemented()
                 }
             }

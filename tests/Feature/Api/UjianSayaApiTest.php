@@ -515,14 +515,215 @@ class UjianSayaApiTest extends TestCase
             'catatan' => null,
         ]);
 
-        Sanctum::actingAs($data['pengguna'], ['mobile']);
-        $this->getJson(route('api.v1.ujian-saya.kerjakan', [
+        app('auth')->forgetGuards();
+        $this->withToken($token)->getJson(route('api.v1.ujian-saya.kerjakan', [
             'pesertaUjianCbt' => $data['peserta'],
             'perangkat' => 'NUSA Android Aman',
         ]))
             ->assertOk()
             ->assertJsonPath('data.mode', 'pengerjaan')
             ->assertJsonPath('data.keamanan.jumlah_kejadian', 3);
+    }
+
+    public function test_token_kedua_dengan_nama_perangkat_sama_tidak_bisa_mengambil_sesi_atau_mengirim_jawaban_dan_heartbeat(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $pertama = $this->token($data['pengguna']);
+        $kedua = $this->token($data['pengguna']);
+        $this->withToken($pertama)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        $hash = $data['peserta']->fresh()->sesi_ujian_hash;
+        $this->assertNotEmpty($hash);
+        app('auth')->forgetGuards();
+        $this->withToken($kedua)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'perangkat' => 'NUSA Android Aman',
+        ])->assertUnprocessable()->assertJsonValidationErrors('perangkat');
+        $this->withToken($kedua)->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
+            'soal_ujian_cbt_id' => $data['soal_pg']->id, 'jawaban' => ['A'], 'ragu' => false,
+            'perangkat' => 'NUSA Android Aman',
+        ])->assertUnprocessable();
+        $this->aktivitasKeamanan($kedua, $data['peserta'], 'heartbeat')->assertUnprocessable();
+        $this->assertSame($hash, $data['peserta']->fresh()->sesi_ujian_hash);
+        $this->assertDatabaseCount('jawaban_peserta_ujian_cbt', 0);
+        app('auth')->forgetGuards();
+        $this->withToken($pertama)->getJson(route('api.v1.ujian-saya.kerjakan', [
+            'pesertaUjianCbt' => $data['peserta'], 'perangkat' => 'NUSA Android Aman',
+        ]))->assertOk();
+    }
+
+    public function test_ujian_aktif_mobile_tidak_dapat_dibuka_dan_disimpan_dari_web(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $token = $this->token($data['pengguna']);
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        app('auth')->forgetGuards();
+        $this->actingAs($data['pengguna']->fresh(), 'web')
+            ->post(route('ujian-saya.masuk', $data['peserta']))->assertSessionHasErrors('perangkat');
+        // Even an old web session established before the mobile start cannot bypass the lease.
+        $this->withSession(['cbt_peserta_ujian_id' => $data['peserta']->id, 'cbt_pengguna_id' => $data['pengguna']->id])
+            ->postJson(route('cbt.ujian.jawaban'), ['soal_ujian_cbt_id' => $data['soal_pg']->id, 'jawaban' => ['A']])
+            ->assertUnprocessable();
+        $this->assertDatabaseCount('jawaban_peserta_ujian_cbt', 0);
+    }
+
+    public function test_ujian_aktif_web_tidak_dapat_diambil_mobile_dan_browser_kedua(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $this->actingAs($data['pengguna'], 'web')->post(route('ujian-saya.masuk', $data['peserta']), ['token' => 'MULAI1'])->assertRedirect();
+        $this->post(route('cbt.ujian.mulai'))->assertRedirect();
+        $this->assertSame('web', $data['peserta']->fresh()->sesi_ujian_saluran);
+        $hash = $data['peserta']->fresh()->sesi_ujian_hash;
+        $this->get(route('cbt.ujian.kerjakan'))->assertOk();
+        $this->withSession(['cbt_identitas_perangkat' => 'browser-kedua'])
+            ->getJson(route('cbt.ujian.kerjakan'))->assertUnprocessable();
+        app('auth')->guard('web')->logout();
+        app('auth')->forgetGuards();
+        $this->withToken($this->token($data['pengguna']->fresh()))->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'perangkat' => 'Web',
+        ])->assertUnprocessable();
+        $this->assertSame($hash, $data['peserta']->fresh()->sesi_ujian_hash);
+    }
+
+    public function test_sinkronisasi_ulang_idempotent_dan_jeda_heartbeat_hanya_ditandai_untuk_ditinjau(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $data['peserta']->ujianCbt->update(['deteksi_pindah_tab' => true, 'tindakan_pindah_aplikasi' => 'tahan', 'batas_pindah_aplikasi' => 1]);
+        $token = $this->token($data['pengguna']);
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        $this->aktivitasKeamanan($token, $data['peserta'], 'heartbeat')->assertOk();
+        Carbon::setTestNow(now()->addMinutes(3));
+        $this->aktivitasKeamanan($token, $data['peserta'], 'heartbeat')->assertOk()
+            ->assertJsonPath('data.keamanan.jumlah_perlu_ditinjau', 1)->assertJsonPath('data.keamanan.jumlah_kejadian', 0);
+        $payload = ['peristiwa' => 'keluar', 'perangkat' => 'NUSA Android Aman', 'metadata' => [
+            'kejadian_id' => 'e327f67b-5889-43f9-97eb-a5c51e86cc91', 'dikirim_ulang' => true,
+            'waktu_klien' => '2026-09-05T08:00:05+07:00',
+        ]];
+        foreach (range(1, 2) as $retry) {
+            $this->postJson(route('api.v1.ujian-saya.aktivitas-keamanan', $data['peserta']), $payload)->assertOk()
+                ->assertJsonPath('data.keamanan.jumlah_kejadian', 0)->assertJsonPath('data.keamanan.jumlah_perlu_ditinjau', 2);
+        }
+        $this->assertDatabaseCount('penerimaan_keamanan_ujian_cbt', 1);
+        $this->assertSame('sedang_mengerjakan', $data['peserta']->fresh()->status);
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.aktivitas-keamanan', $data['peserta_lain']), $payload)->assertNotFound();
+    }
+
+    public function test_reset_sesi_hanya_oleh_petugas_dan_tidak_menghapus_jawaban(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $token = $this->token($data['pengguna']);
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        $this->withToken($token)->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
+            'soal_ujian_cbt_id' => $data['soal_pg']->id, 'jawaban' => ['A'], 'ragu' => false, 'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        $route = route('api.v1.keamanan-ujian.reset-perangkat', $data['peserta']);
+        $this->postJson($route, ['alasan' => 'Gangguan perangkat siswa.'])->assertForbidden();
+        $admin = Pengguna::create(['nama' => 'Pengawas Reset', 'username' => 'reset.admin', 'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'administrator', 'aktif' => true, 'akun_sistem' => false, 'wajib_ganti_kata_sandi' => false]);
+        $admin->daftarPeran()->attach(Peran::where('kode', 'administrator')->firstOrFail());
+        Sanctum::actingAs($admin, ['mobile']);
+        $this->postJson($route, ['alasan' => 'Gangguan perangkat siswa.'])->assertOk();
+        $this->assertNull($data['peserta']->fresh()->sesi_ujian_hash);
+        $this->assertDatabaseCount('jawaban_peserta_ujian_cbt', 1);
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', ['jenis' => 'reset_perangkat', 'oleh_pengguna_id' => $admin->id]);
+        app('auth')->forgetGuards();
+        $this->withToken($this->token($data['pengguna']->fresh()))->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'perangkat' => 'NUSA Android Pengganti',
+        ])->assertOk()->assertJsonPath('data.kemajuan.terjawab', 1);
+    }
+
+    public function test_retry_respons_hilang_tidak_menggandakan_sanksi_dan_waktu_klien_tidak_menentukan_durasi(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $data['peserta']->ujianCbt->update(['deteksi_pindah_tab' => true, 'toleransi_pindah_aplikasi_detik' => 3,
+            'tindakan_pindah_aplikasi' => 'tahan', 'batas_pindah_aplikasi' => 1]);
+        $token = $this->token($data['pengguna']);
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        $route = route('api.v1.ujian-saya.aktivitas-keamanan', $data['peserta']);
+        $this->postJson($route, ['peristiwa' => 'keluar', 'perangkat' => 'NUSA Android Aman',
+            'metadata' => ['kejadian_id' => '0d9e84de-b2ac-44b2-a307-1a61b0849d44', 'waktu_klien' => '2099-01-01T00:00:00Z'],
+        ])->assertOk();
+        Carbon::setTestNow(now()->addSeconds(5));
+        $payload = ['peristiwa' => 'kembali', 'perangkat' => 'NUSA Android Aman',
+            'metadata' => ['kejadian_id' => 'd7258acf-07f2-440f-b4e9-7f12d1d4c4b8', 'waktu_klien' => '2001-01-01T00:00:00Z']];
+        $this->postJson($route, $payload)->assertOk()->assertJsonPath('data.mode', 'ditahan')
+            ->assertJsonPath('data.durasi_kejadian_detik', 5)->assertJsonPath('data.keamanan.jumlah_kejadian', 1);
+        $payload['metadata']['dikirim_ulang'] = true;
+        $this->postJson($route, $payload)->assertOk()->assertJsonPath('data.kejadian_dihitung', false)
+            ->assertJsonPath('data.keamanan.jumlah_kejadian', 1)->assertJsonPath('data.keamanan.jumlah_perlu_ditinjau', 0);
+        $this->assertDatabaseCount('penerimaan_keamanan_ujian_cbt', 2);
+        $this->assertDatabaseCount('aktivitas_keamanan_ujian_cbt', 1);
+    }
+
+    public function test_bukti_tertunda_setelah_selesai_tetap_dicatat_tanpa_mengubah_status_atau_heartbeat(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $data['peserta']->ujianCbt->update(['deteksi_pindah_tab' => true]);
+        $token = $this->token($data['pengguna']);
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        $this->aktivitasKeamanan($token, $data['peserta'], 'heartbeat')->assertOk();
+        $data['peserta']->refresh()->update(['status' => 'selesai', 'waktu_selesai' => now()]);
+        $heartbeat = $data['peserta']->fresh()->heartbeat_terakhir_pada->toISOString();
+        Carbon::setTestNow(now()->addMinute());
+        $payload = ['peristiwa' => 'pemulihan', 'perangkat' => 'NUSA Android Aman', 'metadata' => [
+            'kejadian_id' => '0d9e84de-b2ac-44b2-a307-1a61b0849d44', 'dikirim_ulang' => true,
+        ]];
+        for ($i = 0; $i < 2; $i++) {
+            $this->postJson(route('api.v1.ujian-saya.aktivitas-keamanan', $data['peserta']), $payload)->assertOk()
+                ->assertJsonPath('data.mode', 'selesai')->assertJsonPath('data.keamanan.jumlah_perlu_ditinjau', 1);
+        }
+        $this->aktivitasKeamanan($token, $data['peserta'], 'heartbeat')->assertOk();
+        $this->assertSame($heartbeat, $data['peserta']->fresh()->heartbeat_terakhir_pada->toISOString());
+        $this->assertSame('selesai', $data['peserta']->fresh()->status);
+        $this->assertSame(0, $data['peserta']->fresh()->jumlah_pindah_aplikasi);
+    }
+
+    public function test_keluar_lama_yang_diterima_normal_tetap_dihitung_meski_tidak_ada_heartbeat_di_background(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $data['peserta']->ujianCbt->update(['deteksi_pindah_tab' => true, 'tindakan_pindah_aplikasi' => 'tahan', 'batas_pindah_aplikasi' => 1]);
+        $token = $this->token($data['pengguna']);
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        $this->aktivitasKeamanan($token, $data['peserta'], 'heartbeat')->assertOk();
+        $this->aktivitasKeamanan($token, $data['peserta'], 'keluar')->assertOk();
+        Carbon::setTestNow(now()->addMinutes(3));
+        $this->aktivitasKeamanan($token, $data['peserta'], 'kembali')->assertOk()
+            ->assertJsonPath('data.mode', 'ditahan')->assertJsonPath('data.durasi_kejadian_detik', 180)
+            ->assertJsonPath('data.keamanan.jumlah_kejadian', 1)->assertJsonPath('data.keamanan.jumlah_perlu_ditinjau', 0);
+    }
+
+    public function test_request_invalid_tidak_mengikat_sesi_legacy_yang_belum_diambil(): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $data['peserta']->update(['status' => 'sedang_mengerjakan', 'waktu_mulai' => now()]);
+        $token = $this->token($data['pengguna']);
+        $this->withToken($token)->getJson(route('api.v1.ujian-saya.kerjakan', $data['peserta']))
+            ->assertUnprocessable()->assertJsonValidationErrors('perangkat');
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), ['perangkat' => ['tidak', 'valid']])
+            ->assertUnprocessable()->assertJsonValidationErrors('perangkat');
+        $this->assertNull($data['peserta']->fresh()->sesi_ujian_hash);
+        $this->assertNull($data['peserta']->fresh()->perangkat_terakhir);
     }
 
     private function fondasi(bool $hanyaObjektif = false): array

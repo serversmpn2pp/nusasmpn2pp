@@ -57,10 +57,12 @@ class StudentExamRepository {
 
   Future<StudentExamSecurityUpdate> securityEvent(
     int participantId,
-    String event,
-  ) async => _remote.securityEvent(
+    String event, {
+    Map<String, dynamic> metadata = const {},
+  }) async => _remote.securityEvent(
     participantId: participantId,
     event: event,
+    metadata: metadata,
     device: await _deviceIdentity.readName(),
   );
 }

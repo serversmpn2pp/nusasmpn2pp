@@ -136,6 +136,7 @@ use App\Http\Controllers\RekapKegiatanIbadahController;
 use App\Http\Controllers\RekapNilaiRaporController;
 use App\Http\Controllers\RekapPeminjamanBarangController;
 use App\Http\Controllers\RekapPoinSiswaController;
+use App\Http\Controllers\ResetSesiUjianController;
 use App\Http\Controllers\RingkasanKegiatanIbadahBulananController;
 use App\Http\Controllers\RuangKegiatanUjianCbtController;
 use App\Http\Controllers\RuangUjianCbtController;
@@ -168,6 +169,7 @@ use App\Http\Controllers\UmpanBalikOrangTuaController;
 use App\Http\Controllers\UnitBarangController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use App\Http\Controllers\WaktuTambahanPesertaUjianCbtController;
+use App\Http\Middleware\SesiPengerjaanUjian;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -186,7 +188,7 @@ Route::middleware('guest')->group(function () {
 Route::get('presensi-pertemuan/{token}', [PresensiPertemuanHumasController::class, 'masuk'])
     ->where('token', '[A-Za-z0-9]{64}')->name('presensi-pertemuan.masuk');
 
-Route::middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default'])
+Route::middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default', SesiPengerjaanUjian::class])
     ->prefix('cbt')
     ->name('cbt.')
     ->group(function () {
@@ -204,6 +206,10 @@ Route::middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default'])
         Route::post('ujian/simpan', [AksesUjianCbtController::class, 'simpan'])->name('ujian.simpan');
         Route::get('ujian/selesai', [AksesUjianCbtController::class, 'selesai'])->name('ujian.selesai');
     });
+
+Route::post('keamanan-ujian/{pesertaUjianCbt}/reset-perangkat', ResetSesiUjianController::class)
+    ->middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default', 'throttle:30,1'])
+    ->name('keamanan-ujian.reset-perangkat');
 
 Route::middleware(['auth', 'identitas_sesi'])->group(function () {
     Route::post('logout', [AutentikasiController::class, 'logout'])->name('logout');

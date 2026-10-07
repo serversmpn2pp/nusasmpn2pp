@@ -27,8 +27,10 @@ class ClassAssessmentMonitoringRepository {
     status: status,
   );
 
-  Future<void> unlockParticipant(int participantId) =>
-      _remote.unlockParticipant(participantId);
+  Future<void> unlockParticipant(
+    int participantId, {
+    bool resetDevice = false,
+  }) => _remote.unlockParticipant(participantId, resetDevice: resetDevice);
 }
 
 final classAssessmentMonitoringRepositoryProvider =

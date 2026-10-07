@@ -986,6 +986,11 @@ class _ParticipantCard extends StatelessWidget {
                     label: '${participant.appSwitches}× pindah aplikasi',
                     tone: 'bahaya',
                   ),
+                if (participant.reviewCount > 0)
+                  _TonePill(
+                    label: '${participant.reviewCount} catatan perlu ditinjau',
+                    tone: 'peringatan',
+                  ),
               ],
             ),
             if (participant.status == 'sedang_mengerjakan' || blocked) ...[

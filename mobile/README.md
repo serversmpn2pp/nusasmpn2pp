@@ -439,3 +439,23 @@ php -d memory_limit=1024M vendor/phpunit/phpunit/phpunit tests/Feature/FirebaseC
 Perintah Flutter dijalankan dari `mobile`, PHP dari root Laravel. Tes otomatis
 memakai Firebase/HTTP palsu; uji HP fisik tetap wajib untuk foreground,
 background, cold start, logout/login akun lain, dan perubahan status akun.
+
+### Pengamanan ujian lintas web dan Android (7 Oktober 2026)
+
+Satu sesi pengerjaan diikat oleh server jika pengaturan pembatasan perangkat
+aktif. Mode Aman menyimpan antrean kejadian terenkripsi per server/token/peserta,
+mengirim ulang secara berurutan, dan mencegah hitungan ganda dengan UUID.
+Gangguan jaringan/pemulihan diberi catatan peninjauan, bukan sanksi otomatis;
+keluar aplikasi yang diterima normal tetap mengikuti aturan ujian.
+Android 12+ menyembunyikan overlay dan Mode Aman menyembunyikan soal saat
+split-screen terdeteksi. Fullscreen bukan penguncian HP/kiosk.
+
+Deploy backend saat tidak ada ujian aktif dan jalankan migration sebelum APK
+baru digunakan. Penggantian perangkat dilakukan pengawas/guru pengelola melalui
+reset yang tercatat, tanpa menghapus jawaban atau membuka tahanan Mode Aman.
+Panduan deployment dan uji HP fisik: `docs/pengamanan-ujian-web-mobile.md` di root
+repository.
+
+```powershell
+flutter test test/exam_security_journal_test.dart test/student_exam_view_test.dart test/class_assessment_monitoring_view_test.dart --no-pub
+```

@@ -145,9 +145,13 @@ class UjianSayaController extends Controller
         KeamananUjianService $service,
     ): JsonResponse {
         $data = $request->validate([
-            'peristiwa' => ['required', 'in:keluar,kembali,heartbeat'],
+            'peristiwa' => ['required', 'in:keluar,kembali,heartbeat,pemulihan'],
             'perangkat' => ['required', 'string', 'max:120'],
-            'metadata' => ['nullable', 'array'],
+            'metadata' => ['nullable', 'array:kejadian_id,waktu_klien,dikirim_ulang,pemicu'],
+            'metadata.kejadian_id' => ['nullable', 'uuid'],
+            'metadata.waktu_klien' => ['nullable', 'string', 'max:40'],
+            'metadata.dikirim_ulang' => ['nullable', 'boolean'],
+            'metadata.pemicu' => ['nullable', 'string', 'max:40'],
         ]);
 
         return $this->tanpaCache([

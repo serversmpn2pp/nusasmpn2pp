@@ -1118,6 +1118,11 @@ class _ParticipantCard extends StatelessWidget {
                     'Koneksi perlu diperiksa',
                     color: Colors.red,
                   ),
+                if (participant.reviewCount > 0)
+                  _Info(
+                    Icons.manage_search_rounded,
+                    '${participant.reviewCount} catatan perlu ditinjau',
+                  ),
                 if (participant.retakeStatusLabel != null)
                   _Info(
                     Icons.event_repeat_rounded,

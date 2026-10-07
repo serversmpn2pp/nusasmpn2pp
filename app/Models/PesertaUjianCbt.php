@@ -13,6 +13,13 @@ class PesertaUjianCbt extends Model
     protected static function booted(): void
     {
         static::saving(function (self $peserta) {
+            // All authorized reset/susulan paths already clear this field.
+            if ($peserta->isDirty('perangkat_terakhir') && $peserta->perangkat_terakhir === null) {
+                $peserta->sesi_ujian_hash = null;
+                $peserta->sesi_ujian_saluran = null;
+                $peserta->sesi_ujian_mulai_pada = null;
+                $peserta->heartbeat_terakhir_pada = null;
+            }
             if (($peserta->isDirty('waktu_mulai') && $peserta->waktu_mulai !== null)
                 || ($peserta->isDirty('status') && in_array($peserta->status, ['sedang_mengerjakan', 'selesai'], true))) {
                 // The activity row also serializes this lock with administrator changes.
@@ -109,6 +116,7 @@ class PesertaUjianCbt extends Model
     ];
 
     protected $casts = [
+        'sesi_ujian_mulai_pada' => 'datetime',
         'waktu_mulai' => 'datetime',
         'waktu_selesai' => 'datetime',
         'menit_tersisa' => 'integer',
@@ -127,6 +135,8 @@ class PesertaUjianCbt extends Model
         'susulan_ditetapkan_pada' => 'datetime',
         'nilai_diterapkan_pada' => 'datetime',
     ];
+
+    protected $hidden = ['sesi_ujian_hash'];
 
     public function ujianCbt(): BelongsTo
     {

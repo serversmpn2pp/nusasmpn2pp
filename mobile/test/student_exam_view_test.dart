@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,10 +8,236 @@ import 'package:nusa/core/storage/device_identity.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_exam/data/student_exam_remote_data_source.dart';
 import 'package:nusa/features/student_exam/data/student_exam_file_picker.dart';
+import 'package:nusa/features/student_exam/data/exam_security_journal.dart';
+import 'package:nusa/features/student_exam/data/exam_security_platform.dart';
 import 'package:nusa/features/student_exam/domain/student_exam.dart';
 import 'package:nusa/features/student_exam/presentation/student_exam_view.dart';
 
+Future<void> _openSecurityExam(
+  WidgetTester tester,
+  _SecurityRemote remote,
+  _JournalMemoryStorage storage, {
+  StudentExamFilePicker? picker,
+  _FakeExamPlatform? platform,
+}) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        studentExamRemoteDataSourceProvider.overrideWithValue(remote),
+        deviceIdentityProvider.overrideWithValue(_FakeDeviceIdentity()),
+        examSecurityJournalProvider.overrideWithValue(
+          ExamSecurityJournal(storage, () async => 'test-session'),
+        ),
+        examSecurityPlatformProvider.overrideWithValue(
+          platform ?? _FakeExamPlatform(),
+        ),
+        if (picker != null)
+          studentExamFilePickerProvider.overrideWithValue(picker),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.light,
+        home: const StudentExamView(participantId: 31),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const Key('student-exam-token')), 'MULAI1');
+  await tester.ensureVisible(find.byKey(const Key('student-exam-open')));
+  await tester.tap(find.byKey(const Key('student-exam-open')));
+  await tester.pumpAndSettle();
+}
+
+class _SecurityRemote extends _FakeStudentExamRemoteDataSource {
+  _SecurityRemote({super.upload});
+  bool offline = false;
+  bool completed = false;
+  final events = <(String, Map<String, dynamic>)>[];
+  Map<String, dynamic> get security => {
+    ..._securityJson(),
+    'aktif': true,
+    'catat_pindah_aplikasi': true,
+  };
+  @override
+  Future<StudentExamSession> start({
+    required int participantId,
+    required String? token,
+    required String device,
+  }) async => (await super.start(
+    participantId: participantId,
+    token: token,
+    device: device,
+  )).copyWith(security: StudentExamSecurity.fromJson(security));
+  @override
+  Future<StudentExamSecurityUpdate> securityEvent({
+    required int participantId,
+    required String event,
+    required String device,
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    events.add((event, metadata));
+    if (offline) throw Exception('offline');
+    return StudentExamSecurityUpdate.fromJson({
+      'mode': completed ? 'selesai' : 'pengerjaan',
+      'keamanan': security,
+    });
+  }
+
+  @override
+  Future<StudentExamSession> resume({
+    required int participantId,
+    required String device,
+  }) async => completed
+      ? StudentExamSession.fromJson(_completedJson())
+      : await super.resume(participantId: participantId, device: device);
+}
+
+class _JournalMemoryStorage implements ExamJournalStorage {
+  final values = <String, String>{};
+  @override
+  Future<String?> read(String key) async => values[key];
+  @override
+  Future<void> write(String key, String value) async {
+    values[key] = value;
+  }
+}
+
+class _WaitingPicker implements StudentExamFilePicker {
+  final result = Completer<StudentExamPickedFile?>();
+  @override
+  Future<StudentExamPickedFile?> pick() => result.future;
+}
+
+class _FakeExamPlatform extends ExamSecurityPlatform {
+  bool multiWindow = false;
+  @override
+  Future<void> enter({
+    required bool secureScreen,
+    required bool fullscreen,
+  }) async {}
+  @override
+  Future<void> leave() async {}
+  @override
+  Future<bool> isMultiWindow() async => multiWindow;
+}
+
 void main() {
+  testWidgets(
+    'status selesai dari server mengganti halaman meskipun timer lokal masih berjalan',
+    (tester) async {
+      final remote = _SecurityRemote();
+      await _openSecurityExam(tester, remote, _JournalMemoryStorage());
+      remote.completed = true;
+      await tester.pump(const Duration(seconds: 15));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('student-exam-completed')), findsOneWidget);
+      expect(find.text('Organ pernapasan manusia adalah ....'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'kejadian offline dikirim ulang otomatis tanpa refresh halaman ujian',
+    (tester) async {
+      final remote = _SecurityRemote();
+      final storage = _JournalMemoryStorage();
+      await _openSecurityExam(tester, remote, storage);
+      remote.offline = true;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('student-exam-security-pending')),
+        findsOneWidget,
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      remote.offline = false;
+      await tester.pump(const Duration(seconds: 15));
+      await tester.pumpAndSettle();
+      final exits = remote.events.where((e) => e.$1 == 'keluar').toList();
+      expect(exits.length, greaterThanOrEqualTo(2));
+      expect(exits.first.$2['kejadian_id'], exits.last.$2['kejadian_id']);
+      expect(exits.last.$2['dikirim_ulang'], isTrue);
+      expect(remote.events.any((e) => e.$1 == 'kembali'), isTrue);
+      expect(
+        find.byKey(const Key('student-exam-security-pending')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'pemilih berkas tidak menghapus bukti perubahan lifecycle dan tidak langsung menghukum',
+    (tester) async {
+      final remote = _SecurityRemote(upload: true);
+      final picker = _WaitingPicker();
+      await _openSecurityExam(
+        tester,
+        remote,
+        _JournalMemoryStorage(),
+        picker: picker,
+      );
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byKey(const Key('student-exam-next')));
+        await tester.pumpAndSettle();
+      }
+      await tester.ensureVisible(
+        find.byKey(const Key('student-exam-upload-104')),
+      );
+      await tester.tap(find.byKey(const Key('student-exam-upload-104')));
+      await tester.pumpAndSettle();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      picker.result.complete(null);
+      await tester.pumpAndSettle();
+      expect(
+        remote.events.any(
+          (e) => e.$1 == 'pemulihan' && e.$2['pemicu'] == 'pemilih-berkas',
+        ),
+        isTrue,
+      );
+      expect(remote.events.any((e) => e.$1 == 'keluar'), isFalse);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'layar terbagi menyembunyikan soal dan mengirim catatan peninjauan',
+    (tester) async {
+      final remote = _SecurityRemote();
+      final platform = _FakeExamPlatform();
+      await _openSecurityExam(
+        tester,
+        remote,
+        _JournalMemoryStorage(),
+        platform: platform,
+      );
+      platform.multiWindow = true;
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text('Organ pernapasan manusia adalah ....'), findsNothing);
+      expect(
+        find.text('Tutup layar terbagi untuk melanjutkan ujian.'),
+        findsOneWidget,
+      );
+      expect(
+        remote.events.any((e) => e.$2['pemicu'] == 'layar-terbagi'),
+        isTrue,
+      );
+      platform.multiWindow = false;
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text('Organ pernapasan manusia adalah ....'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   test('domain ujian siswa membaca soal tanpa membutuhkan kunci jawaban', () {
     final session = StudentExamSession.fromJson(_runningJson());
 
@@ -412,6 +639,7 @@ class _FakeStudentExamRemoteDataSource implements StudentExamRemoteDataSource {
     required int participantId,
     required String event,
     required String device,
+    Map<String, dynamic> metadata = const {},
   }) async => StudentExamSecurityUpdate.fromJson({
     'mode': 'pengerjaan',
     'kejadian_dihitung': false,

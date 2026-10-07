@@ -24,12 +24,14 @@ class MonitoringHasilAsesmenKelasMobileService
         $jumlahSoalTampil = min((int) $asesmen->jumlah_soal, $jumlahSoalPaket);
         $waktuSekarang = now();
         $ringkasan = $this->ringkasanMonitoring($asesmen);
+        $bolehReset = $asesmen->dapatDikelolaOleh($pengguna);
 
         $query = $asesmen->pesertaUjianCbt()
             ->with(['kelasUjianCbt.kelas', 'anggotaKelas.siswa'])
             ->withCount([
                 'jawabanPesertaUjianCbt as jumlah_jawaban_tersimpan' => fn (Builder $query) => $query->whereNotNull('jawaban'),
                 'jawabanPesertaUjianCbt as jumlah_jawaban_ragu' => fn (Builder $query) => $query->where('ragu', true),
+                'aktivitasKeamananUjianCbt as jumlah_perlu_ditinjau' => fn (Builder $query) => $query->where('jenis', 'pemulihan_koneksi'),
             ])
             ->when($kelasId, fn (Builder $query) => $query->whereHas(
                 'kelasUjianCbt',
@@ -49,6 +51,7 @@ class MonitoringHasilAsesmenKelasMobileService
                 $asesmen,
                 $jumlahSoalTampil,
                 $waktuSekarang,
+                $bolehReset,
             ))
             ->values();
 
@@ -229,6 +232,7 @@ class MonitoringHasilAsesmenKelasMobileService
         UjianCbt $asesmen,
         int $jumlahSoal,
         CarbonInterface $waktuSekarang,
+        bool $bolehReset,
     ): array {
         $status = $peserta->statusPelaksanaan();
         $kehadiran = $peserta->status_kehadiran_ujian ?: 'belum_absen';
@@ -261,6 +265,8 @@ class MonitoringHasilAsesmenKelasMobileService
             'waktu_selesai' => $peserta->waktu_selesai?->toISOString(),
             'sisa_menit' => $sisaMenit,
             'jumlah_pindah_aplikasi' => (int) $peserta->jumlah_pindah_aplikasi,
+            'jumlah_perlu_ditinjau' => (int) $peserta->jumlah_perlu_ditinjau,
+            'dapat_reset_perangkat' => $bolehReset && filled($peserta->sesi_ujian_hash) && in_array($peserta->status, ['sedang_mengerjakan', 'terblokir'], true),
             'durasi_di_luar_aplikasi_detik' => (int) $peserta->durasi_di_luar_aplikasi_detik,
             'heartbeat_terakhir_pada' => $peserta->heartbeat_terakhir_pada?->toISOString(),
             'ditahan_mode_aman_pada' => $peserta->ditahan_mode_aman_pada?->toISOString(),

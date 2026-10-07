@@ -7,6 +7,7 @@ use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\RuangUjianCbt;
+use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -100,7 +101,9 @@ class TugasPengawasUjianMobileService
             'buktiRuangUjianCbt' => fn ($query) => $query->with('diunggahOleh')->orderBy('jenis')->orderBy('diunggah_pada'),
             'pesertaUjianCbt' => fn ($query) => $query
                 ->with(['anggotaKelas.siswa', 'kelasUjianCbt.kelas'])
-                ->withCount('jawabanPesertaUjianCbt'),
+                ->withCount(['jawabanPesertaUjianCbt',
+                    'aktivitasKeamananUjianCbt as jumlah_perlu_ditinjau' => fn ($query) => $query->where('jenis', 'pemulihan_koneksi'),
+                ]),
         ]);
 
         $bolehMengelola = $this->bolehMengelola($pengguna, $ruang);
@@ -231,11 +234,7 @@ class TugasPengawasUjianMobileService
         $this->pastikanPesertaMilikRuang($ruang, $peserta);
         abort_if($ruang->status === 'selesai' || $peserta->status === 'selesai', 422, 'Perangkat peserta yang sudah selesai tidak dapat direset.');
 
-        $peserta->forceFill([
-            'perangkat_terakhir' => null,
-            'user_agent_terakhir' => null,
-            'ip_terakhir' => null,
-        ])->save();
+        app(KeamananUjianService::class)->resetPerangkat($pengguna, $peserta, 'Reset perangkat disetujui pengawas ruang ujian.');
 
         return $this->detail($pengguna, $ruang->fresh());
     }
@@ -395,6 +394,7 @@ class TugasPengawasUjianMobileService
             'perangkat_terikat' => filled($peserta->perangkat_terakhir),
             'perangkat' => $peserta->perangkat_terakhir,
             'jumlah_pindah_aplikasi' => (int) $peserta->jumlah_pindah_aplikasi,
+            'jumlah_perlu_ditinjau' => (int) $peserta->jumlah_perlu_ditinjau,
             'durasi_di_luar_aplikasi_detik' => (int) $peserta->durasi_di_luar_aplikasi_detik,
             'heartbeat_terakhir_pada' => $peserta->heartbeat_terakhir_pada?->toISOString(),
             'ditahan_mode_aman_pada' => $peserta->ditahan_mode_aman_pada?->toISOString(),

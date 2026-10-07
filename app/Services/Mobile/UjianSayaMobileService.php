@@ -123,6 +123,7 @@ class UjianSayaMobileService
 
         DB::transaction(function () use ($peserta, $perangkat, $ip, $userAgent): void {
             $pesertaTerkunci = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
+            $this->pastikanPerangkatSesuai($pesertaTerkunci, $perangkat);
 
             if ($pesertaTerkunci->status === 'aktif') {
                 $pesertaTerkunci->waktu_mulai = now();

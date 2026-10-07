@@ -11,6 +11,41 @@ import 'package:nusa/features/class_assessment/presentation/class_assessment_mon
 import 'package:nusa/features/class_assessment/presentation/class_assessment_results_view.dart';
 
 void main() {
+  testWidgets(
+    'reset perangkat memerlukan konfirmasi dan memakai tindakan reset, bukan buka tahanan',
+    (tester) async {
+      final remote = _FakeMonitoringRemoteDataSource(canReset: true);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            classAssessmentMonitoringRemoteDataSourceProvider.overrideWithValue(
+              remote,
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const ClassAssessmentMonitoringView(assessmentId: 9),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('assessment-monitoring-reset-41')),
+        250,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.byKey(const Key('assessment-monitoring-reset-41')));
+      await tester.pumpAndSettle();
+      expect(remote.resetCalls, 0);
+      expect(find.text('Reset perangkat siswa?'), findsOneWidget);
+      await tester.tap(find.text('Reset Perangkat'));
+      await tester.pumpAndSettle();
+      expect(remote.resetCalls, 1);
+      expect(remote.unlockCalls, 0);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   test('domain membaca monitoring dan hasil asesmen kelas', () {
     final monitoring = AssessmentMonitoringData.fromJson(_monitoringJson());
     final results = AssessmentResultsData.fromJson(_resultsJson());
@@ -194,15 +229,32 @@ void main() {
 
 class _FakeMonitoringRemoteDataSource
     implements ClassAssessmentMonitoringRemoteDataSource {
+  _FakeMonitoringRemoteDataSource({this.canReset = false});
+  final bool canReset;
+  int resetCalls = 0;
+  int unlockCalls = 0;
   @override
-  Future<void> unlockParticipant(int participantId) async {}
+  Future<void> unlockParticipant(
+    int participantId, {
+    bool resetDevice = false,
+  }) async {
+    if (resetDevice) {
+      resetCalls++;
+    } else {
+      unlockCalls++;
+    }
+  }
 
   @override
   Future<AssessmentMonitoringData> monitoring({
     required int assessmentId,
     required int? classId,
     required String status,
-  }) async => AssessmentMonitoringData.fromJson(_monitoringJson());
+  }) async {
+    final json = _monitoringJson();
+    (json['items'] as List).first['dapat_reset_perangkat'] = canReset;
+    return AssessmentMonitoringData.fromJson(json);
+  }
 
   @override
   Future<AssessmentResultsData> results({

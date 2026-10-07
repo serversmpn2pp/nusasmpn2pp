@@ -8,6 +8,7 @@ import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_exam/application/student_exam_controller.dart';
 import 'package:nusa/features/student_exam/data/exam_security_platform.dart';
+import 'package:nusa/features/student_exam/data/exam_security_journal.dart';
 import 'package:nusa/features/student_exam/data/student_exam_file_picker.dart';
 import 'package:nusa/features/student_exam/domain/student_exam.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
@@ -35,7 +36,14 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   StudentExamSession? _session;
   Timer? _countdownTimer;
   Timer? _heartbeatTimer;
-  Future<void>? _awayRequest;
+  Timer? _environmentTimer;
+  bool _multiWindow = false;
+  ExamSecurityJournal? _journal;
+  Future<void>? _journalReady;
+  bool _appForeground = true;
+  bool _pickerNeedsReview = false;
+  bool _securitySyncPending = false;
+  bool _syncingServerCompletion = false;
   DateTime? _localDeadline;
   int _remainingSeconds = 0;
   int _currentQuestion = 0;
@@ -45,6 +53,7 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   bool _allowPop = false;
   bool _awayReported = false;
   bool _initialLockedSessionScheduled = false;
+  bool _initialCompletedSessionScheduled = false;
   bool _pickingAnswerFile = false;
 
   @override
@@ -56,7 +65,11 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_pickingAnswerFile) return;
+    _appForeground = state == AppLifecycleState.resumed;
+    if (_pickingAnswerFile && state != AppLifecycleState.resumed) {
+      _pickerNeedsReview = true;
+      return; // Reconciled as a review event, not an automatic penalty for a system picker.
+    }
     if (state == AppLifecycleState.resumed) {
       _updateCountdown();
       unawaited(_handleResume());
@@ -74,6 +87,7 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     WidgetsBinding.instance.removeObserver(this);
     _countdownTimer?.cancel();
     _heartbeatTimer?.cancel();
+    _environmentTimer?.cancel();
     for (final timer in _saveTimers.values) {
       timer.cancel();
     }
@@ -90,6 +104,18 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   Widget build(BuildContext context) {
     final state = ref.watch(studentExamProvider(widget.participantId));
     final data = _session ?? state.value;
+    if (data?.isCompleted == true &&
+        data!.security.trackAppSwitch &&
+        _journal == null &&
+        !_initialCompletedSessionScheduled) {
+      _initialCompletedSessionScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _journal = ref.read(examSecurityJournalProvider);
+        _journalReady = _journal!.begin(widget.participantId);
+        unawaited(_completeJournal());
+      });
+    }
     if (data?.isLocked == true &&
         _session == null &&
         !_initialLockedSessionScheduled) {
@@ -217,8 +243,22 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
         : 'Tombol kumpulkan aktif pada 15 menit terakhir.';
     return Column(
       children: [
+        if (_multiWindow)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('Tutup layar terbagi untuk melanjutkan ujian.'),
+          ),
         if (session.security.enabled)
           _SafeModeBanner(security: session.security),
+        if (_securitySyncPending)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Text(
+              'Koneksi terputus. Catatan ujian tersimpan di HP dan akan dikirim ulang. Jika berlanjut, hubungi pengawas.',
+              key: Key('student-exam-security-pending'),
+              style: TextStyle(fontSize: 12, color: NusaColors.textSecondary),
+            ),
+          ),
         _ExamStatusBar(
           subject: session.exam.subject,
           current: _currentQuestion + 1,
@@ -227,28 +267,32 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
           onNavigate: () => _showQuestionNavigator(session),
         ),
         Expanded(
-          child: PageView.builder(
-            key: const Key('student-exam-question-pages'),
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: session.questions.length,
-            itemBuilder: (context, index) => _QuestionPage(
-              question: session.questions[index],
-              saveStatus:
-                  _saveStatuses[session.questions[index].id] ??
-                  _AnswerSaveStatus.saved,
-              controllerFor: _controllerFor,
-              onAnswerChanged: (answer) =>
-                  _changeAnswer(session.questions[index], answer),
-              onDoubtChanged: (value) =>
-                  _changeDoubt(session.questions[index], value),
-              uploadingFile: _uploadingQuestions.contains(
-                session.questions[index].id,
-              ),
-              onUploadFile: () =>
-                  _pickAndUploadAnswerFile(session.questions[index]),
-            ),
-          ),
+          child: _multiWindow
+              ? const Center(
+                  child: Icon(Icons.phonelink_erase_rounded, size: 48),
+                )
+              : PageView.builder(
+                  key: const Key('student-exam-question-pages'),
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: session.questions.length,
+                  itemBuilder: (context, index) => _QuestionPage(
+                    question: session.questions[index],
+                    saveStatus:
+                        _saveStatuses[session.questions[index].id] ??
+                        _AnswerSaveStatus.saved,
+                    controllerFor: _controllerFor,
+                    onAnswerChanged: (answer) =>
+                        _changeAnswer(session.questions[index], answer),
+                    onDoubtChanged: (value) =>
+                        _changeDoubt(session.questions[index], value),
+                    uploadingFile: _uploadingQuestions.contains(
+                      session.questions[index].id,
+                    ),
+                    onUploadFile: () =>
+                        _pickAndUploadAnswerFile(session.questions[index]),
+                  ),
+                ),
         ),
         _ExamNavigationBar(
           current: _currentQuestion,
@@ -377,6 +421,7 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   void _activate(StudentExamSession session) {
     _countdownTimer?.cancel();
     _heartbeatTimer?.cancel();
+    _environmentTimer?.cancel();
     _clearAnswerControllers();
     setState(() {
       _session = session;
@@ -391,13 +436,29 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
       _revisions.clear();
     });
     unawaited(_applyPlatformSecurity(session));
+    if (session.isRunning && session.security.enabled) {
+      _environmentTimer = Timer.periodic(
+        const Duration(seconds: 3),
+        (_) => unawaited(_checkEnvironment()),
+      );
+      unawaited(_checkEnvironment());
+    }
+    if (session.isRunning &&
+        session.security.trackAppSwitch &&
+        _journal == null) {
+      _journal = ref.read(examSecurityJournalProvider);
+      _journalReady = _journal!.begin(widget.participantId);
+    }
+    if (session.isCompleted && _journal != null) {
+      unawaited(_completeJournal());
+    }
     if (session.isRunning || session.isLocked) {
       _countdownTimer = Timer.periodic(
         const Duration(seconds: 1),
         (_) => _updateCountdown(),
       );
     }
-    if (session.isRunning && session.security.enabled) {
+    if (session.isRunning) {
       _heartbeatTimer = Timer.periodic(
         const Duration(seconds: 15),
         (_) => unawaited(_heartbeat()),
@@ -430,16 +491,13 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
       return;
     }
     _awayReported = true;
-    _awayRequest = _reportAway();
+    unawaited(_reportAway());
   }
 
   Future<void> _reportAway() async {
     try {
       await Future.wait<void>([
-        ref
-            .read(studentExamActionsProvider)
-            .securityEvent(widget.participantId, 'keluar')
-            .then((_) {}),
+        _recordSecurity('keluar'),
         _flushAnswers().then((_) {}),
       ]);
     } catch (_) {
@@ -449,25 +507,70 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
 
   Future<void> _handleResume() async {
     if (!_awayReported || _session?.security.trackAppSwitch != true) return;
-    final pending = _awayRequest;
-    if (pending != null) await pending;
+    _awayReported = false;
     try {
-      final update = await ref
-          .read(studentExamActionsProvider)
-          .securityEvent(widget.participantId, 'kembali');
-      if (!mounted) return;
-      _applySecurityUpdate(update);
+      await _recordSecurity('kembali');
     } catch (_) {
-      // Jawaban tetap dapat dilanjutkan; heartbeat akan menyelaraskan status.
-    } finally {
-      _awayRequest = null;
-      _awayReported = false;
+      // Evidence remains in the encrypted journal until acknowledged.
+    }
+  }
+
+  Future<void> _recordSecurity(
+    String event, {
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    final journal = _journal;
+    if (journal == null) return;
+    await _journalReady;
+    await journal.record(widget.participantId, event, metadata: metadata);
+    await _flushSecurity();
+  }
+
+  Future<void> _flushSecurity() async {
+    final journal = _journal;
+    if (journal == null) return;
+    final actions = ref.read(studentExamActionsProvider);
+    try {
+      await _journalReady;
+      final update = await journal.flush(
+        widget.participantId,
+        (event, metadata) => actions.securityEvent(
+          widget.participantId,
+          event,
+          metadata: metadata,
+        ),
+      );
+      if (!mounted) return;
+      if (_securitySyncPending) setState(() => _securitySyncPending = false);
+      if (update != null) _applySecurityUpdate(update);
+    } catch (_) {
+      if (mounted && !_securitySyncPending) {
+        setState(() => _securitySyncPending = true);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _completeJournal() async {
+    try {
+      await _journalReady;
+      await _journal!.complete(widget.participantId);
+      await _flushSecurity();
+    } catch (_) {
+      // Retain pending evidence even if the result page is offline.
     }
   }
 
   Future<void> _heartbeat() async {
-    if (_session?.isRunning != true) return;
+    if (_session?.isRunning != true ||
+        !_appForeground ||
+        _awayReported ||
+        _pickingAnswerFile) {
+      return;
+    }
     try {
+      await _flushSecurity();
+      if (_session?.isRunning != true) return;
       final update = await ref
           .read(studentExamActionsProvider)
           .securityEvent(widget.participantId, 'heartbeat');
@@ -477,12 +580,44 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     }
   }
 
+  Future<void> _recordPickerReview() async {
+    try {
+      await _recordSecurity(
+        'pemulihan',
+        metadata: {'pemicu': 'pemilih-berkas'},
+      );
+    } catch (_) {
+      // Kept for retry; using the system picker alone is not proof of cheating.
+    }
+  }
+
+  Future<void> _checkEnvironment() async {
+    if (!_appForeground || _session?.isRunning != true) return;
+    try {
+      final multiWindow = await _securityPlatform.isMultiWindow();
+      if (!mounted || multiWindow == _multiWindow) return;
+      setState(() => _multiWindow = multiWindow);
+      if (multiWindow) {
+        await _recordSecurity(
+          'pemulihan',
+          metadata: {'pemicu': 'layar-terbagi'},
+        );
+      }
+    } catch (_) {
+      // Unsupported OS or offline evidence is handled by the regular journal retry.
+    }
+  }
+
   void _applySecurityUpdate(
     StudentExamSecurityUpdate update, {
     bool notify = true,
   }) {
     final session = _session;
     if (session == null || session.isCompleted) return;
+    if (update.mode == 'selesai') {
+      unawaited(_reloadServerCompletion());
+      return;
+    }
     final locked = update.mode == 'ditahan' || update.security.locked;
     setState(() {
       _session = session.copyWith(
@@ -493,6 +628,21 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     if (locked) _heartbeatTimer?.cancel();
     if (notify && update.counted && update.message?.isNotEmpty == true) {
       _showMessage(update.message!, error: locked);
+    }
+  }
+
+  Future<void> _reloadServerCompletion() async {
+    if (_syncingServerCompletion) return;
+    _syncingServerCompletion = true;
+    try {
+      final result = await ref
+          .read(studentExamActionsProvider)
+          .resume(widget.participantId);
+      if (mounted && result.isCompleted) _activate(result);
+    } catch (_) {
+      // A later heartbeat retries; the server already rejects any late answer.
+    } finally {
+      _syncingServerCompletion = false;
     }
   }
 
@@ -554,6 +704,10 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
       return;
     } finally {
       _pickingAnswerFile = false;
+      if (_pickerNeedsReview && mounted) {
+        _pickerNeedsReview = false;
+        unawaited(_recordPickerReview());
+      }
     }
     if (file == null || !mounted) return;
     if (file.bytes.length > 10 * 1024 * 1024) {
@@ -770,6 +924,8 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     if (_finishing) return;
     setState(() => _finishing = true);
     try {
+      await _flushSecurity();
+      if (_session?.isLocked == true) return;
       final saved = await _flushAnswers();
       if (!saved) {
         _showMessage(
@@ -792,6 +948,11 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
 
   Future<void> _finishAutomatically() async {
     try {
+      try {
+        await _flushSecurity();
+      } catch (_) {
+        // The server deadline still wins; unsent evidence stays on the device.
+      }
       final result = await ref
           .read(studentExamActionsProvider)
           .finish(widget.participantId);

@@ -44,7 +44,38 @@ class KeamananUjianService
                 ->lockForUpdate()
                 ->findOrFail($peserta->id);
 
+            if (filled($metadata['kejadian_id'] ?? null)) {
+                $diterima = DB::table('penerimaan_keamanan_ujian_cbt')->insertOrIgnore([
+                    'peserta_ujian_cbt_id' => $terkunci->id,
+                    'kejadian_id' => $metadata['kejadian_id'],
+                    'diterima_pada' => now(),
+                ]);
+                if (! $diterima) {
+                    return; // Retry after a lost response must never count a second incident.
+                }
+            }
+
+            if (! in_array($terkunci->status, ['sedang_mengerjakan', 'terblokir'], true)) {
+                if ($terkunci->status === 'selesai' && $terkunci->ujianCbt->deteksi_pindah_tab
+                    && $peristiwa !== 'heartbeat' && filled($metadata['kejadian_id'] ?? null)) {
+                    $this->catatPeninjauan($terkunci, $perangkat, $ip, array_merge($metadata, [
+                        'peristiwa' => $peristiwa, 'pemicu' => 'sinkronisasi-setelah-selesai',
+                    ]));
+                }
+
+                return; // No heartbeat/status/penalty changes once the exam is closed.
+            }
+
+            $heartbeatSebelumnya = $terkunci->heartbeat_terakhir_pada ?? $terkunci->sesi_ujian_mulai_pada;
+            $adaJeda = $heartbeatSebelumnya && $heartbeatSebelumnya->lt(now()->subMinutes(2));
+
             if ($peristiwa === 'heartbeat') {
+                if ($adaJeda && $terkunci->ujianCbt->deteksi_pindah_tab) {
+                    $this->catatPeninjauan($terkunci, $perangkat, $ip, [
+                        'pemicu' => 'jeda-heartbeat',
+                        'heartbeat_sebelumnya' => $heartbeatSebelumnya->toISOString(),
+                    ]);
+                }
                 $terkunci->forceFill(['heartbeat_terakhir_pada' => now()])->save();
 
                 return;
@@ -52,6 +83,29 @@ class KeamananUjianService
 
             if (! $terkunci->ujianCbt->deteksi_pindah_tab
                 || ! in_array($terkunci->status, ['sedang_mengerjakan', 'terblokir'], true)) {
+                return;
+            }
+
+            // Client time and a queued retry are evidence for review, not a trusted clock.
+            // A network outage/force-stop must not automatically penalize the student.
+            $jedaTidakTerjelaskan = $adaJeda && ($peristiwa !== 'kembali'
+                || ! $terkunci->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')->exists());
+            if ($peristiwa === 'pemulihan' || ($metadata['dikirim_ulang'] ?? false) || $jedaTidakTerjelaskan) {
+                $this->catatPeninjauan($terkunci, $perangkat, $ip, array_merge($metadata, [
+                    'peristiwa' => $peristiwa,
+                    'pemicu' => $metadata['pemicu'] ?? ($adaJeda ? 'jeda-heartbeat' : 'sinkronisasi-ulang'),
+                ]));
+                if (in_array($peristiwa, ['kembali', 'pemulihan'], true)) {
+                    AktivitasKeamananUjianCbt::query()->where('peserta_ujian_cbt_id', $terkunci->id)
+                        ->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')
+                        ->get()->each(fn ($aktivitas) => $aktivitas->update([
+                            'selesai_pada' => now(),
+                            'dihitung' => false,
+                            'metadata' => array_merge($aktivitas->metadata ?? [], ['perlu_ditinjau' => true]),
+                        ]));
+                }
+                $terkunci->forceFill(['heartbeat_terakhir_pada' => now()])->save();
+
                 return;
             }
 
@@ -103,6 +157,7 @@ class KeamananUjianService
                 'dihitung' => $dihitung,
                 'metadata' => array_merge($aktivitas->metadata ?? [], $metadata),
             ]);
+            $terkunci->forceFill(['heartbeat_terakhir_pada' => $selesai])->save();
 
             if (! $dihitung) {
                 $polaKeluarSingkat = $this->buatPolaKeluarSingkatJikaPerlu(
@@ -144,7 +199,7 @@ class KeamananUjianService
         $keamanan = $this->ringkas($peserta);
 
         return [
-            'mode' => $peserta->status === 'terblokir' ? 'ditahan' : 'pengerjaan',
+            'mode' => $peserta->status === 'selesai' ? 'selesai' : ($peserta->status === 'terblokir' ? 'ditahan' : 'pengerjaan'),
             'waktu_server' => now()->toISOString(),
             'kejadian_dihitung' => $dihitung,
             'durasi_kejadian_detik' => $durasi,
@@ -152,6 +207,37 @@ class KeamananUjianService
             'pesan' => $this->pesan($keamanan, $dihitung, $polaKeluarSingkat),
             'keamanan' => $keamanan,
         ];
+    }
+
+    public function resetPerangkat(Pengguna $pengguna, PesertaUjianCbt $peserta, string $alasan): array
+    {
+        abort_unless($this->dapatMembuka($pengguna, $peserta), 403);
+        DB::transaction(function () use ($pengguna, $peserta, $alasan): void {
+            $terkunci = PesertaUjianCbt::query()->lockForUpdate()->findOrFail($peserta->id);
+            abort_if($terkunci->ruangUjianCbt?->status === 'selesai', 422, 'Ruang ujian sudah selesai.');
+            abort_unless(in_array($terkunci->status, ['aktif', 'sedang_mengerjakan', 'terblokir'], true), 422, 'Sesi peserta yang sudah selesai tidak dapat direset.');
+            $terkunci->forceFill([
+                'perangkat_terakhir' => null,
+                'sesi_ujian_hash' => null,
+                'sesi_ujian_saluran' => null,
+                'sesi_ujian_mulai_pada' => null,
+                'heartbeat_terakhir_pada' => null,
+                'ip_terakhir' => null,
+                'user_agent_terakhir' => null,
+            ])->save();
+            $terkunci->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')
+                ->whereNull('selesai_pada')->get()->each(fn ($aktivitas) => $aktivitas->update([
+                    'selesai_pada' => now(),
+                    'metadata' => array_merge($aktivitas->metadata ?? [], ['perlu_ditinjau' => true]),
+                ]));
+            AktivitasKeamananUjianCbt::create([
+                'peserta_ujian_cbt_id' => $terkunci->id, 'jenis' => 'reset_perangkat',
+                'mulai_pada' => now(), 'selesai_pada' => now(),
+                'oleh_pengguna_id' => $pengguna->id, 'catatan' => trim($alasan),
+            ]);
+        });
+
+        return ['peserta_id' => (int) $peserta->id, 'pesan' => 'Ikatan sesi telah direset. Siswa dapat membuka ujian pada perangkat yang disetujui.'];
     }
 
     public function bukaTahanan(Pengguna $pengguna, PesertaUjianCbt $peserta, ?string $alasan = null): array
@@ -222,7 +308,23 @@ class KeamananUjianService
             'ditahan' => $peserta->status === 'terblokir',
             'ditahan_pada' => $peserta->ditahan_mode_aman_pada?->toISOString(),
             'heartbeat_terakhir_pada' => $peserta->heartbeat_terakhir_pada?->toISOString(),
+            'jumlah_perlu_ditinjau' => $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'pemulihan_koneksi')->count(),
         ];
+    }
+
+    private function catatPeninjauan(PesertaUjianCbt $peserta, string $perangkat, ?string $ip, array $metadata): void
+    {
+        AktivitasKeamananUjianCbt::create([
+            'peserta_ujian_cbt_id' => $peserta->id,
+            'jenis' => 'pemulihan_koneksi',
+            'mulai_pada' => now(),
+            'selesai_pada' => now(),
+            'dihitung' => false,
+            'perangkat' => $perangkat,
+            'ip' => $ip,
+            'catatan' => 'Koneksi atau sesi ujian terputus/dipulihkan. Perlu ditinjau pengawas, bukan bukti otomatis kecurangan.',
+            'metadata' => $metadata,
+        ]);
     }
 
     private function pesertaMilikSiswa(Pengguna $pengguna, PesertaUjianCbt $peserta): PesertaUjianCbt
@@ -289,6 +391,7 @@ class KeamananUjianService
             ->whereNotNull('selesai_pada')
             ->where('selesai_pada', '>=', $selesai->copy()->subSeconds(self::JENDELA_POLA_KELUAR_SINGKAT_DETIK))
             ->where('dihitung', false)
+            ->whereNull('metadata->perlu_ditinjau')
             ->where('durasi_detik', '<', $batasToleransi)
             ->orderBy('selesai_pada')
             ->orderBy('id')

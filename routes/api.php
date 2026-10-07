@@ -115,6 +115,7 @@ use App\Http\Controllers\Api\V1\UjianSayaController;
 use App\Http\Controllers\Api\V1\UnitBarangController;
 use App\Http\Controllers\KoreksiPoinPresensiController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
+use App\Http\Middleware\SesiPengerjaanUjian;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')
@@ -526,25 +527,30 @@ Route::prefix('v1')
         Route::get('/ujian-saya/{pesertaUjianCbt}', [UjianSayaController::class, 'show'])
             ->name('ujian-saya.show');
         Route::post('/ujian-saya/{pesertaUjianCbt}/mulai', [UjianSayaController::class, 'mulai'])
-            ->middleware('throttle:10,1')
+            ->middleware(['throttle:10,1', SesiPengerjaanUjian::class])
             ->name('ujian-saya.mulai');
         Route::get('/ujian-saya/{pesertaUjianCbt}/kerjakan', [UjianSayaController::class, 'kerjakan'])
+            ->middleware(SesiPengerjaanUjian::class)
             ->name('ujian-saya.kerjakan');
         Route::put('/ujian-saya/{pesertaUjianCbt}/jawaban', [UjianSayaController::class, 'simpanJawaban'])
+            ->middleware(SesiPengerjaanUjian::class)
             ->name('ujian-saya.jawaban.update');
         Route::post('/ujian-saya/{pesertaUjianCbt}/jawaban-berkas', [UjianSayaController::class, 'simpanBerkasJawaban'])
-            ->middleware('throttle:20,1')
+            ->middleware(['throttle:20,1', SesiPengerjaanUjian::class])
             ->name('ujian-saya.jawaban-berkas.store');
         Route::post('/ujian-saya/{pesertaUjianCbt}/selesai', [UjianSayaController::class, 'selesai'])
+            ->middleware(SesiPengerjaanUjian::class)
             ->name('ujian-saya.selesai');
         Route::post('/ujian-saya/{pesertaUjianCbt}/aktivitas-keamanan', [UjianSayaController::class, 'aktivitasKeamanan'])
-            ->middleware('throttle:120,1')
+            ->middleware(['throttle:120,1', SesiPengerjaanUjian::class])
             ->name('ujian-saya.aktivitas-keamanan');
         Route::get('/ujian-anak-saya', UjianAnakController::class)
             ->name('ujian-anak-saya.index');
         Route::post('/keamanan-ujian/peserta/{pesertaUjianCbt}/buka', [KeamananUjianController::class, 'buka'])
             ->middleware('throttle:30,1')
             ->name('keamanan-ujian.buka');
+        Route::post('/keamanan-ujian/peserta/{pesertaUjianCbt}/reset-perangkat', [KeamananUjianController::class, 'reset'])
+            ->middleware('throttle:30,1')->name('keamanan-ujian.reset-perangkat');
 
         Route::get('/bank-soal', [BankSoalController::class, 'index'])
             ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola')

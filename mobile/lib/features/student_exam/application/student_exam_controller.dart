@@ -64,11 +64,12 @@ class StudentExamActions {
 
   Future<StudentExamSecurityUpdate> securityEvent(
     int participantId,
-    String event,
-  ) => _guard(
+    String event, {
+    Map<String, dynamic> metadata = const {},
+  }) => _guard(
     () => ref
         .read(studentExamRepositoryProvider)
-        .securityEvent(participantId, event),
+        .securityEvent(participantId, event, metadata: metadata),
   );
 
   Future<T> _guard<T>(Future<T> Function() operation) async {

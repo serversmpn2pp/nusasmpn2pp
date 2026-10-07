@@ -37,6 +37,7 @@ abstract interface class StudentExamRemoteDataSource {
     required int participantId,
     required String event,
     required String device,
+    Map<String, dynamic> metadata = const {},
   });
 }
 
@@ -161,11 +162,12 @@ final class DioStudentExamRemoteDataSource
     required int participantId,
     required String event,
     required String device,
+    Map<String, dynamic> metadata = const {},
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         'ujian-saya/$participantId/aktivitas-keamanan',
-        data: {'peristiwa': event, 'perangkat': device},
+        data: {'peristiwa': event, 'perangkat': device, 'metadata': metadata},
       );
       return StudentExamSecurityUpdate.fromJson(_data(response));
     } on DioException catch (exception) {

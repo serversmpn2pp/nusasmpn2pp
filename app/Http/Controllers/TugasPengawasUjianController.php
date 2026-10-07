@@ -240,6 +240,9 @@ class TugasPengawasUjianController extends Controller
                 ->paginate(20),
             'dapatMembuka' => $pesertaUjianCbt->status === 'terblokir'
                 && $keamanan->dapatMembuka($request->user(), $pesertaUjianCbt),
+            'dapatResetPerangkat' => in_array($pesertaUjianCbt->status, ['sedang_mengerjakan', 'terblokir'], true)
+                && $ruangUjianCbt->status !== 'selesai'
+                && $keamanan->dapatMembuka($request->user(), $pesertaUjianCbt),
         ]);
     }
 

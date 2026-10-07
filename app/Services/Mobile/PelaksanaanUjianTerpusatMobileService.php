@@ -395,6 +395,7 @@ class PelaksanaanUjianTerpusatMobileService
             ->withCount([
                 'jawabanPesertaUjianCbt as jawaban_tersimpan_count' => fn (Builder $query) => $query
                     ->whereNotNull('jawaban'),
+                'aktivitasKeamananUjianCbt as jumlah_perlu_ditinjau' => fn (Builder $query) => $query->where('jenis', 'pemulihan_koneksi'),
             ])
             ->when($jadwalId, fn (Builder $query) => $query->whereHas('ujianCbt.jadwalUjianCbt', fn (Builder $query) => $query->whereKey($jadwalId)))
             ->when($ruangId, fn (Builder $query) => $query->where('ruang_ujian_cbt_id', $ruangId))
@@ -431,6 +432,7 @@ class PelaksanaanUjianTerpusatMobileService
                     'label_status' => $item->labelStatusPelaksanaan(),
                     'jawaban_tersimpan' => (int) $item->jawaban_tersimpan_count,
                     'jumlah_pindah_aplikasi' => (int) $item->jumlah_pindah_aplikasi,
+                    'jumlah_perlu_ditinjau' => (int) $item->jumlah_perlu_ditinjau,
                     'heartbeat_terakhir_pada' => $item->heartbeat_terakhir_pada?->toISOString(),
                     'heartbeat_terlambat' => (bool) $terlambatHeartbeat,
                     'dapat_dibuka_mode_aman' => $item->status === 'terblokir',

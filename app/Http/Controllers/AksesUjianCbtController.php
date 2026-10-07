@@ -12,6 +12,7 @@ use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\KelayakanPenyelesaianUjianCbtService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
+use App\Services\Cbt\SesiPengerjaanUjianService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -524,6 +525,11 @@ class AksesUjianCbtController extends Controller
         PesertaUjianCbt $peserta,
         int $penggunaId,
     ): void {
+        DB::transaction(function () use ($request, $peserta): void {
+            $terkunci = PesertaUjianCbt::query()->with('ujianCbt')->lockForUpdate()->findOrFail($peserta->id);
+            $sesi = app(SesiPengerjaanUjianService::class);
+            $sesi->pastikan($terkunci, $sesi->identitas($request, false), 'web', 'Web', true);
+        });
         $peserta->update([
             'ip_terakhir' => $request->ip(),
             'user_agent_terakhir' => substr((string) $request->userAgent(), 0, 1000),

@@ -10,6 +10,14 @@ use Illuminate\Http\Request;
 
 class KeamananUjianController extends Controller
 {
+    public function reset(Request $request, PesertaUjianCbt $pesertaUjianCbt, KeamananUjianService $service): JsonResponse
+    {
+        $data = $request->validate(['alasan' => ['required', 'string', 'min:10', 'max:500']]);
+
+        return response()->json(['data' => $service->resetPerangkat($request->user(), $pesertaUjianCbt, $data['alasan'])])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
     public function buka(
         Request $request,
         PesertaUjianCbt $pesertaUjianCbt,

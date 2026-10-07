@@ -197,6 +197,9 @@ class _ClassAssessmentMonitoringViewState
                       onUnlock: item.status == 'terblokir'
                           ? () => _unlockParticipant(item)
                           : null,
+                      onReset: item.canResetDevice
+                          ? () => _unlockParticipant(item, resetDevice: true)
+                          : null,
                     ),
                     const SizedBox(height: 9),
                   ],
@@ -208,13 +211,20 @@ class _ClassAssessmentMonitoringViewState
     );
   }
 
-  Future<void> _unlockParticipant(AssessmentMonitoringParticipant item) async {
+  Future<void> _unlockParticipant(
+    AssessmentMonitoringParticipant item, {
+    bool resetDevice = false,
+  }) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Buka ujian siswa?'),
+        title: Text(
+          resetDevice ? 'Reset perangkat siswa?' : 'Buka ujian siswa?',
+        ),
         content: Text(
-          '${item.student.name} dapat melanjutkan ujian. Catatan keluar aplikasi tetap disimpan.',
+          resetDevice
+              ? 'Pastikan ${item.student.name} menutup sesi lama. Perangkat berikutnya yang membuka ujian akan diikat. Jawaban dan catatan tetap disimpan.'
+              : '${item.student.name} dapat melanjutkan ujian. Catatan keluar aplikasi tetap disimpan.',
         ),
         actions: [
           TextButton(
@@ -223,7 +233,7 @@ class _ClassAssessmentMonitoringViewState
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Buka Ujian'),
+            child: Text(resetDevice ? 'Reset Perangkat' : 'Buka Ujian'),
           ),
         ],
       ),
@@ -233,10 +243,16 @@ class _ClassAssessmentMonitoringViewState
     try {
       await ref
           .read(classAssessmentMonitoringActionsProvider)
-          .unlockParticipant(item.id);
+          .unlockParticipant(item.id, resetDevice: resetDevice);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ujian ${item.student.name} sudah dibuka.')),
+        SnackBar(
+          content: Text(
+            resetDevice
+                ? 'Perangkat ${item.student.name} telah direset.'
+                : 'Ujian ${item.student.name} sudah dibuka.',
+          ),
+        ),
       );
       await _refresh();
     } catch (error) {
@@ -369,6 +385,7 @@ class _ParticipantCard extends StatelessWidget {
     required this.questionCount,
     required this.unlocking,
     this.onUnlock,
+    this.onReset,
     super.key,
   });
 
@@ -376,6 +393,7 @@ class _ParticipantCard extends StatelessWidget {
   final int questionCount;
   final bool unlocking;
   final VoidCallback? onUnlock;
+  final VoidCallback? onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -472,6 +490,11 @@ class _ParticipantCard extends StatelessWidget {
                     label: '${item.appSwitchCount} keluar aplikasi',
                     tone: item.status == 'terblokir' ? 'bahaya' : 'peringatan',
                   ),
+                if (item.reviewCount > 0)
+                  AssessmentToneBadge(
+                    label: '${item.reviewCount} catatan perlu ditinjau',
+                    tone: 'peringatan',
+                  ),
                 if (item.remainingMinutes != null)
                   AssessmentInlineInfo(
                     icon: Icons.timer_outlined,
@@ -489,6 +512,13 @@ class _ParticipantCard extends StatelessWidget {
                   ),
               ],
             ),
+            if (onReset != null)
+              TextButton.icon(
+                key: Key('assessment-monitoring-reset-${item.id}'),
+                onPressed: unlocking ? null : onReset,
+                icon: const Icon(Icons.phonelink_erase_rounded),
+                label: const Text('Reset perangkat'),
+              ),
             if (onUnlock != null) ...[
               const SizedBox(height: 10),
               SizedBox(
