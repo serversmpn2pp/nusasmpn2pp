@@ -20,7 +20,8 @@ pilihan pengguna; kode penyimpanan/penayangan foto tidak diubah.
   dan 12 bagian penjelasan pengolahan data. Label draf pada banner, isi,
   metadata, dan footer telah dihapus.
 - Tidak memuat font, pelacak, atau skrip pihak ketiga. Tautan sumber penyedia
-  hanya dibuka bila pengguna memilihnya. Halaman memakai `no-store`;
+  hanya dibuka bila pengguna memilihnya. Halaman memakai `no-store` dan
+  `no-transform` agar Cloudflare tidak menyamarkan email kontak;
   header `noindex` khusus draf telah dihapus. Tidak ada izin perangkat baru
   untuk membuka tautan.
 - Jika pembuka browser gagal, aplikasi menampilkan pesan umum dan tombol
@@ -68,7 +69,10 @@ Alamat yang diharapkan setelah deployment:
 
 [Kebijakan Privasi NUSA](https://nusa.smpn2padangpanjang.sch.id/kebijakan-privasi).
 
-Alamat produksi tersebut **belum diperiksa tersedia** dalam implementasi ini.
+Pemeriksaan publik 8 Oktober 2026 sebelum perbaikan email mendapat HTTP 200,
+tetapi Cloudflare menyamarkan email dan menyisipkan skrip decode yang diblokir
+CSP halaman. Hasil perbaikan melalui Cloudflare **belum diverifikasi setelah
+deployment**, karena pekerjaan ini tidak mengubah server sekolah.
 Uji dari browser tanpa login/incognito dan jaringan di luar sekolah. Halaman
 harus 200 HTML, tidak mengarahkan ke login, tidak dibatasi Cloudflare Access/
 geografis, dan menampilkan versi naskah yang benar. Halaman publik berarti
@@ -92,10 +96,13 @@ Server sekolah harus sudah memuat rute baru. Untuk pengujian server Laravel
 lokal dari emulator Android, gunakan URL API `http://10.0.2.2:8000/api/v1/`
 dan pastikan server lokal berjalan pada port tersebut.
 
-AAB produksi yang dibuat pada tahap signing **belum berisi tautan privasi
-baru** dan tidak dibangun ulang pada tahap ini. Buat AAB baru sesuai
-[panduan rilis](D:/nusasmpn2pp/docs/rilis-android-play-store.md) sebelum unggah.
-Jika version code sebelumnya sudah dipakai di Play Console, naikkan angkanya.
+AAB produksi **sudah dibangun ulang pada 8 Oktober 2026, 11.51 WIB** dan
+memuat tautan privasi Login/Profil. File lokal signing awal telah diganti
+oleh [app-release.aab](D:/nusasmpn2pp/mobile/build/app/outputs/bundle/release/app-release.aab)
+versi **1.0.0+1**, sekitar 87,5 MiB. Hash dan hasil pemeriksaan artefak baru
+ada dalam [panduan rilis](D:/nusasmpn2pp/docs/rilis-android-play-store.md).
+Tidak ada unggahan ke Play Console pada pekerjaan ini. Jika version code
+sebelumnya sudah dipakai di Play Console, naikkan angkanya dan build ulang.
 Setelah kode tautan terpasang, pembaruan isi halaman di server tidak memerlukan
 build ulang aplikasi selama alamat publik tidak berubah.
 
@@ -122,6 +129,50 @@ dan keterangan risiko foto serta retensi yang belum otomatis tetap tersedia.
 Perubahan ini hanya pada Laravel/naskah/dokumentasi; Flutter tidak diubah
 atau dibangun ulang. Pengujian browser awal di atas dilakukan sebelum
 penghapusan banner; produksi belum diverifikasi dari pekerjaan lokal ini.
+
+### Build ulang AAB setelah persetujuan pengguna
+
+AAB release produksi berhasil dibuat pada 8 Oktober 2026, 11.51 WIB.
+Analyzer bersih dan subset **43 tes Flutter** di atas diuji ulang, semuanya
+lulus. Penanda tautan privasi Login/Profil dan URL API produksi ditemukan
+pada AOT ketiga ABI; plugin pembuka tautan tersedia dalam DEX. Sertifikat
+cocok dengan upload key sebelumnya; 14 ELF 64-bit lulus alignment 16 KB.
+Perincian hash, peringatan Java, dan batas validasi ada di panduan rilis.
+Tidak mengubah kode fitur/API atau melakukan deployment server.
+
+### Perbaikan email kontak Cloudflare
+
+Pada 8 Oktober 2026, header respons **khusus `/kebijakan-privasi`** diubah
+menjadi `Cache-Control: no-store, no-transform` (Laravel dapat menambahkan
+direktif `private`). Menurut
+[dokumentasi Cloudflare](https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/),
+`no-transform` mencegah Email Address Obfuscation. Tidak membuka izin skrip
+pada CSP, menambah JavaScript, mengubah naskah/alamat email, atau mematikan
+perlindungan Cloudflare secara global. Tidak mengubah header login/API.
+
+Subset PHPUnit privasi, autentikasi, izin rute, dan izin tampilan:
+**44 tes lulus, 1.013 assertion**. Regression memastikan `no-transform` dan
+`no-store` tersedia, CSP tetap sama, dua tautan `mailto:` langsung tersedia,
+HTML asal tidak memuat penanda/skrip obfuscation, dan header login tidak
+terkena `no-transform`. Tes ini memeriksa Laravel, bukan simulasi edge
+Cloudflare atau bukti email benar-benar terkirim.
+
+Setelah perubahan sudah di-pull pada server, gunakan perintah deployment
+Laravel di atas. Buka ulang halaman tanpa login/incognito dan pastikan:
+
+- Alamat `official@smpn2padangpanjang.sch.id` terbaca dan tautan membuka
+  aplikasi email, bukan `/cdn-cgi/l/email-protection`.
+- Header `Cache-Control` menyertakan `no-transform` dan `no-store`, serta
+  CSP tetap membatasi skrip. Tidak ada `data-cfemail` atau
+  `email-decode.min.js` pada HTML yang dikirim Cloudflare.
+- Jika versi lama masih tersaji, periksa header/cache proxy; bila perlu
+  bersihkan cache **hanya URL kebijakan privasi** dan uji kembali. Jangan
+  melonggarkan CSP atau mematikan WAF/Tunnel sebagai penyelesaian.
+
+Perubahan ini hanya backend Laravel; **tidak perlu build ulang APK/AAB**.
+Bundle produksi 11.51 WIB di atas tetap dapat dipakai untuk membuka URL
+yang sama. Tidak ada deployment atau perubahan konfigurasi Cloudflare
+yang dilakukan dari workspace ini.
 
 ## Yang masih menjadi gerbang rilis
 

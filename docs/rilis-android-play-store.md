@@ -95,7 +95,7 @@ dan [Play App Signing](https://support.google.com/googleplay/android-developer/a
 - AAB belum diunggah ke Google Play; privasi/Data Safety dan uji penerimaan
   tetap belum dinyatakan selesai.
 
-SHA-256 AAB yang diverifikasi (berubah jika build berikutnya menghasilkan file berbeda):
+SHA-256 AAB signing awal (sudah diganti oleh hasil build ulang di bawah):
 
 ```text
 42D3E0B24B3679B466C99084D59FDFDB70B8F09154F13A115BE298E4269C8A8A
@@ -104,8 +104,61 @@ SHA-256 AAB yang diverifikasi (berubah jika build berikutnya menghasilkan file b
 ## Perubahan setelah AAB signing dibuat
 
 Pada 8 Oktober 2026 tautan kebijakan privasi ditambahkan ke login/Profil
-Flutter dan halaman publik Laravel dibuat, masih berstatus draf. AAB dengan
-hash di atas belum memuat perubahan tersebut. Build AAB baru sebelum unggah;
-jangan menganggap hasil verifikasi artefak lama otomatis berlaku untuk
-artefak baru. Detail deployment, pengesahan, dan uji akses ada di
+Flutter dan halaman publik Laravel dibuat. Pengguna kemudian menyetujui
+naskah dan label draf halaman dihapus. AAB signing awal dengan hash di atas
+belum memuat tautan tersebut; file lokalnya telah diganti hasil build ulang
+yang diverifikasi di bawah. Detail deployment dan uji akses ada di
 [panduan halaman privasi](D:/nusasmpn2pp/docs/halaman-kebijakan-privasi-nusa.md).
+
+## Build ulang dengan tautan privasi — 8 Oktober 2026, 11.51 WIB
+
+Atas permintaan pengguna, AAB release berhasil dibangun ulang dengan perintah
+produksi di atas, memakai dependensi terkunci (`--no-pub`) dan upload key
+lokal yang sama. Tidak mengubah kode aplikasi, versi, backend, database,
+kredensial, atau file kunci. Tidak ada unggahan ke Play Console pada tahap ini.
+
+- File: [app-release.aab](D:/nusasmpn2pp/mobile/build/app/outputs/bundle/release/app-release.aab).
+- Ukuran: **91.721.656 byte**, sekitar **87,5 MiB / 91,7 MB**. Ini ukuran
+  bundle, bukan perkiraan ukuran unduhan APK per perangkat dari Google Play.
+- Package: `id.sch.smpn2padangpanjang.nusa`; versi tetap **1.0.0+1**.
+  Manifest hasil build: min SDK 24, target SDK 36.
+- Konfigurasi build: `APP_ENV=production`, API
+  `https://nusa.smpn2padangpanjang.sch.id/api/v1/`.
+- Analyzer bersih; **43 tes Flutter** tautan privasi, Profil, dan alur
+  aplikasi lulus. Ini subset, bukan pengujian ulang seluruh suite.
+- Penanda tautan Login/Profil dan URL API produksi ditemukan di ketiga
+  library AOT `libapp.so` (arm64-v8a, armeabi-v7a, x86_64). Kanal plugin
+  `url_launcher_android` ditemukan dalam DEX bundle.
+- `jarsigner -verify` menghasilkan `jar verified`; fingerprint sertifikat
+  SHA-256 cocok dengan AAB signing awal, bukan Android Debug.
+- Seluruh **14 library ELF 64-bit** lulus pemeriksaan LOAD alignment minimal
+  16 KB dan kesesuaian offset/alamat. `jar --validate --file` lulus tanpa
+  pesan; tidak ada duplikasi nama ZIP dan hanya satu manifest signing.
+
+SHA-256 **AAB saat ini**:
+
+```text
+01276DCDE5E2B46BC424421FDBB665C4A1C2D1456C969E4A1ACFA16ECAC82B20
+```
+
+Peringatan build Java native access, KGP `firebase_core`/`mobile_scanner`,
+dan font Cupertino tetap muncul, tanpa kegagalan build. Verifikasi JDK 25
+juga memperingatkan sertifikat self-signed/chain tanpa CA, timestamp tidak
+tersedia, atribut POSIX, serta perbedaan pembacaan `JarInputStream`.
+Manifest signing pada bundle ini berada di akhir arsip. Itu menjelaskan
+mengapa pembaca streaming tidak mengenalinya: menurut
+[dokumentasi JarInputStream JDK 25](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/jar/JarInputStream.html),
+pembaca tersebut memerlukan manifest di awal. Penjelasan ini adalah
+inferensi dari urutan arsip dan dokumentasi, bukan hasil penerimaan Google
+Play. [Dokumentasi jarsigner](https://docs.oracle.com/en/java/javase/25/docs/specs/man/jarsigner.html)
+membedakan peringatan dari kegagalan verifikasi. Jangan mengubah atau
+menandatangani ulang bundle secara manual hanya untuk menyembunyikan pesan.
+
+Validasi Google Play/bundletool CLI, ZIP alignment APK hasil distribusi,
+uji HP release, dan ketersediaan halaman privasi produksi belum diverifikasi
+pada tahap ini. JAR bundletool yang tersedia di cache Gradle bukan executable
+CLI (`no main manifest attribute`); tidak mengklaim validasi bundletool lulus.
+Gerbang privasi/Data Safety dan perlindungan foto publik tetap berlaku.
+Jika version code **1** sudah pernah digunakan di Play Console, naikkan
+build number dan buat AAB baru sebelum unggah; build ulang ini tidak menaikkan
+version code otomatis.

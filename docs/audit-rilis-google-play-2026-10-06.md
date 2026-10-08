@@ -391,3 +391,51 @@ Subset PHPUnit privasi, autentikasi, izin rute/tampilan: **43 tes lulus,
 berlaku, kondisi foto dan retensi, serta akses publik tanpa sesi/database.
 Tidak ada deployment, perubahan database, build Android, atau pengisian
 Play Console pada pembaruan naskah ini.
+
+## 13. Build ulang AAB dengan tautan privasi — 8 Oktober 2026
+
+Atas permintaan pengguna, AAB release produksi berhasil dibangun ulang pada
+11.51 WIB dengan HTTPS sekolah dan upload key yang sama. File AAB signing
+awal pada bagian 10 telah diganti oleh artefak baru. Versi tetap 1.0.0+1;
+tidak ada perubahan kode fitur, identitas, database, atau kredensial.
+
+Analyzer bersih; subset 43 tes Flutter tautan privasi/Profil/alur aplikasi
+lulus. Pemeriksaan AOT ketiga ABI menemukan tautan Login/Profil dan URL
+produksi, DEX menyertakan kanal `url_launcher_android`. Tanda tangan
+terverifikasi dan fingerprint sama dengan AAB awal; 14 ELF 64-bit lulus
+alignment minimal 16 KB. Validasi struktur JAR tanpa pesan dan tidak ada
+duplikasi nama ZIP/manifest signing.
+
+Ukuran artefak baru 91.721.656 byte. SHA-256:
+`01276DCDE5E2B46BC424421FDBB665C4A1C2D1456C969E4A1ACFA16ECAC82B20`.
+Peringatan toolchain/Java, termasuk keterbatasan pembacaan manifest signing
+oleh `JarInputStream`, serta batas pemeriksaan dicatat pada
+[panduan rilis](D:/nusasmpn2pp/docs/rilis-android-play-store.md).
+
+Tidak ada upload/deployment. Pemeriksaan Play Console, APK hasil distribusi,
+uji HP fisik, Data Safety, URL kebijakan produksi, dan tindak lanjut privasi
+R02 tetap diperlukan. Build ini menyelesaikan kebutuhan artefak bertautan
+privasi, bukan menyatakan semua gerbang rilis publik telah selesai.
+
+## 14. Email kontak publik dan Cloudflare — 8 Oktober 2026
+
+Pemeriksaan read-only halaman produksi mendapat HTTP 200: Cloudflare
+menyamarkan alamat email dan memasukkan `email-decode.min.js`, sementara
+CSP respons `default-src 'none'` tidak mengizinkan skrip. Atas permintaan
+pengguna, controller halaman privasi kini mengirim `no-store, no-transform`
+untuk mencegah penyamaran tersebut sesuai dokumentasi Cloudflare. CSP,
+identitas, naskah, header login/API, serta pengaturan Cloudflare global
+tidak diubah.
+
+Subset PHPUnit privasi/autentikasi/izin rute/tampilan: **44 tes lulus,
+1.013 assertion**. Regression memeriksa direktif cache, CSP tetap utuh,
+email/tautan `mailto:` tanpa skrip, dan halaman login sebagai kontrol
+agar `no-transform` tidak berlaku global. Pemeriksaan sesi, cookie,
+query database, dan akun nonaktif/ganti sandi tetap lulus.
+
+Tidak ada deployment, perubahan database, atau build Android. AAB 11.51 WIB
+bagian 13 tetap berlaku karena alamat halaman tidak berubah. Perilaku edge
+setelah deployment dan pembukaan aplikasi email perlu diuji di produksi;
+hasil tes lokal bukan bukti Cloudflare sudah menyajikan perbaikannya.
+Langkah deployment dan pemeriksaan ada di
+[panduan halaman privasi](D:/nusasmpn2pp/docs/halaman-kebijakan-privasi-nusa.md).

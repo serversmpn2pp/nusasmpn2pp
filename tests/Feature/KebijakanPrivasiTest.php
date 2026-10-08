@@ -54,6 +54,25 @@ class KebijakanPrivasiTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/\b(draf|draft)\b/iu', $response->getContent());
     }
 
+    public function test_email_privasi_tidak_memerlukan_skrip_dan_no_transform_hanya_pada_halaman_privasi(): void
+    {
+        $response = $this->get(route('kebijakan-privasi'))
+            ->assertOk()
+            ->assertHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+            ->assertSee('href="mailto:official@smpn2padangpanjang.sch.id"', false)
+            ->assertSee('href="mailto:official@smpn2padangpanjang.sch.id?subject=Permintaan%20Privasi%20NUSA"', false)
+            ->assertDontSee('data-cfemail', false)
+            ->assertDontSee('/cdn-cgi/l/email-protection', false)
+            ->assertDontSee('email-decode.min.js', false)
+            ->assertDontSee('<script', false);
+
+        $this->assertTrue($response->headers->hasCacheControlDirective('no-transform'));
+        $this->assertTrue($response->headers->hasCacheControlDirective('no-store'));
+
+        $login = $this->get(route('login'))->assertOk();
+        $this->assertFalse($login->headers->hasCacheControlDirective('no-transform'));
+    }
+
     public function test_halaman_tetap_publik_pada_akun_nonaktif_dan_wajib_ganti_sandi_tanpa_memuat_identitasnya(): void
     {
         $pengguna = new Pengguna;
