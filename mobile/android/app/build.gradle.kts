@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -8,6 +10,39 @@ plugins {
 // Dengan ini build pengembangan lama tetap dapat berjalan tanpa google-services.json.
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+}
+
+// Secret lokal, tidak disimpan dalam Git. Override opsional untuk CI/pengujian.
+val keystorePropertiesFile = rootProject.file(
+    providers.gradleProperty("nusaSigningProperties").orElse("key.properties").get(),
+)
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.isFile) {
+    try {
+        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+    } catch (_: Exception) {
+        throw GradleException("Konfigurasi signing NUSA tidak dapat dibaca. Periksa key.properties secara lokal.")
+    }
+}
+val uploadKeystoreFile = keystoreProperties.getProperty("storeFile")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { rootProject.file(it) }
+
+val validateNusaReleaseSigning = tasks.register("validateNusaReleaseSigning") {
+    group = "verification"
+    description = "Memastikan release NUSA memakai upload key, tanpa fallback ke debug key."
+    doLast {
+        if (!keystorePropertiesFile.isFile) {
+            throw GradleException("Release NUSA memerlukan android/key.properties dan upload key sekolah. Debug tetap dapat dibangun tanpa file tersebut.")
+        }
+        val requiredProperties = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+        if (requiredProperties.any { keystoreProperties.getProperty(it).isNullOrBlank() }) {
+            throw GradleException("Konfigurasi signing NUSA belum lengkap. Isi storeFile, storePassword, keyAlias, dan keyPassword secara lokal; jangan membagikan nilainya.")
+        }
+        if (uploadKeystoreFile?.isFile != true) {
+            throw GradleException("Upload keystore NUSA tidak ditemukan. Periksa storeFile dalam key.properties secara lokal.")
+        }
+    }
 }
 
 android {
@@ -36,12 +71,25 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = uploadKeystoreFile
+            storePassword = keystoreProperties.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
+    }
+}
+
+tasks.configureEach {
+    if (name == "preReleaseBuild" || name == "validateSigningRelease") {
+        dependsOn(validateNusaReleaseSigning)
     }
 }
 

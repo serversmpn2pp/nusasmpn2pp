@@ -429,6 +429,7 @@
                     <p class="install-status" data-pwa-install-status aria-live="polite" hidden></p>
 
                     <p class="help-text">Gunakan akun yang diberikan oleh administrator sekolah.</p>
+                    <p class="help-text"><a href="{{ route('kebijakan-privasi') }}">Kebijakan Privasi NUSA</a></p>
                 </section>
             </div>
             <footer class="login-footer">

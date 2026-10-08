@@ -12,6 +12,18 @@ class AppConfig {
 
   bool get isDevelopment => environment == AppEnvironment.development;
 
+  /// Halaman publik pada instalasi yang sama dengan API /api/v1/.
+  /// Tidak membawa token, query, fragment, atau kredensial ke browser.
+  Uri get privacyPolicyUri {
+    final uri = apiBaseUri.resolve('../../kebijakan-privasi');
+    return Uri(
+      scheme: uri.scheme,
+      host: uri.host,
+      port: uri.hasPort ? uri.port : null,
+      path: uri.path,
+    );
+  }
+
   factory AppConfig.fromEnvironment() {
     const environmentValue = String.fromEnvironment(
       'APP_ENV',

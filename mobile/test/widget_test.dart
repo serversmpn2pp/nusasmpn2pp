@@ -146,6 +146,7 @@ void main() {
     expect(find.text('Silakan masuk untuk melanjutkan'), findsOneWidget);
     expect(find.byKey(const Key('login-username')), findsOneWidget);
     expect(find.byKey(const Key('login-password')), findsOneWidget);
+    expect(find.byKey(const Key('login-privacy-policy')), findsOneWidget);
     expect(find.text('NIP / NISN / ORT-NISN'), findsOneWidget);
     expect(
       find.text('Lupa kata sandi? Silakan hubungi administrator sekolah.'),

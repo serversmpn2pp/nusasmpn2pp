@@ -2,14 +2,15 @@
 
 Tanggal: 6 Oktober 2026. Snapshot: `3f9b866`, termasuk enam perubahan Humas yang sudah ada sebelum audit ini. Audit tidak mengubah kode aplikasi, backend, database sekolah, konfigurasi Firebase, atau hak akses pengguna. Berkas ini merupakan hasil audit, bukan pernyataan bahwa seluruh skenario produksi telah teruji.
 
-**Tindak lanjut kode R03–R05 sudah diterapkan pada 6 Oktober 2026.** Bagian 1–7
-tetap merekam snapshot/temuan awal; status dan bukti perbaikannya ada di bagian 8.
+**Tindak lanjut kode R03–R05 sudah diterapkan pada 6 Oktober 2026; signing/AAB
+R01 sudah ditindaklanjuti pada 8 Oktober 2026.** Bagian 1–7 tetap merekam
+snapshot/temuan awal; status dan bukti perbaikannya ada di bagian 8–10.
 
 ## Keputusan
 
 **Belum direkomendasikan untuk rilis publik/production di Google Play.**
 
-Pondasi fitur dan otorisasi memiliki hasil pengujian yang baik. Pada snapshot awal, penghalang utama adalah signing release, kebijakan privasi dalam aplikasi, pengamanan push saat status akun berubah, serta belum adanya bukti pengujian push dan AAB final di perangkat sungguhan. Pengamanan push R03–R05 kini sudah diperbaiki dan diuji otomatis (bagian 8); signing, privasi, serta pengujian produksi tetap perlu diselesaikan sebelum rilis publik.
+Pondasi fitur dan otorisasi memiliki hasil pengujian yang baik. Pada snapshot awal, penghalang utama adalah signing release, kebijakan privasi dalam aplikasi, pengamanan push saat status akun berubah, serta belum adanya bukti pengujian push dan AAB final di perangkat sungguhan. Pengamanan push R03–R05 sudah diperbaiki dan diuji otomatis (bagian 8); signing dan build AAB sudah diverifikasi lokal (bagian 10). Privasi, kelengkapan Play Console, serta pengujian artefak produksi tetap perlu diselesaikan sebelum rilis publik.
 
 ## 1. Bukti pengujian
 
@@ -331,3 +332,62 @@ JUnit tersimpan lokal di `storage/logs/regression-push-junit.xml`.
 Tes memakai HTTP/Firebase palsu; belum ada deployment atau pengiriman push
 nyata dari perubahan ini. Uji server sekolah/HP fisik serta hambatan rilis
 signing dan privasi tetap wajib diselesaikan.
+
+## 10. Tindak lanjut R01 — signing release dan AAB, 8 Oktober 2026
+
+Hambatan konfigurasi signing R01 sudah diperbaiki: release memakai upload key
+sekolah dari konfigurasi lokal yang diabaikan Git, tanpa fallback ke debug key.
+AAB production dengan HTTPS sekolah berhasil dibangun dan tanda tangannya
+diverifikasi secara lokal. Release tanpa konfigurasi ditolak; pre-build debug
+tetap dapat berjalan tanpa upload key. Tidak ada password atau isi keystore
+yang ditampilkan maupun diubah.
+
+Analyzer bersih. Seluruh 14 library native 64-bit pada AAB lulus pemeriksaan
+ELF alignment minimal 16 KB. Pemeriksaan APK yang didistribusikan Google Play,
+uji HP release, privasi R02, dan isian Play Console tetap menjadi gerbang
+rilis; AAB belum diunggah dan keputusan rilis publik belum berubah menjadi
+disetujui. Bukti dan perintah build ada di
+[panduan rilis Android](D:/nusasmpn2pp/docs/rilis-android-play-store.md).
+
+## 11. Tindak lanjut sebagian R02 — halaman dan tautan privasi, 8 Oktober 2026
+
+Halaman HTML publik `/kebijakan-privasi` serta tautan sebelum login dan di
+tab Profil Flutter sudah diimplementasikan dan diuji lokal. Rute tidak memakai
+sesi/cookie, tidak membaca data akun, dan dapat dibuka tanpa login. Tautan
+aplikasi membuka browser tanpa membawa token atau identitas pengguna.
+
+Naskah masih berstatus draf yang terlihat jelas. Email resmi dan masa simpan
+5 tahun telah diberikan pengelola, tetapi awal hitung, pelaksanaan retensi/
+penghapusan, prosedur layanan privasi, dan persetujuan data anak belum final.
+Foto profil/identitas masih memakai media publik; pengamanannya ditunda oleh
+pengguna dan tidak diperbaiki pada tahap akses kebijakan ini.
+
+Subset tes: 32 Laravel privasi/autentikasi dan 10 izin rute/tampilan lulus;
+43 Flutter tautan/profil/alur aplikasi lulus; analyzer bersih; APK debug
+berhasil dibangun. Halaman lokal telah diperiksa responsif di browser.
+Ini bukan hasil pengujian ulang seluruh suite atau HP produksi.
+
+**R02 tetap terbuka untuk finalisasi dan verifikasi produksi.** Tidak ada
+deployment, pengisian Play Console, atau AAB baru pada tahap ini. AAB signing
+bagian 10 belum berisi perubahan tautan privasi. Panduan penerapan dan batas
+verifikasi ada pada
+[halaman dan akses kebijakan privasi](D:/nusasmpn2pp/docs/halaman-kebijakan-privasi-nusa.md).
+
+## 12. Persetujuan naskah privasi — 8 Oktober 2026
+
+Pengguna menyetujui naskah dan meminta label draf dihapus. Banner draf,
+metadata, isi, label aksesibilitas, dan footer diperbarui; tanggal berlaku
+ditetapkan 8 Oktober 2026. Header `noindex` khusus draf dihapus. Akses publik,
+keamanan halaman, dan kontrak identitas aplikasi tidak berubah.
+
+Keterangan foto yang masih publik serta rincian retensi/penghapusan dan
+prosedur perlindungan data yang belum diimplementasikan tetap dijelaskan,
+bukan diubah menjadi janji teknis yang belum tersedia. Arsip editorial lama
+tidak disajikan kepada pengguna. **R02 belum ditutup sepenuhnya:** tindak
+lanjut perlindungan data dan verifikasi produksi tetap diperlukan.
+
+Subset PHPUnit privasi, autentikasi, izin rute/tampilan: **43 tes lulus,
+1.000 assertion**. Regression mencakup penghapusan label draf, tanggal
+berlaku, kondisi foto dan retensi, serta akses publik tanpa sesi/database.
+Tidak ada deployment, perubahan database, build Android, atau pengisian
+Play Console pada pembaruan naskah ini.

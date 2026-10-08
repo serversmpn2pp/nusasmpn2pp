@@ -5,6 +5,7 @@ import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_illustrations.dart';
 import 'package:nusa/shared/widgets/nusa_logo.dart';
+import 'package:nusa/shared/widgets/nusa_privacy_policy_link.dart';
 
 class LoginView extends ConsumerStatefulWidget {
   const LoginView({super.key});
@@ -175,6 +176,10 @@ class _LoginViewState extends ConsumerState<LoginView> {
                             child: const NusaEducationIllustration(),
                           ),
                           const SizedBox(height: 10),
+                          const NusaPrivacyPolicyLink(
+                            key: Key('login-privacy-policy'),
+                          ),
+                          const SizedBox(height: 4),
                           const Text(
                             'Tim Teknisi SMP Negeri 2 Padang Panjang',
                             textAlign: TextAlign.center,

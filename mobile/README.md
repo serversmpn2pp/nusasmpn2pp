@@ -459,3 +459,18 @@ repository.
 ```powershell
 flutter test test/exam_security_journal_test.dart test/student_exam_view_test.dart test/class_assessment_monitoring_view_test.dart --no-pub
 ```
+
+### Signing release dan AAB Google Play
+
+Release memakai upload key dari `android/key.properties`, bukan debug key.
+Keystore dan password harus tetap lokal; konfigurasi yang tidak lengkap
+menghentikan build release. Debug tidak memerlukan upload key.
+
+```powershell
+flutter build appbundle --release --no-pub --dart-define=APP_ENV=production --dart-define=API_BASE_URL=https://nusa.smpn2padangpanjang.sch.id/api/v1/
+```
+
+Hasil: `build/app/outputs/bundle/release/app-release.aab`. Panduan pengelolaan
+kunci, version code, APK uji, dan gerbang internal testing tersedia di
+`docs/rilis-android-play-store.md` pada root repository. Signing/build yang
+berhasil tidak menggantikan kebijakan privasi maupun uji HP fisik.

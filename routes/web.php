@@ -45,6 +45,7 @@ use App\Http\Controllers\JenisPerangkatAjarController;
 use App\Http\Controllers\KartuPegawaiController;
 use App\Http\Controllers\KartuPelajarController;
 use App\Http\Controllers\KatalogBarangController;
+use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\KategoriBarangController;
 use App\Http\Controllers\KategoriPembinaanSiswaController;
 use App\Http\Controllers\KegiatanIbadahController;
@@ -170,7 +171,23 @@ use App\Http\Controllers\UnitBarangController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use App\Http\Controllers\WaktuTambahanPesertaUjianCbtController;
 use App\Http\Middleware\SesiPengerjaanUjian;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+
+// Informasi publik, tanpa sesi/login maupun akses database pengguna.
+Route::get('kebijakan-privasi', KebijakanPrivasiController::class)
+    ->withoutMiddleware([
+        EncryptCookies::class,
+        AddQueuedCookiesToResponse::class,
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        PreventRequestForgery::class,
+    ])
+    ->name('kebijakan-privasi');
 
 Route::get('/', function () {
     if (auth()->check()) {

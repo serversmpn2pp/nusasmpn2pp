@@ -54,6 +54,7 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    expect(find.byKey(const Key('profile-privacy-policy')), findsOneWidget);
     await tester.tap(find.byKey(const Key('profile-edit-button')));
     await tester.pumpAndSettle();
 
