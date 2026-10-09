@@ -1087,6 +1087,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::middleware('izin:poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil')->group(function () {
             Route::get('lampiran-perilaku-sts', [LampiranPerilakuStsController::class, 'index'])->name('lampiran-perilaku-sts.index');
             Route::put('lampiran-perilaku-sts/{kegiatan}/{kelas}', [LampiranPerilakuStsController::class, 'simpan'])->name('lampiran-perilaku-sts.simpan');
+            Route::put('lampiran-perilaku-sts/{kegiatan}/{kelas}/kolektif', [LampiranPerilakuStsController::class, 'kolektif'])->name('lampiran-perilaku-sts.kolektif');
         });
         Route::resource('pengaturan-absensi', PengaturanAbsensiController::class)
             ->middleware('izin:absensi.pengaturan_kelola');

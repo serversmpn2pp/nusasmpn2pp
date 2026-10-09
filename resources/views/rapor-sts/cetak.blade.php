@@ -96,7 +96,6 @@
         .behavior-print { font-size:8.5pt; }
         .behavior-print td { height:auto; padding:2mm; vertical-align:top; line-height:1.35; }
         .behavior-print th:first-child { white-space:nowrap; padding-left:1mm; padding-right:1mm; }
-        .behavior-print .status { font-size:8pt; }
         .behavior-totals { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:3mm; margin:4mm 0; padding:3mm 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
         .behavior-totals span { display:block; font-size:7.5pt; color:var(--muted); margin-bottom:1mm; }
         .behavior-totals strong { font-size:10pt; }

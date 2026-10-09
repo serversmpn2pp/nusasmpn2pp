@@ -43,7 +43,7 @@
         .sts-table .button { min-height: 38px; padding: 8px 10px; font-size: .8rem; border-radius: 5px; }
         .sts-detail-button { margin-top: 10px; }
         .sts-report-actions { display: flex; flex-direction: column; gap: 8px; }
-        .sts-report-actions .button { width: 100%; text-align: center; }
+        .sts-report-actions .button { width: 100%; min-width: 0; max-width: 100%; text-align: center; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
         .sts-notice { padding: 12px 16px; border-left: 3px solid var(--primary); background: var(--primary-soft); font-size: .85rem; margin: 16px 0; }
         .sts-reset { display: block; background: none; border: 0; margin-top: 8px; padding: 4px 0; color: var(--primary); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
         .sts-reset:disabled { cursor: not-allowed; opacity: .5; }

@@ -117,6 +117,14 @@ class LampiranPerilakuStsService
 
     public function simpan(Pengguna $pengguna, KegiatanUjianCbt $kegiatan, Kelas $kelas, array $data): void
     {
+        $this->simpanKolektif($pengguna, $kegiatan, $kelas, [
+            'guru_bk_id' => $data['guru_bk_id'], 'wakil_kesiswaan_id' => $data['wakil_kesiswaan_id'],
+            'anggota_ids' => [$data['anggota_id']], 'siswa' => [$data['anggota_id'] => $data],
+        ]);
+    }
+
+    public function simpanKolektif(Pengguna $pengguna, KegiatanUjianCbt $kegiatan, Kelas $kelas, array $data): void
+    {
         $this->pastikanCakupan($pengguna, $kegiatan, $kelas);
         DB::transaction(function () use ($pengguna, $kegiatan, $kelas, $data) {
             Kelas::whereKey($kelas->id)->lockForUpdate()->firstOrFail();
@@ -125,11 +133,10 @@ class LampiranPerilakuStsService
             if (! $p->exists || ! $p->tanggal_akhir_presensi->copy()->endOfDay()->isPast()) {
                 throw ValidationException::withMessages(['lampiran' => 'Simpan periode rapor dan tunggu batas periode berakhir sebelum mengesahkan lampiran.']);
             }
-            $siswa = $konteks['baris']->firstWhere('anggota.id', (int) $data['anggota_id']);
-            abort_unless($siswa, 404);
-            if (! hash_equals($siswa['sidik_sumber'], $data['sidik_sumber'])
-                || (int) ($siswa['tersimpan']?->versi ?? 0) !== (int) $data['versi']) {
-                throw ValidationException::withMessages(['lampiran' => 'Sumber atau pemeriksaan lampiran berubah. Muat ulang dan periksa kembali.']);
+            $dipilih = collect($data['anggota_ids'])->map(fn ($id) => (int) $id);
+            if ($dipilih->isEmpty() || $dipilih->unique()->count() !== $dipilih->count()
+                || $dipilih->sort()->values()->all() !== collect(array_keys($data['siswa']))->sort()->values()->all()) {
+                throw ValidationException::withMessages(['anggota_ids' => 'Pilih siswa dan kirim ringkasan lengkap untuk setiap siswa yang dipilih.']);
             }
             foreach (['guru_bk_id' => 'guruBk', 'wakil_kesiswaan_id' => 'wakilKesiswaan'] as $field => $key) {
                 if (! $konteks[$key]->contains('id', (int) $data[$field])) {
@@ -140,21 +147,32 @@ class LampiranPerilakuStsService
                 && ! $konteks['guruBk']->contains('id', (int) $pengguna->pegawai_id)) {
                 abort(403);
             }
-            $input = collect($data['baris'] ?? []);
-            if ($input->keys()->sort()->values()->all() !== $siswa['sumber']->pluck('kunci')->sort()->values()->all()) {
-                throw ValidationException::withMessages(['baris' => 'Seluruh kejadian terverifikasi harus diperiksa; baris tidak boleh ditambah atau dihilangkan.']);
-            }
-            $baris = $siswa['sumber']->map(function ($r) use ($input) {
-                $edit = $input->get($r['kunci']);
+            // One class context and one transaction keep collective reviews consistent and atomic.
+            $daftar = $konteks['baris']->keyBy('anggota.id');
+            foreach ($dipilih as $id) {
+                $siswa = $daftar->get($id);
+                abort_unless($siswa, 404);
+                $edit = $data['siswa'][$id];
+                if (! hash_equals($siswa['sidik_sumber'], $edit['sidik_sumber'])
+                    || (int) ($siswa['tersimpan']?->versi ?? 0) !== (int) $edit['versi']) {
+                    throw ValidationException::withMessages(['lampiran' => 'Sumber atau pemeriksaan lampiran '.$siswa['anggota']->siswa->nama_lengkap.' berubah. Tidak ada perubahan disimpan. Muat ulang dan periksa kembali.']);
+                }
+                $input = collect($edit['baris'] ?? []);
+                if ($input->keys()->sort()->values()->all() !== $siswa['sumber']->pluck('kunci')->sort()->values()->all()) {
+                    throw ValidationException::withMessages(['baris' => 'Seluruh kejadian terverifikasi harus diperiksa; baris tidak boleh ditambah atau dihilangkan.']);
+                }
+                $baris = $siswa['sumber']->map(function ($r) use ($input) {
+                    $edit = $input->get($r['kunci']);
 
-                return collect($r)->except('sidik')->merge(['kejadian' => trim($edit['kejadian']), 'tindakan' => trim($edit['tindakan'])])->all();
-            });
-            LampiranPerilakuSts::updateOrCreate(['rapor_sts_kelas_id' => $p->id, 'anggota_kelas_id' => $data['anggota_id']], [
-                'guru_bk_id' => $data['guru_bk_id'], 'wakil_kesiswaan_id' => $data['wakil_kesiswaan_id'],
-                'baris' => $baris->all(), 'ringkasan' => $siswa['ringkasan'], 'catatan' => trim($data['catatan'] ?? '') ?: null,
-                'sidik_sumber' => $siswa['sidik_sumber'], 'versi' => $data['versi'] + 1,
-                'diperiksa_pada' => now(), 'diperiksa_oleh_pengguna_id' => $pengguna->id,
-            ]);
+                    return collect($r)->except('sidik')->merge(['kejadian' => trim($edit['kejadian']), 'tindakan' => trim($edit['tindakan'])])->all();
+                });
+                LampiranPerilakuSts::updateOrCreate(['rapor_sts_kelas_id' => $p->id, 'anggota_kelas_id' => $id], [
+                    'guru_bk_id' => $data['guru_bk_id'], 'wakil_kesiswaan_id' => $data['wakil_kesiswaan_id'],
+                    'baris' => $baris->all(), 'ringkasan' => $siswa['ringkasan'], 'catatan' => trim($edit['catatan'] ?? '') ?: null,
+                    'sidik_sumber' => $siswa['sidik_sumber'], 'versi' => $edit['versi'] + 1,
+                    'diperiksa_pada' => now(), 'diperiksa_oleh_pengguna_id' => $pengguna->id,
+                ]);
+            }
         });
     }
 
@@ -182,7 +200,7 @@ class LampiranPerilakuStsService
         $beban = 0;
         foreach ($baris as $r) {
             $tinggi = 2 + max((int) ceil(mb_strlen($r['kejadian']) / 20),
-                (int) ceil(mb_strlen($r['tindakan']) / 20), (int) ceil(mb_strlen($r['status']) / 12));
+                (int) ceil(mb_strlen($r['tindakan']) / 20));
             if ($isi->isNotEmpty() && $beban + $tinggi > 30) {
                 $halaman->push($isi);
                 $isi = collect();

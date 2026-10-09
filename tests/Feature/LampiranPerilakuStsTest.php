@@ -22,6 +22,7 @@ use App\Models\TransaksiPoinSiswa;
 use App\Services\Nilai\LampiranPerilakuStsService;
 use App\Services\Nilai\RaporStsService;
 use Carbon\Carbon;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class LampiranPerilakuStsTest extends TestCase
@@ -174,6 +175,7 @@ class LampiranPerilakuStsTest extends TestCase
             ->assertSeeText('Tidak ada catatan pelanggaran terverifikasi pada periode ini.')
             ->assertDontSeeText('RAHASIA-KONSELING')->assertDontSeeText('KRONOLOGI-INTERNAL');
         $html = $cetak->getContent();
+        $this->assertStringNotContainsString('<th>Status</th>', $html);
         $a = strpos($html, 'data-behavior-member="'.$d['anggota'][0]->id.'"');
         $b = strpos($html, 'data-behavior-member="'.$d['anggota'][1]->id.'"');
         $this->assertLessThan($b, $a);
@@ -182,6 +184,7 @@ class LampiranPerilakuStsTest extends TestCase
         $this->capture('class', $html);
         $this->capture('individual', $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'perilaku' => 1, 'anggota_id' => $d['anggota'][0]->id]))->getContent());
         $this->capture('preview', $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'perilaku' => 1, 'pratinjau' => 1]))->getContent());
+        $this->capture('combinedpreview', $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'perilaku' => 1, 'pratinjau' => 1, 'anggota_id' => $d['anggota'][0]->id]))->getContent());
         $this->capture('index', $this->get(route('rapor-sts.index'))->getContent());
         $this->capture('review', $this->actingAs($d['bk'])->get(route('lampiran-perilaku-sts.index', ['kelas_id' => $d['kelas']->id]))->getContent());
     }
@@ -244,10 +247,174 @@ class LampiranPerilakuStsTest extends TestCase
         libxml_clear_errors();
         libxml_use_internal_errors($errors);
         $this->assertCount(0, (new \DOMXPath($dom))->query('//select[@id="behavior-bk-'.$d['anggota'][0]->id.'"]/option[@selected]'));
+        $this->assertCount(0, (new \DOMXPath($dom))->query('//select[@id="behavior-bulk-bk"]/option[@selected]'));
         $p = $this->payload($d);
         $p['guru_bk_id'] = $bk2->pegawai_id;
         $this->put($this->url($d), $p)->assertSessionHasNoErrors();
         $this->assertSame($bk2->pegawai_id, (int) LampiranPerilakuSts::first()->guru_bk_id);
+    }
+
+    public function test_kolektif_menyimpan_siswa_dipilih_dengan_penandatangan_bersama_dan_koreksi_ringkasan(): void
+    {
+        $d = $this->fondasi();
+        $kasus = $this->kasus($d);
+        $bk2 = $this->akun('bk', 'Guru BK Kolektif');
+        PenugasanGuruBkTingkat::create(['tahun_pelajaran_id' => $d['tahun']->id, 'pegawai_id' => $bk2->pegawai_id, 'tingkat' => 7, 'tanggal_mulai' => '2026-07-01', 'aktif' => true]);
+        $p = $this->payloadKolektif($d);
+        $p['guru_bk_id'] = $bk2->pegawai_id;
+        $id = $d['anggota'][0]->id;
+        $p['siswa'][$id]['baris']['laporan-'.$kasus->id] = ['kejadian' => 'Ringkasan kolektif dikoreksi', 'tindakan' => 'Pendampingan orang tua', 'poin' => 0, 'status' => 'Palsu'];
+        $p['siswa'][$id]['catatan'] = 'Catatan yang belum disimpan per siswa.';
+        $p['siswa'][$d['anggota'][1]->id]['catatan'] = 'Pertahankan kedisiplinan.';
+        $this->actingAs($d['bk']);
+        $this->putKolektif($d, $p)->assertSessionHasNoErrors()->assertRedirect()
+            ->assertSessionHas('berhasil', '2 lampiran perilaku siswa telah diperiksa dan disimpan secara kolektif.');
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 2);
+        $this->assertTrue($this->konteks($d)['baris']->every('siap'));
+        foreach (LampiranPerilakuSts::all() as $r) {
+            $this->assertSame($bk2->pegawai_id, (int) $r->guru_bk_id);
+            $this->assertSame($d['wakil']->pegawai_id, (int) $r->wakil_kesiswaan_id);
+            $this->assertSame($d['bk']->id, (int) $r->diperiksa_oleh_pengguna_id);
+        }
+        $saved = LampiranPerilakuSts::where('anggota_kelas_id', $id)->first();
+        $this->assertSame('Ringkasan kolektif dikoreksi', $saved->baris[0]['kejadian']);
+        $this->assertSame('Pendampingan orang tua', $saved->baris[0]['tindakan']);
+        $this->assertSame(15, $saved->baris[0]['poin']);
+        $this->assertSame('Selesai', $saved->baris[0]['status']);
+        $this->assertSame($p['siswa'][$id]['catatan'], $saved->catatan);
+        $this->get(route('lampiran-perilaku-sts.index'))->assertOk()->assertDontSee('<th>Status</th>', false);
+    }
+
+    public function test_kolektif_tidak_mengubah_siswa_yang_tidak_dipilih(): void
+    {
+        $d = $this->fondasi();
+        $this->periksa($d, 1);
+        $untouched = LampiranPerilakuSts::first()->getAttributes();
+        $this->putKolektif($d, $this->payloadKolektif($d, [0]))->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 2);
+        $this->assertSame($untouched, LampiranPerilakuSts::where('anggota_kelas_id', $d['anggota'][1]->id)->first()->getAttributes());
+    }
+
+    public function test_kolektif_memperbarui_pemeriksaan_tersimpan_tanpa_menggandakan_lampiran(): void
+    {
+        $d = $this->fondasi();
+        $kasus = $this->kasus($d);
+        $this->periksa($d, 0);
+        $this->periksa($d, 1);
+        $p = $this->payloadKolektif($d);
+        $p['siswa'][$d['anggota'][0]->id]['baris']['laporan-'.$kasus->id]['tindakan'] = 'Tindak lanjut terbaru';
+        $p['siswa'][$d['anggota'][1]->id]['catatan'] = 'Catatan terbaru untuk keluarga';
+        $this->actingAs($d['admin']);
+        $this->putKolektif($d, $p)->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 2);
+        $this->assertSame([2, 2], LampiranPerilakuSts::orderBy('anggota_kelas_id')->pluck('versi')->all());
+        $this->assertSame('Tindak lanjut terbaru', LampiranPerilakuSts::where('anggota_kelas_id', $d['anggota'][0]->id)->first()->baris[0]['tindakan']);
+        $this->assertDatabaseHas('lampiran_perilaku_sts', ['anggota_kelas_id' => $d['anggota'][1]->id,
+            'catatan' => 'Catatan terbaru untuk keluarga', 'diperiksa_oleh_pengguna_id' => $d['admin']->id]);
+        $ulang = $this->payloadKolektif($d);
+        $ulang['siswa'][$d['anggota'][0]->id]['catatan'] = 'Tidak boleh tersimpan sebagian';
+        $ulang['siswa'][$d['anggota'][1]->id]['versi'] = 1;
+        $this->putKolektif($d, $ulang)->assertSessionHasErrors('lampiran');
+        $this->assertNull(LampiranPerilakuSts::where('anggota_kelas_id', $d['anggota'][0]->id)->first()->catatan);
+        $this->assertSame([2, 2], LampiranPerilakuSts::orderBy('anggota_kelas_id')->pluck('versi')->all());
+    }
+
+    public function test_kolektif_dibatalkan_seluruhnya_jika_versi_satu_siswa_berubah(): void
+    {
+        $d = $this->fondasi();
+        $p = $this->payloadKolektif($d);
+        $this->periksa($d, 1);
+        $p['siswa'][$d['anggota'][0]->id]['catatan'] = 'Tidak boleh tersimpan sebagian.';
+        $this->putKolektif($d, $p)->assertSessionHasErrors('lampiran');
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 1);
+        $this->assertDatabaseMissing('lampiran_perilaku_sts', ['anggota_kelas_id' => $d['anggota'][0]->id]);
+        $this->assertSame(1, LampiranPerilakuSts::first()->versi);
+    }
+
+    public function test_kolektif_dibatalkan_seluruhnya_jika_sumber_satu_siswa_berubah(): void
+    {
+        $d = $this->fondasi();
+        $kasus = $this->kasus($d, ['siswa_id' => $d['anggota'][1]->siswa_id, 'anggota_kelas_id' => $d['anggota'][1]->id]);
+        $p = $this->payloadKolektif($d);
+        $kasus->update(['total_poin' => 25]);
+        $this->actingAs($d['bk']);
+        $this->putKolektif($d, $p)->assertSessionHasErrors('lampiran');
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 0);
+    }
+
+    public function test_kolektif_memerlukan_pilihan_konfirmasi_dan_payload_yang_cocok(): void
+    {
+        $d = $this->fondasi();
+        $p = $this->payloadKolektif($d);
+        $this->actingAs($d['bk']);
+        $this->putKolektif($d, [...$p, 'diperiksa' => 0])->assertSessionHasErrors('diperiksa');
+        $this->putKolektif($d, [...$p, 'anggota_ids' => []])->assertSessionHasErrors('anggota_ids');
+        $this->putKolektif($d, [...$p, 'anggota_ids' => [$d['anggota'][0]->id]])->assertSessionHasErrors('anggota_ids');
+        $this->putKolektif($d, [...$p, 'anggota_ids' => [$d['anggota'][0]->id, $d['anggota'][0]->id]])->assertSessionHasErrors('anggota_ids.0');
+        $this->put(route('lampiran-perilaku-sts.kolektif', [$d['kegiatan'], $d['kelas']]), [...$p, 'siswa_json' => '{rusak'])
+            ->assertSessionHasErrors('siswa_json');
+        $this->putKolektif($d, [...$p, 'siswa' => ['asing' => reset($p['siswa'])]])->assertSessionHasErrors('anggota_ids');
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 0);
+    }
+
+    public function test_kolektif_tetap_melindungi_cakupan_kelas_dan_penandatangan(): void
+    {
+        $d = $this->fondasi();
+        $p = $this->payloadKolektif($d);
+        $this->actingAs($d['wali']);
+        $this->putKolektif($d, $p)->assertForbidden();
+        $kelas8 = Kelas::create(['tahun_pelajaran_id' => $d['tahun']->id, 'nama' => 'VIII.A', 'tingkat' => 8, 'aktif' => true]);
+        $this->actingAs($d['bk'])->put(route('lampiran-perilaku-sts.kolektif', [$d['kegiatan'], $kelas8]), [])
+            ->assertForbidden();
+        $this->putKolektif($d, [...$p, 'guru_bk_id' => $d['wali']->pegawai_id])->assertSessionHasErrors('guru_bk_id');
+        $this->putKolektif($d, [...$p, 'wakil_kesiswaan_id' => $d['bk']->pegawai_id])->assertSessionHasErrors('wakil_kesiswaan_id');
+        $siswaAsing = Siswa::create(['nama_lengkap' => 'Siswa Kelas Lain', 'nisn' => '9876543210', 'jenis_kelamin' => 'P', 'aktif' => true]);
+        $asing = AnggotaKelas::create(['tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $kelas8->id,
+            'siswa_id' => $siswaAsing->id, 'status_keanggotaan' => 'aktif']);
+        $p['anggota_ids'] = [$d['anggota'][0]->id, $asing->id];
+        $p['siswa'][$asing->id] = $p['siswa'][$d['anggota'][1]->id];
+        unset($p['siswa'][$d['anggota'][1]->id]);
+        $this->putKolektif($d, $p)->assertNotFound();
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 0);
+    }
+
+    public function test_kolektif_tidak_boleh_menghilangkan_kasus_dan_mengembalikan_edit_saat_validasi_gagal(): void
+    {
+        $d = $this->fondasi();
+        $kasus = $this->kasus($d);
+        $p = $this->payloadKolektif($d);
+        $id = $d['anggota'][0]->id;
+        $this->actingAs($d['bk']);
+        $kosong = $p;
+        $kosong['siswa'][$id]['baris'] = [];
+        $this->putKolektif($d, $kosong)->assertSessionHasErrors('baris');
+        $p['siswa'][$id]['baris']['laporan-'.$kasus->id]['kejadian'] = 'Koreksi ringkasan tetap terjaga';
+        $p['siswa'][$id]['catatan'] = 'Catatan koreksi tetap terjaga';
+        $this->putKolektif($d, [...$p, 'wakil_kesiswaan_id' => $d['wali']->pegawai_id])->assertSessionHasErrors('wakil_kesiswaan_id');
+        $this->get(route('lampiran-perilaku-sts.index'))->assertOk()->assertSeeText('Koreksi ringkasan tetap terjaga')
+            ->assertSeeText('Catatan koreksi tetap terjaga');
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 0);
+    }
+
+    public function test_kolektif_memvalidasi_tiap_ringkasan_catatan_dan_periode(): void
+    {
+        $d = $this->fondasi();
+        $kasus = $this->kasus($d);
+        $p = $this->payloadKolektif($d);
+        $id = $d['anggota'][0]->id;
+        $this->actingAs($d['bk']);
+        $salah = $p;
+        $salah['siswa'][$id]['baris']['laporan-'.$kasus->id]['tindakan'] = '   ';
+        $this->putKolektif($d, $salah)->assertSessionHasErrors('siswa.'.$id.'.baris.laporan-'.$kasus->id.'.tindakan');
+        $salah = $p;
+        $salah['siswa'][$id]['catatan'] = str_repeat('a', 601);
+        $this->putKolektif($d, $salah)->assertSessionHasErrors('siswa.'.$id.'.catatan');
+        $salah = $p;
+        unset($salah['siswa'][$id]['versi']);
+        $this->putKolektif($d, $salah)->assertSessionHasErrors('siswa.'.$id.'.versi');
+        $d['rapor']->update(['tanggal_akhir_presensi' => '2026-10-10', 'tanggal_rapor' => '2026-10-10']);
+        $this->putKolektif($d, $this->payloadKolektif($d))->assertSessionHasErrors('lampiran');
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 0);
     }
 
     private function fondasi(): array
@@ -315,6 +482,26 @@ class LampiranPerilakuStsTest extends TestCase
     private function periksa(array $d, int $index): void
     {
         $this->actingAs($d['bk'])->put($this->url($d), $this->payload($d, $index))->assertSessionHasNoErrors()->assertRedirect();
+    }
+
+    private function payloadKolektif(array $d, array $indexes = [0, 1]): array
+    {
+        $siswa = [];
+        foreach ($indexes as $index) {
+            $p = $this->payload($d, $index);
+            $siswa[$p['anggota_id']] = ['versi' => $p['versi'], 'sidik_sumber' => $p['sidik_sumber'], 'baris' => $p['baris']];
+        }
+
+        return ['anggota_ids' => array_keys($siswa), 'guru_bk_id' => $d['bk']->pegawai_id,
+            'wakil_kesiswaan_id' => $d['wakil']->pegawai_id, 'diperiksa' => 1, 'siswa' => $siswa];
+    }
+
+    private function putKolektif(array $d, array $data): TestResponse
+    {
+        $data['siswa_json'] = json_encode($data['siswa']);
+        unset($data['siswa']);
+
+        return $this->put(route('lampiran-perilaku-sts.kolektif', [$d['kegiatan'], $d['kelas']]), $data);
     }
 
     private function url(array $d): string
