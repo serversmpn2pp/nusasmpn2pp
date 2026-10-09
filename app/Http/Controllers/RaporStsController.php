@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
 use App\Models\RaporStsKelas;
+use App\Services\Nilai\LampiranPerilakuStsService;
 use App\Services\Nilai\MapelRaporStsService;
 use App\Services\Nilai\RaporStsService;
 use Illuminate\Http\Request;
@@ -29,8 +30,10 @@ class RaporStsController extends Controller
         $laporan = $kelas && $kegiatan ? $service->bangun($kegiatan, $kelas) : null;
         $pilihanMapel = $laporan ? app(MapelRaporStsService::class)->konteks($kegiatan, (int) $kelas->tingkat) : null;
         $dapatMengaturMapel = MapelRaporStsService::dapatMengatur($request->user());
+        $perilaku = $laporan ? app(LampiranPerilakuStsService::class)->konteks($kegiatan, $kelas) : null;
 
-        return view('rapor-sts.index', compact('daftarKegiatan', 'daftarKelas', 'kegiatan', 'kelas', 'laporan', 'pilihanMapel', 'dapatMengaturMapel'));
+        return response()->view('rapor-sts.index', compact('daftarKegiatan', 'daftarKelas', 'kegiatan', 'kelas', 'laporan', 'pilihanMapel', 'dapatMengaturMapel', 'perilaku'))
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function mapel(Request $request, KegiatanUjianCbt $kegiatan, Kelas $kelas, RaporStsService $rapor, MapelRaporStsService $service)
@@ -172,7 +175,7 @@ class RaporStsController extends Controller
     public function cetak(Request $request, KegiatanUjianCbt $kegiatan, Kelas $kelas, RaporStsService $service)
     {
         $service->pastikanCakupan($request->user(), $kegiatan, $kelas);
-        $data = $request->validate(['anggota_id' => ['nullable', 'integer'], 'pratinjau' => ['nullable', 'boolean']]);
+        $data = $request->validate(['anggota_id' => ['nullable', 'integer'], 'pratinjau' => ['nullable', 'boolean'], 'perilaku' => ['nullable', 'boolean']]);
         $laporan = $service->bangun($kegiatan, $kelas);
         if (isset($data['anggota_id'])) {
             $laporan['baris'] = $laporan['baris']->where('anggota.id', (int) $data['anggota_id'])->values();
@@ -183,7 +186,17 @@ class RaporStsController extends Controller
             return $this->kembali($kegiatan, $kelas)->withErrors(['cetak' => 'Rapor belum siap dicetak. Simpan periode rapor, tetapkan wali kelas, dan simpan pemeriksaan kehadiran seluruh siswa yang akan dicetak. Periode presensi harus sudah berakhir.']);
         }
 
-        return response()->view('rapor-sts.cetak', [...$laporan, 'pratinjau' => $pratinjau])
+        $lampiran = null;
+        if ($data['perilaku'] ?? false) {
+            $lampiran = app(LampiranPerilakuStsService::class)->konteks($kegiatan, $kelas);
+            $lampiran['baris'] = $lampiran['baris']->whereIn('anggota.id', $laporan['baris']->pluck('anggota.id'))->keyBy('anggota.id');
+            // Preview also uses reviewed public summaries, never raw BK notes.
+            if (! $lampiran['baris']->every(fn ($b) => $b['siap'])) {
+                return $this->kembali($kegiatan, $kelas)->withErrors(['cetak' => 'Lampiran perilaku belum diperiksa atau datanya berubah. Guru BK perlu memeriksa kembali sebelum rapor gabungan dapat dibuka. Cetak nilai saja tetap tersedia.']);
+            }
+        }
+
+        return response()->view('rapor-sts.cetak', [...$laporan, 'pratinjau' => $pratinjau, 'lampiran' => $lampiran])
             ->header('Cache-Control', 'private, no-store');
     }
 

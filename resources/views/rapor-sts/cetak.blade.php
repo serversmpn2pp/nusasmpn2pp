@@ -91,6 +91,22 @@
         .sheet--dense .signature-space { height: 13mm; }
         .sheet--dense .attendance { margin-top: 3mm; }
         .sheet--dense .signatures,.sheet--dense .notes { margin-top: 3.5mm; }
+        .sheet--behavior { overflow:visible; }
+        .behavior-period { margin:0 0 3mm; color:var(--muted); font-size:8pt; }
+        .behavior-print { font-size:8.5pt; }
+        .behavior-print td { height:auto; padding:2mm; vertical-align:top; line-height:1.35; }
+        .behavior-print th:first-child { white-space:nowrap; padding-left:1mm; padding-right:1mm; }
+        .behavior-print .status { font-size:8pt; }
+        .behavior-totals { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:3mm; margin:4mm 0; padding:3mm 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+        .behavior-totals span { display:block; font-size:7.5pt; color:var(--muted); margin-bottom:1mm; }
+        .behavior-totals strong { font-size:10pt; }
+        .behavior-remarks { margin:3mm 0; font-size:8.5pt; line-height:1.4; overflow-wrap:anywhere; white-space:pre-line; }
+        .signatures--behavior { grid-template-columns:repeat(3,minmax(0,1fr)); gap:4mm; margin-top:5mm; font-size:8pt; }
+        .signatures--behavior .signature-name { min-width:0; max-width:100%; overflow-wrap:anywhere; }
+        .signatures--behavior .signature-space { height:15mm; }
+        .signatures--behavior .signature-parent { letter-spacing:0; }
+        .signatures--behavior .signature-block > p:first-child { min-height:7mm; }
+        .behavior-date { text-align:right; font-size:8.5pt; margin-top:4mm; }
 
         @page { size: A4 portrait; margin: 0; }
         @media print {
@@ -99,6 +115,7 @@
             .toolbar { display: none; }
             .sheet { width: 210mm; height: 297mm; min-height: 297mm; margin: 0; box-shadow: none; break-after: page; page-break-after: always; }
             .sheet:last-child { break-after: auto; page-break-after: auto; }
+            .sheet--behavior { height:auto; overflow:visible; }
             .grades tr,.attendance,.signatures,.notes { break-inside: avoid; page-break-inside: avoid; }
         }
         @media screen and (max-width: 820px) {
@@ -239,6 +256,9 @@
                 <p><strong>Periode presensi:</strong> {{ $pengaturan->tanggal_awal_presensi->format('d-m-Y') }} s.d. {{ $pengaturan->tanggal_akhir_presensi->format('d-m-Y') }}.</p>
             </footer>
         </article>
+        @if($lampiran ?? null)
+            @include('rapor-sts._perilaku-cetak', ['perilakuSiswa' => $lampiran['baris']->get($item['anggota']->id)])
+        @endif
     @endforeach
 </body>
 </html>

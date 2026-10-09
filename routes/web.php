@@ -45,9 +45,9 @@ use App\Http\Controllers\JenisPerangkatAjarController;
 use App\Http\Controllers\KartuPegawaiController;
 use App\Http\Controllers\KartuPelajarController;
 use App\Http\Controllers\KatalogBarangController;
-use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\KategoriBarangController;
 use App\Http\Controllers\KategoriPembinaanSiswaController;
+use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\KegiatanIbadahController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KelasWaliController;
@@ -63,6 +63,7 @@ use App\Http\Controllers\KoreksiManualUjianCbtController;
 use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
 use App\Http\Controllers\KoreksiPoinPresensiController;
 use App\Http\Controllers\LabelBarcodeInventarisController;
+use App\Http\Controllers\LampiranPerilakuStsController;
 use App\Http\Controllers\LaporanAbsensiController;
 use App\Http\Controllers\LaporanAbsensiPegawaiBulananController;
 use App\Http\Controllers\LaporanInventarisBulananController;
@@ -1082,6 +1083,10 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::put('rapor-sts/{kegiatan}/{kelas}/kehadiran', [RaporStsController::class, 'kehadiran'])->name('rapor-sts.kehadiran');
             Route::put('rapor-sts/{kegiatan}/{kelas}/pengecualian', [RaporStsController::class, 'pengecualian'])->name('rapor-sts.pengecualian');
             Route::get('rapor-sts/{kegiatan}/{kelas}/cetak', [RaporStsController::class, 'cetak'])->name('rapor-sts.cetak');
+        });
+        Route::middleware('izin:poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil')->group(function () {
+            Route::get('lampiran-perilaku-sts', [LampiranPerilakuStsController::class, 'index'])->name('lampiran-perilaku-sts.index');
+            Route::put('lampiran-perilaku-sts/{kegiatan}/{kelas}', [LampiranPerilakuStsController::class, 'simpan'])->name('lampiran-perilaku-sts.simpan');
         });
         Route::resource('pengaturan-absensi', PengaturanAbsensiController::class)
             ->middleware('izin:absensi.pengaturan_kelola');

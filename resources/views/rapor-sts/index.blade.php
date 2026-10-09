@@ -140,6 +140,15 @@
             <div><strong>{{ $siap }}</strong><span>Siap cetak</span></div>
         </div>
         <section class="sts-section">
+            <h2>Lampiran perilaku dan pembinaan</h2>
+            <div class="sts-actions">
+                <span class="sts-badge {{ $perilaku['baris']->every(fn ($b) => $b['siap']) ? 'is-complete' : '' }}">{{ $perilaku['baris']->where('siap', true)->count() }}/{{ $baris->count() }} lampiran diperiksa</span>
+                @if(\App\Services\Nilai\LampiranPerilakuStsService::petugas(auth()->user()))<a class="button button-muted" href="{{ route('lampiran-perilaku-sts.index', ['kegiatan_id' => $kegiatan->id, 'kelas_id' => $kelas->id]) }}">Pemeriksaan BK</a>@endif
+            </div>
+            @if($perilaku['guruBk']->isEmpty())<p class="sts-notice">Guru BK tingkat {{ $kelas->tingkat }} belum ditetapkan untuk tanggal rapor.</p>@endif
+            @if($perilaku['wakilKesiswaan']->isEmpty())<p class="sts-notice">Penandatangan Wakil Kesiswaan belum ditetapkan.</p>@endif
+        </section>
+        <section class="sts-section">
             <h2>2. Pemeriksaan nilai dan kehadiran</h2>
             <p class="sts-notice">Rekap awal mengikuti presensi sekolah. Hari presensi aktif tanpa catatan atau konfirmasi dihitung alfa setelah hari berakhir. Koreksi di sini hanya berlaku pada rapor, tidak mengubah presensi harian.</p>
             <form method="POST" action="{{ route('rapor-sts.kehadiran', [$kegiatan, $kelas]) }}" id="sts-kehadiran-form">
@@ -185,6 +194,10 @@
                             </td>
                             <td><div class="sts-report-actions"><a class="button button-muted" target="_blank" rel="noopener" aria-label="Pratinjau rapor {{ $nama }}" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'anggota_id' => $id, 'pratinjau' => 1]) }}">Pratinjau</a>
                                 @if ($item['siap'])<a class="button button-primary" data-sts-print target="_blank" rel="noopener" aria-label="Cetak rapor {{ $nama }}" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'anggota_id' => $id]) }}">Cetak rapor</a>@endif
+                                @if($perilaku['baris']->firstWhere('anggota.id', $id)['siap'] ?? false)
+                                    <a class="button button-muted" target="_blank" rel="noopener" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'anggota_id' => $id, 'pratinjau' => 1, 'perilaku' => 1]) }}">Pratinjau gabungan</a>
+                                    @if($item['siap'])<a class="button button-primary" data-sts-print target="_blank" rel="noopener" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'anggota_id' => $id, 'perilaku' => 1]) }}">Rapor + perilaku</a>@endif
+                                @else<span class="sts-original">Lampiran menunggu pemeriksaan BK.</span>@endif
                                 </div>
                             </td>
                         </tr>
@@ -263,6 +276,10 @@
                 @if ($baris->isNotEmpty())<a class="button button-muted" target="_blank" rel="noopener" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'pratinjau' => 1]) }}">Pratinjau seluruh kelas</a>@endif
                 @if ($siap > 0 && $siap === $baris->count())<a class="button button-primary" data-sts-print target="_blank" rel="noopener" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas]) }}">Cetak seluruh kelas</a>
                 @else<button class="button button-primary" disabled>Cetak seluruh kelas</button>@endif
+                @if($baris->isNotEmpty() && $perilaku['baris']->every(fn ($b) => $b['siap']))
+                    <a class="button button-muted" target="_blank" rel="noopener" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'pratinjau' => 1, 'perilaku' => 1]) }}">Pratinjau gabungan kelas</a>
+                    @if($siap === $baris->count())<a class="button button-primary" data-sts-print target="_blank" rel="noopener" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'perilaku' => 1]) }}">Cetak kelas + perilaku</a>@endif
+                @endif
             </div>
             <p class="help-text">{{ $baris->count() - $siap }} siswa belum siap cetak · A4, satu halaman per siswa.</p>
             @if ($baris->contains(fn ($item) => ! $item['nilai_tuntas']))<p class="help-text">{{ $baris->where('nilai_tuntas', false)->count() }} siswa memiliki nilai yang belum tersedia.</p>@endif
