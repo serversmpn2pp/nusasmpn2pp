@@ -141,6 +141,7 @@
         </div>
         <section class="sts-section">
             <h2>Lampiran perilaku dan pembinaan</h2>
+            <p class="help-text">Isi lampiran: {{ $perilaku['labelIsiLampiran'] }}</p>
             <div class="sts-actions">
                 <span class="sts-badge {{ $perilaku['baris']->every(fn ($b) => $b['siap']) ? 'is-complete' : '' }}">{{ $perilaku['baris']->where('siap', true)->count() }}/{{ $baris->count() }} lampiran diperiksa</span>
                 @if(\App\Services\Nilai\LampiranPerilakuStsService::petugas(auth()->user()))<a class="button button-muted" href="{{ route('lampiran-perilaku-sts.index', ['kegiatan_id' => $kegiatan->id, 'kelas_id' => $kelas->id]) }}">Pemeriksaan BK</a>@endif

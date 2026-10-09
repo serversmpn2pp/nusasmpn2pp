@@ -6,6 +6,7 @@ use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
 use App\Services\Nilai\LampiranPerilakuStsService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class LampiranPerilakuStsController extends Controller
 {
@@ -44,6 +45,20 @@ class LampiranPerilakuStsController extends Controller
 
         return redirect()->route('lampiran-perilaku-sts.index', ['kegiatan_id' => $kegiatan->id, 'kelas_id' => $kelas->id])
             ->with('berhasil', 'Lampiran perilaku siswa telah diperiksa dan disimpan.')->with('perilaku_anggota', $data['anggota_id']);
+    }
+
+    public function isi(Request $request, KegiatanUjianCbt $kegiatan, Kelas $kelas, LampiranPerilakuStsService $service)
+    {
+        $service->pastikanCakupan($request->user(), $kegiatan, $kelas);
+        $data = $request->validate([
+            'isi_lampiran_perilaku' => ['required', Rule::in(array_keys(LampiranPerilakuStsService::PILIHAN_ISI))],
+            'versi_isi_perilaku' => ['required', 'integer', 'min:0'],
+            'versi_rapor' => ['required', 'integer', 'min:0'],
+        ]);
+        $service->simpanIsi($request->user(), $kegiatan, $kelas, $data);
+
+        return redirect()->route('lampiran-perilaku-sts.index', ['kegiatan_id' => $kegiatan->id, 'kelas_id' => $kelas->id])
+            ->with('berhasil', 'Pilihan isi lampiran disimpan untuk seluruh siswa kelas '.$kelas->nama.'. Periksa kembali lampiran yang ditandai belum sesuai.');
     }
 
     public function kolektif(Request $request, KegiatanUjianCbt $kegiatan, Kelas $kelas, LampiranPerilakuStsService $service)

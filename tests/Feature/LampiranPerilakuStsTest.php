@@ -417,6 +417,168 @@ class LampiranPerilakuStsTest extends TestCase
         $this->assertDatabaseCount('lampiran_perilaku_sts', 0);
     }
 
+    public function test_mode_poin_final_hanya_mengambil_pelanggaran_disahkan_positif_termasuk_presensi_otomatis(): void
+    {
+        $d = $this->fondasi();
+        $manual = $this->kasus($d, ['tindakan_awal' => 'Poin manual sudah disahkan.']);
+        $terlambat = $this->kasus($d, ['kunci_presensi_otomatis' => 'uji-terlambat', 'jenis_presensi_otomatis' => 'terlambat',
+            'sumber_laporan' => 'absensi_otomatis', 'status' => 'diproses', 'tindakan_awal' => 'Poin terlambat otomatis.']);
+        $alfa = $this->kasus($d, ['kunci_presensi_otomatis' => 'uji-alfa', 'jenis_presensi_otomatis' => 'alfa',
+            'sumber_laporan' => 'absensi_otomatis', 'total_poin' => 25, 'status' => 'diproses', 'tindakan_awal' => 'Poin alfa otomatis.']);
+        foreach ([['status_verifikasi' => 'diajukan'], ['status_verifikasi' => 'menunggu_pengesahan_wakil'],
+            ['status_verifikasi' => 'tidak_terbukti'], ['status_verifikasi' => 'dibatalkan'], ['status' => 'dibatalkan'],
+            ['status_verifikasi' => 'ditetapkan_pembinaan', 'total_poin' => 0], ['total_poin' => 0],
+            ['jenis_laporan' => 'kejadian', 'status_verifikasi' => 'tidak_perlu', 'total_poin' => 0],
+            ['jenis_laporan' => 'pembinaan'], ['tanggal_kejadian' => '2026-10-03'], ['tanggal_kejadian' => '2026-07-31']] as $ganti) {
+            $this->kasus($d, $ganti);
+        }
+        SanksiPoinSiswa::create(['siswa_id' => $d['anggota'][0]->siswa_id, 'tahun_pelajaran_id' => $d['tahun']->id,
+            'aturan_sanksi_poin_id' => AturanSanksiPoin::first()->id, 'poin_saat_terpicu' => 55, 'status' => 'selesai', 'terpicu_pada' => '2026-09-02']);
+        $this->transaksi($d, 55, '2026-09-01');
+        $this->transaksi($d, -5, '2026-09-02');
+        $sebelum = $this->konteks($d)['baris'][0]['ringkasan'];
+        $kasusSebelum = LaporanPembinaanSiswa::orderBy('id')->get()->map->getAttributes()->all();
+        $ledgerSebelum = TransaksiPoinSiswa::orderBy('id')->get()->map->getAttributes()->all();
+        $this->actingAs($d['bk']);
+        $this->pilihIsi($d)->assertSessionHasNoErrors()->assertRedirect();
+        $k = $this->konteks($d);
+        $this->assertSame('poin_final', $k['isiLampiran']);
+        $this->assertEqualsCanonicalizing(['laporan-'.$manual->id, 'laporan-'.$terlambat->id, 'laporan-'.$alfa->id], $k['baris'][0]['sumber']->pluck('kunci')->all());
+        $this->assertSame(3, $k['baris'][0]['ringkasan']['jumlah_kejadian']);
+        foreach (['poin_masuk', 'poin_dikurangi', 'saldo'] as $key) {
+            $this->assertSame($sebelum[$key], $k['baris'][0]['ringkasan'][$key]);
+        }
+        $this->assertSame($kasusSebelum, LaporanPembinaanSiswa::orderBy('id')->get()->map->getAttributes()->all());
+        $this->assertSame($ledgerSebelum, TransaksiPoinSiswa::orderBy('id')->get()->map->getAttributes()->all());
+        $this->assertDatabaseCount('sanksi_poin_siswa', 1);
+        $this->putKolektif($d, $this->payloadKolektif($d))->assertSessionHasNoErrors();
+        $review = $this->get(route('lampiran-perilaku-sts.index'))->assertOk()->assertSeeText('Termasuk poin otomatis terlambat dan alfa.')
+            ->assertSeeText('Tidak ada pelanggaran berpoin final pada periode ini.');
+        $this->capture('pointreview', $review->getContent());
+        $print = $this->actingAs($d['admin'])->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'perilaku' => 1,
+            'isi_lampiran_perilaku' => 'semua_terverifikasi']))->assertOk()->assertSeeText('Isi lampiran: Hanya pelanggaran berpoin final')
+            ->assertSeeText('Poin manual sudah disahkan.')->assertSeeText('Poin terlambat otomatis.')->assertSeeText('Poin alfa otomatis.')
+            ->assertSeeText('Tidak ada pelanggaran berpoin final pada periode ini.');
+        $this->assertSame(3, substr_count($print->getContent(), 'data-behavior-key='));
+        $this->assertStringNotContainsString('data-behavior-key="sanksi-', $print->getContent());
+        $this->capture('pointprint', $print->getContent());
+    }
+
+    public function test_pilihan_isi_mengharuskan_pemeriksaan_ulang_meski_siswa_tidak_memiliki_kasus(): void
+    {
+        $d = $this->fondasi();
+        $this->periksa($d, 0);
+        $this->periksa($d, 1);
+        $sidikLama = $this->konteks($d)['baris']->pluck('sidik_sumber')->all();
+        $this->assertTrue($this->konteks($d)['baris']->every('siap'));
+        $this->pilihIsi($d)->assertSessionHasNoErrors();
+        $this->assertFalse($this->konteks($d)['baris']->contains('siap', true));
+        $this->assertNotSame($sidikLama, $this->konteks($d)['baris']->pluck('sidik_sumber')->all());
+        $this->actingAs($d['admin'])->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'perilaku' => 1]))
+            ->assertRedirect()->assertSessionHasErrors('cetak');
+        $this->pilihIsi($d, 'semua_terverifikasi')->assertSessionHasNoErrors();
+        $this->assertFalse($this->konteks($d)['baris']->contains('siap', true));
+        $this->assertSame(2, $d['rapor']->fresh()->versi_isi_perilaku);
+        $this->putKolektif($d, $this->payloadKolektif($d))->assertSessionHasNoErrors();
+        $this->assertTrue($this->konteks($d)['baris']->every('siap'));
+        $this->assertSame(1, $d['rapor']->fresh()->versi);
+    }
+
+    public function test_pilihan_isi_menolak_pemeriksaan_dari_mode_lama_dan_kasus_di_luar_mode(): void
+    {
+        $d = $this->fondasi();
+        $this->kasus($d);
+        $teguran = $this->kasus($d, ['status_verifikasi' => 'ditetapkan_pembinaan', 'total_poin' => 0]);
+        $lama = $this->payloadKolektif($d);
+        $this->actingAs($d['bk']);
+        $this->pilihIsi($d)->assertSessionHasNoErrors();
+        $this->putKolektif($d, $lama)->assertSessionHasErrors('lampiran');
+        $palsu = $this->payloadKolektif($d);
+        $palsu['siswa'][$d['anggota'][0]->id]['baris']['laporan-'.$teguran->id] = ['kejadian' => 'Teguran', 'tindakan' => 'Pembinaan'];
+        $this->putKolektif($d, $palsu)->assertSessionHasErrors('baris');
+        $this->assertDatabaseCount('lampiran_perilaku_sts', 0);
+        $this->putKolektif($d, $this->payloadKolektif($d))->assertSessionHasNoErrors();
+        $this->assertCount(1, LampiranPerilakuSts::where('anggota_kelas_id', $d['anggota'][0]->id)->first()->baris);
+    }
+
+    public function test_perubahan_kasus_yang_tidak_ditampilkan_tidak_membatalkan_lampiran_poin_final(): void
+    {
+        $d = $this->fondasi();
+        $valid = $this->kasus($d);
+        $teguran = $this->kasus($d, ['jenis_laporan' => 'kejadian', 'status_verifikasi' => 'tidak_perlu', 'total_poin' => 0]);
+        $this->actingAs($d['bk']);
+        $this->pilihIsi($d)->assertSessionHasNoErrors();
+        $this->periksa($d, 0);
+        $teguran->update(['tindakan_awal' => 'Pembinaan diperbarui.']);
+        $this->assertTrue($this->konteks($d)['baris'][0]['siap']);
+        $valid->update(['status_verifikasi' => 'dibatalkan', 'status' => 'dibatalkan', 'total_poin' => 0]);
+        $this->assertFalse($this->konteks($d)['baris'][0]['siap']);
+        $this->assertCount(0, $this->konteks($d)['baris'][0]['sumber']);
+    }
+
+    public function test_pilihan_isi_memvalidasi_mode_versi_periode_dan_cakupan_petugas(): void
+    {
+        $d = $this->fondasi();
+        $url = route('lampiran-perilaku-sts.isi', [$d['kegiatan'], $d['kelas']]);
+        $data = ['isi_lampiran_perilaku' => 'poin_final', 'versi_isi_perilaku' => 0, 'versi_rapor' => 1];
+        $this->actingAs($d['wali'])->put($url, $data)->assertForbidden();
+        $this->actingAs($d['bk'])->put($url, [...$data, 'isi_lampiran_perilaku' => 'palsu'])->assertSessionHasErrors('isi_lampiran_perilaku');
+        $this->put($url, [...$data, 'versi_isi_perilaku' => 2])->assertSessionHasErrors('isi_lampiran_perilaku');
+        $this->put($url, [...$data, 'versi_rapor' => 0])->assertSessionHasErrors('isi_lampiran_perilaku');
+        $kelas8 = Kelas::create(['tahun_pelajaran_id' => $d['tahun']->id, 'nama' => 'VIII.A', 'tingkat' => 8, 'aktif' => true]);
+        $this->put(route('lampiran-perilaku-sts.isi', [$d['kegiatan'], $kelas8]), $data)->assertForbidden();
+        $this->put($url, $data)->assertSessionHasNoErrors();
+        $this->put($url, $data)->assertSessionHasErrors('isi_lampiran_perilaku');
+        $this->assertSame('poin_final', $d['rapor']->fresh()->isi_lampiran_perilaku);
+        $this->assertSame($d['bk']->id, (int) $d['rapor']->fresh()->isi_perilaku_diubah_oleh_pengguna_id);
+        $this->assertNotNull($d['rapor']->fresh()->isi_perilaku_diubah_pada);
+        PenugasanGuruBkTingkat::query()->update(['tanggal_selesai' => '2026-09-01']);
+        $this->pilihIsi($d, 'semua_terverifikasi')->assertForbidden();
+        $this->assertSame('poin_final', $d['rapor']->fresh()->isi_lampiran_perilaku);
+    }
+
+    public function test_mode_awal_mempertahankan_sidik_lama_dan_simpan_pilihan_sama_tidak_membatalkan_pemeriksaan(): void
+    {
+        $d = $this->fondasi();
+        $this->kasus($d);
+        $this->periksa($d, 0);
+        $k = $this->konteks($d);
+        $r = $k['baris'][0];
+        $a = $r['anggota'];
+        $p = $k['pengaturan'];
+        $lama = hash('sha256', json_encode([$a->id, $a->kelas_id, $a->siswa_id, $a->siswa->nama_lengkap,
+            $p->tanggal_awal_presensi->toDateString(), $p->tanggal_akhir_presensi->toDateString(), $p->tanggal_rapor->toDateString(),
+            $r['sumber']->all(), $r['ringkasan'], [], [$k['guruBk']->map(fn ($pegawai) => [$pegawai->id, $pegawai->nama_lengkap, $pegawai->nip])->all(),
+                $k['wakilKesiswaan']->map(fn ($pegawai) => [$pegawai->id, $pegawai->nama_lengkap, $pegawai->nip])->all()]]));
+        $this->assertSame($lama, $r['sidik_sumber']);
+        $this->pilihIsi($d, 'semua_terverifikasi')->assertSessionHasNoErrors();
+        $this->assertTrue($this->konteks($d)['baris'][0]['siap']);
+        $this->assertSame(0, $d['rapor']->fresh()->versi_isi_perilaku);
+        $this->assertNull($d['rapor']->fresh()->isi_perilaku_diubah_oleh_pengguna_id);
+        $this->pilihIsi($d)->assertSessionHasNoErrors();
+        $this->periksa($d, 0);
+        $this->pilihIsi($d)->assertSessionHasNoErrors();
+        $this->assertSame(1, $d['rapor']->fresh()->versi_isi_perilaku);
+        $this->assertTrue($this->konteks($d)['baris'][0]['siap']);
+    }
+
+    public function test_pilihan_isi_hanya_berlaku_pada_kelas_kegiatan_dan_memerlukan_periode_tersimpan(): void
+    {
+        $d = $this->fondasi();
+        $lain = Kelas::create(['tahun_pelajaran_id' => $d['tahun']->id, 'nama' => 'VII.B', 'tingkat' => 7, 'aktif' => true]);
+        $pLain = RaporStsKelas::create(['kegiatan_ujian_cbt_id' => $d['kegiatan']->id, 'kelas_id' => $lain->id,
+            'tanggal_awal_presensi' => '2026-08-01', 'tanggal_akhir_presensi' => '2026-10-02', 'tanggal_rapor' => '2026-10-02']);
+        $this->actingAs($d['wakil']);
+        $this->pilihIsi($d)->assertSessionHasNoErrors();
+        $this->assertSame('semua_terverifikasi', $pLain->fresh()->isi_lampiran_perilaku);
+        $this->assertSame(0, $pLain->fresh()->versi_isi_perilaku);
+        $this->assertSame('semua_terverifikasi', app(LampiranPerilakuStsService::class)->konteks($d['kegiatan'], $lain)['isiLampiran']);
+        $pLain->delete();
+        $this->put(route('lampiran-perilaku-sts.isi', [$d['kegiatan'], $lain]), ['isi_lampiran_perilaku' => 'poin_final',
+            'versi_isi_perilaku' => 0, 'versi_rapor' => 0])->assertSessionHasErrors('isi_lampiran_perilaku');
+        $this->assertDatabaseCount('rapor_sts_kelas', 1);
+    }
+
     private function fondasi(): array
     {
         $admin = Pengguna::create(['nama' => 'Admin', 'username' => 'admin-perilaku', 'kata_sandi' => 'test-pass', 'peran' => 'administrator', 'aktif' => true, 'wajib_ganti_kata_sandi' => false]);
@@ -502,6 +664,15 @@ class LampiranPerilakuStsTest extends TestCase
         unset($data['siswa']);
 
         return $this->put(route('lampiran-perilaku-sts.kolektif', [$d['kegiatan'], $d['kelas']]), $data);
+    }
+
+    private function pilihIsi(array $d, string $isi = 'poin_final'): TestResponse
+    {
+        $p = $d['rapor']->fresh();
+
+        return $this->put(route('lampiran-perilaku-sts.isi', [$d['kegiatan'], $d['kelas']]), [
+            'isi_lampiran_perilaku' => $isi, 'versi_isi_perilaku' => $p->versi_isi_perilaku, 'versi_rapor' => $p->versi,
+        ]);
     }
 
     private function url(array $d): string

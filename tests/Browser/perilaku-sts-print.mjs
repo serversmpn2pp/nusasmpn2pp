@@ -11,12 +11,16 @@ const output = resolve('storage/logs/perilaku-sts-audit');
 await mkdir(output, {recursive: true});
 try {
     const context = await browser.newContext();
-    const page = await context.newPage(), errors = [], pages = {};
+    const page = await context.newPage(), errors = [], pages = {}, contentRequests = [];
     page.on('pageerror', error => errors.push(error.message));
     await context.route('**/*', async route => {
         const url = new URL(route.request().url());
         const name = url.pathname.match(/^\/audit\/([a-z]+)$/)?.[1];
         if (name) return route.fulfill({contentType: 'text/html', body: await readFile(`storage/framework/testing/perilaku-sts/${name}.html`, 'utf8')});
+        if (/\/lampiran-perilaku-sts\/[^/]+\/[^/]+\/isi$/.test(url.pathname)) {
+            contentRequests.push(Object.fromEntries(new URLSearchParams(route.request().postData())));
+            return route.fulfill({status: 303, headers: {location: '/audit/pointreview'}, body: ''});
+        }
         if (/\/rapor-sts\/.*\/cetak$/.test(url.pathname) && url.searchParams.get('perilaku') === '1' && url.searchParams.get('pratinjau') === '1') {
             return route.fulfill({contentType: 'text/html', body: await readFile('storage/framework/testing/perilaku-sts/combinedpreview.html', 'utf8')});
         }
@@ -28,6 +32,8 @@ try {
     for (const width of [360, 768, 1366]) {
         await page.setViewportSize({width, height: 1000});
         await page.goto('http://localhost/audit/review');
+        assert.equal(await page.locator('#behavior-content-choice').inputValue(), 'semua_terverifikasi');
+        assert.equal(await page.locator('#behavior-content-choice option').count(), 2);
         const student = page.locator('[data-behavior-student]').first();
         await student.evaluate(el => { el.open = true; });
         const form = student.locator('form');
@@ -125,15 +131,50 @@ try {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Luapan rekap @${width}`);
         await page.screenshot({path: `${output}/index-${width}.png`});
     }
+    await page.goto('http://localhost/audit/review');
+    await page.locator('[data-behavior-student]').first().evaluate(el => { el.open = true; });
+    await page.locator('.behavior-form textarea[name=catatan]').first().fill('Koreksi yang belum disimpan');
+    await page.locator('#behavior-content-choice').selectOption('poin_final');
+    page.once('dialog', dialog => dialog.dismiss());
+    await page.locator('#behavior-content-form button').click();
+    assert.equal(contentRequests.length, 0, 'Batalkan pergantian isi agar koreksi tidak hilang');
+    page.once('dialog', dialog => dialog.accept());
+    const contentNavigation = page.waitForURL('**/audit/pointreview');
+    await page.locator('#behavior-content-form button').click();
+    await contentNavigation;
+    assert.equal(contentRequests.length, 1);
+    assert.equal(contentRequests[0]._method, 'PUT');
+    assert.equal(contentRequests[0].isi_lampiran_perilaku, 'poin_final');
+    assert.equal(contentRequests[0].versi_isi_perilaku, '0');
+    assert.equal(contentRequests[0].versi_rapor, '1');
+    for (const width of [360, 768, 1366]) {
+        await page.setViewportSize({width, height: 1000});
+        await page.goto('http://localhost/audit/pointreview');
+        assert.equal(await page.locator('#behavior-content-choice').inputValue(), 'poin_final');
+        assert.ok((await page.locator('.behavior-content-state').textContent()).includes('Termasuk poin otomatis terlambat dan alfa.'));
+        await page.locator('[data-behavior-student]').first().evaluate(el => { el.open = true; });
+        assert.equal(await page.locator('.behavior-table tbody tr').count(), 3, 'Hanya tiga pelanggaran berpoin final');
+        await page.locator('[data-behavior-student]').last().evaluate(el => { el.open = true; });
+        assert.equal((await page.locator('.behavior-empty').textContent()).trim(), 'Tidak ada pelanggaran berpoin final pada periode ini.');
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Luapan poin final @${width}`);
+        await page.evaluate(() => {
+            document.querySelectorAll('*').forEach(el => { if (el.scrollTop) el.scrollTop = 0; });
+            window.scrollTo(0, 0);
+        });
+        await page.screenshot({path: `${output}/point-review-${width}.png`, fullPage: true});
+    }
     await page.setViewportSize({width: 1366, height: 1000});
-    for (const name of ['individual', 'class', 'preview', 'long']) {
+    for (const name of ['individual', 'class', 'preview', 'long', 'pointprint']) {
         await page.goto(`http://localhost/audit/${name}`);
         await page.evaluate(() => document.fonts.ready);
         assert.ok(await page.locator('img').evaluateAll(els => els.every(el => el.complete && el.naturalWidth > 0)), `Logo ${name}`);
         const sheets = await page.locator('.sheet').count();
         assert.deepEqual(await page.locator('.behavior-print').first().locator('th').allTextContents(), ['No.', 'Tanggal', 'Kejadian / pelanggaran', 'Teguran / tindak lanjut', 'Poin']);
-        assert.equal(await page.locator('[data-behavior-key]').count(), name === 'long' ? 28 : 1, `Tidak ada kasus terpotong ${name}`);
-        if (name === 'class' || name === 'preview') {
+        assert.equal(await page.locator('[data-behavior-key]').count(), name === 'long' ? 28 : name === 'pointprint' ? 3 : 1, `Tidak ada kasus terpotong ${name}`);
+        if (name === 'pointprint') {
+            assert.ok((await page.locator('.behavior-period').first().textContent()).includes('Hanya pelanggaran berpoin final'));
+        }
+        if (name === 'class' || name === 'preview' || name === 'pointprint') {
             assert.deepEqual(await page.locator('.sheet').evaluateAll(els => els.map(el => el.hasAttribute('data-behavior-sheet'))), [false, true, false, true]);
         }
         await page.emulateMedia({media: 'print'});
@@ -156,5 +197,5 @@ try {
         await page.emulateMedia({media: 'screen'});
     }
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({result: 'passed', pages, checks: ['BK-confirmation', 'collective-selection', 'collective-confirmation', 'unsaved-edits', 'shared-signers', 'preview-button-fit', 'combined-preview', 'status-column-removed', 'desktop-mobile', 'parent-safe-summary', 'logos', 'student-page-order', 'long-cases', 'no-clipping', 'A4']}));
+    console.log(JSON.stringify({result: 'passed', pages, checks: ['class-content-setting', 'final-points-and-auto-attendance', 'content-change-confirmation', 'filtered-review-and-print', 'BK-confirmation', 'collective-selection', 'collective-confirmation', 'unsaved-edits', 'shared-signers', 'preview-button-fit', 'combined-preview', 'status-column-removed', 'desktop-mobile', 'parent-safe-summary', 'logos', 'student-page-order', 'long-cases', 'no-clipping', 'A4']}));
 } finally { await browser.close(); }

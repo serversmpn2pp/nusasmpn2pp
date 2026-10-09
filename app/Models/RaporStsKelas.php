@@ -9,9 +9,11 @@ class RaporStsKelas extends Model
 {
     protected $table = 'rapor_sts_kelas';
 
-    protected $fillable = ['kegiatan_ujian_cbt_id', 'kelas_id', 'tanggal_awal_presensi', 'tanggal_akhir_presensi', 'tanggal_rapor', 'versi', 'diubah_oleh_pengguna_id'];
+    protected $fillable = ['kegiatan_ujian_cbt_id', 'kelas_id', 'tanggal_awal_presensi', 'tanggal_akhir_presensi', 'tanggal_rapor', 'versi', 'diubah_oleh_pengguna_id',
+        'isi_lampiran_perilaku', 'versi_isi_perilaku', 'isi_perilaku_diubah_pada', 'isi_perilaku_diubah_oleh_pengguna_id'];
 
-    protected $casts = ['tanggal_awal_presensi' => 'date', 'tanggal_akhir_presensi' => 'date', 'tanggal_rapor' => 'date', 'versi' => 'integer'];
+    protected $casts = ['tanggal_awal_presensi' => 'date', 'tanggal_akhir_presensi' => 'date', 'tanggal_rapor' => 'date', 'versi' => 'integer',
+        'versi_isi_perilaku' => 'integer', 'isi_perilaku_diubah_pada' => 'datetime'];
 
     public function kehadiran(): HasMany
     {

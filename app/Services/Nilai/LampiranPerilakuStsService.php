@@ -21,6 +21,11 @@ use Illuminate\Validation\ValidationException;
 
 class LampiranPerilakuStsService
 {
+    public const PILIHAN_ISI = [
+        'semua_terverifikasi' => 'Semua catatan terverifikasi',
+        'poin_final' => 'Hanya pelanggaran berpoin final',
+    ];
+
     public static function petugas(?Pengguna $pengguna): bool
     {
         return (bool) ($pengguna?->aktif && ! $pengguna->akunSiswa() && ! $pengguna->akunOrangTua()
@@ -50,6 +55,11 @@ class LampiranPerilakuStsService
     public function konteks(KegiatanUjianCbt $kegiatan, Kelas $kelas): array
     {
         $pengaturan = app(RaporStsService::class)->pengaturan($kegiatan, $kelas);
+        $isiLampiran = $pengaturan->isi_lampiran_perilaku ?? 'semua_terverifikasi';
+        $hanyaPoinFinal = $isiLampiran === 'poin_final';
+        $labelIsiLampiran = self::PILIHAN_ISI[$isiLampiran];
+        $pesanKosong = $hanyaPoinFinal ? 'Tidak ada pelanggaran berpoin final pada periode ini.'
+            : 'Tidak ada catatan pelanggaran terverifikasi pada periode ini.';
         $anggota = $kelas->anggotaKelas()->with('siswa')->where('status_keanggotaan', 'aktif')
             ->orderByRaw('nomor_absen IS NULL')->orderBy('nomor_absen')->orderBy('id')->get();
         $siswaIds = $anggota->pluck('siswa_id');
@@ -59,13 +69,14 @@ class LampiranPerilakuStsService
         $laporan = LaporanPembinaanSiswa::query()->where('tahun_pelajaran_id', $kegiatan->tahun_pelajaran_id)
             ->whereIn('siswa_id', $siswaIds)->where('status', '!=', 'dibatalkan')
             ->whereBetween('tanggal_kejadian', [$awal, $akhir->toDateString()])
-            ->where(fn ($q) => $q->whereIn('status_verifikasi', ['disahkan', 'ditetapkan_pembinaan'])
-                ->orWhere(fn ($q) => $q->where('jenis_laporan', 'kejadian')->where('status', 'selesai')->where('status_verifikasi', 'tidak_perlu')))
+            ->when($hanyaPoinFinal, fn ($q) => $q->where('jenis_laporan', 'pelanggaran')->where('status_verifikasi', 'disahkan')->where('total_poin', '>', 0),
+                fn ($q) => $q->where(fn ($q) => $q->whereIn('status_verifikasi', ['disahkan', 'ditetapkan_pembinaan'])
+                    ->orWhere(fn ($q) => $q->where('jenis_laporan', 'kejadian')->where('status', 'selesai')->where('status_verifikasi', 'tidak_perlu'))))
             ->with(['butirPelanggaranLaporan', 'kategoriPembinaanSiswa',
                 'tindakLanjutPembinaanSiswa' => fn ($q) => $q->where('jenis_tindak_lanjut', 'keputusan_akhir')
                     ->whereDate('tanggal_tindak_lanjut', '<=', $akhir)->orderBy('tanggal_tindak_lanjut')->orderBy('id')])
             ->orderBy('tanggal_kejadian')->orderBy('id')->get()->groupBy('siswa_id');
-        $sanksi = SanksiPoinSiswa::with('aturanSanksiPoin')->where('tahun_pelajaran_id', $kegiatan->tahun_pelajaran_id)
+        $sanksi = $hanyaPoinFinal ? collect() : SanksiPoinSiswa::with('aturanSanksiPoin')->where('tahun_pelajaran_id', $kegiatan->tahun_pelajaran_id)
             ->whereIn('siswa_id', $siswaIds)->where('status', '!=', 'dibatalkan')
             ->whereBetween('terpicu_pada', [$pengaturan->tanggal_awal_presensi->copy()->startOfDay(), $akhir])
             ->orderBy('terpicu_pada')->orderBy('id')->get()->groupBy('siswa_id');
@@ -78,7 +89,7 @@ class LampiranPerilakuStsService
             ->filter(fn ($p) => $p->pengguna?->aktif && $p->pengguna->memilikiPeran('wakil_pimpinan_kesiswaan'))->values();
         $penandatangan = [$guruBk->map(fn ($p) => [$p->id, $p->nama_lengkap, $p->nip])->all(),
             $wakilKesiswaan->map(fn ($p) => [$p->id, $p->nama_lengkap, $p->nip])->all()];
-        $baris = $anggota->map(function ($a) use ($laporan, $sanksi, $transaksi, $tersimpan, $pengaturan, $penandatangan, $awal) {
+        $baris = $anggota->map(function ($a) use ($laporan, $sanksi, $transaksi, $tersimpan, $pengaturan, $penandatangan, $awal, $isiLampiran) {
             $kasus = $laporan->get($a->siswa_id, collect());
             $hukuman = $sanksi->get($a->siswa_id, collect());
             $ledger = $transaksi->get($a->siswa_id, collect());
@@ -100,10 +111,15 @@ class LampiranPerilakuStsService
                 'tindakan' => 'Tindak lanjut akumulasi poin', 'poin' => null, 'status' => $s->labelStatus(),
                 'sidik' => [$s->updated_at?->toJSON(), $s->aturanSanksiPoin?->updated_at?->toJSON()]]))
                 ->sortBy(fn ($r) => $r['tanggal'].'-'.$r['kunci'])->values();
-            $sidik = hash('sha256', json_encode([$a->id, $a->kelas_id, $a->siswa_id, $a->siswa->nama_lengkap,
+            $dataSidik = [$a->id, $a->kelas_id, $a->siswa_id, $a->siswa->nama_lengkap,
                 $pengaturan->tanggal_awal_presensi->toDateString(), $pengaturan->tanggal_akhir_presensi->toDateString(),
                 $pengaturan->tanggal_rapor->toDateString(), $sumber->all(), $ringkasan,
-                $ledger->map(fn ($t) => [$t->id, $t->poin, $t->tercatat_pada->toJSON()])->all(), $penandatangan]));
+                $ledger->map(fn ($t) => [$t->id, $t->poin, $t->tercatat_pada->toJSON()])->all(), $penandatangan];
+            // Existing reviews keep their fingerprint until the class changes its content setting.
+            if ($isiLampiran !== 'semua_terverifikasi' || $pengaturan->versi_isi_perilaku > 0) {
+                $dataSidik[] = [$isiLampiran, (int) $pengaturan->versi_isi_perilaku];
+            }
+            $sidik = hash('sha256', json_encode($dataSidik));
             $simpan = $tersimpan->get($a->id);
             $siap = $simpan && hash_equals($simpan->sidik_sumber, $sidik);
 
@@ -112,7 +128,36 @@ class LampiranPerilakuStsService
                 'baris' => $siap ? collect($simpan->baris) : $sumber->map(fn ($r) => collect($r)->except('sidik')->all())];
         });
 
-        return compact('kegiatan', 'kelas', 'pengaturan', 'guruBk', 'wakilKesiswaan', 'baris');
+        return compact('kegiatan', 'kelas', 'pengaturan', 'guruBk', 'wakilKesiswaan', 'baris', 'isiLampiran', 'labelIsiLampiran', 'pesanKosong');
+    }
+
+    public function simpanIsi(Pengguna $pengguna, KegiatanUjianCbt $kegiatan, Kelas $kelas, array $data): void
+    {
+        $this->pastikanCakupan($pengguna, $kegiatan, $kelas);
+        DB::transaction(function () use ($pengguna, $kegiatan, $kelas, $data) {
+            Kelas::whereKey($kelas->id)->lockForUpdate()->firstOrFail();
+            $konteks = $this->konteks($kegiatan, $kelas);
+            $p = $konteks['pengaturan'];
+            $this->pastikanPetugasKonteks($pengguna, $konteks);
+            if (! $p->exists) {
+                throw ValidationException::withMessages(['isi_lampiran_perilaku' => 'Periode rapor harus disimpan oleh wali kelas terlebih dahulu.']);
+            }
+            if ((int) $p->versi_isi_perilaku !== (int) $data['versi_isi_perilaku'] || (int) $p->versi !== (int) $data['versi_rapor']) {
+                throw ValidationException::withMessages(['isi_lampiran_perilaku' => 'Pilihan isi atau periode rapor sudah berubah. Muat ulang halaman sebelum menyimpan.']);
+            }
+            if ($p->isi_lampiran_perilaku !== $data['isi_lampiran_perilaku']) {
+                $p->update(['isi_lampiran_perilaku' => $data['isi_lampiran_perilaku'], 'versi_isi_perilaku' => $p->versi_isi_perilaku + 1,
+                    'isi_perilaku_diubah_pada' => now(), 'isi_perilaku_diubah_oleh_pengguna_id' => $pengguna->id]);
+            }
+        });
+    }
+
+    private function pastikanPetugasKonteks(Pengguna $pengguna, array $konteks): void
+    {
+        if (! $pengguna->administrator() && ! $pengguna->memilikiIzin('poin_siswa.sahkan_wakil')
+            && ! $konteks['guruBk']->contains('id', (int) $pengguna->pegawai_id)) {
+            abort(403);
+        }
     }
 
     public function simpan(Pengguna $pengguna, KegiatanUjianCbt $kegiatan, Kelas $kelas, array $data): void
@@ -143,10 +188,7 @@ class LampiranPerilakuStsService
                     throw ValidationException::withMessages([$field => 'Penandatangan tidak sesuai penugasan aktif pada periode rapor.']);
                 }
             }
-            if (! $pengguna->administrator() && ! $pengguna->memilikiIzin('poin_siswa.sahkan_wakil')
-                && ! $konteks['guruBk']->contains('id', (int) $pengguna->pegawai_id)) {
-                abort(403);
-            }
+            $this->pastikanPetugasKonteks($pengguna, $konteks);
             // One class context and one transaction keep collective reviews consistent and atomic.
             $daftar = $konteks['baris']->keyBy('anggota.id');
             foreach ($dipilih as $id) {

@@ -25,6 +25,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -314,11 +315,17 @@ class LaporanPembinaanSiswaController extends Controller
             ->get()
             ->filter(fn ($laporan) => $this->aksesLaporan->bolehLihat($request->user(), $laporan));
 
+        $fotoSiswa = $laporanPembinaanSiswa->siswa?->foto;
+        $fotoSiswaUrl = filled($fotoSiswa) && Storage::disk('public')->exists($fotoSiswa)
+            ? asset('storage/'.$fotoSiswa)
+            : null;
+
         return view('laporan-pembinaan-siswa.show', compact(
             'laporanPembinaanSiswa', 'bolehKelolaFakta', 'bolehMencatatKlarifikasi',
             'bolehMemprosesBk', 'modeBacaBk', 'bolehMengubahLaporan',
             'daftarSiswaSaksi', 'daftarPegawaiSaksi', 'daftarJenisPelanggaranKeputusan', 'laporanMirip',
             'konteksGuruWali', 'konteksLaporanSaya', 'konteksWaliKelas',
+            'fotoSiswaUrl',
         ));
     }
 

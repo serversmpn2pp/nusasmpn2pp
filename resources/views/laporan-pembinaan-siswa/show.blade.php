@@ -23,6 +23,8 @@
     @endphp
 
     <style>
+        .laporan-student-avatar img { display:block; object-fit:contain; }
+        .laporan-student-avatar [hidden] { display:none; }
         .point-summary { background:var(--primary); color:#fff; display:grid; gap:14px; grid-template-columns:1fr auto; }
         .point-summary strong { color:var(--secondary); font-size:38px; }
         .violation-detail-list,.decision-list,.follow-up-list { display:grid; gap:12px; margin-top:16px; }
@@ -98,7 +100,16 @@
 
     <div class="detail-shell">
         <aside class="panel panel-pad">
-            <div class="detail-profile"><div class="avatar avatar-lg">{{ str($laporanPembinaanSiswa->siswa?->nama_lengkap)->substr(0,2)->upper() }}</div><h2>{{ $laporanPembinaanSiswa->siswa?->nama_lengkap }}</h2><p>NISN {{ $laporanPembinaanSiswa->siswa?->nisn ?: '-' }}</p></div>
+            <div class="detail-profile">
+                <div class="avatar avatar-lg laporan-student-avatar" data-student-avatar>
+                    @if($fotoSiswaUrl)
+                        <img src="{{ $fotoSiswaUrl }}" alt="Foto {{ $laporanPembinaanSiswa->siswa?->nama_lengkap }}" width="144" height="144" decoding="async" data-student-photo>
+                    @endif
+                    <span data-student-photo-fallback @if($fotoSiswaUrl) hidden @endif>{{ str($laporanPembinaanSiswa->siswa?->nama_lengkap)->substr(0,2)->upper() }}</span>
+                </div>
+                <h2>{{ $laporanPembinaanSiswa->siswa?->nama_lengkap }}</h2>
+                <p>NISN {{ $laporanPembinaanSiswa->siswa?->nisn ?: '-' }}</p>
+            </div>
             <dl class="quick-facts" style="margin-top:20px"><div><dt>Kelas</dt><dd>{{ $laporanPembinaanSiswa->kelas?->nama ?: '-' }}</dd></div><div><dt>Tahun</dt><dd>{{ $laporanPembinaanSiswa->tahunPelajaran?->nama ?: '-' }}</dd></div><div><dt>Wali kelas</dt><dd>{{ $laporanPembinaanSiswa->waliKelasPegawai?->nama_lengkap ?: 'Belum ditentukan' }}</dd></div><div><dt>Guru wali</dt><dd>{{ $laporanPembinaanSiswa->guruWaliPegawai?->nama_lengkap ?: 'Belum ditugaskan' }}</dd></div></dl>
             @if($bolehKoreksiPoinPresensi && !$laporanPembinaanSiswa->poin_dikecualikan_pada)
                 <form method="POST" action="{{ route('poin-presensi.koreksi', $laporanPembinaanSiswa) }}" style="border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px;" onsubmit="return confirm('Terima alasan siswa dan batalkan poin kejadian ini?')">
@@ -239,6 +250,13 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded',()=>{
+            const photo=document.querySelector('[data-student-photo]');
+            if(photo){
+                const fallback=document.querySelector('[data-student-photo-fallback]');
+                const showInitials=()=>{photo.hidden=true;fallback.hidden=false};
+                photo.addEventListener('error',showInitials);
+                if(photo.complete&&photo.naturalWidth===0)showInitials();
+            }
             const type=document.querySelector('[data-witness-type]');
             if(type){const student=document.querySelector('[data-witness-student]');const employee=document.querySelector('[data-witness-employee]');const other=document.querySelector('[data-witness-other]');const update=()=>{student.hidden=type.value!=='siswa';employee.hidden=type.value!=='pegawai';other.hidden=type.value!=='lainnya';student.querySelector('select').required=type.value==='siswa';employee.querySelector('select').required=type.value==='pegawai';other.querySelector('input').required=type.value==='lainnya'};type.addEventListener('change',update);update()}
 

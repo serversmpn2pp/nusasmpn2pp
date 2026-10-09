@@ -11,6 +11,10 @@
         .behavior-select { padding-top:4px; }
         .behavior-bulk { padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
         .behavior-bulk h2 { font-size:1.05rem; margin:0 0 18px; }
+        .behavior-content { padding:18px 0; border-top:1px solid var(--line); }
+        .behavior-content h2 { font-size:1.05rem; margin:0 0 16px; }
+        .behavior-content-grid { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:end; }
+        .behavior-content-state { margin:12px 0 0; color:var(--muted); font-size:.85rem; line-height:1.5; }
         .behavior-selection { display:flex; align-items:center; flex-wrap:wrap; gap:12px 24px; }
         .behavior-selection output { font-size:.85rem; color:var(--muted); }
         .behavior-actions .behavior-check { flex:1 1 300px; }
@@ -34,7 +38,7 @@
         .behavior-notice { margin:16px 0; padding:12px 16px; border-left:3px solid #bf8a23; background:#fff9eb; font-size:.85rem; line-height:1.5; }
         .behavior-empty { padding:20px 0; color:var(--muted); }
         .behavior-audit { font-size:.8rem; color:var(--muted); margin-top:14px; }
-        @media(max-width:640px) { .behavior-filters,.behavior-grid { grid-template-columns:minmax(0,1fr); } .behavior-actions .button { width:100%; } .behavior-state { margin:8px 0 0; } }
+        @media(max-width:640px) { .behavior-filters,.behavior-grid,.behavior-content-grid { grid-template-columns:minmax(0,1fr); } .behavior-actions .button { width:100%; } .behavior-state { margin:8px 0 0; } }
     </style>
     <div class="page-header"><div><p class="eyebrow">Kesiswaan & BK</p><h1 class="page-title">Lampiran Perilaku STS</h1></div></div>
     <form method="GET" class="behavior-filters" action="{{ route('lampiran-perilaku-sts.index') }}">
@@ -57,6 +61,20 @@
         @if(!$pengaturan->tanggal_akhir_presensi->copy()->endOfDay()->isPast())<p class="behavior-notice">Pemeriksaan dapat disahkan setelah batas periode laporan berakhir.</p>@endif
         @if($konteks['guruBk']->isEmpty())<p class="behavior-notice">Belum ada Guru BK aktif yang ditugaskan untuk tingkat {{ $kelas->tingkat }} pada tanggal rapor.</p>@endif
         @if($konteks['wakilKesiswaan']->isEmpty())<p class="behavior-notice">Belum ada pegawai aktif dengan peran Wakil Kepala Sekolah Bidang Kesiswaan.</p>@endif
+        <section class="behavior-content">
+            <h2>Isi lampiran · {{ $kelas->nama }}</h2>
+            <form id="behavior-content-form" class="behavior-content-grid" method="POST" action="{{ route('lampiran-perilaku-sts.isi', [$kegiatan, $kelas]) }}">
+                @csrf @method('PUT')
+                <input type="hidden" name="versi_isi_perilaku" value="{{ $pengaturan->versi_isi_perilaku ?? 0 }}">
+                <input type="hidden" name="versi_rapor" value="{{ $pengaturan->versi }}">
+                <div class="field"><label for="behavior-content-choice">Catatan yang ditampilkan</label><select class="select" id="behavior-content-choice" name="isi_lampiran_perilaku" required @disabled(!$pengaturan->exists)>
+                    @foreach(\App\Services\Nilai\LampiranPerilakuStsService::PILIHAN_ISI as $kode => $label)<option value="{{ $kode }}" @selected(old('isi_lampiran_perilaku', $konteks['isiLampiran']) === $kode)>{{ $label }}</option>@endforeach
+                </select></div>
+                <button class="button button-muted" @disabled(!$pengaturan->exists)>Simpan pilihan</button>
+            </form>
+            <p class="behavior-content-state">Pilihan tersimpan: <strong>{{ $konteks['labelIsiLampiran'] }}</strong>@if($konteks['isiLampiran'] === 'poin_final') · Termasuk poin otomatis terlambat dan alfa.@endif</p>
+            @if($pengaturan->isi_perilaku_diubah_pada)<p class="behavior-audit">Diperbarui {{ $pengaturan->isi_perilaku_diubah_pada->format('d-m-Y H:i') }}</p>@endif
+        </section>
         @if($konteks['baris']->isNotEmpty())
             <form id="behavior-bulk-form" class="behavior-bulk" method="POST" action="{{ route('lampiran-perilaku-sts.kolektif', [$kegiatan, $kelas]) }}">
                 @csrf @method('PUT')
@@ -108,7 +126,7 @@
                                 <td>{{ $r['poin'] ?: '—' }}</td></tr>
                         @endforeach
                         </tbody></table></div>
-                    @else<p class="behavior-empty">Tidak ada catatan pelanggaran terverifikasi pada periode ini.</p>@endif
+                    @else<p class="behavior-empty">{{ $konteks['pesanKosong'] }}</p>@endif
                     <div class="behavior-summary"><div><span>Poin masuk</span> <strong>{{ $item['ringkasan']['poin_masuk'] }}</strong></div><div><span>Pengurangan / koreksi</span> <strong>{{ $item['ringkasan']['poin_dikurangi'] }}</strong></div><div><span>Saldo sampai batas laporan</span> <strong>{{ $item['ringkasan']['saldo'] }}</strong></div></div>
                     <div class="field behavior-note"><label for="behavior-note-{{ $id }}">Catatan pembinaan untuk orang tua</label><textarea class="input" id="behavior-note-{{ $id }}" name="catatan" maxlength="600" @disabled($disabled)>{{ old($oldPrefix.'catatan', $simpan?->catatan) }}</textarea></div>
                     <div class="behavior-actions"><label class="behavior-check"><input type="checkbox" name="diperiksa" value="1" required @disabled($disabled)> Ringkasan dan tindak lanjut telah diperiksa serta layak disampaikan kepada orang tua.</label><button class="button button-primary" @disabled($disabled)>Simpan pemeriksaan</button></div>
@@ -124,6 +142,15 @@
             this.form.submit();
         });
         let dirty = false;
+        const contentForm = document.getElementById('behavior-content-form');
+        contentForm?.addEventListener('input', () => { dirty = true; });
+        contentForm?.addEventListener('submit', event => {
+            if (dirty && !window.confirm('Pilihan isi berlaku untuk seluruh siswa kelas ini. Lampiran perlu diperiksa ulang jika pilihan berubah. Koreksi yang belum disimpan akan hilang. Lanjutkan?')) {
+                event.preventDefault();
+                return;
+            }
+            dirty = false;
+        });
         document.querySelectorAll('.behavior-form').forEach(form => {
             form.addEventListener('input', () => {
                 dirty = true;

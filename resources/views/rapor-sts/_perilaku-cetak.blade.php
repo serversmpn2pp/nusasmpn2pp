@@ -12,14 +12,14 @@
         </header>
         <div class="header-rule" aria-hidden="true"></div>
         <section class="identity" aria-label="Identitas siswa"><span class="identity-label">Nama siswa</span><span class="identity-value">: {{ $item['anggota']->siswa->nama_lengkap }}</span><span class="identity-label identity-class-label">Kelas</span><span class="identity-value">: {{ $kelas->nama }}</span></section>
-        <p class="behavior-period">Periode laporan: {{ $pengaturan->tanggal_awal_presensi->format('d-m-Y') }} s.d. {{ $pengaturan->tanggal_akhir_presensi->format('d-m-Y') }} · Lampiran {{ $loop->iteration }}/{{ $halamanPerilaku->count() }}</p>
+        <p class="behavior-period">Periode laporan: {{ $pengaturan->tanggal_awal_presensi->format('d-m-Y') }} s.d. {{ $pengaturan->tanggal_akhir_presensi->format('d-m-Y') }} · Lampiran {{ $loop->iteration }}/{{ $halamanPerilaku->count() }}<br>Isi lampiran: {{ $lampiran['labelIsiLampiran'] }}</p>
         <table class="grades behavior-print">
             <colgroup><col style="width:6%"><col style="width:14%"><col style="width:36%"><col style="width:36%"><col style="width:8%"></colgroup>
             <thead><tr><th>No.</th><th>Tanggal</th><th>Kejadian / pelanggaran</th><th>Teguran / tindak lanjut</th><th>Poin</th></tr></thead>
             <tbody>
                 @forelse($daftar as $r)
                     <tr data-behavior-key="{{ $r['kunci'] }}"><td class="number">{{ $perilakuSiswa['baris']->search(fn ($b) => $b['kunci'] === $r['kunci']) + 1 }}</td><td>{{ \Carbon\Carbon::parse($r['tanggal'])->format('d-m-Y') }}</td><td>{{ $r['kejadian'] }}</td><td>{{ $r['tindakan'] }}</td><td class="score">{{ $r['poin'] ?: '—' }}</td></tr>
-                @empty<tr><td colspan="5">{{ $perilakuSiswa['baris']->isEmpty() ? 'Tidak ada catatan pelanggaran terverifikasi pada periode ini.' : 'Lanjutan ringkasan dan catatan pembinaan.' }}</td></tr>@endforelse
+                @empty<tr><td colspan="5">{{ $perilakuSiswa['baris']->isEmpty() ? $lampiran['pesanKosong'] : 'Lanjutan ringkasan dan catatan pembinaan.' }}</td></tr>@endforelse
             </tbody>
         </table>
         @if($loop->last)
