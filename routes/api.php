@@ -156,6 +156,7 @@ Route::prefix('v1')
     ])
     ->group(function () {
         require __DIR__.'/api_humas.php';
+        require __DIR__.'/api_persuratan.php';
 
         Route::get('/beranda', BerandaController::class)
             ->middleware('izin:beranda.akses')

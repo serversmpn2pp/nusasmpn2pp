@@ -27,13 +27,15 @@ class MenuApiTest extends TestCase
         $response = $this->withToken($this->token($administrator))
             ->getJson(route('api.v1.menu'))
             ->assertOk()
-            ->assertJsonPath('data.jumlah_menu', 90)
-            ->assertJsonCount(8, 'data.kelompok')
+            ->assertJsonPath('data.jumlah_menu', 93)
+            ->assertJsonCount(9, 'data.kelompok')
             ->assertJsonPath('data.kelompok.0.kode', 'data-sekolah')
             ->assertJsonPath('data.kelompok.0.items.0.kode', 'tahun-pelajaran')
             ->assertJsonPath('data.kelompok.6.kode', 'humas')
-            ->assertJsonPath('data.kelompok.7.kode', 'sistem')
-            ->assertJsonPath('data.kelompok.7.items.5.kode', 'backup-restore')
+            ->assertJsonPath('data.kelompok.7.kode', 'persuratan-arsip')
+            ->assertJsonCount(3, 'data.kelompok.7.items')
+            ->assertJsonPath('data.kelompok.8.kode', 'sistem')
+            ->assertJsonPath('data.kelompok.8.items.5.kode', 'backup-restore')
             ->assertJsonFragment([
                 'kode' => 'pusat-cbt',
                 'label' => 'Ujian & Asesmen',

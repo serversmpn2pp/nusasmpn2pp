@@ -204,6 +204,12 @@ class MenuMobileService
 
     private function bolehDilihat(array $item, Pengguna $pengguna): bool
     {
+        if (($item['persuratan_only'] ?? false)
+            && (! $pengguna->aktif || $pengguna->akunSiswa() || $pengguna->akunOrangTua()
+                || ! ($pengguna->administrator() || ($pengguna->akunPegawai() && $pengguna->pegawai?->aktif)))) {
+            return false;
+        }
+
         if (($item['staff_only'] ?? false)
             && ($pengguna->akunOrangTua() || $pengguna->akunSiswa())) {
             return false;
