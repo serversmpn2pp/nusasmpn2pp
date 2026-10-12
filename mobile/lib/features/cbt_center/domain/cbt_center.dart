@@ -85,6 +85,7 @@ class CbtFlow {
     required this.title,
     required this.description,
     required this.color,
+    this.steps = const [],
   });
 
   factory CbtFlow.fromJson(Map<String, dynamic> json) => CbtFlow(
@@ -92,12 +93,14 @@ class CbtFlow {
     title: json['judul'] as String? ?? '-',
     description: json['deskripsi'] as String? ?? '',
     color: json['warna'] as String? ?? 'biru',
+    steps: _list(json['langkah'], CbtTool.fromJson),
   );
 
   final String code;
   final String title;
   final String description;
   final String color;
+  final List<CbtTool> steps;
 }
 
 class CbtTool {
@@ -105,6 +108,8 @@ class CbtTool {
     required this.code,
     required this.label,
     required this.status,
+    this.description = '',
+    this.stepNumber,
     this.route,
   });
 
@@ -112,13 +117,34 @@ class CbtTool {
     code: json['kode'] as String? ?? '',
     label: json['label'] as String? ?? '-',
     status: json['status'] as String? ?? 'fondasi',
+    description: json['deskripsi'] as String? ?? '',
+    stepNumber: _nullableInteger(json['nomor']),
     route: json['rute'] as String?,
   );
 
   final String code;
   final String label;
   final String status;
+  final String description;
+  final int? stepNumber;
   final String? route;
+
+  // Katalog hanya boleh membuka rute native yang dikenal aplikasi ini.
+  String? get nativeRoute {
+    final expected = switch (code) {
+      'ujian-terpusat' => '/ujian-terpusat',
+      'pelaksanaan-ujian-terpusat' => '/pelaksanaan-ujian-terpusat',
+      'hasil-ujian-terpusat' => '/hasil-ujian-terpusat',
+      'paket-soal' => '/paket-soal',
+      'presensi-ujian' => '/presensi-ujian',
+      'bank-soal' => '/bank-soal',
+      'asesmen-kelas' => '/asesmen-kelas',
+      _ => null,
+    };
+    return status == 'tersedia' && expected != null && route == expected
+        ? expected
+        : null;
+  }
 }
 
 class CbtSupervisor {

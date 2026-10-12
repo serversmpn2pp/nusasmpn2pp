@@ -31,8 +31,9 @@ class PusatCbtMobileService
     {
         $pengguna->loadMissing('daftarPeran.izin', 'siswa');
 
-        $dapatMengelola = $pengguna->memilikiIzin(self::IZIN_PENGELOLAAN);
-        $tugasPengawas = $this->tugasPengawas($pengguna);
+        $akunStaf = ! $pengguna->akunSiswa() && ! $pengguna->akunOrangTua();
+        $dapatMengelola = $akunStaf && $pengguna->memilikiIzin(self::IZIN_PENGELOLAAN);
+        $tugasPengawas = $akunStaf ? $this->tugasPengawas($pengguna) : collect();
         $akunSiswa = $pengguna->akunSiswa() && $pengguna->siswa;
 
         abort_unless($dapatMengelola || $tugasPengawas->isNotEmpty() || $akunSiswa, 403);
@@ -54,36 +55,45 @@ class PusatCbtMobileService
 
     private function pengelolaan(Pengguna $pengguna): array
     {
+        $alat = collect(config('cbt_mobile', []))
+            ->filter(fn (array $item) => $pengguna->memilikiIzin($item['izin']))
+            ->map(fn (array $item) => [
+                'kode' => $item['kode'],
+                'label' => $item['label'],
+                'deskripsi' => $item['deskripsi'],
+                'kelompok' => $item['kelompok'],
+                'status' => $item['status'],
+                'rute' => $item['rute'],
+                'api' => $item['api'],
+            ])->values();
+
+        $langkah = function (array $kode) use ($alat): array {
+            $tersedia = $alat->keyBy('kode');
+
+            return collect($kode)->map(fn (string $item, int $index) => $tersedia->has($item)
+                ? ['nomor' => $index + 1, ...$tersedia->get($item)]
+                : null)->filter()->values()->all();
+        };
+
         return [
             'ringkasan' => $this->ringkasanPusatCbt->untuk($pengguna),
-            'alur' => [
-                [
-                    'kode' => 'asesmen-kelas',
-                    'judul' => 'Asesmen Kelas',
-                    'deskripsi' => 'Asesmen harian yang disiapkan guru untuk kelas dan mata pelajarannya.',
-                    'warna' => 'biru',
-                ],
+            'alur' => collect([
                 [
                     'kode' => 'ujian-terpusat',
                     'judul' => 'Ujian Terpusat',
-                    'deskripsi' => 'Kegiatan ujian sekolah dengan jadwal, ruang, peserta, dan pengawas terpusat.',
+                    'deskripsi' => 'Persiapan, pelaksanaan, hingga pengolahan hasil ujian sekolah.',
                     'warna' => 'kuning',
+                    'langkah' => $langkah(['ujian-terpusat', 'pelaksanaan-ujian-terpusat', 'hasil-ujian-terpusat']),
                 ],
-            ],
-            'alat' => collect([
-                ['kode' => 'asesmen-kelas', 'label' => 'Asesmen Kelas', 'izin' => ['cbt.asesmen_kelola', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/asesmen-kelas'],
-                ['kode' => 'bank-soal', 'label' => 'Bank Soal', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola'], 'status' => 'tersedia', 'rute' => '/bank-soal'],
-                ['kode' => 'ujian-terpusat', 'label' => 'Ujian Terpusat', 'izin' => ['cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/ujian-terpusat'],
-                ['kode' => 'hasil-ujian-terpusat', 'label' => 'Nilai & Hasil', 'izin' => ['cbt.soal_kelola', 'cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/hasil-ujian-terpusat'],
-                ['kode' => 'paket-soal', 'label' => 'Paket Soal', 'izin' => ['cbt.soal_kelola', 'cbt.panitia', 'cbt.terpusat_lihat', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/paket-soal'],
-                ['kode' => 'presensi-ujian', 'label' => 'Presensi Ujian', 'izin' => ['cbt.presensi', 'cbt.kelola'], 'status' => 'tersedia', 'rute' => '/presensi-ujian'],
-            ])->filter(fn (array $alat) => $pengguna->memilikiIzin($alat['izin']))
-                ->map(fn (array $alat) => [
-                    'kode' => $alat['kode'],
-                    'label' => $alat['label'],
-                    'status' => $alat['status'] ?? 'fondasi',
-                    'rute' => $alat['rute'] ?? null,
-                ])->values(),
+                [
+                    'kode' => 'asesmen-kelas',
+                    'judul' => 'Asesmen Kelas',
+                    'deskripsi' => 'Bank soal dan asesmen harian untuk kelas yang Anda ajar.',
+                    'warna' => 'biru',
+                    'langkah' => $langkah(['bank-soal', 'asesmen-kelas']),
+                ],
+            ])->filter(fn (array $alur) => count($alur['langkah']) > 0)->values(),
+            'alat' => $alat,
         ];
     }
 

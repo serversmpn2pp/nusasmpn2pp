@@ -1,5 +1,26 @@
 <?php
 
+$pintasanUjianTerpusat = array_map(
+    static fn (array $alat): array => [
+        'kode' => $alat['kode'],
+        'label' => $alat['label'],
+        'inisial' => $alat['inisial'],
+        'deskripsi' => $alat['deskripsi'],
+        'subkelompok' => 'Ujian Terpusat',
+        'izin' => $alat['izin'],
+        'staff_only' => true,
+        'status' => $alat['status'],
+        'rute' => $alat['rute'],
+        'api' => $alat['api'],
+    ],
+    array_values(array_filter(
+        require __DIR__.'/cbt_mobile.php',
+        static fn (array $alat): bool => in_array($alat['kode'], [
+            'ujian-terpusat', 'pelaksanaan-ujian-terpusat', 'hasil-ujian-terpusat',
+        ], true),
+    )),
+);
+
 return [
     [
         'kode' => 'data-sekolah',
@@ -52,8 +73,9 @@ return [
         'deskripsi' => 'Pusat pengelolaan asesmen dan ujian CBT.',
         'ikon' => 'quiz',
         'items' => [
-            ['kode' => 'tugas-pengawas-saya', 'label' => 'Tugas Pengawas Saya', 'inisial' => 'TP', 'subkelompok' => 'CBT', 'pengawas_ujian_only' => true, 'status' => 'tersedia', 'rute' => '/tugas-pengawas-ujian'],
-            ['kode' => 'pusat-cbt', 'label' => 'Ujian & Asesmen', 'deskripsi' => 'Buka seluruh pengelolaan asesmen dan ujian CBT.', 'inisial' => 'UA', 'subkelompok' => 'CBT', 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat'], 'status' => 'tersedia', 'rute' => '/pusat-cbt'],
+            ['kode' => 'tugas-pengawas-saya', 'label' => 'Tugas Pengawas Saya', 'inisial' => 'TP', 'subkelompok' => 'CBT', 'staff_only' => true, 'pengawas_ujian_only' => true, 'status' => 'tersedia', 'rute' => '/tugas-pengawas-ujian'],
+            ['kode' => 'pusat-cbt', 'label' => 'Ujian & Asesmen', 'deskripsi' => 'Buka seluruh pengelolaan asesmen dan ujian CBT.', 'inisial' => 'UA', 'subkelompok' => 'CBT', 'staff_only' => true, 'izin' => ['cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'cbt.asesmen_kelola', 'cbt.panitia', 'cbt.terpusat_lihat'], 'status' => 'tersedia', 'rute' => '/pusat-cbt'],
+            ...$pintasanUjianTerpusat,
             ['kode' => 'ujian-saya', 'label' => 'Ujian Saya', 'inisial' => 'US', 'subkelompok' => 'CBT', 'siswa_only' => true, 'status' => 'tersedia', 'rute' => '/ujian-saya'],
             ['kode' => 'ujian-anak-saya', 'label' => 'Ujian Anak Saya', 'inisial' => 'UA', 'subkelompok' => 'Pemantauan Anak', 'parent_only' => true, 'status' => 'tersedia', 'rute' => '/ujian-anak-saya', 'deskripsi' => 'Pantau jadwal, status pengerjaan, dan hasil ujian anak yang telah dipublikasikan.'],
         ],

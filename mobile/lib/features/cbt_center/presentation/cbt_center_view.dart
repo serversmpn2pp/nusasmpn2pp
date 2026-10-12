@@ -65,7 +65,7 @@ class CbtCenterView extends ConsumerWidget {
     ];
 
     void management() {
-      if (data.management == null) return;
+      if (!data.access.canManage || data.management == null) return;
       sections.add(_ManagementSection(data: data.management!));
       sections.add(const SizedBox(height: 16));
     }
@@ -246,110 +246,106 @@ class _ManagementSection extends StatelessWidget {
   final CbtManagement data;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const _SectionTitle(
-        title: 'Ringkasan Pengelolaan',
-        subtitle: 'Kondisi data CBT saat ini',
-      ),
-      const SizedBox(height: 9),
-      LayoutBuilder(
-        builder: (context, constraints) {
-          final width = (constraints.maxWidth - 10) / 2;
-          return Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _MetricCard(
-                width: width,
-                icon: Icons.library_books_rounded,
-                label: 'Soal siap',
-                value: data.summary.readyQuestions,
-                color: NusaColors.primaryLight,
-              ),
-              _MetricCard(
-                width: width,
-                icon: Icons.account_tree_rounded,
-                label: 'Ujian terpusat',
-                value: data.summary.centralActivities,
-                color: const Color(0xFFEFAF08),
-              ),
-              _MetricCard(
-                width: width,
-                icon: Icons.class_rounded,
-                label: 'Asesmen kelas',
-                value: data.summary.classAssessments,
-                color: NusaColors.success,
-              ),
-              _MetricCard(
-                width: width,
-                icon: Icons.event_available_rounded,
-                label: 'Paket terjadwal',
-                value: data.summary.scheduledPackages,
-                color: const Color(0xFF7A56B3),
-              ),
-            ],
-          );
-        },
-      ),
-      const SizedBox(height: 18),
-      const _SectionTitle(
-        title: 'Alur CBT',
-        subtitle: 'Dua jalur ujian yang sudah digunakan NUSA',
-      ),
-      const SizedBox(height: 9),
-      ...data.flows.map(
-        (flow) => Padding(
-          padding: const EdgeInsets.only(bottom: 9),
-          child: _FlowCard(flow: flow),
+  Widget build(BuildContext context) {
+    final flows = data.flows
+        .where((flow) => _flowSteps(flow, data.tools).isNotEmpty)
+        .toList();
+    final flowCodes = flows
+        .expand((flow) => _flowSteps(flow, data.tools))
+        .map((tool) => tool.code)
+        .toSet();
+    final supportingTools = data.tools
+        .where((tool) => !flowCodes.contains(tool.code))
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle(
+          title: 'Ringkasan Pengelolaan',
+          subtitle: 'Kondisi data CBT saat ini',
         ),
-      ),
-      const SizedBox(height: 9),
-      const _SectionTitle(
-        title: 'Alat Pengelolaan',
-        subtitle: 'Pintasan ditampilkan sesuai izin akun',
-      ),
-      const SizedBox(height: 9),
-      if (data.tools.isEmpty)
-        const _EmptyCard(
-          icon: Icons.lock_outline_rounded,
-          title: 'Tidak ada alat pengelolaan',
-          message: 'Hak akses akun belum mencakup alat CBT.',
-        )
-      else
+        const SizedBox(height: 9),
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth < 350 ? 2 : 3;
-            final width =
-                (constraints.maxWidth - ((columns - 1) * 9)) / columns;
+            final largeText = MediaQuery.textScalerOf(context).scale(12) > 17;
+            final columns = constraints.maxWidth < 240 || largeText ? 1 : 2;
+            final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
             return Wrap(
-              spacing: 9,
-              runSpacing: 9,
-              children: data.tools
-                  .map(
-                    (tool) => _ToolCard(
-                      width: width,
-                      tool: tool,
-                      onTap: () {
-                        if (tool.route case final route?) {
-                          context.push(route);
-                        } else {
-                          _showFoundationMessage(context, tool.label);
-                        }
-                      },
-                    ),
-                  )
-                  .toList(),
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _MetricCard(
+                  width: width,
+                  icon: Icons.library_books_rounded,
+                  label: 'Soal siap',
+                  value: data.summary.readyQuestions,
+                  color: NusaColors.primaryLight,
+                ),
+                _MetricCard(
+                  width: width,
+                  icon: Icons.account_tree_rounded,
+                  label: 'Ujian terpusat',
+                  value: data.summary.centralActivities,
+                  color: const Color(0xFFEFAF08),
+                ),
+                _MetricCard(
+                  width: width,
+                  icon: Icons.class_rounded,
+                  label: 'Asesmen kelas',
+                  value: data.summary.classAssessments,
+                  color: NusaColors.success,
+                ),
+                _MetricCard(
+                  width: width,
+                  icon: Icons.event_available_rounded,
+                  label: 'Paket terjadwal',
+                  value: data.summary.scheduledPackages,
+                  color: const Color(0xFF7A56B3),
+                ),
+              ],
             );
           },
         ),
-      const SizedBox(height: 11),
-      const _ScopeNotice(
-        message: 'Bank Soal, Paket Soal, Asesmen Kelas, Persiapan, Pelaksanaan, Hasil, dan Presensi Ujian sudah terhubung secara native.',
-      ),
-    ],
-  );
+        if (flows.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          const _SectionTitle(
+            title: 'Alur Ujian & Asesmen',
+            subtitle: 'Pilih tahap pekerjaan sesuai hak akses Anda',
+          ),
+          const SizedBox(height: 9),
+          for (final flow in flows)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _FlowCard(flow: flow, steps: _flowSteps(flow, data.tools)),
+            ),
+        ],
+        if (data.tools.isEmpty)
+          const _EmptyCard(
+            icon: Icons.lock_outline_rounded,
+            title: 'Tidak ada alat pengelolaan',
+            message: 'Hak akses akun belum mencakup alat CBT.',
+          ),
+        if (supportingTools.isNotEmpty) ...[
+          const SizedBox(height: 9),
+          const _SectionTitle(
+            title: 'Alat Pendukung',
+            subtitle: 'Paket soal dan operasional sesuai izin akun',
+          ),
+          const SizedBox(height: 9),
+          for (final tool in supportingTools)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: _ToolCard(tool: tool),
+            ),
+        ],
+        const SizedBox(height: 11),
+        const _ScopeNotice(
+          message: 'Pintasan mengikuti hak akses. Aksi pengelolaan tetap diperiksa oleh server sesuai cakupan akun.',
+        ),
+      ],
+    );
+  }
 }
 
 class _MetricCard extends StatelessWidget {
@@ -402,7 +398,7 @@ class _MetricCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: NusaColors.textSecondary,
-                      fontSize: 9.5,
+                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -416,8 +412,9 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _FlowCard extends StatelessWidget {
-  const _FlowCard({required this.flow});
+  const _FlowCard({required this.flow, required this.steps});
   final CbtFlow flow;
+  final List<CbtTool> steps;
 
   @override
   Widget build(BuildContext context) {
@@ -426,42 +423,53 @@ class _FlowCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: Icon(
-                yellow ? Icons.account_tree_rounded : Icons.class_rounded,
-                color: color,
-              ),
-            ),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    flow.title,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(13),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    flow.description,
-                    style: const TextStyle(
-                      color: NusaColors.textSecondary,
-                      fontSize: 11,
-                      height: 1.4,
-                    ),
+                  child: Icon(
+                    yellow ? Icons.account_tree_rounded : Icons.class_rounded,
+                    color: color,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        flow.title,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        flow.description,
+                        style: const TextStyle(
+                          color: NusaColors.textSecondary,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 14),
+            for (final step in steps)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _ToolCard(tool: step, showStep: true),
+              ),
           ],
         ),
       ),
@@ -470,65 +478,107 @@ class _FlowCard extends StatelessWidget {
 }
 
 class _ToolCard extends StatelessWidget {
-  const _ToolCard({
-    required this.width,
-    required this.tool,
-    required this.onTap,
-  });
+  const _ToolCard({required this.tool, this.showStep = false});
 
-  final double width;
   final CbtTool tool;
-  final VoidCallback onTap;
+  final bool showStep;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width,
-    height: 104,
-    child: Material(
+  Widget build(BuildContext context) {
+    final route = tool.nativeRoute;
+    final color = route == null ? NusaColors.textSecondary : NusaColors.primary;
+    final description = tool.description.isEmpty
+        ? _toolDescription(tool.code)
+        : tool.description;
+    return Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: NusaColors.outline),
       ),
       child: InkWell(
+        key: Key('cbt-tool-${tool.code}'),
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+        onTap: route == null ? null : () => context.push(route),
         child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          padding: const EdgeInsets.all(13),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(_toolIcon(tool.code), color: NusaColors.primary, size: 26),
-              const SizedBox(height: 7),
-              Text(
-                tool.label,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_toolIcon(tool.code), color: color, size: 22),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (showStep && tool.stepNumber != null) ...[
+                      Text(
+                        'TAHAP ${tool.stepNumber}',
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                    ],
+                    Text(
+                      showStep && tool.code == 'ujian-terpusat'
+                          ? 'Persiapan Ujian'
+                          : tool.label,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          color: NusaColors.textSecondary,
+                          fontSize: 11.5,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 7),
+                    Text(
+                      route == null
+                          ? 'Belum tersedia di aplikasi ini'
+                          : 'Buka modul',
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                tool.status == 'tersedia' ? 'Tersedia' : 'Fondasi',
-                style: TextStyle(
-                  color: tool.status == 'tersedia'
-                      ? NusaColors.success
-                      : NusaColors.textSecondary,
-                  fontSize: 8.5,
-                  fontWeight: tool.status == 'tersedia'
-                      ? FontWeight.w700
-                      : FontWeight.normal,
-                ),
+              const SizedBox(width: 5),
+              Icon(
+                route == null
+                    ? Icons.lock_outline_rounded
+                    : Icons.chevron_right,
+                color: color,
+                size: 20,
               ),
             ],
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _SupervisorSection extends StatelessWidget {
@@ -1023,6 +1073,7 @@ IconData _toolIcon(String code) => switch (code) {
   'asesmen-kelas' => Icons.class_rounded,
   'bank-soal' => Icons.library_books_rounded,
   'ujian-terpusat' => Icons.account_tree_rounded,
+  'pelaksanaan-ujian-terpusat' => Icons.monitor_heart_outlined,
   'hasil-ujian-terpusat' => Icons.fact_check_outlined,
   'paket-soal' => Icons.inventory_rounded,
   'presensi-ujian' => Icons.fact_check_rounded,
@@ -1057,10 +1108,42 @@ String _dateLabel(String? value) {
   return '${date.day} ${months[date.month - 1]} ${date.year}';
 }
 
-void _showFoundationMessage(BuildContext context, String label) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('$label akan dilanjutkan sebagai modul native berikutnya.'),
-    ),
-  );
+List<CbtTool> _flowSteps(CbtFlow flow, List<CbtTool> tools) {
+  final allowed = {for (final tool in tools) tool.code: tool};
+  if (flow.steps.isNotEmpty) {
+    return flow.steps
+        .where(
+          (step) =>
+              allowed[step.code]?.route == step.route &&
+              allowed[step.code]?.status == step.status,
+        )
+        .toList();
+  }
+  // Backend sebelum katalog bertahap tetap didukung, tanpa menciptakan hak akses.
+  final codes = switch (flow.code) {
+    'ujian-terpusat' => [
+      'ujian-terpusat',
+      'pelaksanaan-ujian-terpusat',
+      'hasil-ujian-terpusat',
+    ],
+    'asesmen-kelas' => ['bank-soal', 'asesmen-kelas'],
+    _ => <String>[],
+  };
+  return [
+    for (final code in codes)
+      if (allowed[code] != null) allowed[code]!,
+  ];
 }
+
+String _toolDescription(String code) => switch (code) {
+  'ujian-terpusat' => 'Kegiatan, panitia, sesi, ruang, peserta, dan jadwal.',
+  'pelaksanaan-ujian-terpusat' =>
+    'Pantau ruang, pengawas, dan pengerjaan peserta.',
+  'hasil-ujian-terpusat' =>
+    'Hasil, koreksi uraian, finalisasi, dan publikasi nilai.',
+  'paket-soal' => 'Susun soal untuk jadwal ujian terpusat.',
+  'presensi-ujian' => 'Pindai atau catat kehadiran peserta ujian.',
+  'bank-soal' => 'Kelola soal dalam cakupan mata pelajaran dan tingkat Anda.',
+  'asesmen-kelas' => 'Asesmen harian, monitoring, dan hasil kelas.',
+  _ => '',
+};

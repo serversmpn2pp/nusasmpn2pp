@@ -4,12 +4,14 @@ namespace Tests\Feature\Api;
 
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
+use App\Models\Izin;
 use App\Models\JadwalUjianCbt;
 use App\Models\JenisUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
 use App\Models\KelasUjianCbt;
 use App\Models\MataPelajaran;
+use App\Models\OrangTuaWali;
 use App\Models\Pegawai;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
@@ -32,7 +34,7 @@ class PusatCbtApiTest extends TestCase
         $this->getJson(route('api.v1.pusat-cbt'))->assertUnauthorized();
     }
 
-    public function test_administrator_menerima_fondasi_pengelolaan_cbt(): void
+    public function test_administrator_menerima_katalog_native_dan_tiga_tahap_ujian_terpusat(): void
     {
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
 
@@ -77,6 +79,12 @@ class PusatCbtApiTest extends TestCase
                 'rute' => '/ujian-terpusat',
             ])
             ->assertJsonFragment([
+                'kode' => 'pelaksanaan-ujian-terpusat',
+                'status' => 'tersedia',
+                'rute' => '/pelaksanaan-ujian-terpusat',
+                'api' => '/api/v1/pelaksanaan-ujian-terpusat',
+            ])
+            ->assertJsonFragment([
                 'kode' => 'hasil-ujian-terpusat',
                 'status' => 'tersedia',
                 'rute' => '/hasil-ujian-terpusat',
@@ -89,7 +97,92 @@ class PusatCbtApiTest extends TestCase
             ->assertJsonPath('data.pengawas', null)
             ->assertJsonPath('data.siswa', null);
 
+        $this->assertSame([
+            'ujian-terpusat', 'pelaksanaan-ujian-terpusat', 'hasil-ujian-terpusat',
+        ], array_column($response->json('data.pengelolaan.alur.0.langkah'), 'kode'));
+        $this->assertSame([1, 2, 3], array_column($response->json('data.pengelolaan.alur.0.langkah'), 'nomor'));
+        $response->assertJsonCount(7, 'data.pengelolaan.alat');
         $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+    }
+
+    public function test_pintasan_katalog_memiliki_endpoint_baca_yang_aktif_dan_tidak_memuat_credential(): void
+    {
+        TahunPelajaran::create([
+            'nama' => '2026/2027', 'tanggal_mulai' => '2026-07-01',
+            'tanggal_selesai' => '2027-06-30', 'aktif' => true,
+        ]);
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $token = $this->token($administrator);
+        $katalog = $this->withToken($token)->getJson(route('api.v1.pusat-cbt'))->assertOk();
+        $menu = collect($this->withToken($token)->getJson(route('api.v1.menu'))
+            ->assertOk()->json('data.kelompok'))->flatMap(fn (array $kelompok) => $kelompok['items'])->keyBy('kode');
+
+        foreach ($katalog->json('data.pengelolaan.alat') as $alat) {
+            $this->assertNotEmpty($alat['deskripsi']);
+            $this->assertArrayNotHasKey('izin', $alat);
+            $this->assertArrayNotHasKey('token', $alat);
+            $this->assertArrayNotHasKey('kunci_jawaban', $alat);
+            $this->withToken($token)->getJson($alat['api'])->assertOk();
+
+            if (in_array($alat['kode'], ['ujian-terpusat', 'pelaksanaan-ujian-terpusat', 'hasil-ujian-terpusat'], true)) {
+                $this->assertSame($alat['rute'], $menu->get($alat['kode'])['rute']);
+                $this->assertSame($alat['api'], $menu->get($alat['kode'])['api']);
+            }
+        }
+    }
+
+    public function test_izin_hasil_saja_tidak_membuka_persiapan_dan_pelaksanaan(): void
+    {
+        $pengguna = $this->buatPenggunaDenganIzin('hasil.saja', ['cbt.soal_kelola']);
+        $response = $this->withToken($this->token($pengguna))->getJson(route('api.v1.pusat-cbt'))->assertOk();
+
+        $this->assertSame(['hasil-ujian-terpusat'], array_column($response->json('data.pengelolaan.alur.0.langkah'), 'kode'));
+        $response->assertJsonPath('data.pengelolaan.alur.0.langkah.0.nomor', 3)
+            ->assertJsonMissing(['kode' => 'pelaksanaan-ujian-terpusat']);
+        $this->assertNotContains('ujian-terpusat', array_column($response->json('data.pengelolaan.alat'), 'kode'));
+
+        $token = $this->token($pengguna);
+        $menu = collect($this->withToken($token)->getJson(route('api.v1.menu'))->assertOk()->json('data.kelompok'))
+            ->flatMap(fn (array $kelompok) => $kelompok['items'])->pluck('kode');
+        $this->assertContains('hasil-ujian-terpusat', $menu);
+        $this->assertNotContains('pelaksanaan-ujian-terpusat', $menu);
+        $this->assertNotContains('ujian-terpusat', $menu);
+        $this->withToken($token)->getJson('/api/v1/pelaksanaan-ujian-terpusat')->assertForbidden();
+        $this->withToken($token)->getJson('/api/v1/ujian-terpusat')->assertForbidden();
+    }
+
+    public function test_izin_presensi_saja_tidak_menampilkan_alur_pengelolaan_terpusat(): void
+    {
+        $pengguna = $this->buatPenggunaDenganIzin('presensi.saja', ['cbt.presensi']);
+        $this->withToken($this->token($pengguna))->getJson(route('api.v1.pusat-cbt'))->assertOk()
+            ->assertJsonCount(0, 'data.pengelolaan.alur')
+            ->assertJsonCount(1, 'data.pengelolaan.alat')
+            ->assertJsonPath('data.pengelolaan.alat.0.kode', 'presensi-ujian');
+    }
+
+    public function test_akun_siswa_dengan_izin_staf_keliru_tetap_tidak_menerima_menu_pengelolaan(): void
+    {
+        $siswa = Siswa::create([
+            'nama_lengkap' => 'Siswa Bukan Pengelola', 'nis' => 'CBT26002',
+            'nisn' => '0099002602', 'jenis_kelamin' => 'L', 'aktif' => true,
+        ]);
+        $pengguna = $this->buatPenggunaDenganIzin('siswa.izin.keliru', ['cbt.kelola']);
+        $pengguna->update(['siswa_id' => $siswa->id, 'peran' => 'siswa']);
+        $token = $this->token($pengguna);
+        $this->withToken($token)->getJson(route('api.v1.pusat-cbt'))->assertOk()
+            ->assertJsonPath('data.akses.dapat_mengelola', false)
+            ->assertJsonPath('data.pengelolaan', null)
+            ->assertJsonPath('data.pengawas', null);
+        $this->pastikanMenuTanpaPengelolaan($token);
+    }
+
+    public function test_akun_orang_tua_dengan_izin_staf_keliru_tetap_tidak_menerima_menu_pengelolaan(): void
+    {
+        $pengguna = $this->buatPenggunaDenganIzin('ortu.izin.keliru', ['cbt.kelola']);
+        OrangTuaWali::create(['pengguna_id' => $pengguna->id, 'nama_lengkap' => 'Orang Tua CBT']);
+        $token = $this->token($pengguna);
+        $this->withToken($token)->getJson(route('api.v1.pusat-cbt'))->assertForbidden();
+        $this->pastikanMenuTanpaPengelolaan($token);
     }
 
     public function test_ringkasan_guru_mapel_hanya_menghitung_mapel_dan_tingkat_yang_diajar(): void
@@ -451,5 +544,28 @@ class PusatCbtApiTest extends TestCase
     private function token(Pengguna $pengguna): string
     {
         return $pengguna->createToken('Pixel 7 Emulator', ['mobile'])->plainTextToken;
+    }
+
+    private function buatPenggunaDenganIzin(string $username, array $izin): Pengguna
+    {
+        $pengguna = Pengguna::create([
+            'nama' => 'Penguji CBT', 'username' => $username, 'kata_sandi' => 'RahasiaNusa123',
+            'peran' => 'pegawai', 'aktif' => true, 'akun_sistem' => false, 'wajib_ganti_kata_sandi' => false,
+        ]);
+        $peran = Peran::create(['kode' => $username, 'nama' => 'Penguji CBT', 'aktif' => true]);
+        $peran->izin()->attach(Izin::whereIn('kode', $izin)->pluck('id'));
+        $pengguna->daftarPeran()->attach($peran);
+
+        return $pengguna;
+    }
+
+    private function pastikanMenuTanpaPengelolaan(string $token): void
+    {
+        $response = $this->withToken($token)->getJson(route('api.v1.menu'))->assertOk();
+        $kelompok = collect($response->json('data.kelompok'))->firstWhere('kode', 'ujian-asesmen');
+        $kode = array_column($kelompok['items'] ?? [], 'kode');
+        foreach (['pusat-cbt', 'ujian-terpusat', 'pelaksanaan-ujian-terpusat', 'hasil-ujian-terpusat'] as $item) {
+            $this->assertNotContains($item, $kode);
+        }
     }
 }
