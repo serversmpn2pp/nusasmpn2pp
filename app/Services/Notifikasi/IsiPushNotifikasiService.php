@@ -49,6 +49,9 @@ class IsiPushNotifikasiService
 
         // Modul dengan catatan bebas mendapat ringkasan, bukan salinan catatannya.
         foreach ([
+            '/persuratan' => ['Pembaruan persuratan sekolah', 'Ada surat atau keputusan yang perlu Anda periksa di NUSA.'],
+            '/surat-saya' => ['Pembaruan surat tugas Anda', 'Ada penugasan atau pembatalan surat tugas Anda. Periksa di NUSA.'],
+            '/tindak-lanjut-surat' => ['Pembaruan tindak lanjut surat', 'Ada disposisi, laporan, atau tenggat surat yang perlu Anda periksa di NUSA.'],
             '/tugas-pengawas-ujian' => ['Pembaruan tugas pengawas', 'Ada pembaruan tugas atau bukti pelaksanaan ujian Anda. Periksa di NUSA.'],
             '/perangkat-ajar-saya' => ['Pemeriksaan perangkat ajar', 'Perangkat ajar Anda telah diperiksa. Buka NUSA untuk melihat hasil pemeriksaan.'],
             '/pemeriksaan-perangkat-ajar' => ['Perangkat ajar menunggu pemeriksaan', 'Ada pembaruan perangkat ajar yang perlu Anda periksa di NUSA.'],

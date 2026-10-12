@@ -1,0 +1,1 @@
+@if($laporan->bukti->isNotEmpty())<ul class="surat-file-list">@foreach($laporan->bukti as $b)<li><span>{{ $b->nama_file_asli }}<small class="surat-muted">{{ number_format($b->ukuran_file/1024/1024,2,',','.') }} MB</small></span><a class="button button-muted button-sm" href="{{ route('tindak-lanjut-surat.bukti',[$tugas,$b]) }}">Unduh</a></li>@endforeach</ul>@endif

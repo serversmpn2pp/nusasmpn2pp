@@ -112,6 +112,7 @@ use App\Http\Controllers\PerangkatAjarSayaController;
 use App\Http\Controllers\PergantianGuruMataPelajaranController;
 use App\Http\Controllers\PeringatanDiniSiswaController;
 use App\Http\Controllers\PermintaanPenghapusanController;
+use App\Http\Controllers\PersuratanController;
 use App\Http\Controllers\PertanyaanSurveiPembelajaranController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\PiketKehadiranSiswaController;
@@ -159,10 +160,12 @@ use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SoalCbtController;
 use App\Http\Controllers\SoalUjianCbtController;
 use App\Http\Controllers\SumberPerolehanBarangController;
+use App\Http\Controllers\SuratSayaController;
 use App\Http\Controllers\SurveiPembelajaranController;
 use App\Http\Controllers\TahunPelajaranController;
 use App\Http\Controllers\TerapkanNilaiCbtController;
 use App\Http\Controllers\TindakLanjutPembinaanSiswaController;
+use App\Http\Controllers\TindakLanjutSuratController;
 use App\Http\Controllers\TugasPengawasUjianController;
 use App\Http\Controllers\UjianCbtController;
 use App\Http\Controllers\UjianSayaController;
@@ -255,6 +258,44 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('beranda', [BerandaController::class, 'index'])
             ->middleware('izin:beranda.akses')
             ->name('beranda');
+
+        Route::middleware('akun_pegawai')->group(function () {
+            Route::get('persuratan/tindak-lanjut', [TindakLanjutSuratController::class, 'monitoring'])
+                ->middleware('izin:surat.lihat,surat.kelola,surat.sahkan,surat.disposisi')->name('tindak-lanjut-surat.monitoring');
+            Route::post('persuratan/{surat}/disposisi', [TindakLanjutSuratController::class, 'disposisi'])
+                ->whereNumber('surat')->middleware(['izin:surat.disposisi', 'throttle:30,1'])->name('persuratan.disposisi');
+            Route::prefix('tindak-lanjut-surat')->name('tindak-lanjut-surat.')->controller(TindakLanjutSuratController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{tindakLanjut}', 'show')->whereNumber('tindakLanjut')->name('show');
+                Route::post('/{tindakLanjut}/laporan', 'laporan')->whereNumber('tindakLanjut')->middleware('throttle:30,1')->name('laporan');
+                Route::post('/{tindakLanjut}/tindakan/{aksi}', 'tindakan')->whereNumber('tindakLanjut')
+                    ->whereIn('aksi', ['baca', 'mulai', 'ubah', 'terima', 'kembalikan', 'batal'])->middleware('throttle:30,1')->name('tindakan');
+                Route::get('/{tindakLanjut}/bukti/{bukti}', 'bukti')->whereNumber(['tindakLanjut', 'bukti'])->name('bukti');
+                Route::get('/{tindakLanjut}/berkas/{berkas}', 'berkas')->whereNumber(['tindakLanjut', 'berkas'])->name('berkas');
+            });
+            Route::prefix('persuratan')->name('persuratan.')->controller(PersuratanController::class)->group(function () {
+                Route::get('/pengesahan', 'pemeriksaan')->middleware('izin:surat.sahkan')->name('pemeriksaan');
+                Route::middleware('izin:surat.kelola')->group(function () {
+                    Route::get('/tambah', 'create')->name('create');
+                    Route::post('/', 'store')->middleware('throttle:30,1')->name('store');
+                    Route::get('/{surat}/edit', 'edit')->whereNumber('surat')->name('edit');
+                    Route::put('/{surat}', 'update')->whereNumber('surat')->name('update');
+                });
+                Route::middleware('izin:surat.lihat,surat.kelola,surat.sahkan,surat.disposisi')->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::get('/{surat}', 'show')->whereNumber('surat')->name('show');
+                    Route::get('/{surat}/berkas/{berkas}', 'berkas')->whereNumber(['surat', 'berkas'])->name('berkas');
+                    Route::post('/{surat}/tindakan/{aksi}', 'tindakan')->whereNumber('surat')
+                        ->whereIn('aksi', ['ajukan', 'tarik', 'kembalikan', 'sahkan', 'kirim', 'batal'])->middleware('throttle:30,1')->name('tindakan');
+                });
+            });
+            Route::prefix('surat-saya')->name('surat-saya.')->controller(SuratSayaController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{surat}', 'show')->whereNumber('surat')->name('show');
+                Route::post('/{surat}/baca', 'baca')->whereNumber('surat')->name('baca');
+                Route::get('/{surat}/berkas/{berkas}', 'berkas')->whereNumber(['surat', 'berkas'])->name('berkas');
+            });
+        });
 
         Route::get('presensi-anak', [PresensiAnakController::class, 'index'])
             ->name('presensi-anak.index');

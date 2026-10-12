@@ -93,7 +93,7 @@ class DatabaseSeeder extends Seeder
             [
                 'nama' => 'Pimpinan',
                 'kode' => 'pimpinan',
-                'deskripsi' => 'Monitoring seluruh data sekolah secara read-only.',
+                'deskripsi' => 'Monitoring data sekolah serta pemeriksaan surat dan publikasi sesuai hak akses.',
             ],
             [
                 'nama' => 'Wakil Pimpinan Kesiswaan',
@@ -119,6 +119,11 @@ class DatabaseSeeder extends Seeder
                 'nama' => 'Guru Mapel',
                 'kode' => 'guru_mapel',
                 'deskripsi' => 'Input dan melihat nilai sesuai mata pelajaran dan kelas yang diajar.',
+            ],
+            [
+                'nama' => 'Tata Usaha',
+                'kode' => 'tata_usaha',
+                'deskripsi' => 'Mengelola persuratan dan arsip sekolah; tidak mengesahkan surat.',
             ],
             [
                 'nama' => 'Wali Kelas',
@@ -244,6 +249,11 @@ class DatabaseSeeder extends Seeder
     private function daftarIzinBawaan(): array
     {
         return [
+            ['kelompok' => 'Persuratan', 'nama' => 'Lihat arsip surat', 'kode' => 'surat.lihat', 'deskripsi' => 'Melihat arsip surat sekolah sesuai sifat dan hak akses.'],
+            ['kelompok' => 'Persuratan', 'nama' => 'Kelola surat dan penugasan', 'kode' => 'surat.kelola', 'deskripsi' => 'Mencatat, mengajukan, merevisi, dan mengelola surat sekolah.'],
+            ['kelompok' => 'Persuratan', 'nama' => 'Periksa dan sahkan surat', 'kode' => 'surat.sahkan', 'deskripsi' => 'Memeriksa dan mengesahkan surat sebagai pejabat yang ditunjuk.'],
+            ['kelompok' => 'Persuratan', 'nama' => 'Akses arsip surat rahasia', 'kode' => 'surat.rahasia', 'deskripsi' => 'Membuka surat rahasia bersama izin persuratan.'],
+            ['kelompok' => 'Persuratan', 'nama' => 'Disposisi dan pemeriksaan surat masuk', 'kode' => 'surat.disposisi', 'deskripsi' => 'Memberikan disposisi surat masuk dan memeriksa hasil tindak lanjutnya.'],
             ['kelompok' => 'Umum', 'nama' => 'Akses beranda', 'kode' => 'beranda.akses', 'deskripsi' => 'Masuk ke halaman beranda NUSA.'],
             ['kelompok' => 'Akun', 'nama' => 'Lihat akun pegawai', 'kode' => 'akun.lihat', 'deskripsi' => 'Melihat daftar akun pegawai.'],
             ['kelompok' => 'Akun', 'nama' => 'Kelola akun pegawai', 'kode' => 'akun.kelola', 'deskripsi' => 'Membuat, mengaktifkan, menonaktifkan, dan reset akun pegawai.'],
@@ -370,7 +380,8 @@ class DatabaseSeeder extends Seeder
 
         $peta = [
             'administrator' => $semuaKodeIzin,
-            'pimpinan' => array_merge($izinLihat, ['publikasi_humas.periksa']),
+            'pimpinan' => array_merge($izinLihat, ['publikasi_humas.periksa', 'surat.sahkan', 'surat.rahasia', 'surat.disposisi']),
+            'tata_usaha' => ['beranda.akses', 'pegawai.profil', 'absensi_pegawai.pribadi', 'surat.lihat', 'surat.kelola', 'surat.rahasia'],
             'wakil_pimpinan_kesiswaan' => ['beranda.akses', 'siswa.lihat', 'kartu_pelajar.lihat', 'kartu_pelajar.cetak', 'absensi.lihat', 'absensi.koreksi', 'absensi.laporan', 'piket_guru.kelola', 'ibadah.pengaturan_kelola', 'ibadah.scan', 'ibadah.rekap', 'ibadah.koreksi', 'bk.lihat', 'bk.kelola', 'bk.penugasan_tingkat_kelola', 'poin_siswa.sahkan_wakil', 'laporan.export'],
             'wakil_pimpinan_sarana_prasarana' => ['beranda.akses', 'sarpras.lihat', 'sarpras.kelola', 'barang.lihat', 'barang.kelola', 'barang.peminjaman_kelola', 'laporan.export'],
             'wakil_pimpinan_kurikulum' => ['beranda.akses', 'tahun_pelajaran.lihat', 'kelas.lihat', 'mata_pelajaran.lihat', 'guru_mapel.lihat', 'guru_mapel.kelola', 'jadwal.lihat', 'jadwal.kelola', 'nilai.lihat', 'nilai.rekap', 'cbt.lihat', 'cbt.kelola', 'cbt.soal_kelola', 'cbt.presensi', 'perangkat_ajar.lihat', 'perangkat_ajar.periksa', 'perangkat_ajar.jenis_kelola', 'survei.pertanyaan_kelola', 'survei.monitor', 'laporan.export'],

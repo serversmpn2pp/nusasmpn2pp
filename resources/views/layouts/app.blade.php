@@ -2236,6 +2236,19 @@
                 $semuaSidebarSections = $sidebarPegawaiSections;
             }
 
+            if (! $pakaiSidebarSiswa && ! $pakaiSidebarOrangTua && ($penggunaAktif?->akunPegawai() || $penggunaAktif?->administrator())) {
+                $semuaSidebarSections[] = [
+                    'id' => 'persuratan', 'title' => 'Persuratan & Arsip',
+                    'items' => [
+                        ['label' => 'Arsip Surat', 'route' => 'persuratan.index', 'active' => ['persuratan.index', 'persuratan.create', 'persuratan.edit', 'persuratan.show'], 'initial' => 'AS', 'izin' => ['surat.lihat', 'surat.kelola', 'surat.sahkan', 'surat.disposisi']],
+                        ['label' => 'Pengesahan Surat', 'route' => 'persuratan.pemeriksaan', 'active' => ['persuratan.pemeriksaan'], 'initial' => 'PS', 'izin' => 'surat.sahkan'],
+                        ['label' => 'Surat & Penugasan Saya', 'route' => 'surat-saya.index', 'active' => ['surat-saya.*'], 'initial' => 'SS', 'izin' => null, 'pegawai_only' => true],
+                        ['label' => 'Monitoring Tindak Lanjut Surat', 'route' => 'tindak-lanjut-surat.monitoring', 'active' => ['tindak-lanjut-surat.monitoring'], 'initial' => 'MT', 'izin' => ['surat.lihat', 'surat.kelola', 'surat.sahkan', 'surat.disposisi']],
+                        ['label' => 'Tindak Lanjut Surat Saya', 'route' => 'tindak-lanjut-surat.index', 'active' => ['tindak-lanjut-surat.index', 'tindak-lanjut-surat.show'], 'initial' => 'TL', 'izin' => null, 'pegawai_only' => true],
+                    ],
+                ];
+            }
+
             $sidebarSections = collect($semuaSidebarSections)
                 ->map(function (array $section) use ($bolehMelihatMenu, $penggunaAktif, $dapatScanIbadahHariIni, $dapatRekapIbadahHariIni, $dapatRingkasanIbadahBulanan, $dapatScanBerhalanganIbadah, $dapatKonfirmasiBerhalanganIbadah, $dapatMengawasiUjian, $dapatMelaksanakanSanksi) {
                     $section['items'] = collect($section['items'])

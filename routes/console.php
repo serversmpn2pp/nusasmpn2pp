@@ -4,6 +4,7 @@ use App\Services\Cbt\SelesaikanPengerjaanKedaluwarsaCbtService;
 use App\Services\Humas\IngatkanAgendaHumasService;
 use App\Services\Humas\IngatkanDokumenHumasService;
 use App\Services\Humas\IngatkanKerjaSamaHumasService;
+use App\Services\Persuratan\IngatkanTindakLanjutSuratService;
 use App\Services\Sistem\CadanganDatabaseService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -92,3 +93,12 @@ Artisan::command('humas:ingatkan-mou', function (IngatkanKerjaSamaHumasService $
 })->purpose('Mengirim pengingat MoU mendekati akhir, berakhir hari ini, dan kedaluwarsa');
 
 Schedule::command('humas:ingatkan-mou')->dailyAt('07:10')->withoutOverlapping();
+
+Artisan::command('surat:ingatkan-tindak-lanjut', function (IngatkanTindakLanjutSuratService $service) {
+    $jumlah = $service->kirimPengingat();
+    $this->info("{$jumlah} pengingat tindak lanjut surat baru dikirim.");
+
+    return Command::SUCCESS;
+})->purpose('Mengirim pengingat tenggat disposisi, surat tugas, dan pemeriksaan laporan');
+
+Schedule::command('surat:ingatkan-tindak-lanjut')->dailyAt('07:15')->withoutOverlapping();
