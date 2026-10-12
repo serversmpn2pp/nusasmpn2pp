@@ -17,9 +17,10 @@ Tahap kedua menambahkan disposisi surat masuk, progres/laporan pelaksanaan surat
 tugas, pemeriksaan laporan, bukti privat, monitoring dan pengingat tenggat.
 
 Belum mencakup template pembuatan surat, penomoran otomatis,
-tanda tangan elektronik tersertifikasi, atau layar
-native Android persuratan. API dan katalog menu mobile sudah tersedia;
-kontrak integrasinya ada di [API Persuratan](api-persuratan.md).
+atau tanda tangan elektronik tersertifikasi. API, katalog menu dan layar native
+Android sudah tersedia, termasuk unggahan foto kamera/galeri untuk surat dan bukti.
+Kontrak integrasinya ada di [API Persuratan](api-persuratan.md),
+dan panduannya di [Persuratan Android](mobile-persuratan.md).
 Halaman web responsif dapat digunakan di browser ponsel.
 Arsip Humas yang sudah ada tidak dipindah atau diduplikasi secara otomatis.
 

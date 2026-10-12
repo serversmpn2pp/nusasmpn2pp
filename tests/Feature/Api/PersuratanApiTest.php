@@ -77,12 +77,12 @@ class PersuratanApiTest extends TestCase
             $grup = collect($r->json('data.kelompok'))->firstWhere('kode', 'persuratan-arsip');
             $this->assertCount($jumlah, $grup['items']);
             foreach ($grup['items'] as $menu) {
-                $this->assertSame('segera_hadir', $menu['status']);
+                $this->assertSame('tersedia', $menu['status']);
                 $this->assertTrue($menu['api_tersedia']);
                 $this->getJson(url($menu['api']))->assertOk();
             }
             if ($akun->id === $this->tu->id) {
-                $this->assertEmpty(array_intersect(['arsip-surat', 'monitoring-tindak-lanjut-surat', 'surat-saya', 'tindak-lanjut-surat-saya'], $r->json('data.akses_cepat.kode_menu')));
+                $this->assertSame(['arsip-surat', 'monitoring-tindak-lanjut-surat', 'surat-saya', 'tindak-lanjut-surat-saya'], $r->json('data.akses_cepat.kode_menu'));
             }
         }
     }
@@ -160,6 +160,24 @@ class PersuratanApiTest extends TestCase
         $this->post($this->url(), $this->payload('masuk', ['nomor_surat' => 'D-002']))->assertUnprocessable();
         $this->assertDatabaseCount('surat_tu', 2);
         $this->assertCount(2, Storage::disk('local')->allFiles('persuratan'));
+    }
+
+    public function test_foto_kamera_dapat_menjadi_surat_masuk_keluar_tugas_dan_bukti_laporan(): void
+    {
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+        $foto = fn () => UploadedFile::fake()->createWithContent('foto-surat.png', $png);
+        foreach (['masuk', 'keluar', 'tugas'] as $jenis) {
+            $s = $this->buat($jenis, ['nomor_surat' => 'FOTO-'.$jenis, 'berkas_utama' => $foto(), 'lampiran' => [$foto()]]);
+            $this->assertSame('image/png', $s->berkas()->where('jenis', 'utama')->firstOrFail()->tipe_file);
+            $this->assertCount(2, $s->berkas);
+        }
+        $t = $this->disposisi($this->buat('masuk', ['nomor_surat' => 'FOTO-DISPOSISI', 'nomor_agenda' => 'AG-FOTO-002']));
+        $r = $this->lapor($t, 'ajukan', ['bukti' => [$foto()]])->assertCreated();
+        $bukti = $r->json('data.laporan.0.bukti.0.id');
+        $this->getJson($this->url('tindak-lanjut-surat/'.$t->id.'/bukti/'.$bukti))
+            ->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->token($this->lain);
+        $this->getJson($this->url('tindak-lanjut-surat/'.$t->id.'/bukti/'.$bukti))->assertNotFound();
     }
 
     public function test_pembaruan_multipart_memakai_method_spoof_dan_mengunci_versi_lama(): void
@@ -413,12 +431,12 @@ class PersuratanApiTest extends TestCase
         $this->aksiTindak($t, 'mulai', $this->guru)->assertUnprocessable();
     }
 
-    public function test_notifikasi_surat_memiliki_fallback_sampai_layar_native_tersedia_dan_tidak_otomatis_membaca(): void
+    public function test_notifikasi_membuka_surat_dan_tugas_native_tanpa_otomatis_membaca(): void
     {
         $surat = $this->disahkan();
         $n = $this->guru->notifikasiPengguna()->firstOrFail();
         $this->token($this->guru);
-        $this->getJson(route('api.v1.notifikasi.tujuan', $n))->assertOk()->assertJsonPath('data.tautan_mobile', null);
+        $this->getJson(route('api.v1.notifikasi.tujuan', $n))->assertOk()->assertJsonPath('data.tautan_mobile', '/surat-saya/'.$surat->id);
         $this->assertNull($n->fresh()->dibaca_pada);
         $this->assertNull($surat->penugasan()->where('pegawai_id', $this->guru->pegawai_id)->first()->dibaca_pada);
         $this->token($this->lain);
@@ -426,7 +444,7 @@ class PersuratanApiTest extends TestCase
         $t = $this->disposisi($this->buat('masuk', ['nomor_surat' => 'D-002']));
         $n = $this->guru->notifikasiPengguna()->latest('id')->firstOrFail();
         $this->token($this->guru);
-        $this->getJson(route('api.v1.notifikasi.tujuan', $n))->assertOk()->assertJsonPath('data.tautan_mobile', null);
+        $this->getJson(route('api.v1.notifikasi.tujuan', $n))->assertOk()->assertJsonPath('data.tautan_mobile', '/tindak-lanjut-surat/'.$t->id);
         $this->assertNull($t->fresh()->dibaca_pada);
     }
 

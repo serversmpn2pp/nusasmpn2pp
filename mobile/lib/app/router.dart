@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nusa/features/persuratan/domain/persuratan.dart';
+import 'package:nusa/features/persuratan/presentation/persuratan_list_view.dart';
+import 'package:nusa/features/persuratan/presentation/persuratan_detail_view.dart';
 import 'package:nusa/core/security/password_change_gate.dart';
 import 'package:nusa/features/humas/domain/humas.dart';
 import 'package:nusa/features/humas/presentation/humas_hub_view.dart';
@@ -369,6 +372,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      for (final module in [
+        SuratModule.archive,
+        SuratModule.myLetters,
+        SuratModule.myTasks,
+      ])
+        GoRoute(
+          path: module.route,
+          builder: (context, state) => PersuratanListView(module: module),
+          routes: [
+            if (module == SuratModule.archive) ...[
+              GoRoute(
+                path: 'pengesahan',
+                builder: (context, state) =>
+                    const PersuratanListView(module: SuratModule.approval),
+              ),
+              GoRoute(
+                path: 'tindak-lanjut',
+                builder: (context, state) =>
+                    const PersuratanListView(module: SuratModule.monitoring),
+              ),
+            ],
+            GoRoute(
+              path: ':id',
+              builder: (context, state) => PersuratanDetailView(
+                id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+                personal: module == SuratModule.myLetters,
+                task: module == SuratModule.myTasks,
+              ),
+            ),
+          ],
+        ),
       GoRoute(
         path: AppRoutes.humas,
         builder: (context, state) => const HumasHubView(),

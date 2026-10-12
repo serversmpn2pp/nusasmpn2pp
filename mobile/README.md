@@ -4,6 +4,14 @@ Aplikasi Android NUSA untuk SMP Negeri 2 Padang Panjang. Proyek ini berada
 dalam repository yang sama dengan backend Laravel NUSA, tetapi memiliki proses
 build dan dependensi sendiri.
 
+## Persuratan & Arsip
+
+Menu Android sudah terhubung ke API surat masuk, keluar/tugas, pengesahan,
+disposisi, monitoring dan laporan pelaksanaan. Surat dan bukti dapat diunggah
+melalui kamera HP, galeri atau pemilih berkas; foto dikonfirmasi sebelum dipakai.
+Tombol mengikuti kewenangan TU, pimpinan dan penerima tugas. Panduan format,
+batas berkas, privasi, deployment dan uji HP: [Persuratan Android](../docs/mobile-persuratan.md).
+
 ## Menjalankan aplikasi
 
 Pastikan backend Laravel berjalan dari root repository:

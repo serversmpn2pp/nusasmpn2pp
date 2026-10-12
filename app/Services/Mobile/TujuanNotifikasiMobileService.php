@@ -34,7 +34,14 @@ class TujuanNotifikasiMobileService
             return $path.($parameter ? '?'.http_build_query($parameter) : '');
         }
 
+        if (in_array($path, ['/persuratan/pengesahan', '/persuratan/tindak-lanjut'], true)) {
+            return $path;
+        }
+
         foreach ([
+            '/persuratan' => '/persuratan',
+            '/surat-saya' => '/surat-saya',
+            '/tindak-lanjut-surat' => '/tindak-lanjut-surat',
             '/dashboard-humas' => '/humas',
             '/agenda-humas' => '/humas/agenda',
             '/dokumen-humas' => '/humas/dokumen',

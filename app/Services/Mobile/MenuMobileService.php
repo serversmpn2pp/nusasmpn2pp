@@ -142,6 +142,7 @@ class MenuMobileService
             'wakil_pimpinan_sarana_prasarana' => ['dashboard-sarpras', 'inventaris-barang', 'peminjaman-barang', 'barang-datang'],
             'petugas_inventaris' => ['dashboard-sarpras', 'inventaris-barang', 'peminjaman-barang', 'barang-datang'],
             'wakil_pimpinan_humas' => ['dashboard-humas', 'agenda-humas', 'pengaduan-humas', 'dokumen-humas'],
+            'tata_usaha' => ['arsip-surat', 'monitoring-tindak-lanjut-surat', 'surat-saya', 'tindak-lanjut-surat-saya'],
             'satpam' => ['scan-presensi-siswa', 'scan-presensi-pegawai', 'laporkan-kejadian'],
         ];
         $peran = $pengguna->daftarPeran

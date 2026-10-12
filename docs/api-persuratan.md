@@ -18,17 +18,16 @@ Nomor tetap manual; surat final dibuat di luar NUSA lalu diunggah.
 | monitoring-tindak-lanjut-surat | /persuratan/tindak-lanjut | /api/v1/persuratan/tindak-lanjut | TU, pimpinan, administrator |
 | tindak-lanjut-surat-saya | /tindak-lanjut-surat | /api/v1/tindak-lanjut-surat | Akun pegawai aktif |
 
-`api_tersedia=true` menandai backend siap, sedangkan `status=segera_hadir`
-menandai **layar native belum dibuat/terdaftar pada APK**. Kedua status berbeda.
-Menu tidak dijadikan akses cepat sampai layar tersedia; pilihan akses cepat lama
+`api_tersedia=true` dan `status=tersedia` menandai API dan layar native siap.
+TU mendapat rekomendasi akses cepat persuratan; pilihan akses cepat lama
 tetap dijaga. Guru mendapat dua menu pribadi, TU empat, pimpinan lima,
 administrator tanpa identitas pegawai tiga. Siswa/orang tua dan pegawai nonaktif
 tidak mendapat menu ini walaupun keliru diberi role TU.
 
-Tahap integrasi Android: bangun layar daftar/detail/formulir/unduhan, daftarkan rute
-di router APK, tambahkan pemetaan tujuan notifikasi, lalu ubah status katalog menjadi
-`tersedia` dan rilis APK baru. Backend ini tidak mengaktifkan layar pada APK lama.
-Sementara itu fitur web tetap dapat dipakai seperti sebelumnya.
+Layar Android mencakup daftar, filter, detail, formulir, tindakan, dan unduhan
+privat. Kamera, galeri atau pemilih berkas dapat dipakai untuk surat dan bukti.
+Pasang APK baru bersama pembaruan backend; status katalog tidak menambahkan
+layar ke APK lama. Panduan: [Persuratan Android](mobile-persuratan.md).
 
 ## Autentikasi Dan Privasi
 
@@ -195,7 +194,9 @@ dibuka ulang. Pembatalan surat memblokir pengerjaan baru, tanpa menghapus lapora
 
 ## Berkas, Notifikasi Dan Rate Limit
 
-Unduh `berkas.url`, `berkas_surat.url`, `laporan[].bukti[].url` dengan header Bearer.
+Unduh berkas melalui endpoint yang sesuai dengan header Bearer. Klien Android
+membentuk path relatif dari ID surat/tugas/berkas, bukan meneruskan token ke URL
+sembarang dari respons API.
 Server memeriksa akses parent, keaktifan berkas pribadi, lokasi privat dan SHA-256.
 File hilang/berubah, ID silang antar surat/tugas atau di luar izin ditolak.
 Membuka GET detail/berkas tidak mengubah status baca/tugas.
@@ -204,9 +205,10 @@ Alur notifikasi sama dengan web: pengajuan ke pengesah, penugasan saat sah,
 disposisi, pengajuan/keputusan laporan, perubahan dan pembatalan. Pencatatan kirim
 tidak mengulang notifikasi penugasan. Push memakai worker Firebase yang sudah ada,
 jika aktif, dengan isi generik. Tidak ada WhatsApp/email otomatis.
-Selama layar native belum terdaftar, endpoint tujuan notifikasi mengembalikan
-`tautan_mobile=null` untuk surat; APK tetap dapat menampilkan isi notifikasi melalui
-fallback yang sudah ada. Tidak mengarahkan pengguna ke rute native yang belum dibuat.
+Tujuan notifikasi terverifikasi membuka `/persuratan/{id}`, `/surat-saya/{id}`,
+atau `/tindak-lanjut-surat/{id}` sesuai penerima. Query privat tidak diteruskan.
+GET tujuan/detail tidak menandai surat dibaca atau menyelesaikan tugas; konfirmasi
+membaca surat/instruksi tetap berupa tindakan tersendiri.
 
 Batas umum 120 request/menit per akun. Buat/ubah surat/laporan 15/menit per operasi;
 tindakan/disposisi/baca 30/menit per operasi. Ikuti Retry-After pada 429.

@@ -191,12 +191,11 @@ return [
         'deskripsi' => 'Arsip surat, pengesahan, disposisi, dan laporan pelaksanaan tugas.',
         'ikon' => 'archive',
         'items' => [
-            // APIs are ready; native screens have not been registered in the APK yet.
-            ['kode' => 'arsip-surat', 'label' => 'Arsip Surat', 'inisial' => 'AS', 'staff_only' => true, 'persuratan_only' => true, 'izin' => ['surat.lihat', 'surat.kelola', 'surat.sahkan', 'surat.disposisi'], 'status' => 'segera_hadir', 'rute' => '/persuratan', 'api' => '/api/v1/persuratan'],
-            ['kode' => 'pengesahan-surat', 'label' => 'Pengesahan Surat', 'inisial' => 'PS', 'staff_only' => true, 'persuratan_only' => true, 'izin' => 'surat.sahkan', 'status' => 'segera_hadir', 'rute' => '/persuratan/pengesahan', 'api' => '/api/v1/persuratan/pengesahan'],
-            ['kode' => 'surat-saya', 'label' => 'Surat & Penugasan Saya', 'inisial' => 'SS', 'staff_only' => true, 'persuratan_only' => true, 'pegawai_only' => true, 'status' => 'segera_hadir', 'rute' => '/surat-saya', 'api' => '/api/v1/surat-saya'],
-            ['kode' => 'monitoring-tindak-lanjut-surat', 'label' => 'Monitoring Tindak Lanjut Surat', 'inisial' => 'MT', 'staff_only' => true, 'persuratan_only' => true, 'izin' => ['surat.lihat', 'surat.kelola', 'surat.sahkan', 'surat.disposisi'], 'status' => 'segera_hadir', 'rute' => '/persuratan/tindak-lanjut', 'api' => '/api/v1/persuratan/tindak-lanjut'],
-            ['kode' => 'tindak-lanjut-surat-saya', 'label' => 'Tindak Lanjut Surat Saya', 'inisial' => 'TL', 'staff_only' => true, 'persuratan_only' => true, 'pegawai_only' => true, 'status' => 'segera_hadir', 'rute' => '/tindak-lanjut-surat', 'api' => '/api/v1/tindak-lanjut-surat'],
+            ['kode' => 'arsip-surat', 'label' => 'Arsip Surat', 'inisial' => 'AS', 'staff_only' => true, 'persuratan_only' => true, 'izin' => ['surat.lihat', 'surat.kelola', 'surat.sahkan', 'surat.disposisi'], 'status' => 'tersedia', 'rute' => '/persuratan', 'api' => '/api/v1/persuratan'],
+            ['kode' => 'pengesahan-surat', 'label' => 'Pengesahan Surat', 'inisial' => 'PS', 'staff_only' => true, 'persuratan_only' => true, 'izin' => 'surat.sahkan', 'status' => 'tersedia', 'rute' => '/persuratan/pengesahan', 'api' => '/api/v1/persuratan/pengesahan'],
+            ['kode' => 'surat-saya', 'label' => 'Surat & Penugasan Saya', 'inisial' => 'SS', 'staff_only' => true, 'persuratan_only' => true, 'pegawai_only' => true, 'status' => 'tersedia', 'rute' => '/surat-saya', 'api' => '/api/v1/surat-saya'],
+            ['kode' => 'monitoring-tindak-lanjut-surat', 'label' => 'Monitoring Tindak Lanjut Surat', 'inisial' => 'MT', 'staff_only' => true, 'persuratan_only' => true, 'izin' => ['surat.lihat', 'surat.kelola', 'surat.sahkan', 'surat.disposisi'], 'status' => 'tersedia', 'rute' => '/persuratan/tindak-lanjut', 'api' => '/api/v1/persuratan/tindak-lanjut'],
+            ['kode' => 'tindak-lanjut-surat-saya', 'label' => 'Tindak Lanjut Surat Saya', 'inisial' => 'TL', 'staff_only' => true, 'persuratan_only' => true, 'pegawai_only' => true, 'status' => 'tersedia', 'rute' => '/tindak-lanjut-surat', 'api' => '/api/v1/tindak-lanjut-surat'],
         ],
     ],
     [
