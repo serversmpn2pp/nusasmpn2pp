@@ -7,11 +7,16 @@
         @if(!$pribadi) @izin('surat.kelola')<a href="{{ route('persuratan.create') }}" class="button button-primary">Tambah surat</a>@endizin @endif
     </div>
     @include('persuratan._messages')
-    <div class="surat-summary">
-        @if(!$pribadi)<div><span>Draf / perlu perbaikan</span><strong>{{ ($jumlah['draf'] ?? 0) + ($jumlah['dikembalikan'] ?? 0) }}</strong></div><div><span>Menunggu pengesahan</span><strong>{{ $jumlah['diajukan'] ?? 0 }}</strong></div><div><span>Surat masuk tercatat</span><strong>{{ $jumlah['tercatat'] ?? 0 }}</strong></div>@endif
-        <div><span>{{ $pribadi ? 'Penugasan aktif' : 'Disahkan / dikirim' }}</span><strong>{{ ($jumlah['disahkan'] ?? 0) + ($jumlah['dikirim'] ?? 0) }}</strong></div><div><span>Dibatalkan</span><strong>{{ $jumlah['dibatalkan'] ?? 0 }}</strong></div>
+    <div class="stats-grid surat-stats {{ $pribadi ? 'surat-stats--pribadi' : '' }}">
+        @if(!$pribadi)
+            <div class="panel stat"><p class="stat-label">Draf / perlu perbaikan</p><p class="stat-value">{{ ($jumlah['draf'] ?? 0) + ($jumlah['dikembalikan'] ?? 0) }}</p></div>
+            <div class="panel stat inactive"><p class="stat-label">Menunggu pengesahan</p><p class="stat-value">{{ $jumlah['diajukan'] ?? 0 }}</p></div>
+            <div class="panel stat"><p class="stat-label">Surat masuk tercatat</p><p class="stat-value">{{ $jumlah['tercatat'] ?? 0 }}</p></div>
+        @endif
+        <div class="panel stat active"><p class="stat-label">{{ $pribadi ? 'Penugasan aktif' : 'Disahkan / dikirim' }}</p><p class="stat-value">{{ ($jumlah['disahkan'] ?? 0) + ($jumlah['dikirim'] ?? 0) }}</p></div>
+        <div class="panel stat"><p class="stat-label">Dibatalkan</p><p class="stat-value">{{ $jumlah['dibatalkan'] ?? 0 }}</p></div>
     </div>
-    <form method="GET" action="{{ route($pribadi ? 'surat-saya.index' : 'persuratan.index') }}" class="surat-filter">
+    <form method="GET" action="{{ route($pribadi ? 'surat-saya.index' : 'persuratan.index') }}" class="panel panel-pad surat-filter {{ $pribadi ? 'surat-filter--pribadi' : '' }}">
         <div><label for="kata_kunci">Cari surat</label><input class="input" id="kata_kunci" name="kata_kunci" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120" placeholder="Nomor surat atau perihal"></div>
         @if(!$pribadi)<div><label for="jenis">Jenis surat</label><select class="select" id="jenis" name="jenis"><option value="">Semua jenis</option>@foreach(\App\Models\SuratTu::JENIS as $kode => $label)<option value="{{ $kode }}" @selected(($filter['jenis'] ?? '') === $kode)>{{ $label }}</option>@endforeach</select></div>@endif
         <div><label for="status">Status</label><select class="select" id="status" name="status"><option value="">Semua status</option>@foreach(\App\Models\SuratTu::STATUS as $kode => $label) @if(!$pribadi || in_array($kode, ['disahkan','dikirim','dibatalkan']))<option value="{{ $kode }}" @selected(($filter['status'] ?? '') === $kode)>{{ $label }}</option>@endif @endforeach</select></div>
@@ -21,13 +26,13 @@
             @if($pribadi)<label><input type="checkbox" name="belum_dibaca" value="1" @checked($filter['belum_dibaca'] ?? false)> Belum dibaca</label>
             @else @izin('surat.sahkan')<label><input type="checkbox" name="pemeriksaan_saya" value="1" @checked($filter['pemeriksaan_saya'] ?? false)> Menunggu pengesahan saya</label>@endizin @endif
             <button class="button button-primary" type="submit">Tampilkan</button><a class="button button-muted" href="{{ route($pribadi ? 'surat-saya.index' : 'persuratan.index') }}">Reset</a>
-            <span class="surat-muted">{{ $surat->total() }} surat</span>
+            <span class="surat-muted surat-filter-count" role="status">{{ $surat->total() }} surat</span>
         </div>
     </form>
-    <div class="surat-shell">
+    <div class="panel surat-shell">
         @if($surat->isEmpty())<div class="surat-empty">{{ $pribadi ? 'Belum ada surat tugas yang sesuai.' : 'Belum ada surat yang sesuai.' }}</div>
         @else
-            <table class="surat-table surat-table--list"><thead><tr><th>Nomor & perihal</th><th>Tanggal</th><th>{{ $pribadi ? 'Pelaksanaan' : 'Pengirim / penerima' }}</th><th>Status</th><th>{{ $pribadi ? 'Konfirmasi' : 'Tindak lanjut' }}</th><th></th></tr></thead><tbody>
+            <table class="surat-table surat-table--list"><thead><tr><th scope="col">Nomor & perihal</th><th scope="col">Tanggal</th><th scope="col">{{ $pribadi ? 'Pelaksanaan' : 'Pengirim / penerima' }}</th><th scope="col">Status</th><th scope="col">{{ $pribadi ? 'Konfirmasi' : 'Tindak lanjut' }}</th><th scope="col">Aksi</th></tr></thead><tbody>
             @foreach($surat as $item)
                 <tr><td><a href="{{ route($pribadi ? 'surat-saya.show' : 'persuratan.show', $item) }}">{{ $item->nomor_surat }}</a><small>{{ $item->perihal }}</small><small>{{ \App\Models\SuratTu::JENIS[$item->jenis] }} @if($item->nomor_agenda) &middot; Agenda {{ $item->nomor_agenda }} @endif @if($item->sifat !== 'biasa') &middot; {{ \App\Models\SuratTu::SIFAT[$item->sifat] }} @endif</small></td>
                 <td data-label="Tanggal">{{ $item->tanggal_surat->format('d-m-Y') }} @if($item->tanggal_diterima)<small>Diterima {{ $item->tanggal_diterima->format('d-m-Y') }}</small>@endif</td>

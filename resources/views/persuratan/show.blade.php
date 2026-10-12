@@ -4,6 +4,7 @@
     @include('persuratan._style')
     <div class="page-header"><div><p class="eyebrow">{{ $pribadi ? 'Surat & Penugasan Saya' : 'Tata Usaha / Persuratan & Arsip' }}</p><h1 class="page-title">{{ \App\Models\SuratTu::JENIS[$surat->jenis] }}</h1></div><div class="surat-actions"><a class="button button-muted" href="{{ route($pribadi ? 'surat-saya.index' : 'persuratan.index') }}">Kembali</a>@if(!$pribadi) @izin('surat.kelola') @if($surat->dapatDiedit())<a class="button button-primary" href="{{ route('persuratan.edit', $surat) }}">Perbarui surat</a>@elseif($surat->disahkan_pada && !$revisi->whereNotNull('disahkan_pada')->count())<a class="button button-primary" href="{{ route('persuratan.create', ['revisi_dari_id' => $surat->id]) }}">Buat revisi</a>@endif @endizin @endif</div></div>
     @include('persuratan._messages')
+    <article class="panel surat-document">
     <header class="surat-detail-head"><div><h2>{{ $surat->nomor_surat }}</h2><span class="surat-muted">{{ $surat->perihal }}</span></div><span class="surat-status surat-status--{{ $surat->status }}">{{ \App\Models\SuratTu::STATUS[$surat->status] }}</span></header>
     @if($surat->catatan_status)<div class="surat-notice"><strong>Catatan keputusan</strong><p class="surat-text">{{ $surat->catatan_status }}</p></div>@endif
     @if($asal)<p class="surat-muted">Revisi dari <a href="{{ route('persuratan.show', $asal) }}">{{ $asal->nomor_surat }}</a></p>@endif
@@ -33,26 +34,31 @@
     @if(!$pribadi)
         @php($akun = auth()->user())
         @php($pemeriksa = $akun->memilikiIzin('surat.sahkan') && $surat->pengesah_pengguna_id === $akun->id)
+        @php($kelola = $akun->memilikiIzin('surat.kelola'))
+        @php($dapatMembatalkan = $surat->status !== 'dibatalkan' && ($surat->disahkan_pada ? ($pemeriksa || $akun->administrator()) : $kelola))
+        @if(($kelola && (($surat->jenis !== 'masuk' && in_array($surat->status, ['draf','dikembalikan'])) || in_array($surat->status, ['diajukan','disahkan']))) || ($pemeriksa && $surat->status === 'diajukan') || $dapatMembatalkan || in_array($surat->status, ['disahkan','dikirim']))
         <section class="surat-section"><h2>Keputusan & pengiriman</h2>
-            @if($akun->memilikiIzin('surat.kelola') && $surat->jenis !== 'masuk' && in_array($surat->status, ['draf','dikembalikan']))
+            @if($kelola && $surat->jenis !== 'masuk' && in_array($surat->status, ['draf','dikembalikan']))
                 @include('persuratan._tindakan', ['aksi'=>'ajukan','label'=>'Ajukan pengesahan','alasan'=>false])
             @endif
             @if($pemeriksa && $surat->status === 'diajukan')
                 @include('persuratan._tindakan', ['aksi'=>'sahkan','label'=>'Sahkan surat','alasan'=>false])
                 @include('persuratan._tindakan', ['aksi'=>'kembalikan','label'=>'Kembalikan untuk perbaikan','alasan'=>true])
             @endif
-            @if($akun->memilikiIzin('surat.kelola') && $surat->status === 'diajukan')
+            @if($kelola && $surat->status === 'diajukan')
                 @include('persuratan._tindakan', ['aksi'=>'tarik','label'=>'Tarik pengajuan','alasan'=>true])
             @endif
-            @if($akun->memilikiIzin('surat.kelola') && $surat->status === 'disahkan')
+            @if($kelola && $surat->status === 'disahkan')
                 @include('persuratan._tindakan', ['aksi'=>'kirim','label'=>'Catat pengiriman','alasan'=>true])
             @endif
-            @if($surat->status !== 'dibatalkan' && ($surat->disahkan_pada ? ($pemeriksa || $akun->administrator()) : $akun->memilikiIzin('surat.kelola')))
+            @if($dapatMembatalkan)
                 @include('persuratan._tindakan', ['aksi'=>'batal','label'=>'Batalkan surat','alasan'=>true])
             @endif
             @if(in_array($surat->status,['disahkan','dikirim']))<p class="surat-muted">Surat telah disahkan dan dikunci.</p>@endif
         </section>
+        @endif
         <section class="surat-section"><h2>Riwayat surat</h2><ul class="surat-timeline">@foreach($surat->riwayat as $log)<li><strong>{{ ['dicatat'=>'Surat dicatat','diperbarui'=>'Surat diperbarui','ajukan'=>'Diajukan untuk pengesahan','sahkan'=>'Surat disahkan','kembalikan'=>'Dikembalikan untuk perbaikan','tarik'=>'Pengajuan ditarik','kirim'=>'Pengiriman dicatat','batal'=>'Surat dibatalkan','dibaca'=>'Surat dibaca','digantikan'=>'Digantikan oleh revisi','disposisi'=>'Disposisi diberikan'][$log->aksi] ?? $log->aksi }}</strong><div class="surat-muted">{{ $log->created_at->format('d-m-Y H:i') }} &middot; {{ $log->pengguna?->nama }} &middot; Versi {{ $log->versi }}</div>@if($log->catatan)<p>{{ $log->catatan }}</p>@endif</li>@endforeach</ul></section>
     @endif
+    </article>
     @include('persuratan.tindak-lanjut._scripts')
 @endsection

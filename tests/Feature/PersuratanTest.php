@@ -306,6 +306,43 @@ class PersuratanTest extends TestCase
         $this->capture('penugasan', $this->get(route('surat-saya.index'))->assertOk());
     }
 
+    public function test_menu_persuratan_memakai_panel_nusa_pada_keadaan_kosong_dan_terisi(): void
+    {
+        $kosong = $this->actingAs($this->tu)->get(route('persuratan.index'))->assertOk()
+            ->assertSee('class="stats-grid surat-stats ', false)
+            ->assertSee('class="panel stat inactive"', false)
+            ->assertSee('class="panel panel-pad surat-filter ', false)
+            ->assertSee('class="panel surat-shell"', false)
+            ->assertSee('Belum ada surat yang sesuai.');
+        $this->capture('arsip-kosong', $kosong);
+        $this->get(route('persuratan.create'))->assertOk()
+            ->assertSee('class="panel surat-document surat-form"', false)
+            ->assertSee('class="surat-actions surat-form-footer"', false);
+
+        $surat = $this->buat();
+        $this->get(route('persuratan.show', $surat))->assertOk()
+            ->assertSee('<article class="panel surat-document">', false);
+        $this->aksi($surat, 'ajukan', $this->tu)->assertSessionHasNoErrors();
+        $pengesahan = $this->actingAs($this->kepala)->get(route('persuratan.pemeriksaan'))->assertOk()
+            ->assertSee('Pengesahan surat')
+            ->assertSee('class="panel panel-pad surat-filter ', false)
+            ->assertSee('scope="col">Aksi', false)
+            ->assertSee($surat->nomor_surat);
+        $this->capture('pengesahan-daftar', $pengesahan);
+        $this->aksi($surat, 'sahkan', $this->kepala, ['konfirmasi_berkas' => 1])->assertSessionHasNoErrors();
+        $this->actingAs($this->guru)->get(route('surat-saya.index'))->assertOk()
+            ->assertSee('surat-stats--pribadi', false)
+            ->assertSee('surat-filter--pribadi', false)
+            ->assertSee($surat->nomor_surat);
+        $this->get(route('surat-saya.show', $surat))->assertOk()
+            ->assertSee('<article class="panel surat-document">', false)
+            ->assertDontSee('Keputusan &amp; pengiriman', false);
+        $masuk = $this->buat('masuk');
+        $this->actingAs($this->kepala)->get(route('persuratan.show', $masuk))->assertOk()
+            ->assertSee('Disposisi &amp; tindak lanjut', false)
+            ->assertDontSee('Keputusan &amp; pengiriman', false);
+    }
+
     public function test_pejabat_nonaktif_dan_surat_rahasia_tidak_dapat_diajukan_ke_pengesah_tanpa_akses(): void
     {
         $surat = $this->buat('keluar');

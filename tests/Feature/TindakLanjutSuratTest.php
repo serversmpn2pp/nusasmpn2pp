@@ -296,6 +296,28 @@ class TindakLanjutSuratTest extends TestCase
         $this->assertStringNotContainsString('D/1', json_encode($push));
     }
 
+    public function test_monitoring_dan_tindak_lanjut_pribadi_memakai_panel_nusa_yang_sama(): void
+    {
+        $this->actingAs($this->tu)->get(route('tindak-lanjut-surat.monitoring'))->assertOk()
+            ->assertSee('class="stats-grid surat-stats surat-stats--tindak"', false)
+            ->assertSee('class="panel panel-pad surat-filter surat-filter--tindak"', false)
+            ->assertSee('class="panel surat-shell"', false)
+            ->assertSee('0 tindak lanjut')
+            ->assertSee('Belum ada tindak lanjut yang sesuai.');
+        $t = $this->disposisi();
+        $pribadi = $this->actingAs($this->guru)->get(route('tindak-lanjut-surat.index'))->assertOk()
+            ->assertSee('class="stats-grid surat-stats surat-stats--tindak"', false)
+            ->assertSee('class="panel panel-pad surat-filter surat-filter--tindak"', false)
+            ->assertSee('1 tindak lanjut')
+            ->assertSee('scope="col">Aksi', false)
+            ->assertDontSee('name="pemeriksaan_saya"', false);
+        $this->capture('tindak-saya-daftar', $pribadi);
+        $this->get(route('tindak-lanjut-surat.show', $t))->assertOk()
+            ->assertSee('<article class="panel surat-document">', false)
+            ->assertSee('data-tindak-upload', false)
+            ->assertDontSee('Pemeriksaan laporan');
+    }
+
     public function test_migrasi_mengikutkan_surat_tugas_lama_tanpa_mengirim_notifikasi(): void
     {
         $surat = $this->surat('tugas');

@@ -5,7 +5,7 @@
     <div class="page-header"><div><p class="eyebrow">Tata Usaha / Persuratan & Arsip</p><h1 class="page-title">{{ $surat->exists ? 'Perbarui surat' : ($asal ? 'Revisi surat' : 'Tambah surat') }}</h1></div><a class="button button-muted" href="{{ $surat->exists ? route('persuratan.show', $surat) : route('persuratan.index') }}">Kembali</a></div>
     @include('persuratan._messages')
     @if($asal)<div class="surat-notice">Revisi dari surat <strong>{{ $asal->nomor_surat }}</strong>. Surat asal tetap berlaku sampai revisi ini disahkan.</div>@endif
-    <form method="POST" enctype="multipart/form-data" action="{{ $surat->exists ? route('persuratan.update', $surat) : route('persuratan.store') }}" data-surat-form>
+    <form method="POST" enctype="multipart/form-data" action="{{ $surat->exists ? route('persuratan.update', $surat) : route('persuratan.store') }}" class="panel surat-document surat-form" data-surat-form>
         @csrf
         @if($surat->exists) @method('PUT')<input type="hidden" name="versi" value="{{ $surat->versi }}">@endif
         @if($asal)<input type="hidden" name="revisi_dari_id" value="{{ $asal->id }}"><input type="hidden" name="versi_asal" value="{{ $asal->versi }}">@endif
@@ -38,7 +38,7 @@
             @if($surat->exists && $surat->berkas->where('aktif',true)->where('jenis','lampiran')->isNotEmpty())<div class="surat-full"><label>Lepas lampiran</label>@foreach($surat->berkas->where('aktif',true)->where('jenis','lampiran') as $file)<label class="surat-choice"><input type="checkbox" name="hapus_lampiran[]" value="{{ $file->id }}">{{ $file->nama_file_asli }}</label>@endforeach</div>@endif
             @if($surat->exists)<div class="surat-full"><label for="catatan_revisi">Alasan perubahan</label><textarea class="textarea" id="catatan_revisi" name="catatan_revisi" rows="2" maxlength="2000" required>{{ old('catatan_revisi') }}</textarea></div>@endif
         </div></section>
-        <div class="surat-actions" style="padding-top:20px"><button type="submit" class="button button-primary">{{ $surat->exists ? 'Simpan perubahan' : 'Simpan surat' }}</button><a href="{{ route('persuratan.index') }}" class="button button-muted">Batal</a><span role="status" data-surat-progress hidden>Sedang mengunggah dan menyimpan surat...</span></div>
+        <div class="surat-actions surat-form-footer"><button type="submit" class="button button-primary">{{ $surat->exists ? 'Simpan perubahan' : 'Simpan surat' }}</button><a href="{{ route('persuratan.index') }}" class="button button-muted">Batal</a><span role="status" data-surat-progress hidden>Sedang mengunggah dan menyimpan surat...</span></div>
     </form>
     @include('persuratan._scripts')
 @endsection
