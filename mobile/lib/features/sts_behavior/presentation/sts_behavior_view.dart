@@ -4,6 +4,7 @@ import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/sts_behavior/data/sts_behavior_remote_data_source.dart';
 import 'package:nusa/features/sts_behavior/domain/sts_behavior.dart';
+import 'package:nusa/features/sts_behavior/presentation/sts_behavior_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
 String _errorMessage(Object error) => error is AppException
@@ -116,6 +117,37 @@ class _StsBehaviorViewState extends ConsumerState<StsBehaviorView> {
     if (changed == true && mounted) await _refresh();
   }
 
+  void _showInfo() => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (context) => const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StsBehaviorSectionTitle(title: 'Isi & privasi lampiran'),
+          SizedBox(height: 14),
+          StsBehaviorNotice(
+            title: 'Ringkasan yang aman untuk rapor',
+            message: 'Lampiran berisi ringkasan pembinaan, bukan kronologi lengkap atau catatan rahasia BK. Jangan mencantumkan rincian sensitif atau identitas siswa lain.',
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Tanggal, status, sumber kejadian, dan poin berasal dari server dan tidak dapat diubah di halaman ini. Setiap siswa tetap perlu diperiksa, termasuk siswa tanpa catatan kejadian.',
+            style: TextStyle(fontSize: 13, height: 1.5),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Pencetakan rapor dan lampiran gabungan tetap melalui wali kelas di web. Jika sumber atau periode berubah, lampiran harus diperiksa kembali.',
+            style: TextStyle(fontSize: 13, height: 1.5),
+          ),
+        ],
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final page = _page;
@@ -129,7 +161,7 @@ class _StsBehaviorViewState extends ConsumerState<StsBehaviorView> {
             key: const Key('sts-refresh'),
             tooltip: 'Muat ulang',
             onPressed: _busy ? null : _refresh,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
@@ -144,6 +176,12 @@ class _StsBehaviorViewState extends ConsumerState<StsBehaviorView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      const Icon(
+                        Icons.cloud_off_rounded,
+                        size: 44,
+                        color: NusaColors.textSecondary,
+                      ),
+                      const SizedBox(height: 14),
                       Text(_error!, textAlign: TextAlign.center),
                       TextButton(
                         onPressed: _refresh,
@@ -155,160 +193,144 @@ class _StsBehaviorViewState extends ConsumerState<StsBehaviorView> {
               )
             : page == null
             ? const SizedBox.shrink()
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _selector(
-                    'sts-activity',
-                    'Kegiatan STS',
-                    page.activityId,
-                    page.activities,
-                    (id) => _load(activityId: id),
-                  ),
-                  const SizedBox(height: 12),
-                  _selector(
-                    'sts-class',
-                    'Kelas',
-                    page.classId,
-                    page.classes,
-                    (id) => _load(activityId: page.activityId, classId: id),
-                  ),
-                  if (report == null)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Text(
-                        'Belum ada kegiatan STS atau kelas dalam cakupan tugas Anda.',
-                      ),
+            : RefreshIndicator(
+                onRefresh: _refresh,
+                child: ListView(
+                  key: const PageStorageKey<String>('sts-behavior-list'),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),
+                  children: [
+                    StsBehaviorSummary(report: report, onInfo: _showInfo),
+                    const SizedBox(height: 14),
+                    _selector(
+                      'sts-activity',
+                      'Kegiatan STS',
+                      page.activityId,
+                      page.activities,
+                      (id) => _load(activityId: id),
                     ),
-                  if (report != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      'Periode ${report.start} — ${report.end}\nTanggal rapor: ${report.reportDate}',
+                    const SizedBox(height: 12),
+                    _selector(
+                      'sts-class',
+                      'Kelas',
+                      page.classId,
+                      page.classes,
+                      (id) => _load(activityId: page.activityId, classId: id),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Ringkasan untuk lampiran rapor; bukan kronologi atau catatan rahasia BK. Pencetakan rapor gabungan tetap melalui wali kelas di web.',
-                    ),
-                    for (final notice in report.notices)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          notice,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    NusaDropdownField<String>(
-                      fieldKey: const Key('sts-content'),
-                      value: report.content,
-                      enabled: report.canChangeContent,
-                      decoration: const InputDecoration(
-                        labelText: 'Isi lampiran',
-                      ),
-                      options: [
-                        for (final item in page.contentOptions.entries)
-                          NusaDropdownOption(
-                            value: item.key,
-                            label: item.value,
-                          ),
-                      ],
-                      onChanged: (choice) {
-                        if (choice != null) _changeContent(choice);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '${report.students.where((s) => s.ready).length} dari ${report.students.length} lampiran siap',
-                    ),
-                    if (report.students.isEmpty)
+                    if (report == null)
                       const Padding(
                         padding: EdgeInsets.only(top: 16),
-                        child: Text('Belum ada siswa aktif di kelas ini.'),
-                      ),
-                    if (report.canReview && report.students.isNotEmpty) ...[
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Pilih semua siswa'),
-                        value: _selected.length == report.students.length,
-                        onChanged: (value) => setState(() {
-                          _selected.clear();
-                          if (value == true) {
-                            _selected.addAll(
-                              report.students.map((s) => s.memberId),
-                            );
-                          }
-                        }),
-                      ),
-                      FilledButton.icon(
-                        key: const Key('sts-review-selected'),
-                        onPressed: _selected.isEmpty
-                            ? null
-                            : () => _review(
-                                report.students
-                                    .where(
-                                      (s) => _selected.contains(s.memberId),
-                                    )
-                                    .toList(),
-                              ),
-                        icon: const Icon(Icons.fact_check_outlined),
-                        label: Text(
-                          'Periksa ${_selected.length} lampiran terpilih',
+                        child: StsBehaviorNotice(
+                          title: 'Belum ada lampiran',
+                          message: 'Belum ada kegiatan STS atau kelas dalam cakupan tugas Anda.',
                         ),
                       ),
-                    ],
-                    for (final student in report.students)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (report.canReview)
-                                CheckboxListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  title: Text(
-                                    '${student.attendanceNumber ?? '-'}. ${student.name}',
-                                  ),
-                                  value: _selected.contains(student.memberId),
-                                  onChanged: (value) => setState(() {
-                                    if (value == true) {
-                                      _selected.add(student.memberId);
-                                    } else {
-                                      _selected.remove(student.memberId);
-                                    }
-                                  }),
-                                )
-                              else
-                                Text(
-                                  '${student.attendanceNumber ?? '-'}. ${student.name}',
-                                ),
-                              Text(
-                                student.ready
-                                    ? 'Siap · sudah diperiksa'
-                                    : 'Belum siap · perlu pemeriksaan',
-                              ),
-                              Text(
-                                '${student.incidentCount} kejadian · masuk ${student.pointsIn} · dikurangi ${student.pointsOut} · saldo ${student.balance}',
-                              ),
-                              TextButton(
-                                key: Key('sts-student-${student.memberId}'),
-                                onPressed: () => _review([student]),
-                                child: Text(
-                                  report.canReview
-                                      ? 'Buka dan periksa'
-                                      : 'Lihat ringkasan',
-                                ),
-                              ),
-                            ],
+                    if (report != null) ...[
+                      const SizedBox(height: 12),
+                      NusaDropdownField<String>(
+                        fieldKey: const Key('sts-content'),
+                        value: report.content,
+                        enabled: report.canChangeContent,
+                        decoration: const InputDecoration(
+                          labelText: 'Isi lampiran',
+                          prefixIcon: Icon(Icons.article_outlined, size: 20),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
                           ),
                         ),
+                        options: [
+                          for (final item in page.contentOptions.entries)
+                            NusaDropdownOption(
+                              value: item.key,
+                              label: item.value,
+                            ),
+                        ],
+                        onChanged: (choice) {
+                          if (choice != null) _changeContent(choice);
+                        },
                       ),
+                      const SizedBox(height: 12),
+                      StsBehaviorPeriod(report: report),
+                      for (final notice in report.notices)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: StsBehaviorNotice(
+                            message: notice,
+                            warning: true,
+                          ),
+                        ),
+                      const SizedBox(height: 20),
+                      StsBehaviorSectionTitle(
+                        title: 'Lampiran siswa',
+                        detail: '${report.students.length} siswa',
+                      ),
+                      const SizedBox(height: 10),
+                      if (report.students.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4),
+                          child: StsBehaviorNotice(
+                            message: 'Belum ada siswa aktif di kelas ini.',
+                          ),
+                        ),
+                      if (report.canReview && report.students.isNotEmpty) ...[
+                        CheckboxListTile(
+                          key: const Key('sts-select-all'),
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: const Text(
+                            'Pilih semua siswa',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          value: _selected.length == report.students.length,
+                          onChanged: (value) => setState(() {
+                            _selected.clear();
+                            if (value == true) {
+                              _selected.addAll(
+                                report.students.map((s) => s.memberId),
+                              );
+                            }
+                          }),
+                        ),
+                        if (_selected.isNotEmpty)
+                          FilledButton.icon(
+                            key: const Key('sts-review-selected'),
+                            onPressed: _selected.isEmpty
+                                ? null
+                                : () => _review(
+                                    report.students
+                                        .where(
+                                          (s) => _selected.contains(s.memberId),
+                                        )
+                                        .toList(),
+                                  ),
+                            icon: const Icon(Icons.fact_check_outlined),
+                            label: Text(
+                              'Periksa ${_selected.length} lampiran terpilih',
+                            ),
+                          ),
+                        const SizedBox(height: 10),
+                      ],
+                      for (final student in report.students)
+                        StsBehaviorStudentCard(
+                          student: student,
+                          canReview: report.canReview,
+                          selected: _selected.contains(student.memberId),
+                          onSelected: (value) => setState(() {
+                            if (value) {
+                              _selected.add(student.memberId);
+                            } else {
+                              _selected.remove(student.memberId);
+                            }
+                          }),
+                          onOpen: () => _review([student]),
+                        ),
+                    ],
                   ],
-                ],
+                ),
               ),
       ),
     );
@@ -323,7 +345,17 @@ class _StsBehaviorViewState extends ConsumerState<StsBehaviorView> {
   ) => NusaDropdownField<int>(
     fieldKey: Key(key),
     value: value,
-    decoration: InputDecoration(labelText: label, hintText: 'Tidak tersedia'),
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: 'Tidak tersedia',
+      prefixIcon: Icon(
+        key == 'sts-activity'
+            ? Icons.event_note_rounded
+            : Icons.groups_outlined,
+        size: 20,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    ),
     options: [
       for (final option in options)
         NusaDropdownOption(value: option.id, label: option.label),
@@ -520,7 +552,9 @@ class _StsBehaviorReviewViewState extends ConsumerState<StsBehaviorReviewView> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Periksa Lampiran STS'),
+          title: Text(
+            _report.canReview ? 'Periksa Lampiran STS' : 'Lihat Lampiran STS',
+          ),
           leading: IconButton(
             onPressed: _saving ? null : _leave,
             icon: const Icon(Icons.arrow_back),
@@ -533,11 +567,24 @@ class _StsBehaviorReviewViewState extends ConsumerState<StsBehaviorReviewView> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Periode ${_report.start} — ${_report.end}'),
-                const SizedBox(height: 8),
-                const Text(
-                  'Periksa setiap ringkasan sebelum menyimpan. Jangan mencantumkan rincian sensitif, kronologi lengkap, atau identitas siswa lain. Tanggal, status, dan poin hanya dapat dibaca.',
+                StsBehaviorPeriod(report: _report),
+                const SizedBox(height: 12),
+                StsBehaviorNotice(
+                  title: _report.canReview
+                      ? 'Ringkasan untuk orang tua/wali'
+                      : 'Mode baca saja',
+                  message: _report.canReview
+                      ? 'Periksa setiap ringkasan sebelum menyimpan. Jangan mencantumkan rincian sensitif, kronologi lengkap, atau identitas siswa lain. Tanggal, status, dan poin hanya dapat dibaca.'
+                      : 'Ringkasan dapat dilihat, tetapi belum dapat disahkan. Tanggal, status, dan poin berasal dari server.',
                 ),
+                if (!_report.canReview)
+                  for (final notice in _report.notices)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: StsBehaviorNotice(message: notice, warning: true),
+                    ),
+                const SizedBox(height: 20),
+                const StsBehaviorSectionTitle(title: 'Penandatangan lampiran'),
                 const SizedBox(height: 16),
                 _signer(
                   'sts-counselor',
@@ -564,82 +611,117 @@ class _StsBehaviorReviewViewState extends ConsumerState<StsBehaviorReviewView> {
                 ),
                 for (final draft in _drafts) ...[
                   const SizedBox(height: 20),
-                  Text(
-                    '${draft.student.attendanceNumber ?? '-'}. ${draft.student.name}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    '${draft.student.incidentCount} kejadian · masuk ${draft.student.pointsIn} · dikurangi ${draft.student.pointsOut} · saldo ${draft.student.balance}',
-                  ),
-                  if (draft.student.rows.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(_report.emptyMessage),
-                    ),
-                  for (final row in draft.student.rows)
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${row.date} · ${row.status} · poin ${row.points ?? '-'}',
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          StsBehaviorStudentHeading(student: draft.student),
+                          const SizedBox(height: 12),
+                          StsBehaviorPoints(student: draft.student),
+                          const SizedBox(height: 16),
+                          StsBehaviorSectionTitle(
+                            title: 'Catatan kejadian',
+                            detail: '${draft.student.incidentCount} kejadian',
+                          ),
+                          if (draft.student.rows.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: StsBehaviorNotice(
+                                message: _report.emptyMessage,
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                            _text(
-                              'sts-incident-${draft.student.memberId}-${row.key}',
-                              'Ringkasan kejadian',
-                              draft.rows[row.key]!.incident,
-                              200,
-                              editable,
-                              required: true,
+                          for (final row in draft.student.rows)
+                            Container(
+                              margin: const EdgeInsets.only(
+                                top: 12,
+                                bottom: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: NusaColors.background,
+                                border: Border.all(color: NusaColors.outline),
+                                borderRadius: BorderRadius.circular(13),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        StsBehaviorBadge(
+                                          label: stsDisplayDate(row.date),
+                                          color: NusaColors.primary,
+                                          icon: Icons.event_outlined,
+                                        ),
+                                        StsBehaviorBadge(
+                                          label: row.status,
+                                          color: NusaColors.primary,
+                                        ),
+                                        StsBehaviorBadge(
+                                          label: 'Poin ${row.points ?? '—'}',
+                                          color: NusaColors.primary,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _text(
+                                      'sts-incident-${draft.student.memberId}-${row.key}',
+                                      'Ringkasan kejadian',
+                                      draft.rows[row.key]!.incident,
+                                      200,
+                                      editable,
+                                      required: true,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _text(
+                                      'sts-action-${draft.student.memberId}-${row.key}',
+                                      'Tindak lanjut',
+                                      draft.rows[row.key]!.action,
+                                      200,
+                                      editable,
+                                      required: true,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                            _text(
-                              'sts-action-${draft.student.memberId}-${row.key}',
-                              'Tindak lanjut',
-                              draft.rows[row.key]!.action,
-                              200,
-                              editable,
-                              required: true,
+                          _text(
+                            'sts-note-${draft.student.memberId}',
+                            'Catatan umum (opsional)',
+                            draft.note,
+                            600,
+                            editable,
+                          ),
+                          if (_report.canReview)
+                            CheckboxListTile(
+                              key: Key('sts-confirm-${draft.student.memberId}'),
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: const Text(
+                                'Saya telah memeriksa ringkasan siswa ini dan menyatakan layak disampaikan kepada orang tua/wali.',
+                                style: TextStyle(fontSize: 12, height: 1.4),
+                              ),
+                              value: draft.confirmed,
+                              onChanged: editable
+                                  ? (value) => setState(() {
+                                      draft.confirmed = value == true;
+                                      _dirty = true;
+                                    })
+                                  : null,
                             ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
-                  _text(
-                    'sts-note-${draft.student.memberId}',
-                    'Catatan umum (opsional)',
-                    draft.note,
-                    600,
-                    editable,
                   ),
-                  if (_report.canReview)
-                    CheckboxListTile(
-                      key: Key('sts-confirm-${draft.student.memberId}'),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        'Saya telah memeriksa ringkasan siswa ini dan menyatakan layak disampaikan kepada orang tua/wali.',
-                      ),
-                      value: draft.confirmed,
-                      onChanged: editable
-                          ? (value) => setState(() {
-                              draft.confirmed = value == true;
-                              _dirty = true;
-                            })
-                          : null,
-                    ),
                 ],
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      _error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
+                    child: StsBehaviorNotice(message: _error!, error: true),
                   ),
                 if (_report.canReview) ...[
                   if (_counselor == null || _deputy == null)
@@ -683,6 +765,12 @@ class _StsBehaviorReviewViewState extends ConsumerState<StsBehaviorReviewView> {
     decoration: InputDecoration(
       labelText: label,
       hintText: 'Pilih penandatangan',
+      prefixIcon: Icon(
+        key == 'sts-counselor'
+            ? Icons.badge_outlined
+            : Icons.verified_user_outlined,
+        size: 20,
+      ),
     ),
     options: [
       for (final option in options)

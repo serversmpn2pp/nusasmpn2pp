@@ -64,6 +64,18 @@ Guru BK tetap hanya memperoleh kelas pada tingkat/tahun penugasannya.
   belum sesuai. Perubahan belum disimpan meminta konfirmasi sebelum ditutup.
 - Pencetakan rapor dan lampiran gabungan tetap melalui wali kelas pada web.
 
+Tampilan mobile diselaraskan dengan Pemeriksaan & Pengesahan: ringkasan biru
+dengan jumlah siswa/lampiran siap/perlu pemeriksaan, badge status, kartu siswa
+berjarak, serta tiga kolom poin masuk/pengurangan/saldo. Periode dan tanggal
+rapor ditampilkan dalam format tanggal Indonesia. Pembatasan pemeriksaan dari
+server tampil pada panel informasi, bukan pesan kesalahan merah. Pedoman
+privasi tetap tersedia pada tombol informasi; detail siswa menegaskan mode
+baca-saja saat pemeriksaan belum diizinkan. Tampilan tidak mengubah izin,
+validasi versi/sumber, atau kewajiban konfirmasi setiap siswa.
+
+Perubahan tampilan memerlukan build/restart aplikasi mobile. AAB yang dibuat
+sebelum perubahan tampilan ini tidak ikut berubah saat backend diperbarui.
+
 API mobile menggunakan aturan yang sama pada `LampiranPerilakuStsService`:
 
 ```text
@@ -85,7 +97,7 @@ migration STS web yang sudah ada tetap menjadi prasyarat. Tidak menjalankan
 migration atau mengubah server/database produksi saat membangun AAB.
 
 Pengujian tambahan: `tests/Feature/Api/LampiranPerilakuStsApiTest.php`
-(11 tes) dan `mobile/test/sts_behavior_view_test.dart` (10 tes), menggunakan
+(11 tes) dan `mobile/test/sts_behavior_view_test.dart` (14 tes), menggunakan
 data contoh. Meliputi cakupan BK, akun tanpa hak akses, kebocoran data rahasia,
 konfirmasi, sumber/versi berubah, rollback kolektif, pilihan penandatangan,
 dan layar 320 px dengan teks diperbesar. Uji end-to-end pada HP terhadap server

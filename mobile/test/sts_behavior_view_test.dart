@@ -1,4 +1,9 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nusa/core/errors/app_exception.dart';
@@ -58,6 +63,55 @@ void main() {
   });
 
   testWidgets(
+    'summary uses server readiness and privacy guidance remains accessible',
+    (tester) async {
+      final remote = _Fake(_page(twoStudents: true, readyIds: {72}));
+      await tester.pumpWidget(_app(remote));
+      await tester.pumpAndSettle();
+      final summary = find.byKey(const Key('sts-summary'));
+      expect(
+        find.descendant(of: summary, matching: find.text('2')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: summary, matching: find.text('1')),
+        findsNWidgets(2),
+      );
+      final progress = tester.widget<LinearProgressIndicator>(
+        find.descendant(
+          of: summary,
+          matching: find.byType(LinearProgressIndicator),
+        ),
+      );
+      expect(progress.value, 0.5);
+      await tester.tap(find.byKey(const Key('sts-info')));
+      await tester.pumpAndSettle();
+      expect(find.text('Isi & privasi lampiran'), findsOneWidget);
+      expect(find.textContaining('catatan rahasia BK'), findsOneWidget);
+      expect(find.textContaining('wali kelas di web'), findsOneWidget);
+      expect(remote.saved, isNull);
+    },
+  );
+
+  testWidgets(
+    'student checkbox selects without opening review; refresh clears selection',
+    (tester) async {
+      final remote = _Fake(_page(twoStudents: true));
+      await tester.pumpWidget(_app(remote));
+      await tester.pumpAndSettle();
+      await _tap(tester, 'sts-select-71');
+      expect(find.text('Periksa Lampiran STS'), findsNothing);
+      await _visible(tester, 'sts-review-selected', delta: -220);
+      expect(find.text('Periksa 1 lampiran terpilih'), findsOneWidget);
+      expect(remote.saved, isNull);
+      await tester.tap(find.byKey(const Key('sts-refresh')));
+      await tester.pumpAndSettle();
+      expect(remote.calls.length, 2);
+      expect(find.byKey(const Key('sts-review-selected')), findsNothing);
+    },
+  );
+
+  testWidgets(
     'single review requires confirmation, sends exact snapshot and refreshes',
     (tester) async {
       final remote = _Fake(_page());
@@ -101,7 +155,7 @@ void main() {
     final remote = _Fake(_page(twoStudents: true));
     await tester.pumpWidget(_app(remote));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Pilih semua siswa'));
+    await _tap(tester, 'sts-select-all');
     await _tap(tester, 'sts-review-selected');
     await _tap(tester, 'sts-confirm-71');
     await _visible(tester, 'sts-save');
@@ -210,26 +264,96 @@ void main() {
     expect(remote.saved, isNull);
   });
 
-  testWidgets(
-    'narrow screen with enlarged text has no overflow in list or review',
-    (tester) async {
-      tester.view.physicalSize = const Size(320, 720);
+  for (final scale in [1.0, 1.5, 2.0]) {
+    testWidgets(
+      '320px screen with ${scale}x text has no overflow in list or review',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 720);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(_app(_Fake(_page()), scale: scale));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await _tap(tester, 'sts-student-71');
+        await _visible(tester, 'sts-save');
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  // Optional, reproducible visual QA with synthetic records. No live API/accounts.
+  // NUSA_STS_PREVIEW=1 and NUSA_UI_FONT_DIR=<Flutter material_fonts> enable export.
+  if (Platform.environment['NUSA_STS_PREVIEW'] == '1') {
+    testWidgets('export STS mobile design previews with synthetic data', (
+      tester,
+    ) async {
+      final fontDirectory = Platform.environment['NUSA_UI_FONT_DIR']!;
+      await tester.runAsync(() async {
+        final textFont = FontLoader('Roboto');
+        for (final weight in ['regular', 'medium', 'bold', 'black']) {
+          final bytes = await File('$fontDirectory/roboto-$weight.ttf')
+              .readAsBytes();
+          textFont.addFont(Future.value(ByteData.sublistView(bytes)));
+        }
+        await textFont.load();
+        final icons = await File('$fontDirectory/materialicons-regular.otf')
+            .readAsBytes();
+        await (FontLoader(
+          'MaterialIcons',
+        )..addFont(Future.value(ByteData.sublistView(icons)))).load();
+      });
+      tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(_app(_Fake(_page()), scale: 1.5));
+      const boundaryKey = Key('sts-preview-boundary');
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundaryKey,
+          child: _app(
+            _Fake(_page(canReview: false, twoStudents: true, readyIds: {72})),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+      await _exportPreview(tester, boundaryKey, 'sts-list');
       await _tap(tester, 'sts-student-71');
-      await _visible(tester, 'sts-save');
+      await _exportPreview(tester, boundaryKey, 'sts-read-only');
+      // Reset the provider/session fixture before rendering the editable screen.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundaryKey,
+          child: _app(_Fake(_page(twoStudents: true, readyIds: {72}))),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _tap(tester, 'sts-student-71');
+      await _exportPreview(tester, boundaryKey, 'sts-review');
       expect(tester.takeException(), isNull);
-    },
-  );
+    });
+  }
+}
+
+Future<void> _exportPreview(WidgetTester tester, Key key, String name) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 2);
+    final data = (await image.toByteData(format: ui.ImageByteFormat.png))!;
+    final directory = Directory('build/ui-preview');
+    await directory.create(recursive: true);
+    await File('${directory.path}/$name.png')
+        .writeAsBytes(data.buffer.asUint8List());
+    image.dispose();
+  });
 }
 
 Widget _app(_Fake remote, {double scale = 1}) => ProviderScope(
   overrides: [stsBehaviorRemoteDataSourceProvider.overrideWithValue(remote)],
   child: MaterialApp(
+    debugShowCheckedModeBanner: false,
     theme: AppTheme.light,
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context)
@@ -306,6 +430,7 @@ StsBehaviorPage _page({
   bool twoStudents = false,
   bool multipleSigners = false,
   bool empty = false,
+  Set<int> readyIds = const {},
 }) => StsBehaviorPage.fromJson({
   'filter': {'kegiatan_id': empty ? null : 1, 'kelas_id': empty ? null : 7},
   'opsi': {
@@ -355,7 +480,7 @@ StsBehaviorPage _page({
                 'id': id,
                 'nama': id == 71 ? 'Alya Contoh' : 'Bima Contoh',
                 'nomor_absen': id - 70,
-                'siap': false,
+                'siap': readyIds.contains(id),
                 'versi': 3,
                 'sidik_sumber': 'a' * 64,
                 'catatan': null,
