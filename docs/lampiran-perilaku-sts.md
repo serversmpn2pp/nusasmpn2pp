@@ -44,3 +44,49 @@ php -d memory_limit=512M vendor/phpunit/phpunit/phpunit tests/Feature/LampiranPe
 ```
 
 Audit browser menggunakan fixture Blade dengan database pengujian, bukan akun siswa nyata: `tests/Browser/perilaku-sts-print.mjs`. Memeriksa tampilan desktop/mobile, penandatangan, konfirmasi pemeriksaan, logo, urutan halaman, PDF A4, dan kasus panjang tanpa pemotongan.
+
+## Mobile native — 12 Oktober 2026
+
+Menu **Kesiswaan & BK → Lampiran Perilaku STS** tersedia bagi administrator,
+Guru BK berizin, serta Wakil Kesiswaan berizin. Menu tidak diberikan kepada
+siswa/orang tua, walaupun secara keliru mereka mendapatkan peran/izin BK.
+Guru BK tetap hanya memperoleh kelas pada tingkat/tahun penugasannya.
+
+- Memilih kegiatan STS/kelas dan isi lampiran (semua terverifikasi atau poin final).
+- Membuka ringkasan siswa; hanya kejadian/tindak lanjut publik dan catatan umum
+  yang dapat diedit. Tanggal, sumber, status, dan poin tidak dapat diedit.
+- Pemeriksaan tunggal atau kolektif; setiap siswa harus dikonfirmasi sendiri.
+  Jika kandidat penandatangan lebih dari satu, petugas harus memilihnya.
+- Pemeriksaan lama tidak otomatis ditimpa: versi dan sidik sumber tetap berasal
+  dari snapshot yang dibuka. Konflik meminta muat ulang dan pemeriksaan ulang,
+  bukan retry otomatis dengan versi baru. Penyimpanan kolektif bersifat atomik.
+- Halaman baca-saja ketika periode belum selesai atau petugas/penandatangan
+  belum sesuai. Perubahan belum disimpan meminta konfirmasi sebelum ditutup.
+- Pencetakan rapor dan lampiran gabungan tetap melalui wali kelas pada web.
+
+API mobile menggunakan aturan yang sama pada `LampiranPerilakuStsService`:
+
+```text
+GET /api/v1/lampiran-perilaku-sts?kegiatan_id=…&kelas_id=…
+PUT /api/v1/lampiran-perilaku-sts/{kegiatan}/{kelas}/isi
+PUT /api/v1/lampiran-perilaku-sts/{kegiatan}/{kelas}/pemeriksaan
+```
+
+Semua endpoint memerlukan token aktif dengan ability `mobile`, akun pegawai
+atau admin, serta izin pemeriksaan. Respons memakai allowlist dan `no-store`;
+bukan serialisasi model siswa/laporan penuh. Kronologi, catatan rahasia,
+bukti, NISN, NIP, dan nilai tidak dimasukkan ke respons fitur ini.
+
+Deployment memerlukan pembaruan controller API, `routes/api.php`, dan
+`config/menu_mobile.php` pada server. Muat ulang route/config cache dan layanan
+berumur panjang melalui prosedur deployment sekolah. AAB saja tidak menambah
+endpoint/menu di server. Tidak ada migration baru dalam penambahan mobile ini;
+migration STS web yang sudah ada tetap menjadi prasyarat. Tidak menjalankan
+migration atau mengubah server/database produksi saat membangun AAB.
+
+Pengujian tambahan: `tests/Feature/Api/LampiranPerilakuStsApiTest.php`
+(11 tes) dan `mobile/test/sts_behavior_view_test.dart` (10 tes), menggunakan
+data contoh. Meliputi cakupan BK, akun tanpa hak akses, kebocoran data rahasia,
+konfirmasi, sumber/versi berubah, rollback kolektif, pilihan penandatangan,
+dan layar 320 px dengan teks diperbesar. Uji end-to-end pada HP terhadap server
+yang sudah diperbarui tetap diperlukan.

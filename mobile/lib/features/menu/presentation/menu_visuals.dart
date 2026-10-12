@@ -85,6 +85,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'rekap-presensi-pegawai' => Icons.assignment_turned_in_rounded,
     'laporan-presensi-pegawai' => Icons.summarize_rounded,
     'pemeriksaan-pengesahan' => Icons.verified_rounded,
+    'lampiran-perilaku-sts' => Icons.fact_check_rounded,
     'daftar-laporan-siswa' => Icons.assignment_rounded,
     'laporan-saya' => Icons.history_edu_rounded,
     'progress-kasus-saya' => Icons.route_rounded,

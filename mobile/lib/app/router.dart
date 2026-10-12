@@ -123,6 +123,7 @@ import 'package:nusa/features/student_early_warning/presentation/student_early_w
 import 'package:nusa/features/student_exam/presentation/student_exam_view.dart';
 import 'package:nusa/features/student_point_recap/presentation/student_point_recap_detail_view.dart';
 import 'package:nusa/features/student_point_recap/presentation/student_point_recap_list_view.dart';
+import 'package:nusa/features/sts_behavior/presentation/sts_behavior_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_detail_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_list_view.dart';
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
@@ -243,6 +244,7 @@ abstract final class AppRoutes {
   static const guardianStudentReports = '/laporan-siswa-wali';
   static const guardianStudentReportDetail = '/laporan-siswa-wali/:id';
   static const reportVerification = '/pemeriksaan-pengesahan';
+  static const stsBehavior = '/lampiran-perilaku-sts';
   static const reportVerificationDetail = '/pemeriksaan-pengesahan/:id';
   static const studentAssistance = '/pendampingan-siswa';
   static const studentEarlyWarnings = '/peringatan-dini-siswa';
@@ -876,6 +878,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.stsBehavior,
+        name: 'sts-behavior',
+        builder: (context, state) => const StsBehaviorView(),
       ),
       GoRoute(
         path: AppRoutes.studentAssistance,

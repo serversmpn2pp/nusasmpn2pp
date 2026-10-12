@@ -324,6 +324,7 @@ class MenuMobileService
             'ikon' => $item['ikon'] ?? null,
             'status' => $item['status'] ?? 'segera_hadir',
             'rute' => $item['rute'] ?? null,
+            ...isset($item['api']) ? ['api' => $item['api'], 'api_tersedia' => true] : [],
         ];
     }
 }

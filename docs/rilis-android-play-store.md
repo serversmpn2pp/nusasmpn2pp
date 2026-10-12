@@ -135,7 +135,7 @@ kredensial, atau file kunci. Tidak ada unggahan ke Play Console pada tahap ini.
   16 KB dan kesesuaian offset/alamat. `jar --validate --file` lulus tanpa
   pesan; tidak ada duplikasi nama ZIP dan hanya satu manifest signing.
 
-SHA-256 **AAB saat ini**:
+SHA-256 **AAB 8 Oktober 2026** (lihat pembaruan 12 Oktober di bawah):
 
 ```text
 01276DCDE5E2B46BC424421FDBB665C4A1C2D1456C969E4A1ACFA16ECAC82B20
@@ -162,3 +162,76 @@ Gerbang privasi/Data Safety dan perlindungan foto publik tetap berlaku.
 Jika version code **1** sudah pernah digunakan di Play Console, naikkan
 build number dan buat AAB baru sebelum unggah; build ulang ini tidak menaikkan
 version code otomatis.
+
+## Build 1.0.1+2 — 12 Oktober 2026, 16.18 WIB
+
+Hasil final: [app-release.aab](D:/nusasmpn2pp/mobile/build/app/outputs/bundle/release/app-release.aab).
+Ukuran **91.880.876 byte** (sekitar 87,6 MiB / 91,9 MB); SHA-256:
+
+```text
+D85AF7C0482F4312AA1E70B31A753E111ABB4B025090F71BEC3A62DE482B614A
+```
+
+- Version name **1.0.1**, version code **2**, package tetap
+  `id.sch.smpn2padangpanjang.nusa`. Code 1 sudah dipakai dalam internal testing.
+- Manifest AAB: min SDK **24** (Android 7.0), target SDK **36** (Android 16),
+  bukan debug; `allowBackup=false`, `extractNativeLibs=false`.
+  Target 36 sesuai [ketentuan target API Google Play saat pemeriksaan](https://support.google.com/googleplay/android-developer/answer/11926878?hl=en).
+- Memuat [Lampiran Perilaku STS native](D:/nusasmpn2pp/docs/lampiran-perilaku-sts.md),
+  tautan kebijakan privasi, serta permintaan penghapusan pada Login/Profil.
+  Ketujuh penanda route/link/URL produksi ditemukan pada ketiga `libapp.so`.
+- Kunci upload sama; `jarsigner -verify` menghasilkan `jar verified`.
+  Fingerprint SHA-256 sertifikat identik dengan AAB lama, bukan Android Debug:
+  `CA:E5:19:98:35:1F:48:D5:38:2C:F1:3C:74:CA:B6:67:CF:FB:C8:32:9B:D8:9F:47:70:0C:8C:B4:7B:27:34:05`.
+- Validador **bundletool CLI 1.18.3** resmi Google berhasil membaca/validasi AAB.
+  CLI diunduh dari rilis resmi ke `.dart_tool`, bukan dependensi baru aplikasi.
+  `jar --validate` dan pemeriksaan CRC/duplikasi ZIP lulus.
+- Konfigurasi AAB meminta `PAGE_ALIGNMENT_16K`. Semua 14 ELF 64-bit memiliki
+  LOAD alignment minimal 16 KB dengan offset/alamat sesuai.
+- Pemeriksa ELF Android Studio terpasang (`PageAlignUtilsKt`, melalui
+  `scripts/VerifyAabElf.java`) memeriksa 14 ELF 64-bit: **0 masalah**, termasuk
+  LOAD dan RELRO; 7 library ABI 32-bit dilewati sesuai perilaku alat tersebut.
+  Penghitungan mentah akhir RELRO pada `scripts/verify-aab-native.py` merupakan
+  indikator tambahan, bukan penentu kelulusan: pemeriksa lengkap juga membaca
+  section headers/susunan seluruh LOAD agar padding/segmen penuh tidak menjadi
+  alarm palsu. Tidak menambal header ELF atau memodifikasi library prebuilt.
+- APK universal diagnostik yang dibuat dari AAB dengan bundletool lulus
+  `zipalign -v -c -P 16 4`: `Verification successful`. APK ini memakai kunci
+  **debug** untuk diagnostik lokal saja, bukan artefak distribusi/rilis Play.
+  Ini bukan pemeriksaan APK split aktual yang nanti didistribusikan Google Play,
+  juga bukan pengganti [uji runtime perangkat 16 KB](https://developer.android.com/guide/practices/page-sizes).
+- **62 tes backend / 1.486 assertion** dan **31 tes mobile** relevan lulus.
+  Analyzer Flutter dan format PHP lulus. Ini subset, bukan seluruh suite.
+  Tes memakai data contoh dan SQLite di memori, tidak data sekolah asli.
+- GET HTTPS publik `/kebijakan-privasi` dan `/penghapusan-akun` menghasilkan
+  **HTTP 200** tanpa login pada pemeriksaan ini; kontak privasi dapat dibaca,
+  tidak terhalang halaman challenge Cloudflare. Bukan jaminan akses global
+  terus-menerus atau audit kesesuaian isi kebijakan.
+- AAB lama dipertahankan di `mobile/build/releases/app-release-1.0.0-1.aab`.
+  Jangan menaruh salinan AAB lama di folder keluaran `bundle/release`: Flutter
+  bisa melaporkan file pertama yang cocok, bukan AAB baru. Versi/hash di atas
+  dibaca dari file `app-release.aab` final menggunakan bundletool dan hash file.
+
+Perintah build tetap memakai `--no-pub`, `APP_ENV=production`, dan API HTTPS
+sekolah. Tidak mengganti keystore, password, dependensi aplikasi, Flutter SDK,
+atau menonaktifkan perlindungan ujian. Peringatan KGP plugin, Java/SDK dan font
+Cupertino masih tampil; build selesai tanpa error.
+
+### Sebelum unggah / rilis
+
+1. Deploy controller API STS baru, route, dan konfigurasi menu pada backend,
+   lalu segarkan cache/layanan sesuai prosedur sekolah. Belum dilakukan pada
+   tahap ini. AAB lama tidak mempunyai layar baru; server lama tidak mempunyai
+   endpoint baru. Tidak ada migration baru dari penambahan mobile ini.
+2. Unggah **file `app-release.aab` versi 1.0.1+2** ke internal testing, bukan
+   salinan code 1 atau APK diagnostik. Uji install/update, Login/Profil,
+   tautan publik, pemeriksaan tunggal/kolektif STS, kamera dan push di HP nyata.
+   Uji perangkat/emulator 16 KB serta laporan pre-launch Play tetap diperlukan.
+3. Selesaikan Data Safety, akses reviewer, target usia/Families, store listing,
+   dan prosedur pemenuhan permintaan penghapusan. Halaman permintaan tidak
+   otomatis menghapus arsip sekolah dan bukan bukti seluruh kewajiban Google
+   Play sudah dipenuhi. Gerbang perlindungan foto publik/prosedur privasi anak
+   yang dibahas sebelumnya tidak menjadi selesai hanya karena AAB dibangun.
+
+Belum mengunggah, menerbitkan aplikasi, atau mengubah server/database produksi.
+Kelulusan pemeriksaan artefak bukan jaminan persetujuan reviewer Google Play.

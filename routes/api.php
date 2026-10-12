@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\V1\KenaikanKelasController;
 use App\Http\Controllers\Api\V1\KomponenNilaiController;
 use App\Http\Controllers\Api\V1\KonfirmasiBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\LabelInventarisController;
+use App\Http\Controllers\Api\V1\LampiranPerilakuStsController;
 use App\Http\Controllers\Api\V1\LaporanInventarisBulananController;
 use App\Http\Controllers\Api\V1\LaporanPresensiPegawaiController;
 use App\Http\Controllers\Api\V1\LaporanPresensiSiswaController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\Api\V1\LaporanSiswaController;
 use App\Http\Controllers\Api\V1\LaporanSiswaKelasController;
 use App\Http\Controllers\Api\V1\LaporanSiswaWaliController;
 use App\Http\Controllers\Api\V1\LaporkanKejadianController;
+use App\Http\Controllers\Api\V1\LegerStsController;
 use App\Http\Controllers\Api\V1\LokasiBarangController;
 use App\Http\Controllers\Api\V1\MataPelajaranController;
 use App\Http\Controllers\Api\V1\MenuController;
@@ -89,6 +91,7 @@ use App\Http\Controllers\Api\V1\PresensiUjianController;
 use App\Http\Controllers\Api\V1\ProfilSayaController;
 use App\Http\Controllers\Api\V1\ProgressKasusSiswaController;
 use App\Http\Controllers\Api\V1\PusatCbtController;
+use App\Http\Controllers\Api\V1\RaporStsController;
 use App\Http\Controllers\Api\V1\RekapBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\RekapKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
@@ -675,6 +678,13 @@ Route::prefix('v1')
         Route::get('/pemeriksaan-pengesahan', [PemeriksaanPengesahanController::class, 'index'])
             ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
             ->name('pemeriksaan-pengesahan.index');
+        Route::middleware(['akun_pegawai', 'izin:poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])->group(function () {
+            Route::get('/lampiran-perilaku-sts', [LampiranPerilakuStsController::class, 'index'])->name('lampiran-perilaku-sts.index');
+            Route::put('/lampiran-perilaku-sts/{kegiatan}/{kelas}/isi', [LampiranPerilakuStsController::class, 'isi'])
+                ->whereNumber(['kegiatan', 'kelas'])->name('lampiran-perilaku-sts.isi');
+            Route::put('/lampiran-perilaku-sts/{kegiatan}/{kelas}/pemeriksaan', [LampiranPerilakuStsController::class, 'pemeriksaan'])
+                ->whereNumber(['kegiatan', 'kelas'])->name('lampiran-perilaku-sts.pemeriksaan');
+        });
         Route::get('/pemeriksaan-pengesahan/{laporanPembinaanSiswa}', [PemeriksaanPengesahanController::class, 'show'])
             ->middleware(['akun_pegawai', 'izin:poin_siswa.lihat,poin_siswa.verifikasi_bk,poin_siswa.sahkan_wakil'])
             ->name('pemeriksaan-pengesahan.show');
@@ -1063,6 +1073,23 @@ Route::prefix('v1')
         Route::get('/rekap-nilai-rapor', RekapNilaiRaporController::class)
             ->middleware('izin:nilai.rekap')
             ->name('rekap-nilai-rapor.index');
+
+        Route::middleware(['akun_pegawai', 'izin:nilai.rekap'])->group(function () {
+            Route::get('/rapor-sts', [RaporStsController::class, 'index'])->name('rapor-sts.index');
+            Route::put('/rapor-sts/{kegiatan}/{kelas}/pengaturan', [RaporStsController::class, 'pengaturan'])
+                ->whereNumber(['kegiatan', 'kelas'])->name('rapor-sts.pengaturan');
+            Route::put('/rapor-sts/{kegiatan}/{kelas}/kehadiran', [RaporStsController::class, 'kehadiran'])
+                ->whereNumber(['kegiatan', 'kelas'])->name('rapor-sts.kehadiran');
+            Route::put('/rapor-sts/{kegiatan}/{kelas}/pengecualian', [RaporStsController::class, 'pengecualian'])
+                ->whereNumber(['kegiatan', 'kelas'])->name('rapor-sts.pengecualian');
+            Route::put('/rapor-sts/{kegiatan}/{kelas}/mapel', [RaporStsController::class, 'mapel'])
+                ->whereNumber(['kegiatan', 'kelas'])->name('rapor-sts.mapel');
+            Route::get('/rapor-sts/{kegiatan}/{kelas}/cetak', [RaporStsController::class, 'cetak'])
+                ->whereNumber(['kegiatan', 'kelas'])->name('rapor-sts.cetak');
+            Route::get('/leger-sts', [LegerStsController::class, 'index'])->name('leger-sts.index');
+            Route::get('/leger-sts/penghargaan', [LegerStsController::class, 'penghargaan'])->name('leger-sts.penghargaan');
+            Route::get('/leger-sts/cetak', [LegerStsController::class, 'cetak'])->name('leger-sts.cetak');
+        });
 
         Route::get('/pernyataan-survei', [PernyataanSurveiController::class, 'index'])
             ->middleware('izin:survei.pertanyaan_kelola')

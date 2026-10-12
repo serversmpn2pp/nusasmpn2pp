@@ -24,7 +24,8 @@ class RaporStsService
 {
     public static function dapatMengakses(?Pengguna $pengguna): bool
     {
-        return $pengguna && $pengguna->memilikiIzin('nilai.rekap')
+        return $pengguna && $pengguna->aktif && ! $pengguna->akunSiswa() && ! $pengguna->akunOrangTua()
+            && $pengguna->memilikiIzin('nilai.rekap')
             && ($pengguna->administrator() || $pengguna->memilikiPeran('wakil_pimpinan_kurikulum')
                 || ($pengguna->memilikiPeran('wali_kelas') && filled($pengguna->pegawai_id)));
     }
