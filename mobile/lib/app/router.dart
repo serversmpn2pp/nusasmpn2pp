@@ -124,6 +124,7 @@ import 'package:nusa/features/student_exam/presentation/student_exam_view.dart';
 import 'package:nusa/features/student_point_recap/presentation/student_point_recap_detail_view.dart';
 import 'package:nusa/features/student_point_recap/presentation/student_point_recap_list_view.dart';
 import 'package:nusa/features/sts_behavior/presentation/sts_behavior_view.dart';
+import 'package:nusa/features/sts_reports/presentation/sts_reports_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_detail_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_list_view.dart';
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
@@ -292,6 +293,8 @@ abstract final class AppRoutes {
   static const gradeComponents = '/komponen-nilai';
   static const gradeEntry = '/input-nilai';
   static const gradeRecap = '/rekap-nilai-rapor';
+  static const stsReport = '/rapor-sts';
+  static const stsLedger = '/leger-sts';
   static const myGrades = '/nilai-saya';
   static const myAttendance = '/kehadiran-saya';
   static const parentChildAttendance = '/kehadiran-anak-saya';
@@ -1243,6 +1246,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.gradeRecap,
         name: 'grade-recap',
         builder: (context, state) => const GradeRecapView(),
+      ),
+      GoRoute(
+        path: AppRoutes.stsReport,
+        name: 'sts-report',
+        builder: (context, state) => const RaporStsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.stsLedger,
+        name: 'sts-ledger',
+        builder: (context, state) => const LegerStsView(),
       ),
       GoRoute(
         path: AppRoutes.myGrades,

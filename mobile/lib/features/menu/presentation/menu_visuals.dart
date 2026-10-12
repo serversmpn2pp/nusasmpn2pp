@@ -48,6 +48,8 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'komponen-nilai' => Icons.fact_check_rounded,
     'input-nilai' => Icons.edit_note_rounded,
     'rekap-nilai-rapor' => Icons.assessment_rounded,
+    'rapor-sts' => Icons.description_rounded,
+    'leger-sts' => Icons.leaderboard_rounded,
     'nilai-saya' => Icons.workspace_premium_rounded,
     'jadwal-pelajaran-anak' => Icons.calendar_view_week_rounded,
     'nilai-anak-saya' => Icons.workspace_premium_rounded,

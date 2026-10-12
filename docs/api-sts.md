@@ -24,10 +24,29 @@ tersisip pada akun tersebut.
 `GET /api/v1/menu` memuat tiga entri STS sesuai akses akun. Ketiganya memiliki
 `api` (alamat endpoint) dan `api_tersedia: true`. Status `tersedia` tetap berarti
 layar native Android sudah diimplementasikan, bukan sekadar API sudah ada.
-Lampiran Perilaku memiliki layar native. Rapor dan Leger masih
-`status: segera_hadir` agar APK yang belum memiliki rutenya tidak membuka halaman
-error. Sambungkan layar native kedua fitur tersebut sebelum mengubah status
-menjadi `tersedia`; pembaruan backend tidak otomatis menambah layar ke APK lama.
+Ketiganya kini memiliki layar native dan `status: tersedia`.
+Rapor/Leger berada di **Akademik → Penilaian**. Pembaruan backend tidak otomatis
+menambah layar ke APK lama; distribusikan build Android yang memuat rute
+`/rapor-sts` dan `/leger-sts` bersamaan dengan aktivasi menu di server.
+
+### Cakupan layar mobile Rapor/Leger
+
+- Pemilihan kegiatan STS dan kelas sesuai opsi server; perubahan kegiatan
+  membuang filter kelas/tingkat lama agar tidak mengambil cakupan yang salah.
+- Rapor: jumlah siswa, kelengkapan nilai final, kesiapan cetak, periode, wali
+  kelas, pencarian/filter siswa, rincian nilai, rekap dan status pemeriksaan
+  kehadiran, catatan koreksi, serta kesiapan lampiran perilaku.
+- Leger: mode kelas/tingkat, rekap nilai, ranking sesuai urutan server,
+  penanda draf/ranking sementara, peringatan cakupan tingkat terbatas,
+  statistik mapel dan perbandingan kelas. Jumlah/rata-rata/ranking tidak
+  dihitung ulang di perangkat. Nilai nol tetap ditampilkan, nilai kosong `—`.
+- Halaman dan rincian ini **hanya baca**, bukan dokumen cetak resmi. Pengaturan
+  periode/mapel, koreksi kehadiran, pengecualian, cetak rapor/leger, dan kandidat
+  penghargaan tetap melalui web. API mutasi/cetak/penghargaan di bawah tetap
+  tersedia, tetapi belum disambungkan ke tombol mobile.
+- Tarik halaman atau muat ulang untuk membaca pembaruan server. Kegagalan
+  akses tidak mempertahankan data kelas lama; coba lagi menggunakan filter
+  terakhir atau kembali ke pilihan awal. Tidak ada cache persisten nilai.
 
 ## Rapor STS
 

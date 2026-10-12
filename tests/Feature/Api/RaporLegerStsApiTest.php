@@ -57,13 +57,13 @@ class RaporLegerStsApiTest extends TestCase
         $this->getJson(route('api.v1.leger-sts.index'))->assertForbidden();
     }
 
-    public function test_menu_membedakan_kesiapan_api_dan_layar_native(): void
+    public function test_menu_rapor_dan_leger_native_tersedia_sesuai_hak_akses(): void
     {
         $d = $this->data();
         $this->login($d['admin']);
         $this->getJson(route('api.v1.menu'))->assertOk()
-            ->assertJsonFragment(['kode' => 'rapor-sts', 'api' => '/api/v1/rapor-sts', 'api_tersedia' => true, 'status' => 'segera_hadir'])
-            ->assertJsonFragment(['kode' => 'leger-sts', 'api' => '/api/v1/leger-sts', 'api_tersedia' => true, 'status' => 'segera_hadir'])
+            ->assertJsonFragment(['kode' => 'rapor-sts', 'rute' => '/rapor-sts', 'api' => '/api/v1/rapor-sts', 'api_tersedia' => true, 'status' => 'tersedia'])
+            ->assertJsonFragment(['kode' => 'leger-sts', 'rute' => '/leger-sts', 'api' => '/api/v1/leger-sts', 'api_tersedia' => true, 'status' => 'tersedia'])
             ->assertJsonFragment(['kode' => 'lampiran-perilaku-sts', 'api_tersedia' => true, 'status' => 'tersedia']);
         $this->login($d['wali']);
         $this->getJson(route('api.v1.menu'))->assertOk()->assertSee('rapor-sts')->assertSee('leger-sts')->assertDontSee('lampiran-perilaku-sts');
