@@ -2336,6 +2336,7 @@
                     return $section;
                 })
                 ->filter(fn (array $section) => $section['direct'] || count($section['items']) > 0)
+                ->sortBy(fn (array $section) => $section['id'] === 'sistem' ? 1 : 0)
                 ->values()
                 ->all();
         @endphp

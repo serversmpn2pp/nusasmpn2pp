@@ -16,7 +16,7 @@ class SidebarNavigasiTest extends TestCase
     {
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
 
-        $this->actingAs($administrator)
+        $response = $this->actingAs($administrator)
             ->get(route('beranda'))
             ->assertOk()
             ->assertSee('Cari menu...')
@@ -28,6 +28,7 @@ class SidebarNavigasiTest extends TestCase
                 'Kehadiran',
                 'Kesiswaan &amp; BK',
                 'Sarana Prasarana',
+                'Persuratan &amp; Arsip',
                 'Sistem',
             ], false)
             ->assertSeeInOrder([
@@ -50,6 +51,20 @@ class SidebarNavigasiTest extends TestCase
             ->assertSee('Aktivitas Login')
             ->assertSee('Backup &amp; Restore', false)
             ->assertDontSee('Data Master');
+
+        preg_match_all('/data-sidebar-section-id="([^"]+)"/', $response->getContent(), $sections);
+        $this->assertSame([
+            'utama',
+            'data-sekolah',
+            'akademik',
+            'humas',
+            'ujian-asesmen',
+            'kehadiran',
+            'kesiswaan-bk',
+            'sarana-prasarana',
+            'persuratan',
+            'sistem',
+        ], $sections[1]);
     }
 
     public function test_grup_menu_aktif_dibuka_otomatis(): void
@@ -88,6 +103,7 @@ class SidebarNavigasiTest extends TestCase
             ->get(route('beranda'))
             ->assertOk()
             ->assertSee('Ujian &amp; Asesmen', false)
+            ->assertDontSee('data-sidebar-section-id="sistem"', false)
             ->assertDontSee('Pusat CBT');
 
         $this->assertMatchesRegularExpression(
