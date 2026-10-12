@@ -48,7 +48,16 @@ Backup PostgreSQL menggunakan daftar tabel dinamis sehingga tabel baru ikut dica
 
 ## API
 
-Respons rekap/rincian menambahkan status `pengecualian`, label/alasan penetapan, serta ringkasan `pengecualian` pada rekap harian. Filter rekap API menerima `status=pengecualian`; filter web rincian menerima `status_rincian=pengecualian`. Android perlu menggunakan label dari API dan menangani status tambahan ini. Penetapan/pembatalan dilakukan di web, belum disediakan endpoint manajemen mobile.
+Respons rekap/rincian menambahkan status `pengecualian`, label/alasan penetapan, serta ringkasan `pengecualian` pada rekap harian. Filter rekap API menerima `status=pengecualian`; filter web rincian menerima `status_rincian=pengecualian`.
+
+Menu native Android **Kehadiran > Presensi Siswa > Pengecualian Presensi** sudah
+tersedia untuk pengelola yang sama dengan web. Tombol pintas juga ada di Pengaturan
+Presensi Siswa. Mendukung formulir, pratinjau dampak, pencarian siswa dalam pratinjau,
+konfirmasi penetapan, riwayat dengan filter/paginasi, detail, dan pembatalan beralasan.
+Kontrak endpoint tersedia di [API Pengecualian Presensi](api-pengecualian-presensi.md).
+Penambahan API/Android menggunakan tabel lama, tanpa migrasi baru. Pasang APK baru
+dan jalankan `php artisan optimize:clear` setelah deploy backend. Worker notifikasi
+yang sudah ada dapat dipakai untuk koreksi poin presensi otomatis.
 
 ## Verifikasi
 

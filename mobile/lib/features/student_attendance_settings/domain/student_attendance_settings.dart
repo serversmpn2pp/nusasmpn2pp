@@ -6,6 +6,7 @@ class StudentAttendanceSettingsCatalog {
     required this.selectedDay,
     required this.status,
     required this.canManage,
+    this.canManageExceptions = false,
   });
 
   factory StudentAttendanceSettingsCatalog.fromJson(Map<String, dynamic> json) {
@@ -20,6 +21,8 @@ class StudentAttendanceSettingsCatalog {
       selectedDay: filter['hari'] as String? ?? 'semua',
       status: filter['status'] as String? ?? 'semua',
       canManage: access['dapat_kelola'] as bool? ?? false,
+      canManageExceptions:
+          access['dapat_kelola_pengecualian'] as bool? ?? false,
     );
   }
 
@@ -29,6 +32,7 @@ class StudentAttendanceSettingsCatalog {
   final String selectedDay;
   final String status;
   final bool canManage;
+  final bool canManageExceptions;
 
   Set<String> get configuredDays => items.map((item) => item.day).toSet();
 }

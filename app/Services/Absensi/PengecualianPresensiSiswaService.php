@@ -20,9 +20,14 @@ class PengecualianPresensiSiswaService
 {
     public function pastikanAkses(Pengguna $pengguna): void
     {
-        abort_unless($pengguna->aktif && $pengguna->memilikiIzin('absensi.pengaturan_kelola')
+        abort_unless($this->bolehMengelola($pengguna), 403);
+    }
+
+    public function bolehMengelola(Pengguna $pengguna): bool
+    {
+        return $pengguna->aktif && $pengguna->memilikiIzin('absensi.pengaturan_kelola')
             && ! $pengguna->akunSiswa() && ! $pengguna->akunOrangTua()
-            && ! $pengguna->membatasiCakupanWaliKelas(), 403);
+            && ! $pengguna->membatasiCakupanWaliKelas();
     }
 
     public function pratinjau(Pengguna $pengguna, array $data): array

@@ -4,6 +4,7 @@ namespace App\Services\Mobile;
 
 use App\Models\PengaturanAbsensi;
 use App\Models\Pengguna;
+use App\Services\Absensi\PengecualianPresensiSiswaService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 
@@ -44,6 +45,7 @@ class PengaturanPresensiSiswaMobileService
             ],
             'hak_akses' => [
                 'dapat_kelola' => $pengguna->memilikiIzin('absensi.pengaturan_kelola'),
+                'dapat_kelola_pengecualian' => app(PengecualianPresensiSiswaService::class)->bolehMengelola($pengguna),
             ],
         ];
     }

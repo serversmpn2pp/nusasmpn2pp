@@ -131,6 +131,7 @@ import 'package:nusa/features/sts_reports/presentation/sts_reports_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_detail_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_list_view.dart';
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
+import 'package:nusa/features/attendance_exceptions/presentation/attendance_exceptions_view.dart';
 import 'package:nusa/features/student_attendance_recap/presentation/student_attendance_recap_view.dart';
 import 'package:nusa/features/student_attendance_report/presentation/student_attendance_report_view.dart';
 import 'package:nusa/features/student_scan_status/presentation/student_scan_status_view.dart';
@@ -278,6 +279,7 @@ abstract final class AppRoutes {
   static const employeeCards = '/kartu-pegawai';
   static const studentCards = '/kartu-pelajar';
   static const studentAttendanceSettings = '/pengaturan-presensi-siswa';
+  static const attendanceExceptions = '/pengecualian-presensi';
   static const employeeAttendanceSettings = '/pengaturan-presensi-pegawai';
   static const employeeAttendanceRecap = '/rekap-presensi-pegawai';
   static const employeeAttendanceReport = '/laporan-presensi-pegawai';
@@ -1166,6 +1168,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.studentAttendanceSettings,
         name: 'student-attendance-settings',
         builder: (context, state) => const StudentAttendanceSettingsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.attendanceExceptions,
+        builder: (context, state) => const AttendanceExceptionsView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (context, state) => AttendanceExceptionDetailView(
+              id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.myAttendance,

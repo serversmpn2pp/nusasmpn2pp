@@ -67,6 +67,7 @@ use App\Http\Controllers\Api\V1\PeminjamanBarangController;
 use App\Http\Controllers\Api\V1\PendampinganSiswaController;
 use App\Http\Controllers\Api\V1\PenempatanSiswaController;
 use App\Http\Controllers\Api\V1\PenerimaanBarangController;
+use App\Http\Controllers\Api\V1\PengecualianPresensiController;
 use App\Http\Controllers\Api\V1\PengajuanBarangController;
 use App\Http\Controllers\Api\V1\PengajuanBarangSayaController;
 use App\Http\Controllers\Api\V1\PengaturanBatasProsesPelanggaranController;
@@ -951,6 +952,18 @@ Route::prefix('v1')
         Route::post('/penempatan-siswa/masukkan', [PenempatanSiswaController::class, 'store'])
             ->middleware('izin:kelas.kelola')
             ->name('penempatan-siswa.store');
+
+        Route::prefix('pengecualian-presensi')->name('pengecualian-presensi.')
+            ->middleware(['izin:absensi.pengaturan_kelola', 'throttle:60,1,pengecualian-presensi-api:'])
+            ->controller(PengecualianPresensiController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/referensi', 'referensi')->name('referensi');
+                Route::post('/pratinjau', 'pratinjau')->middleware('throttle:10,1,pratinjau-pengecualian-api:')->name('pratinjau');
+                Route::post('/', 'store')->middleware('throttle:15,1,terapkan-pengecualian-api:')->name('store');
+                Route::get('/{pengecualian}', 'show')->where('pengecualian', '[1-9][0-9]{0,18}')->name('show');
+                Route::post('/{pengecualian}/batalkan', 'batalkan')->where('pengecualian', '[1-9][0-9]{0,18}')
+                    ->middleware('throttle:15,1,batalkan-pengecualian-api:')->name('batalkan');
+            });
 
         Route::get('/pengaturan-presensi-siswa', [PengaturanPresensiSiswaController::class, 'index'])
             ->middleware('izin:absensi.pengaturan_kelola')

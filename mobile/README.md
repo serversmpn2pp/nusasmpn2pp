@@ -4,6 +4,14 @@ Aplikasi Android NUSA untuk SMP Negeri 2 Padang Panjang. Proyek ini berada
 dalam repository yang sama dengan backend Laravel NUSA, tetapi memiliki proses
 build dan dependensi sendiri.
 
+## Pengecualian Presensi
+
+Menu Kehadiran dan tombol pintas Pengaturan Presensi Siswa membuka halaman native
+penetapan pengecualian scan: tahun/kelas/sekolah, rentang tanggal, jenis dan alasan,
+pratinjau dampak, konfirmasi, riwayat dan pembatalan beralasan. Token pratinjau
+terikat akun/sumber dan tidak diperbarui otomatis saat konflik.
+Panduan: [API Pengecualian Presensi](../docs/api-pengecualian-presensi.md).
+
 ## Persuratan & Arsip
 
 Menu Android sudah terhubung ke API surat masuk, keluar/tugas, pengesahan,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_attendance_settings/application/student_attendance_settings_controller.dart';
@@ -32,6 +33,14 @@ class _StudentAttendanceSettingsViewState
       appBar: AppBar(
         title: const Text('Pengaturan Presensi Siswa'),
         actions: [
+          if (current?.canManageExceptions == true)
+            IconButton(
+              tooltip: 'Pengecualian presensi',
+              onPressed: _mutating
+                  ? null
+                  : () => context.push('/pengecualian-presensi'),
+              icon: const Icon(Icons.event_busy_outlined),
+            ),
           IconButton(
             tooltip: 'Perbarui',
             onPressed: settings.isLoading

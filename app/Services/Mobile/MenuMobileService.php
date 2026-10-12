@@ -5,6 +5,7 @@ namespace App\Services\Mobile;
 use App\Models\AksesCepatPengguna;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
+use App\Services\Absensi\PengecualianPresensiSiswaService;
 use App\Services\Ibadah\AksesBerhalanganIbadah;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
 use App\Services\Pembinaan\AksesRekapPoinSiswaService;
@@ -19,6 +20,7 @@ class MenuMobileService
         private AksesScanKegiatanIbadah $aksesIbadah,
         private AksesRekapPoinSiswaService $aksesRekapPoin,
         private AksesSanksiPoinService $aksesSanksi,
+        private PengecualianPresensiSiswaService $aksesPengecualianPresensi,
     ) {}
 
     public function siapkan(Pengguna $pengguna): array
@@ -205,6 +207,11 @@ class MenuMobileService
 
     private function bolehDilihat(array $item, Pengguna $pengguna): bool
     {
+        if (($item['pengecualian_presensi_only'] ?? false)
+            && ! $this->aksesPengecualianPresensi->bolehMengelola($pengguna)) {
+            return false;
+        }
+
         if (($item['persuratan_only'] ?? false)
             && (! $pengguna->aktif || $pengguna->akunSiswa() || $pengguna->akunOrangTua()
                 || ! ($pengguna->administrator() || ($pengguna->akunPegawai() && $pengguna->pegawai?->aktif)))) {
