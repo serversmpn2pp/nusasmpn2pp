@@ -83,6 +83,8 @@ Penetapan masa simpan tersebut tidak berarti penghapusan otomatis sudah tersedia
 
 ## 10. Permintaan akses, koreksi, dan penghapusan
 
+Untuk penghapusan akun akses NUSA beserta data terkait, atau penghapusan data tertentu tanpa menghapus akun, buka [Permintaan Penghapusan Akun/Data NUSA](penghapusan-akun). Halaman tersebut dapat digunakan tanpa login dan menyediakan langkah pengiriman email kepada pengelola. Permintaan ditinjau manual; nilai dan arsip sekolah tidak dihapus otomatis.
+
 Pengguna atau orang tua/wali yang berwenang dapat mengirim pertanyaan dan permintaan privasi ke **official@smpn2padangpanjang.sch.id**, dengan subjek **“Permintaan Privasi NUSA”**. Jelaskan nama, identitas akun, hubungan dengan siswa bila relevan, permintaan, serta cara untuk dihubungi.
 
 Jangan mengirim kata sandi, kode OTP, atau dokumen identitas lengkap dalam email awal. Verifikasi tambahan perlu dilakukan oleh petugas sekolah dengan informasi minimum yang memadai.

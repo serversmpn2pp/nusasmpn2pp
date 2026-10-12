@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nusa/core/config/app_config.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/domain/pengguna.dart';
 import 'package:nusa/features/profile/data/my_profile_remote_data_source.dart';
 import 'package:nusa/features/profile/domain/my_profile.dart';
 import 'package:nusa/features/profile/presentation/profile_page.dart';
+import 'package:nusa/shared/widgets/nusa_account_deletion_link.dart';
 
 void main() {
   test('model profil membaca data anak dan sekolah', () {
@@ -61,6 +63,33 @@ void main() {
     expect(find.text('Edit Profil'), findsOneWidget);
     expect(find.byKey(const Key('profile-field-nama_lengkap')), findsOneWidget);
     expect(find.byKey(const Key('profile-field-nuptk')), findsOneWidget);
+  });
+
+  testWidgets('profil menyediakan kanal permintaan tanpa identitas di URL', (
+    tester,
+  ) async {
+    Uri? opened;
+    final remote = _FakeProfileRemoteDataSource(_employeeProfile());
+    await tester.pumpWidget(
+      _app(
+        remote,
+        deletionOpener: (uri) async {
+          opened = uri;
+          return true;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    final link = find.byKey(const Key('profile-account-deletion'));
+    await tester.scrollUntilVisible(
+      link,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(link);
+    await tester.pumpAndSettle();
+    expect(opened.toString(), 'https://sekolah.example/penghapusan-akun');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('perubahan nama profil disimpan dan langsung ditampilkan', (
@@ -129,9 +158,22 @@ void main() {
   });
 }
 
-Widget _app(_FakeProfileRemoteDataSource remote) {
+Widget _app(
+  _FakeProfileRemoteDataSource remote, {
+  AccountDeletionOpener? deletionOpener,
+}) {
   return ProviderScope(
-    overrides: [myProfileRemoteDataSourceProvider.overrideWithValue(remote)],
+    overrides: [
+      myProfileRemoteDataSourceProvider.overrideWithValue(remote),
+      appConfigProvider.overrideWithValue(
+        AppConfig(
+          environment: AppEnvironment.production,
+          apiBaseUri: Uri.parse('https://sekolah.example/api/v1/'),
+        ),
+      ),
+      if (deletionOpener != null)
+        accountDeletionOpenerProvider.overrideWithValue(deletionOpener),
+    ],
     child: MaterialApp(
       theme: AppTheme.light,
       home: Scaffold(

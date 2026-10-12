@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
+import 'package:nusa/shared/widgets/nusa_account_deletion_link.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_illustrations.dart';
 import 'package:nusa/shared/widgets/nusa_logo.dart';
@@ -178,6 +179,9 @@ class _LoginViewState extends ConsumerState<LoginView> {
                           const SizedBox(height: 10),
                           const NusaPrivacyPolicyLink(
                             key: Key('login-privacy-policy'),
+                          ),
+                          const NusaAccountDeletionLink(
+                            key: Key('login-account-deletion'),
                           ),
                           const SizedBox(height: 4),
                           const Text(

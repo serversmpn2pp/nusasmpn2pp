@@ -176,6 +176,14 @@ yang dilakukan dari workspace ini.
 
 ## Yang masih menjadi gerbang rilis
 
+Pada 12 Oktober 2026 ditambahkan kanal publik `GET /penghapusan-akun`, tautan
+dari login/profil mobile dan login web, serta
+[panduan penanganan petugas](D:/nusasmpn2pp/docs/permintaan-penghapusan-akun-data-nusa.md).
+Perubahan ini tidak menghapus data, tidak mengubah retensi menjadi permanen,
+dan tidak otomatis memperbarui AAB atau server produksi. SOP, penunjukan
+petugas, kemampuan pemenuhan permintaan, dan verifikasi URL tetap menjadi
+gerbang sebelum deklarasi penghapusan di Play Console.
+
 Naskah telah disetujui pengguna, tetapi ketersediaan URL dan tautan hanyalah
 implementasi akses. Tetapkan awal hitung retensi 5 tahun dan penghapusan/
 cadangan, prosedur permintaan privasi serta perlindungan data anak, dan

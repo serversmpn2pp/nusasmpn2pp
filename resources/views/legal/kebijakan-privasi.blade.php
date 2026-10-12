@@ -75,6 +75,7 @@
             <h2 id="kontak-privasi">Pertanyaan atau permintaan privasi?</h2>
             <p>Gunakan subjek “Permintaan Privasi NUSA”. Jangan sertakan kata sandi atau kode OTP.</p>
             <a href="mailto:official@smpn2padangpanjang.sch.id?subject=Permintaan%20Privasi%20NUSA">Hubungi pengelola melalui email</a>
+            <p><a href="{{ route('penghapusan-akun') }}">Permintaan Penghapusan Akun/Data NUSA</a> — cara mengajukan permintaan tanpa login dan penjelasan arsip yang dapat dipertahankan.</p>
         </section>
     </main>
     <footer class="shell">NUSA · Tim Teknisi SMP Negeri 2 Padang Panjang · Berlaku mulai 8 Oktober 2026</footer>

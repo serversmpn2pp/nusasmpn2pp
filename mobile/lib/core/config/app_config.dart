@@ -14,8 +14,12 @@ class AppConfig {
 
   /// Halaman publik pada instalasi yang sama dengan API /api/v1/.
   /// Tidak membawa token, query, fragment, atau kredensial ke browser.
-  Uri get privacyPolicyUri {
-    final uri = apiBaseUri.resolve('../../kebijakan-privasi');
+  Uri get privacyPolicyUri => _publicLegalUri('kebijakan-privasi');
+
+  Uri get accountDeletionUri => _publicLegalUri('penghapusan-akun');
+
+  Uri _publicLegalUri(String path) {
+    final uri = apiBaseUri.resolve('../../$path');
     return Uri(
       scheme: uri.scheme,
       host: uri.host,

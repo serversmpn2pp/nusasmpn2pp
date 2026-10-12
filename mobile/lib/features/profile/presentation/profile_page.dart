@@ -6,6 +6,7 @@ import 'package:nusa/features/auth/domain/pengguna.dart';
 import 'package:nusa/features/profile/application/my_profile_controller.dart';
 import 'package:nusa/features/profile/data/my_profile_photo_picker.dart';
 import 'package:nusa/features/profile/domain/my_profile.dart';
+import 'package:nusa/shared/widgets/nusa_account_deletion_link.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_privacy_policy_link.dart';
 
@@ -210,6 +211,7 @@ class _ProfileOverview extends StatelessWidget {
           ),
           const SizedBox(height: 9),
           const NusaPrivacyPolicyLink(key: Key('profile-privacy-policy')),
+          const NusaAccountDeletionLink(key: Key('profile-account-deletion')),
           const SizedBox(height: 9),
           OutlinedButton.icon(
             onPressed: loggingOut || uploadingPhoto ? null : onLogout,

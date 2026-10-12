@@ -111,6 +111,7 @@ use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PerangkatAjarSayaController;
 use App\Http\Controllers\PergantianGuruMataPelajaranController;
 use App\Http\Controllers\PeringatanDiniSiswaController;
+use App\Http\Controllers\PermintaanPenghapusanController;
 use App\Http\Controllers\PertanyaanSurveiPembelajaranController;
 use App\Http\Controllers\PesertaUjianCbtController;
 use App\Http\Controllers\PiketKehadiranSiswaController;
@@ -189,6 +190,16 @@ Route::get('kebijakan-privasi', KebijakanPrivasiController::class)
         PreventRequestForgery::class,
     ])
     ->name('kebijakan-privasi');
+
+Route::get('penghapusan-akun', PermintaanPenghapusanController::class)
+    ->withoutMiddleware([
+        EncryptCookies::class,
+        AddQueuedCookiesToResponse::class,
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        PreventRequestForgery::class,
+    ])
+    ->name('penghapusan-akun');
 
 Route::get('/', function () {
     if (auth()->check()) {

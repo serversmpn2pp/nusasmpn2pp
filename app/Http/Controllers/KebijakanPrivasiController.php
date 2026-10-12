@@ -11,7 +11,10 @@ class KebijakanPrivasiController extends Controller
     public function __invoke(): Response
     {
         // Hanya naskah statis; jangan membaca akun, sesi, atau data sekolah.
-        $isi = Str::markdown(File::get(resource_path('legal/kebijakan-privasi-nusa.md')), [
+        $naskah = File::get(resource_path('legal/kebijakan-privasi-nusa.md'));
+        // Gunakan route instalasi yang sama, termasuk jika URL privasi memakai trailing slash.
+        $naskah = str_replace('(penghapusan-akun)', '('.route('penghapusan-akun').')', $naskah);
+        $isi = Str::markdown($naskah, [
             'html_input' => 'strip',
             'allow_unsafe_links' => false,
         ]);
