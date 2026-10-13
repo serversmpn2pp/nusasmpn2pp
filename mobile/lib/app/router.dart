@@ -301,6 +301,8 @@ abstract final class AppRoutes {
   static const gradeEntry = '/input-nilai';
   static const gradeRecap = '/rekap-nilai-rapor';
   static const stsReport = '/rapor-sts';
+  static const stsPublication = '/publikasi-rapor-sts';
+  static const publishedSts = '/rapor-sts-saya';
   static const stsLedger = '/leger-sts';
   static const myGrades = '/nilai-saya';
   static const myAttendance = '/kehadiran-saya';
@@ -1303,6 +1305,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RaporStsView(),
       ),
       GoRoute(
+        path: AppRoutes.stsPublication,
+        name: 'sts-publication',
+        builder: (_, state) => const StsPublicationView(),
+      ),
+      GoRoute(
         path: '/rapor-sts/publikasi',
         builder: (_, state) => StsPublicationView(
           activityId:
@@ -1312,7 +1319,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: '/rapor-sts-saya',
+        path: AppRoutes.publishedSts,
         builder: (_, state) => const PublishedStsView(),
         routes: [
           GoRoute(

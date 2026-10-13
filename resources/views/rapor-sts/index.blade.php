@@ -6,7 +6,7 @@
         .sts-section h2 { margin: 0 0 16px; font-size: 1.05rem; }
         .sts-section .button:disabled { opacity: .5; cursor: not-allowed; }
         .sts-filters, .sts-dates { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(150px, 1fr) auto; gap: 16px; align-items: end; }
-        .sts-dates { grid-template-columns: repeat(3, minmax(150px, 1fr)) auto; }
+        .sts-dates { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
         .sts-summary { display: flex; flex-wrap: wrap; gap: 16px 32px; padding: 18px 0; border-bottom: 1px solid var(--line); }
         .sts-summary strong { font-size: 1.25rem; margin-right: 8px; }
         .sts-summary span { color: var(--muted); font-size: .9rem; }
@@ -75,12 +75,23 @@
         .sts-unsaved-warning { padding: 14px 24px; border-top: 1px solid #e7cd89; background: #fff8e8; font-size: .85rem; flex: 0 0 auto; }
         .sts-unsaved-warning p { margin: 0 0 10px; }
         .sts-unsaved-warning .actions { justify-content: flex-end; }
-        .sts-subject-section > details > summary { display:list-item; cursor:pointer; padding:4px 0; }
+        .sts-workspace .sts-filters { padding: 20px 24px; background: #fff; }
+        .sts-workspace .sts-table-wrap { border-radius: 0; border-color: #c6ddd4; }
+        .sts-table th { background: #e5f1ec; color: #28564a; }
+        .sts-table tbody tr:nth-child(even) { background: #f5f9f7; }
+        .sts-table tbody tr:hover { background: #edf4fa; }
+        .sts-table tbody tr:has([data-sts-reviewed]:checked) .sts-order { background: #d8eee1; border-color: #afd0bc; color: #286040; }
+        .sts-workspace .sts-subject-section > details > summary { display:flex; align-items:center; gap:14px; cursor:pointer; padding:18px 24px; background:#e6edf5; list-style:none; }
+        .sts-subject-section > details > summary::-webkit-details-marker { display:none; }
+        .sts-subject-section > details > summary::after { content:'+'; font-size:1.3rem; color:var(--primary); margin-left:auto; }
+        .sts-subject-section > details[open] > summary::after { content:'-'; }
+        .sts-subject-section > details > .sts-band-body { background:#f7f9fc; }
         .sts-subject-section > details > summary > span { display:inline-flex; flex-direction:column; gap:5px; vertical-align:middle; margin:0 14px 0 4px; }
         .sts-subject-section > details > summary > .sts-badge { display:inline-flex; }
         .sts-subject-scope { font-size:.8rem; color:var(--muted); }
         .sts-subject-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:24px; margin:16px 0; }
-        .sts-subject-option { display:grid; grid-template-columns:18px minmax(0,1fr) auto; align-items:center; gap:10px; border-bottom:1px solid var(--line); padding:14px 0; margin:0; cursor:pointer; font-size:.85rem; }
+        .sts-subject-option { display:grid; grid-template-columns:18px minmax(0,1fr) auto; align-items:center; gap:10px; border-bottom:1px solid var(--line); padding:14px 12px; margin:0; cursor:pointer; font-size:.85rem; background:#edf3f9; }
+        .sts-subject-option:has(input:not(:checked)) { background:#fff3d8; }
         .sts-subject-option input { width:18px; height:18px; margin:0; accent-color:var(--primary); }
         .sts-subject-option strong { display:block; overflow-wrap:anywhere; }
         .sts-subject-option:has(input:not(:checked)) strong { color:var(--muted); }
@@ -93,11 +104,15 @@
         .sts-subject-history p { margin:5px 0 0; overflow-wrap:anywhere; }
         .sts-subject-section [hidden] { display:none !important; }
         @media (max-width: 950px) { .sts-dates { grid-template-columns: repeat(2, minmax(150px, 1fr)); } }
-        @media (max-width: 640px) { .sts-filters, .sts-dates, .sts-subject-list, .sts-subject-footer { grid-template-columns: 1fr; } .sts-subject-section > details > summary > .sts-badge { margin-top:10px; } }
+        @media (max-width: 640px) { .sts-filters, .sts-dates, .sts-subject-list, .sts-subject-footer { grid-template-columns: 1fr; } .sts-workspace .sts-filters { padding:18px 16px; } .sts-workspace .sts-subject-section > details > summary { flex-wrap:wrap; padding:18px 16px; } .sts-subject-section > details > summary > .sts-badge { margin:0; } .sts-workspace .sts-band-footer { align-items:stretch; } }
     </style>
+    @include('rapor-sts._workspace-style')
+    <div class="sts-workspace">
     <div class="page-header">
         <div><p class="eyebrow">Penilaian</p><h1 class="page-title">Rapor STS</h1></div>
-        <a class="button button-muted" href="{{ route('leger-sts.index', ['kegiatan_id' => $kegiatan?->id, 'kelas_id' => $kelas?->id]) }}">Buka Leger STS</a>
+        <div class="actions"><a class="button button-muted" href="{{ route('leger-sts.index', ['kegiatan_id' => $kegiatan?->id, 'kelas_id' => $kelas?->id]) }}">Buka Leger STS</a>
+            @if($laporan)<a class="button button-primary" href="{{ route('rapor-sts.publikasi.index', [$kegiatan, $kelas]) }}">Kelola publikasi</a>@endif
+        </div>
     </div>
     <form method="GET" action="{{ route('rapor-sts.index') }}" class="sts-section sts-filters">
         <div class="field"><label for="sts-kegiatan">Kegiatan STS</label>
@@ -119,48 +134,47 @@
             $siap = $baris->where('siap', true)->count();
             $diperiksa = $baris->where('diperiksa', true)->count();
         @endphp
+        <div class="sts-context"><strong>{{ $kelas->nama }}</strong><span>{{ $kegiatan->nama }}</span><span>Wali kelas: {{ $kelas->waliKelas?->nama_lengkap ?? 'Belum ditetapkan' }}</span></div>
+        <div class="sts-summary" aria-label="Ringkasan kesiapan rapor">
+            <div class="sts-metric"><span>Siswa</span><strong>{{ $baris->count() }}</strong></div>
+            <div class="sts-metric sts-metric--blue"><span>Rekap nilai lengkap</span><strong>{{ $baris->where('nilai_tuntas', true)->count() }}</strong></div>
+            <div class="sts-metric sts-metric--amber"><span>Kehadiran diperiksa</span><strong>{{ $diperiksa }}</strong></div>
+            <div class="sts-metric sts-metric--teal"><span>Siap cetak</span><strong>{{ $siap }}</strong></div>
+        </div>
         @include('rapor-sts._mapel')
-        <section class="sts-section">
-            <div class="sts-actions"><h2>Publikasi untuk orang tua dan siswa</h2><a class="button button-primary" href="{{ route('rapor-sts.publikasi.index', [$kegiatan, $kelas]) }}">Publikasi rapor</a></div>
-            <p class="help-text">Rapor tidak tampil pada akun penerima sebelum dipublikasikan. Koreksi setelah penerbitan perlu dipublikasikan ulang.</p>
-        </section>
-        <section class="sts-section">
-            <h2>1. Periode dan tanggal rapor</h2>
+        <section class="sts-section sts-band sts-band--blue">
+            <div class="sts-band-head"><div class="sts-band-title"><span class="sts-step" aria-hidden="true">01</span><div><h2>Periode dan tanggal rapor</h2><p>{{ $kegiatan->tahunPelajaran?->nama }} · Semester {{ ucfirst($kegiatan->semester) }}</p></div></div></div>
+            <div class="sts-band-body">
             <form method="POST" action="{{ route('rapor-sts.pengaturan', [$kegiatan, $kelas]) }}" class="sts-dates" id="sts-periode-form">
                 @csrf @method('PUT')<input type="hidden" name="versi" value="{{ $pengaturan->versi }}">
                 <div class="field"><label for="sts-awal">Awal rekap presensi</label><input class="input" id="sts-awal" type="date" name="tanggal_awal_presensi" value="{{ old('tanggal_awal_presensi', $pengaturan->tanggal_awal_presensi->toDateString()) }}" required></div>
                 <div class="field"><label for="sts-akhir">Batas rekap presensi</label><input class="input" id="sts-akhir" type="date" name="tanggal_akhir_presensi" value="{{ old('tanggal_akhir_presensi', $pengaturan->tanggal_akhir_presensi->toDateString()) }}" required></div>
                 <div class="field"><label for="sts-tanggal">Tanggal pembagian rapor</label><input class="input" id="sts-tanggal" type="date" name="tanggal_rapor" value="{{ old('tanggal_rapor', $pengaturan->tanggal_rapor->toDateString()) }}" required></div>
-                <button class="button button-primary">Simpan periode</button>
             </form>
-            <p class="help-text">Wali kelas: {{ $kelas->waliKelas?->nama_lengkap ?? 'Belum ditetapkan' }} · Nilai: hasil final CBT atau STS manual untuk mapel non-CBT.</p>
             @if (! $pengaturan->exists)<p class="sts-notice">Periode belum disimpan. Pemeriksaan kehadiran dan cetak rapor belum tersedia.</p>@endif
             @if (! $pengaturan->tanggal_akhir_presensi->copy()->endOfDay()->isPast())<p class="sts-notice">Periode presensi belum berakhir. Rapor belum dapat dicetak.</p>@endif
+            <div class="sts-band-footer"><p class="help-text">Nilai: hasil final CBT atau STS manual untuk mapel non-CBT.</p><button class="button button-primary" form="sts-periode-form">Simpan periode</button></div>
+            </div>
         </section>
-        <div class="sts-summary">
-            <div><strong>{{ $baris->count() }}</strong><span>Siswa</span></div>
-            <div><strong>{{ $baris->where('nilai_tuntas', true)->count() }}</strong><span>Rekap nilai lengkap</span></div>
-            <div><strong>{{ $diperiksa }}</strong><span>Kehadiran diperiksa</span></div>
-            <div><strong>{{ $siap }}</strong><span>Siap cetak</span></div>
-        </div>
-        <section class="sts-section">
-            <h2>Lampiran perilaku dan pembinaan</h2>
-            <p class="help-text">Isi lampiran: {{ $perilaku['labelIsiLampiran'] }}</p>
-            <div class="sts-actions">
-                <span class="sts-badge {{ $perilaku['baris']->every(fn ($b) => $b['siap']) ? 'is-complete' : '' }}">{{ $perilaku['baris']->where('siap', true)->count() }}/{{ $baris->count() }} lampiran diperiksa</span>
+        <section class="sts-section sts-band sts-band--amber">
+            <div class="sts-band-head"><div class="sts-band-title"><span class="sts-step" aria-hidden="true">02</span><div><h2>Lampiran perilaku dan pembinaan</h2><p>{{ $perilaku['labelIsiLampiran'] }}</p></div></div>
                 @if(\App\Services\Nilai\LampiranPerilakuStsService::petugas(auth()->user()))<a class="button button-muted" href="{{ route('lampiran-perilaku-sts.index', ['kegiatan_id' => $kegiatan->id, 'kelas_id' => $kelas->id]) }}">Pemeriksaan BK</a>@endif
             </div>
-            @if($perilaku['guruBk']->isEmpty())<p class="sts-notice">Guru BK tingkat {{ $kelas->tingkat }} belum ditetapkan untuk tanggal rapor.</p>@endif
-            @if($perilaku['wakilKesiswaan']->isEmpty())<p class="sts-notice">Penandatangan Wakil Kesiswaan belum ditetapkan.</p>@endif
+            <div class="sts-band-body">
+                <span class="sts-badge {{ $perilaku['baris']->every(fn ($b) => $b['siap']) ? 'is-complete' : '' }}">{{ $perilaku['baris']->where('siap', true)->count() }}/{{ $baris->count() }} lampiran diperiksa</span>
+                @if($perilaku['guruBk']->isEmpty())<p class="sts-notice">Guru BK tingkat {{ $kelas->tingkat }} belum ditetapkan untuk tanggal rapor.</p>@endif
+                @if($perilaku['wakilKesiswaan']->isEmpty())<p class="sts-notice">Penandatangan Wakil Kesiswaan belum ditetapkan.</p>@endif
+            </div>
         </section>
-        <section class="sts-section">
-            <h2>2. Pemeriksaan nilai dan kehadiran</h2>
-            <p class="sts-notice">Rekap awal mengikuti presensi sekolah. Hari presensi aktif tanpa catatan atau konfirmasi dihitung alfa setelah hari berakhir. Koreksi di sini hanya berlaku pada rapor, tidak mengubah presensi harian.</p>
+        <section class="sts-section sts-band sts-band--teal">
+            <div class="sts-band-head"><div class="sts-band-title"><span class="sts-step" aria-hidden="true">03</span><div><h2>Pemeriksaan nilai dan kehadiran</h2><p>{{ $diperiksa }} dari {{ $baris->count() }} siswa sudah diperiksa</p></div></div><button class="button button-primary" form="sts-kehadiran-form" @disabled(! $pengaturan->exists || $baris->isEmpty())>Simpan pemeriksaan</button></div>
+            <div class="sts-band-body">
+            <p class="sts-section-note">Rekap awal mengikuti presensi sekolah. Hari presensi aktif tanpa catatan atau konfirmasi dihitung alfa setelah hari berakhir. Koreksi di sini hanya berlaku pada rapor, tidak mengubah presensi harian.</p>
             <form method="POST" action="{{ route('rapor-sts.kehadiran', [$kegiatan, $kelas]) }}" id="sts-kehadiran-form">
                 @csrf @method('PUT')<input type="hidden" name="versi" value="{{ $pengaturan->versi }}">
                 <div class="sts-actions">
                     <label class="sts-check"><input type="checkbox" id="sts-periksa-semua" @disabled(! $pengaturan->exists || $baris->isEmpty())> Semua siswa sudah diperiksa</label>
-                    <button class="button button-primary" @disabled(! $pengaturan->exists || $baris->isEmpty())>Simpan pemeriksaan</button>
+                    <span class="sts-badge {{ $siap === $baris->count() && $siap ? 'is-complete' : '' }}">{{ $siap }}/{{ $baris->count() }} siap cetak</span>
                 </div>
                 <div class="sts-table-wrap" tabindex="0" aria-label="Rekap kehadiran dan kelengkapan nilai STS">
                     <table class="sts-table">
@@ -210,7 +224,9 @@
                     </tbody></table>
                 </div>
                 <p class="help-text" id="sts-unsaved" hidden>Ada perubahan yang belum disimpan. Cetak menggunakan pemeriksaan terakhir yang tersimpan.</p>
+                <div class="sts-band-footer"><p class="help-text">{{ $baris->count() - $diperiksa }} siswa belum diperiksa</p><button class="button button-primary" @disabled(! $pengaturan->exists || $baris->isEmpty())>Simpan pemeriksaan</button></div>
             </form>
+            </div>
         </section>
         <dialog id="sts-grade-dialog" class="sts-dialog" aria-labelledby="sts-grade-title" aria-describedby="sts-grade-student" data-sts-reopen="{{ session('rincian_siswa', old('anggota_id')) }}">
             <div class="sts-dialog-header">
@@ -275,8 +291,9 @@
                 </form>
             </template>
         @endforeach
-        <section class="sts-section">
-            <h2>3. Cetak rapor kelas</h2>
+        <section class="sts-section sts-band">
+            <div class="sts-band-head"><div class="sts-band-title"><span class="sts-step" aria-hidden="true">04</span><div><h2>Cetak rapor kelas</h2><p>{{ $siap }} dari {{ $baris->count() }} siswa siap cetak · A4</p></div></div></div>
+            <div class="sts-band-body">
             <div class="actions">
                 @if ($baris->isNotEmpty())<a class="button button-muted" target="_blank" rel="noopener" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'pratinjau' => 1]) }}">Pratinjau seluruh kelas</a>@endif
                 @if ($siap > 0 && $siap === $baris->count())<a class="button button-primary" data-sts-print target="_blank" rel="noopener" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas]) }}">Cetak seluruh kelas</a>
@@ -288,6 +305,11 @@
             </div>
             <p class="help-text">{{ $baris->count() - $siap }} siswa belum siap cetak · A4, satu halaman per siswa.</p>
             @if ($baris->contains(fn ($item) => ! $item['nilai_tuntas']))<p class="help-text">{{ $baris->where('nilai_tuntas', false)->count() }} siswa memiliki nilai yang belum tersedia.</p>@endif
+            </div>
+        </section>
+        <section class="sts-section sts-publish-band">
+            <div><h2>Publikasi untuk orang tua dan siswa</h2><p>Rapor tidak tampil pada akun penerima sebelum dipublikasikan. Koreksi setelah penerbitan perlu dipublikasikan ulang.</p></div>
+            <a class="button" href="{{ route('rapor-sts.publikasi.index', [$kegiatan, $kelas]) }}">Publikasi rapor</a>
         </section>
     @else
         <p class="sts-notice">Belum ada kegiatan STS atau kelas dalam kewenangan Anda.</p>
@@ -422,4 +444,5 @@
             }
         })();
     </script>
+    </div>
 @endsection

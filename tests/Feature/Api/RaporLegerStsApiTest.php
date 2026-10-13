@@ -62,6 +62,7 @@ class RaporLegerStsApiTest extends TestCase
         $d = $this->data();
         $this->login($d['admin']);
         $this->getJson(route('api.v1.menu'))->assertOk()
+            ->assertJsonFragment(['kode' => 'publikasi-rapor-sts', 'rute' => '/publikasi-rapor-sts', 'api' => '/api/v1/publikasi-rapor-sts', 'api_tersedia' => true, 'status' => 'tersedia'])
             ->assertJsonFragment(['kode' => 'rapor-sts', 'rute' => '/rapor-sts', 'api' => '/api/v1/rapor-sts', 'api_tersedia' => true, 'status' => 'tersedia'])
             ->assertJsonFragment(['kode' => 'leger-sts', 'rute' => '/leger-sts', 'api' => '/api/v1/leger-sts', 'api_tersedia' => true, 'status' => 'tersedia'])
             ->assertJsonFragment(['kode' => 'lampiran-perilaku-sts', 'api_tersedia' => true, 'status' => 'tersedia']);
@@ -69,6 +70,55 @@ class RaporLegerStsApiTest extends TestCase
         $this->getJson(route('api.v1.menu'))->assertOk()->assertSee('rapor-sts')->assertSee('leger-sts')->assertDontSee('lampiran-perilaku-sts');
         $this->login($this->akun('bk', 'BK API STS'));
         $this->getJson(route('api.v1.menu'))->assertOk()->assertSee('lampiran-perilaku-sts')->assertDontSee('rapor-sts')->assertDontSee('leger-sts');
+    }
+
+    public function test_pusat_publikasi_mobile_memakai_pilihan_dan_kesiapan_tanpa_menerbitkan(): void
+    {
+        $d = $this->data();
+        $url = route('api.v1.publikasi-rapor-sts.index');
+        $this->getJson($url)->assertUnauthorized();
+        $this->login($d['wali']);
+        $response = $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.filter.kegiatan_id', $d['kegiatan']->id)
+            ->assertJsonPath('data.filter.kelas_id', $d['kelas']->id)
+            ->assertJsonCount(1, 'data.opsi.kelas')
+            ->assertJsonCount(3, 'data.konteks.siswa')
+            ->assertJsonPath('data.konteks.siswa.0.aktif', false)
+            ->assertJsonPath('data.konteks.siswa.0.siap', false)
+            ->assertJsonPath('data.konteks.siswa.0.versi_publikasi', 0);
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $response->json('data.konteks.siswa.0.sidik_rapor'));
+        $response->assertDontSee('NILAI-CATATAN-PRIVAT');
+        $this->assertDatabaseCount('publikasi_rapor_sts', 0);
+        $this->assertDatabaseCount('rapor_sts_kelas', 0);
+        $lain = Kelas::create(['nama' => 'VII.B', 'tingkat' => 7, 'tahun_pelajaran_id' => $d['tahun']->id, 'aktif' => true]);
+        $this->getJson($url.'?kelas_id='.$lain->id)->assertNotFound();
+        $this->getJson($url.'?kegiatan_id=0')->assertUnprocessable();
+        $this->login($this->akun('guru_mapel', 'Guru bukan pengelola'));
+        $this->getJson($url)->assertForbidden();
+        $this->getJson(route('api.v1.menu'))->assertJsonMissing(['kode' => 'publikasi-rapor-sts']);
+    }
+
+    public function test_pusat_publikasi_kosong_dan_identitas_penerima_tidak_membuka_pengelolaan(): void
+    {
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->login($admin);
+        $this->getJson(route('api.v1.publikasi-rapor-sts.index'))->assertOk()
+            ->assertJsonPath('data.konteks', null)->assertJsonCount(0, 'data.opsi.kegiatan');
+        $d = $this->data();
+        foreach (['siswa', 'orang_tua'] as $peran) {
+            $user = Pengguna::create(['nama' => 'Penerima '.$peran, 'username' => 'publikasi-'.$peran,
+                'peran' => $peran, 'aktif' => true, 'kata_sandi' => 'test-pass', 'wajib_ganti_kata_sandi' => false,
+                'siswa_id' => $peran === 'siswa' ? $d['anggota'][0]->siswa_id : null]);
+            if ($peran === 'orang_tua') {
+                OrangTuaWali::create(['pengguna_id' => $user->id, 'nama_lengkap' => $user->nama,
+                    'siswa_acuan_username_id' => $d['anggota'][0]->siswa_id]);
+            }
+            $user->daftarPeran()->sync([Peran::where('kode', 'wali_kelas')->value('id')]);
+            $this->login($user);
+            $this->getJson(route('api.v1.publikasi-rapor-sts.index'))->assertForbidden();
+            $this->getJson(route('api.v1.menu'))->assertJsonMissing(['kode' => 'publikasi-rapor-sts']);
+        }
     }
 
     public function test_identitas_siswa_dan_orang_tua_tetap_ditolak_meski_role_wali_tersisip(): void

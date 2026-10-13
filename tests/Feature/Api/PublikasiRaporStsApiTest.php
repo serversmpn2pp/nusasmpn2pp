@@ -223,18 +223,25 @@ class PublikasiRaporStsApiTest extends TestCase
     {
         $d = $this->data();
         $this->actingAs($d['admin']);
+        $workspace = $this->get(route('rapor-sts.index', ['kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $d['kelas']->id]))
+            ->assertOk()->assertSee('class="sts-workspace"', false)->assertSee('form="sts-periode-form"', false)
+            ->assertSee('form="sts-kehadiran-form"', false);
         $url = route('rapor-sts.publikasi.index', [$d['kegiatan'], $d['kelas']]);
         $manager = $this->get($url)->assertOk();
         $this->post(route('rapor-sts.publikasi.store', [$d['kegiatan'], $d['kelas']]), $this->payload($d, [0, 1, 2]))->assertSessionHasNoErrors();
+        $managerActive = $this->get($url)->assertOk();
         $p = PublikasiRaporSts::first();
         $this->actingAs($d['orang_tua']);
         $index = $this->get('/rapor-sts-saya')->assertOk();
         $print = $this->get('/rapor-sts-saya/'.$p->id)->assertOk();
         $this->assertSame(1, substr_count($print->getContent(), '<article class="sheet'));
+        $d['pengaturan']->update(['tanggal_akhir_presensi' => now()->addDays(5)->toDateString(), 'tanggal_rapor' => now()->addDays(7)->toDateString()]);
+        $pending = $this->actingAs($d['admin'])->get(route('rapor-sts.index', ['kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $d['kelas']->id]))
+            ->assertOk()->assertSee('Periode presensi belum berakhir.');
         if (getenv('NUSA_CAPTURE_PUBLICATION_STS') === '1') {
             $dir = storage_path('framework/testing/publikasi-rapor-sts');
             File::ensureDirectoryExists($dir);
-            foreach (['manager' => $manager, 'index' => $index, 'print' => $print] as $name => $response) {
+            foreach (['workspace' => $workspace, 'pending' => $pending, 'manager' => $manager, 'manager-active' => $managerActive, 'index' => $index, 'print' => $print] as $name => $response) {
                 File::put($dir.'/'.$name.'.html', $response->getContent());
             }
         }

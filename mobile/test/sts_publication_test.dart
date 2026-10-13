@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
@@ -17,6 +18,8 @@ import 'package:nusa/features/sts_publication/data/sts_publication_repository.da
 import 'package:nusa/features/sts_publication/presentation/sts_publication_view.dart';
 import 'package:nusa/features/sts_publication/presentation/published_sts_view.dart';
 import 'package:nusa/features/sts_publication/application/published_sts_document_service.dart';
+import 'package:nusa/features/menu/data/menu_remote_data_source.dart';
+import 'package:nusa/features/menu/domain/menu_catalog.dart';
 
 const _admin = Pengguna(
   id: 1,
@@ -105,17 +108,20 @@ void main() {
       await repo.cancel(5, 6, [
         {'anggota_id': 8, 'versi_publikasi': 1},
       ], 'Koreksi nilai ulang.');
+      await repo.workspace(activityId: 5);
       expect(calls.map((r) => r.path), [
         'rapor-sts-saya',
         'rapor-sts-saya/19',
         'rapor-sts/5/6/publikasi',
         'rapor-sts/5/6/publikasi',
         'rapor-sts/5/6/publikasi',
+        'publikasi-rapor-sts',
       ]);
       expect(calls[3].method, 'POST');
       expect(calls[3].data['konfirmasi'], isTrue);
       expect(calls[4].method, 'DELETE');
       expect(calls[4].data['konfirmasi'], isTrue);
+      expect(calls[5].queryParameters, {'kegiatan_id': 5});
       expect(() => repo.detail(0), throwsArgumentError);
     },
   );
@@ -130,6 +136,7 @@ void main() {
       );
       expect(find.text('Orang tua saja'), findsOneWidget);
       expect(find.text('Siswa saja'), findsNothing);
+      await _visible(t, find.text('Pilih yang siap'));
       await t.tap(find.text('Pilih yang siap'));
       await t.pumpAndSettle();
       expect(find.text('2 siswa dipilih'), findsOneWidget);
@@ -165,8 +172,10 @@ void main() {
         const StsPublicationView(activityId: 5, classId: 6),
         repo,
       );
+      await _visible(t, find.text('Sertakan lampiran perilaku'));
       await t.tap(find.text('Sertakan lampiran perilaku'));
       await t.pumpAndSettle();
+      await _visible(t, find.text('Pilih yang siap'));
       await t.tap(find.text('Pilih yang siap'));
       await t.pumpAndSettle();
       expect(find.text('1 siswa dipilih'), findsOneWidget);
@@ -198,6 +207,7 @@ void main() {
         const StsPublicationView(activityId: 5, classId: 6),
         repo,
       );
+      await _visible(t, find.text('Pilih yang siap'));
       await t.tap(find.text('Pilih yang siap'));
       await t.pumpAndSettle();
       await _visible(t, find.byKey(const Key('sts-publish-confirm')));
@@ -229,6 +239,7 @@ void main() {
         const StsPublicationView(activityId: 5, classId: 6),
         repo,
       );
+      await _visible(t, find.text('Pilih terpublikasi'));
       await t.tap(find.text('Pilih terpublikasi'));
       await t.pumpAndSettle();
       await _visible(t, find.byKey(const Key('sts-publish-confirm')));
@@ -266,6 +277,7 @@ void main() {
       );
       expect(find.text('Semua anak'), findsOneWidget);
       expect(find.text('Alya STS'), findsOneWidget);
+      await _visible(t, find.text('Alya STS'));
       await t.tap(find.text('Alya STS'));
       await t.pumpAndSettle();
       expect(repo.details, [19]);
@@ -316,6 +328,222 @@ void main() {
       await File('${dir.path}/published.pdf').writeAsBytes(bytes);
     }
   });
+  for (final user in [_admin, _parent, _student]) {
+    testWidgets(
+      'real Akademik menu opens STS destination for ${user.jenisAkun}',
+      (t) async {
+        final repo = _Repo();
+        await _mount(
+          t,
+          const SizedBox(),
+          repo,
+          user: user,
+          route: '/menu/akademik',
+        );
+        final code = user == _admin
+            ? 'publikasi-rapor-sts'
+            : user == _parent
+            ? 'rapor-sts-anak'
+            : 'rapor-sts-saya';
+        await t.tap(find.byKey(Key('menu-item-$code')));
+        await t.pumpAndSettle();
+        if (user == _admin) {
+          expect(find.byType(StsPublicationView), findsOneWidget);
+          expect(repo.workspaces.single, (null, null));
+          expect(find.text('Kegiatan STS'), findsOneWidget);
+        } else {
+          expect(find.byType(PublishedStsView), findsOneWidget);
+          expect(repo.managementReads, 0);
+        }
+        expect(t.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets('changing activity discards class, selections and confirmation', (
+    t,
+  ) async {
+    final repo = _Repo();
+    await _mount(t, const StsPublicationView(), repo);
+    await _visible(t, find.text('Pilih yang siap'));
+    await t.tap(find.text('Pilih yang siap'));
+    await t.pumpAndSettle();
+    await _visible(t, find.byKey(const Key('sts-publish-confirm')));
+    await t.tap(find.byKey(const Key('sts-publish-confirm')));
+    await t.pumpAndSettle();
+    final activity = find.byWidgetPredicate(
+      (w) =>
+          w is DropdownButtonFormField<int> &&
+          w.decoration.labelText == 'Kegiatan STS',
+    );
+    await _visible(t, activity);
+    await t.tap(activity);
+    await t.pumpAndSettle();
+    await t.tap(find.text('STS Genap').last);
+    await t.pumpAndSettle();
+    expect(repo.workspaces.last, (11, null));
+    await _visible(t, find.text('0 siswa dipilih'));
+    expect(find.text('0 siswa dipilih'), findsOneWidget);
+    await _visible(t, find.byKey(const Key('sts-publish-confirm')));
+    expect(
+      t
+          .widget<CheckboxListTile>(
+            find.byKey(const Key('sts-publish-confirm')),
+          )
+          .value,
+      isFalse,
+    );
+    expect(repo.publishes, isEmpty);
+  });
+  for (final user in [_parent, _student]) {
+    testWidgets('reviewed behavior has a separate tab for ${user.jenisAkun}', (
+      t,
+    ) async {
+      await _mount(t, const PublishedStsView(id: 19), _Repo(), user: user);
+      expect(find.text('88,50'), findsOneWidget);
+      expect(find.text('Pembinaan disiplin waktu'), findsNothing);
+      await t.tap(find.byKey(const Key('published-sts-behavior-tab')));
+      await t.pumpAndSettle();
+      await _visible(t, find.text('Pembinaan disiplin waktu'));
+      expect(find.text('Pembinaan disiplin waktu'), findsOneWidget);
+      expect(find.text('88,50'), findsNothing);
+      await _visible(t, find.byKey(const Key('published-sts-report-tab')));
+      await t.tap(find.byKey(const Key('published-sts-report-tab')));
+      await t.pumpAndSettle();
+      expect(find.text('88,50'), findsOneWidget);
+    });
+  }
+  testWidgets(
+    'attachment not included does not suggest there were no incidents',
+    (t) async {
+      final repo = _Repo()..withBehavior = false;
+      await _mount(t, const PublishedStsView(id: 19), repo, user: _parent);
+      expect(find.byKey(const Key('published-sts-behavior-tab')), findsNothing);
+      await _visible(
+        t,
+        find.textContaining('Lampiran perilaku tidak disertakan'),
+      );
+      expect(
+        find.textContaining('Ini bukan keterangan bahwa tidak ada kejadian'),
+        findsOneWidget,
+      );
+    },
+  );
+  testWidgets('revoked export rechecks permission and removes cached report', (
+    t,
+  ) async {
+    final repo = _Repo();
+    await _mount(t, const PublishedStsView(id: 19), repo, user: _parent);
+    repo.detailError = const NetworkException(
+      'Rapor tidak tersedia.',
+      statusCode: 404,
+    );
+    await t.tap(find.byKey(const Key('published-sts-print')));
+    await t.pumpAndSettle();
+    expect(repo.details, [19, 19]);
+    expect(find.text('Alya STS'), findsNothing);
+    expect(find.text('Rapor tidak tersedia.'), findsOneWidget);
+  });
+  testWidgets('late response cannot expose a previous account report', (
+    t,
+  ) async {
+    final repo = _Repo()..pendingDetail = Completer<StsData>();
+    final c = await _mount(
+      t,
+      const PublishedStsView(id: 19),
+      repo,
+      user: _parent,
+      settle: false,
+    );
+    (c.read(authControllerProvider.notifier) as _Auth).change(_admin);
+    await t.pump();
+    repo.pendingDetail!.complete(_detail());
+    await t.pumpAndSettle();
+    expect(find.text('Alya STS'), findsNothing);
+    expect(find.text('88,50'), findsNothing);
+  });
+  testWidgets('empty workspace gives safe empty state without publishing', (
+    t,
+  ) async {
+    final repo = _Repo()..emptyWorkspace = true;
+    await _mount(t, const StsPublicationView(), repo);
+    expect(
+      find.textContaining('Belum ada kegiatan STS atau kelas'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('sts-publish-submit')), findsNothing);
+    expect(repo.publishes, isEmpty);
+    expect(t.takeException(), isNull);
+  });
+  testWidgets('unreviewed selected attachment keeps publish disabled', (
+    t,
+  ) async {
+    final repo = _Repo();
+    await _mount(t, const StsPublicationView(), repo);
+    await _visible(t, find.text('Pilih yang siap'));
+    await t.tap(find.text('Pilih yang siap'));
+    await t.pumpAndSettle();
+    await _visible(t, find.text('Sertakan lampiran perilaku'));
+    await t.tap(find.text('Sertakan lampiran perilaku'));
+    await t.pumpAndSettle();
+    await _visible(t, find.byKey(const Key('sts-publish-confirm')));
+    await t.tap(find.byKey(const Key('sts-publish-confirm')));
+    await t.pumpAndSettle();
+    await _visible(t, find.byKey(const Key('sts-publish-submit')));
+    expect(
+      t
+          .widget<FilledButton>(find.byKey(const Key('sts-publish-submit')))
+          .onPressed,
+      isNull,
+    );
+    expect(repo.publishes, isEmpty);
+  });
+  testWidgets('320px at 2x text fits publication and both recipient panels', (
+    t,
+  ) async {
+    await _mount(
+      t,
+      const StsPublicationView(),
+      _Repo(),
+      size: const Size(320, 844),
+      scale: 2,
+    );
+    await _visible(t, find.text('Batalkan publikasi'));
+    expect(t.takeException(), isNull);
+    await _mount(
+      t,
+      const PublishedStsView(id: 19),
+      _Repo(),
+      user: _student,
+      size: const Size(320, 844),
+      scale: 2,
+    );
+    await _visible(t, find.text('Wali kelas'));
+    expect(t.takeException(), isNull);
+    await _visible(t, find.byKey(const Key('published-sts-behavior-tab')));
+    await t.tap(find.byKey(const Key('published-sts-behavior-tab')));
+    await t.pumpAndSettle();
+    await _visible(t, find.text('Pembinaan telah dilakukan.'));
+    expect(t.takeException(), isNull);
+  });
+  if (Platform.environment['NUSA_CAPTURE_PUBLICATION_STS'] == '1') {
+    testWidgets('capture native publication and recipient screens', (t) async {
+      final oldShadows = debugDisableShadows;
+      debugDisableShadows = false;
+      try {
+        await _mount(t, const StsPublicationView(), _Repo());
+        await _screenshot(t, 'publication-mobile');
+        await _mount(t, const PublishedStsView(), _Repo(), user: _parent);
+        await _screenshot(t, 'parent-list-mobile');
+        await _mount(t, const PublishedStsView(id: 19), _Repo(), user: _parent);
+        await _screenshot(t, 'report-mobile');
+        await t.tap(find.byKey(const Key('published-sts-behavior-tab')));
+        await t.pumpAndSettle();
+        await _screenshot(t, 'behavior-mobile');
+      } finally {
+        debugDisableShadows = oldShadows;
+      }
+    });
+  }
   for (final width in [320.0, 390.0, 768.0]) {
     testWidgets('publication and recipient UI fits $width with larger text', (
       t,
@@ -339,6 +567,10 @@ void main() {
       );
       expect(t.takeException(), isNull);
       await _screenshot(t, 'report-${width.toInt()}');
+      await _visible(t, find.byKey(const Key('published-sts-behavior-tab')));
+      await t.tap(find.byKey(const Key('published-sts-behavior-tab')));
+      await t.pumpAndSettle();
+      await _screenshot(t, 'behavior-${width.toInt()}');
       await t.drag(find.byType(ListView), const Offset(0, -900));
       await t.pumpAndSettle();
       expect(t.takeException(), isNull);
@@ -348,11 +580,20 @@ void main() {
 
 Future<void> _visible(WidgetTester t, Finder finder) async {
   if (finder.evaluate().isEmpty) {
-    await t.scrollUntilVisible(
-      finder,
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
+    final scrollable = find
+        .descendant(
+          of: find.byType(ListView).first,
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    t.state<ScrollableState>(scrollable).position.jumpTo(0);
+    await t.pumpAndSettle();
+    if (finder.evaluate().isNotEmpty) {
+      await t.ensureVisible(finder);
+      await t.pumpAndSettle();
+      return;
+    }
+    await t.scrollUntilVisible(finder, 250, scrollable: scrollable);
   } else {
     await t.ensureVisible(finder);
   }
@@ -382,6 +623,7 @@ Future<ProviderContainer> _mount(
   String? route,
   Size size = const Size(390, 844),
   double scale = 1,
+  bool settle = true,
 }) async {
   await t.pumpWidget(const SizedBox());
   t.view.physicalSize = size;
@@ -395,6 +637,7 @@ Future<ProviderContainer> _mount(
       authControllerProvider.overrideWith(() => _Auth(user)),
       stsPublicationRepositoryProvider.overrideWithValue(repo),
       splashGateProvider.overrideWith((ref) async {}),
+      menuRemoteDataSourceProvider.overrideWithValue(_Menu(user)),
     ],
   );
   await c.read(authControllerProvider.future);
@@ -421,7 +664,12 @@ Future<ProviderContainer> _mount(
       ),
     ),
   );
-  await t.pumpAndSettle();
+  if (settle) {
+    await t.pumpAndSettle();
+  } else {
+    await t.pump();
+    await t.pump();
+  }
   return c;
 }
 
@@ -445,6 +693,36 @@ class _Repo extends StsPublicationRepository {
   final publishes = <StsData>[], details = <int>[];
   final cancellations = <(List<StsData>, String)>[];
   Object? publishError;
+  Object? detailError;
+  bool withBehavior = true;
+  bool emptyWorkspace = false;
+  Completer<StsData>? pendingDetail;
+  final workspaces = <(int?, int?)>[];
+  @override
+  Future<StsData> workspace({int? activityId, int? classId}) async {
+    workspaces.add((activityId, classId));
+    if (emptyWorkspace) {
+      return {
+        'filter': {},
+        'opsi': {'kegiatan': [], 'kelas': []},
+        'konteks': null,
+      };
+    }
+    return {
+      'filter': {'kegiatan_id': activityId ?? 5, 'kelas_id': classId ?? 6},
+      'opsi': {
+        'kegiatan': [
+          {'id': 5, 'label': 'STS Ganjil'},
+          {'id': 11, 'label': 'STS Genap'},
+        ],
+        'kelas': [
+          {'id': 6, 'label': 'VII.A'},
+        ],
+      },
+      'konteks': await publication(activityId ?? 5, classId ?? 6),
+    };
+  }
+
   @override
   Future<StsData> publication(int a, int c) async {
     managementReads++;
@@ -489,6 +767,7 @@ class _Repo extends StsPublicationRepository {
         {
           'id': id,
           'versi': 1,
+          'sertakan_perilaku': id == 19,
           'siswa': {'id': id, 'nama': name},
           'kelas': {'nama': 'VII.A'},
           'kegiatan': {'nama': 'STS Ganjil', 'tahun_pelajaran': '2026/2027'},
@@ -499,8 +778,53 @@ class _Repo extends StsPublicationRepository {
   @override
   Future<StsData> detail(int id) async {
     details.add(id);
-    return _detail();
+    if (detailError != null) throw detailError!;
+    if (pendingDetail != null) return pendingDetail!.future;
+    final data = _detail();
+    if (!withBehavior) (data['rapor'] as StsData)['perilaku'] = null;
+    return data;
   }
+}
+
+class _Menu implements MenuRemoteDataSource {
+  _Menu(this.user);
+  final Pengguna user;
+  @override
+  Future<MenuCatalog> fetchCatalog() async => MenuCatalog.fromJson({
+    'dihasilkan_pada': '2026-10-13T12:00:00+07:00',
+    'kelompok': [
+      {
+        'kode': 'akademik',
+        'label': 'Akademik',
+        'ikon': 'academic',
+        'items': [
+          {
+            'kode': user == _admin
+                ? 'publikasi-rapor-sts'
+                : user == _parent
+                ? 'rapor-sts-anak'
+                : 'rapor-sts-saya',
+            'label': user == _admin
+                ? 'Publikasi Rapor STS'
+                : user == _parent
+                ? 'Rapor STS Anak Saya'
+                : 'Rapor STS Saya',
+            'inisial': 'RS',
+            'subkelompok': 'Penilaian',
+            'status': 'tersedia',
+            'rute': user == _admin
+                ? AppRoutes.stsPublication
+                : AppRoutes.publishedSts,
+          },
+        ],
+      },
+    ],
+  });
+  @override
+  Future<MenuCatalog> resetQuickAccess() => throw UnimplementedError();
+  @override
+  Future<MenuCatalog> saveQuickAccess(List<String> codes) =>
+      throw UnimplementedError();
 }
 
 StsData _detail() => {

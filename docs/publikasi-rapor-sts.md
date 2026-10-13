@@ -7,8 +7,11 @@ per mapel. Rapor lama tidak otomatis diterbitkan ketika fitur ini dipasang.
 
 Administrator, wakil kurikulum, dan wali kelas dengan `nilai.rekap` mengelola
 publikasi dalam cakupan kelas yang sudah berlaku. Buka Rapor STS, pilih kegiatan
-dan kelas, lalu **Publikasi rapor**. Android menyediakan tombol publikasi pada
-halaman Rapor STS.
+dan kelas, lalu **Publikasi rapor**. Android menyediakan menu langsung
+**Akademik → Penilaian → Publikasi Rapor STS** dan tombol publikasi pada halaman
+Rapor STS. Pilihan kegiatan/kelas di menu langsung hanya berasal dari cakupan
+pengelola. Mengganti kegiatan mengosongkan kelas lama, pilihan siswa, dan
+konfirmasi; GET tidak menerbitkan rapor.
 
 - Penerima: `orang_tua` (bawaan) atau `orang_tua_dan_siswa`. Siswa saja ditolak backend.
 - Pilih satu/beberapa siswa atau semua yang siap. Konfirmasi eksplisit wajib.
@@ -51,6 +54,12 @@ dikonfirmasi kembali. Tidak ada retry mutasi otomatis.
 - Web memakai format cetak STS yang sama. Android menampilkan ringkasan native
   dan cetak/simpan PDF A4 dengan logo dan lampiran opsional. Sebelum ekspor
   Android, izin diperiksa kembali ke server.
+- Pembaca Android memakai kartu nilai, kehadiran, periode dan identitas versi.
+  **Rapor** dan **Lampiran Perilaku** dipisahkan menjadi pilihan tampilan.
+  Lampiran hanya tersedia jika salinan yang diterbitkan menyertakannya. Tidak
+  disertakannya lampiran tidak berarti siswa tidak memiliki kejadian.
+- Daftar orang tua dapat disaring berdasarkan anak dan tahun pelajaran.
+  Pergantian akun membuang data layar dan respons lama tidak boleh ditampilkan.
 - Pembatalan menutup akses server. Salinan yang diunduh/dicetak atau sudah
   terlihat pada layar tidak dapat ditarik kembali dari perangkat penerima.
 
@@ -65,6 +74,7 @@ gerbang penggantian kata sandi bawaan.
 
 | Metode | Jalur | Fungsi |
 | --- | --- | --- |
+| GET | `/publikasi-rapor-sts` | Pilihan kegiatan/kelas dan konteks publikasi untuk menu mobile |
 | GET | `/rapor-sts/{kegiatan}/{kelas}/publikasi` | Kesiapan, sidik, versi, penerima, riwayat |
 | POST | `/rapor-sts/{kegiatan}/{kelas}/publikasi` | Publikasi pilihan siswa |
 | DELETE | `/rapor-sts/{kegiatan}/{kelas}/publikasi` | Batalkan pilihan siswa |
@@ -74,6 +84,13 @@ gerbang penggantian kata sandi bawaan.
 
 Pengelolaan API juga memerlukan `akun_pegawai`, `nilai.rekap`, dan cakupan STS.
 Mutasi dibatasi 15 permintaan/menit. GET tidak menerbitkan rapor.
+
+GET `/publikasi-rapor-sts` menerima `kegiatan_id` dan `kelas_id` opsional;
+respons `data.filter`, `data.opsi`, `data.konteks` memakai pilihan STS dan
+kontrak konteks publikasi yang sama. Tanpa kegiatan/kelas dalam cakupan,
+`konteks` bernilai `null`. Filter ID di luar cakupan ditolak, bukan diganti
+dengan kelas yang tidak diminta. Menu ini memerlukan aplikasi mobile versi
+terbaru; AAB lama tidak mendapat layar baru hanya dari pembaruan backend.
 
 ```json
 {

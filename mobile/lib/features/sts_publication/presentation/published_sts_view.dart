@@ -5,6 +5,7 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/sts_publication/data/sts_publication_repository.dart';
 import 'package:nusa/features/sts_publication/application/published_sts_document_service.dart';
+import 'package:nusa/features/sts_publication/presentation/sts_publication_widgets.dart';
 
 class PublishedStsView extends ConsumerStatefulWidget {
   const PublishedStsView({this.id, super.key});
@@ -16,7 +17,7 @@ class PublishedStsView extends ConsumerStatefulWidget {
 class _PublishedStsState extends ConsumerState<PublishedStsView> {
   StsData? _page;
   Object? _error;
-  bool _loading = true, _printing = false;
+  bool _loading = true, _printing = false, _behaviorTab = false;
   int _serial = 0;
   int? _account;
   String _child = '', _year = '';
@@ -52,6 +53,7 @@ class _PublishedStsState extends ConsumerState<PublishedStsView> {
       _error = null;
       _child = '';
       _year = '';
+      _behaviorTab = false;
     });
     try {
       final repo = ref.read(stsPublicationRepositoryProvider);
@@ -111,6 +113,7 @@ class _PublishedStsState extends ConsumerState<PublishedStsView> {
           _account = null;
           _child = '';
           _year = '';
+          _behaviorTab = false;
         });
         Future.microtask(_load);
       }
@@ -119,13 +122,12 @@ class _PublishedStsState extends ConsumerState<PublishedStsView> {
         stsRecipient(user) && (_account == null || _account == user?.id);
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 68,
         title: Text(
           user?.jenisAkun == 'Orang tua'
               ? 'Rapor STS Anak Saya'
               : 'Rapor STS Saya',
-          maxLines: 2,
-          style: const TextStyle(fontSize: 18),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
           if (widget.id != null && _page != null && allowed)
@@ -169,14 +171,20 @@ class _PublishedStsState extends ConsumerState<PublishedStsView> {
                 ),
               ),
             )
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                children: widget.id == null
-                    ? _list()
-                    : _report(stsMap(_page?['rapor'])),
+          : SafeArea(
+              top: false,
+              child: RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  key: PageStorageKey(
+                    'published-sts-${user?.id}-${widget.id}-${_behaviorTab ? 'behavior' : 'report'}',
+                  ),
+                  children: widget.id == null
+                      ? _list()
+                      : _report(stsMap(_page?['rapor'])),
+                ),
               ),
             ),
     );
@@ -198,11 +206,33 @@ class _PublishedStsState extends ConsumerState<PublishedStsView> {
           (_year.isEmpty || stsMap(r['kegiatan'])['tahun_pelajaran'] == _year),
     );
     return [
+      StsPublicationHeader(
+        title: _page?['mode'] == 'orang_tua'
+            ? 'Rapor anak terpublikasi'
+            : 'Rapor terpublikasi',
+        subtitle:
+            'Salinan rapor resmi yang diterbitkan sekolah untuk akun Anda.',
+        metrics: {
+          'Rapor': '${items.length}',
+          'Tahun': '${years.length}',
+          'Lampiran':
+              '${items.where((r) => r['sertakan_perilaku'] == true).length}',
+        },
+      ),
+      const SizedBox(height: 12),
+      const StsPublicationNotice(
+        'Hanya rapor yang sudah dipublikasikan untuk akun Anda yang tampil. Jika belum tersedia, hubungi wali kelas.',
+      ),
+      const SizedBox(height: 16),
       if (children.length > 1) ...[
         DropdownButtonFormField<String>(
+          key: ValueKey('published-sts-child-$_child'),
           initialValue: _child,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Anak'),
+          decoration: const InputDecoration(
+            labelText: 'Anak',
+            prefixIcon: Icon(Icons.family_restroom_rounded),
+          ),
           items: [
             const DropdownMenuItem(value: '', child: Text('Semua anak')),
             for (final c in children.entries)
@@ -217,9 +247,13 @@ class _PublishedStsState extends ConsumerState<PublishedStsView> {
       ],
       if (years.length > 1) ...[
         DropdownButtonFormField<String>(
+          key: ValueKey('published-sts-year-$_year'),
           initialValue: _year,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Tahun pelajaran'),
+          decoration: const InputDecoration(
+            labelText: 'Tahun pelajaran',
+            prefixIcon: Icon(Icons.calendar_month_rounded),
+          ),
           items: [
             const DropdownMenuItem(value: '', child: Text('Semua tahun')),
             for (final y in years) DropdownMenuItem(value: y, child: Text(y)),
@@ -236,153 +270,219 @@ class _PublishedStsState extends ConsumerState<PublishedStsView> {
             textAlign: TextAlign.center,
           ),
         ),
-      for (final r in filtered)
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: NusaColors.outline),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            title: Text(
-              stsText(stsMap(r['siswa'])['nama']),
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                '${stsText(stsMap(r['kelas'])['nama'])} - ${stsText(stsMap(r['kegiatan'])['tahun_pelajaran'])}\n${stsText(stsMap(r['kegiatan'])['nama'])}\nVersi ${r['versi']} - ${stsDate(r['dipublikasikan_pada'])}${r['sertakan_perilaku'] == true ? '\nDengan lampiran perilaku' : ''}',
-              ),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/rapor-sts-saya/${r['id']}'),
-          ),
+      if (items.isNotEmpty && filtered.isEmpty)
+        const StsPublicationNotice(
+          'Tidak ada rapor yang sesuai dengan pilihan anak dan tahun pelajaran.',
         ),
+      for (final r in filtered) ...[
+        PublishedStsReportCard(
+          report: r,
+          onTap: () => context.push('/rapor-sts-saya/${r['id']}'),
+        ),
+        const SizedBox(height: 12),
+      ],
     ];
   }
 
   List<Widget> _report(StsData r) {
     final l = stsMap(r['perilaku']);
     return [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      StsPublicationHeader(
+        title: stsText(stsMap(r['siswa'])['nama']),
+        subtitle:
+            '${stsText(stsMap(r['kelas'])['nama'])} · ${stsText(stsMap(r['kegiatan'])['tahun_pelajaran'])}\n${stsText(stsMap(r['kegiatan'])['nama'])}',
+      ),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
-          Image.asset(
-            'assets/images/logo-padang-panjang.png',
-            height: 62,
-            width: 55,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(width: 20),
-          Image.asset(
-            'assets/images/logo-smpn2pp.png',
-            height: 62,
-            width: 62,
-            fit: BoxFit.contain,
-          ),
+          const StsPublicationBadge('Terpublikasi', success: true),
+          StsPublicationBadge('Versi ${_page?['versi']}'),
+          if (l.isNotEmpty) const StsPublicationBadge('Dengan lampiran'),
         ],
       ),
-      const SizedBox(height: 16),
-      const Text(
-        'SMP NEGERI 2 PADANG PANJANG',
-        textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-      ),
-      const Text(
-        'Laporan Hasil Capaian Pembelajaran\nSumatif Tengah Semester',
-        textAlign: TextAlign.center,
-      ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 8),
       Text(
-        stsText(stsMap(r['siswa'])['nama']),
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-      ),
-      Text(
-        '${stsText(stsMap(r['kelas'])['nama'])} - ${stsText(stsMap(r['kegiatan'])['tahun_pelajaran'])} - ${stsText(stsMap(r['kegiatan'])['semester'])}',
-      ),
-      Text(
-        'Versi ${_page?['versi']} - Terbit ${stsDate(_page?['dipublikasikan_pada'])}',
+        'Terbit ${stsDate(_page?['dipublikasikan_pada'])} · Tanggal rapor ${stsDate(stsMap(r['periode'])['tanggal_rapor'])}',
         style: const TextStyle(color: NusaColors.textSecondary, fontSize: 12),
       ),
-      const SizedBox(height: 20),
-      _heading('Nilai STS'),
-      for (final n in stsItems(r['nilai'])) ...[
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(stsText(n['mapel'])),
-          subtitle: Text(stsText(n['keterangan'])),
-          trailing: Text(
-            _score(n['nilai']),
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
-        ),
-        const Divider(height: 1),
-      ],
-      _facts({'Jumlah': _score(r['jumlah']), 'Rata-rata': _score(r['rata'])}),
-      if (r['nilai_tuntas'] != true)
-        const Text(
-          'Jumlah dan rata-rata belum dihitung karena ada nilai belum tersedia.',
-          style: TextStyle(fontSize: 12, color: NusaColors.textSecondary),
-        ),
-      const SizedBox(height: 20),
-      _heading('Kehadiran dan keterlambatan'),
-      _facts({
-        'Sakit': '${stsInt(stsMap(r['kehadiran'])['sakit'])} hari',
-        'Izin': '${stsInt(stsMap(r['kehadiran'])['izin'])} hari',
-        'Alfa': '${stsInt(stsMap(r['kehadiran'])['alfa'])} hari',
-        'Terlambat': '${stsInt(stsMap(r['keterlambatan'])['jumlah'])} kali',
-        'Total keterlambatan':
-            '${stsInt(stsMap(r['keterlambatan'])['total_menit'])} menit',
-      }),
-      Text(
-        'Periode ${stsDate(stsMap(r['periode'])['awal'])} - ${stsDate(stsMap(r['periode'])['akhir'])}',
-        style: const TextStyle(fontSize: 12),
-      ),
-      const SizedBox(height: 20),
-      _heading('Wali kelas'),
-      Text(stsText(stsMap(r['wali_kelas'])['nama_lengkap'])),
-      Text('Tanggal rapor: ${stsDate(stsMap(r['periode'])['tanggal_rapor'])}'),
       if (l.isNotEmpty) ...[
-        const SizedBox(height: 28),
-        _heading('Lampiran perilaku dan pembinaan'),
-        Text(stsText(l['label_isi']), style: const TextStyle(fontSize: 12)),
-        if (stsItems(l['baris']).isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Text(stsText(l['pesan_kosong'])),
-          ),
-        for (final b in stsItems(l['baris'])) ...[
-          const Divider(),
-          Text(
-            stsDate(b['tanggal']),
-            style: const TextStyle(
-              fontSize: 12,
-              color: NusaColors.textSecondary,
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              key: const Key('published-sts-report-tab'),
+              showCheckmark: false,
+              label: const Text('Rapor'),
+              avatar: const Icon(Icons.description_outlined, size: 18),
+              selected: !_behaviorTab,
+              onSelected: _printing
+                  ? null
+                  : (_) => setState(() => _behaviorTab = false),
             ),
-          ),
-          Text(
-            stsText(b['kejadian']),
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          Text(stsText(b['tindakan'])),
-          Text('Poin: ${stsInt(b['poin'])}'),
-        ],
-        _facts({
-          'Jumlah kejadian': stsInt(stsMap(l['ringkasan'])['jumlah_kejadian']),
-          'Poin masuk': stsInt(stsMap(l['ringkasan'])['poin_masuk']),
-          'Pengurangan': stsInt(stsMap(l['ringkasan'])['poin_dikurangi']),
-          'Saldo': stsInt(stsMap(l['ringkasan'])['saldo']),
-        }),
-        if (l['catatan'] != null) Text(stsText(l['catatan'])),
-        const SizedBox(height: 12),
-        Text('Guru BK: ${stsText(stsMap(l['guru_bk'])['nama_lengkap'])}'),
-        Text(
-          'Wakil Kesiswaan: ${stsText(stsMap(l['wakil_kesiswaan'])['nama_lengkap'])}',
+            ChoiceChip(
+              key: const Key('published-sts-behavior-tab'),
+              showCheckmark: false,
+              label: const Text('Lampiran Perilaku'),
+              avatar: const Icon(Icons.fact_check_outlined, size: 18),
+              selected: _behaviorTab,
+              onSelected: _printing
+                  ? null
+                  : (_) => setState(() => _behaviorTab = true),
+            ),
+          ],
         ),
       ],
+      const SizedBox(height: 20),
+      ...(_behaviorTab && l.isNotEmpty
+          ? _behavior(l)
+          : _academic(r, hasBehavior: l.isNotEmpty)),
       const SizedBox(height: 28),
     ];
   }
+
+  List<Widget> _academic(StsData r, {required bool hasBehavior}) => [
+    _heading('Nilai STS'),
+    for (final n in stsItems(r['nilai'])) ...[
+      StsPublicationSurface(
+        child: LayoutBuilder(
+          builder: (_, constraints) {
+            final subject = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stsText(n['mapel']),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  stsText(n['keterangan']),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: NusaColors.textSecondary,
+                  ),
+                ),
+              ],
+            );
+            final score = StsPublicationBadge(
+              _score(n['nilai']),
+              success: n['nilai'] != null,
+            );
+            return MediaQuery.textScalerOf(context).scale(14) > 22
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [subject, const SizedBox(height: 10), score],
+                  )
+                : Row(
+                    children: [
+                      Expanded(child: subject),
+                      const SizedBox(width: 12),
+                      score,
+                    ],
+                  );
+          },
+        ),
+      ),
+      const SizedBox(height: 10),
+    ],
+    StsPublicationFacts({
+      'Jumlah': _score(r['jumlah']),
+      'Rata-rata': _score(r['rata']),
+    }),
+    if (r['nilai_tuntas'] != true)
+      const Padding(
+        padding: EdgeInsets.only(top: 12),
+        child: StsPublicationNotice(
+          'Jumlah dan rata-rata belum dihitung karena ada nilai belum tersedia.',
+          warning: true,
+        ),
+      ),
+    const SizedBox(height: 20),
+    _heading('Kehadiran dan keterlambatan'),
+    StsPublicationFacts({
+      'Sakit': '${stsInt(stsMap(r['kehadiran'])['sakit'])} hari',
+      'Izin': '${stsInt(stsMap(r['kehadiran'])['izin'])} hari',
+      'Alfa': '${stsInt(stsMap(r['kehadiran'])['alfa'])} hari',
+      'Terlambat': '${stsInt(stsMap(r['keterlambatan'])['jumlah'])} kali',
+      'Total keterlambatan':
+          '${stsInt(stsMap(r['keterlambatan'])['total_menit'])} menit',
+    }),
+    const SizedBox(height: 10),
+    Text(
+      'Periode ${stsDate(stsMap(r['periode'])['awal'])} - ${stsDate(stsMap(r['periode'])['akhir'])}',
+      style: const TextStyle(fontSize: 12),
+    ),
+    const SizedBox(height: 20),
+    _heading('Wali kelas'),
+    Text(stsText(stsMap(r['wali_kelas'])['nama_lengkap'])),
+    if (!hasBehavior) ...[
+      const SizedBox(height: 20),
+      const StsPublicationNotice(
+        'Lampiran perilaku tidak disertakan dalam publikasi rapor ini. Ini bukan keterangan bahwa tidak ada kejadian.',
+      ),
+    ],
+  ];
+
+  List<Widget> _behavior(StsData l) => [
+    _heading('Lampiran perilaku dan pembinaan'),
+    StsPublicationNotice(
+      '${stsText(l['label_isi'])}. Ringkasan diperiksa BK dan diterbitkan bersama rapor; bukan catatan konseling privat.',
+    ),
+    const SizedBox(height: 12),
+    StsPublicationFacts({
+      'Jumlah kejadian': stsInt(stsMap(l['ringkasan'])['jumlah_kejadian']),
+      'Poin masuk': stsInt(stsMap(l['ringkasan'])['poin_masuk']),
+      'Pengurangan': stsInt(stsMap(l['ringkasan'])['poin_dikurangi']),
+      'Saldo': stsInt(stsMap(l['ringkasan'])['saldo']),
+    }),
+    const SizedBox(height: 16),
+    if (stsItems(l['baris']).isEmpty)
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(stsText(l['pesan_kosong'])),
+      ),
+    for (final b in stsItems(l['baris'])) ...[
+      StsPublicationSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                StsPublicationBadge(stsDate(b['tanggal'])),
+                StsPublicationBadge('Poin: ${stsInt(b['poin'])}'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              stsText(b['kejadian']),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Tindak lanjut',
+              style: TextStyle(fontSize: 11, color: NusaColors.textSecondary),
+            ),
+            Text(stsText(b['tindakan'])),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+    ],
+    if (l['catatan'] != null) ...[
+      _heading('Catatan pembinaan'),
+      StsPublicationSurface(child: Text(stsText(l['catatan']))),
+    ],
+    const SizedBox(height: 12),
+    Text('Guru BK: ${stsText(stsMap(l['guru_bk'])['nama_lengkap'])}'),
+    Text(
+      'Wakil Kesiswaan: ${stsText(stsMap(l['wakil_kesiswaan'])['nama_lengkap'])}',
+    ),
+  ];
 
   Widget _heading(String s) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
@@ -393,35 +493,4 @@ class _PublishedStsState extends ConsumerState<PublishedStsView> {
   );
   String _score(Object? v) =>
       v is num ? v.toStringAsFixed(2).replaceAll('.', ',') : '-';
-  Widget _facts(Map<String, Object> values) => LayoutBuilder(
-    builder: (_, c) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 16,
-        children: [
-          for (final e in values.entries)
-            SizedBox(
-              width: (c.maxWidth - 16) / 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    e.key,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: NusaColors.textSecondary,
-                    ),
-                  ),
-                  Text(
-                    '${e.value}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
 }

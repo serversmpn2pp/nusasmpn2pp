@@ -50,6 +50,18 @@ class StsPublicationRepository {
 
   Future<StsData> publication(int activity, int classId) =>
       _call('GET', _path(activity, classId));
+  Future<StsData> workspace({int? activityId, int? classId}) async {
+    try {
+      final response = await _dio.get<StsData>(
+        'publikasi-rapor-sts',
+        queryParameters: {'kegiatan_id': ?activityId, 'kelas_id': ?classId},
+      );
+      return stsMap(response.data?['data']);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
   Future<StsData> publish(int activity, int classId, StsData data) =>
       _call('POST', _path(activity, classId), {...data, 'konfirmasi': true});
   Future<StsData> cancel(

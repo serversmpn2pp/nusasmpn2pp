@@ -11,6 +11,7 @@
             <span><strong id="sts-subject-title">Mata pelajaran rapor STS</strong><span class="sts-subject-scope">Tingkat {{ $kelas->tingkat }} · {{ $pilihanMapel['kelas']->count() }} kelas paralel</span></span>
             <span class="sts-badge is-complete">{{ $jumlahDipilih }} diikutkan · {{ $mapelPilihan->count() - $jumlahDipilih }} dikecualikan</span>
         </summary>
+        <div class="sts-band-body">
         @if ($mapelPilihan->where('dipulihkan', true)->isNotEmpty())
             <p class="sts-notice">{{ $mapelPilihan->where('dipulihkan', true)->pluck('mapel.nama')->join(', ') }} kembali diikutkan karena memiliki sumber STS baru. Pengaturan perlu diperiksa kembali.</p>
         @endif
@@ -61,5 +62,6 @@
                 </ol>
             </details>
         @endif
+        </div>
     </details>
 </section>
