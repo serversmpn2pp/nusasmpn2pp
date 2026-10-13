@@ -291,6 +291,7 @@ class CbtStudentExam {
     required this.durationMinutes,
     required this.requiresToken,
     required this.canOpen,
+    this.workStatus,
     this.code,
     this.examType,
     this.startAt,
@@ -310,6 +311,7 @@ class CbtStudentExam {
     group: json['kelompok'] as String? ?? 'akan_datang',
     statusLabel: json['label_status'] as String? ?? '-',
     statusTone: json['nada_status'] as String? ?? 'menunggu',
+    workStatus: json['status_pengerjaan'] as String?,
     startAt: _date(json['waktu_mulai']),
     endAt: _date(json['waktu_selesai']),
     date: json['tanggal'] as String?,
@@ -336,6 +338,7 @@ class CbtStudentExam {
   final int durationMinutes;
   final bool requiresToken;
   final bool canOpen;
+  final String? workStatus;
   final String? participantNumber;
 }
 

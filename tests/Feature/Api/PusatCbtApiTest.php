@@ -426,6 +426,7 @@ class PusatCbtApiTest extends TestCase
             ->assertJsonPath('data.siswa.items.0.nama', 'Asesmen Matematika Bab 1')
             ->assertJsonPath('data.siswa.items.0.mata_pelajaran', 'Matematika')
             ->assertJsonPath('data.siswa.items.0.label_status', 'Siap dimulai')
+            ->assertJsonPath('data.siswa.items.0.status_pengerjaan', 'aktif')
             ->assertJsonPath('data.siswa.pengerjaan_native', true)
             ->assertJsonPath('data.pengawas', null)
             ->assertJsonPath('data.pengelolaan', null);

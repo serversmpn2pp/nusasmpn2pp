@@ -5,18 +5,31 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/parent_child_exams/application/parent_child_exams_controller.dart';
 import 'package:nusa/features/parent_child_exams/domain/parent_child_exams.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
+import 'package:nusa/shared/domain/exam_sections.dart';
+import 'package:nusa/shared/widgets/nusa_exam_tabs.dart';
 
-class ParentChildExamsView extends ConsumerWidget {
+class ParentChildExamsView extends ConsumerStatefulWidget {
   const ParentChildExamsView({super.key});
+  @override
+  ConsumerState<ParentChildExamsView> createState() =>
+      _ParentChildExamsViewState();
+}
+
+class _ParentChildExamsViewState extends ConsumerState<ParentChildExamsView> {
+  NusaExamTab _tab = NusaExamTab.schedule;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final result = ref.watch(parentChildExamsControllerProvider);
     final controller = ref.read(parentChildExamsControllerProvider.notifier);
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
-        title: const Text('Ujian Anak Saya'),
+        title: const Text(
+          'Ujian Anak Saya',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           IconButton(
             tooltip: 'Perbarui',
@@ -35,7 +48,15 @@ class ParentChildExamsView extends ConsumerWidget {
                 : 'Ujian anak belum dapat dimuat.',
             onRetry: controller.refresh,
           ),
-          data: (page) => _Content(page: page),
+          data: (page) => _Content(
+            page: page,
+            selectedTab: _tab,
+            onChanged: (tab) => setState(() => _tab = tab),
+            onStudentChanged: (id) {
+              setState(() => _tab = NusaExamTab.schedule);
+              controller.selectStudent(id);
+            },
+          ),
         ),
       ),
     );
@@ -43,17 +64,41 @@ class ParentChildExamsView extends ConsumerWidget {
 }
 
 class _Content extends ConsumerWidget {
-  const _Content({required this.page});
+  const _Content({
+    required this.page,
+    required this.selectedTab,
+    required this.onChanged,
+    required this.onStudentChanged,
+  });
 
   final ParentChildExamsPage page;
+  final NusaExamTab selectedTab;
+  final ValueChanged<NusaExamTab> onChanged;
+  final ValueChanged<int> onStudentChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(parentChildExamsControllerProvider.notifier);
+    final sections = ExamSections<ParentExam>(
+      page.exams,
+      group: (exam) => exam.group,
+      start: (exam) => exam.startAt ?? DateTime.tryParse(exam.date ?? ''),
+      end: (exam) => exam.endAt,
+    );
+    List<Widget> cards(List<ParentExam> exams) => exams
+        .map(
+          (exam) => Padding(
+            padding: const EdgeInsets.only(bottom: 9),
+            child: _ExamCard(exam: exam),
+          ),
+        )
+        .toList();
     return RefreshIndicator(
       onRefresh: controller.refresh,
       child: ListView(
-        key: const Key('parent-child-exams-scroll'),
+        key: PageStorageKey(
+          'parent-child-exams-${page.selectedStudentId}-${selectedTab.name}',
+        ),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -76,7 +121,7 @@ class _Content extends ConsumerWidget {
                 prefixIcon: Icon(Icons.family_restroom_rounded),
               ),
               onChanged: (value) {
-                if (value != null) controller.selectStudent(value);
+                if (value != null) onStudentChanged(value);
               },
             ),
           ],
@@ -92,25 +137,47 @@ class _Content extends ConsumerWidget {
           else ...[
             _Summary(summary: page.summary),
             const SizedBox(height: 16),
-            const _SectionTitle(
-              title: 'Daftar Ujian',
-              subtitle: 'Jadwal, kemajuan, dan hasil yang dipublikasikan',
+            NusaExamTabs(
+              selected: selectedTab,
+              scheduleCount: sections.scheduledCount,
+              historyCount: sections.history.length,
+              onChanged: onChanged,
             ),
-            const SizedBox(height: 9),
-            if (page.exams.isEmpty)
-              const _EmptyCard(
-                icon: Icons.quiz_outlined,
-                title: 'Belum ada ujian',
-                message:
-                    'Ujian yang diberikan kepada anak akan tampil di sini.',
-              )
-            else
-              ...page.exams.map(
-                (exam) => Padding(
-                  padding: const EdgeInsets.only(bottom: 9),
-                  child: _ExamCard(exam: exam),
+            if (selectedTab == NusaExamTab.schedule) ...[
+              if (sections.scheduledCount == 0)
+                NusaExamEmptySchedule(
+                  historyCount: sections.history.length,
+                  onHistory: () => onChanged(NusaExamTab.history),
                 ),
+              if (sections.active.isNotEmpty) ...[
+                NusaExamGroupTitle(
+                  'Berlangsung',
+                  count: sections.active.length,
+                ),
+                ...cards(sections.active),
+              ],
+              if (sections.upcoming.isNotEmpty) ...[
+                NusaExamGroupTitle(
+                  'Akan datang',
+                  count: sections.upcoming.length,
+                ),
+                ...cards(sections.upcoming),
+              ],
+            ] else ...[
+              NusaExamGroupTitle(
+                'Riwayat ujian',
+                count: sections.history.length,
+                history: true,
               ),
+              if (sections.history.isEmpty)
+                const _EmptyCard(
+                  icon: Icons.history_rounded,
+                  title: 'Belum ada riwayat ujian',
+                  message: 'Ujian yang selesai atau waktu aksesnya berakhir akan tampil di sini.',
+                )
+              else
+                ...cards(sections.history),
+            ],
             const SizedBox(height: 3),
             _PrivacyNotice(message: page.notice),
           ],
@@ -127,7 +194,7 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(17),
+    padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
       gradient: const LinearGradient(
         colors: [NusaColors.primary, NusaColors.primaryDark],
@@ -155,8 +222,8 @@ class _Hero extends StatelessWidget {
         Row(
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(15),
@@ -186,7 +253,7 @@ class _Hero extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -240,7 +307,7 @@ class _Summary extends StatelessWidget {
           SizedBox(width: gap),
           Expanded(
             child: _Metric(
-              label: 'Selesai',
+              label: 'Riwayat',
               value: summary.completed,
               color: NusaColors.primary,
             ),
@@ -303,7 +370,12 @@ class _ExamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _toneColor(exam.statusTone);
+    final color = nusaExamStatusColor(
+      group: exam.group,
+      tone: exam.statusTone,
+      label: exam.statusLabel,
+      workStatus: exam.workStatus,
+    );
     final date = _examDate(exam);
     final time = _examTime(exam);
     return Card(
@@ -351,8 +423,6 @@ class _ExamCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _StatusPill(label: exam.statusLabel, color: color),
                 ],
               ),
               const SizedBox(height: 11),
@@ -360,6 +430,7 @@ class _ExamCard extends StatelessWidget {
                 spacing: 12,
                 runSpacing: 7,
                 children: [
+                  _StatusPill(label: exam.statusLabel, color: color),
                   if (date != null)
                     _Info(
                       icon: Icons.calendar_today_rounded,
@@ -401,10 +472,12 @@ class _ResultLabel extends StatelessWidget {
     if (exam.result.visible) {
       final passed = exam.result.passed;
       final color = passed == false ? NusaColors.danger : NusaColors.success;
-      return Row(
+      return Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 6,
+        runSpacing: 4,
         children: [
           Icon(Icons.workspace_premium_rounded, size: 18, color: color),
-          const SizedBox(width: 6),
           Text(
             'Nilai ${_score(exam.result.score)}',
             style: TextStyle(
@@ -414,7 +487,6 @@ class _ResultLabel extends StatelessWidget {
             ),
           ),
           if (passed != null) ...[
-            const SizedBox(width: 6),
             Text(
               passed ? '· Tuntas' : '· Belum tuntas',
               style: TextStyle(color: color, fontSize: 10.5),
@@ -427,7 +499,9 @@ class _ResultLabel extends StatelessWidget {
     final label = exam.result.waitingForCorrection
         ? 'Menunggu koreksi guru'
         : exam.group == 'selesai'
-        ? 'Hasil belum dipublikasikan'
+        ? exam.workStatus == 'selesai'
+              ? 'Hasil belum dipublikasikan'
+              : 'Tidak ada hasil terpublikasi'
         : '${exam.progress.answered}/${exam.progress.questionCount} soal terjawab';
     return Text(
       label,
@@ -560,7 +634,6 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(maxWidth: 105),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
     decoration: BoxDecoration(
       color: color.withValues(alpha: .09),
@@ -592,32 +665,11 @@ class _Info extends StatelessWidget {
     children: [
       Icon(icon, size: 14, color: NusaColors.textSecondary),
       const SizedBox(width: 4),
-      Text(
-        text,
-        style: const TextStyle(color: NusaColors.textSecondary, fontSize: 10),
-      ),
-    ],
-  );
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-      ),
-      const SizedBox(height: 2),
-      Text(
-        subtitle,
-        style: const TextStyle(color: NusaColors.textSecondary, fontSize: 10.5),
+      Flexible(
+        child: Text(
+          text,
+          style: const TextStyle(color: NusaColors.textSecondary, fontSize: 10),
+        ),
       ),
     ],
   );
@@ -718,13 +770,6 @@ class _ErrorState extends StatelessWidget {
     ),
   );
 }
-
-Color _toneColor(String tone) => switch (tone) {
-  'aktif' => NusaColors.success,
-  'bahaya' => NusaColors.danger,
-  'selesai' => NusaColors.primary,
-  _ => const Color(0xFFE59A00),
-};
 
 String _score(double? value) {
   if (value == null) return '-';

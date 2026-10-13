@@ -57,12 +57,22 @@ void main() {
       expect(find.text('Ujian Anak Saya'), findsOneWidget);
       expect(find.text('Alya Ujian'), findsWidgets);
       expect(find.byKey(const Key('parent-exams-child-filter')), findsOne);
+      expect(find.byKey(const Key('exam-tab-schedule')), findsOne);
+      expect(find.text('Asesmen Matematika'), findsNothing);
+      await tester.tap(find.byKey(const Key('exam-tab-history')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('parent-exam-201')));
+      await tester.pumpAndSettle();
       expect(find.text('Asesmen Matematika'), findsOneWidget);
       expect(find.text('Nilai 88'), findsOneWidget);
       expect(find.text('Token ujian'), findsNothing);
       expect(find.text('Mulai ujian'), findsNothing);
       expect(tester.takeException(), isNull);
 
+      await tester.ensureVisible(
+        find.byKey(const Key('parent-exams-child-filter')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('parent-exams-child-filter')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bima Ujian').last);
@@ -70,6 +80,9 @@ void main() {
 
       expect(remote.studentIds.last, 102);
       expect(find.text('Bima Ujian'), findsWidgets);
+      expect(find.text('Ujian IPA'), findsNothing);
+      await tester.tap(find.byKey(const Key('exam-open-history')));
+      await tester.pumpAndSettle();
       expect(find.text('Ujian IPA'), findsOneWidget);
       expect(find.text('Hasil belum dipublikasikan'), findsOneWidget);
 

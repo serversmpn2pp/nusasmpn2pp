@@ -202,6 +202,7 @@ class PusatCbtMobileService
                     'kelompok' => $item['kelompok'],
                     'label_status' => $item['label_status'],
                     'nada_status' => $item['nada_status'],
+                    'status_pengerjaan' => $peserta->status,
                     'waktu_mulai' => $item['waktu_mulai']?->toISOString(),
                     'waktu_selesai' => $item['waktu_selesai']?->toISOString(),
                     'waktu' => $jadwal?->labelWaktu(),

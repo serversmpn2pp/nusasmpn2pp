@@ -1,5 +1,32 @@
 # Menu dan API Ujian & Asesmen mobile
 
+## Jadwal dan Riwayat siswa/orang tua — 13 Oktober 2026
+
+Ujian Saya (termasuk pintasan pusat CBT untuk akun siswa) dan Ujian Anak Saya
+memakai dua tab dengan jumlah ujian. **Jadwal** selalu menjadi tampilan awal:
+bagian Berlangsung (`kelompok=aktif`) di atas, kemudian Akan datang, masing-masing
+dari jadwal terdekat. **Riwayat** (`kelompok=selesai`) diurutkan dari waktu akhir
+terbaru, lalu waktu mulai; jadwal tanpa waktu berada di akhir. Jadwal kosong
+memiliki tombol Lihat riwayat jika ada riwayat, bukan menampilkan semua ujian lama.
+
+Pengelompokan mengikuti keputusan server, bukan jam/tanggal HP, agar susulan,
+waktu tambahan, dan ujian tertahan tidak salah diarsipkan. Pilihan tab bertahan
+saat muat ulang; mengganti anak kembali ke Jadwal. Ujian berpindah kelompok
+sesuai status terbaru setelah siswa kembali dari layar pengerjaan,
+karena daftar dimuat ulang ke server tanpa memulai/menyelesaikan ujian otomatis.
+Selesai dikerjakan tetap
+dibedakan dari Waktu berakhir dan Dibatalkan. API pusat menambahkan
+`siswa.items[].status_pengerjaan` untuk warna status yang tepat; klien tetap
+mendukung payload lama tanpa field ini. Endpoint, pembatasan akses pengerjaan,
+publikasi hasil, dan pemantauan orang tua tidak berubah. Tidak ada migrasi baru.
+
+Verifikasi pembaruan tab: **49 tes Flutter lulus** (termasuk pengerjaan native
+dan jurnal keamanan), **34 tes backend lulus** (593 assertions) pada SQLite
+sementara. Pratinjau memakai data contoh melalui `NUSA_EXAM_TABS_PREVIEW=1`
+dan `NUSA_UI_FONT_DIR`, dengan `flutter test --no-pub
+test/exam_tabs_view_test.dart`; PNG tersimpan di `mobile/build/exam-tabs-qa`.
+Belum deployment, pemasangan emulator, atau pembangunan ulang AAB.
+
 ## Pembaruan 12 Oktober 2026
 
 Fokus pembaruan adalah pusat navigasi mobile, terutama **Ujian Terpusat → Pelaksanaan → Nilai & Hasil**. Mesin ujian, penilaian, pembatasan satu sesi/perangkat, dan jurnal Mode Aman tidak diganti. Tampilan pusat menggunakan kartu berdeskripsi tanpa tinggi tetap, mendukung layar kecil dan pembesaran teks.
