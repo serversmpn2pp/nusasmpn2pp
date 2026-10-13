@@ -121,6 +121,10 @@
         @endphp
         @include('rapor-sts._mapel')
         <section class="sts-section">
+            <div class="sts-actions"><h2>Publikasi untuk orang tua dan siswa</h2><a class="button button-primary" href="{{ route('rapor-sts.publikasi.index', [$kegiatan, $kelas]) }}">Publikasi rapor</a></div>
+            <p class="help-text">Rapor tidak tampil pada akun penerima sebelum dipublikasikan. Koreksi setelah penerbitan perlu dipublikasikan ulang.</p>
+        </section>
+        <section class="sts-section">
             <h2>1. Periode dan tanggal rapor</h2>
             <form method="POST" action="{{ route('rapor-sts.pengaturan', [$kegiatan, $kelas]) }}" class="sts-dates" id="sts-periode-form">
                 @csrf @method('PUT')<input type="hidden" name="versi" value="{{ $pengaturan->versi }}">

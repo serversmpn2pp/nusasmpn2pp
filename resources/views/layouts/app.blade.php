@@ -2187,6 +2187,7 @@
                     'items' => [
                         ['label' => 'Ujian Saya', 'route' => 'ujian-saya.index', 'active' => ['ujian-saya.*'], 'initial' => 'US', 'izin' => null],
                         ['label' => 'Nilai Saya', 'route' => 'nilai-saya.index', 'active' => ['nilai-saya.*'], 'initial' => 'NS', 'izin' => null],
+                        ['label' => 'Rapor STS Saya', 'route' => 'rapor-sts-saya.index', 'active' => ['rapor-sts-saya.*'], 'initial' => 'RS', 'izin' => null],
                         ['label' => 'Progress Kasus Saya', 'route' => 'progress-kasus-siswa.index', 'active' => ['progress-kasus-siswa.*'], 'initial' => 'PK', 'izin' => null],
                     ],
                 ],
@@ -2216,6 +2217,7 @@
                         ['label' => 'Umpan Balik Saya', 'route' => 'umpan-balik-saya.index', 'active' => ['umpan-balik-saya.*'], 'initial' => 'UB', 'izin' => null],
                         ['label' => 'Aspirasi & Pengaduan Saya', 'route' => 'pengaduan-saya.index', 'active' => ['pengaduan-saya.*'], 'initial' => 'AD', 'izin' => null],
                         ['label' => 'Akademik Anak', 'route' => 'akademik-anak.index', 'active' => ['akademik-anak.*'], 'initial' => 'AA', 'izin' => null],
+                        ['label' => 'Rapor STS Anak Saya', 'route' => 'rapor-sts-saya.index', 'active' => ['rapor-sts-saya.*'], 'initial' => 'RA', 'izin' => null],
                         ['label' => 'Pembinaan & Poin', 'route' => 'pembinaan-poin-anak.index', 'active' => ['pembinaan-poin-anak.*'], 'initial' => 'PP', 'izin' => null],
                     ],
                 ],

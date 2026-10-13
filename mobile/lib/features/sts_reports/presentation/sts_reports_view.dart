@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/sts_reports/data/sts_reports_remote_data_source.dart';
@@ -157,6 +158,14 @@ class _StsReportsViewState extends ConsumerState<StsReportsView> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          if (!_ledger && _page?.context != null && !_busy)
+            IconButton(
+              tooltip: 'Publikasi rapor',
+              icon: const Icon(Icons.publish),
+              onPressed: () => context.push(
+                '/rapor-sts/publikasi?kegiatan_id=${_filter.activityId}&kelas_id=${_filter.classId}',
+              ),
+            ),
           IconButton(
             key: const Key('sts-reports-info'),
             tooltip: 'Tentang rapor dan leger',

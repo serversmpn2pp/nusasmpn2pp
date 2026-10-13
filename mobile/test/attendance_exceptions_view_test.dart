@@ -17,6 +17,7 @@ import 'package:nusa/features/auth/domain/pengguna.dart';
 import 'package:nusa/features/attendance_exceptions/data/attendance_exceptions_repository.dart';
 import 'package:nusa/features/attendance_exceptions/domain/attendance_exception.dart';
 import 'package:nusa/features/attendance_exceptions/presentation/attendance_exception_form_view.dart';
+import 'package:nusa/features/attendance_exceptions/presentation/attendance_exception_list_widgets.dart';
 import 'package:nusa/features/attendance_exceptions/presentation/attendance_exceptions_view.dart';
 import 'package:nusa/features/student_attendance_settings/domain/student_attendance_settings.dart';
 
@@ -140,12 +141,130 @@ void main() {
     expect(find.text('PJJ akibat bencana asap - kedua.'), findsOneWidget);
     await t.drag(find.byType(ListView).first, const Offset(0, 2000));
     await t.pumpAndSettle();
-    await _tap(t, find.byTooltip('Filter pengecualian'));
     await _tap(t, find.byKey(const Key('exception-filter-status')));
     await _tap(t, find.text('Dibatalkan').last);
     expect(repo.filters.last['status'], 'dibatalkan');
     expect(repo.filters.last['halaman'], 1);
+    await _tap(t, find.byKey(const Key('attendance-exception-7')));
+    expect(find.byType(AttendanceExceptionDetailView), findsOneWidget);
+    expect(repo.reads, contains('detail/7'));
   });
+
+  testWidgets('history uses blue summary and visible year/status filters', (
+    t,
+  ) async {
+    final repo = _Repo();
+    await _mount(t, const AttendanceExceptionsView(), repo);
+    final summary = find.byKey(const Key('exception-summary'));
+    expect(
+      find.descendant(of: summary, matching: find.text('2')),
+      findsNWidgets(2),
+    );
+    expect(
+      find.descendant(of: summary, matching: find.text('0')),
+      findsOneWidget,
+    );
+    final decoration =
+        t.widget<Container>(summary).decoration! as BoxDecoration;
+    expect(decoration.gradient, isA<LinearGradient>());
+    expect(find.byKey(const Key('exception-filter-year')), findsOneWidget);
+    expect(find.byKey(const Key('exception-filter-status')), findsOneWidget);
+    expect(find.byTooltip('Filter pengecualian'), findsNothing);
+    expect(find.textContaining('Ringkasan mengikuti'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+    await t.ensureVisible(find.byKey(const Key('attendance-exception-7')));
+    await t.pumpAndSettle();
+    expect(find.text('Mulai'), findsOneWidget);
+    expect(find.text('Selesai'), findsOneWidget);
+    expect(repo.applied, isEmpty);
+  });
+
+  testWidgets(
+    'visible filters, debounced search and reset preserve API contract',
+    (t) async {
+      final repo = _Repo();
+      await _mount(t, const AttendanceExceptionsView(), repo);
+      await _tap(t, find.byKey(const Key('exception-filter-year')));
+      await _tap(t, find.text('2027/2028').last);
+      expect(repo.filters.last['tahun_pelajaran_id'], 2);
+      await _tap(t, find.byKey(const Key('exception-filter-status')));
+      await _tap(t, find.text('Dibatalkan').last);
+      expect(repo.filters.last['status'], 'dibatalkan');
+      final search = find.byKey(const Key('exception-search'));
+      await t.ensureVisible(search);
+      final before = repo.filters.length;
+      await t.enterText(search, 'bencana');
+      await t.pump(const Duration(milliseconds: 300));
+      expect(repo.filters.length, before);
+      await t.pump(const Duration(milliseconds: 200));
+      await t.pumpAndSettle();
+      expect(repo.filters.last['kata_kunci'], 'bencana');
+      expect(repo.filters.last['halaman'], 1);
+      await t.testTextInput.receiveAction(TextInputAction.done);
+      await t.pumpAndSettle();
+      await _tap(t, find.byKey(const Key('exception-reset-filters')));
+      expect(repo.filters.last['status'], 'semua');
+      expect(repo.filters.last.containsKey('tahun_pelajaran_id'), isFalse);
+      expect(repo.filters.last.containsKey('kata_kunci'), isFalse);
+      expect(t.widget<TextField>(search).controller!.text, isEmpty);
+      expect(repo.previews, isEmpty);
+      expect(repo.applied, isEmpty);
+      expect(repo.cancellations, isEmpty);
+    },
+  );
+
+  for (final scale in [1.0, 1.5, 2.0]) {
+    testWidgets('cancelled card and list fit 320px at text scale $scale', (
+      t,
+    ) async {
+      final repo = _Repo();
+      await _mount(
+        t,
+        const AttendanceExceptionsView(),
+        repo,
+        size: const Size(320, 760),
+        scale: scale,
+      );
+      await t.scrollUntilVisible(
+        find.byKey(const Key('attendance-exception-7')),
+        240,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView).last,
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+      await _mount(
+        t,
+        Scaffold(
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              AttendanceExceptionCard(
+                item: {
+                  ..._record,
+                  'aktif': false,
+                  'cakupan_label': 'VIII.A dengan nama kelas panjang',
+                  'jenis_label': 'Gangguan scanner',
+                },
+                onOpen: () {},
+              ),
+            ],
+          ),
+        ),
+        repo,
+        size: const Size(320, 760),
+        scale: scale,
+      );
+      expect(find.text('Dibatalkan'), findsOneWidget);
+      expect(find.text('14/09/2026'), findsOneWidget);
+      expect(find.text('18/09/2026'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
+  }
   testWidgets('blocked identity cannot load reference, history or detail', (
     t,
   ) async {
@@ -389,6 +508,23 @@ void main() {
       expect(repo.applied, isEmpty);
     },
   );
+  if (Platform.environment['NUSA_CAPTURE_PENGECUALIAN_UI'] == '1') {
+    testWidgets('capture refreshed history with synthetic records', (t) async {
+      final shadows = debugDisableShadows;
+      debugDisableShadows = false;
+      try {
+        await _mount(t, const AttendanceExceptionsView(), _PreviewRepo());
+        await _screenshot(t, 'history-refreshed-390');
+        await t.drag(find.byType(ListView), const Offset(0, -320));
+        await t.pumpAndSettle();
+        await _screenshot(t, 'history-refreshed-cards-390');
+        expect(t.takeException(), isNull);
+      } finally {
+        debugDisableShadows = shadows;
+      }
+    });
+  }
+
   for (final size in [
     const Size(320, 760),
     const Size(390, 844),
@@ -448,7 +584,12 @@ Future<void> _tap(WidgetTester t, Finder f) async {
     await t.scrollUntilVisible(
       f,
       240,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView).last,
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
   }
   await t.ensureVisible(f);
@@ -529,6 +670,7 @@ Future<ProviderContainer> _mount(
         key: _capture,
         child: route == null
             ? MaterialApp(
+                debugShowCheckedModeBanner: false,
                 theme: theme,
                 initialRoute: '/test-feature',
                 routes: {
@@ -536,7 +678,11 @@ Future<ProviderContainer> _mount(
                   '/test-feature': (_) => child,
                 },
               )
-            : MaterialApp.router(theme: theme, routerConfig: router),
+            : MaterialApp.router(
+                debugShowCheckedModeBanner: false,
+                theme: theme,
+                routerConfig: router,
+              ),
       ),
     ),
   );
@@ -627,6 +773,39 @@ class _Repo extends AttendanceExceptionsRepository {
     cancelled = true;
     return _record;
   }
+}
+
+class _PreviewRepo extends _Repo {
+  @override
+  Future<ExceptionData> list(ExceptionData filter) async => {
+    'items': [
+      {
+        ..._record,
+        'tanggal_mulai': '2026-10-12',
+        'tanggal_selesai': '2026-10-13',
+        'alasan': 'PJJ berdasarkan keputusan sekolah.',
+      },
+      {
+        ..._record,
+        'id': 8,
+        'tanggal_mulai': '2026-10-08',
+        'tanggal_selesai': '2026-10-09',
+        'alasan': 'PJJ untuk menjaga keselamatan warga sekolah.',
+      },
+      {..._record, 'id': 9},
+      {
+        ..._record,
+        'id': 10,
+        'aktif': false,
+        'cakupan_label': 'VIII.A',
+        'jenis_label': 'Gangguan scanner',
+        'alasan': 'Contoh pengecualian yang telah dibatalkan.',
+      },
+    ],
+    'ringkasan': {'total': 4, 'aktif': 3, 'dibatalkan': 1},
+    'paginasi': {'halaman': 1, 'total': 4, 'ada_halaman_berikutnya': false},
+    'hak_akses': {'dapat_kelola': true},
+  };
 }
 
 const _references = <String, dynamic>{

@@ -70,6 +70,9 @@ flutter:
 
   assets:
     - assets/images/logo-nusa.png
+    - assets/images/logo-padang-panjang.png
+    - assets/images/logo-smpn2pp.png
+    - assets/fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

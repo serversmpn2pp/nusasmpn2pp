@@ -1,5 +1,16 @@
 # NUSA Mobile
 
+## Publikasi Rapor STS
+
+Rapor STS menyediakan publikasi native untuk wali kelas/wakil kurikulum/admin:
+pilihan orang tua saja atau orang tua dan siswa, pilihan lampiran diperiksa BK,
+publikasi kolektif/per siswa, riwayat versi, dan pembatalan beralasan. Akun
+penerima memiliki menu Rapor STS Saya/Anak Saya, filter anak/tahun, laporan
+native dan cetak/simpan PDF A4 dari versi yang terbit. Backend selalu memeriksa
+identitas dan relasi anak; draf dan versi dibatalkan tidak dapat diakses.
+
+Panduan API, migrasi dan deploy: [Publikasi Rapor STS](../docs/publikasi-rapor-sts.md).
+
 Aplikasi Android NUSA untuk SMP Negeri 2 Padang Panjang. Proyek ini berada
 dalam repository yang sama dengan backend Laravel NUSA, tetapi memiliki proses
 build dan dependensi sendiri.

@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/attendance_exceptions/data/attendance_exceptions_repository.dart';
 import 'package:nusa/features/attendance_exceptions/domain/attendance_exception.dart';
 import 'package:nusa/features/attendance_exceptions/presentation/attendance_exception_form_view.dart';
 import 'package:nusa/features/attendance_exceptions/presentation/attendance_exception_widgets.dart';
+import 'package:nusa/features/attendance_exceptions/presentation/attendance_exception_list_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
 class AttendanceExceptionsView extends ConsumerStatefulWidget {
@@ -25,7 +27,6 @@ class _AttendanceExceptionsViewState
   ExceptionData? _page;
   String _year = '';
   String _status = 'semua';
-  bool _filters = false;
   bool _loading = true;
   bool _creating = false;
   int _request = 0;
@@ -162,14 +163,19 @@ class _AttendanceExceptionsViewState
     final allowed = canManageAttendanceExceptions(user);
     final visible = _account == user?.id;
     return Scaffold(
-      appBar: exceptionAppBar(
-        'Pengecualian Presensi',
+      backgroundColor: NusaColors.background,
+      appBar: AppBar(
+        title: const Text(
+          'Pengecualian Presensi',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           if (allowed)
             IconButton(
               tooltip: 'Perbarui',
               onPressed: _loading || _creating ? null : _load,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
             ),
         ],
       ),
@@ -178,10 +184,17 @@ class _AttendanceExceptionsViewState
               visible &&
               _references != null &&
               exceptionMap(_references!['hak_akses'])['dapat_kelola'] == true
-          ? FloatingActionButton(
+          ? FloatingActionButton.extended(
+              key: const Key('add-attendance-exception'),
               tooltip: 'Tambah pengecualian',
               onPressed: _creating || _loading ? null : _create,
-              child: const Icon(Icons.add),
+              icon: const Icon(Icons.add_rounded),
+              label: Text(
+                MediaQuery.sizeOf(context).width >= 380 &&
+                        MediaQuery.textScalerOf(context).scale(14) <= 18
+                    ? 'Tambah Pengecualian'
+                    : 'Tambah',
+              ),
             )
           : null,
       body: !allowed
@@ -189,46 +202,45 @@ class _AttendanceExceptionsViewState
               child: Text('Menu ini tidak tersedia untuk akun Anda.'),
             )
           : SafeArea(
+              top: false,
               child: RefreshIndicator(
                 onRefresh: _load,
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
                   physics: const AlwaysScrollableScrollPhysics(),
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            key: const Key('exception-search'),
-                            controller: _search,
-                            maxLength: 100,
-                            decoration: const InputDecoration(
-                              labelText: 'Cari alasan',
-                              prefixIcon: Icon(Icons.search),
-                              counterText: '',
-                            ),
-                            onChanged: (_) {
-                              _debounce?.cancel();
-                              ++_request;
-                              _debounce = Timer(
-                                const Duration(milliseconds: 450),
-                                _load,
-                              );
-                            },
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Filter pengecualian',
-                          onPressed: () => setState(() => _filters = !_filters),
-                          icon: const Icon(Icons.filter_alt_outlined),
-                        ),
-                      ],
+                    AttendanceExceptionSummary(
+                      summary: visible && _page != null
+                          ? exceptionMap(_page!['ringkasan'])
+                          : null,
                     ),
-                    if (_filters && visible) ...[
+                    const SizedBox(height: 10),
+                    const AttendanceExceptionInfoBanner(),
+                    const SizedBox(height: 10),
+                    TextField(
+                      key: const Key('exception-search'),
+                      controller: _search,
+                      maxLength: 100,
+                      decoration: const InputDecoration(
+                        hintText: 'Cari alasan pengecualian',
+                        prefixIcon: Icon(Icons.search_rounded),
+                        counterText: '',
+                      ),
+                      onChanged: (_) {
+                        _debounce?.cancel();
+                        ++_request;
+                        _debounce = Timer(
+                          const Duration(milliseconds: 450),
+                          _load,
+                        );
+                      },
+                    ),
+                    if (visible) ...[
                       const SizedBox(height: 12),
                       NusaDropdownField<String>(
                         fieldKey: const Key('exception-filter-year'),
                         value: _year,
+                        enabled: !_loading && !_creating && _references != null,
                         options: [
                           const NusaDropdownOption(
                             value: '',
@@ -244,6 +256,10 @@ class _AttendanceExceptionsViewState
                         ],
                         decoration: const InputDecoration(
                           labelText: 'Tahun pelajaran',
+                          prefixIcon: Icon(
+                            Icons.calendar_today_outlined,
+                            size: 20,
+                          ),
                         ),
                         onChanged: (v) => _change(() => _year = v ?? ''),
                       ),
@@ -251,6 +267,7 @@ class _AttendanceExceptionsViewState
                       NusaDropdownField<String>(
                         fieldKey: const Key('exception-filter-status'),
                         value: _status,
+                        enabled: !_loading && !_creating && _references != null,
                         options: const [
                           NusaDropdownOption(
                             value: 'semua',
@@ -262,33 +279,35 @@ class _AttendanceExceptionsViewState
                             label: 'Dibatalkan',
                           ),
                         ],
-                        decoration: const InputDecoration(labelText: 'Status'),
+                        decoration: const InputDecoration(
+                          labelText: 'Status',
+                          prefixIcon: Icon(Icons.toggle_on_outlined, size: 20),
+                        ),
                         onChanged: (v) => _change(() => _status = v ?? 'semua'),
                       ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          tooltip: 'Reset filter',
-                          icon: const Icon(Icons.filter_alt_off_outlined),
-                          onPressed: () => _change(() {
-                            _year = '';
-                            _status = 'semua';
-                            _search.clear();
-                          }),
+                      if (_year.isNotEmpty ||
+                          _status != 'semua' ||
+                          _search.text.trim().isNotEmpty)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            key: const Key('exception-reset-filters'),
+                            label: const Text('Reset filter'),
+                            icon: const Icon(
+                              Icons.filter_alt_off_outlined,
+                              size: 18,
+                            ),
+                            onPressed: _loading || _creating
+                                ? null
+                                : () => _change(() {
+                                    _year = '';
+                                    _status = 'semua';
+                                    _search.clear();
+                                  }),
+                          ),
                         ),
-                      ),
                     ],
-                    if (_page != null && visible) ...[
-                      const SizedBox(height: 20),
-                      ExceptionFacts({
-                        'Total': exceptionMap(_page!['ringkasan'])['total'],
-                        'Aktif': exceptionMap(_page!['ringkasan'])['aktif'],
-                        'Dibatalkan': exceptionMap(
-                          _page!['ringkasan'],
-                        )['dibatalkan'],
-                      }),
-                      const Divider(height: 32),
-                    ],
+                    const SizedBox(height: 14),
                     if (_loading)
                       const Padding(
                         padding: EdgeInsets.all(24),
@@ -308,67 +327,16 @@ class _AttendanceExceptionsViewState
                       for (final item in _items)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: Card(
-                            clipBehavior: Clip.antiAlias,
-                            child: InkWell(
-                              onTap: _creating
-                                  ? null
-                                  : () async {
-                                      await context.push(
-                                        '/pengecualian-presensi/${item['id']}',
-                                      );
-                                      if (mounted) _load();
-                                    },
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Wrap(
-                                      spacing: 12,
-                                      runSpacing: 8,
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
-                                      children: [
-                                        ExceptionStatus(item['aktif'] == true),
-                                        Text(
-                                          exceptionText(item['jenis_label']),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      exceptionText(item['cakupan_label']),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 17,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      exceptionText(
-                                        exceptionMap(
-                                          item['tahun_pelajaran'],
-                                        )['nama'],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '${exceptionDate(item['tanggal_mulai'])} s.d. ${exceptionDate(item['tanggal_selesai'])}',
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      exceptionText(item['alasan']),
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                          child: AttendanceExceptionCard(
+                            item: item,
+                            onOpen: _creating
+                                ? null
+                                : () async {
+                                    await context.push(
+                                      '/pengecualian-presensi/${item['id']}',
+                                    );
+                                    if (mounted) _load();
+                                  },
                           ),
                         ),
                     if (!_loading &&

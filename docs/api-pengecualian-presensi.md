@@ -29,6 +29,14 @@ Tidak ada endpoint edit/hapus permanen. Batalkan lalu buat penetapan pengganti.
 
 ## Riwayat Dan Referensi
 
+Tampilan riwayat Android mengikuti pola Pengaturan Presensi Siswa: ringkasan
+biru Total/Aktif/Dibatalkan, informasi singkat, pencarian, serta filter tahun
+pelajaran dan status yang langsung terlihat. Kartu memuat cakupan, tahun,
+status, jenis, tanggal mulai/selesai, dan alasan; ketuk untuk detail/audit.
+Tombol Tambah tetap melalui pratinjau dan konfirmasi. Ukuran teks besar memakai
+susunan kartu adaptif. Perubahan ini hanya UI, tanpa perubahan endpoint,
+perhitungan, atau aturan penerapan/pembatalan.
+
 GET riwayat menerima `tahun_pelajaran_id`, `kelas_id`, `kata_kunci` (alasan,
 maksimal 100 karakter), `status=semua|aktif|dibatalkan`, `halaman` (mulai 1),
 dan `per_halaman` (default 20, maksimal 50). Filter kelas juga menyertakan

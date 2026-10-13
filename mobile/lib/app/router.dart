@@ -128,6 +128,8 @@ import 'package:nusa/features/student_point_recap/presentation/student_point_rec
 import 'package:nusa/features/student_point_recap/presentation/student_point_recap_list_view.dart';
 import 'package:nusa/features/sts_behavior/presentation/sts_behavior_view.dart';
 import 'package:nusa/features/sts_reports/presentation/sts_reports_view.dart';
+import 'package:nusa/features/sts_publication/presentation/sts_publication_view.dart';
+import 'package:nusa/features/sts_publication/presentation/published_sts_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_detail_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_list_view.dart';
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
@@ -1299,6 +1301,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.stsReport,
         name: 'sts-report',
         builder: (context, state) => const RaporStsView(),
+      ),
+      GoRoute(
+        path: '/rapor-sts/publikasi',
+        builder: (_, state) => StsPublicationView(
+          activityId:
+              int.tryParse(state.uri.queryParameters['kegiatan_id'] ?? '') ?? 0,
+          classId:
+              int.tryParse(state.uri.queryParameters['kelas_id'] ?? '') ?? 0,
+        ),
+      ),
+      GoRoute(
+        path: '/rapor-sts-saya',
+        builder: (_, state) => const PublishedStsView(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (_, state) => PublishedStsView(
+              id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.stsLedger,

@@ -49,6 +49,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'input-nilai' => Icons.edit_note_rounded,
     'rekap-nilai-rapor' => Icons.assessment_rounded,
     'rapor-sts' => Icons.description_rounded,
+    'rapor-sts-saya' || 'rapor-sts-anak' => Icons.description_rounded,
     'leger-sts' => Icons.leaderboard_rounded,
     'nilai-saya' => Icons.workspace_premium_rounded,
     'jadwal-pelajaran-anak' => Icons.calendar_view_week_rounded,

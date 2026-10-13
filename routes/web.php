@@ -132,6 +132,8 @@ use App\Http\Controllers\PublikasiNilaiController;
 use App\Http\Controllers\PusatCbtController;
 use App\Http\Controllers\PusatVerifikasiPelanggaranController;
 use App\Http\Controllers\RaporStsController;
+use App\Http\Controllers\PublikasiRaporStsController;
+use App\Http\Controllers\RaporStsSayaController;
 use App\Http\Controllers\RekapAbsensiHarianController;
 use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
 use App\Http\Controllers\RekapBerhalanganIbadahController;
@@ -336,6 +338,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             ->name('progress-kasus-siswa.show');
         Route::get('nilai-saya', [NilaiSayaController::class, 'index'])
             ->name('nilai-saya.index');
+        Route::get('rapor-sts-saya', [RaporStsSayaController::class, 'index'])->name('rapor-sts-saya.index');
+        Route::get('rapor-sts-saya/{id}', [RaporStsSayaController::class, 'show'])->whereNumber('id')->name('rapor-sts-saya.show');
         Route::get('ujian-saya', [UjianSayaController::class, 'index'])
             ->name('ujian-saya.index');
         Route::post('ujian-saya/{pesertaUjianCbt}/masuk', [AksesUjianCbtController::class, 'masukDariAkunSiswa'])
@@ -1130,6 +1134,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('leger-sts/penghargaan', [LegerStsController::class, 'penghargaan'])->name('leger-sts.penghargaan');
             Route::get('leger-sts', [LegerStsController::class, 'index'])->name('leger-sts.index');
             Route::get('rapor-sts', [RaporStsController::class, 'index'])->name('rapor-sts.index');
+            Route::get('rapor-sts/{kegiatan}/{kelas}/publikasi', [PublikasiRaporStsController::class, 'index'])->whereNumber(['kegiatan', 'kelas'])->name('rapor-sts.publikasi.index');
+            Route::post('rapor-sts/{kegiatan}/{kelas}/publikasi', [PublikasiRaporStsController::class, 'store'])->whereNumber(['kegiatan', 'kelas'])->middleware('throttle:15,1')->name('rapor-sts.publikasi.store');
+            Route::delete('rapor-sts/{kegiatan}/{kelas}/publikasi', [PublikasiRaporStsController::class, 'destroy'])->whereNumber(['kegiatan', 'kelas'])->middleware('throttle:15,1')->name('rapor-sts.publikasi.destroy');
             Route::put('rapor-sts/{kegiatan}/{kelas}/mapel', [RaporStsController::class, 'mapel'])->name('rapor-sts.mapel');
             Route::put('rapor-sts/{kegiatan}/{kelas}/pengaturan', [RaporStsController::class, 'pengaturan'])->name('rapor-sts.pengaturan');
             Route::put('rapor-sts/{kegiatan}/{kelas}/kehadiran', [RaporStsController::class, 'kehadiran'])->name('rapor-sts.kehadiran');

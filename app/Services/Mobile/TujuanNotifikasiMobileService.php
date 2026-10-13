@@ -41,6 +41,7 @@ class TujuanNotifikasiMobileService
         foreach ([
             '/persuratan' => '/persuratan',
             '/surat-saya' => '/surat-saya',
+            '/rapor-sts-saya' => '/rapor-sts-saya',
             '/tindak-lanjut-surat' => '/tindak-lanjut-surat',
             '/dashboard-humas' => '/humas',
             '/agenda-humas' => '/humas/agenda',

@@ -37,20 +37,25 @@ class ExceptionErrorView extends StatelessWidget {
 }
 
 class ExceptionStatus extends StatelessWidget {
-  const ExceptionStatus(this.active, {super.key});
+  const ExceptionStatus(this.active, {this.compact = false, super.key});
   final bool active;
+  final bool compact;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    padding: EdgeInsets.symmetric(
+      horizontal: compact ? 8 : 10,
+      vertical: compact ? 4 : 6,
+    ),
     decoration: BoxDecoration(
       color: active ? NusaColors.successSurface : NusaColors.dangerSurface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(compact ? 20 : 8),
     ),
     child: Text(
       active ? 'Aktif' : 'Dibatalkan',
       style: TextStyle(
         color: active ? NusaColors.success : NusaColors.danger,
         fontWeight: FontWeight.w600,
+        fontSize: compact ? 10 : null,
       ),
     ),
   );

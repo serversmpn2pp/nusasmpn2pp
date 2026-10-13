@@ -126,11 +126,12 @@
 </head>
 <body>
     <nav class="toolbar" aria-label="Tindakan rapor">
-        <a href="{{ route('rapor-sts.index', ['kegiatan_id' => $kegiatan->id, 'kelas_id' => $kelas->id]) }}">Kembali ke rekap</a>
+        <a href="{{ $tautan_kembali ?? route('rapor-sts.index', ['kegiatan_id' => $kegiatan->id, 'kelas_id' => $kelas->id]) }}">{{ isset($publikasi) ? 'Kembali ke daftar rapor' : 'Kembali ke rekap' }}</a>
         @unless ($pratinjau)
             <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
         @endunless
         <span>{{ $baris->count() }} siswa · A4 portrait · {{ $pratinjau ? 'Pratinjau draf' : ($baris->every(fn ($item) => $item['nilai_tuntas']) ? 'Rekap nilai lengkap' : 'Memuat nilai belum tersedia') }}</span>
+        @isset($publikasi)<span>Versi {{ $publikasi->versi }} · Terbit {{ $publikasi->dipublikasikan_pada->format('d-m-Y H:i') }}</span>@endisset
     </nav>
 
     @foreach ($baris as $item)

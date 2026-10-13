@@ -88,7 +88,7 @@ class RaporLegerStsApiTest extends TestCase
             $this->getJson($this->url($d, 'rapor-sts.index'))->assertForbidden();
             $this->getJson($this->url($d, 'leger-sts.index'))->assertForbidden();
             $this->putJson($this->aksi($d, 'pengaturan'), $this->periode())->assertForbidden();
-            $this->getJson(route('api.v1.menu'))->assertOk()->assertDontSee('rapor-sts')->assertDontSee('leger-sts');
+            $this->getJson(route('api.v1.menu'))->assertOk()->assertJsonMissing(['kode' => 'rapor-sts'])->assertJsonMissing(['kode' => 'leger-sts']);
         }
     }
 

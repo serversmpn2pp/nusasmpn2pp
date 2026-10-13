@@ -1,5 +1,9 @@
 # API STS untuk Android
 
+Publikasi untuk siswa/orang tua, versi rapor, dan endpoint penerima dijelaskan
+di [Publikasi Rapor STS](publikasi-rapor-sts.md). Bagian publikasi membutuhkan
+migrasi tambahan `2026_10_13_000001_buat_publikasi_rapor_sts.php`.
+
 Backend menyediakan Rapor STS, Leger STS, dan Lampiran Perilaku STS.
 Perhitungan nilai, ranking, presensi, pilihan mapel, dan pemeriksaan menggunakan
 layanan yang sama dengan web. Penambahan API ini tidak membutuhkan migration

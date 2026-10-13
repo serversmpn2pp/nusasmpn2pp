@@ -93,6 +93,8 @@ use App\Http\Controllers\Api\V1\ProfilSayaController;
 use App\Http\Controllers\Api\V1\ProgressKasusSiswaController;
 use App\Http\Controllers\Api\V1\PusatCbtController;
 use App\Http\Controllers\Api\V1\RaporStsController;
+use App\Http\Controllers\PublikasiRaporStsController;
+use App\Http\Controllers\RaporStsSayaController;
 use App\Http\Controllers\Api\V1\RekapBerhalanganIbadahController;
 use App\Http\Controllers\Api\V1\RekapKegiatanIbadahController;
 use App\Http\Controllers\Api\V1\RekapNilaiRaporController;
@@ -1090,6 +1092,9 @@ Route::prefix('v1')
 
         Route::middleware(['akun_pegawai', 'izin:nilai.rekap'])->group(function () {
             Route::get('/rapor-sts', [RaporStsController::class, 'index'])->name('rapor-sts.index');
+            Route::get('/rapor-sts/{kegiatan}/{kelas}/publikasi', [PublikasiRaporStsController::class, 'index'])->whereNumber(['kegiatan', 'kelas'])->name('rapor-sts.publikasi.index');
+            Route::post('/rapor-sts/{kegiatan}/{kelas}/publikasi', [PublikasiRaporStsController::class, 'store'])->whereNumber(['kegiatan', 'kelas'])->middleware('throttle:15,1')->name('rapor-sts.publikasi.store');
+            Route::delete('/rapor-sts/{kegiatan}/{kelas}/publikasi', [PublikasiRaporStsController::class, 'destroy'])->whereNumber(['kegiatan', 'kelas'])->middleware('throttle:15,1')->name('rapor-sts.publikasi.destroy');
             Route::put('/rapor-sts/{kegiatan}/{kelas}/pengaturan', [RaporStsController::class, 'pengaturan'])
                 ->whereNumber(['kegiatan', 'kelas'])->name('rapor-sts.pengaturan');
             Route::put('/rapor-sts/{kegiatan}/{kelas}/kehadiran', [RaporStsController::class, 'kehadiran'])
@@ -1316,6 +1321,9 @@ Route::prefix('v1')
 
         Route::get('/nilai-saya', NilaiSayaController::class)
             ->name('nilai-saya.index');
+        Route::get('/rapor-sts-saya', [RaporStsSayaController::class, 'index'])->name('rapor-sts-saya.index');
+        Route::get('/rapor-sts-saya/{id}', [RaporStsSayaController::class, 'show'])->whereNumber('id')->name('rapor-sts-saya.show');
+        Route::get('/rapor-sts-saya/{id}/cetak', [RaporStsSayaController::class, 'cetak'])->whereNumber('id')->name('rapor-sts-saya.cetak');
         Route::get('/akademik-anak', AkademikAnakController::class)
             ->name('akademik-anak.index');
         Route::get('/survei-pembelajaran/{guruMataPelajaran}/{semester}', [SurveiPembelajaranController::class, 'show'])
