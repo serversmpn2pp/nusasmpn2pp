@@ -43,6 +43,7 @@ class DatabaseSeeder extends Seeder
         $this->isiJenisUjianCbtBawaan();
         $this->isiPengaturanInventarisBawaan();
         $this->hubungkanIzinPeranBawaan();
+        $this->call(SupervisiAwalSeeder::class);
 
         $administrator->daftarPeran()->syncWithoutDetaching([
             Peran::where('kode', 'administrator')->value('id'),

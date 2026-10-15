@@ -4,6 +4,75 @@ Upload key dibuat dan disimpan oleh pengelola sekolah pada komputer pengembang,
 bukan server Laravel. Kunci tersebut berbeda dari service-account Firebase.
 Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
+## AAB terbaru — 1.0.2+3, 13 Oktober 2026
+
+File untuk diunggah:
+[app-release-1.0.2-3.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.2-3.aab).
+Salinan ini identik dengan keluaran `mobile/build/app/outputs/bundle/release/app-release.aab`
+yang selesai dibangun pada **08.36 WIB**. Ukuran **94.936.750 byte**
+(sekitar **94,9 MB / 90,5 MiB**). Build sebelumnya tetap disimpan sebagai
+`mobile/build/releases/app-release-1.0.1-2.aab`; bagian build lama di bawah
+merupakan riwayat, bukan file yang perlu diunggah sekarang.
+
+SHA-256:
+
+```text
+70CD1E5E21540E0A2A43F3B5CDF2E2AC40E77A95A24F82DF1BADA4662F8D3C68
+```
+
+- Manifest final: package `id.sch.smpn2padangpanjang.nusa`, version name
+  **1.0.2**, version code **3**, min SDK **24**, target SDK **36**.
+  Bukan debug; `allowBackup=false`, `extractNativeLibs=false`.
+- Build memakai `APP_ENV=production`, API HTTPS sekolah yang sama, dependensi
+  terkunci (`--no-pub`), dan upload key lama. Fingerprint SHA-256 sertifikat
+  cocok dengan build 1.0.1+2; tidak mengganti keystore/password.
+- Memuat pusat Ujian & Asesmen, Rapor/Leger STS, publikasi rapor STS, pembaca
+  rapor/lampiran perilaku untuk penerima yang berhak, penyempurnaan tampilan
+  STS/presensi, serta tab **Jadwal/Riwayat** siswa dan orang tua.
+  Penanda route STS, tab ujian, URL produksi, dan tautan privasi/penghapusan
+  ditemukan pada ketiga library AOT `libapp.so`.
+- Analyzer bersih; seluruh **537 tes mobile** lulus. **76 tes API terkait /
+  984 assertion** lulus memakai SQLite di memori dan data contoh, tanpa
+  menguji/mengubah database produksi atau mengirim notifikasi pengguna nyata.
+- `bundletool validate`, `jar --validate`, ZIP CRC/duplikasi, dan
+  `jarsigner -verify` lulus. Konfigurasi meminta `PAGE_ALIGNMENT_16K`;
+  **14 ELF 64-bit** lolos pemeriksa LOAD/RELRO Android Studio (0 masalah).
+- APK universal diagnostik dari AAB juga lolos `zipalign -v -c -P 16 4`.
+  File di `mobile/build/aab-validation-1.0.2-3/diagnostic-universal.*`
+  memakai **debug key**, hanya untuk pemeriksaan alignment; jangan diunggah
+  atau digunakan sebagai APK rilis. Ini bukan uji runtime 16 KB atau
+  pemeriksaan APK split aktual dari Google Play.
+
+Peringatan toolchain KGP/Java dan font Cupertino masih muncul tanpa error
+build. Peringatan sertifikat self-signed/tanpa timestamp, atribut POSIX,
+dan pembaca `JarInputStream` pada JDK 25 juga tetap muncul; tanda tangan
+terverifikasi dan bundletool berhasil memvalidasi artefak final.
+
+### Langkah berikutnya untuk versi ini
+
+1. Pastikan backend produksi sudah memuat API/menu terbaru dan migration
+   publikasi STS. Lihat [pemasangan publikasi STS](D:/nusasmpn2pp/docs/publikasi-rapor-sts.md).
+   Build AAB ini tidak melakukan deployment, migrasi, atau restart worker.
+2. Buat rilis baru **internal testing** dan unggah salinan AAB bernama versi
+   di atas. Version code 3 harus belum pernah dipakai di Play Console;
+   riwayat Console tidak diperiksa dari komputer ini.
+3. Uji update melalui Play pada HP tester: login, kamera/push, ujian,
+   akses rapor sesuai penerima, lampiran, dan ekspor PDF. Pemeriksaan artefak
+   bukan pengganti uji perangkat, pre-launch report, atau deklarasi kebijakan.
+
+Contoh release notes:
+
+```text
+<id>
+Pembaruan Ujian & Asesmen, pelaksanaan, pemantauan, dan hasil.
+Ujian siswa dan orang tua kini dipisahkan menjadi Jadwal dan Riwayat.
+Rapor dan Leger STS tersedia di mobile, termasuk publikasi rapor serta lampiran perilaku sesuai izin akun.
+Penyempurnaan tampilan Lampiran Perilaku STS dan Pengecualian Presensi.
+</id>
+```
+
+Belum mengunggah atau menerbitkan aplikasi di Google Play Console.
+
 ## Konfigurasi lokal
 
 File `mobile/android/key.properties` memuat empat properti:

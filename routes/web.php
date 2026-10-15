@@ -251,6 +251,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
     Route::put('ganti-kata-sandi', [AutentikasiController::class, 'updateKataSandi'])->name('kata-sandi.update');
 
     Route::middleware('kata_sandi_bukan_default')->group(function () {
+        require __DIR__.'/supervisi.php';
         Route::get('notifikasi', [NotifikasiPenggunaController::class, 'index'])->name('notifikasi.index');
         Route::get('notifikasi/ringkasan', [NotifikasiPenggunaController::class, 'ringkasan'])->name('notifikasi.ringkasan');
         Route::patch('notifikasi/baca-semua', [NotifikasiPenggunaController::class, 'tandaiSemuaDibaca'])->name('notifikasi.baca-semua');

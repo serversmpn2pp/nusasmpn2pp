@@ -1914,6 +1914,10 @@
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PS', 'izin' => 'perangkat_ajar.upload', 'pegawai_only' => true, 'subgroup' => 'Perangkat Ajar'],
                         ['label' => 'Pemeriksaan Perangkat Ajar', 'route' => 'pemeriksaan-perangkat-ajar.index', 'active' => ['pemeriksaan-perangkat-ajar.*'], 'initial' => 'PP', 'izin' => ['perangkat_ajar.lihat', 'perangkat_ajar.periksa'], 'subgroup' => 'Perangkat Ajar'],
                         ['label' => 'Jenis Perangkat Ajar', 'route' => 'jenis-perangkat-ajar.index', 'active' => ['jenis-perangkat-ajar.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.jenis_kelola', 'subgroup' => 'Perangkat Ajar'],
+                        ['label' => 'Supervisi Akademik', 'route' => 'supervisi.index', 'active' => ['supervisi.index', 'supervisi.sesi.*'], 'initial' => 'SA', 'izin' => ['supervisi.lihat', 'supervisi.kelola'], 'subgroup' => 'Supervisi'],
+                        ['label' => 'Program Supervisi', 'route' => 'supervisi.program.index', 'active' => ['supervisi.program.*', 'supervisi.jadwal.*'], 'initial' => 'SP', 'izin' => ['supervisi.lihat', 'supervisi.kelola'], 'subgroup' => 'Supervisi'],
+                        ['label' => 'Rekap Supervisi', 'route' => 'supervisi.rekap.index', 'active' => ['supervisi.rekap.*', 'supervisi.laporan.*'], 'initial' => 'SR', 'izin' => ['supervisi.lihat', 'supervisi.kelola'], 'subgroup' => 'Supervisi'],
+                        ['label' => 'Instrumen Supervisi', 'route' => 'supervisi.instrumen.index', 'active' => ['supervisi.instrumen.*'], 'initial' => 'SI', 'izin' => 'supervisi.instrumen_kelola', 'subgroup' => 'Supervisi'],
                     ],
                 ],
                 [
@@ -2146,6 +2150,7 @@
                         ['label' => 'Jadwal Mengajar Saya', 'route' => 'jadwal-saya.index', 'active' => ['jadwal-saya.*'], 'initial' => 'JP', 'izin' => 'jadwal.pribadi', 'peran' => 'guru_mapel'],
                         ['label' => 'Input Nilai', 'route' => 'input-nilai.index', 'active' => ['input-nilai.*'], 'initial' => 'IN', 'izin' => 'nilai.input', 'peran' => 'guru_mapel'],
                         ['label' => 'Hasil Survei Saya', 'route' => 'hasil-survei-saya.index', 'active' => ['hasil-survei-saya.*'], 'initial' => 'HS', 'izin' => 'survei.hasil_pribadi', 'peran' => 'guru_mapel'],
+                        ['label' => 'Supervisi Saya', 'route' => 'supervisi.index', 'active' => ['supervisi.*'], 'initial' => 'SP', 'izin' => null, 'pegawai_only' => true],
                         ['label' => 'Perangkat Ajar Saya', 'route' => 'perangkat-ajar-saya.index', 'active' => ['perangkat-ajar-saya.*'], 'initial' => 'PA', 'izin' => 'perangkat_ajar.upload', 'peran' => 'guru_mapel'],
                     ],
                 ],

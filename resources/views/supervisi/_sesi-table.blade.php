@@ -1,0 +1,10 @@
+<div class="sp-table-wrap" tabindex="0" aria-label="Jadwal supervisi"><table class="sp-table"><thead><tr>@if($pilih)<th scope="col">Pilih</th>@endif<th scope="col">Guru dan pembelajaran</th><th scope="col">Supervisor</th><th scope="col">Waktu dan tempat</th><th scope="col">Status</th><th scope="col">Aksi</th></tr></thead><tbody>
+@forelse($items as $i=>$s)<tr data-sp-status="{{ $s['status'] }}">
+    @if($pilih)<td><input type="checkbox" data-sp-select aria-label="Pilih {{ $s['konteks']['guru'] }}" @disabled($s['status']==='dibatalkan')><input type="hidden" disabled data-sp-field name="sesi[{{ $i }}][id]" value="{{ $s['id'] }}"><input type="hidden" disabled data-sp-field name="sesi[{{ $i }}][versi]" value="{{ $s['versi'] }}"></td>@endif
+    <td><strong>{{ $s['konteks']['guru'] }}</strong><small>{{ $s['konteks']['mapel'] }} · {{ $s['konteks']['kelas'] }}</small><small>{{ $s['topik'] ?: $s['program'] }}</small></td>
+    <td>{{ $s['supervisor'] }}<small>{{ $s['konteks']['instrumen'] }} · Versi {{ $s['konteks']['instrumen_nomor'] }}</small></td>
+    <td>{{ \Carbon\Carbon::parse($s['waktu_mulai'])->translatedFormat('l, d M Y') }}<small>{{ \Carbon\Carbon::parse($s['waktu_mulai'])->format('H:i') }} - {{ \Carbon\Carbon::parse($s['waktu_selesai'])->format('H:i') }} · {{ $s['tempat'] }}</small></td>
+    <td><span class="sp-badge {{ $s['status'] }}">{{ \App\Models\SesiSupervisi::STATUS[$s['status']] }}</span>@if($s['status']==='terjadwal')<small>Praobservasi: {{ \App\Models\PraobservasiSupervisi::STATUS[$s['praobservasi_status']] }}</small><small>Penilaian: {{ $s['penilaian_status'] === 'final' ? 'Final' : ($s['penilaian_status'] === 'draf' ? 'Draf' : 'Belum dinilai') }}</small>@endif @if($s['jadwal_terlewat'] && $s['penilaian_status'] !== 'final')<small>Waktu jadwal telah lewat</small>@endif</td>
+    <td><a class="button button-muted button-sm" href="{{ route('supervisi.sesi.show',$s['id']) }}">Rincian</a></td>
+</tr>@empty<tr><td colspan="{{ $pilih ? 6 : 5 }}" class="sp-empty">Belum ada jadwal supervisi yang sesuai.</td></tr>@endforelse
+</tbody></table></div>
