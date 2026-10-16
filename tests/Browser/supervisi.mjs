@@ -19,7 +19,7 @@ try {
         try{return route.fulfill({body:await readFile(path),contentType:({'.css':'text/css','.js':'text/javascript','.png':'image/png','.woff2':'font/woff2'})[extname(path)]||'application/octet-stream'});}
         catch{return route.fulfill({status:404,body:''});}
     });
-    const pages=['index','program','program-show','program-form','program-edit','jadwal-form','jadwal-edit','instrumen','instrumen-show','instrumen-form','instrumen-revisi','sesi','pra-guru','pra-supervisor','nilai-tertutup','nilai-supervisor','nilai-final','nilai-koreksi','pasca-guru','pasca-review','pasca-rencana','tindak-draf','tindak-guru','tindak-review','pasca-selesai','tindak-selesai','pasca-arsip'];
+    const pages=['index','program','program-show','program-form','program-edit','jadwal-form','jadwal-edit','instrumen','instrumen-show','instrumen-form','instrumen-revisi','sesi','pra-guru','pra-supervisor','nilai-tertutup','nilai-supervisor','nilai-final','nilai-koreksi','pasca-guru','pasca-review','pasca-rencana','tindak-draf','tindak-guru','tindak-review','pasca-selesai','tindak-selesai','pasca-arsip','akses-kurikulum','akses-pimpinan','akses-guru','akses-supervisor','akses-tu','akses-delegasi','akses-instrumen'];
     for(const width of [320,390,768,1366,1920]) {
         await page.setViewportSize({width,height:1000});
         for(const name of pages) {
@@ -28,6 +28,21 @@ try {
             const clipped=await page.locator('.sp-stat,.sp-head,.sp-footer,.sp-nav,.sp-context,.sp-savebar,.sp-stage-nav,.sp-score-group summary,.sp-score-row,.sp-file-row,.sp-task-top,.sp-task-body,.sp-bulk-plan').evaluateAll(els=>els.filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent.trim()));
             assert.deepEqual(clipped,[],`Clipped controls ${name}@${width}`);
             if([390,1366].includes(width)&&['index','program-show','jadwal-form','instrumen-form','instrumen-revisi','pra-guru','nilai-supervisor','nilai-final','pasca-guru','pasca-rencana','tindak-guru','tindak-review'].includes(name))await page.screenshot({path:`${output}/${name}-${width}.png`,fullPage:true});
+        }
+    }
+    const roleMenus={kurikulum:['/supervisi','/supervisi/program','/supervisi/rekap','/supervisi/instrumen'],pimpinan:['/supervisi','/supervisi/program','/supervisi/rekap'],guru:['/supervisi'],supervisor:['/supervisi'],tu:[],delegasi:['/supervisi','/supervisi/program','/supervisi/rekap'],instrumen:['/supervisi/instrumen']};
+    for(const width of [390,1366]) {
+        await page.setViewportSize({width,height:1000});
+        for(const [role,expected] of Object.entries(roleMenus)) {
+            await page.goto(`http://localhost/audit/akses-${role}`);
+            const links=await page.locator('.app-sidebar a[href]').evaluateAll(els=>els.map(e=>new URL(e.href).pathname).filter(p=>p==='/supervisi'||p.startsWith('/supervisi/')));
+            assert.deepEqual(links.sort(),[...expected].sort(),`Role sidebar ${role}@${width}`);
+            assert.equal(await page.getByRole('link',{name:'Kelola program',exact:true}).count(),['kurikulum','delegasi'].includes(role)?1:0,`Management command ${role}`);
+            if(width===390) {
+                await page.getByLabel('Buka menu utama',{exact:true}).click();
+                await page.waitForFunction(()=>Math.abs(document.querySelector('.app-sidebar').getBoundingClientRect().left)<1);
+            }
+            if(['kurikulum','guru','delegasi'].includes(role))await page.screenshot({path:`${output}/akses-${role}-${width}.png`});
         }
     }
     await page.setViewportSize({width:1366,height:1000});
@@ -130,5 +145,5 @@ try {
     assert.equal(await page.getByRole('button',{name:'Verifikasi selesai',exact:true}).count(),1);
     assert.equal(await page.getByRole('button',{name:'Simpan draf pelaksanaan',exact:true}).count(),0);
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({result:'passed',pages:pages.length,widths:[320,390,768,1366,1920],checks:['responsive','dynamic-indicators','dynamic-reflections','dynamic-scale-max','group-order','group-removal','batch-session-tokens','batch-selection','score-progress','unsaved-guard','large-form-json-submit','final-readonly','followup-bulk-selection','followup-role-controls','no-js-errors']}));
+    console.log(JSON.stringify({result:'passed',pages:pages.length,widths:[320,390,768,1366,1920],checks:['role-sidebar-matrix','management-commands','responsive','dynamic-indicators','dynamic-reflections','dynamic-scale-max','group-order','group-removal','batch-session-tokens','batch-selection','score-progress','unsaved-guard','large-form-json-submit','final-readonly','followup-bulk-selection','followup-role-controls','no-js-errors']}));
 } finally {await browser.close();}

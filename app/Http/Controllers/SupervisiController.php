@@ -43,6 +43,16 @@ class SupervisiController extends Controller
         return $this->hasil($r, 'index', ['daftar' => $daftar, 'statistik' => $stat, 'filter' => $filter, 'program' => $this->programQuery($r)->orderByDesc('id')->get(['id', 'nama']), 'hak_akses' => $this->hak($r)]);
     }
 
+    public function akses(Request $r)
+    {
+        $this->akses->staff($r->user());
+
+        return response()->json(['data' => ['hak_akses' => $this->akses->hak($r->user()),
+            'menu' => array_map(fn ($m) => ['kode' => $m['kode'], 'label' => $m['label'],
+                'web' => route($m['route'], [], false), 'api' => $m['api']], $this->akses->menu($r->user())),
+            'ui_mobile_tersedia' => false]])->header('Cache-Control', 'private, no-store, max-age=0');
+    }
+
     public function pilihan(Request $r)
     {
         $this->akses->kelola($r->user());
@@ -107,7 +117,7 @@ class SupervisiController extends Controller
 
         return $this->hasil($r, 'sesi-show', ['sesi' => $this->dataSesi($sesi), 'instrumen' => $this->instrumen->data($sesi->instrumen),
             'bisa_cetak' => app(RekapSupervisiService::class)->baris($sesi)['bisa_cetak'],
-            'pengisian' => ['praobservasi' => app(PengisianSupervisiService::class)->dataPra($r->user(), $sesi), 'penilaian' => app(PengisianSupervisiService::class)->dataPenilaian($r->user(), $sesi)],
+            'pengisian' => ['praobservasi' => app(PengisianSupervisiService::class)->dataPra($r->user(), $sesi), 'penilaian' => app(PengisianSupervisiService::class)->dataPenilaian($r->user(), $sesi), 'hak' => app(PengisianSupervisiService::class)->hak($r->user(), $sesi)],
             'riwayat' => $this->riwayat('sesi_supervisi_id', $sesi->id), 'hak_akses' => $this->hak($r)]);
     }
 
@@ -181,7 +191,7 @@ class SupervisiController extends Controller
 
     private function hak(Request $r): array
     {
-        return ['kelola' => $r->user()->memilikiIzin('supervisi.kelola'), 'instrumen' => $r->user()->memilikiIzin('supervisi.instrumen_kelola'), 'monitor' => $this->akses->global($r->user()), 'tahap_tersedia' => ['jadwal', 'praobservasi', 'penilaian', 'pascaobservasi']];
+        return $this->akses->hak($r->user());
     }
 
     private function dataProgram(ProgramSupervisi $p): array

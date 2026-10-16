@@ -10,6 +10,7 @@ use App\Services\Ibadah\AksesBerhalanganIbadah;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
 use App\Services\Pembinaan\AksesRekapPoinSiswaService;
 use App\Services\Pembinaan\AksesSanksiPoinService;
+use App\Services\Supervisi\AksesSupervisi;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -182,8 +183,10 @@ class MenuMobileService
 
     private function siapkanKelompok(array $kelompok, Pengguna $pengguna): array
     {
+        $menuSupervisi = $kelompok['kode'] === 'akademik'
+            ? array_column(app(AksesSupervisi::class)->menu($pengguna), 'kode') : [];
         $items = collect($kelompok['items'] ?? [])
-            ->filter(fn (array $item) => $this->bolehDilihat($item, $pengguna))
+            ->filter(fn (array $item) => $this->bolehDilihat($item, $pengguna, $menuSupervisi))
             ->map(fn (array $item) => $this->siapkanItem($item, $pengguna))
             ->values()
             ->all();
@@ -205,8 +208,11 @@ class MenuMobileService
         ];
     }
 
-    private function bolehDilihat(array $item, Pengguna $pengguna): bool
+    private function bolehDilihat(array $item, Pengguna $pengguna, array $menuSupervisi = []): bool
     {
+        if (($item['supervisi_only'] ?? false) && ! in_array($item['kode'], $menuSupervisi, true)) {
+            return false;
+        }
         if (($item['pengecualian_presensi_only'] ?? false)
             && ! $this->aksesPengecualianPresensi->bolehMengelola($pengguna)) {
             return false;

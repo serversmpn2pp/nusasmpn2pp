@@ -22,6 +22,49 @@ API: jalur yang sama dengan awalan `/api/v1`. Memakai Sanctum dengan ability
   Guru tidak dapat menugaskan diri, mengubah jadwal, atau mengakses sesi guru lain.
   Siswa/orang tua ditolak meski memiliki role tambahan administrator.
 
+### Konsistensi Role, Menu, dan API
+
+Wakil Kurikulum (`wakil_pimpinan_kurikulum`) adalah pengelola utama. Izin
+kelola program/jadwal dan instrumen tetap terpisah agar delegasi eksplisit
+dapat dibatasi. Pimpinan bawaan hanya monitoring. Administrator tetap dapat
+membantu pengelolaan, tetapi tidak mengisi atas nama guru/supervisor.
+Tidak ada pemberian izin monitoring sekolah secara otomatis kepada semua guru,
+BK, TU, atau wakil bidang lain. Guru/supervisor mengakses sesi terbit sesuai
+identitas pegawai, bukan hanya nama role. Pegawai nonaktif ditolak, termasuk
+bila role pengelolanya masih melekat; administrator sistem tetap dapat masuk.
+
+`AksesSupervisi` menjadi sumber keputusan menu web dan katalog mobile.
+Menu pengelolaan muncul untuk izin global; menu Supervisi Saya muncul hanya
+untuk peserta/supervisor dengan penugasan terbit, tanpa duplikasi pada akun
+monitoring. Role kustom dengan izin eksplisit tetap memperoleh menu yang sesuai,
+termasuk saat memakai sidebar pegawai sederhana. Role/izin nonaktif tidak berlaku.
+
+`GET /api/v1/supervisi/akses` mengembalikan `data.hak_akses`, `data.menu`, dan
+`data.ui_mobile_tersedia=false`. Hak umum: `kelola`, `instrumen`, `monitor`,
+`pribadi` (menu pribadi non-monitor), `lingkup` (sekolah/penugasan), dan
+`tahap_tersedia`. Rincian sesi menambahkan `data.pengisian.hak`; tindakan
+pascaobservasi tetap memakai `data.pascaobservasi.hak` dan hak masing-masing
+rencana. Klien wajib mengikuti hak aksi server, bukan menyimpulkan hak menilai
+dari `kelola=true`. Kepemilikan dan status tetap diperiksa ulang pada setiap mutasi.
+
+Katalog `/api/v1/menu` mencantumkan supervisi berdasarkan keputusan akses yang
+sama. Karena UI Android native supervisi belum dibangun, statusnya
+`segera_hadir`, `rute=null`, dan `api_tersedia=true`, bukan rute native aktif.
+Item ini tidak bisa dipilih sebagai akses cepat sampai UI tersedia.
+
+Migrasi `2026_10_16_000101_pastikan_izin_peran_supervisi.php` memasang ulang
+izin bawaan yang kurang secara aditif. Tidak mengganti role pengguna, mencabut
+izin kustom, atau mengubah instrumen/jadwal/nilai. Rollback tidak mencabut izin
+yang mungkin sudah ada sebelum migrasi. Setelah pull, backup database lalu
+jalankan `php artisan migrate --force`, `php artisan optimize:clear`, dan
+`php artisan queue:restart`; jangan menjalankan seeder seluruh aplikasi.
+Akun pemegang Wakil Kurikulum harus dipilih oleh administrator melalui
+pengaturan akun/peran. Migrasi tidak menebak atau memilih pegawai secara otomatis.
+
+Pengujian matriks akses: `tests/Feature/AksesSupervisiTest.php`, termasuk role
+bawaan/kustom/ganda, cakupan lintas sesi, data draf, mutasi, menu, autentikasi,
+dan pemasangan izin berulang. Fixture visual memakai `NUSA_CAPTURE_SUPERVISI=1`.
+
 ## Endpoint
 
 | Metode | Sufiks setelah `/api/v1/supervisi` | Fungsi |

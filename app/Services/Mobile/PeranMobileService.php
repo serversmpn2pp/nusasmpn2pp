@@ -22,6 +22,7 @@ class PeranMobileService
         'Laporan',
         'BK',
         'Kurikulum',
+        'Supervisi Akademik',
         'Sarpras',
         'Keamanan',
         'Kebersihan',

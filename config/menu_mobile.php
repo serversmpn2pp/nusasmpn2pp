@@ -68,6 +68,11 @@ return [
             ['kode' => 'perangkat-ajar-saya', 'label' => 'Perangkat Ajar Saya', 'inisial' => 'PS', 'subkelompok' => 'Perangkat Ajar', 'izin' => 'perangkat_ajar.upload', 'pegawai_only' => true, 'status' => 'tersedia', 'rute' => '/perangkat-ajar-saya'],
             ['kode' => 'pemeriksaan-perangkat-ajar', 'label' => 'Pemeriksaan Perangkat Ajar', 'inisial' => 'PP', 'subkelompok' => 'Perangkat Ajar', 'izin' => ['perangkat_ajar.lihat', 'perangkat_ajar.periksa'], 'status' => 'tersedia', 'rute' => '/pemeriksaan-perangkat-ajar'],
             ['kode' => 'jenis-perangkat-ajar', 'label' => 'Jenis Perangkat Ajar', 'inisial' => 'PA', 'subkelompok' => 'Perangkat Ajar', 'izin' => 'perangkat_ajar.jenis_kelola', 'status' => 'tersedia', 'rute' => '/jenis-perangkat-ajar'],
+            ['kode' => 'supervisi-akademik', 'label' => 'Supervisi Akademik', 'inisial' => 'SA', 'subkelompok' => 'Supervisi', 'supervisi_only' => true, 'status' => 'segera_hadir', 'api' => '/api/v1/supervisi'],
+            ['kode' => 'program-supervisi', 'label' => 'Program Supervisi', 'inisial' => 'SP', 'subkelompok' => 'Supervisi', 'supervisi_only' => true, 'status' => 'segera_hadir', 'api' => '/api/v1/supervisi/program'],
+            ['kode' => 'rekap-supervisi', 'label' => 'Rekap Supervisi', 'inisial' => 'SR', 'subkelompok' => 'Supervisi', 'supervisi_only' => true, 'status' => 'segera_hadir', 'api' => '/api/v1/supervisi/rekap'],
+            ['kode' => 'instrumen-supervisi', 'label' => 'Instrumen Supervisi', 'inisial' => 'SI', 'subkelompok' => 'Supervisi', 'supervisi_only' => true, 'status' => 'segera_hadir', 'api' => '/api/v1/supervisi/instrumen'],
+            ['kode' => 'supervisi-saya', 'label' => 'Supervisi Saya', 'inisial' => 'SP', 'subkelompok' => 'Supervisi', 'supervisi_only' => true, 'status' => 'segera_hadir', 'api' => '/api/v1/supervisi'],
         ],
     ],
     [

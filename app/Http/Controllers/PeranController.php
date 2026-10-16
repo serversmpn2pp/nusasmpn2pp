@@ -183,6 +183,7 @@ class PeranController extends Controller
             'Laporan',
             'BK',
             'Kurikulum',
+            'Supervisi Akademik',
             'Sarpras',
             'Keamanan',
             'Kebersihan',

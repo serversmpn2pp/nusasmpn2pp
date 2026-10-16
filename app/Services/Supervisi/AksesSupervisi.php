@@ -5,15 +5,22 @@ namespace App\Services\Supervisi;
 use App\Models\Izin;
 use App\Models\Pengguna;
 use App\Models\RiwayatSupervisi;
+use App\Models\SesiSupervisi;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
 class AksesSupervisi
 {
+    public function boleh(Pengguna $u): bool
+    {
+        return $u->aktif && ! $u->akunSiswa() && ! $u->akunOrangTua()
+            && ($u->akun_sistem || ($u->akunPegawai() && $u->pegawai?->aktif));
+    }
+
     public function staff(Pengguna $u): void
     {
-        abort_unless($u->aktif && ! $u->akunSiswa() && ! $u->akunOrangTua() && ($u->akun_sistem || $u->akunPegawai()), 403);
+        abort_unless($this->boleh($u), 403);
     }
 
     public function kelola(Pengguna $u, bool $instrumen = false): void
@@ -24,7 +31,39 @@ class AksesSupervisi
 
     public function global(Pengguna $u): bool
     {
-        return $u->memilikiIzin(['supervisi.lihat', 'supervisi.kelola']);
+        return $this->boleh($u) && $u->memilikiIzin(['supervisi.lihat', 'supervisi.kelola']);
+    }
+
+    public function hak(Pengguna $u): array
+    {
+        $boleh = $this->boleh($u);
+        $global = $this->global($u);
+
+        return ['kelola' => $boleh && $u->memilikiIzin('supervisi.kelola'),
+            'instrumen' => $boleh && $u->memilikiIzin('supervisi.instrumen_kelola'), 'monitor' => $global,
+            'pribadi' => $boleh && ! $global && $u->pegawai_id && $this->sesi(SesiSupervisi::query(), $u)->exists(),
+            'lingkup' => $global ? 'sekolah' : 'penugasan',
+            'tahap_tersedia' => ['jadwal', 'praobservasi', 'penilaian', 'pascaobservasi', 'rekap_laporan']];
+    }
+
+    public function menu(Pengguna $u): array
+    {
+        $hak = $this->hak($u);
+        $menu = [];
+        if ($hak['monitor']) {
+            $menu = [
+                ['kode' => 'supervisi-akademik', 'label' => 'Supervisi Akademik', 'route' => 'supervisi.index', 'active' => ['supervisi.index', 'supervisi.sesi.*'], 'initial' => 'SA', 'api' => '/api/v1/supervisi'],
+                ['kode' => 'program-supervisi', 'label' => 'Program Supervisi', 'route' => 'supervisi.program.index', 'active' => ['supervisi.program.*', 'supervisi.jadwal.*'], 'initial' => 'SP', 'api' => '/api/v1/supervisi/program'],
+                ['kode' => 'rekap-supervisi', 'label' => 'Rekap Supervisi', 'route' => 'supervisi.rekap.index', 'active' => ['supervisi.rekap.*', 'supervisi.laporan.*'], 'initial' => 'SR', 'api' => '/api/v1/supervisi/rekap'],
+            ];
+        } elseif ($hak['pribadi']) {
+            $menu[] = ['kode' => 'supervisi-saya', 'label' => 'Supervisi Saya', 'route' => 'supervisi.index', 'active' => ['supervisi.*'], 'initial' => 'SP', 'api' => '/api/v1/supervisi'];
+        }
+        if ($hak['instrumen']) {
+            $menu[] = ['kode' => 'instrumen-supervisi', 'label' => 'Instrumen Supervisi', 'route' => 'supervisi.instrumen.index', 'active' => ['supervisi.instrumen.*'], 'initial' => 'SI', 'api' => '/api/v1/supervisi/instrumen'];
+        }
+
+        return array_map(fn ($item) => [...$item, 'izin' => null, 'subgroup' => 'Supervisi'], $menu);
     }
 
     public function sesi(Builder $query, Pengguna $u): Builder

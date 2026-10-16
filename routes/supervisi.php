@@ -4,10 +4,12 @@ use App\Http\Controllers\LaporanSupervisiController;
 use App\Http\Controllers\PascaobservasiSupervisiController;
 use App\Http\Controllers\PengisianSupervisiController;
 use App\Http\Controllers\SupervisiController;
+use App\Http\Middleware\PastikanAksesSupervisi;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('supervisi')->name('supervisi.')->middleware('akun_pegawai')->controller(SupervisiController::class)->group(function () {
+Route::prefix('supervisi')->name('supervisi.')->middleware(['akun_pegawai', PastikanAksesSupervisi::class])->controller(SupervisiController::class)->group(function () {
     Route::get('/', 'index')->name('index');
+    Route::get('/akses', 'akses')->name('akses');
     Route::controller(LaporanSupervisiController::class)->group(function () {
         Route::get('/rekap', 'index')->name('rekap.index');
         Route::get('/rekap/cetak', 'cetakRekap')->middleware('throttle:10,1')->name('rekap.cetak');

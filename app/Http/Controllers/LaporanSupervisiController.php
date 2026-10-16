@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SesiSupervisi;
+use App\Services\Supervisi\AksesSupervisi;
 use App\Services\Supervisi\LaporanSupervisiService;
 use App\Services\Supervisi\RekapSupervisiService;
 use App\Support\PenulisExcelSupervisi;
@@ -16,6 +17,7 @@ class LaporanSupervisiController extends Controller
     public function index(Request $r)
     {
         $data = $this->rekap->bangun($r->user(), $r->query());
+        $data['hak_akses'] = app(AksesSupervisi::class)->hak($r->user());
         $page = (int) ($data['filter']['halaman'] ?? 1);
         $data['daftar'] = (new LengthAwarePaginator($data['semua']->forPage($page, 20)->values(), $data['semua']->count(), 20, $page, ['path' => $r->url(), 'pageName' => 'halaman']))->appends(collect($data['filter'])->except('halaman')->all());
         unset($data['semua']);
