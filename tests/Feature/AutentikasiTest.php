@@ -11,7 +11,10 @@ class AutentikasiTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertOk();
-        $response->assertSee('Masuk ke aplikasi');
+        $response->assertSee('Masuk ke NUSA');
+        $response->assertSee('placeholder="NIP/NISN/ORT-NISN"', false);
+        $response->assertSee('images/nusa/login/sekolah-sketsa.webp', false);
+        $response->assertDontSee('Siswa menggunakan NISN');
         $response->assertSee('aria-controls="password"', false);
         $response->assertSee('aria-label="Tampilkan kata sandi"', false);
         $response->assertSee('Caps Lock aktif.');

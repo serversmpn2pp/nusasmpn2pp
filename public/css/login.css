@@ -1,0 +1,194 @@
+.nusa-login {
+    --blue: #15477a;
+    --yellow: #f1c40f;
+    --teal: #0f766e;
+    --text: #172c43;
+    --muted: #607184;
+    --line: #dce3ec;
+    margin: 0;
+    background: #fff;
+    color: var(--text);
+    color-scheme: light;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: 0;
+}
+
+.nusa-login *, .nusa-login *::before, .nusa-login *::after { box-sizing: border-box; }
+.nusa-login button, .nusa-login input { font: inherit; }
+.nusa-login button, .nusa-login a, .nusa-login input { -webkit-tap-highlight-color: transparent; outline-offset: 4px; }
+.nusa-login button { touch-action: manipulation; }
+.nusa-login :focus-visible { outline: 3px solid var(--teal); }
+.nusa-login [hidden] { display: none !important; }
+.nusa-login .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+.nusa-login .login-page {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow: clip;
+    background: #fff;
+}
+.nusa-login .brand-rule {
+    position: absolute;
+    z-index: 3;
+    inset: 0 0 auto;
+    height: 4px;
+    background: linear-gradient(90deg, var(--blue) 0 68%, var(--teal) 68% 94%, var(--yellow) 94% 100%);
+}
+.nusa-login .campus {
+    position: absolute;
+    z-index: -1;
+    inset: auto 0 0;
+    height: 720px;
+    max-height: 85%;
+    background: #fff;
+    opacity: .88;
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 58%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 58%);
+    pointer-events: none;
+}
+.nusa-login .campus img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 61%; }
+.nusa-login .campus::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 20%, #ffffffa6 38%, #ffffffd9 45% 55%, #ffffffa6 62%, transparent 80%);
+    mask-image: linear-gradient(to bottom, #000 0% 78%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0% 78%, transparent 100%);
+}
+.nusa-login .page-header { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 32px 52px; }
+.nusa-login .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.nusa-login .brand-logo { display: block; flex: 0 0 auto; object-fit: contain; }
+.nusa-login .brand-copy { display: grid; gap: 0; min-width: 0; }
+.nusa-login .brand-name { color: var(--blue); font-size: 27px; line-height: 1.15; font-weight: 750; }
+.nusa-login .brand-dot { color: var(--teal); }
+.nusa-login .brand-school { padding-top: 4px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.nusa-login .header-caption { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.nusa-login .header-caption > span { height: 13px; width: 3px; background: var(--teal); }
+.nusa-login .page-main { flex: 1; display: grid; place-items: center; padding: 24px 24px 40px; }
+.nusa-login .login-content { width: 100%; max-width: 388px; min-width: 0; }
+.nusa-login .welcome { text-align: center; margin-bottom: 30px; }
+.nusa-login .welcome-accent { height: 4px; width: 32px; margin: 0 auto 18px; border-radius: 1px; background: var(--yellow); }
+.nusa-login h1 { margin: 0; color: var(--blue); font-size: 32px; font-weight: 700; line-height: 1.25; }
+.nusa-login .welcome p { margin: 13px 0 0; font-size: 14px; color: var(--muted); line-height: 1.65; }
+.nusa-login .field { margin: 0 0 22px; }
+.nusa-login .field > label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 650; }
+.nusa-login .input-wrap, .nusa-login .password-control { position: relative; }
+.nusa-login .input {
+    display: block;
+    width: 100%;
+    height: 52px;
+    min-width: 0;
+    padding: 12px 14px 12px 44px;
+    border: 2px solid #6f89a4;
+    border-radius: 8px;
+    background: #f6f9fc;
+    box-shadow: 0 2px 6px #15477a0a;
+    color: var(--text);
+    font-size: 14px;
+    transition: border-color 150ms, box-shadow 150ms;
+}
+.nusa-login .input::placeholder { color: #607184; opacity: 1; }
+.nusa-login .input:hover:not(:focus):not(.is-invalid) { border-color: #486d92; }
+.nusa-login .input:focus { border-color: var(--teal); background: #fff; outline: none; box-shadow: 0 0 0 3px #0f766e26; }
+.nusa-login .login-icon { display: inline-block; width: 18px; height: 18px; flex: 0 0 auto; background-color: currentColor; mask: var(--login-icon) center / contain no-repeat; -webkit-mask: var(--login-icon) center / contain no-repeat; }
+.nusa-login .login-icon-user { --login-icon: url("../images/nusa/login/user-round.svg"); }
+.nusa-login .login-icon-arrow { --login-icon: url("../images/nusa/login/arrow-right.svg"); }
+.nusa-login .login-icon-help { --login-icon: url("../images/nusa/login/circle-help.svg"); }
+.nusa-login .login-icon-download { --login-icon: url("../images/nusa/login/download.svg"); }
+.nusa-login .field-icon { position: absolute; left: 15px; top: 17px; color: #466b8c; pointer-events: none; }
+.nusa-login .input-wrap:focus-within .field-icon { color: var(--teal); }
+.nusa-login .password-field { margin-bottom: 2px; }
+.nusa-login .password-control .input { padding-left: 44px; padding-right: 52px; }
+.nusa-login .password-control::before { content: ""; position: absolute; left: 15px; top: 17px; width: 18px; height: 18px; background: #466b8c; mask: url("../images/nusa/login/lock-keyhole.svg") center / contain no-repeat; -webkit-mask: url("../images/nusa/login/lock-keyhole.svg") center / contain no-repeat; pointer-events: none; }
+.nusa-login .password-control:focus-within::before { background: var(--teal); }
+.nusa-login .password-toggle { top: 4px; right: 4px; width: 44px; height: 44px; transform: none; border-radius: 5px; color: var(--teal); }
+.nusa-login .password-toggle-icon { width: 19px; height: 19px; stroke-width: 1.8; }
+.nusa-login .password-toggle:hover { background: #eff8f6; color: var(--teal); }
+.nusa-login .password-toggle:focus-visible { outline: 3px solid var(--teal); outline-offset: 1px; }
+.nusa-login .password-caps-warning { margin-top: 8px; color: #805900; font-size: 12px; font-weight: 600; }
+.nusa-login .remember-row { margin: 8px 0 16px; }
+.nusa-login .remember { display: inline-flex; gap: 9px; min-height: 44px; align-items: center; cursor: pointer; font-size: 13px; color: #435970; }
+.nusa-login .remember input { width: 17px; height: 17px; margin: 0; accent-color: var(--teal); cursor: pointer; }
+.nusa-login .submit-button { position: relative; display: flex; align-items: center; justify-content: center; gap: 11px; width: 100%; min-height: 52px; padding: 12px 20px; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; font-size: 14px; font-weight: 650; cursor: pointer; box-shadow: 0 3px 6px #15477a12; transition: background 150ms, box-shadow 150ms; }
+.nusa-login .submit-button:hover { background: #103b67; box-shadow: 0 4px 10px #15477a22; }
+.nusa-login .submit-button:active { background: #0e3258; }
+.nusa-login .submit-button:disabled { cursor: wait; }
+.nusa-login .spinner { display: none; width: 17px; height: 17px; border: 2px solid #ffffff55; border-top-color: #fff; border-radius: 50%; animation: login-spin 800ms linear infinite; }
+.nusa-login .submit-button.is-loading .submit-arrow { display: none; }
+.nusa-login .submit-button.is-loading .spinner { display: block; }
+@keyframes login-spin { to { transform: rotate(360deg); } }
+.nusa-login .input.is-invalid { border-color: #b42318; }
+.nusa-login .input.is-invalid:focus { box-shadow: 0 0 0 3px #b4231819; }
+.nusa-login .error-text { margin: 8px 0 0; color: #a3261d; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.nusa-login .login-alert { margin: 0 0 20px; padding: 12px 14px; border: 1px solid #f5c4c0; border-radius: 8px; background: #fff2f0; color: #a3261d; font-size: 13px; overflow-wrap: anywhere; }
+.nusa-login .install-action { display: flex; justify-content: center; margin-top: 2px; }
+.nusa-login .install-button { display: inline-flex; gap: 7px; align-items: center; justify-content: center; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--teal); font-size: 12px; font-weight: 600; cursor: pointer; }
+.nusa-login .install-button .login-icon { width: 17px; height: 17px; }
+.nusa-login .install-button:hover { color: var(--blue); }
+.nusa-login .install-button:hover .install-label { text-decoration: underline; text-underline-offset: 3px; }
+.nusa-login .install-status { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; text-align: center; }
+.nusa-login .support { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 26px; color: var(--muted); text-align: center; }
+.nusa-login .support > .login-icon { width: 17px; height: 17px; }
+.nusa-login .support p { margin: 0; font-size: 12px; line-height: 1.7; text-align: center; }
+.nusa-login .support p span { color: var(--teal); font-weight: 600; }
+.nusa-login .legal { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 12px; margin-top: 20px; }
+.nusa-login .legal a { display: inline-flex; align-items: center; min-height: 44px; color: #52677b; font-size: 11px; text-decoration: none; text-underline-offset: 3px; }
+.nusa-login .legal a:hover { color: var(--teal); text-decoration: underline; }
+.nusa-login .legal-divider { height: 10px; width: 1px; background: #a8b7c4; }
+.nusa-login .page-footer { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 26px 52px 30px; text-align: center; background: linear-gradient(to bottom, #ffffff00, #ffffffd9 28%, #fffffff2); }
+.nusa-login .page-footer p { margin: 0; }
+.nusa-login .tagline { max-width: 760px; font-size: 24px; font-weight: 650; line-height: 1.5; color: var(--blue); text-wrap: balance; }
+.nusa-login .tagline span { padding: 0 3px 2px; color: var(--teal); font-weight: 750; box-shadow: inset 0 -.48em 0 #f1c40fb3; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.nusa-login .copyright { color: #52677b; font-size: 11px; }
+
+@media (min-width: 1800px) {
+    .nusa-login .page-header, .nusa-login .page-footer { padding-left: 80px; padding-right: 80px; }
+}
+@media (max-width: 1023px) {
+    .nusa-login .page-header { padding: 28px 32px; }
+    .nusa-login .page-footer { padding: 24px 32px; }
+    .nusa-login .campus { height: 620px; }
+}
+@media (max-width: 720px) {
+    .nusa-login .page-header { justify-content: center; padding: 30px 24px 20px; }
+    .nusa-login .brand { gap: 11px; }
+    .nusa-login .brand-logo { width: 46px; height: 46px; }
+    .nusa-login .brand-name { font-size: 25px; }
+    .nusa-login .brand-school { font-size: 11px; }
+    .nusa-login .header-caption { display: none; }
+    .nusa-login .page-main { padding: 28px 24px 22px; }
+    .nusa-login .welcome { margin-bottom: 26px; }
+    .nusa-login .welcome-accent { margin-bottom: 16px; }
+    .nusa-login h1 { font-size: 28px; }
+    .nusa-login .welcome p { font-size: 13px; margin-top: 11px; }
+    .nusa-login .page-footer { gap: 9px; padding: 26px 20px 24px; }
+    .nusa-login .tagline { max-width: 270px; font-size: 12px; }
+    .nusa-login .copyright { font-size: 10px; }
+    .nusa-login .campus { height: 480px; max-height: 65%; opacity: .70; }
+    .nusa-login .campus::after { background: #ffffffb3; mask-image: linear-gradient(to bottom, #000 0% 70%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, #000 0% 70%, transparent 100%); }
+    .nusa-login .campus img { object-position: center 66%; }
+}
+@media (max-width: 350px) {
+    .nusa-login .page-main { padding-left: 20px; padding-right: 20px; }
+    .nusa-login .legal { column-gap: 9px; }
+    .nusa-login .legal a { font-size: 10px; }
+    .nusa-login .brand-school { font-size: 10px; }
+}
+@media (max-height: 740px) and (min-width: 721px) {
+    .nusa-login .page-header { padding-top: 21px; padding-bottom: 20px; }
+    .nusa-login .page-main { padding-top: 12px; padding-bottom: 12px; }
+    .nusa-login .welcome { margin-bottom: 22px; }
+    .nusa-login .welcome-accent { margin-bottom: 12px; }
+    .nusa-login .support { margin-top: 20px; }
+    .nusa-login .legal { margin-top: 12px; }
+    .nusa-login .page-footer { padding-top: 18px; padding-bottom: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .nusa-login *, .nusa-login *::before, .nusa-login *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
