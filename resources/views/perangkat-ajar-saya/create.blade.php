@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Unggah Perangkat Ajar - NUSA')
 
@@ -61,7 +62,7 @@
             </aside>
 
             <div class="section-stack">
-                <section class="panel panel-pad">
+                <section class="panel panel-pad feature-section">
                     <h2 class="panel-title">Informasi Dokumen</h2>
                     <div class="form-grid">
                         <input type="hidden" name="tahun_pelajaran_id" value="{{ $tahunPelajaranId }}">

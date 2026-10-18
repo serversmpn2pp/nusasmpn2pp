@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Aspirasi & Pengaduan - NUSA')
 @section('content')
 @include('pengaduan-humas._style')
@@ -6,7 +7,7 @@
     <div class="page-header"><div><p class="eyebrow">Humas / Layanan Internal</p><h1 class="page-title">Aspirasi & Pengaduan</h1></div>@izin('pengaduan_humas.kelola')<a class="button button-primary" href="{{ route('pengaduan-humas.create') }}">Catat tiket</a>@endizin</div>
     @include('agenda-humas._messages')
     <div class="agenda-metrics">@foreach (['aktif' => 'Tiket aktif', 'verifikasi' => 'Menunggu verifikasi', 'terlambat' => 'Lewat batas waktu', 'selesai' => 'Selesai'] as $key => $label)<div class="agenda-metric @if($key === 'terlambat') agenda-metric--warning @endif"><span>{{ $label }}</span><strong>{{ $statistik[$key] }}</strong></div>@endforeach</div>
-    <section class="agenda-section"><form method="GET" class="pengaduan-filter">
+    <section class="agenda-section"><form method="GET" class="feature-filter pengaduan-filter">
         <div class="field span-2"><label for="kata_kunci">Cari judul atau nomor tiket</label><input class="input" id="kata_kunci" name="kata_kunci" maxlength="120" value="{{ $filter['kata_kunci'] ?? '' }}" placeholder="Judul atau HM-2026-000001"></div>
         @foreach (['status' => ['Status', ['aktif' => 'Semua tiket aktif', 'semua' => 'Semua status'] + \App\Models\PengaduanHumas::STATUS], 'jenis' => ['Jenis', ['' => 'Semua jenis'] + \App\Models\PengaduanHumas::JENIS], 'kategori' => ['Kategori', ['' => 'Semua kategori'] + \App\Models\PengaduanHumas::KATEGORI], 'prioritas' => ['Prioritas', ['' => 'Semua prioritas'] + \App\Models\PengaduanHumas::PRIORITAS], 'tugas' => ['Penugasan', ['semua' => 'Semua dalam akses saya', 'saya' => 'Ditugaskan kepada saya']], 'batas' => ['Batas waktu', ['' => 'Semua batas waktu', 'lewat' => 'Sudah lewat']]] as $name => [$label, $options])<div class="field"><label for="{{ $name }}">{{ $label }}</label><select class="select" id="{{ $name }}" name="{{ $name }}">@foreach ($options as $value => $text)<option value="{{ $value }}" @selected(($filter[$name] ?? ($name === 'status' ? 'aktif' : ($name === 'tugas' ? 'semua' : ''))) === $value)>{{ $text }}</option>@endforeach</select></div>@endforeach
         <div class="field"><label for="mulai">Diterima mulai</label><input class="input" id="mulai" name="mulai" type="date" value="{{ $filter['mulai'] ?? '' }}"></div><div class="field"><label for="sampai">Diterima sampai</label><input class="input" id="sampai" name="sampai" type="date" value="{{ $filter['sampai'] ?? '' }}"></div>

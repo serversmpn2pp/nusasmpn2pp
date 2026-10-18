@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Perangkat Ajar Saya - NUSA')
 
@@ -110,7 +111,7 @@
         <div class="alert alert-danger">Akun ini belum terhubung dengan data pegawai. Hubungi administrator agar perangkat ajar dapat diunggah.</div>
     @endunless
 
-    <form action="{{ route('perangkat-ajar-saya.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('perangkat-ajar-saya.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="teaching-document-filter">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -162,7 +163,7 @@
     </div>
 
     @if ($perangkatTanpaTingkat->isNotEmpty())
-        <section class="panel panel-pad" style="margin-bottom: 20px;">
+        <section class="panel panel-pad feature-section" style="margin-bottom: 20px;">
             <h2 class="panel-title">Dokumen lama perlu ditentukan tingkatnya</h2>
             <p class="help-text" style="margin-top: 6px;">Dokumen berikut dibuat sebelum perangkat ajar dipisahkan per tingkat. Pilih tingkat yang benar agar masuk ke perhitungan kelengkapan.</p>
             <div class="actions" style="margin-top: 14px;">

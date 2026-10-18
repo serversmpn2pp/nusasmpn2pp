@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Susun Paket Soal Terpusat - NUSA')
 
@@ -137,7 +138,7 @@
     </div>
 
     @if ($bolehKelola && $jadwal->kegiatanUjianCbt?->jenisUjianCbt?->kode === 'SIMULASI_CBT')
-        <section class="panel panel-pad" style="margin-bottom:18px;">
+        <section class="panel panel-pad feature-section" style="margin-bottom:18px;">
             <h2 class="panel-title">Simulasi CBT</h2>
             <p class="help-text">Paket bawaan 12 soal umum: masing-masing dua pilihan ganda, pilihan ganda kompleks, benar-salah, menjodohkan, isian singkat, dan numerik. Durasi 20 menit. Tanpa uraian, upload file, dan nilai akademik.</p>
             <div class="actions" style="margin-top:14px;">

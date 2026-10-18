@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Pengajuan Barang - NUSA')
 
@@ -28,7 +29,7 @@
 
     @if (session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 
-    <form action="{{ route('pengajuan-barang.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('pengajuan-barang.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="submission-filter">
             <div class="field"><label for="kata_kunci">Cari pengajuan</label><input id="kata_kunci" name="kata_kunci" type="search" value="{{ $kataKunci }}" class="input" placeholder="Nomor, pegawai, atau barang"></div>
             <div class="field"><label for="jenis">Jenis</label><select id="jenis" name="jenis" class="select"><option value="semua">Semua jenis</option>@foreach ($daftarJenis as $nilai => $label)<option value="{{ $nilai }}" @selected($jenis === $nilai)>{{ $label }}</option>@endforeach</select></div>

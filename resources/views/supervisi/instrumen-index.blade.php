@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'supervisi')
 @section('title','Instrumen Supervisi - NUSA')
 @section('content')
 <div class="sp-workspace"><div class="page-header"><div><p class="eyebrow">Supervisi Akademik</p><h1 class="page-title">Instrumen supervisi</h1></div><a class="button button-primary" href="{{ route('supervisi.instrumen.create') }}">Tambah instrumen</a></div>@include('supervisi._style')

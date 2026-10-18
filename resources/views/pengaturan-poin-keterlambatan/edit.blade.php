@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Atur Poin Presensi - NUSA')
 
@@ -48,7 +49,7 @@
         @csrf
         @method('PUT')
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div class="late-settings-head">
                 <div>
                     <h2 class="panel-title">Otomatisasi presensi</h2>
@@ -60,7 +61,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad" style="margin-top: 18px;">
+        <section class="panel panel-pad feature-section" style="margin-top: 18px;">
             <input type="hidden" name="otomatis_langsung" value="0">
             <label class="late-toggle" for="otomatis_langsung">
                 <input id="otomatis_langsung" type="checkbox" name="otomatis_langsung" value="1" @checked(old('otomatis_langsung', $pengaturan->otomatis_langsung))>
@@ -77,7 +78,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad" id="legacy-late-settings" style="margin-top: 18px;">
+        <section class="panel panel-pad feature-section" id="legacy-late-settings" style="margin-top: 18px;">
             <h2 class="panel-title">Rentang menit dan poin</h2>
             <p class="help-text">Gunakan 0 poin sebagai toleransi. Rentang terakhir tidak memiliki batas akhir.</p>
 

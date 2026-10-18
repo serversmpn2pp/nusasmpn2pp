@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Pemeriksaan & Pengesahan Laporan - NUSA')
 
@@ -67,7 +68,7 @@
         <a class="panel verification-stat {{ $antrean==='selesai'?'active':'' }}" href="{{ route('pusat-verifikasi-pelanggaran.index',['antrean'=>'selesai']) }}"><p class="verification-stat-label">Selesai diperiksa</p><p class="verification-stat-value">{{ $ringkasan['selesai'] }}</p></a>
     </div>
 
-    <form method="GET" class="panel panel-pad" style="margin-bottom:20px">
+    <form method="GET" class="feature-filter panel panel-pad" style="margin-bottom:20px">
         <div class="verification-filter">
             <div class="field"><label for="kata_kunci">Cari laporan</label><input id="kata_kunci" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nomor laporan, siswa, NISN, atau kelas"></div>
             <div class="field"><label for="antrean">Jenis antrean</label><select id="antrean" name="antrean" class="select">@foreach($daftarAntrean as $kode=>$label)<option value="{{ $kode }}" @selected($antrean===$kode)>{{ $label }}</option>@endforeach</select></div>

@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Akademik</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Kelas</h1>
         </div>
 
@@ -34,10 +34,10 @@
     </div>
 
     @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
+        <x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>
     @endif
 
-    <form action="{{ route('kelas.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('kelas.index') }}" method="GET" class="panel panel-pad ui-filter" style="margin-bottom: 24px;">
         <div class="filter-grid filter-grid-wide">
             <div class="field">
                 <label for="kata_kunci">Cari kelas</label>
@@ -73,16 +73,16 @@
     </form>
 
     <section class="panel">
-        <div class="desktop-only table-wrap">
-            <table class="employee-table">
+        <div class="school-table-heading"><h2 class="panel-title">Daftar kelas</h2><span class="school-table-count">{{ $kelas->total() }} hasil</span></div>
+        <div class="desktop-only table-wrap" tabindex="0" role="region" aria-label="Daftar kelas">
+            <table class="employee-table school-table--kelas">
                 <thead>
                     <tr>
-                        <th>Kelas</th>
-                        <th>Tahun pelajaran</th>
-                        <th>Wali kelas</th>
-                        <th>Anggota</th>
-                        <th>Status</th>
-                        <th class="text-right">Aksi</th>
+                        <th scope="col">Kelas</th>
+                        <th scope="col">Wali kelas</th>
+                        <th scope="col">Anggota</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,10 +91,7 @@
                             <td>
                                 <p class="person-name">{{ $item->nama }}</p>
                                 <p class="person-meta">Tingkat {{ $item->tingkat ?: '-' }}{{ $item->kapasitas ? ' · kapasitas ' . $item->kapasitas : '' }}</p>
-                            </td>
-                            <td>
-                                <div>{{ $item->tahunPelajaran?->nama ?: '-' }}</div>
-                                <div class="muted">{{ $item->tahunPelajaran?->aktif ? 'Tahun aktif' : 'Tahun nonaktif' }}</div>
+                                <p class="person-meta">{{ $item->tahunPelajaran?->nama ?: '-' }} &middot; {{ $item->tahunPelajaran?->aktif ? 'Tahun aktif' : 'Tahun nonaktif' }}</p>
                             </td>
                             <td>{{ $item->waliKelas?->nama_lengkap ?: '-' }}</td>
                             <td>{{ $item->anggota_kelas_count }} siswa</td>
@@ -107,17 +104,17 @@
                             </td>
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
-                                    <a href="{{ route('kelas.show', $item) }}" class="button button-muted">Lihat</a>
-                                    <a href="{{ route('penempatan-siswa.index', ['tahun_pelajaran_id' => $item->tahun_pelajaran_id, 'kelas_id' => $item->id]) }}" class="button button-muted">Anggota</a>
+                                    <x-ui.action-link :href="route('kelas.show', $item)" icon="eye" label="Lihat" :context="$item->nama" variant="muted" />
+                                    <x-ui.action-link :href="route('penempatan-siswa.index', ['tahun_pelajaran_id' => $item->tahun_pelajaran_id, 'kelas_id' => $item->id])" icon="users" label="Anggota" :context="$item->nama" variant="muted" />
                                     @izin('kelas.kelola')
-                                        <a href="{{ route('kelas.edit', $item) }}" class="button button-dark">Edit</a>
+                                        <x-ui.action-link :href="route('kelas.edit', $item)" icon="square-pen" label="Edit" :context="$item->nama" variant="dark" />
                                     @endizin
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="empty-state">Belum ada kelas.</td>
+                            <td colspan="5" class="ui-empty-cell"><x-ui.empty-state title="Belum ada kelas." description="Tidak ada data yang sesuai dengan pilihan saat ini." icon="school" /></td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -160,7 +157,7 @@
                     </div>
                 </article>
             @empty
-                <div class="empty-state">Belum ada kelas.</div>
+                <x-ui.empty-state title="Belum ada kelas." description="Tidak ada data yang sesuai dengan pilihan saat ini." icon="school" />
             @endforelse
         </div>
     </section>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', ($tahapAktif === 5 ? 'Penetapan Ruang' : ($tahapAktif === 6 ? 'Pembagian Peserta' : 'Jadwal Ujian')).' - NUSA')
 

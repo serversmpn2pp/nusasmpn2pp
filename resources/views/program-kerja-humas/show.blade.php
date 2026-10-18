@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Rincian Program Kerja Humas - NUSA')
 @section('program-actions')
     <a class="button button-muted" href="{{ route('program-kerja-humas.index') }}">Daftar program</a>

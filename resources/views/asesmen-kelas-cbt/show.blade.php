@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Detail Asesmen Kelas - NUSA')
 
@@ -42,7 +43,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="section-heading">
                     <div><h2 class="panel-title">Soal asesmen</h2><p class="help-text">Bank soal otomatis disaring sesuai mapel dan tingkat.</p></div>
                     <a href="{{ route('ujian-cbt.soal.edit', $ujianCbt) }}" class="button button-primary">{{ $jumlahSoal ? 'Ubah pilihan soal' : 'Pilih soal' }}</a>
@@ -52,7 +53,7 @@
                 @endunless
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="section-heading">
                     <div><h2 class="panel-title">Pelaksanaan dan hasil</h2><p class="help-text">Pantau pengerjaan, koreksi jawaban, lalu masukkan hasil ke nilai siswa.</p></div>
                     <div class="actions">
@@ -63,7 +64,7 @@
                 </div>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi asesmen</h2>
                 <dl class="detail-grid" style="margin-top: 16px;">
                     <div class="detail-item"><dt>Dibuka</dt><dd>{{ $ujianCbt->tanggal_mulai?->format('d-m-Y H:i') ?: '-' }}</dd></div>
@@ -74,7 +75,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Kelas dan tujuan nilai</h2>
                 <div class="table-wrap" style="margin-top: 14px;">
                     <table class="employee-table">

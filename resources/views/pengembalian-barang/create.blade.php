@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Catat Pengembalian Barang - NUSA')
 
@@ -67,7 +68,7 @@
         </div>
     @endif
 
-    <section class="panel panel-pad" style="margin-bottom: 18px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 18px;">
         <p class="eyebrow">{{ $peminjamanBarang->nomor_peminjaman }}</p>
         <h2 class="panel-title">{{ $peminjamanBarang->namaPeminjam() }}</h2>
         <p class="help-text" style="margin-top: 8px;">{{ $peminjamanBarang->identitasPeminjam() }}. Centang barang secara manual atau scan barcode untuk memilihnya.</p>
@@ -76,7 +77,7 @@
     <form action="{{ route('pengembalian-barang.store', $peminjamanBarang) }}" method="POST">
         @csrf
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div class="return-scan-grid">
                 <div class="field">
                     <label for="kode_pengembalian_scan">Scan barcode barang</label>
@@ -159,7 +160,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad" style="margin-top: 18px;">
+        <section class="panel panel-pad feature-section" style="margin-top: 18px;">
             <div class="form-grid">
                 <div class="field">
                     <label for="tanggal_pengembalian">Tanggal pengembalian</label>

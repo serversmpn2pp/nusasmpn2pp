@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Database sekolah</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Data siswa</h1>
         </div>
 
@@ -37,16 +37,16 @@
     </div>
 
     @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
+        <x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>
     @endif
 
     @if (session('ringkasan_import'))
         @php
             $ringkasan = session('ringkasan_import');
         @endphp
-        <div class="panel panel-pad" style="margin-bottom: 20px;">
+        <div class="panel panel-pad school-import-summary" style="margin-bottom: 20px;">
             <h2 class="panel-title">Ringkasan import</h2>
-            <div class="stats-grid" style="margin: 16px 0 0;">
+            <div class="stats-grid school-inline-stats" style="margin: 16px 0 0;">
                 <div class="panel stat">
                     <p class="stat-label">Dibaca</p>
                     <p class="stat-value">{{ $ringkasan['dibaca'] }}</p>
@@ -94,7 +94,7 @@
         </div>
     @endif
 
-    <form action="{{ route('siswa.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('siswa.index') }}" method="GET" class="panel panel-pad ui-filter" style="margin-bottom: 24px;">
         <div class="filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari siswa</label>
@@ -118,16 +118,16 @@
     </form>
 
     <section class="panel">
-        <div class="desktop-only table-wrap">
-            <table class="employee-table">
+        <div class="school-table-heading"><h2 class="panel-title">Daftar siswa</h2><span class="school-table-count">{{ $siswa->total() }} hasil</span></div>
+        <div class="desktop-only table-wrap" tabindex="0" role="region" aria-label="Daftar siswa">
+            <table class="employee-table school-table--people">
                 <thead>
                     <tr>
-                        <th>Siswa</th>
-                        <th>Identitas</th>
-                        <th>Data pribadi</th>
-                        <th>Orang tua</th>
-                        <th>Status</th>
-                        <th class="text-right">Aksi</th>
+                        <th scope="col">Siswa</th>
+                        <th scope="col">Identitas</th>
+                        <th scope="col">Orang tua</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -145,16 +145,13 @@
                                     <div>
                                         <p class="person-name">{{ $item->nama_lengkap }}</p>
                                         <p class="person-meta">{{ $item->jenis_kelamin === 'L' ? 'Laki-laki' : ($item->jenis_kelamin === 'P' ? 'Perempuan' : '-') }}</p>
+                                        <p class="person-meta">{{ $item->tempat_lahir ?: '-' }}{{ $item->tanggal_lahir ? ', '.$item->tanggal_lahir->format('d-m-Y') : '' }}</p>
                                     </div>
                                 </div>
                             </td>
                             <td>
                                 <div>NIS: {{ $item->nis ?: '-' }}</div>
                                 <div class="muted">NISN: {{ $item->nisn ?: '-' }}</div>
-                            </td>
-                            <td>
-                                <div>{{ $item->tempat_lahir ?: '-' }}</div>
-                                <div class="muted">{{ $item->tanggal_lahir ? $item->tanggal_lahir->format('d-m-Y') : '-' }}</div>
                             </td>
                             <td>
                                 <div>Ayah: {{ $item->nama_ayah ?: '-' }}</div>
@@ -169,16 +166,16 @@
                             </td>
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
-                                    <a href="{{ route('siswa.show', $item) }}" class="button button-muted">Lihat</a>
+                                    <x-ui.action-link :href="route('siswa.show', $item)" icon="eye" label="Lihat" :context="$item->nama_lengkap" variant="muted" />
                                     @izin('siswa.kelola')
-                                        <a href="{{ route('siswa.edit', $item) }}" class="button button-dark">Edit</a>
+                                        <x-ui.action-link :href="route('siswa.edit', $item)" icon="square-pen" label="Edit" :context="$item->nama_lengkap" variant="dark" />
                                     @endizin
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="empty-state">Belum ada data siswa.</td>
+                            <td colspan="5" class="ui-empty-cell"><x-ui.empty-state title="Belum ada data siswa." description="Tidak ada data yang sesuai dengan pilihan saat ini." icon="users" /></td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -232,7 +229,7 @@
                     </div>
                 </article>
             @empty
-                <div class="empty-state">Belum ada data siswa.</div>
+                <x-ui.empty-state title="Belum ada data siswa." description="Tidak ada data yang sesuai dengan pilihan saat ini." icon="users" />
             @endforelse
         </div>
     </section>

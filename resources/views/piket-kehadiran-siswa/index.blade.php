@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Piket Kehadiran Siswa - NUSA')
 
@@ -29,7 +30,7 @@
         <div class="panel stat inactive"><p class="stat-label">Belum scan</p><p class="stat-value">{{ $ringkasan['belum_scan'] }}</p></div>
     </div>
 
-    <form action="{{ route('piket-kehadiran-siswa.index') }}" method="GET" class="panel panel-pad" style="margin-bottom:18px;" data-auto-filter>
+    <form action="{{ route('piket-kehadiran-siswa.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom:18px;" data-auto-filter>
         <div class="filter-grid">
             <div class="field"><label for="kelas_id">Kelas</label><select id="kelas_id" name="kelas_id" class="select" data-auto-submit><option value="">Semua kelas</option>@foreach ($kelas as $item)<option value="{{ $item->id }}" @selected((int) $kelasId === (int) $item->id)>{{ $item->nama }}</option>@endforeach</select></div>
             <div class="field"><label for="status">Status</label><select id="status" name="status" class="select" data-auto-submit><option value="semua" @selected($status === 'semua')>Semua status</option><option value="belum_scan" @selected($status === 'belum_scan')>Belum scan</option><option value="hadir" @selected($status === 'hadir')>Hadir</option><option value="sakit" @selected($status === 'sakit')>Sakit</option><option value="izin" @selected($status === 'izin')>Izin</option><option value="alfa" @selected($status === 'alfa')>Alfa</option></select></div>

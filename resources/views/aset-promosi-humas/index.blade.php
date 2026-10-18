@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Bank Aset Promosi - NUSA')
 @section('content')
 @include('aset-promosi-humas._style')
@@ -6,7 +7,7 @@
     <div class="page-header"><div><p class="eyebrow">Humas</p><h1 class="page-title">Bank Aset Promosi</h1></div>@izin('aset_promosi_humas.kelola')<a class="button button-primary" href="{{ route('aset-promosi-humas.create') }}">Tambah aset</a>@endizin</div>
     @include('agenda-humas._messages')
     <div class="agenda-metrics">@foreach (['aktif' => 'Aset aktif', 'foto' => 'Foto & logo', 'tautan' => 'Tautan aktif', 'arsip' => 'Diarsipkan'] as $kode => $label)<div class="agenda-metric"><span>{{ $label }}</span><strong>{{ $statistik[$kode] }}</strong></div>@endforeach</div>
-    <section class="agenda-section"><form class="aset-filter" method="GET">
+    <section class="agenda-section"><form class="feature-filter aset-filter" method="GET">
         <div class="field"><label for="kata_kunci">Cari aset</label><input class="input" id="kata_kunci" name="kata_kunci" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120" placeholder="Nama atau kata kunci"></div>
         <div class="field"><label for="kategori">Kategori</label><select class="select" id="kategori" name="kategori"><option value="">Semua kategori</option>@foreach (\App\Models\AsetPromosiHumas::KATEGORI as $kode => $label)<option value="{{ $kode }}" @selected(($filter['kategori'] ?? '') === $kode)>{{ $label }}</option>@endforeach</select></div>
         <div class="field"><label for="sumber">Jenis aset</label><select class="select" id="sumber" name="sumber"><option value="">Berkas & tautan</option><option value="berkas" @selected(($filter['sumber'] ?? '') === 'berkas')>Berkas</option><option value="tautan" @selected(($filter['sumber'] ?? '') === 'tautan')>Tautan</option></select></div>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Pelaksanaan Sanksi Siswa - NUSA')
 
@@ -55,7 +56,7 @@
         <a class="panel sanction-stat {{ $status === 'selesai' ? 'active' : '' }}" href="{{ route('sanksi-poin-siswa.index', ['status' => 'selesai', 'tahun_pelajaran_id' => $tahunPelajaranId]) }}"><p>Selesai</p><strong>{{ $ringkasan['selesai'] }}</strong></a>
     </div>
 
-    <form method="GET" class="panel panel-pad" style="margin-bottom:20px">
+    <form method="GET" class="feature-filter panel panel-pad" style="margin-bottom:20px">
         <div class="sanction-filter">
             <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select"><option value="">Semua tahun</option>@foreach($daftarTahunPelajaran as $tahun)<option value="{{ $tahun->id }}" @selected((string)$tahunPelajaranId === (string)$tahun->id)>{{ $tahun->nama }}{{ $tahun->aktif ? ' (aktif)' : '' }}</option>@endforeach</select></div>
             <div class="field"><label for="kelas_id">Kelas</label><select id="kelas_id" name="kelas_id" class="select"><option value="">Semua kelas</option>@foreach($daftarKelas as $kelas)<option value="{{ $kelas->id }}" @selected((string)$kelasId === (string)$kelas->id)>{{ $kelas->nama }}</option>@endforeach</select></div>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 @section('title', 'Rapor STS - NUSA')
 @section('content')
     <style>
@@ -114,7 +115,7 @@
             @if($laporan)<a class="button button-primary" href="{{ route('rapor-sts.publikasi.index', [$kegiatan, $kelas]) }}">Kelola publikasi</a>@endif
         </div>
     </div>
-    <form method="GET" action="{{ route('rapor-sts.index') }}" class="sts-section sts-filters">
+    <form method="GET" action="{{ route('rapor-sts.index') }}" class="feature-filter sts-section sts-filters">
         <div class="field"><label for="sts-kegiatan">Kegiatan STS</label>
             <select class="select" id="sts-kegiatan" name="kegiatan_id" required>
                 @forelse ($daftarKegiatan as $item)

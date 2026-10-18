@@ -254,7 +254,7 @@
 
 <div class="receipt-form-shell">
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <p class="eyebrow">Langkah 1</p>
             <h2 class="panel-title">Dokumen barang datang</h2>
             <p class="help-text" style="margin-top: 5px;">Gunakan satu formulir untuk barang yang berasal dari dokumen dan sumber yang sama.</p>

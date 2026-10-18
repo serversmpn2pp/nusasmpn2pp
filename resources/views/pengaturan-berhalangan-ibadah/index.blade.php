@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Pengaturan Berhalangan - NUSA')
 
@@ -45,7 +46,7 @@
     @endif
 
     @unless ($tahunPelajaran)
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Tahun pelajaran belum aktif</h2>
             <p class="help-text">Aktifkan tahun pelajaran sebelum mengatur batas dan pendamping ibadah siswi.</p>
             <a href="{{ route('tahun-pelajaran.index') }}" class="button button-primary">Buka tahun pelajaran</a>
@@ -58,7 +59,7 @@
         </div>
 
         <div class="absence-setting-grid" style="margin-top:18px;">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Batas konfirmasi</h2>
                 <p class="help-text">Batas ini hanya menjadi pengingat untuk pendamping. Siswi tidak otomatis dianggap melakukan pelanggaran.</p>
 
@@ -83,7 +84,7 @@
                 </div>
             </section>
 
-            <section class="panel panel-pad" id="form-pendamping">
+            <section class="panel panel-pad feature-section" id="form-pendamping">
                 <div class="section-heading">
                     <div>
                         <h2 class="panel-title">{{ $penugasanDiedit ? 'Atur ulang pendamping' : 'Tambah pendamping' }}</h2>

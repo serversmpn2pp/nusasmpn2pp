@@ -10,7 +10,7 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Siswa</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Detail siswa</h1>
         </div>
 
@@ -23,7 +23,7 @@
     </div>
 
     @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
+        <x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>
     @endif
 
     <div class="detail-shell">
@@ -40,7 +40,7 @@
                 <h2>{{ $siswa->nama_lengkap }}</h2>
                 <p>{{ $siswa->nis ? 'NIS ' . $siswa->nis : 'Siswa' }}</p>
 
-                <div style="margin-top: 16px;">
+                <div class="school-profile-status">
                     @if ($siswa->aktif)
                         <span class="badge badge-active">Aktif</span>
                     @else
@@ -51,7 +51,7 @@
 
             @izin('siswa.kelola')
                 @if ($siswa->aktif)
-                    <form action="{{ route('siswa.destroy', $siswa) }}" method="POST" style="margin-top: 24px;" onsubmit="return confirm('Nonaktifkan siswa ini?')">
+                    <form action="{{ route('siswa.destroy', $siswa) }}" method="POST" class="school-profile-action" onsubmit="return confirm('Nonaktifkan siswa ini?')">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="button button-danger button-full">Nonaktifkan</button>
@@ -61,7 +61,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad school-data-section">
                 <h2 class="panel-title">Identitas Utama</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -83,7 +83,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad school-data-section">
                 <h2 class="panel-title">Data Pribadi</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -105,7 +105,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad school-data-section">
                 <h2 class="panel-title">Data Keluarga</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -159,7 +159,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad school-data-section">
                 <h2 class="panel-title">Alamat & Catatan</h2>
                 <dl class="detail-grid">
                     <div class="detail-item span-2">

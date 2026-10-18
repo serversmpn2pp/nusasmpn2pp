@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Undangan Orang Tua - Agenda Humas')
 @section('content')
     @include('agenda-humas._style')
@@ -6,7 +7,7 @@
     @include('agenda-humas._messages')
     @if ($agendaHumas->status !== 'terjadwal')<div class="alert alert-warning">Agenda tidak terjadwal. Undangan baru tidak dapat ditambahkan.</div>@endif
     <section class="agenda-section">
-        <form method="GET" action="{{ route('agenda-humas.undangan', $agendaHumas) }}" class="agenda-actions" style="margin-top:0">
+        <form method="GET" action="{{ route('agenda-humas.undangan', $agendaHumas) }}" class="feature-filter agenda-actions" style="margin-top:0">
             <div class="field"><label for="tahun_undangan">Tahun pelajaran</label><select id="tahun_undangan" name="tahun_pelajaran_id" class="select">@foreach ($tahunPelajaran as $tahun)<option value="{{ $tahun->id }}" @selected($tahunId === $tahun->id)>{{ $tahun->nama }}</option>@endforeach</select></div>
             <button class="button button-muted">Muat pilihan kelas</button>
         </form>

@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Pegawai</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Tambah pegawai</h1>
         </div>
 

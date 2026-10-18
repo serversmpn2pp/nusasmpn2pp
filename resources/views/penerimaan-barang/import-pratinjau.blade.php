@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Pratinjau Import Barang Datang - NUSA')
 
@@ -117,7 +118,7 @@
     @endif
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div class="page-header" style="margin-bottom: 16px;">
                 <h2 class="panel-title">Informasi penerimaan</h2>
                 <span class="badge {{ $pratinjau['kesalahan_umum'] ? 'badge-warning' : 'badge-active' }}">{{ $pratinjau['kesalahan_umum'] ? 'Perlu diperbaiki' : 'Valid' }}</span>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Edit Guru Piket - NUSA')
 
@@ -18,7 +19,7 @@
     <form action="{{ route('jadwal-piket-guru.update', $jadwalPiketGuru) }}" method="POST">
         @csrf
         @method('PUT')
-        <section class="panel panel-pad" style="max-width:820px;">
+        <section class="panel panel-pad feature-section" style="max-width:820px;">
             <div class="form-grid">
                 <div class="field">
                     <label for="tahun_pelajaran_id">Tahun pelajaran</label>

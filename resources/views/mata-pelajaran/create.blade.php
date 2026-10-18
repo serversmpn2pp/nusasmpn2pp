@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Tambah Mata Pelajaran - NUSA')
 

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Periksa Perangkat Ajar - NUSA')
 
@@ -57,7 +58,7 @@
             </aside>
 
             <div class="section-stack">
-                <section class="panel panel-pad">
+                <section class="panel panel-pad feature-section">
                     <h2 class="panel-title">Hasil Pemeriksaan</h2>
                     <div class="form-grid">
                         <div class="field">

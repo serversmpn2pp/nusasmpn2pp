@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Rincian Presensi Siswa - NUSA')
 
@@ -95,7 +96,7 @@
     <section class="presensi-history" aria-label="Riwayat presensi siswa">
         <div class="presensi-history-head">
             <div><h2>Riwayat harian</h2><p>{{ $rincian->count() }} hari &middot; {{ $labelFilter[$statusRincian] }}</p></div>
-            <form action="{{ route('laporan-absensi.show', $anggota) }}" method="GET" class="presensi-detail-filter">
+            <form action="{{ route('laporan-absensi.show', $anggota) }}" method="GET" class="feature-filter presensi-detail-filter">
                 @foreach ($parameter as $kunci => $nilai)<input type="hidden" name="{{ $kunci }}" value="{{ $nilai }}">@endforeach
                 <div class="field"><label for="status-rincian">Status / kejadian</label><select id="status-rincian" name="status_rincian" class="select">
                     @foreach ($labelFilter as $kode => $label)<option value="{{ $kode }}" @selected($statusRincian === $kode)>{{ $label }}</option>@endforeach

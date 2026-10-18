@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', e($mou->judul).' - MoU')
 @section('content')
 @include('kemitraan-humas._style')

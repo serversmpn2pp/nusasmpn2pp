@@ -394,22 +394,22 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Pegawai</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Kartu pegawai</h1>
         </div>
 
         <div class="actions">
-            <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPegawai->isEmpty())>Cetak kartu</button>
             @izin('pegawai.kelola')
-                <a href="{{ route('foto-identitas.index', ['tab' => 'pegawai']) }}" class="button button-dark">Kelola foto</a>
+                <a href="{{ route('foto-identitas.index', ['tab' => 'pegawai']) }}" class="button button-muted">Kelola foto</a>
             @endizin
             @izin('pegawai.lihat', 'pegawai.kelola')
                 <a href="{{ route('pegawai.index') }}" class="button button-muted">Data pegawai</a>
             @endizin
+            <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPegawai->isEmpty())>Cetak kartu</button>
         </div>
     </div>
 
-    <form action="{{ route('kartu-pegawai.index') }}" method="GET" class="panel panel-pad kartu-filter" style="margin-bottom: 24px;">
+    <form action="{{ route('kartu-pegawai.index') }}" method="GET" class="panel panel-pad ui-filter kartu-filter" style="margin-bottom: 24px;">
         <div class="employee-filter-grid">
             <div class="field">
                 <label for="jenis_pegawai">Jenis pegawai</label>
@@ -454,7 +454,6 @@
             <h2 class="panel-title">{{ $kartuPegawai->count() }} kartu siap cetak</h2>
             <p class="help-text" style="margin-top: 4px;">Ukuran kartu: 53,98mm x 85,60mm, posisi portrait.</p>
         </div>
-        <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPegawai->isEmpty())>Cetak kartu</button>
     </div>
 
     @if ($kartuPegawai->isEmpty())
@@ -475,6 +474,7 @@
                     data-card-name="{{ $pegawai->nama_lengkap }}"
                     data-card-number="{{ $pegawai->nip }}"
                 >
+                    <h3 class="school-card-name">{{ $pegawai->nama_lengkap }}</h3>
                     <div>
                         <div class="employee-id-card employee-card-front" data-card-side="depan" aria-label="Kartu pegawai depan {{ $pegawai->nama_lengkap }}">
                             <div class="employee-card-content">

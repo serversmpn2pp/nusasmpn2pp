@@ -155,7 +155,7 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Identitas barang</h2>
             <p class="help-text" style="margin-top: 5px;">Buat satu master untuk satu jenis barang. Merek dan tipe boleh berbeda pada setiap barang datang.</p>
 

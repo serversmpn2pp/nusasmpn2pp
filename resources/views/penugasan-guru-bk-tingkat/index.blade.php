@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Penugasan Tingkat Guru BK - NUSA')
 
@@ -56,7 +57,7 @@
             <div class="bk-assignment-note"><span class="bk-assignment-note-number">2</span><div class="bk-assignment-note-copy"><strong>Tindakan mengikuti penugasan</strong><span>Keputusan, klarifikasi, bukti, dan tindak lanjut hanya dapat dikerjakan oleh Guru BK tingkat terkait.</span></div></div>
             <div class="bk-assignment-note"><span class="bk-assignment-note-number">3</span><div class="bk-assignment-note-copy"><strong>Notifikasi lebih terarah</strong><span>Laporan baru dan pengingat hanya dikirim kepada Guru BK yang ditugaskan pada tingkat siswa.</span></div></div>
         </div>
-        <form method="GET" class="panel panel-pad bk-year-filter">
+        <form method="GET" class="feature-filter panel panel-pad bk-year-filter">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
                 <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select" onchange="this.form.submit()">

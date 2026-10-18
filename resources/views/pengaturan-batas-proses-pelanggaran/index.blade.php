@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Batas Proses Pelanggaran - NUSA')
 
@@ -16,7 +17,7 @@
 
     @if(session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 
-    <section class="panel panel-pad" style="margin-bottom:20px">
+    <section class="panel panel-pad feature-section" style="margin-bottom:20px">
         <h2 class="panel-title">Cara penerapan</h2>
         <p class="help-text" style="margin-bottom:0">Batas disalin ke laporan ketika memasuki suatu tahap. Mengubah pengaturan tidak menggeser tenggat laporan yang sudah berjalan.</p>
     </section>

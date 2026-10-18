@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', $judul . ' - NUSA')
 
@@ -33,7 +34,7 @@
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
-    <form action="{{ route($routePrefix . '.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route($routePrefix . '.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="filter-grid filter-grid-wide">
             <div class="field">
                 <label for="kata_kunci">Cari {{ $judulSingular }}</label>

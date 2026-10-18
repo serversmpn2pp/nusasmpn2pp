@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Pernyataan Survei Pembelajaran - NUSA')
 
@@ -46,7 +47,7 @@
         <div class="alert alert-danger">{{ $errors->first() }}</div>
     @endif
 
-    <form method="GET" action="{{ route('pertanyaan-survei-pembelajaran.index') }}" class="panel panel-pad" style="margin-bottom:24px">
+    <form method="GET" action="{{ route('pertanyaan-survei-pembelajaran.index') }}" class="feature-filter panel panel-pad" style="margin-bottom:24px">
         <div class="filter-grid survey-statement-filter">
             <div class="field">
                 <label for="kata_kunci">Cari pernyataan</label>

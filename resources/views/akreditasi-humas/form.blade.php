@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Portofolio Akreditasi - NUSA')
 @section('ak-actions')<a class="button button-muted" href="{{ $portofolio->exists ? route('akreditasi-humas.show', $portofolio) : route('akreditasi-humas.index') }}">Kembali</a>@endsection
 @section('content')

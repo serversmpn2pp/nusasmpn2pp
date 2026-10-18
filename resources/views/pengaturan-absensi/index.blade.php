@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Pengaturan Presensi - NUSA')
 
@@ -33,7 +34,7 @@
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
-    <form action="{{ route('pengaturan-absensi.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('pengaturan-absensi.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="filter-grid">
             <div class="field">
                 <label for="hari">Hari</label>

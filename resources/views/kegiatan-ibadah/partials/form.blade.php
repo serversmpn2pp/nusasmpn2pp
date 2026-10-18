@@ -12,7 +12,7 @@
         <label class="status-toggle"><span><span class="form-label" style="margin-bottom:0;">Kegiatan aktif</span><span class="help-text">Siap digunakan</span></span><input type="hidden" name="aktif" value="0"><input type="checkbox" name="aktif" value="1" @checked((bool)$nilai('aktif', true))></label>
     </aside>
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Identitas Kegiatan</h2>
             <div class="form-grid">
                 <div class="field"><label for="nama">Nama kegiatan</label><input id="nama" name="nama" class="input @error('nama') is-invalid @enderror" value="{{ $nilai('nama') }}" placeholder="Contoh: Sholat Duhur Berjamaah" required autofocus>@error('nama')<p class="error-text">{{ $message }}</p>@enderror</div>

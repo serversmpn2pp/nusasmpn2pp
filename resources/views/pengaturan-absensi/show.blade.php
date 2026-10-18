@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Detail Pengaturan Presensi - NUSA')
 
@@ -61,7 +62,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Jam Masuk</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -79,7 +80,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Jam Pulang</h2>
                 @if ($pengaturanAbsensi->pulangJumatDibedakan())
                     <p class="help-text" style="margin-bottom: 16px;">Jadwal Jumat dibedakan. Data jenis kelamin yang belum lengkap mengikuti jadwal siswa laki-laki.</p>

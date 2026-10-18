@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Detail Unit Aset - NUSA')
 
@@ -217,7 +218,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="page-header" style="margin-bottom: 0;">
                     <div>
                         <p class="eyebrow">Status terkini</p>
@@ -256,7 +257,7 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Identitas Aset</h2>
 
                 <dl class="detail-grid">
@@ -307,7 +308,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Perolehan dan Catatan</h2>
 
                 <dl class="detail-grid">
@@ -334,7 +335,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="page-header" style="margin-bottom: 0;">
                     <div>
                         <p class="eyebrow">Jejak aset</p>

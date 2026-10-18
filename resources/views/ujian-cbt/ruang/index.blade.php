@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Ruang Ujian CBT - NUSA')
 
@@ -195,7 +196,7 @@
         <div class="alert alert-danger">{{ $errors->first() }}</div>
     @endif
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
         <div style="display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
             <div>
                 <h2 class="panel-title">{{ $ujianCbt->nama }}</h2>
@@ -216,7 +217,7 @@
         </dl>
     </section>
 
-    <form action="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('ujian-cbt.ruang.index', $ujianCbt) }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="cbt-room-filter">
             <div class="field">
                 <label for="sesi_ujian_cbt_id">Sesi</label>
@@ -261,7 +262,7 @@
         </div>
     </form>
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
         <h2 class="panel-title">Buat ruang dan bagi peserta</h2>
         <p class="help-text" style="margin-top: 6px;">Buat ruang sesuai kapasitas, lalu bagi peserta otomatis berdasarkan urutan kelas dan nomor absen.</p>
         <div class="cbt-room-grid" style="margin-top: 16px;">

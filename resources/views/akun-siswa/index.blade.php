@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sistem')
 
 @section('title', 'Akun Siswa - NUSA')
 
@@ -162,7 +163,7 @@
         </div>
     </div>
 
-    <form action="{{ route('akun-siswa.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 22px;" data-auto-filter>
+    <form action="{{ route('akun-siswa.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 22px;" data-auto-filter>
         <div class="filter-grid account-filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari siswa</label>

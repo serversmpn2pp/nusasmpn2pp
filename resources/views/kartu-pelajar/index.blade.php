@@ -371,28 +371,28 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Siswa</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Kartu pelajar</h1>
         </div>
 
         <div class="actions">
-            @izin('kartu_pelajar.cetak')
-                <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPelajar->isEmpty())>Cetak kartu</button>
-            @endizin
             @izin('siswa.kelola')
                 <a href="{{ route('foto-identitas.index', array_filter([
                     'tab' => 'siswa',
                     'tahun_pelajaran_id' => $tahunPelajaranId,
                     'kelas_id' => $kelasId,
-                ])) }}" class="button button-dark">Kelola foto</a>
+                ])) }}" class="button button-muted">Kelola foto</a>
             @endizin
             @izin('siswa.lihat', 'siswa.kelola')
                 <a href="{{ route('siswa.index') }}" class="button button-muted">Data siswa</a>
             @endizin
+            @izin('kartu_pelajar.cetak')
+                <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPelajar->isEmpty())>Cetak kartu</button>
+            @endizin
         </div>
     </div>
 
-    <form action="{{ route('kartu-pelajar.index') }}" method="GET" class="panel panel-pad kartu-filter" style="margin-bottom: 24px;">
+    <form action="{{ route('kartu-pelajar.index') }}" method="GET" class="panel panel-pad ui-filter kartu-filter" style="margin-bottom: 24px;">
         <div class="filter-grid filter-grid-wide">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -443,9 +443,6 @@
             <h2 class="panel-title">{{ $kartuPelajar->count() }} kartu siap cetak</h2>
             <p class="help-text" style="margin-top: 4px;">Ukuran kartu: 53,98mm x 85,60mm, posisi portrait.</p>
         </div>
-        @izin('kartu_pelajar.cetak')
-            <button type="button" class="button button-primary" data-card-export-open @disabled($kartuPelajar->isEmpty())>Cetak kartu</button>
-        @endizin
     </div>
 
     @if ($kartuPelajar->isEmpty())
@@ -467,6 +464,7 @@
                     data-card-name="{{ $siswa?->nama_lengkap }}"
                     data-card-number="{{ $siswa?->nisn }}"
                 >
+                    <h3 class="school-card-name">{{ $siswa?->nama_lengkap }}</h3>
                     <div>
                         <div class="id-card card-front" data-card-side="depan" aria-label="Kartu pelajar depan {{ $siswa?->nama_lengkap }}">
                             <div class="card-content">

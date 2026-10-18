@@ -1,5 +1,13 @@
+@php
+    // The shared visual shell does not grant administrator permissions.
+    $temaAntarmukaNusa = auth()->check();
+    $temaDashboardAdmin = ($tampilanDashboardAdmin ?? false) && (auth()->user()?->administrator() ?? false);
+    $temaDataSekolahAdmin = $temaAntarmukaNusa && request()->routeIs('tahun-pelajaran.*', 'pegawai.*', 'siswa.*', 'kelas.*', 'anggota-kelas.*', 'penempatan-siswa.*', 'kenaikan-kelas.*', 'foto-identitas.*', 'kartu-pegawai.*', 'kartu-pelajar.*');
+    $kelompokFiturAdmin = trim($__env->yieldContent('admin-module')) ?: 'pribadi';
+    $temaFiturAdmin = $temaAntarmukaNusa && ! $temaDataSekolahAdmin && ! $temaDashboardAdmin && in_array($kelompokFiturAdmin, ['akademik', 'kehadiran', 'kesiswaan-bk', 'ujian-asesmen', 'humas', 'supervisi', 'persuratan', 'sarpras', 'sistem', 'pribadi'], true);
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ $temaAntarmukaNusa ? 'id' : str_replace('_', '-', app()->getLocale()) }}" @class(['admin-shell-root' => $temaAntarmukaNusa])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1781,8 +1789,19 @@
             }
         </style>
         @stack('styles')
+        @if ($temaAntarmukaNusa)
+            <link rel="stylesheet" href="{{ asset('css/admin-components.css') }}?v={{ filemtime(public_path('css/admin-components.css')) }}">
+            <link rel="stylesheet" href="{{ asset('css/admin-shell.css') }}?v={{ filemtime(public_path('css/admin-shell.css')) }}">
+            <link rel="stylesheet" href="{{ asset('css/nusa-account-pages.css') }}?v={{ filemtime(public_path('css/nusa-account-pages.css')) }}">
+            @if ($temaDataSekolahAdmin)
+                <link rel="stylesheet" href="{{ asset('css/admin-data-sekolah.css') }}?v={{ filemtime(public_path('css/admin-data-sekolah.css')) }}">
+            @endif
+            @if ($temaFiturAdmin)
+                <link rel="stylesheet" href="{{ asset('css/admin-feature-pages.css') }}?v={{ filemtime(public_path('css/admin-feature-pages.css')) }}">
+            @endif
+        @endif
     </head>
-    <body>
+    <body @class(['nusa-admin-shell' => $temaAntarmukaNusa, 'nusa-shared-theme' => $temaAntarmukaNusa, 'nusa-dashboard-admin' => $temaDashboardAdmin, 'admin-school-data' => $temaDataSekolahAdmin, 'admin-feature-pages' => $temaFiturAdmin]) @if ($temaFiturAdmin) data-admin-module="{{ $kelompokFiturAdmin }}" @endif @if ($temaAntarmukaNusa) data-nusa-theme data-admin-shell data-admin-sidebar-storage="nusa.admin.sidebar.mode.{{ auth()->id() }}" @endif>
         @php
             $penggunaAktif = auth()->user();
             $penggunaAktif?->loadMissing(['pegawai', 'siswa', 'orangTuaWali', 'daftarPeran.izin']);
@@ -2354,10 +2373,13 @@
                 ->all();
         @endphp
 
-        <input id="sidebar-toggle" type="checkbox" class="sidebar-toggle">
+        <input id="sidebar-toggle" type="checkbox" class="sidebar-toggle" @if ($temaAntarmukaNusa) tabindex="-1" aria-hidden="true" @endif>
 
         <div class="app-shell">
-            <aside class="app-sidebar" aria-label="Menu utama NUSA">
+            <aside class="app-sidebar" aria-label="Menu utama NUSA" @if ($temaAntarmukaNusa) id="admin-sidebar" @endif>
+                @if ($temaAntarmukaNusa)
+                    <button type="button" class="icon-button admin-sidebar-close" aria-label="Tutup menu" data-admin-sidebar-close><i data-lucide="x" aria-hidden="true"></i></button>
+                @endif
                 <a href="{{ route('beranda') }}" class="sidebar-brand">
                     <span class="sidebar-brand-mark">
                         <img src="{{ asset('images/logo-nusa.png') }}" alt="Logo NUSA">
@@ -2368,7 +2390,7 @@
                     </span>
                 </a>
 
-                @if ($penggunaAktif?->administrator())
+                @if ($temaAntarmukaNusa)
                     <div class="sidebar-search" data-sidebar-search>
                         <label for="sidebar-menu-search" class="sr-only">Cari menu</label>
                         <div class="sidebar-search-control">
@@ -2393,8 +2415,16 @@
                 @endif
 
                 <nav class="sidebar-nav" data-sidebar-nav>
+                    @php
+                        $ikonKategori = ['utama' => 'layout-dashboard', 'data-sekolah' => 'school', 'akademik' => 'book-open', 'humas' => 'messages-square', 'ujian-asesmen' => 'clipboard-check', 'kehadiran' => 'scan-line', 'kesiswaan-bk' => 'heart-handshake', 'sarana-prasarana' => 'building-2', 'persuratan' => 'mails', 'sistem' => 'settings-2', 'informasi-saya' => 'graduation-cap', 'informasi-anak' => 'users-round', 'akun-saya' => 'user-round', 'pembelajaran' => 'book-open', 'kehadiran-saya' => 'calendar-check', 'kelas-wali' => 'users', 'guru-wali' => 'heart-handshake', 'supervisi' => 'clipboard-check', 'layanan-humas' => 'messages-square', 'layanan-sarpras' => 'building-2', 'piket-siswa' => 'clipboard-list', 'tugas-guru-pl' => 'scan-line', 'kegiatan-ibadah' => 'calendar-check', 'wali-kelas' => 'users', 'verifikasi-poin' => 'clipboard-check'];
+                    @endphp
                     @foreach ($sidebarSections as $section)
-                        @if ($section['direct'])
+                        @if ($temaAntarmukaNusa && $section['id'] === 'utama' && count($section['items']) === 1 && $section['items'][0]['route'] === 'beranda')
+                            <div class="sidebar-section sidebar-section-direct {{ $section['active'] ? 'has-active' : '' }}" data-sidebar-section data-sidebar-direct data-sidebar-section-id="utama" data-sidebar-section-title="utama dashboard">
+                                <span class="sr-only">Utama</span>
+                                <a href="{{ route('beranda') }}" class="sidebar-section-summary admin-home-link" @if ($section['active']) aria-current="page" @endif aria-label="Dashboard" data-admin-tooltip="Dashboard"><i data-lucide="layout-dashboard" class="sidebar-category-icon" aria-hidden="true"></i><span class="sidebar-section-title">Dashboard</span>@if ($section['active'])<span class="active-dot" aria-hidden="true"></span>@endif</a>
+                            </div>
+                        @elseif ($section['direct'])
                             <div
                                 class="sidebar-section sidebar-section-direct {{ $section['active'] ? 'has-active' : '' }}"
                                 data-sidebar-section
@@ -2405,8 +2435,10 @@
                                 <a
                                     href="{{ route($section['direct']['route']) }}"
                                     class="sidebar-section-summary"
+                                    @if ($temaAntarmukaNusa) aria-label="{{ $section['title'] }}" data-admin-tooltip="{{ $section['title'] }}" @endif
                                     @if ($section['active']) aria-current="page" @endif
                                 >
+                                    @if ($temaAntarmukaNusa)<i class="sidebar-category-icon" data-lucide="{{ $ikonKategori[$section['id']] ?? 'folder' }}" aria-hidden="true"></i>@endif
                                     <span class="sidebar-section-title">{{ $section['title'] }}</span>
                                     <svg class="sidebar-section-chevron" aria-hidden="true" viewBox="0 0 24 24">
                                         <path d="m9 18 6-6-6-6"></path>
@@ -2421,7 +2453,8 @@
                                 data-sidebar-section-title="{{ str($section['title'])->lower() }}"
                                 @if ($section['active']) open @endif
                             >
-                                <summary class="sidebar-section-summary">
+                                <summary class="sidebar-section-summary" @if ($temaAntarmukaNusa) aria-label="{{ $section['title'] }}" data-admin-tooltip="{{ $section['title'] }}" @endif>
+                                    @if ($temaAntarmukaNusa)<i class="sidebar-category-icon" data-lucide="{{ $ikonKategori[$section['id']] ?? 'folder' }}" aria-hidden="true"></i>@endif
                                     <span class="sidebar-section-title">{{ $section['title'] }}</span>
                                     <span class="sidebar-section-count">{{ count($section['items']) }}</span>
                                     <svg class="sidebar-section-chevron" aria-hidden="true" viewBox="0 0 24 24">
@@ -2450,7 +2483,7 @@
                                                         @if ($item['is_active']) aria-current="page" @endif
                                                         @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif
                                                     >
-                                                        <span class="sidebar-link-initial">{{ $item['initial'] }}</span>
+                                                        <span class="sidebar-link-initial">@if ($temaAntarmukaNusa)<i data-lucide="{{ $ikonKategori[$section['id']] ?? 'folder' }}" aria-hidden="true"></i>@else{{ $item['initial'] }}@endif</span>
                                                         <span class="sidebar-link-label">{{ $item['label'] }}</span>
                                                     </a>
                                                 @endforeach
@@ -2468,8 +2501,13 @@
                 </nav>
 
                 <div class="sidebar-foot">
-                    <span>NUSA</span><br>
-                    <span>Data sekolah terpadu.</span>
+                    @if ($temaAntarmukaNusa)
+                        <div class="admin-school-sketch"><img src="{{ asset('images/nusa/login/sekolah-sketsa.webp') }}" width="1448" height="1086" alt=""><p>Satu pintu. Terhubung<br>untuk <span>bertumbuh.</span></p></div>
+                        <div class="admin-sidebar-account"><span class="admin-account-avatar">{{ $inisialPengguna ?: 'N' }}</span><span><strong>{{ $namaPenggunaAktif }}</strong><small>{{ $labelPeranAktif }}</small></span><i data-lucide="shield-check" aria-hidden="true"></i></div>
+                    @else
+                        <span>NUSA</span><br>
+                        <span>Data sekolah terpadu.</span>
+                    @endif
                 </div>
             </aside>
 
@@ -2477,6 +2515,22 @@
 
             <div class="app-content">
                 <header class="app-topbar">
+                    @if ($temaAntarmukaNusa)
+                        <div class="admin-sidebar-controls">
+                            <button type="button" class="icon-button admin-sidebar-toggle" data-admin-sidebar-toggle aria-label="Sembunyikan sidebar" data-admin-tooltip="Sembunyikan sidebar" aria-expanded="true" aria-controls="admin-sidebar"><i data-lucide="panel-left-close" data-admin-sidebar-hide-icon aria-hidden="true"></i><i data-lucide="panel-left-open" data-admin-sidebar-show-icon aria-hidden="true" hidden></i></button>
+                            <details class="topbar-menu admin-sidebar-options" data-admin-sidebar-options>
+                                <summary class="admin-sidebar-options-trigger" aria-label="Pilihan tampilan sidebar" data-admin-tooltip="Pilihan tampilan sidebar"><i data-lucide="chevron-down" aria-hidden="true"></i></summary>
+                                <div class="topbar-popover admin-sidebar-popover">
+                                    <fieldset class="admin-sidebar-modes">
+                                        <legend>Tampilan sidebar</legend>
+                                        @foreach (['expanded' => ['Tampilkan sidebar', 'panel-left-open'], 'collapsed' => ['Sidebar ringkas', 'panel-left'], 'hidden' => ['Sembunyikan sidebar', 'panel-left-close']] as $mode => [$label, $ikon])
+                                            <label><i data-lucide="{{ $ikon }}" aria-hidden="true"></i><span>{{ $label }}</span><input type="radio" name="admin_sidebar_mode" value="{{ $mode }}" data-admin-sidebar-mode @if ($mode === 'expanded') checked @endif></label>
+                                        @endforeach
+                                    </fieldset>
+                                </div>
+                            </details>
+                        </div>
+                    @endif
                     <label for="sidebar-toggle" class="mobile-menu-button" title="Buka menu utama" aria-label="Buka menu utama">
                         <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                             <path d="M4 6h16M4 12h16M4 18h16"></path>
@@ -2485,8 +2539,16 @@
                     </label>
 
                     <div class="topbar-title">
-                        <span class="topbar-eyebrow">NUSA</span>
-                        <span class="topbar-current">@yield('title', 'NUSA')</span>
+                        @if ($temaAntarmukaNusa)
+                            @php
+                                $bagianAktifAdmin = collect($sidebarSections)->firstWhere('active', true);
+                                $judulHalamanAdmin = trim(preg_replace('/\s*-\s*NUSA\s*$/u', '', html_entity_decode(strip_tags($__env->yieldContent('title', 'NUSA')), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                            @endphp
+                            <span class="admin-breadcrumb"><span>{{ $bagianAktifAdmin['title'] ?? 'NUSA' }}</span><i data-lucide="chevron-right" aria-hidden="true"></i><strong>{{ $judulHalamanAdmin }}</strong></span>
+                        @else
+                            <span class="topbar-eyebrow">NUSA</span>
+                            <span class="topbar-current">@yield('title', 'NUSA')</span>
+                        @endif
                     </div>
 
                     @auth
@@ -2631,6 +2693,9 @@
                 </main>
             </div>
         </div>
+        @if ($temaAntarmukaNusa)
+            <div class="admin-shell-tooltip" id="admin-tooltip" role="tooltip" hidden></div>
+        @endif
         @auth
             <script>
                 (() => {
@@ -2968,6 +3033,11 @@
                 })();
             </script>
         @endauth
+        @if ($temaAntarmukaNusa)
+            <script src="{{ asset('vendor/lucide/lucide.min.js') }}" defer></script>
+            <script src="{{ asset('js/admin-shell.js') }}?v={{ filemtime(public_path('js/admin-shell.js')) }}" defer></script>
+            <script src="{{ asset('js/admin-components.js') }}?v={{ filemtime(public_path('js/admin-components.js')) }}" defer></script>
+        @endif
         @stack('scripts')
     </body>
 </html>

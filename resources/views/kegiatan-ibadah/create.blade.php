@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 @section('title', 'Tambah Kegiatan Ibadah - NUSA')
 @section('content')
     <div class="page-header"><div><p class="eyebrow">Kehadiran Siswa</p><h1 class="page-title">Tambah Kegiatan Ibadah</h1><p class="page-subtitle">Siapkan kegiatan yang akan menggunakan presensi QR siswa.</p></div><a href="{{ route('kegiatan-ibadah.index') }}" class="button button-muted">Kembali</a></div>

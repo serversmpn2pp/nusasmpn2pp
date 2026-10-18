@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'persuratan')
 @section('title', ($surat->exists ? 'Perbarui Surat' : 'Tambah Surat').' - NUSA')
 @section('content')
     @include('persuratan._style')

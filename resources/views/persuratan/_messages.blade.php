@@ -1,2 +1,2 @@
-@if(session('berhasil'))<div class="alert alert-success" role="status">{{ session('berhasil') }}</div>@endif
-@if($errors->any())<div class="alert alert-danger" role="alert"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+@if(session('berhasil'))<x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>@endif
+@if($errors->any())<x-ui.alert type="danger" title="Ada data yang perlu diperbaiki."><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></x-ui.alert>@endif

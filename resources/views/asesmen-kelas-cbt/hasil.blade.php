@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Hasil Asesmen Kelas - NUSA')
 
@@ -251,7 +252,7 @@
     @endif
 
     <div class="hasil-asesmen-overview">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div class="hasil-asesmen-title-row">
                 <div>
                     <h2 class="panel-title">{{ $ujianCbt->nama }}</h2>
@@ -270,7 +271,7 @@
             </dl>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Tujuan nilai</h2>
             <p class="help-text" style="margin-top: 6px;">Hasil yang sudah selesai dikoreksi akan masuk ke komponen berikut.</p>
 
@@ -312,7 +313,7 @@
         </div>
     </div>
 
-    <form action="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" method="GET" class="panel panel-pad hasil-asesmen-filter" data-auto-filter-form>
+    <form action="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" method="GET" class="feature-filter panel panel-pad hasil-asesmen-filter" data-auto-filter-form>
         <div class="field">
             <label for="kelas_id">Kelas</label>
             <select id="kelas_id" name="kelas_id" class="select" data-auto-submit>

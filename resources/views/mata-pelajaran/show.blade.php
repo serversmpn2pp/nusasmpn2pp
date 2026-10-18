@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Detail Mata Pelajaran - NUSA')
 
@@ -53,7 +54,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="page-header" style="margin-bottom: 18px;">
                     <div>
                         <h2 class="panel-title">Pengaturan per Tingkat</h2>
@@ -91,7 +92,7 @@
                 </div>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi Mata Pelajaran</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">

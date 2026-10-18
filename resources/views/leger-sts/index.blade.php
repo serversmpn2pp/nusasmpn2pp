@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Leger STS - NUSA')
 
@@ -117,7 +118,7 @@
         <a class="leger-tab {{ $mode === 'tingkat' ? 'is-active' : '' }}" href="{{ route('leger-sts.index', ['mode' => 'tingkat', 'kegiatan_id' => $kegiatan?->id, 'tingkat' => $tingkat]) }}">Per Tingkat</a>
     </nav>
 
-    <form class="panel leger-filter" method="GET" action="{{ route('leger-sts.index') }}">
+    <form class="feature-filter panel leger-filter" method="GET" action="{{ route('leger-sts.index') }}">
         <input type="hidden" name="mode" value="{{ $mode }}">
         <div class="field">
             <label for="leger-kegiatan">Kegiatan STS</label>

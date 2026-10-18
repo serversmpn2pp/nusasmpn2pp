@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Program Kerja Humas - NUSA')
 @section('program-actions')
     @if(auth()->user()->memilikiIzin('program_kerja_humas.kelola'))<a class="button button-primary" href="{{ route('program-kerja-humas.create') }}">Tambah program</a>@endif
@@ -7,7 +8,7 @@
 <div class="publikasi-page humas-program-page">
     @include('program-kerja-humas._header', ['judulHalaman' => 'Program kerja Waka Humas'])
     <div class="agenda-metrics">@foreach($statistik as $kode => $jumlah)<div class="agenda-metric"><span>{{ \App\Models\ProgramKerjaHumas::STATUS[$kode] }}</span><strong>{{ $jumlah }}</strong></div>@endforeach</div>
-    <section class="agenda-section"><form method="GET" class="humas-program-filter">
+    <section class="agenda-section"><form method="GET" class="feature-filter humas-program-filter">
         <div class="field"><label for="kata_kunci">Cari program</label><input class="input" id="kata_kunci" name="kata_kunci" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120"></div>
         <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select class="select" id="tahun_pelajaran_id" name="tahun_pelajaran_id"><option value="">Semua tahun</option>@foreach($tahun as $t)<option value="{{ $t->id }}" @selected((string)($filter['tahun_pelajaran_id'] ?? '') === (string)$t->id)>{{ $t->nama }}</option>@endforeach</select></div>
         @foreach(['semester' => ['Periode', \App\Models\ProgramKerjaHumas::SEMESTER], 'bidang' => ['Bidang', \App\Models\ProgramKerjaHumas::BIDANG], 'status' => ['Status', \App\Models\ProgramKerjaHumas::STATUS]] as $key => [$label, $pilihan])

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', ($laporanPembinaanSiswa->jenis_laporan === 'pembinaan' ? 'Tambah Pembinaan' : 'Tambah Laporan Kejadian').' - NUSA')
 

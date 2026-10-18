@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Program Kerja Komite - NUSA')
 @section('program-actions')
     <a class="button button-muted" href="{{ route('komite-humas.program.index', $periode) }}">Daftar program</a>
@@ -17,7 +18,7 @@
             {{ $rapat->links() }}
         @else<p class="agenda-muted">Rincian rapat dibatasi sesuai izin Agenda & Pertemuan.</p>@endif
         @if ($pilihanRapat)
-            <h3>Hubungkan rapat yang sudah ada</h3><form method="GET" action="{{ route('komite-humas.program.show', [$periode, $program]) }}#rapat" class="agenda-actions"><div class="field"><label for="cari_rapat">Cari rapat komite</label><input id="cari_rapat" name="cari_rapat" class="input" value="{{ $cariRapat }}" maxlength="120"></div><button type="submit" class="button button-muted">Cari</button></form>
+            <h3>Hubungkan rapat yang sudah ada</h3><form method="GET" action="{{ route('komite-humas.program.show', [$periode, $program]) }}#rapat" class="feature-filter agenda-actions"><div class="field"><label for="cari_rapat">Cari rapat komite</label><input id="cari_rapat" name="cari_rapat" class="input" value="{{ $cariRapat }}" maxlength="120"></div><button type="submit" class="button button-muted">Cari</button></form>
             @if ($pilihanRapat->count())<form method="POST" action="{{ route('komite-humas.program.rapat.store', [$periode, $program]) }}" class="program-link-form" data-agenda-submit>@csrf<input type="hidden" name="versi" value="{{ $program->versi }}"><div class="field"><label for="agenda_humas_id">Rapat komite</label><select id="agenda_humas_id" name="agenda_humas_id" class="select" required><option value="">Pilih rapat</option>@foreach ($pilihanRapat as $a)<option value="{{ $a->id }}" @selected((string) old('agenda_humas_id') === (string) $a->id)>{{ $a->waktu_mulai->format('d-m-Y') }} - {{ $a->judul }}</option>@endforeach</select></div><div class="field"><label for="alasan_hubung">Catatan pengaitan</label><input id="alasan_hubung" name="catatan_perubahan" class="input" value="{{ old('catatan_perubahan') }}" minlength="5" maxlength="2000" required></div><button class="button button-primary" type="submit">Hubungkan rapat</button></form>@else<p class="agenda-muted">Tidak ada rapat komite yang cocok dalam masa bakti ini.</p>@endif
             {{ $pilihanRapat->fragment('rapat')->links() }}
         @endif

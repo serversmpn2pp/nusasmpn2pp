@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Bank Soal - NUSA')
 
@@ -73,7 +74,7 @@
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
-    <form action="{{ route('soal-cbt.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;" data-bank-question-filter>
+    <form action="{{ route('soal-cbt.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;" data-bank-question-filter>
         <input type="hidden" name="folder" value="{{ $folderFilter }}" data-bank-folder-filter>
         <div class="soal-filter-grid">
             <div class="field">

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 
 @section('title', e($dokumenHumas->judul).' - Dokumen Humas')
 
@@ -22,7 +23,7 @@
 
     <div class="detail-shell">
         <aside class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Status dan masa berlaku</h2>
                 <dl class="quick-facts" style="margin-top:14px;">
                     <div><dt>Status arsip</dt><dd>{{ \App\Models\DokumenHumas::STATUS[$dokumenHumas->status] ?? $dokumenHumas->status }}</dd></div>
@@ -39,7 +40,7 @@
                     </form>
                 @endizin
             </section>
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Berkas terbaru</h2>
                 <p style="margin:10px 0 0;font-weight:800;overflow-wrap:anywhere;">{{ $dokumenHumas->nama_file_asli }}</p>
                 <p class="help-text">{{ $dokumenHumas->ukuranFileTampil() }} · {{ $dokumenHumas->updated_at?->format('d M Y H:i') }}</p>
@@ -48,7 +49,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Rincian</h2>
                 <dl class="quick-facts" style="margin-top:14px;">
                     <div><dt>Nomor dokumen</dt><dd>{{ $dokumenHumas->nomor_dokumen ?: 'Tidak dicantumkan' }}</dd></div>
@@ -60,7 +61,7 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Riwayat berkas</h2>
                 <p class="help-text">Setiap revisi disimpan sebagai versi agar berkas sebelumnya tetap dapat ditelusuri.</p>
                 <div class="table-wrap" style="margin-top:12px;">

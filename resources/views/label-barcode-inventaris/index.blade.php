@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Label Inventaris - NUSA')
 
@@ -285,7 +286,7 @@
         </div>
     </div>
 
-    <form action="{{ route('label-barcode-inventaris.index') }}" method="GET" class="panel panel-pad print-hidden" style="margin-bottom: 20px;">
+    <form action="{{ route('label-barcode-inventaris.index') }}" method="GET" class="feature-filter panel panel-pad print-hidden" style="margin-bottom: 20px;">
         <h2 class="panel-title">Saring sumber label</h2>
         <div class="label-filter-grid" style="margin-top: 16px;">
             <div class="field">
@@ -350,7 +351,7 @@
         </div>
     </form>
 
-    <form id="form-seleksi-label" action="{{ route('label-barcode-inventaris.index') }}" method="GET" class="panel panel-pad print-hidden">
+    <form id="form-seleksi-label" action="{{ route('label-barcode-inventaris.index') }}" method="GET" class="feature-filter panel panel-pad print-hidden">
         <input type="hidden" name="jenis_label" value="{{ $jenisLabel }}">
         <input type="hidden" name="seleksi" value="1">
         @if ($penerimaanBarangId)<input type="hidden" name="penerimaan_barang_id" value="{{ $penerimaanBarangId }}">@endif

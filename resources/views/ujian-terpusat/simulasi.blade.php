@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 @section('title', 'Simulasi CBT - NUSA')
 @section('content')
     <div class="page-header">
@@ -8,7 +9,7 @@
     <p class="alert">Gunakan kegiatan simulasi terpisah. Setelah sesi, ruang, peserta, dan jadwal disiapkan, buka Tahap 8 lalu pilih Gunakan paket Simulasi CBT. Isi soal sama untuk setiap tingkat dan tidak menguji materi mapel tertentu.</p>
     <div class="section-stack" data-inline-math>
         @foreach ($contoh as $index => $soal)
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="section-heading"><h2 class="panel-title">Soal {{ $index + 1 }}</h2><span class="badge badge-muted">{{ \App\Models\SoalCbt::DAFTAR_JENIS[$soal['jenis_soal']] }}</span></div>
                 @if (!empty($soal['stimulus']))<p style="margin-top:12px;">{{ $soal['stimulus'] }}</p>@endif
                 @if ($index === 1)<figure style="margin:12px 0;"><img src="{{ asset('images/login-sekolah.jpg') }}" alt="Lingkungan sekolah" style="max-width:100%;width:420px;border-radius:6px;"><figcaption>Lingkungan sekolah yang perlu dijaga bersama.</figcaption></figure>@endif

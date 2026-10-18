@@ -247,7 +247,7 @@ try {
     await page.waitForTimeout(100);
     assert.equal(securityPayloads.filter(payload => payload.peristiwa === 'kembali').length, 2, 'Fokus kembali harus menutup kejadian keluar');
     assert.equal(securityPayloads.find(payload => payload.peristiwa === 'keluar')?.metadata.pemicu, 'pagehide');
-    assert.equal(securityPayloads.filter(payload => payload.peristiwa === 'kembali').at(-1)?.metadata.pemicu, 'focus');
+    assert.ok(['focus', 'focus-guard'].includes(securityPayloads.filter(payload => payload.peristiwa === 'kembali').at(-1)?.metadata.pemicu), 'Focus event and the one-second focus guard may close the same event; it must remain a single return');
 
     securityResponseMode = 'warning';
     await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));

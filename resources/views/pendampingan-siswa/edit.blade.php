@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', (($konteksGuruWali ?? false) ? 'Pendampingan Siswa Wali' : 'Pendampingan Siswa').' - NUSA')
 

@@ -43,7 +43,7 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Identitas Aset</h2>
 
             <div class="form-grid">
@@ -142,7 +142,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Perolehan dan Catatan</h2>
 
             <div class="form-grid">

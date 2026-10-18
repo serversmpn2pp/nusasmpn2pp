@@ -318,17 +318,17 @@
 
         @if ($bolehKelolaSiswa && $bolehKelolaPegawai)
             <nav class="identity-tab-list" aria-label="Jenis foto identitas">
-                <a href="{{ route('foto-identitas.index', ['tab' => 'siswa']) }}" class="identity-tab {{ $tab === 'siswa' ? 'is-active' : '' }}">
+                <a href="{{ route('foto-identitas.index', ['tab' => 'siswa']) }}" class="identity-tab {{ $tab === 'siswa' ? 'is-active' : '' }}" @if ($tab === 'siswa') aria-current="page" @endif>
                     Siswa
                 </a>
-                <a href="{{ route('foto-identitas.index', ['tab' => 'pegawai']) }}" class="identity-tab {{ $tab === 'pegawai' ? 'is-active' : '' }}">
+                <a href="{{ route('foto-identitas.index', ['tab' => 'pegawai']) }}" class="identity-tab {{ $tab === 'pegawai' ? 'is-active' : '' }}" @if ($tab === 'pegawai') aria-current="page" @endif>
                     Pegawai
                 </a>
             </nav>
         @endif
 
         @if ($tab === 'siswa')
-            <form action="{{ route('foto-identitas.index') }}" method="GET" class="panel panel-pad">
+            <form action="{{ route('foto-identitas.index') }}" method="GET" class="panel panel-pad ui-filter">
                 <input type="hidden" name="tab" value="siswa">
                 <div class="identity-filter-grid">
                     <div class="field">
@@ -376,7 +376,7 @@
                 </div>
             </form>
         @else
-            <form action="{{ route('foto-identitas.index') }}" method="GET" class="panel panel-pad">
+            <form action="{{ route('foto-identitas.index') }}" method="GET" class="panel panel-pad ui-filter">
                 <input type="hidden" name="tab" value="pegawai">
                 <div class="identity-filter-grid employee">
                     <div class="field">

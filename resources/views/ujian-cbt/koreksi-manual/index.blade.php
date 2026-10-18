@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', ($ujianCbt->asesmenKelas() ? 'Koreksi Uraian Asesmen' : 'Koreksi Manual CBT') . ' - NUSA')
 
@@ -127,7 +128,7 @@
         </div>
     @endif
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
         <div style="display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
             <div>
                 <h2 class="panel-title">{{ $ujianCbt->nama }}</h2>
@@ -150,7 +151,7 @@
         </dl>
     </section>
 
-    <form action="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('ujian-cbt.koreksi-manual.index', $ujianCbt) }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="manual-filter-grid {{ $ujianCbt->asesmenKelas() ? 'asesmen-kelas' : '' }}">
             <div class="field">
                 <label for="kelas_id">Kelas</label>
@@ -188,7 +189,7 @@
     </form>
 
     @if ($soalManual->isEmpty())
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div class="empty-state">
                 {{ $ujianCbt->asesmenKelas() ? 'Asesmen ini' : 'Paket ini' }} tidak memiliki soal uraian atau unggahan file yang perlu dikoreksi.
             </div>

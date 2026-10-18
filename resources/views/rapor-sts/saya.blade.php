@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 @section('title', 'Rapor STS')
 @section('content')
     <div class="page-header"><div><p class="eyebrow">Penilaian</p><h1 class="page-title">{{ $data['mode'] === 'orang_tua' ? 'Rapor STS Anak Saya' : 'Rapor STS Saya' }}</h1></div></div>

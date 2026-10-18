@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Detail Pelaksanaan Sanksi - NUSA')
 
@@ -71,7 +72,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Proses Pelaksanaan</h2>
                 <p class="help-text">Sanksi diproses oleh petugas yang ditugaskan dan ditutup setelah hasil pelaksanaannya dicatat.</p>
                 <div class="sanction-flow"><span class="sanction-step {{ $tahap === 1 ? 'current' : 'done' }}">1. Menunggu penugasan</span><span class="sanction-step {{ $tahap === 2 ? 'current' : ($tahap > 2 ? 'done' : '') }}">2. Pelaksanaan</span><span class="sanction-step {{ $tahap === 3 ? 'done' : '' }}">3. Selesai</span></div>
@@ -100,7 +101,7 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Bukti Pelaksanaan</h2><p class="help-text">Foto atau PDF disimpan privat dan hanya dapat dibuka oleh pengguna yang memiliki akses.</p></div><span class="badge badge-muted">{{ $sanksiPoinSiswa->buktiPelaksanaanSanksi->count() }} file</span></div>
                 <div class="sanction-file-list">
                     @forelse($sanksiPoinSiswa->buktiPelaksanaanSanksi as $bukti)
@@ -114,7 +115,7 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Riwayat Pelaksanaan</h2>
                 <p class="help-text">Catatan ini terbentuk otomatis dan tidak dapat diedit.</p>
                 <div class="sanction-history">

@@ -7,14 +7,13 @@
 @endphp
 
 @if ($errors->any())
-    <div class="alert alert-danger">
-        <strong>Ada data yang perlu diperbaiki.</strong>
+    <x-ui.alert type="danger" title="Ada data yang perlu diperbaiki.">
         <ul>
             @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
-    </div>
+    </x-ui.alert>
 @endif
 
 <div class="form-shell">
@@ -33,12 +32,12 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad school-data-section">
             <h2 class="panel-title">Informasi Kelas</h2>
             <div class="form-grid">
                 <div class="field">
                     <label for="tahun_pelajaran_id">Tahun pelajaran</label>
-                    <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="{{ $selectClass('tahun_pelajaran_id') }}" required>
+                    <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="{{ $selectClass('tahun_pelajaran_id') }}" required @error('tahun_pelajaran_id') aria-invalid="true" aria-describedby="tahun_pelajaran_id-error" @enderror>
                         <option value="">Pilih tahun pelajaran</option>
                         @foreach ($tahunPelajaran as $item)
                             <option value="{{ $item->id }}" @selected((string) $nilai('tahun_pelajaran_id', $tahunPelajaranDipilih) === (string) $item->id)>
@@ -47,42 +46,42 @@
                         @endforeach
                     </select>
                     @error('tahun_pelajaran_id')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="tahun_pelajaran_id-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nama">Nama kelas</label>
-                    <input id="nama" name="nama" type="text" value="{{ $nilai('nama') }}" placeholder="Contoh: VII.A" class="{{ $inputClass('nama') }}" required autofocus>
+                    <input id="nama" name="nama" type="text" value="{{ $nilai('nama') }}" placeholder="Contoh: VII.A" class="{{ $inputClass('nama') }}" required autofocus @error('nama') aria-invalid="true" aria-describedby="nama-error" @enderror>
                     @error('nama')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nama-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="tingkat">Tingkat</label>
-                    <select id="tingkat" name="tingkat" class="{{ $selectClass('tingkat') }}">
+                    <select id="tingkat" name="tingkat" class="{{ $selectClass('tingkat') }}" @error('tingkat') aria-invalid="true" aria-describedby="tingkat-error" @enderror>
                         <option value="">Pilih</option>
                         <option value="7" @selected((string) $nilai('tingkat') === '7')>VII</option>
                         <option value="8" @selected((string) $nilai('tingkat') === '8')>VIII</option>
                         <option value="9" @selected((string) $nilai('tingkat') === '9')>IX</option>
                     </select>
                     @error('tingkat')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="tingkat-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="kapasitas">Kapasitas</label>
-                    <input id="kapasitas" name="kapasitas" type="number" min="1" max="500" value="{{ $nilai('kapasitas') }}" class="{{ $inputClass('kapasitas') }}">
+                    <input id="kapasitas" name="kapasitas" type="number" min="1" max="500" value="{{ $nilai('kapasitas') }}" class="{{ $inputClass('kapasitas') }}" @error('kapasitas') aria-invalid="true" aria-describedby="kapasitas-error" @enderror>
                     @error('kapasitas')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="kapasitas-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field span-2">
                     <label for="wali_kelas_id">Wali kelas</label>
-                    <select id="wali_kelas_id" name="wali_kelas_id" class="{{ $selectClass('wali_kelas_id') }}">
+                    <select id="wali_kelas_id" name="wali_kelas_id" class="{{ $selectClass('wali_kelas_id') }}" @error('wali_kelas_id') aria-invalid="true" aria-describedby="wali_kelas_id-error" @enderror>
                         <option value="">Belum dipilih</option>
                         @foreach ($pegawai as $item)
                             <option value="{{ $item->id }}" @selected((string) $nilai('wali_kelas_id') === (string) $item->id)>
@@ -91,15 +90,15 @@
                         @endforeach
                     </select>
                     @error('wali_kelas_id')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="wali_kelas_id-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field span-2">
                     <label for="keterangan">Keterangan</label>
-                    <textarea id="keterangan" name="keterangan" class="{{ $textareaClass('keterangan') }}">{{ $nilai('keterangan') }}</textarea>
+                    <textarea id="keterangan" name="keterangan" class="{{ $textareaClass('keterangan') }}" @error('keterangan') aria-invalid="true" aria-describedby="keterangan-error" @enderror>{{ $nilai('keterangan') }}</textarea>
                     @error('keterangan')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="keterangan-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
             </div>

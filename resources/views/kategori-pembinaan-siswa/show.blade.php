@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Detail Kategori Pembinaan - NUSA')
 
@@ -53,7 +54,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi Kategori</h2>
 
                 <dl class="detail-grid">
@@ -72,7 +73,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Catatan pengembangan</h2>
                 <p class="help-text" style="margin-top: 8px;">Kategori ini akan menjadi pilihan saat laporan pembinaan siswa dan tindak lanjut BK dibuat.</p>
             </section>

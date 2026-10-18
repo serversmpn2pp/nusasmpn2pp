@@ -773,8 +773,9 @@
         </style>
 
         @stack('styles')
+        <link rel="stylesheet" href="{{ asset('css/nusa-exam.css') }}?v={{ filemtime(public_path('css/nusa-exam.css')) }}">
     </head>
-    <body class="@yield('body_class')">
+    <body class="nusa-exam-theme @yield('body_class')">
         @yield('body')
 
         @stack('scripts')

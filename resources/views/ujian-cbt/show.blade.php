@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Detail Paket CBT - NUSA')
 
@@ -70,7 +71,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi Paket</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -120,7 +121,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Pengaturan CBT</h2>
                 <dl class="detail-grid">
                     <div class="detail-item"><dt>Acak soal</dt><dd>{{ $ujianCbt->acak_soal ? 'Ya' : 'Tidak' }}</dd></div>
@@ -136,7 +137,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
                     <h2 class="panel-title">Soal Paket</h2>
                     @izin('cbt.kelola')
@@ -200,7 +201,7 @@
                 </div>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
                     <h2 class="panel-title">Peserta dan Sesi</h2>
                     @izin('cbt.kelola')
@@ -271,7 +272,7 @@
                 </div>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Kelas Peserta</h2>
                 <div class="table-wrap" style="margin-top: 14px;">
                     <table class="employee-table">

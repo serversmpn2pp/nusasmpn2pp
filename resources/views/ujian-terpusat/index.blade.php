@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Ujian Terpusat - NUSA')
 
@@ -214,7 +215,7 @@
         <div class="panel stat"><p class="stat-label">Jadwal selesai</p><p class="stat-value">{{ $ringkasan['selesai'] }}</p></div>
     </div>
 
-    <form action="{{ route('ujian-terpusat.index') }}" method="GET" class="panel panel-pad central-filter">
+    <form action="{{ route('ujian-terpusat.index') }}" method="GET" class="feature-filter panel panel-pad central-filter">
         <div class="field">
             <label for="kata_kunci">Cari Ujian Terpusat</label>
             <input id="kata_kunci" name="kata_kunci" value="{{ $kataKunci }}" type="search" class="input" placeholder="Nama atau jenis ujian">

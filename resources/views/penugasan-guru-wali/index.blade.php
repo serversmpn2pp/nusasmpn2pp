@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Penugasan Guru Wali - NUSA')
 
@@ -489,7 +490,7 @@
         </form>
 
         <div class="section-stack">
-            <form method="GET" class="panel panel-pad">
+            <form method="GET" class="feature-filter panel panel-pad">
                 <div class="guardian-list-filter">
                     <div class="field">
                         <label for="kata_kunci">Cari penugasan aktif</label>

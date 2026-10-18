@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Database Alumni - NUSA')
 @section('alumni-actions')
     <a class="button button-muted" href="{{ route('alumni-humas.cetak', \Illuminate\Support\Arr::except($filter, 'tab')) }}" target="_blank" rel="noopener">Cetak rekap</a>
@@ -9,7 +10,7 @@
     @include('alumni-humas._header', ['judulHalaman' => 'Database alumni'])
     <div class="agenda-metrics">@foreach(['total' => 'Alumni sesuai filter', 'melanjutkan' => 'Melanjutkan pendidikan', 'tidak_melanjutkan' => 'Tidak melanjutkan', 'belum_terdata' => 'Belum terdata'] as $key => $label)<div class="agenda-metric"><span>{{ $label }}</span><strong>{{ $statistik[$key] }}</strong></div>@endforeach</div>
     <nav class="agenda-tabs" aria-label="Bagian alumni"><a href="{{ route('alumni-humas.index', array_replace($filter, ['tab' => 'data'])) }}" @if(($filter['tab'] ?? 'data') === 'data')aria-current="page"@endif>Data alumni</a><a href="{{ route('alumni-humas.index', array_replace($filter, ['tab' => 'statistik'])) }}" @if(($filter['tab'] ?? 'data') === 'statistik')aria-current="page"@endif>Statistik & sekolah lanjutan</a></nav>
-    <section class="agenda-section"><form method="GET" class="alumni-filter"><input type="hidden" name="tab" value="{{ $filter['tab'] ?? 'data' }}">
+    <section class="agenda-section"><form method="GET" class="feature-filter alumni-filter"><input type="hidden" name="tab" value="{{ $filter['tab'] ?? 'data' }}">
         <div class="field"><label for="kata_kunci">Cari nama / NISN / sekolah</label><input class="input" id="kata_kunci" name="kata_kunci" maxlength="120" value="{{ $filter['kata_kunci'] ?? '' }}"></div>
         <div class="field"><label for="tahun_lulus">Angkatan (tahun lulus)</label><select class="select" id="tahun_lulus" name="tahun_lulus"><option value="">Semua angkatan</option>@foreach($tahun as $t)<option value="{{ $t }}" @selected((string)($filter['tahun_lulus'] ?? '') === (string)$t)>{{ $t }}</option>@endforeach</select></div>
         @foreach(['status_penelusuran' => ['Penelusuran', \App\Models\AlumniHumas::PENELUSURAN], 'jenis_sekolah' => ['Jenis sekolah', \App\Models\AlumniHumas::SEKOLAH], 'jenis_kelamin' => ['Jenis kelamin', ['L' => 'Laki-laki', 'P' => 'Perempuan']], 'status' => ['Status data', ['aktif' => 'Aktif', 'arsip' => 'Diarsipkan', 'semua' => 'Semua status']]] as $key => [$label, $pilihan])<div class="field"><label for="{{ $key }}">{{ $label }}</label><select class="select" id="{{ $key }}" name="{{ $key }}">@if($key !== 'status')<option value="">Semua</option>@endif @foreach($pilihan as $kode => $nama)<option value="{{ $kode }}" @selected(($filter[$key] ?? ($key === 'status' ? 'aktif' : '')) === $kode)>{{ $nama }}</option>@endforeach</select></div>@endforeach

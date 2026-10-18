@@ -249,7 +249,7 @@
 </section>
 
 <div class="question-builder">
-    <section class="panel panel-pad">
+    <section class="panel panel-pad feature-section">
         <div class="question-step-head">
             <span class="question-step-number">1</span>
             <div><h2>Pilih jenis soal</h2><p>Setelah dipilih, NUSA hanya menampilkan bentuk jawaban yang diperlukan.</p></div>
@@ -300,7 +300,7 @@
         </div>
     </section>
 
-    <section class="panel panel-pad">
+    <section class="panel panel-pad feature-section">
         <div class="question-step-head">
             <span class="question-step-number">2</span>
             <div><h2>Tulis soal</h2><p>Materi membantu pencarian. Isi soal adalah bagian yang akan dibaca siswa.</p></div>
@@ -366,7 +366,7 @@
         </details>
     </section>
 
-    <section class="panel panel-pad">
+    <section class="panel panel-pad feature-section">
         <div class="question-step-head">
             <span class="question-step-number">3</span>
             <div><h2>Isi jawaban dan tentukan kunci</h2><p>Bentuk kolom berikut otomatis mengikuti jenis soal yang dipilih.</p></div>

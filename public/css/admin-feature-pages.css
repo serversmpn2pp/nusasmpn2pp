@@ -1,0 +1,182 @@
+/* Explicit opt-in on operational admin views. Never loaded on standalone scans or exams. */
+@media screen {
+    .nusa-admin-shell.admin-feature-pages { --feature-accent: var(--ui-blue); --feature-soft: var(--ui-blue-soft); }
+    .nusa-admin-shell.admin-feature-pages:is([data-admin-module="kehadiran"],[data-admin-module="supervisi"],[data-admin-module="humas"]) { --feature-accent: var(--ui-teal); --feature-soft: var(--ui-teal-soft); }
+    .nusa-admin-shell.admin-feature-pages .content-shell { min-width: 0; }
+    .nusa-admin-shell.admin-feature-pages .page-header { gap: 18px; margin-bottom: 24px; align-items: center; }
+    .nusa-admin-shell.admin-feature-pages .page-header > :first-child { min-width: 0; flex: 1 1 240px; }
+    .nusa-admin-shell.admin-feature-pages .page-header > .actions { justify-content: flex-end; flex: 0 1 auto; }
+    .nusa-admin-shell.admin-feature-pages .page-title { font-size: 30px; line-height: 1.3; }
+    .nusa-admin-shell.admin-feature-pages .content-shell :is(.panel,.agenda-section,.sp-band,.surat-document) { box-shadow: none; }
+    .nusa-admin-shell.admin-feature-pages .section-stack { gap: 24px; min-width: 0; }
+    .nusa-admin-shell.admin-feature-pages :is(.form-grid,.detail-grid,.filter-grid) { gap: 18px 22px; }
+    .nusa-admin-shell.admin-feature-pages :is(.form-grid,.detail-grid,.filter-grid) > * { min-width: 0; }
+    .nusa-admin-shell.admin-feature-pages :is(.form-shell,.detail-shell) { gap: 24px; align-items: start; }
+    .nusa-admin-shell.admin-feature-pages .form-shell { grid-template-columns: 240px minmax(0,1fr); }
+    .nusa-admin-shell.admin-feature-pages .form-shell > aside { background: var(--feature-soft); border-color: #bad3de; }
+    .nusa-admin-shell.admin-feature-pages .feature-section { background: #fff; border: 0; border-radius: 0; box-shadow: none; padding: 22px; }
+    .nusa-admin-shell.admin-feature-pages .feature-section > .panel-title { padding: 13px 18px; margin: -22px -22px 22px; background: var(--feature-soft); border-left: 3px solid var(--feature-accent); }
+    .nusa-admin-shell.admin-feature-pages .detail-item { min-width: 0; padding-bottom: 12px; border-bottom: 1px solid var(--ui-divider); }
+    .nusa-admin-shell.admin-feature-pages :is(.detail-item,.quick-facts) dt { font-size: 14px; line-height: 1.5; }
+    .nusa-admin-shell.admin-feature-pages :is(.detail-item,.quick-facts) dd { font-size: 15px; overflow-wrap: anywhere; line-height: 1.6; }
+
+    /* Neutral totals, teal success and yellow attention retain their semantic meaning. */
+    .nusa-admin-shell.admin-feature-pages .stats-grid { grid-template-columns: repeat(auto-fit,minmax(min(100%,145px),1fr)); gap: 12px; }
+    .nusa-admin-shell.admin-feature-pages .stat { padding: 16px 18px; min-width: 0; }
+    .nusa-admin-shell.admin-feature-pages .stat-label { font-size: 14px; overflow-wrap: anywhere; }
+    .nusa-admin-shell.admin-feature-pages .stat-value { font-size: 28px; line-height: 1.25; margin-top: 6px; font-variant-numeric: tabular-nums; }
+    .nusa-admin-shell.admin-feature-pages .stat.active { background: var(--ui-teal-soft); border-color: #b4d7ce; }
+    .nusa-admin-shell.admin-feature-pages .stat:is(.warning,.inactive) { background: var(--ui-yellow-soft); border-color: #e6d48c; }
+    .nusa-admin-shell.admin-feature-pages .feature-filter { background: var(--ui-blue-soft); padding: 20px; border: 1px solid #cadbea; border-radius: 6px; margin-bottom: 24px; }
+    .nusa-admin-shell.admin-feature-pages :is(.grade-filter,.sp-filters,.surat-filter,.uf-filter,.ak-filter,.hd-filter) { background: var(--ui-blue-soft); border: 1px solid #cadbea; padding: 20px; border-radius: 6px; }
+    .nusa-admin-shell.admin-feature-pages .feature-filter :is(.agenda-filter,.agenda-filter-bottom) { padding-block: 0; }
+    .nusa-admin-shell.admin-feature-pages .feature-filter .agenda-filter-bottom { padding-top: 14px; }
+    .nusa-admin-shell.admin-feature-pages .pagination-simple { font-size: 14px; align-items: center; flex-wrap: wrap; gap: 12px; padding-block: 16px; }
+
+    /* Table aliases are deliberate: editors, physical print layouts and score matrices are not reset. */
+    .nusa-admin-shell.admin-feature-pages :is(.table-wrap,.sp-table-wrap,.surat-shell,.agenda-table-shell,.komite-table-shell) { min-width: 0; max-width: 100%; overscroll-behavior-inline: contain; }
+    .nusa-admin-shell.admin-feature-pages :is(.employee-table,.agenda-table,.mitra-table,.komite-table,.publikasi-table,.sp-table,.surat-table,.hd-table,.alumni-table) { font-size: 15px; line-height: 1.55; }
+    .nusa-admin-shell.admin-feature-pages :is(.employee-table,.agenda-table,.mitra-table,.komite-table,.publikasi-table,.sp-table,.surat-table,.hd-table,.alumni-table) th { font-size: 13px; background: var(--ui-blue-soft); color: #36536c; letter-spacing: 0; vertical-align: middle; }
+    .nusa-admin-shell.admin-feature-pages :is(.employee-table,.agenda-table,.mitra-table,.komite-table,.publikasi-table,.sp-table,.surat-table,.hd-table,.alumni-table) td { font-size: 15px; line-height: 1.55; }
+    .nusa-admin-shell.admin-feature-pages :is(.employee-table,.agenda-table,.mitra-table,.komite-table,.publikasi-table,.sp-table,.surat-table,.hd-table,.alumni-table) tbody tr:hover > td { background-color: #f1f8f7; }
+    .nusa-admin-shell.admin-feature-pages :is(.person-meta,.help-text,.agenda-muted,.sp-muted,.surat-muted,.agenda-facts dt,.sp-facts dt,.uf-facts dt,.ak-facts dt) { font-size: 14px; line-height: 1.6; }
+    .nusa-admin-shell.admin-feature-pages :is(.employee-table,.agenda-table,.mitra-table,.komite-table,.sp-table,.surat-table) small { font-size: 14px; line-height: 1.55; }
+    .nusa-admin-shell.admin-feature-pages .person-name { font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
+    .nusa-admin-shell.admin-feature-pages .empty-state { font-size: 15px; line-height: 1.6; }
+    .nusa-admin-shell.admin-feature-pages :is(.mobile-card,.mobile-list) { min-width: 0; }
+    .nusa-admin-shell.admin-feature-pages .mobile-card .person-name { font-size: 16px; }
+    .nusa-admin-shell.admin-feature-pages .mobile-card .actions { flex-wrap: wrap; gap: 8px; }
+    .nusa-admin-shell.admin-feature-pages :is(.agenda-empty,.sp-empty,.surat-empty,.hd-empty,.tamu-empty) { font-size: 15px; padding: 40px 20px; color: var(--ui-muted); line-height: 1.7; }
+
+    /* Akademik: full-width grade workspace, readable metadata and persistent save action. */
+    .nusa-admin-shell.admin-feature-pages .grade-overview { border: 1px solid #b9d1df; background: #fff; }
+    .nusa-admin-shell.admin-feature-pages .grade-overview-head { background: var(--ui-blue-soft); padding: 16px; border-left-color: var(--ui-teal); }
+    .nusa-admin-shell.admin-feature-pages .grade-overview-head h2 { font-size: 20px; line-height: 1.4; }
+    .nusa-admin-shell.admin-feature-pages .grade-facts { padding-block: 18px; }
+    .nusa-admin-shell.admin-feature-pages .grade-facts dt { font-size: 14px; }
+    .nusa-admin-shell.admin-feature-pages .grade-facts dd { font-size: 15px; line-height: 1.55; }
+    .nusa-admin-shell.admin-feature-pages :is(.publication-box,.sts-manual) p { font-size: 14px; line-height: 1.6; }
+    .nusa-admin-shell.admin-feature-pages .publication-box { background: var(--ui-yellow-soft); }
+    .nusa-admin-shell.admin-feature-pages .publication-box.is-published { background: var(--ui-teal-soft); }
+    .nusa-admin-shell.admin-feature-pages .grade-entry-head { background: var(--ui-teal-soft); padding: 18px 20px; }
+    .nusa-admin-shell.admin-feature-pages .grade-entry-head dt { font-size: 14px; }
+    .nusa-admin-shell.admin-feature-pages .grade-table { min-width: 0; }
+    .nusa-admin-shell.admin-feature-pages .grade-table :is(.input,.select) { min-height: 44px; font-size: 16px; }
+    .nusa-admin-shell.admin-feature-pages .grade-table .help-text { font-size: 13px; }
+    .nusa-admin-shell.admin-feature-pages .grade-save-actions { position: sticky; bottom: 0; z-index: 6; padding: 14px 20px; margin: 0; background: #edf4fc; border-top: 2px solid #b3cde3; box-shadow: 0 -3px 8px #172d3e08; }
+    .nusa-admin-shell.admin-feature-pages .grade-unsaved { font-size: 14px; color: var(--ui-warning-text); }
+    .nusa-admin-shell.admin-feature-pages .leger-table :is(th,.person-meta) { font-size: 13px; letter-spacing: 0; }
+    .nusa-admin-shell.admin-feature-pages .leger-table td { font-size: 15px; }
+
+    /* Kehadiran and monitoring: scroll stays inside the data surface, not the whole page. */
+    .nusa-admin-shell.admin-feature-pages .feature-worktable { max-height: 70dvh; overflow: auto; scrollbar-gutter: stable; scroll-padding-top: 72px; }
+    .nusa-admin-shell.admin-feature-pages .feature-worktable:focus-visible { outline: 3px solid #0f766e80; outline-offset: 2px; }
+    .nusa-admin-shell.admin-feature-pages .feature-worktable table { border-collapse: separate; border-spacing: 0; }
+    .nusa-admin-shell.admin-feature-pages .feature-worktable thead th { position: sticky; top: 0; z-index: 3; border-bottom: 1px solid #b6cddd; }
+    .nusa-admin-shell.admin-feature-pages .feature-worktable td { background: #fff; }
+    .nusa-admin-shell.admin-feature-pages .attendance-worktable :is(th,td):nth-child(2) { position: sticky; left: 0; z-index: 2; min-width: 230px; max-width: 280px; box-shadow: 2px 0 0 #dce5ed; }
+    .nusa-admin-shell.admin-feature-pages .attendance-worktable th:nth-child(2) { z-index: 4; }
+    .nusa-admin-shell.admin-feature-pages .monitor-worktable :is(th,td):first-child { position: sticky; left: 0; z-index: 2; min-width: 230px; max-width: 280px; box-shadow: 2px 0 0 #dce5ed; }
+    .nusa-admin-shell.admin-feature-pages .monitor-worktable th:first-child { z-index: 4; }
+    .nusa-admin-shell.admin-feature-pages .identity-worktable :is(th,td):first-child { position: sticky; left: 0; z-index: 2; min-width: 230px; max-width: 280px; box-shadow: 2px 0 0 #dce5ed; }
+    .nusa-admin-shell.admin-feature-pages .identity-worktable th:first-child { z-index: 4; }
+    .nusa-admin-shell.admin-feature-pages .monitor-worktable .monitor-table { min-width: 1250px; }
+    .nusa-admin-shell.admin-feature-pages .monitor-context { background: var(--ui-blue-soft); border-color: #c2d5e6; }
+    .nusa-admin-shell.admin-feature-pages .monitor-status-card { padding: 16px 18px; }
+    .nusa-admin-shell.admin-feature-pages .monitor-status-card dt { font-size: 13px; letter-spacing: 0; }
+    .nusa-admin-shell.admin-feature-pages .monitor-status-card dd { font-size: 16px; line-height: 1.5; }
+    .nusa-admin-shell.admin-feature-pages .monitor-status-card.success { background: var(--ui-teal-soft); border-color: #b4d7ce; }
+    .nusa-admin-shell.admin-feature-pages .monitor-token { background: #fff8d8; color: #5f4900; letter-spacing: 0; font-size: 20px; }
+    .nusa-admin-shell.admin-feature-pages .monitor-progress-fill { background: var(--ui-teal); }
+    .nusa-admin-shell.admin-feature-pages :is(.monitor-meta,.monitor-live,.monitor-extra-time summary,.monitor-extra-note) { font-size: 14px; }
+    .nusa-admin-shell.admin-feature-pages .monitor-extra-form label { font-size: 14px; }
+    .nusa-admin-shell.admin-feature-pages .monitor-extra-form :is(input,textarea) { font-size: 16px; min-height: 44px; }
+
+    /* Kesiswaan & BK: distinguish official points, follow-up and the chronological record. */
+    .nusa-admin-shell.admin-feature-pages .point-summary { background: #15477a; border: 0; }
+    .nusa-admin-shell.admin-feature-pages :is(.violation-detail,.decision-item,.follow-up-item) { border-color: #c5d5df; box-shadow: none; }
+    .nusa-admin-shell.admin-feature-pages .decision-item { border-left: 3px solid var(--ui-teal); }
+    .nusa-admin-shell.admin-feature-pages .follow-up-item { background: #f0f7f5; }
+    .nusa-admin-shell.admin-feature-pages .timeline-list { border-left-color: #9fc8c0; }
+    .nusa-admin-shell.admin-feature-pages :is(.timeline-status,.bk-violation-title,.bk-violation-points) { font-size: 13px; letter-spacing: 0; }
+    .nusa-admin-shell.admin-feature-pages .bk-violation-option { padding: 14px 12px; }
+    .nusa-admin-shell.admin-feature-pages :is(.verification-stat-label,.verification-step,.fact-chip) { font-size: 13px; line-height: 1.5; }
+    .nusa-admin-shell.admin-feature-pages .verification-stat.active { background: var(--ui-teal-soft); border-color: #a7cec4; box-shadow: inset 0 3px 0 var(--ui-teal); }
+
+    /* Humas, Supervisi and Persuratan keep their stage navigation and document workflows. */
+    .nusa-admin-shell.admin-feature-pages :is(.agenda-section,.sp-band,.surat-section,.uf-section,.ak-section,.bp-section) { border-radius: 0; box-shadow: none; }
+    .nusa-admin-shell.admin-feature-pages :is(.agenda-section,.surat-section,.tamu-section) > h2 { font-size: 18px; padding: 12px 16px; background: var(--feature-soft); border-left: 3px solid var(--feature-accent); }
+    .nusa-admin-shell.admin-feature-pages :is(.sp-head,.uf-head,.ak-head,.bp-head,.hd-section-head) { background: var(--ui-blue-soft); color: var(--ui-blue); }
+    .nusa-admin-shell.admin-feature-pages :is(.sp-head,.uf-head,.ak-head,.bp-head,.hd-section-head) h2 { font-size: 18px; }
+    .nusa-admin-shell.admin-feature-pages .sp-band.teal > .sp-head { background: var(--ui-teal-soft); color: #0b5d56; }
+    .nusa-admin-shell.admin-feature-pages .sp-band.amber > .sp-head { background: var(--ui-yellow-soft); color: var(--ui-warning-text); }
+    .nusa-admin-shell.admin-feature-pages :is(.sp-badge,.agenda-badge,.surat-status) { font-size: 13px; line-height: 1.5; }
+    .nusa-admin-shell.admin-feature-pages :is(.sp-nav a,.sp-stage-nav a,.agenda-tabs a) { font-size: 14px; min-height: 44px; }
+    .nusa-admin-shell.admin-feature-pages :is(.sp-score-row,.sp-task-body) { gap: 18px; }
+    .nusa-admin-shell.admin-feature-pages :is(.sp-indicator-label,.sp-score-row .field label,.sp-check,.sp-savebar span,.surat-choice small) { font-size: 14px; line-height: 1.6; }
+    .nusa-admin-shell.admin-feature-pages .sp-stat span { font-size: 14px; }
+    .nusa-admin-shell.admin-feature-pages .sp-stat strong { font-size: 28px; }
+    .nusa-admin-shell.admin-feature-pages .agenda-metrics { background: var(--ui-teal-soft); border-color: #b4d7ce; }
+    .nusa-admin-shell.admin-feature-pages .agenda-metric span { font-size: 14px; }
+    .nusa-admin-shell.admin-feature-pages .humas-table { font-size: 15px; line-height: 1.55; }
+    .nusa-admin-shell.admin-feature-pages .humas-table th { font-size: 13px; background: var(--ui-blue-soft); color: #36536c; }
+    .nusa-admin-shell.admin-feature-pages .humas-table tbody tr:hover > td { background-color: #f1f8f7; }
+    .nusa-admin-shell.admin-feature-pages .surat-detail-head { border-left-color: var(--ui-teal); background: var(--ui-blue-soft); }
+    .nusa-admin-shell.admin-feature-pages .surat-form-footer { background: var(--ui-blue-soft); }
+    .nusa-admin-shell.admin-feature-pages .surat-table .surat-status { overflow-wrap: normal; word-break: normal; }
+    .nusa-admin-shell.admin-feature-pages .hd-section-head { padding: 12px 16px; }
+    .nusa-admin-shell.admin-feature-pages .hd-metrics { gap: 12px; }
+    .nusa-admin-shell.admin-feature-pages .hd-metric { padding: 16px; background: var(--ui-blue-soft); border: 1px solid #cadbea; border-radius: 6px; }
+    .nusa-admin-shell.admin-feature-pages .hd-metric:is(.hd-color-green,.hd-color-teal) { background: var(--ui-teal-soft); border-color: #b4d7ce; }
+    .nusa-admin-shell.admin-feature-pages .hd-metric.hd-color-amber { background: var(--ui-yellow-soft); border-color: #e6d48c; }
+    .nusa-admin-shell.admin-feature-pages :is(.hd-metric-label,.hd-metric small,.hd-muted,.hd-note,.hd-status,.sarpras-kpi-label,.sarpras-kpi-note,.sarpras-side-note) { font-size: 14px; line-height: 1.6; }
+    .nusa-admin-shell.admin-feature-pages .hd-metric strong { font-size: 28px; }
+    .nusa-admin-shell.admin-feature-pages .sarpras-hero .eyebrow { color: var(--ui-yellow); }
+    .nusa-admin-shell.admin-feature-pages .sarpras-title { font-size: 28px; line-height: 1.4; }
+
+    @media (min-width: 901px) {
+        .nusa-admin-shell.admin-feature-pages .grade-entry .grade-table-wrap { max-height: 68dvh; overflow: auto; scroll-padding-top: 90px; }
+        .nusa-admin-shell.admin-feature-pages .grade-table { border-collapse: separate; border-spacing: 0; }
+        .nusa-admin-shell.admin-feature-pages .grade-table thead th { position: sticky; top: 0; z-index: 2; }
+    }
+    @media (max-width: 1100px) {
+        .nusa-admin-shell.admin-feature-pages .form-shell { grid-template-columns: minmax(0,1fr); }
+        .nusa-admin-shell.admin-feature-pages .form-shell > aside { display: block; }
+        .nusa-admin-shell.admin-feature-pages .page-header { align-items: flex-start; flex-wrap: wrap; }
+        .nusa-admin-shell.admin-feature-pages .page-header > .actions { justify-content: flex-start; }
+        .nusa-admin-shell.admin-feature-pages :is(.account-filter-grid,.parent-account-filter,.assessment-filter-grid) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .nusa-admin-shell.admin-feature-pages :is(.account-filter-grid,.parent-account-filter,.assessment-filter-grid) .actions { flex-direction: row; flex-wrap: wrap; }
+        .nusa-admin-shell.admin-feature-pages .verification-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .nusa-admin-shell.admin-feature-pages .verification-actions { grid-column: 1/-1; display: flex; justify-content: flex-start; }
+        .nusa-admin-shell.admin-feature-pages .database-backup-activity-item { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .nusa-admin-shell.admin-feature-pages .database-backup-activity-item > * { min-width: 0; overflow-wrap: anywhere; }
+    }
+    @media (max-width: 900px) {
+        .nusa-admin-shell.admin-feature-pages .page-header > :first-child { flex-basis: auto; }
+        .nusa-admin-shell.admin-feature-pages .page-header > .actions { display: flex; flex-direction: row; width: 100%; flex-wrap: wrap; }
+        .nusa-admin-shell.admin-feature-pages .page-header .button { width: auto; flex: 0 1 auto; }
+        .nusa-admin-shell.admin-feature-pages .grade-save-actions { position: static; }
+        .nusa-admin-shell.admin-feature-pages .grade-table-wrap { overflow: visible; }
+        .nusa-admin-shell.admin-feature-pages .grade-table tbody tr { padding: 16px; background: #fff; }
+        .nusa-admin-shell.admin-feature-pages .grade-table td .input { width: 100%; }
+    }
+    @media (max-width: 600px) {
+        .nusa-admin-shell.admin-feature-pages .page-title { font-size: 26px; }
+        .nusa-admin-shell.admin-feature-pages .stats-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .nusa-admin-shell.admin-feature-pages .stats-grid > :last-child:nth-child(odd) { grid-column: 1/-1; }
+        .nusa-admin-shell.admin-feature-pages .stat { padding: 14px; }
+        .nusa-admin-shell.admin-feature-pages .feature-filter { padding: 16px; }
+        .nusa-admin-shell.admin-feature-pages .feature-section { padding: 18px 16px; }
+        .nusa-admin-shell.admin-feature-pages .feature-section > .panel-title { margin: -18px -16px 18px; padding: 12px 16px; }
+        .nusa-admin-shell.admin-feature-pages .grade-overview { padding: 16px; }
+        .nusa-admin-shell.admin-feature-pages .grade-overview-head h2 { font-size: 18px; }
+        .nusa-admin-shell.admin-feature-pages .grade-entry-head { flex-wrap: wrap; gap: 16px; padding: 16px; }
+        .nusa-admin-shell.admin-feature-pages .grade-save-actions { gap: 12px; padding: 16px; }
+        .nusa-admin-shell.admin-feature-pages .grade-save-actions .button { width: 100%; }
+        .nusa-admin-shell.admin-feature-pages .grade-save-actions .grade-unsaved { margin-right: 0; width: 100%; }
+        .nusa-admin-shell.admin-feature-pages :is(.form-grid,.detail-grid) { grid-template-columns: minmax(0,1fr); }
+        .nusa-admin-shell.admin-feature-pages .span-2 { grid-column: 1/-1; }
+        .nusa-admin-shell.admin-feature-pages .sp-stat { padding: 14px; }
+        .nusa-admin-shell.admin-feature-pages :is(.account-filter-grid,.parent-account-filter,.assessment-filter-grid,.verification-row,.database-backup-activity-item) { grid-template-columns: minmax(0,1fr); }
+    }
+}

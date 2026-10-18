@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Bundel Pertemuan Humas - NUSA')
 @section('content')
 <main class="bp-page">

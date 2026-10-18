@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Detail Perangkat Ajar - NUSA')
 
@@ -167,7 +168,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi Dokumen</h2>
                 <dl class="detail-grid">
                     <div class="detail-item span-2">
@@ -210,7 +211,7 @@
             </section>
 
             @if ($perangkatAjar->catatan_pemeriksa || $perangkatAjar->diperiksa_pada)
-                <section class="panel panel-pad">
+                <section class="panel panel-pad feature-section">
                     <h2 class="panel-title">Hasil Pemeriksaan</h2>
                     <dl class="detail-grid">
                         <div class="detail-item">

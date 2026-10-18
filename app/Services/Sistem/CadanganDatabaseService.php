@@ -219,7 +219,7 @@ class CadanganDatabaseService
             $modePemeliharaanAktif = true;
             DB::disconnect($koneksi['nama_koneksi']);
 
-            $this->pulihkanSchemaPublik($path, $ringkasanCadangan, $status, $koneksi);
+            $this->pulihkanSchemaPublik($path, $status, $koneksi);
             $databaseDiganti = true;
 
             DB::purge($koneksi['nama_koneksi']);
@@ -245,9 +245,9 @@ class CadanganDatabaseService
             if ($databaseDiganti) {
                 try {
                     $pathPengaman = Storage::disk('local')->path($cadanganPengaman['lokasi']);
-                    $ringkasanPengaman = $this->pastikanCadanganNusa($pathPengaman, $status['pg_restore']);
+                    $this->pastikanCadanganNusa($pathPengaman, $status['pg_restore']);
                     DB::disconnect($koneksi['nama_koneksi']);
-                    $this->pulihkanSchemaPublik($pathPengaman, $ringkasanPengaman, $status, $koneksi);
+                    $this->pulihkanSchemaPublik($pathPengaman, $status, $koneksi);
                     DB::purge($koneksi['nama_koneksi']);
                     DB::reconnect($koneksi['nama_koneksi']);
                     Artisan::call('migrate', ['--force' => true]);
@@ -492,7 +492,7 @@ class CadanganDatabaseService
     }
 
     /**
-     * @return array{tabel: array<int, string>, memuat_schema_public: bool}
+     * @return array{tabel: array<int, string>}
      */
     private function ringkasanCadangan(string $path, string $pgRestore): array
     {
@@ -505,22 +505,16 @@ class CadanganDatabaseService
         }
 
         $tabel = [];
-        $memuatSchemaPublic = false;
-
         foreach (preg_split('/\R/', $proses->getOutput()) ?: [] as $baris) {
             if (preg_match('/;\s+\d+\s+\d+\s+TABLE\s+public\s+([^\s]+)\s+/i', $baris, $cocok)) {
                 $tabel[] = trim($cocok[1], '"');
-            }
-
-            if (preg_match('/;\s+\d+\s+\d+\s+SCHEMA\s+-\s+public\s+/i', $baris)) {
-                $memuatSchemaPublic = true;
             }
         }
 
         $tabel = array_values(array_unique($tabel));
         sort($tabel);
 
-        return ['tabel' => $tabel, 'memuat_schema_public' => $memuatSchemaPublic];
+        return ['tabel' => $tabel];
     }
 
     private function pastikanCadanganNusa(string $path, string $pgRestore): array
@@ -600,7 +594,7 @@ class CadanganDatabaseService
         }
     }
 
-    private function pulihkanSchemaPublik(string $path, array $ringkasan, array $status, array $koneksi): void
+    private function pulihkanSchemaPublik(string $path, array $status, array $koneksi): void
     {
         $disk = Storage::disk('local');
         $penanda = Str::lower(Str::random(12));
@@ -625,11 +619,11 @@ class CadanganDatabaseService
                 throw new RuntimeException($this->pesanProsesGagal('Persiapan berkas pemulihan', $ekstrak));
             }
 
-            $reset = "DROP SCHEMA IF EXISTS public CASCADE;\n";
-
-            if (! $ringkasan['memuat_schema_public']) {
-                $reset .= "CREATE SCHEMA public;\nGRANT USAGE ON SCHEMA public TO PUBLIC;\n";
-            }
+            // pg_restore --schema=public memilih isi skema, bukan perintah CREATE SCHEMA.
+            $reset = "SET client_min_messages = warning;\n"
+                ."DROP SCHEMA IF EXISTS public CASCADE;\n"
+                ."CREATE SCHEMA public;\n"
+                ."GRANT USAGE ON SCHEMA public TO PUBLIC;\n";
 
             if (file_put_contents($pathReset, $reset, LOCK_EX) === false) {
                 throw new RuntimeException('Berkas persiapan pemulihan tidak dapat dibuat.');
@@ -661,6 +655,11 @@ class CadanganDatabaseService
     private function pesanProsesGagal(string $proses, Process $process): string
     {
         $detail = trim($process->getErrorOutput() ?: $process->getOutput());
+
+        if (preg_match('/(?:^|\R)[^\r\n]*\b(?:ERROR|FATAL|PANIC)\s*:/i', $detail, $cocok, PREG_OFFSET_CAPTURE)) {
+            $detail = trim(substr($detail, $cocok[0][1]));
+        }
+
         $detail = str($detail)->limit(900)->toString();
 
         return $proses.' gagal.'.($detail !== '' ? ' '.$detail : ' Periksa koneksi dan konfigurasi PostgreSQL.');

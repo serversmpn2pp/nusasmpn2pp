@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Rincian Aset Promosi - NUSA')
 @section('content')
 @include('aset-promosi-humas._style')

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Program Kerja Komite - NUSA')
 @section('program-actions')
     @if ($periode->status !== 'arsip' && auth()->user()->memilikiIzin('komite_humas.kelola'))<a class="button button-primary" href="{{ route('komite-humas.program.create', $periode) }}">Tambah program</a>@endif
@@ -8,7 +9,7 @@
     @include('program-komite-humas._header', ['judulHalaman' => 'Program kerja komite'])
     <div class="agenda-metrics">@foreach ($statistik as $kode => $jumlah)<div class="agenda-metric"><span>{{ \App\Models\ProgramKomiteHumas::STATUS[$kode] }}</span><strong>{{ $jumlah }}</strong></div>@endforeach</div>
     <section class="agenda-section">
-        <form method="GET" class="program-filter">
+        <form method="GET" class="feature-filter program-filter">
             <div class="field"><label for="kata_kunci">Cari program</label><input id="kata_kunci" name="kata_kunci" class="input" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120"></div>
             <div class="field"><label for="status">Status</label><select id="status" name="status" class="select"><option value="">Semua status</option>@foreach (\App\Models\ProgramKomiteHumas::STATUS as $kode => $nama)<option value="{{ $kode }}" @selected(($filter['status'] ?? '') === $kode)>{{ $nama }}</option>@endforeach</select></div>
             <label class="check-label"><input type="checkbox" name="terlambat" value="1" @checked($filter['terlambat'] ?? false)>Lewat target ({{ $terlambat }})</label>

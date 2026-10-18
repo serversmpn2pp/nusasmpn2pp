@@ -46,7 +46,7 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Sasaran Jadwal</h2>
             <div class="form-grid">
                 <div class="field span-2">
@@ -115,7 +115,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Jam Masuk</h2>
             <div class="form-grid">
                 <div class="field">
@@ -144,7 +144,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Jam Pulang</h2>
             <div class="form-grid">
                 <div class="field">

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($aset->exists ? 'Edit aset' : 'Tambah aset').' - NUSA')
 @section('content')
 @include('aset-promosi-humas._style')

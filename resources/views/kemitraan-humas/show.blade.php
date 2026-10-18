@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', e($mitra->nama).' - Kemitraan')
 @section('content')
 @include('kemitraan-humas._style')
@@ -17,7 +18,7 @@
         @if (!$bolehAgenda)<div class="alert">Akses agenda Humas belum diberikan.</div>@else
             @izin('kemitraan_humas.kelola')@if ($mitra->status === 'aktif')
                 <section class="agenda-section"><h2>Kegiatan bersama mitra</h2>@izin('agenda_humas.kelola')<a class="button button-primary" href="{{ route('agenda-humas.create', ['mitra_humas_id' => $mitra->id]) }}">Buat agenda bersama</a>@endizin
-                    <form method="GET" action="{{ route('kemitraan-humas.show', $mitra) }}" class="agenda-actions"><input type="hidden" name="tab" value="kegiatan"><div class="field" style="flex:1"><label for="cari_agenda">Cari agenda yang sudah ada</label><input id="cari_agenda" name="cari_agenda" class="input" value="{{ request('cari_agenda') }}" maxlength="120"></div><button type="submit" class="button button-muted">Cari agenda</button></form>
+                    <form method="GET" action="{{ route('kemitraan-humas.show', $mitra) }}" class="feature-filter agenda-actions"><input type="hidden" name="tab" value="kegiatan"><div class="field" style="flex:1"><label for="cari_agenda">Cari agenda yang sudah ada</label><input id="cari_agenda" name="cari_agenda" class="input" value="{{ request('cari_agenda') }}" maxlength="120"></div><button type="submit" class="button button-muted">Cari agenda</button></form>
                     <form method="POST" action="{{ route('kemitraan-humas.agenda.store', $mitra) }}" class="agenda-actions" data-kemitraan-submit>@csrf<div class="field" style="flex:1"><label for="agenda_humas_id">Agenda terkait</label><select class="select" id="agenda_humas_id" name="agenda_humas_id" required><option value="">Pilih agenda</option>@foreach ($pilihanAgenda as $item)<option value="{{ $item->id }}">{{ $item->waktu_mulai->format('d-m-Y') }} - {{ $item->judul }}</option>@endforeach</select></div><button type="submit" class="button button-muted">Hubungkan agenda</button></form>
                 </section>
             @endif

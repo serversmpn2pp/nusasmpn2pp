@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 @section('title', $judul . ' - NUSA')
 @section('content')
     <div class="page-header"><div><p class="eyebrow">Pengaturan Pembinaan</p><h1 class="page-title">{{ $judul }}</h1></div></div>

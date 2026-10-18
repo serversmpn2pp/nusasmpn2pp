@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Koreksi Presensi - NUSA')
 
@@ -88,7 +89,7 @@
             @endif
         </aside>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Data koreksi</h2>
 
             <form action="{{ route('rekap-absensi-harian.koreksi.update', $anggotaKelas) }}" method="POST" style="margin-top: 16px;">

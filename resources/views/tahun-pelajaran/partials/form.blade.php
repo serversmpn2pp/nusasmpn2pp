@@ -11,14 +11,13 @@
 @endphp
 
 @if ($errors->any())
-    <div class="alert alert-danger">
-        <strong>Ada data yang perlu diperbaiki.</strong>
+    <x-ui.alert type="danger" title="Ada data yang perlu diperbaiki.">
         <ul>
             @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
-    </div>
+    </x-ui.alert>
 @endif
 
 <div class="form-shell">
@@ -37,38 +36,38 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad school-data-section">
             <h2 class="panel-title">Informasi Tahun Pelajaran</h2>
             <div class="form-grid">
                 <div class="field span-2">
                     <label for="nama">Nama tahun pelajaran</label>
-                    <input id="nama" name="nama" type="text" value="{{ $nilai('nama') }}" placeholder="Contoh: 2026/2027" class="{{ $inputClass('nama') }}" required autofocus>
+                    <input id="nama" name="nama" type="text" value="{{ $nilai('nama') }}" placeholder="Contoh: 2026/2027" class="{{ $inputClass('nama') }}" @error('nama') aria-invalid="true" aria-describedby="nama-error" @enderror required autofocus>
                     @error('nama')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nama-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="tanggal_mulai">Tanggal mulai</label>
-                    <input id="tanggal_mulai" name="tanggal_mulai" type="date" value="{{ $tanggal('tanggal_mulai') }}" class="{{ $inputClass('tanggal_mulai') }}">
+                    <input id="tanggal_mulai" name="tanggal_mulai" type="date" value="{{ $tanggal('tanggal_mulai') }}" class="{{ $inputClass('tanggal_mulai') }}" @error('tanggal_mulai') aria-invalid="true" aria-describedby="tanggal_mulai-error" @enderror>
                     @error('tanggal_mulai')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="tanggal_mulai-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="tanggal_selesai">Tanggal selesai</label>
-                    <input id="tanggal_selesai" name="tanggal_selesai" type="date" value="{{ $tanggal('tanggal_selesai') }}" class="{{ $inputClass('tanggal_selesai') }}">
+                    <input id="tanggal_selesai" name="tanggal_selesai" type="date" value="{{ $tanggal('tanggal_selesai') }}" class="{{ $inputClass('tanggal_selesai') }}" @error('tanggal_selesai') aria-invalid="true" aria-describedby="tanggal_selesai-error" @enderror>
                     @error('tanggal_selesai')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="tanggal_selesai-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field span-2">
                     <label for="keterangan">Keterangan</label>
-                    <textarea id="keterangan" name="keterangan" class="{{ $textareaClass('keterangan') }}">{{ $nilai('keterangan') }}</textarea>
+                    <textarea id="keterangan" name="keterangan" class="{{ $textareaClass('keterangan') }}" @error('keterangan') aria-invalid="true" aria-describedby="keterangan-error" @enderror>{{ $nilai('keterangan') }}</textarea>
                     @error('keterangan')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="keterangan-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
             </div>

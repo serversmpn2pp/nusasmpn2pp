@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Detail Barang Datang - NUSA')
 
@@ -145,7 +146,7 @@
             </div>
         </aside>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Informasi penerimaan</h2>
             <dl class="detail-grid" style="margin-top:16px;">
                 <div class="detail-item"><dt>Sumber barang</dt><dd>{{ $penerimaanBarang->sumberPerolehanBarang->nama }} {{ $penerimaanBarang->tanggal_penerimaan->year }}</dd></div>

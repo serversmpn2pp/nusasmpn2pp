@@ -1,0 +1,121 @@
+.nusa-admin-shell{--admin-sidebar-width:244px;font-family:"Segoe UI",Arial,sans-serif;background:#f5f8fa;letter-spacing:0;color-scheme:light}
+.nusa-admin-shell .app-shell{grid-template-columns:var(--admin-sidebar-width) minmax(0,1fr)}
+.nusa-admin-shell .app-sidebar{background:#fff;color:#526879;padding:0;border-right:1px solid #dce5eb;box-shadow:none;overflow:hidden}
+.nusa-admin-shell :is(.app-sidebar,.app-topbar){--muted:#627486;--line:#dce5eb;--text:#172d3e;font-size:14px;line-height:1.5}
+.nusa-admin-shell .app-topbar strong{font-weight:650}
+.nusa-admin-shell :where(.app-sidebar,.app-topbar) svg{width:20px;height:20px;flex-shrink:0;stroke-width:1.75}
+.nusa-admin-shell :where(.app-sidebar,.app-topbar) a,.nusa-admin-shell :where(.app-sidebar,.app-topbar) button,.nusa-admin-shell :where(.app-sidebar,.app-topbar) summary,.nusa-admin-shell :where(.app-sidebar,.app-topbar) input{outline-offset:3px;touch-action:manipulation}
+.nusa-admin-shell :where(.app-sidebar,.app-topbar) :focus-visible{outline:3px solid #0f766e75}
+.nusa-admin-shell .sidebar-brand{padding:24px 22px 22px;min-height:104px;border:0;position:relative;gap:11px;flex-shrink:0}
+.nusa-admin-shell .sidebar-brand:after{content:"";position:absolute;width:31px;height:3px;background:#f1c40f;left:22px;bottom:11px}
+.nusa-admin-shell .sidebar-brand-mark{width:44px;height:44px;padding:0;border:0;box-shadow:none;background:transparent}
+.nusa-admin-shell .sidebar-brand-title{font-size:25px;color:#15477a;font-weight:750;line-height:1.1}
+.nusa-admin-shell .sidebar-brand-title:after{content:".";color:#0f766e}
+.nusa-admin-shell .sidebar-brand>span:last-child{min-width:0}
+.nusa-admin-shell .sidebar-brand-subtitle{font-size:13px;color:#4d6476;font-weight:500;line-height:1.45;margin-top:3px;max-width:150px}
+.nusa-admin-shell .sidebar-search{margin:12px 16px 14px;padding-top:0;flex-shrink:0}
+.nusa-admin-shell .sidebar-search-control{border:0;background:transparent}
+.nusa-admin-shell .sidebar-search-control input{height:44px;border:1px solid #cfdce7;border-radius:6px;background:#fafcfd;font-size:14px;color:#172d3e;font-weight:400;padding-left:35px}
+.nusa-admin-shell .sidebar-search-control input::placeholder{color:#5d7183}
+.nusa-admin-shell .sidebar-search-control input:focus{border-color:#0f766e;background:#fff;box-shadow:0 0 0 3px #0f766e12}
+.nusa-admin-shell .sidebar-search-control>svg{color:#7b8c9d;stroke:currentColor;left:12px;top:13px;width:17px;height:17px}
+.nusa-admin-shell .sidebar-search-clear{color:#627486}
+.nusa-admin-shell .sidebar-search-clear:hover{background:#edf4fc;color:#15477a}
+.nusa-admin-shell .sidebar-nav{display:flex;flex-direction:column;padding:0 12px;gap:2px;flex:1;overflow-y:auto;min-height:0;margin:0;scrollbar-width:thin}
+.nusa-admin-shell .sidebar-section{border:0;margin:0;flex-shrink:0}
+.nusa-admin-shell .sidebar-section[open]{background:transparent}
+.nusa-admin-shell .sidebar-section-summary{display:flex;gap:11px;min-height:48px;padding:11px 12px;color:#40596d;border-radius:6px;font-weight:600}
+.nusa-admin-shell .sidebar-section-summary:hover,.nusa-admin-shell .sidebar-section[open]>.sidebar-section-summary{color:#15477a;background:#f0f5f9}
+.nusa-admin-shell .sidebar-section-title{font-size:15px;font-weight:600;text-transform:none;overflow-wrap:anywhere}
+.nusa-admin-shell .sidebar-section.has-active>.sidebar-section-summary{color:#15477a;background:#edf4fc}
+.nusa-admin-shell .sidebar-section.has-active>.sidebar-section-summary .sidebar-section-title{color:inherit}
+.nusa-admin-shell .sidebar-section.has-active>.admin-home-link[aria-current=page]{background:#15477a;color:#fff}
+.nusa-admin-shell .admin-home-link .active-dot{width:5px;height:5px;background:#f1c40f;border-radius:50%;margin-left:auto}
+.nusa-admin-shell .sidebar-category-icon{width:19px;height:19px;flex:0 0 auto}
+.nusa-admin-shell .sidebar-section-chevron{margin-left:auto;width:14px;height:14px;color:#8292a0}
+.nusa-admin-shell .sidebar-section-count{display:none}
+.nusa-admin-shell .sidebar-section-content{padding:4px 0 8px 12px}
+.nusa-admin-shell .sidebar-subgroup+.sidebar-subgroup{border-top:1px solid #edf1f4;margin-top:4px;padding-top:6px}
+.nusa-admin-shell .sidebar-subgroup-title{font-size:13px;color:#4d6476;font-weight:600;margin:12px 12px 7px;text-transform:none}
+.nusa-admin-shell .sidebar-link{min-height:44px;font-size:14px;font-weight:550;color:#40596d;padding:9px 11px;gap:10px;border-radius:6px}
+.nusa-admin-shell .sidebar-link.active{background:#15477a;color:#fff;border-color:#15477a;box-shadow:inset 3px 0 0 #f1c40f}
+.nusa-admin-shell .sidebar-link:not(.active):hover{background:#edf4fc;color:#15477a;border-color:transparent}
+.nusa-admin-shell .sidebar-link-initial{width:19px;height:19px;background:none;border-radius:0;color:inherit}
+.nusa-admin-shell .sidebar-link-initial svg{width:16px;height:16px}
+.nusa-admin-shell .sidebar-search-empty{color:#4d6476;border:1px dashed #cfdce7;font-size:14px;font-weight:400}
+.nusa-admin-shell .sidebar-foot{border:0;padding:0;margin:0;background:#fff;flex-shrink:0}
+.nusa-admin-shell .admin-school-sketch{display:flex;flex-direction:column-reverse;align-items:center;gap:5px;margin:12px 20px;text-align:center}
+.nusa-admin-shell .admin-school-sketch img{display:block;width:168px;height:88px;object-fit:contain;opacity:.55;flex-shrink:0;transform:none}
+.nusa-admin-shell .admin-school-sketch p{margin:0;width:100%;font-size:13px;line-height:1.5;color:#15477a;font-weight:550;font-style:normal}
+.nusa-admin-shell .admin-school-sketch p span{box-shadow:inset 0 -5px #f1c40f72}
+.nusa-admin-shell .admin-sidebar-account{display:flex;gap:10px;align-items:center;min-height:74px;padding:17px 20px;border-top:1px solid #dce5eb}
+.nusa-admin-shell .admin-account-avatar{display:grid;place-items:center;background:#edf4fc;color:#15477a;font-weight:650;border-radius:7px;width:34px;height:34px;flex-shrink:0;font-size:13px}
+.nusa-admin-shell .admin-sidebar-account>span:nth-child(2){min-width:0;flex:1}
+.nusa-admin-shell .admin-sidebar-account strong,.nusa-admin-shell .admin-sidebar-account small{display:block;overflow-wrap:anywhere;font-size:14px;color:#172d3e;line-height:1.5;font-weight:650}
+.nusa-admin-shell .admin-sidebar-account small{font-size:13px;color:#4d6476;font-weight:400}
+.nusa-admin-shell .admin-sidebar-account>svg{width:17px;height:17px;color:#0f766e}
+.nusa-admin-shell .app-content{position:relative;background:#f5f8fa}
+.nusa-admin-shell .app-topbar{min-height:68px;padding:10px 30px;gap:15px;background:#fffffff5;flex-shrink:0}
+.nusa-admin-shell .admin-breadcrumb{display:flex;align-items:center;gap:12px;font-size:14px;color:#172d3e;min-width:0}
+.nusa-admin-shell .admin-breadcrumb>span{color:#4d6476;flex-shrink:0}
+.nusa-admin-shell .admin-breadcrumb strong{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nusa-admin-shell .admin-breadcrumb svg{width:13px;height:13px;color:#9babb7}
+.nusa-admin-shell .mobile-menu-button{display:none}
+.nusa-admin-shell .admin-sidebar-toggle,.nusa-admin-shell .admin-sidebar-close{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:40px;height:40px;padding:0;border:0;border-radius:6px;background:transparent;color:#5d7385;cursor:pointer}
+.nusa-admin-shell .admin-sidebar-toggle:hover,.nusa-admin-shell .admin-sidebar-close:hover{background:#edf3f7;color:#15477a}
+.nusa-admin-shell .admin-sidebar-close{display:none}
+.nusa-admin-shell .admin-sidebar-controls{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.nusa-admin-shell .admin-sidebar-toggle{background:#edf4fc;color:#15477a;border:1px solid #ccdae8}
+.nusa-admin-shell .admin-sidebar-toggle[aria-expanded=false]{background:#eaf5f2;color:#0f766e;border-color:#c9e1d9}
+.nusa-admin-shell .admin-sidebar-options-trigger{display:grid;place-items:center;width:28px;height:40px;border-radius:5px;color:#526879;cursor:pointer}
+.nusa-admin-shell .admin-sidebar-options-trigger:hover,.nusa-admin-shell .admin-sidebar-options[open]>.admin-sidebar-options-trigger{background:#edf4fc;color:#15477a}
+.nusa-admin-shell .admin-sidebar-options-trigger svg{width:15px;height:15px}
+.nusa-admin-shell .admin-sidebar-popover{left:-43px;right:auto;width:248px;min-width:0;padding:6px;background:#fff;color:#172d3e}
+.nusa-admin-shell .admin-sidebar-modes{border:0;margin:0;padding:0;min-width:0}
+.nusa-admin-shell .admin-sidebar-modes legend{padding:10px 11px 8px;font-size:13px;font-weight:650;color:#4d6476}
+.nusa-admin-shell .admin-sidebar-modes label{display:flex;align-items:center;gap:10px;padding:11px;border-radius:5px;cursor:pointer;min-height:44px;font-size:14px;font-weight:500}
+.nusa-admin-shell .admin-sidebar-modes label:hover,.nusa-admin-shell .admin-sidebar-modes label:focus-within{background:#edf4fc}
+.nusa-admin-shell .admin-sidebar-modes label svg{color:#15477a;width:18px;height:18px}
+.nusa-admin-shell .admin-sidebar-modes label span{flex:1}
+.nusa-admin-shell .admin-sidebar-modes input{margin:0;accent-color:#0f766e;width:16px;height:16px;flex-shrink:0}
+.nusa-admin-shell .topbar-actions{gap:17px;align-items:center;flex-shrink:0}
+.nusa-admin-shell .account-trigger{background:none;border:0;padding:0;min-height:40px;border-radius:6px}
+.nusa-admin-shell .account-trigger .account-identity,.nusa-admin-shell .account-trigger .account-chevron{display:none}
+.nusa-admin-shell .account-avatar{background:#15477a;color:#fff;border:0;border-radius:7px;width:34px;height:34px;font-size:13px}
+.nusa-admin-shell .topbar-icon-button{background:none;border:0;color:#5d7385;width:40px;height:40px}
+.nusa-admin-shell .notification-count{background:#f1c40f;color:#15477a;box-shadow:0 0 0 2px #fff;font-size:10px;min-width:16px;height:16px;padding:1px 4px;border:0}
+.nusa-admin-shell .content-shell{width:min(100%,1496px);padding:27px 32px 44px}
+.nusa-admin-shell .admin-shell-tooltip{position:fixed;z-index:100;max-width:260px;font-size:13px;color:#fff;background:#10375c;padding:9px 12px;border-radius:5px;box-shadow:0 3px 12px #15477a14;pointer-events:none;line-height:1.5}
+@media(min-width:761px){
+    html.admin-shell-root{height:100%;overflow:hidden}
+    .nusa-admin-shell{height:100dvh;overflow:hidden}
+    .nusa-admin-shell .app-shell{display:grid;height:100dvh;grid-template-rows:minmax(0,1fr);overflow:hidden}
+    .nusa-admin-shell .app-sidebar{position:relative;transform:none;width:auto;height:100dvh;max-height:100dvh}
+    .nusa-admin-shell .app-content{display:flex;height:100dvh;overflow-y:auto;overscroll-behavior-y:contain}
+    .nusa-admin-shell.admin-sidebar-collapsed .app-shell{grid-template-columns:76px minmax(0,1fr)}
+    .nusa-admin-shell.admin-sidebar-collapsed .sidebar-brand>span:last-child,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-search,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-title,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-chevron,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-content,.nusa-admin-shell.admin-sidebar-collapsed .admin-school-sketch,.nusa-admin-shell.admin-sidebar-collapsed .admin-sidebar-account>span:nth-child(2),.nusa-admin-shell.admin-sidebar-collapsed .admin-sidebar-account>svg{display:none}
+    .nusa-admin-shell.admin-sidebar-collapsed .sidebar-brand{padding-inline:16px}
+    .nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-summary{justify-content:center;padding-inline:7px}
+    .nusa-admin-shell.admin-sidebar-collapsed .admin-sidebar-account{justify-content:center;padding-inline:0}
+    .nusa-admin-shell.admin-sidebar-hidden .app-shell{grid-template-columns:minmax(0,1fr)}
+    .nusa-admin-shell.admin-sidebar-hidden .app-sidebar{display:none}
+}
+@media(max-width:1250px){.nusa-admin-shell{--admin-sidebar-width:224px}.nusa-admin-shell .content-shell{padding:23px 24px 44px}.nusa-admin-shell .app-topbar{padding-inline:22px}}
+@media(max-width:760px){
+    .nusa-admin-shell{height:auto;overflow-y:auto}
+    .nusa-admin-shell.admin-drawer-open{overflow:hidden}
+    .nusa-admin-shell .app-shell{display:block;height:auto;overflow:visible}
+    .nusa-admin-shell .app-sidebar{position:fixed;left:0;top:0;width:244px;height:100dvh;max-height:100dvh;transform:translateX(-100%)}
+    .nusa-admin-shell .sidebar-toggle:checked~.app-shell .app-sidebar{transform:translateX(0)}
+    .nusa-admin-shell .app-content{display:block;height:auto;overflow:visible}
+    .nusa-admin-shell .content-shell{padding:23px 19px 34px}
+    .nusa-admin-shell .app-topbar{min-height:64px;padding:10px 17px}
+    .nusa-admin-shell .admin-sidebar-close{display:inline-flex;position:absolute;right:5px;top:5px;width:32px;height:32px;z-index:1;background:#fff}
+    .nusa-admin-shell .admin-sidebar-options{display:none}
+    .nusa-admin-shell .admin-breadcrumb>span,.nusa-admin-shell .admin-breadcrumb>svg{display:none}
+    .nusa-admin-shell .topbar-actions{gap:10px}
+    .nusa-admin-shell .sidebar-toggle:checked~.app-shell .sidebar-backdrop{background:#12334b4d;backdrop-filter:blur(2px)}
+}
+@media(max-width:560px){.nusa-admin-shell .content-shell{padding-inline:16px}}
+@media(max-width:350px){.nusa-admin-shell .content-shell{padding-inline:12px}.nusa-admin-shell .app-topbar{padding-inline:10px}}
+@media(prefers-reduced-motion:reduce){.nusa-admin-shell .app-sidebar,.nusa-admin-shell .sidebar-section-chevron,.nusa-admin-shell .sidebar-section-summary,.nusa-admin-shell .sidebar-link{transition:none}}

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($publikasi->exists ? 'Edit draf' : 'Buat draf').' - Publikasi Humas')
 @section('content')
 @include('aset-promosi-humas._style')

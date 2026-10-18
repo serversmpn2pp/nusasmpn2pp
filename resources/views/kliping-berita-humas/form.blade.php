@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($kliping->exists ? 'Edit kliping berita' : 'Tambah kliping berita').' - NUSA')
 @section('content')
 @include('kliping-berita-humas._style')

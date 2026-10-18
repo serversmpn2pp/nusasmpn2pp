@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Import Barang Datang - NUSA')
 
@@ -98,7 +99,7 @@
     @endif
 
     <div class="import-upload-shell section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Ketentuan template</h2>
             <ul style="margin: 12px 0 0; padding-left: 20px; color: var(--muted); line-height: 1.75;">
                 <li>Jangan mengganti nama sheet atau judul kolom.</li>

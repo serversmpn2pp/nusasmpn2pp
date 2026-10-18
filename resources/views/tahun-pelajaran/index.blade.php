@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Akademik</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Tahun pelajaran</h1>
         </div>
 
@@ -30,10 +30,10 @@
     </div>
 
     @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
+        <x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>
     @endif
 
-    <form action="{{ route('tahun-pelajaran.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('tahun-pelajaran.index') }}" method="GET" class="panel panel-pad ui-filter" style="margin-bottom: 24px;">
         <div class="filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari tahun pelajaran</label>
@@ -57,15 +57,16 @@
     </form>
 
     <section class="panel">
-        <div class="desktop-only table-wrap">
-            <table class="employee-table">
+        <div class="school-table-heading"><h2 class="panel-title">Daftar tahun pelajaran</h2><span class="school-table-count">{{ $tahunPelajaran->total() }} hasil</span></div>
+        <div class="desktop-only table-wrap" tabindex="0" role="region" aria-label="Daftar tahun pelajaran">
+            <table class="employee-table school-table--tahun" aria-label="Tahun pelajaran">
                 <thead>
                     <tr>
-                        <th>Tahun pelajaran</th>
-                        <th>Periode</th>
-                        <th>Kelas</th>
-                        <th>Status</th>
-                        <th class="text-right">Aksi</th>
+                        <th scope="col">Tahun pelajaran</th>
+                        <th scope="col">Periode</th>
+                        <th scope="col">Kelas</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -82,23 +83,23 @@
                             <td>{{ $item->kelas_count }} kelas</td>
                             <td>
                                 @if ($item->aktif)
-                                    <span class="badge badge-active">Aktif</span>
+                                    <x-ui.status type="success">Aktif</x-ui.status>
                                 @else
-                                    <span class="badge badge-inactive">Nonaktif</span>
+                                    <x-ui.status type="warning">Nonaktif</x-ui.status>
                                 @endif
                             </td>
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
-                                    <a href="{{ route('tahun-pelajaran.show', $item) }}" class="button button-muted">Lihat</a>
+                                    <x-ui.action-link :href="route('tahun-pelajaran.show', $item)" icon="eye" label="Lihat" :context="$item->nama" variant="muted" />
                                     @izin('tahun_pelajaran.kelola')
-                                        <a href="{{ route('tahun-pelajaran.edit', $item) }}" class="button button-dark">Edit</a>
+                                        <x-ui.action-link :href="route('tahun-pelajaran.edit', $item)" icon="square-pen" label="Edit" :context="$item->nama" variant="dark" />
                                     @endizin
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="empty-state">Belum ada tahun pelajaran.</td>
+                            <td colspan="5" class="ui-empty-cell"><x-ui.empty-state title="Belum ada tahun pelajaran." description="Tambahkan tahun pelajaran untuk memulai pengaturan akademik." icon="calendar-days" /></td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -115,9 +116,9 @@
                         </div>
 
                         @if ($item->aktif)
-                            <span class="badge badge-active">Aktif</span>
+                            <x-ui.status type="success">Aktif</x-ui.status>
                         @else
-                            <span class="badge badge-inactive">Nonaktif</span>
+                            <x-ui.status type="warning">Nonaktif</x-ui.status>
                         @endif
                     </div>
 
@@ -140,7 +141,7 @@
                     </div>
                 </article>
             @empty
-                <div class="empty-state">Belum ada tahun pelajaran.</div>
+                <x-ui.empty-state title="Belum ada tahun pelajaran." description="Tambahkan tahun pelajaran untuk memulai pengaturan akademik." icon="calendar-days" />
             @endforelse
         </div>
     </section>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Pemeriksaan Perangkat Ajar - NUSA')
 
@@ -98,7 +99,7 @@
         </article>
     </section>
 
-    <form action="{{ route('pemeriksaan-perangkat-ajar.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('pemeriksaan-perangkat-ajar.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="curriculum-monitor-filter">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>

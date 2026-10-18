@@ -311,7 +311,7 @@ class PersuratanTest extends TestCase
         $kosong = $this->actingAs($this->tu)->get(route('persuratan.index'))->assertOk()
             ->assertSee('class="stats-grid surat-stats ', false)
             ->assertSee('class="panel stat inactive"', false)
-            ->assertSee('class="panel panel-pad surat-filter ', false)
+            ->assertSee('ui-filter surat-filter ', false)
             ->assertSee('class="panel surat-shell"', false)
             ->assertSee('Belum ada surat yang sesuai.');
         $this->capture('arsip-kosong', $kosong);
@@ -325,7 +325,7 @@ class PersuratanTest extends TestCase
         $this->aksi($surat, 'ajukan', $this->tu)->assertSessionHasNoErrors();
         $pengesahan = $this->actingAs($this->kepala)->get(route('persuratan.pemeriksaan'))->assertOk()
             ->assertSee('Pengesahan surat')
-            ->assertSee('class="panel panel-pad surat-filter ', false)
+            ->assertSee('ui-filter surat-filter ', false)
             ->assertSee('scope="col">Aksi', false)
             ->assertSee($surat->nomor_surat);
         $this->capture('pengesahan-daftar', $pengesahan);

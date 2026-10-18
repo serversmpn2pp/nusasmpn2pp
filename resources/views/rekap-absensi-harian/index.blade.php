@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Rekap Presensi Harian - NUSA')
 
@@ -242,7 +243,7 @@
         </div>
     </div>
 
-    <form action="{{ route('rekap-absensi-harian.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;" data-auto-filter>
+    <form action="{{ route('rekap-absensi-harian.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;" data-auto-filter>
         <div class="attendance-filter-grid">
             <div class="field">
                 <label for="tanggal">Tanggal</label>
@@ -360,7 +361,7 @@
     </div>
 
     @if (! $tahunPelajaranId)
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Tahun pelajaran aktif belum tersedia</h2>
             <p class="help-text" style="margin-top: 8px;">Aktifkan tahun pelajaran dan siapkan kelas terlebih dahulu agar rekap presensi dapat ditampilkan.</p>
         </section>
@@ -373,7 +374,7 @@
                 </p>
             </div>
 
-            <div class="desktop-only table-wrap">
+            <div class="desktop-only table-wrap feature-worktable attendance-worktable" tabindex="0" role="region" aria-label="Rekap presensi harian siswa">
                 <table class="employee-table placement-table" style="min-width: 1320px;">
                     <thead>
                         <tr>

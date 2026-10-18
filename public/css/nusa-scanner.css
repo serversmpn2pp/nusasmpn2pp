@@ -1,0 +1,117 @@
+/* Standalone terminals keep their own controls, focus handling and scan processors. */
+body.nusa-scanner {
+    --primary: #15477a; --primary-dark: #10395f; --accent: #f1c40f;
+    --text: #172d3e; --ink: #172d3e; --muted: #4d6476; --line: #c3d2df;
+    --success: #0f766e; --success-soft: #e8f5f1; --green: #0f766e; --green-soft: #e8f5f1;
+    --danger: #b42332; --danger-soft: #fff0f1; --warning: #775700; --warning-soft: #fff8d8;
+    --panel: #fff; --panel-soft: #edf4fc; --blue: #15477a; --blue-dark: #10395f;
+    --shadow: none; background: #f6f8fb; color: #172d3e;
+    font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif; font-size: 16px; line-height: 1.55;
+}
+.nusa-scanner :is(.scan-page,.office-scan-page) { background: transparent; background-image: none; }
+.nusa-scanner .scan-page::after { display: none; }
+.nusa-scanner .scan-shell { gap: 24px; padding: 24px; }
+.nusa-scanner .scan-header { background: #fff; border-bottom: 1px solid #dce5ed; margin: -24px -24px 0; padding: 18px 24px; }
+.nusa-scanner .brand { gap: 12px; }
+.nusa-scanner .brand-mark { width: 56px; flex: 0 0 56px; border: 1px solid #e6d48c; background: #fff; border-radius: 6px; box-shadow: none; }
+.nusa-scanner .brand-title { font-size: 24px; line-height: 1.3; color: #15477a; letter-spacing: 0; }
+.nusa-scanner .brand-subtitle { font-size: 14px; color: #4d6476; font-weight: 500; }
+.nusa-scanner .brand > span:last-child { min-width: 0; }
+.nusa-scanner .status-pill { padding: 7px 10px; background: #edf4fc; border: 1px solid #c3d6e5; color: #15477a; font-size: 14px; border-radius: 5px; }
+.nusa-scanner .status-pill strong { color: #15477a; }
+.nusa-scanner :is(.time-panel,.office-side) { background: #edf4fc; color: #172d3e; border-color: #c3d6e5; box-shadow: none; border-radius: 0; padding: 24px; }
+.nusa-scanner :is(.scanner-panel,.schedule-panel) { background: #fff; color: #172d3e; border: 1px solid #c3d6e5; border-radius: 6px; box-shadow: none; }
+.nusa-scanner :is(.clock-panel,.mode-panel) { background: transparent; border-color: #bed3e4; box-shadow: none; }
+.nusa-scanner .clock { font-size: 64px; line-height: 1.15; color: #15477a; text-shadow: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.nusa-scanner :is(.time-label,.label,.date-line,.status-line) { color: #4d6476; font-size: 16px; }
+.nusa-scanner .mode-value { color: #0f766e; font-size: 24px; }
+.nusa-scanner :is(.schedule-item,.schedule-time-grid) { background: #fff; border-color: #bdd2e2; box-shadow: none; }
+.nusa-scanner .schedule-item.is-active { background: #fff8d8; border-color: #dfc45f; }
+.nusa-scanner :is(.schedule-label,.schedule-name,.schedule-time,.schedule-time strong,.friday-dismissal-time,.schedule-time-grid strong) { color: #15477a; letter-spacing: 0; }
+.nusa-scanner :is(.schedule-note,.schedule-note strong,.schedule-target,.schedule-time span,.schedule-window,.friday-dismissal-group,.friday-dismissal-window) { color: #4d6476; font-size: 14px; line-height: 1.6; }
+.nusa-scanner :is(.schedule-label,.schedule-name) { font-size: 14px; }
+.nusa-scanner p.schedule-time { font-size: 30px; }
+.nusa-scanner .schedule-mode { color: #15477a; background: #edf4fc; }
+.nusa-scanner :is(.scanner-title,.page-title) { color: #15477a; font-size: 28px; line-height: 1.4; }
+.nusa-scanner :is(.panel-title,.panel-head h2) { color: #15477a; font-size: 18px; line-height: 1.5; }
+.nusa-scanner .queue-badge { background: #fff8d8; color: #775700; border-color: #e6d48c; font-size: 14px; }
+.nusa-scanner :is(.scan-capture-label,.scan-label) { color: #15477a; font-size: 16px; }
+.nusa-scanner .scan-capture { border: 2px solid #8ca8c0; background: #fff; color: #172d3e; border-radius: 6px; min-height: 56px; font-size: 20px; box-shadow: none; }
+.nusa-scanner .scan-capture::placeholder { color: #5c7284; opacity: 1; }
+.nusa-scanner .scan-capture:focus { outline: 3px solid #0f766e26; border-color: #0f766e; }
+.nusa-scanner .result-card { background: #edf4fc; border: 1px solid #c3d6e5; border-left: 4px solid #15477a; border-radius: 6px; box-shadow: none; }
+.nusa-scanner .result-card.is-success { background: #e8f5f1; border-color: #a6cfc5; border-left-color: #0f766e; }
+.nusa-scanner .result-card.is-recorded { background: #edf4fc; border-color: #c3d6e5; }
+.nusa-scanner .result-card.is-warning { background: #fff8d8; border-color: #dfc45f; }
+.nusa-scanner .result-card.is-error { background: #fff0f1; border-color: #e6aab3; border-left-color: #b42332; }
+.nusa-scanner .result-name { color: #15477a; font-size: 28px; line-height: 1.4; overflow-wrap: anywhere; }
+.nusa-scanner :is(.result-message,.result-nisn,.result-nip) { color: #4d6476; font-size: 16px; line-height: 1.6; }
+.nusa-scanner .result-status { background: #fff; color: #15477a; font-size: 14px; border-radius: 5px; }
+.nusa-scanner :is(.meta-pill,.history-name,.history-time,.history-kind,.empty-note,.offline-note,.warning-note) { font-size: 14px; line-height: 1.6; }
+.nusa-scanner .empty-note { color: #4d6476; background: transparent; border-color: #dce5ed; }
+.nusa-scanner .history-item { background: #fff; border-color: #dce5ed; color: #172d3e; }
+.nusa-scanner .history-kind { color: #0f766e; background: #e8f5f1; }
+.nusa-scanner .office-shell { grid-template-columns: minmax(340px,36%) minmax(0,1fr); gap: 24px; padding: 24px; }
+.nusa-scanner .office-side { border-top: 3px solid #0f766e; }
+.nusa-scanner .office-main { padding: 0; min-width: 0; }
+.nusa-scanner .office-main .scanner-panel { border: 0; border-top: 1px solid #c3d6e5; border-radius: 0; }
+.nusa-scanner .top-strip { padding: 12px 0 20px; }
+.nusa-scanner .scan-main { gap: 24px; }
+.nusa-scanner .time-panel { border: 0; border-top: 3px solid #0f766e; }
+.nusa-scanner .app-header { background: #fff; border-bottom: 1px solid #c3d6e5; box-shadow: none; color: #172d3e; }
+.nusa-scanner .app-header .brand strong { color: #15477a; }
+.nusa-scanner .server-clock strong { color: #15477a; font-size: 24px; }
+.nusa-scanner .server-clock span { color: #4d6476; font-size: 13px; }
+.nusa-scanner .page { max-width: 1400px; padding: 24px; }
+.nusa-scanner .page-head h1 { color: #15477a; font-size: 28px; line-height: 1.4; }
+.nusa-scanner .page-head p { color: #4d6476; font-size: 15px; line-height: 1.6; }
+.nusa-scanner .page-head .eyebrow { color: #0f766e; font-size: 14px; }
+.nusa-scanner .back-link { min-height: 44px; border: 1px solid #a6bdcf; background: #fff; color: #15477a; border-radius: 6px; font-size: 14px; }
+.nusa-scanner .schedule-strip { border-color: #c3d6e5; box-shadow: none; border-radius: 6px; }
+.nusa-scanner .schedule-block span { color: #4d6476; font-size: 14px; }
+.nusa-scanner .schedule-block.highlight { background: #fff8d8; }
+.nusa-scanner .schedule-select { min-height: 44px; font-size: 16px; border-color: #8ca8c0; border-radius: 6px; }
+.nusa-scanner .panel { box-shadow: none; border-color: #c3d6e5; border-radius: 6px; }
+.nusa-scanner .panel-head { background: #edf4fc; padding: 16px; flex-wrap: wrap; }
+.nusa-scanner .panel-head p { font-size: 14px; line-height: 1.6; }
+.nusa-scanner .button { min-height: 44px; border-radius: 6px; font-size: 14px; font-weight: 650; line-height: 1.5; }
+.nusa-scanner .button-primary { background: #15477a; color: #fff; }
+.nusa-scanner .button-secondary { background: #fff; border-color: #a6bdcf; color: #15477a; }
+.nusa-scanner .button-danger { background: #fff; border-color: #df9ca5; color: #b42332; }
+.nusa-scanner .button:disabled { opacity: 1; background: #eef2f5; color: #566a7b; border-color: #cbd5de; }
+.nusa-scanner :is(.button,.back-link,.schedule-select,.manual-form input):focus-visible { outline: 3px solid #0f766e40; outline-offset: 2px; }
+.nusa-scanner .status-pill.aktif { background: #e8f5f1; color: #0f766e; border-color: #a6cfc5; }
+.nusa-scanner .camera-wrap { min-height: 0; aspect-ratio: 16/10; }
+.nusa-scanner .camera-placeholder p { color: #c3d6e5; font-size: 15px; }
+.nusa-scanner :is(.camera-warning,.manual-help,.recent-meta,.result-text,.privacy-box) { font-size: 14px; line-height: 1.6; }
+.nusa-scanner .manual-form input { min-height: 44px; font-size: 16px; border: 1px solid #8ca8c0; border-radius: 6px; }
+.nusa-scanner .recent-name { white-space: normal; overflow-wrap: anywhere; font-size: 15px; }
+.nusa-scanner .result { box-shadow: none; }
+.nusa-scanner .summary { background: #e8f5f1; }
+.nusa-scanner .summary-number { background: #fff8d8; color: #775700; }
+@media (max-width: 1100px) {
+    .nusa-scanner .office-shell { grid-template-columns: minmax(0,1fr); }
+    .nusa-scanner .office-side { grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; }
+    .nusa-scanner .office-side > :is(.brand,.schedule-panel) { grid-column: 1/-1; }
+    .nusa-scanner .scan-main { grid-template-columns: minmax(0,1fr); }
+    .nusa-scanner .time-panel { grid-template-columns: minmax(0,1fr); gap: 20px; }
+    .nusa-scanner .clock { font-size: 56px; }
+}
+@media (max-width: 760px) {
+    .nusa-scanner :is(.scan-shell,.office-shell,.page) { padding: 16px; gap: 20px; }
+    .nusa-scanner .scan-header { margin: -16px -16px 0; padding: 16px; flex-wrap: wrap; gap: 14px; }
+    .nusa-scanner :is(.time-panel,.office-side) { padding: 18px 16px; }
+    .nusa-scanner .clock { font-size: 44px; }
+    .nusa-scanner .status-strip { justify-content: flex-start; }
+    .nusa-scanner :is(.result-name,.page-title,.scanner-title,.page-head h1) { font-size: 24px; }
+    .nusa-scanner .camera-wrap { aspect-ratio: 4/3; }
+    .nusa-scanner .result-card { gap: 16px; padding: 20px 16px; }
+    .nusa-scanner .status-pill { white-space: normal; }
+}
+@media (max-width: 420px) {
+    .nusa-scanner .clock { font-size: 36px; }
+    .nusa-scanner .office-side { grid-template-columns: minmax(0,1fr); }
+    .nusa-scanner .office-side > * { grid-column: 1; }
+    .nusa-scanner .brand-title { font-size: 22px; }
+    .nusa-scanner .server-clock strong { font-size: 20px; }
+}

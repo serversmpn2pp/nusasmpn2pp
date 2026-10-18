@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 
 @php($sedangEdit = $dokumenHumas->exists)
 
@@ -46,7 +47,7 @@
             </aside>
 
             <div class="section-stack">
-                <section class="panel panel-pad">
+                <section class="panel panel-pad feature-section">
                     <h2 class="panel-title">Informasi dokumen</h2>
                     <div class="form-grid">
                         <div class="field">

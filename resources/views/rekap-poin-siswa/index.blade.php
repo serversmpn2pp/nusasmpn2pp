@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', ($konteksGuruWali ? 'Rekap Poin Siswa Wali' : 'Monitoring Poin Siswa').' - NUSA')
 
@@ -87,7 +88,7 @@
         </a>
     </section>
 
-    <form method="GET" class="panel panel-pad" style="margin-bottom:20px">
+    <form method="GET" class="feature-filter panel panel-pad" style="margin-bottom:20px">
         <div class="form-grid">
             <div class="field">
                 <label for="tahun">Tahun pelajaran</label>

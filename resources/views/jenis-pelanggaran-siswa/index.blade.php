@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Jenis Pelanggaran & Poin - NUSA')
 
@@ -9,7 +10,7 @@
     </div>
     @if (session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 
-    <form method="GET" class="panel panel-pad" style="margin-bottom: 20px;">
+    <form method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 20px;">
         <div class="form-grid">
             <div class="field"><label for="kata_kunci">Cari</label><input id="kata_kunci" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Kode atau nama pelanggaran"></div>
             <div class="field"><label for="tingkat">Tingkat</label><select id="tingkat" name="tingkat" class="select"><option value="semua">Semua</option>@foreach (\App\Models\LaporanPembinaanSiswa::DAFTAR_TINGKAT as $kode => $label)<option value="{{ $kode }}" @selected($tingkat === $kode)>{{ $label }}</option>@endforeach</select></div>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'persuratan')
 @section('title', ($monitoring ? 'Monitoring Tindak Lanjut Surat' : 'Tindak Lanjut Surat Saya').' - NUSA')
 @section('content')
     @include('persuratan._style')
@@ -10,7 +11,7 @@
         <div class="panel stat inactive"><p class="stat-label">Menunggu pemeriksaan</p><p class="stat-value">{{ $jumlah['menunggu_pemeriksaan'] ?? 0 }}</p></div>
         <div class="panel stat active"><p class="stat-label">Selesai</p><p class="stat-value">{{ $jumlah['selesai'] ?? 0 }}</p></div>
     </div>
-    <form method="GET" action="{{ route($monitoring ? 'tindak-lanjut-surat.monitoring' : 'tindak-lanjut-surat.index') }}" class="panel panel-pad surat-filter surat-filter--tindak">
+    <form method="GET" action="{{ route($monitoring ? 'tindak-lanjut-surat.monitoring' : 'tindak-lanjut-surat.index') }}" class="feature-filter panel panel-pad surat-filter surat-filter--tindak">
         <div><label for="kata_kunci">Cari surat / penerima</label><input class="input" id="kata_kunci" name="kata_kunci" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120" placeholder="Nomor, perihal, atau nama pegawai"></div>
         <div><label for="jenis">Jenis tindak lanjut</label><select class="select" id="jenis" name="jenis"><option value="">Semua jenis</option><option value="disposisi" @selected(($filter['jenis'] ?? '') === 'disposisi')>Disposisi surat masuk</option><option value="tugas" @selected(($filter['jenis'] ?? '') === 'tugas')>Pelaksanaan surat tugas</option></select></div>
         <div><label for="status">Status</label><select class="select" id="status" name="status"><option value="">Semua status</option>@foreach(\App\Models\TindakLanjutSuratTu::STATUS as $kode => $label)<option value="{{ $kode }}" @selected(($filter['status'] ?? '') === $kode)>{{ $label }}</option>@endforeach</select></div>

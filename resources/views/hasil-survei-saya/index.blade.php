@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Hasil Survei Saya - NUSA')
 
@@ -53,7 +54,7 @@
         </div>
 
         @if ($daftarPenugasan->isNotEmpty())
-            <form method="GET" action="{{ route('hasil-survei-saya.index') }}" class="panel panel-pad">
+            <form method="GET" action="{{ route('hasil-survei-saya.index') }}" class="feature-filter panel panel-pad">
                 <div class="filter-grid survey-result-filter">
                     <div class="field">
                         <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -167,7 +168,7 @@
                     </div>
                 </div>
 
-                <section class="panel panel-pad">
+                <section class="panel panel-pad feature-section">
                     @if ($daftarSaran->isNotEmpty())
                         <ol class="survey-suggestion-list">
                             @foreach ($daftarSaran as $saran)

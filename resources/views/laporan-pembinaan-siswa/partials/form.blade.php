@@ -44,7 +44,7 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Data kejadian</h2>
             <div class="form-grid">
                 <div class="field"><label for="tanggal_kejadian">Tanggal kejadian</label><input id="tanggal_kejadian" name="tanggal_kejadian" type="date" value="{{ $tanggalValue }}" class="input" required></div>
@@ -84,7 +84,7 @@
         </section>
 
         @if($jenisTerpilih === 'pembinaan')
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Klasifikasi Pembinaan</h2>
                 <div class="form-grid">
                     <div class="field"><label for="kategori_pembinaan_siswa_id">Kategori</label><select id="kategori_pembinaan_siswa_id" name="kategori_pembinaan_siswa_id" class="select" required><option value="">Pilih kategori</option>@foreach($daftarKategoriPembinaan as $kategori)<option value="{{ $kategori->id }}" @selected((string)$nilai('kategori_pembinaan_siswa_id')===(string)$kategori->id)>{{ $kategori->nama }}</option>@endforeach</select></div>
@@ -93,9 +93,9 @@
             </section>
         @endif
 
-        <section class="panel panel-pad"><h2 class="panel-title">Kronologi dan tindakan</h2><div class="form-grid"><div class="field span-2"><label for="kronologi">Kronologi faktual</label><textarea id="kronologi" name="kronologi" class="textarea" required placeholder="Tuliskan siapa, apa yang terjadi, dan informasi saksi atau bukti yang tersedia.">{{ $nilai('kronologi') }}</textarea></div><div class="field span-2"><label for="tindakan_awal">Tindakan awal</label><textarea id="tindakan_awal" name="tindakan_awal" class="textarea" placeholder="Tindakan yang sudah dilakukan saat kejadian.">{{ $nilai('tindakan_awal') }}</textarea></div>@izin('bk.kelola')<div class="field span-2"><label for="catatan_rahasia">Catatan rahasia BK</label><textarea id="catatan_rahasia" name="catatan_rahasia" class="textarea">{{ $nilai('catatan_rahasia') }}</textarea></div>@endizin</div></section>
+        <section class="panel panel-pad feature-section"><h2 class="panel-title">Kronologi dan tindakan</h2><div class="form-grid"><div class="field span-2"><label for="kronologi">Kronologi faktual</label><textarea id="kronologi" name="kronologi" class="textarea" required placeholder="Tuliskan siapa, apa yang terjadi, dan informasi saksi atau bukti yang tersedia.">{{ $nilai('kronologi') }}</textarea></div><div class="field span-2"><label for="tindakan_awal">Tindakan awal</label><textarea id="tindakan_awal" name="tindakan_awal" class="textarea" placeholder="Tindakan yang sudah dilakukan saat kejadian.">{{ $nilai('tindakan_awal') }}</textarea></div>@izin('bk.kelola')<div class="field span-2"><label for="catatan_rahasia">Catatan rahasia BK</label><textarea id="catatan_rahasia" name="catatan_rahasia" class="textarea">{{ $nilai('catatan_rahasia') }}</textarea></div>@endizin</div></section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div class="page-header" style="margin-bottom:0">
                 <div><h2 class="panel-title">Bukti pendukung</h2><p class="help-text">Opsional. Unggah foto atau PDF, maksimal 5 file dan 10 MB per file.</p></div>
             </div>
@@ -107,7 +107,7 @@
 
         @if(! $laporanPembinaanSiswa?->exists)
             @php $saksiAwal = collect(old('daftar_saksi', [])); @endphp
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="page-header" style="margin-bottom:0">
                     <div><h2 class="panel-title">Saksi awal</h2><p class="help-text">Opsional. Identitas rinci saksi masih dapat dilengkapi setelah laporan disimpan.</p></div>
                     <button type="button" class="button button-muted" data-add-initial-witness>Tambah saksi</button>

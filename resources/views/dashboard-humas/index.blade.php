@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Dashboard Humas - NUSA')
 @section('content')
 @include('dashboard-humas._style')
@@ -7,7 +8,7 @@
         <div><span class="hd-kicker">Humas</span><h1>Dashboard Humas</h1><p class="hd-muted">{{ $labelPeriode }} &middot; {{ $mulai->format('d-m-Y') }} s.d. {{ $selesai->format('d-m-Y') }}</p></div>
         <a class="button button-muted" href="{{ route('dashboard-humas.cetak', $filter) }}" target="_blank" rel="noopener">Cetak ringkasan</a>
     </header>
-    <form method="GET" action="{{ route('dashboard-humas.index') }}" class="hd-filter" data-dashboard-filter>
+    <form method="GET" action="{{ route('dashboard-humas.index') }}" class="feature-filter hd-filter" data-dashboard-filter>
         <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select class="select" id="tahun_pelajaran_id" name="tahun_pelajaran_id">
             <option value="">Pilih tahun pelajaran</option>@foreach($tahun as $t)<option value="{{ $t->id }}" @selected((string)($filter['tahun_pelajaran_id'] ?? '') === (string)$t->id)>{{ $t->nama }}</option>@endforeach
         </select></div>

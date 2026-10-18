@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Rekap Umpan Balik Orang Tua - NUSA')
 @section('uf-actions')<a class="button button-muted" href="{{ route('umpan-balik-humas.index') }}">Daftar formulir</a><a class="button button-muted" href="{{ route('umpan-balik-humas.cetak', $formulir) }}" target="_blank" rel="noopener">Cetak rekap</a>@endsection
 @section('content')

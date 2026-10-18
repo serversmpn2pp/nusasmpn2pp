@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Atur Batas Proses Pelanggaran - NUSA')
 
@@ -16,7 +17,7 @@
     @if($errors->any())<div class="alert alert-danger"><strong>Ada data yang perlu diperbaiki.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 
     <form method="POST" action="{{ route('pengaturan-batas-proses-pelanggaran.update',$tahunPelajaran) }}">@csrf @method('PUT')
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Tenggat pemeriksaan dan pengesahan</h2><p class="help-text">Gunakan hari kalender. Setiap tahap memiliki batas 1 sampai 30 hari.</p>
             <div class="deadline-form-grid" style="margin-top:16px">
                 <div class="field"><label for="batas_hari_pemeriksaan_bk">Pemeriksaan BK</label><input id="batas_hari_pemeriksaan_bk" name="batas_hari_pemeriksaan_bk" type="number" min="1" max="30" class="input" value="{{ old('batas_hari_pemeriksaan_bk',$pengaturan->batas_hari_pemeriksaan_bk) }}" required><p class="help-text">Sejak laporan dibuat atau dikembalikan untuk diperiksa ulang.</p></div>
@@ -24,7 +25,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad" style="margin-top:18px">
+        <section class="panel panel-pad feature-section" style="margin-top:18px">
             <h2 class="panel-title">Pengingat otomatis</h2>
             <div class="field" style="margin-top:16px;max-width:360px"><label for="pengingat_hari_sebelum_batas">Kirim pengingat sebelum batas</label><input id="pengingat_hari_sebelum_batas" name="pengingat_hari_sebelum_batas" type="number" min="0" max="29" class="input" value="{{ old('pengingat_hari_sebelum_batas',$pengaturan->pengingat_hari_sebelum_batas) }}" required><p class="help-text">Isi 0 untuk mengingatkan pada hari jatuh tempo.</p></div>
             <div class="deadline-toggle-list">

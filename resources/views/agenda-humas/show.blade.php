@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', e($agendaHumas->judul).' - Agenda Humas')
 @section('content')
     @include('agenda-humas._style')

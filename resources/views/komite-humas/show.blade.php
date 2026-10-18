@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Kepengurusan Komite - NUSA')
 @section('content')
 @include('komite-humas._style')

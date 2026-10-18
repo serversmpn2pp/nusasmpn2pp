@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Detail Soal CBT - NUSA')
 
@@ -51,7 +52,7 @@
         </aside>
 
         <div class="section-stack" data-inline-math>
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Identitas Soal</h2>
                 <dl class="detail-grid">
                     <div class="detail-item"><dt>Mata pelajaran</dt><dd>{{ $soalCbt->mataPelajaran?->nama ?: '-' }}</dd></div>
@@ -66,7 +67,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Isi Soal</h2>
                 @if ($soalCbt->stimulus)
                     <div class="detail-item" style="margin-bottom: 16px;">
@@ -87,7 +88,7 @@
                 </div>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Opsi dan Kunci</h2>
 
                 @if (isset($soalCbt->opsi['pilihan']))
@@ -181,7 +182,7 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Pembahasan</h2>
                 <p style="white-space: pre-line;">{{ $teks($soalCbt->pembahasan) }}</p>
             </section>

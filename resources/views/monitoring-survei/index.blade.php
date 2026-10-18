@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Monitoring Survei - NUSA')
 
@@ -51,7 +52,7 @@
             </div>
         </div>
 
-        <form method="GET" action="{{ route('monitoring-survei.index') }}" class="panel panel-pad">
+        <form method="GET" action="{{ route('monitoring-survei.index') }}" class="feature-filter panel panel-pad">
             <div class="filter-grid survey-monitor-filter">
                 <div class="field">
                     <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -185,7 +186,7 @@
                     </div>
 
                     <div class="survey-monitor-section-title"><div><h2>Saran siswa</h2><p>{{ $hasilDipilih['daftarSaran']->count() }} saran tertulis</p></div></div>
-                    <section class="panel panel-pad">
+                    <section class="panel panel-pad feature-section">
                         @if ($hasilDipilih['daftarSaran']->isNotEmpty())
                             <ol class="survey-monitor-suggestions">
                                 @foreach ($hasilDipilih['daftarSaran'] as $saran)

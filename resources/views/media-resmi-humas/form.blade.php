@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($media->exists ? 'Edit media resmi' : 'Tambah media resmi').' - NUSA')
 @section('content')
 @include('media-resmi-humas._style')

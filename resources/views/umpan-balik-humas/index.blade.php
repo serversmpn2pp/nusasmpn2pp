@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Umpan Balik Orang Tua - NUSA')
 @section('uf-actions')
 @if(auth()->user()->memilikiIzin('umpan_balik_humas.kelola'))<a class="button button-primary" href="{{ route('umpan-balik-humas.create') }}">Tambah formulir</a>@endif
@@ -7,7 +8,7 @@
 <main class="uf-page">
     @include('umpan-balik-humas._header', ['judulHalaman' => 'Umpan Balik Orang Tua'])
     <div class="agenda-metrics">@foreach(\App\Models\UmpanBalikHumas::STATUS as $kode => $label)<div class="agenda-metric"><span>{{ $label }}</span><strong>{{ $jumlah[$kode] ?? 0 }}</strong></div>@endforeach</div>
-    <form method="GET" class="uf-filter"><div class="field"><label for="kata_kunci">Cari formulir</label><input class="input" id="kata_kunci" name="kata_kunci" maxlength="120" value="{{ $filter['kata_kunci'] ?? '' }}"></div>
+    <form method="GET" class="feature-filter uf-filter"><div class="field"><label for="kata_kunci">Cari formulir</label><input class="input" id="kata_kunci" name="kata_kunci" maxlength="120" value="{{ $filter['kata_kunci'] ?? '' }}"></div>
         <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select class="select" id="tahun_pelajaran_id" name="tahun_pelajaran_id"><option value="">Semua tahun</option>@foreach($tahun as $t)<option value="{{ $t->id }}" @selected((string)($filter['tahun_pelajaran_id'] ?? '') === (string)$t->id)>{{ $t->nama }}</option>@endforeach</select></div>
         <div class="field"><label for="status">Status</label><select class="select" id="status" name="status"><option value="">Semua status</option>@foreach(\App\Models\UmpanBalikHumas::STATUS as $kode => $label)<option value="{{ $kode }}" @selected(($filter['status'] ?? '') === $kode)>{{ $label }}</option>@endforeach</select></div><div class="actions"><button class="button button-primary" type="submit">Terapkan</button><a class="button button-muted" href="{{ route('umpan-balik-humas.index') }}">Reset</a></div>
     </form>

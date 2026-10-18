@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 @section('title', 'Detail Kegiatan Ibadah - NUSA')
 @section('content')
     <div class="page-header"><div><p class="eyebrow">Kehadiran Siswa</p><h1 class="page-title">{{ $kegiatanIbadah->nama }}</h1><p class="page-subtitle">{{ $kegiatanIbadah->keterangan ?: 'Kegiatan ibadah siswa.' }}</p></div><div class="actions"><a href="{{ route('kegiatan-ibadah.index') }}" class="button button-muted">Kembali</a><a href="{{ route('kegiatan-ibadah.edit',$kegiatanIbadah) }}" class="button button-dark">Edit</a></div></div>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Butir Akreditasi Humas - NUSA')
 @section('ak-actions')<a class="button button-muted" href="{{ route('akreditasi-humas.show', $portofolio) }}">Kembali ke portofolio</a>@endsection
 @section('content')
@@ -36,7 +37,7 @@
     </section>
     @if($dokumen !== null)
     <details class="ak-disclosure" @if($butir->bukti->isEmpty() || request()->has('kata_kunci') || request()->has('page')) open @endif><summary>Tambah bukti dari Pusat Dokumen Humas</summary>
-        <form method="GET" class="ak-filter" action="{{ route('akreditasi-humas.butir', [$portofolio, $butir]) }}">
+        <form method="GET" class="feature-filter ak-filter" action="{{ route('akreditasi-humas.butir', [$portofolio, $butir]) }}">
             <div class="field"><label for="kata_kunci">Cari dokumen</label><input class="input" id="kata_kunci" name="kata_kunci" maxlength="120" value="{{ $filter['kata_kunci'] ?? '' }}"></div>
             <div class="field"><label for="kategori">Kategori</label><select class="select" id="kategori" name="kategori"><option value="">Semua kategori</option>@foreach(\App\Models\DokumenHumas::KATEGORI as $k => $label)<option value="{{ $k }}" @selected(($filter['kategori'] ?? '') === $k)>{{ $label }}</option>@endforeach</select></div>
             <div class="actions"><button type="submit" class="button button-muted">Cari</button><a class="button button-muted" href="{{ route('akreditasi-humas.butir', [$portofolio, $butir]) }}">Reset</a></div>

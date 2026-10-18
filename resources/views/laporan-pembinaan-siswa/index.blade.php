@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', ($konteksGuruWali ? 'Laporan Siswa Wali' : ($konteksWaliKelas ? 'Laporan Siswa Kelas Saya' : ($konteksLaporanSaya ? 'Laporan Saya' : 'Daftar Laporan Siswa'))).' - NUSA')
 
@@ -125,7 +126,7 @@
 
     <div class="stats-grid"><div class="panel stat"><p class="stat-label">Semua laporan</p><p class="stat-value">{{ $ringkasan['total'] }}</p></div><div class="panel stat active"><p class="stat-label">Laporan kejadian</p><p class="stat-value">{{ $ringkasan['kejadian'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Pelanggaran berpoin</p><p class="stat-value">{{ $ringkasan['pelanggaran'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Menunggu BK</p><p class="stat-value">{{ $ringkasan['menunggu'] }}</p></div><div class="panel stat inactive"><p class="stat-label">Menunggu Wakil Kesiswaan</p><p class="stat-value">{{ $ringkasan['menunggu_wakil'] }}</p></div><div class="panel stat active"><p class="stat-label">Disahkan</p><p class="stat-value">{{ $ringkasan['disahkan'] }}</p></div></div>
 
-    <form method="GET" class="panel panel-pad" style="margin-bottom:20px"><div class="report-filter {{ $konteksLaporanSaya ? 'is-personal' : '' }}">
+    <form method="GET" class="feature-filter panel panel-pad" style="margin-bottom:20px"><div class="report-filter {{ $konteksLaporanSaya ? 'is-personal' : '' }}">
         <div class="field"><label for="kata_kunci">Cari laporan</label><input id="kata_kunci" name="kata_kunci" value="{{ $kataKunci }}" class="input" placeholder="Nomor, siswa, NISN, pelanggaran"></div>
         @unless($konteksLaporanSaya)
             <div class="field"><label for="jenis_laporan">Jenis laporan</label><select id="jenis_laporan" name="jenis_laporan" class="select"><option value="semua">Semua</option>@foreach($daftarJenisLaporan as $kode=>$label)<option value="{{ $kode }}" @selected($jenisLaporan===$kode)>{{ $label }}</option>@endforeach</select></div>

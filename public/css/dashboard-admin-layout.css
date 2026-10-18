@@ -1,0 +1,95 @@
+.nusa-admin-shell.nusa-dashboard-admin .content-shell{padding-bottom:0}
+.nusa-dashboard-admin .stat{display:block}
+.nusa-dashboard-admin .stat-copy p{padding-right:29px}
+.nusa-dashboard-admin .stat-icon{position:absolute;right:13px;top:16px;margin:0}
+.nusa-dashboard-admin .greeting{overflow-wrap:anywhere}
+.nusa-dashboard-admin .chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#ffffffec;text-align:center;padding:25px;color:#627486}
+.nusa-dashboard-admin .chart-empty svg{width:32px;height:32px;color:#8aa59e}
+.nusa-dashboard-admin .untimed-note{color:#796a30;margin:8px 0 0}
+.nusa-dashboard-admin .dot-pending{background:#aab6c2}.nusa-dashboard-admin .dot-permit{background:#5a91ba}.nusa-dashboard-admin .dot-sick{background:#e5be40}.nusa-dashboard-admin .dot-absent{background:#c25d64}.nusa-dashboard-admin .dot-excluded{background:#bbd4c9}
+.nusa-dashboard-admin .admin-activity-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:210px;gap:13px;color:#627486;text-align:center;padding:20px}
+.nusa-dashboard-admin .admin-activity-empty svg{width:30px;height:30px;color:#8aa59e}
+.nusa-dashboard-admin .activity-status.status-failed{color:#b34a53}
+.nusa-dashboard-admin .admin-noscript{padding:15px;background:#fff8da;color:#655715;margin-bottom:20px}
+.nusa-dashboard-admin .admin-noscript a{text-decoration:underline}
+.nusa-dashboard-admin .secondary-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-bottom:24px}
+.nusa-dashboard-admin .secondary-chart{min-width:0;background:white;border-block:1px solid #dce5eb}
+.nusa-dashboard-admin .secondary-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 22px;background:#edf4fc;border-bottom:1px solid #d9e5f2}
+.nusa-dashboard-admin .secondary-laporan .secondary-heading{background:#eaf6f1;border-color:#d3e8dd}
+.nusa-dashboard-admin .secondary-heading h2{font-weight:650;line-height:1.4;color:#15477a}
+.nusa-dashboard-admin .secondary-laporan .secondary-heading h2{color:#0f766e}
+.nusa-dashboard-admin .secondary-symbol{display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;color:#15477a}
+.nusa-dashboard-admin .secondary-laporan .secondary-symbol{color:#0f766e}
+.nusa-dashboard-admin .secondary-symbol svg{width:25px;height:25px}
+.nusa-dashboard-admin .secondary-body{padding:20px 22px 13px}
+.nusa-dashboard-admin .secondary-chart .chart-toolbar{flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.nusa-dashboard-admin .secondary-chart .period-switch{min-width:210px}
+.nusa-dashboard-admin .secondary-table{border:1px solid #dbe4eb;width:39px;height:39px}
+.nusa-dashboard-admin .secondary-chart .chart-caption{min-height:36px;align-items:flex-start}
+.nusa-dashboard-admin .secondary-chart .chart-container{height:235px}
+.nusa-dashboard-admin .secondary-chart .chart-legend{gap:18px;margin-top:10px;min-height:30px}
+.nusa-dashboard-admin .secondary-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px;padding:16px 0;margin-top:12px;border-block:1px solid #e7edf2}
+.nusa-dashboard-admin .secondary-metrics dt{color:#627486;line-height:1.5}
+.nusa-dashboard-admin .secondary-metrics dd{line-height:1.3;color:#15477a;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums}
+.nusa-dashboard-admin .secondary-laporan .secondary-metrics dd{color:#0f766e}
+.nusa-dashboard-admin .secondary-note{color:#627486;line-height:1.6;margin-top:12px}
+.nusa-dashboard-admin .activity-band .activity-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 30px}
+.nusa-dashboard-admin .activity-band .admin-activity-empty{grid-column:1/-1;min-height:130px}
+@media(max-width:1199px){.nusa-dashboard-admin .secondary-charts{grid-template-columns:1fr}.nusa-dashboard-admin .secondary-chart .chart-caption{min-height:0}.nusa-dashboard-admin .secondary-pegawai .secondary-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:560px){.nusa-dashboard-admin .secondary-charts{gap:20px}.nusa-dashboard-admin .secondary-heading{padding:17px 16px}.nusa-dashboard-admin .secondary-body{padding:18px 16px 12px}.nusa-dashboard-admin .secondary-chart .chart-toolbar{display:flex;align-items:center;flex-wrap:wrap}.nusa-dashboard-admin .secondary-chart .period-switch{min-width:100%;max-width:none;flex-basis:100%}.nusa-dashboard-admin .secondary-chart .chart-tools{margin-left:auto}.nusa-dashboard-admin .secondary-pegawai .secondary-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.nusa-dashboard-admin .secondary-metrics{gap:12px}.nusa-dashboard-admin .activity-band .activity-list{grid-template-columns:1fr}}
+/* One type scale for dashboard content, including compact screens. */
+.nusa-dashboard-admin{font-size:16px;--muted:#4d6476}
+.nusa-dashboard-admin .page-heading h1{font-size:32px}
+.nusa-dashboard-admin .section-heading h2,.nusa-dashboard-admin .secondary-heading h2{font-size:20px;font-weight:700}
+.nusa-dashboard-admin .dialog-header h2{font-size:22px}
+.nusa-dashboard-admin .greeting,.nusa-dashboard-admin .stat-copy p,.nusa-dashboard-admin .summary-heading h3,.nusa-dashboard-admin .attendance-breakdown dd,.nusa-dashboard-admin .attention-copy strong,.nusa-dashboard-admin .student-copy strong{font-size:16px}
+.nusa-dashboard-admin .stat-copy p{font-weight:650}
+.nusa-dashboard-admin .stat-copy strong,.nusa-dashboard-admin .attendance-rate>strong,.nusa-dashboard-admin .staff-main>strong{font-size:36px}
+.nusa-dashboard-admin .attendance-rate>strong>span{font-size:22px}
+.nusa-dashboard-admin .eyebrow,.nusa-dashboard-admin .section-kicker,.nusa-dashboard-admin .stat-copy small,.nusa-dashboard-admin .heading-date,.nusa-dashboard-admin .update-time,.nusa-dashboard-admin .chart-caption,.nusa-dashboard-admin .chart-caption p,.nusa-dashboard-admin .chart-caption>span,.nusa-dashboard-admin .chart-unit,.nusa-dashboard-admin .legend-button,.nusa-dashboard-admin .attendance-rate>span,.nusa-dashboard-admin .late-summary div>span,.nusa-dashboard-admin .small-muted,.nusa-dashboard-admin .attention-copy small,.nusa-dashboard-admin .activity-label,.nusa-dashboard-admin .student-copy small,.nusa-dashboard-admin .activity-status,.nusa-dashboard-admin .activity-row time,.nusa-dashboard-admin .page-footer,.nusa-dashboard-admin .page-footer>span,.nusa-dashboard-admin .secondary-note,.nusa-dashboard-admin .untimed-note,.nusa-dashboard-admin .student-avatar{font-size:13px}
+.nusa-dashboard-admin .year-badge,.nusa-dashboard-admin .period-switch button,.nusa-dashboard-admin .attendance-breakdown,.nusa-dashboard-admin .staff-breakdown,.nusa-dashboard-admin .text-button,.nusa-dashboard-admin .attendance-summary .text-button,.nusa-dashboard-admin .secondary-metrics dt,.nusa-dashboard-admin .data-table,.nusa-dashboard-admin .dialog-note,.nusa-dashboard-admin .admin-noscript{font-size:14px}
+.nusa-dashboard-admin .late-summary strong{font-size:15px}
+.nusa-dashboard-admin .dialog-content,.nusa-dashboard-admin .empty-detail p{font-size:15px}
+.nusa-dashboard-admin .detail-metrics strong,.nusa-dashboard-admin .secondary-metrics dd{font-size:32px}
+.nusa-dashboard-admin .detail-metrics span,.nusa-dashboard-admin .staff-main>span:not(.staff-rate),.nusa-dashboard-admin .staff-main .staff-rate,.nusa-dashboard-admin .staff-breakdown dd{font-size:14px}
+.nusa-dashboard-admin .staff-main>strong>span{font-size:18px}
+.nusa-dashboard-admin .popover-heading strong{font-size:16px}
+.nusa-dashboard-admin .popover-heading>span,.nusa-dashboard-admin .tooltip{font-size:13px}
+.nusa-dashboard-admin .stat{min-height:160px}
+.nusa-dashboard-admin .stat-copy small{max-width:none;line-height:1.55;color:#4d6476}
+.nusa-dashboard-admin .stat-yellow .stat-copy small{color:#6a591e}
+.nusa-dashboard-admin .section-kicker,.nusa-dashboard-admin .update-time,.nusa-dashboard-admin .chart-caption>span,.nusa-dashboard-admin .chart-unit,.nusa-dashboard-admin .small-muted,.nusa-dashboard-admin .attention-copy small,.nusa-dashboard-admin .student-copy small,.nusa-dashboard-admin .activity-row time,.nusa-dashboard-admin .page-footer,.nusa-dashboard-admin .page-footer>span,.nusa-dashboard-admin .secondary-note,.nusa-dashboard-admin .secondary-metrics dt{color:#4d6476}
+.nusa-dashboard-admin .chart-caption p,.nusa-dashboard-admin .legend-button{color:#40596d}
+.nusa-dashboard-admin .attendance-rate>span,.nusa-dashboard-admin .attendance-breakdown dt{color:#365c52}
+.nusa-dashboard-admin .late-summary strong{color:#705600}
+.nusa-dashboard-admin .late-summary div>span{color:#4d6458}
+.nusa-dashboard-admin .attention-copy strong{font-weight:700;color:#15477a}
+.nusa-dashboard-admin .student-copy strong{color:#172d3e}
+.nusa-dashboard-admin .chart-toolbar{flex-wrap:wrap;gap:12px}
+.nusa-dashboard-admin .period-switch{flex:1 1 280px;max-width:360px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.nusa-dashboard-admin .period-switch button{min-height:42px;font-weight:600;color:#40596d}
+.nusa-dashboard-admin .period-switch button[aria-pressed=true]{color:#fff}
+.nusa-dashboard-admin .chart-tools{margin-left:auto}
+.nusa-dashboard-admin .chart-caption{flex-wrap:wrap;gap:6px 12px}
+.nusa-dashboard-admin .chart-caption p,.nusa-dashboard-admin .chart-caption>span{max-width:100%;text-align:left}
+.nusa-dashboard-admin .section-heading{flex-wrap:wrap;align-items:flex-start;gap:8px 14px}
+.nusa-dashboard-admin .chart-bottom{flex-wrap:wrap}
+.nusa-dashboard-admin .chart-container{height:280px}
+.nusa-dashboard-admin .activity-row{min-height:72px}
+.nusa-dashboard-admin .student-avatar{width:38px;height:38px}
+.nusa-dashboard-admin .attention-item{min-height:104px}
+.nusa-dashboard-admin .heading-meta{flex-wrap:wrap;gap:8px 16px}
+.nusa-dashboard-admin .year-badge{flex-shrink:0}
+.nusa-dashboard-admin .secondary-metrics>div{display:flex;flex-direction:column;justify-content:space-between;gap:6px;min-width:0}
+.nusa-dashboard-admin .secondary-metrics dd{margin-top:0}
+@media(max-width:600px){
+    .nusa-dashboard-admin .attendance-summary{display:flex;flex-direction:column;gap:0;padding:22px 20px}
+    .nusa-dashboard-admin .attendance-track{width:100%;margin:18px 0}
+    .nusa-dashboard-admin .attendance-breakdown{margin:0 0 18px;gap:12px}
+    .nusa-dashboard-admin .late-summary{margin-top:0;padding-top:16px}
+    .nusa-dashboard-admin .summary-link{align-self:flex-start}
+}
+@media(max-width:560px){
+    .nusa-dashboard-admin .period-switch{flex-basis:100%;max-width:none}
+    .nusa-dashboard-admin .secondary-metrics,.nusa-dashboard-admin .secondary-pegawai .secondary-metrics{grid-template-columns:repeat(auto-fit,minmax(100px,1fr))}
+}

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Periksa Pengajuan Barang - NUSA')
 
@@ -27,7 +28,7 @@
             <div class="actions" style="margin-top: 15px;"><span class="badge {{ $pengajuanBarang->status === 'dipenuhi' ? 'badge-active' : ($pengajuanBarang->status === 'menunggu' ? 'badge-warning' : 'badge-muted') }}">{{ $pengajuanBarang->labelStatus() }}</span></div>
         </aside>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Rincian pengajuan</h2>
             <dl class="detail-grid" style="margin-top: 16px;">
                 <div class="detail-item"><dt>Barang</dt><dd>{{ $pengajuanBarang->barang->nama }}</dd></div>

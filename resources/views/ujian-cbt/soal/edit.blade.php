@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Kelola Soal Paket CBT - NUSA')
 
@@ -96,7 +97,7 @@
         </div>
     </div>
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
         <h2 class="panel-title">{{ $ujianCbt->nama }}</h2>
         <dl class="quick-facts" style="margin-top: 16px;">
             <div><dt>Mapel</dt><dd>{{ $ujianCbt->mataPelajaran?->nama ?: '-' }}</dd></div>
@@ -108,7 +109,7 @@
         <p class="help-text" style="margin-top: 6px;">Skor ditentukan otomatis: Mudah 1, Sedang 2, Sulit 3, dan Sangat Sulit 4.</p>
     </section>
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
         <h2 class="panel-title">Ringkasan Komposisi</h2>
         <div class="stats-grid" style="margin: 16px 0 0;">
             <div class="panel panel-pad">

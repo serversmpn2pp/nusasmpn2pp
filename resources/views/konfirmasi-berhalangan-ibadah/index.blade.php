@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Konfirmasi Privat - NUSA')
 
@@ -43,8 +44,8 @@
         <div class="private-stat"><span>Selesai bulan ini</span><strong>{{ $jumlahSelesaiBulanIni }}</strong></div>
     </div>
 
-    <section class="panel panel-pad">
-        <form method="GET" action="{{ route('konfirmasi-berhalangan-ibadah.index') }}" class="private-filter" data-auto-filter>
+    <section class="panel panel-pad feature-section">
+        <form method="GET" action="{{ route('konfirmasi-berhalangan-ibadah.index') }}" class="feature-filter private-filter" data-auto-filter>
             <div class="field">
                 <label for="kelas_id">Kelas</label>
                 <select id="kelas_id" name="kelas_id" class="select" data-auto-submit>

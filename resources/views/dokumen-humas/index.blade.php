@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 
 @section('title', 'Pusat Dokumen Humas - NUSA')
 
@@ -38,7 +39,7 @@
         <article class="panel stat"><p class="stat-label">Kedaluwarsa</p><p class="stat-value">{{ number_format($jumlahKedaluwarsa, 0, ',', '.') }}</p></article>
     </div>
 
-    <form action="{{ route('dokumen-humas.index') }}" method="GET" class="panel panel-pad" style="margin-bottom:18px;">
+    <form action="{{ route('dokumen-humas.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom:18px;">
         <div class="humas-filter">
             <div class="field">
                 <label for="kata_kunci">Cari dokumen</label>
@@ -71,7 +72,7 @@
         </div>
     </form>
 
-    <section class="panel panel-pad">
+    <section class="panel panel-pad feature-section">
         @if ($dokumen->isEmpty())
             <div class="empty-state">Belum ada dokumen yang sesuai. Tambahkan arsip pertama untuk mulai mengelola dokumen Humas.</div>
         @else

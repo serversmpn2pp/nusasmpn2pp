@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Laporan Presensi - NUSA')
 
@@ -50,7 +51,7 @@
         </div>
     </div>
 
-    <form action="{{ route('laporan-absensi.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('laporan-absensi.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="filter-grid filter-grid-wide">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -178,7 +179,7 @@
             </p>
         </div>
 
-        <div class="desktop-only table-wrap">
+        <div class="desktop-only table-wrap feature-worktable attendance-worktable" tabindex="0" role="region" aria-label="Laporan presensi siswa">
             <table class="employee-table placement-table" style="min-width: 1180px;">
                 <thead>
                     <tr>

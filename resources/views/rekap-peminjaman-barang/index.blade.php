@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Rekap Peminjaman Barang - NUSA')
 
@@ -178,7 +179,7 @@
         </div>
     </div>
 
-    <form action="{{ route('rekap-peminjaman-barang.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('rekap-peminjaman-barang.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="loan-report-filter-grid">
             <div class="field loan-filter-search">
                 <label for="kata_kunci">Cari rekap</label>

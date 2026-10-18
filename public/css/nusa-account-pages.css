@@ -1,0 +1,52 @@
+/* Shared shell class names retain their original names for compatibility, not authorization. */
+@media screen {
+    .nusa-shared-theme:not(.nusa-dashboard-admin) :is(.student-dashboard,.parent-dashboard) { gap: 24px; }
+    .nusa-shared-theme :is(.student-hero,.parent-hero,.employee-hero) { background: #edf4fc; color: #172d3e; border: 0; border-left: 4px solid #0f766e; border-radius: 0; box-shadow: none; padding: 24px; gap: 24px; }
+    .nusa-shared-theme .employee-hero .dashboard-hero-main,
+    .nusa-shared-theme .employee-hero .dashboard-hero-side { padding: 0; }
+    .nusa-shared-theme .employee-hero .dashboard-hero-side { background: transparent; border-color: #bdd2e2; padding-left: 24px; }
+    .nusa-shared-theme :is(.student-name,.parent-name,.dashboard-title) { font-size: 26px; line-height: 1.4; color: #15477a; }
+    .nusa-shared-theme :is(.student-hero,.parent-hero,.employee-hero) .eyebrow { color: #0f766e; font-size: 14px; }
+    .nusa-shared-theme :is(.student-meta,.parent-meta,.student-today span,.parent-today span,.dashboard-subtitle,.dashboard-date,.dashboard-year-note) { color: #4d6476; font-size: 15px; line-height: 1.6; }
+    .nusa-shared-theme .employee-hero .dashboard-note { color: #4d6476; font-size: 14px; }
+    .nusa-shared-theme :is(.student-today,.parent-today) { border-color: #bdd2e2; }
+    .nusa-shared-theme :is(.student-today strong,.parent-today strong,.dashboard-year) { color: #15477a; font-size: 18px; }
+    .nusa-shared-theme :is(.student-photo,.parent-photo) { border: 2px solid #88bdb4; border-radius: 6px; }
+    .nusa-shared-theme :is(.student-status,.parent-status) { background: #fff8d8; color: #775700; font-size: 13px; }
+    .nusa-shared-theme :is(.student-panel,.parent-panel,.dashboard-panel) { border: 0; border-bottom: 1px solid #dce5ed; border-radius: 0; box-shadow: none; min-width: 0; }
+    .nusa-shared-theme :is(.student-panel-head,.parent-panel-head,.dashboard-panel-head) { background: #e8f5f1; padding: 16px 20px; gap: 14px; flex-wrap: wrap; }
+    .nusa-shared-theme :is(.student-panel-head,.parent-panel-head,.dashboard-panel-head) h2 { font-size: 18px; color: #15477a; line-height: 1.5; }
+    .nusa-shared-theme :is(.student-panel-head,.parent-panel-head,.dashboard-panel-head) > span { font-size: 14px; color: #4d6476; }
+    .nusa-shared-theme :is(.student-panel-body,.parent-panel-body,.dashboard-panel-body) { padding: 20px; }
+    .nusa-shared-theme :is(.student-dashboard-grid,.parent-dashboard-grid,.employee-dashboard-grid,.dashboard-grid) { gap: 24px; min-width: 0; }
+    .nusa-shared-theme :is(.student-stack,.parent-stack,.dashboard-stack) { min-width: 0; gap: 24px; }
+    .nusa-shared-theme .parent-stat { box-shadow: none; border-radius: 6px; border-color: #c3d6e5; background: #edf4fc; }
+    .nusa-shared-theme .parent-stat:nth-child(even) { background: #e8f5f1; border-color: #b3d6cd; }
+    .nusa-shared-theme :is(.parent-stat span,.parent-stat small,.student-panel-body small,.parent-panel-body small,.attendance-item span,.attendance-item small,.mini-card span,.mini-card small) { font-size: 14px; line-height: 1.6; }
+    .nusa-shared-theme .parent-stat strong { font-size: 24px; line-height: 1.4; }
+    .nusa-shared-theme :is(.attendance-summary,.mini-grid) { background: transparent; border: 0; border-radius: 0; }
+    .nusa-shared-theme .mini-card { background: #f3f7fa; border: 0; border-radius: 0; padding: 14px; min-width: 0; }
+    .nusa-shared-theme .attendance-item { background: #f3f7fa; border-color: #dce5ed; }
+    .nusa-shared-theme .content-shell :is(.student-panel,.parent-panel) .button { min-height: 44px; }
+    .nusa-shared-theme .school-row-action { width: 36px; height: 36px; min-height: 36px; flex: 0 0 36px; padding: 8px; }
+    .nusa-shared-theme .school-row-action svg { width: 17px; height: 17px; }
+    .nusa-shared-theme .dashboard-actions.employee-actions { gap: 12px; }
+    .nusa-shared-theme .dashboard-action { box-shadow: none; border-bottom-width: 1px; border-radius: 6px; min-height: 68px; font-weight: 650; }
+    .nusa-shared-theme .dashboard-action:hover { transform: none; }
+    @media (max-width: 1100px) {
+        .nusa-shared-theme :is(.student-dashboard-grid,.parent-dashboard-grid,.employee-dashboard-grid) { grid-template-columns: minmax(0,1fr); }
+    }
+    @media (max-width: 760px) {
+        .nusa-shared-theme :is(.student-hero,.parent-hero,.employee-hero) { grid-template-columns: minmax(0,1fr); padding: 20px 16px; gap: 18px; }
+        .nusa-shared-theme :is(.student-name,.parent-name,.dashboard-title) { font-size: 22px; }
+        .nusa-shared-theme :is(.student-today,.parent-today),
+        .nusa-shared-theme .employee-hero .dashboard-hero-side { min-width: 0; padding: 16px 0 0; border: 0; border-top: 1px solid #bdd2e2; text-align: left; }
+        .nusa-shared-theme :is(.student-panel-head,.parent-panel-head,.dashboard-panel-head) { padding: 14px 16px; }
+        .nusa-shared-theme :is(.student-panel-body,.parent-panel-body,.dashboard-panel-body) { padding: 16px; }
+        .nusa-shared-theme :is(.student-identity,.parent-identity) { gap: 14px; align-items: flex-start; }
+        .nusa-shared-theme :is(.student-photo,.parent-photo) { width: 60px; height: 76px; }
+        .nusa-shared-theme .dashboard-actions.employee-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .nusa-shared-theme .dashboard-action { grid-template-columns: minmax(0,1fr) auto; padding: 12px; }
+        .nusa-shared-theme .dashboard-action-mark { display: none; }
+    }
+}

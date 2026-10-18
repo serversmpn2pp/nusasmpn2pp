@@ -45,7 +45,7 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Informasi Penugasan</h2>
             <div class="form-grid">
                 <div class="field">
@@ -124,7 +124,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div>
                 <h2 class="panel-title">Pilih Kelas</h2>
                 <p class="help-text">Kelas otomatis disaring berdasarkan tahun pelajaran dan tingkat yang tersedia untuk mata pelajaran.</p>

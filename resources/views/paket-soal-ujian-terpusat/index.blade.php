@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', $tampilanHasil ? 'Hasil & Analisis Ujian - NUSA' : 'Paket Soal Terpusat - NUSA')
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="id">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -839,8 +839,9 @@
                 }
             }
         </style>
+        @include('partials.scanner-theme')
     </head>
-    <body>
+    <body class="nusa-scanner" data-scan-kind="siswa">
         <div class="scan-page">
             <div class="scan-shell">
                 <header class="scan-header">

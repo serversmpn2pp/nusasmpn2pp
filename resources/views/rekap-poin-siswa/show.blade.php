@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Profil Disiplin ' . $siswa->nama_lengkap . ' - NUSA')
 
@@ -353,7 +354,7 @@
         </div>
     </div>
 
-    <form method="GET" class="panel panel-pad" style="margin-bottom: 16px;">
+    <form method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 16px;">
         <div class="form-grid">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -434,7 +435,7 @@
     </nav>
 
     <div class="discipline-grid" id="perkembangan">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div class="discipline-section-head">
                 <div>
                     <h2>Perkembangan poin bulanan</h2>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Jadwal Guru Piket - NUSA')
 
@@ -30,7 +31,7 @@
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
-    <form action="{{ route('jadwal-piket-guru.index') }}" method="GET" class="panel panel-pad" style="margin-bottom:18px;">
+    <form action="{{ route('jadwal-piket-guru.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom:18px;">
         <div class="field" style="max-width:420px;">
             <label for="tahun_pelajaran_id">Tahun pelajaran</label>
             <select id="tahun_pelajaran_id" name="tahun_pelajaran_id" class="select" onchange="this.form.submit()">

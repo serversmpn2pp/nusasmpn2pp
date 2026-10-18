@@ -96,7 +96,7 @@
 
 <div class="assessment-form-grid">
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">1. Informasi asesmen</h2>
             <p class="help-text" style="margin-top: 6px;">Pilih penugasan mengajar. NUSA hanya menampilkan mata pelajaran dan kelas yang sesuai.</p>
 
@@ -132,7 +132,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">2. Kelas dan tujuan nilai</h2>
             <p class="help-text" style="margin-top: 6px;">Pilih satu atau beberapa kelas. NUSA dapat membuat komponen Sumatif baru secara otomatis dengan nama asesmen ini.</p>
             @error('kelas_peserta')<p class="error-text" style="margin-top: 10px;">{{ $message }}</p>@enderror
@@ -168,7 +168,7 @@
             <div class="empty-state" data-class-empty hidden>Pilih mata pelajaran dan tingkat untuk menampilkan kelas.</div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">3. Waktu pelaksanaan</h2>
             <div class="form-grid" style="margin-top: 16px;">
                 <div class="field">

@@ -32,7 +32,7 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Informasi {{ $judul }}</h2>
 
             <div class="form-grid">

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', ($mode === 'hasil' ? 'Nilai & Hasil Ujian Terpusat' : 'Pelaksanaan Ujian Terpusat').' - NUSA')
 

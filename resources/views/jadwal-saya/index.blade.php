@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Jadwal Saya - NUSA')
 
@@ -179,7 +180,7 @@
         </div>
     @endunless
 
-    <form action="{{ route('jadwal-saya.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('jadwal-saya.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="personal-schedule-filter">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>

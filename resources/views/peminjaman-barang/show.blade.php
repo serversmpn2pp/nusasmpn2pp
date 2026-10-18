@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Detail Peminjaman Barang - NUSA')
 
@@ -37,7 +38,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi Transaksi</h2>
 
                 <dl class="detail-grid" style="margin-top: 16px;">

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Tambah Guru Piket - NUSA')
 
@@ -31,7 +32,7 @@
     <form action="{{ route('jadwal-piket-guru.store') }}" method="POST">
         @csrf
         <div class="form-layout">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Jadwal Piket</h2>
                 <div class="form-grid" style="margin-top:16px;">
                     <div class="field">
@@ -57,7 +58,7 @@
                 </div>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="section-heading"><div><h2 class="panel-title">Pilih Guru Mata Pelajaran</h2><p class="help-text">Hanya guru dengan penugasan mapel aktif yang ditampilkan.</p></div><span class="badge badge-muted">{{ $guruMapel->count() }} guru</span></div>
                 <div class="field" style="margin:16px 0 10px;"><label for="cari_guru">Cari guru</label><input id="cari_guru" type="search" class="input" placeholder="Ketik nama atau NIP" autocomplete="off"></div>
                 <div class="actions" style="margin-bottom:10px;"><button type="button" class="button button-muted button-sm" data-select-all>Pilih semua</button><button type="button" class="button button-muted button-sm" data-clear-all>Kosongkan</button></div>

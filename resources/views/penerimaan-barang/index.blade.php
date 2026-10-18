@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Barang Datang - NUSA')
 
@@ -62,7 +63,7 @@
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
-    <form id="filter-penerimaan" action="{{ route('penerimaan-barang.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form id="filter-penerimaan" action="{{ route('penerimaan-barang.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="receipt-filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari penerimaan</label>

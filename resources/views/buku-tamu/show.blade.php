@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Kunjungan '.$tamu->nama_tamu.' - NUSA')
 @section('content')
 @include('buku-tamu._style')

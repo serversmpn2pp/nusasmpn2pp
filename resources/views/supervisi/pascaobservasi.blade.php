@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'supervisi')
 @section('title', 'Pascaobservasi Supervisi - NUSA')
 @section('content')
 <div class="sp-workspace">

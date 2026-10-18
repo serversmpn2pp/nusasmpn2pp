@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'supervisi')
 @section('title','Penjadwalan Supervisi - NUSA')
 @section('content')
 <div class="sp-workspace"><div class="page-header"><div><p class="eyebrow">{{ $program->nama }}</p><h1 class="page-title">{{ $sesi ? 'Ubah jadwal' : 'Tambah jadwal supervisi' }}</h1></div><a class="button button-muted" href="{{ route('supervisi.program.show',$program) }}">Kembali ke program</a></div>@include('supervisi._style')

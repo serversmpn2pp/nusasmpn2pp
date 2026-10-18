@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'supervisi')
 @section('title','Program Supervisi - NUSA')
 @section('content')
 <div class="sp-workspace"><div class="page-header"><div><p class="eyebrow">Supervisi Akademik</p><h1 class="page-title">Program supervisi</h1></div>@if($hak_akses['kelola'])<a class="button button-primary" href="{{ route('supervisi.program.create') }}">Tambah program</a>@endif</div>

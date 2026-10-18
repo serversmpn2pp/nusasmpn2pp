@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Scan Berhalangan Ibadah - NUSA</title>
+    @fonts
     <link rel="icon" href="{{ asset('images/logo-nusa.png') }}" type="image/png">
     @vite('resources/js/scan-kegiatan-ibadah.js')
     <style>
@@ -44,8 +45,9 @@
         @media(max-width:820px) { .page { padding:18px 14px calc(30px + env(safe-area-inset-bottom)); }.page-head { align-items:flex-start; }.scan-layout { grid-template-columns:1fr; }.schedule-strip { grid-template-columns:1fr 1fr; }.schedule-block:first-child { grid-column:1/-1; }.camera-wrap { aspect-ratio:4/5; min-height:430px; }.side-stack { display:flex; flex-direction:column; }.result { order:-1; } }
         @media(max-width:500px) { .app-header { min-height:64px; }.brand img { width:40px; height:40px; }.brand span span { display:none; }.page-head { display:block; }.back-link { width:100%; margin-top:14px; }.schedule-strip { grid-template-columns:1fr 1fr; }.schedule-block { padding:13px; }.schedule-block:first-child,.schedule-block.highlight { grid-column:1/-1; }.camera-wrap { min-height:0; aspect-ratio:3/4; }.camera-controls .button { flex:1 1 calc(50% - 9px); }.camera-controls .button-grow { flex-basis:100%; }.result-grid { grid-template-columns:70px minmax(0,1fr); }.result-photo { width:70px; height:86px; }.manual-form { flex-direction:column; }.manual-form .button { width:100%; } }
     </style>
+    @include('partials.scanner-theme')
 </head>
-<body>
+<body class="nusa-scanner" data-scan-kind="privat">
     <header class="app-header">
         <a class="brand" href="{{ route('beranda') }}"><img src="{{ asset('images/logo-nusa.png') }}" alt="Logo NUSA"><span><strong>NUSA Ibadah</strong><span>SMP Negeri 2 Padang Panjang</span></span></a>
         <span class="private-badge">MODE PRIVAT</span>

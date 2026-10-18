@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Kegiatan Ibadah - NUSA')
 
@@ -23,7 +24,7 @@
         <div class="panel stat inactive"><p class="stat-label">Nonaktif</p><p class="stat-value">{{ $jumlahNonaktif }}</p></div>
     </div>
 
-    <form action="{{ route('kegiatan-ibadah.index') }}" method="GET" class="panel panel-pad" style="margin-bottom:18px;">
+    <form action="{{ route('kegiatan-ibadah.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom:18px;">
         <div class="filter-grid">
             <div class="field"><label for="cari">Cari kegiatan</label><input id="cari" name="cari" class="input" value="{{ $cari }}" placeholder="Nama atau kode kegiatan"></div>
             <div class="field"><label for="status">Status</label><select id="status" name="status" class="select" onchange="this.form.submit()"><option value="semua" @selected($status === 'semua')>Semua status</option><option value="aktif" @selected($status === 'aktif')>Aktif</option><option value="nonaktif" @selected($status === 'nonaktif')>Nonaktif</option></select></div>

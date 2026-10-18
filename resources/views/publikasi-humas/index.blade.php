@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Publikasi & Persetujuan - NUSA')
 @section('content')
 @include('publikasi-humas._style')

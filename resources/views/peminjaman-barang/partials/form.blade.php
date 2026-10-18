@@ -127,7 +127,7 @@
 @endif
 
 <div class="loan-workspace">
-    <section class="panel panel-pad">
+    <section class="panel panel-pad feature-section">
         <p class="eyebrow">Langkah 1</p>
         <h2 class="panel-title">Pilih peminjam</h2>
 
@@ -178,7 +178,7 @@
         </div>
     </section>
 
-    <section class="panel panel-pad">
+    <section class="panel panel-pad feature-section">
         <p class="eyebrow">Langkah 2</p>
         <h2 class="panel-title">Masukkan barang</h2>
 
@@ -256,7 +256,7 @@
         </div>
     </section>
 
-    <section class="panel panel-pad">
+    <section class="panel panel-pad feature-section">
         <p class="eyebrow">Langkah 4</p>
         <h2 class="panel-title">Simpan transaksi</h2>
 

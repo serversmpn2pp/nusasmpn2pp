@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'persuratan')
 @section('title', ($pribadi ? 'Surat & Penugasan Saya' : 'Persuratan & Arsip').' - NUSA')
 @section('content')
     @include('persuratan._style')
@@ -16,7 +17,7 @@
         <div class="panel stat active"><p class="stat-label">{{ $pribadi ? 'Penugasan aktif' : 'Disahkan / dikirim' }}</p><p class="stat-value">{{ ($jumlah['disahkan'] ?? 0) + ($jumlah['dikirim'] ?? 0) }}</p></div>
         <div class="panel stat"><p class="stat-label">Dibatalkan</p><p class="stat-value">{{ $jumlah['dibatalkan'] ?? 0 }}</p></div>
     </div>
-    <form method="GET" action="{{ route($pribadi ? 'surat-saya.index' : 'persuratan.index') }}" class="panel panel-pad surat-filter {{ $pribadi ? 'surat-filter--pribadi' : '' }}">
+    <form method="GET" action="{{ route($pribadi ? 'surat-saya.index' : 'persuratan.index') }}" class="feature-filter panel panel-pad ui-filter surat-filter {{ $pribadi ? 'surat-filter--pribadi' : '' }}">
         <div><label for="kata_kunci">Cari surat</label><input class="input" id="kata_kunci" name="kata_kunci" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120" placeholder="Nomor surat atau perihal"></div>
         @if(!$pribadi)<div><label for="jenis">Jenis surat</label><select class="select" id="jenis" name="jenis"><option value="">Semua jenis</option>@foreach(\App\Models\SuratTu::JENIS as $kode => $label)<option value="{{ $kode }}" @selected(($filter['jenis'] ?? '') === $kode)>{{ $label }}</option>@endforeach</select></div>@endif
         <div><label for="status">Status</label><select class="select" id="status" name="status"><option value="">Semua status</option>@foreach(\App\Models\SuratTu::STATUS as $kode => $label) @if(!$pribadi || in_array($kode, ['disahkan','dikirim','dibatalkan']))<option value="{{ $kode }}" @selected(($filter['status'] ?? '') === $kode)>{{ $label }}</option>@endif @endforeach</select></div>
@@ -29,10 +30,10 @@
             <span class="surat-muted surat-filter-count" role="status">{{ $surat->total() }} surat</span>
         </div>
     </form>
-    <div class="panel surat-shell">
-        @if($surat->isEmpty())<div class="surat-empty">{{ $pribadi ? 'Belum ada surat tugas yang sesuai.' : 'Belum ada surat yang sesuai.' }}</div>
+    <div class="panel surat-shell" @if($surat->isNotEmpty()) tabindex="0" role="region" aria-label="Daftar surat" @endif>
+        @if($surat->isEmpty())<x-ui.empty-state :title="$pribadi ? 'Belum ada surat tugas yang sesuai.' : 'Belum ada surat yang sesuai.'" description="Coba ubah pencarian atau filter yang digunakan." icon="mail-search" />
         @else
-            <table class="surat-table surat-table--list"><thead><tr><th scope="col">Nomor & perihal</th><th scope="col">Tanggal</th><th scope="col">{{ $pribadi ? 'Pelaksanaan' : 'Pengirim / penerima' }}</th><th scope="col">Status</th><th scope="col">{{ $pribadi ? 'Konfirmasi' : 'Tindak lanjut' }}</th><th scope="col">Aksi</th></tr></thead><tbody>
+            <table class="surat-table surat-table--list ui-table"><thead><tr><th scope="col">Nomor & perihal</th><th scope="col">Tanggal</th><th scope="col">{{ $pribadi ? 'Pelaksanaan' : 'Pengirim / penerima' }}</th><th scope="col">Status</th><th scope="col">{{ $pribadi ? 'Konfirmasi' : 'Tindak lanjut' }}</th><th scope="col">Aksi</th></tr></thead><tbody>
             @foreach($surat as $item)
                 <tr><td><a href="{{ route($pribadi ? 'surat-saya.show' : 'persuratan.show', $item) }}">{{ $item->nomor_surat }}</a><small>{{ $item->perihal }}</small><small>{{ \App\Models\SuratTu::JENIS[$item->jenis] }} @if($item->nomor_agenda) &middot; Agenda {{ $item->nomor_agenda }} @endif @if($item->sifat !== 'biasa') &middot; {{ \App\Models\SuratTu::SIFAT[$item->sifat] }} @endif</small></td>
                 <td data-label="Tanggal">{{ $item->tanggal_surat->format('d-m-Y') }} @if($item->tanggal_diterima)<small>Diterima {{ $item->tanggal_diterima->format('d-m-Y') }}</small>@endif</td>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Koreksi Presensi Ibadah - NUSA')
 
@@ -58,7 +59,7 @@
             </section>
 
             @if($riwayat->isNotEmpty())
-                <section class="panel panel-pad">
+                <section class="panel panel-pad feature-section">
                     <h2 class="panel-title">Riwayat perubahan</h2>
                     <div class="worship-history">
                         @foreach($riwayat as $item)
@@ -73,7 +74,7 @@
             @endif
         </aside>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Data presensi</h2>
             <p class="worship-form-note">Pilih <strong>Sudah presensi</strong> untuk menambah atau memperbaiki waktu. Pilih <strong>Belum presensi</strong> untuk membatalkan catatan yang keliru. Alasan wajib diisi dan tersimpan dalam riwayat.</p>
 

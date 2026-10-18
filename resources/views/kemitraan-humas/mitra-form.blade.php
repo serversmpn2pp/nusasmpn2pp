@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($mitra->exists ? 'Edit mitra' : 'Tambah mitra').' - NUSA')
 @section('content')
 @include('kemitraan-humas._style')

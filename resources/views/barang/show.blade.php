@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Detail Barang - NUSA')
 
@@ -49,7 +50,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi Barang</h2>
 
                 <dl class="detail-grid">
@@ -95,7 +96,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Tahap berikutnya</h2>
                 @if ($barang->tipe_pengelolaan === 'aset_individual')
                     <p class="help-text" style="margin-top: 8px;">Setiap aset individual memiliki kode inventaris dan barcode masing-masing agar lokasi, kondisi, dan peminjamnya dapat dilacak.</p>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 @section('title','Aturan Sanksi Poin - NUSA')
 @section('content')
     <div class="page-header"><div><p class="eyebrow">Pengaturan Pembinaan</p><h1 class="page-title">Aturan Sanksi Poin</h1><p class="page-subtitle">Tindak lanjut dibuat otomatis ketika total poin pertama kali melewati ambang.</p></div><a href="{{ route('aturan-sanksi-poin.create') }}" class="button button-primary">Tambah</a></div>

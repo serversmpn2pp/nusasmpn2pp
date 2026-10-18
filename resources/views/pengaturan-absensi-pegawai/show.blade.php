@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Detail Jam Presensi Pegawai - NUSA')
 
@@ -53,7 +54,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Sasaran Jadwal</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -81,7 +82,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Jam Masuk</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -99,7 +100,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Jam Pulang</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">

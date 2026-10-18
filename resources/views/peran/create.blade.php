@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sistem')
 
 @section('title', 'Tambah Peran - NUSA')
 

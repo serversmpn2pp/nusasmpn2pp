@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Formulir Evaluasi Orang Tua - NUSA')
 @section('uf-actions')<a class="button button-muted" href="{{ $formulir->exists ? route('umpan-balik-humas.show', $formulir) : route('umpan-balik-humas.index') }}">Kembali</a>@endsection
 @section('content')

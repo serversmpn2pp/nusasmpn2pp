@@ -1,0 +1,24 @@
+/* Exam-only presentation. Timer, answer states and security behavior remain in the exam client. */
+@media screen {
+    body.nusa-exam-theme { --primary: #15477a; --primary-dark: #10395f; --accent: #f1c40f; --success: #0f766e; --success-soft: #e8f5f1; --text: #172d3e; --muted: #4d6476; --line: #c3d2df; --bg: #f6f8fb; }
+    .nusa-exam-theme .cbt-topbar { background: #fff; border-color: #c3d2df; box-shadow: inset 0 -2px 0 #f1c40f; }
+    .nusa-exam-theme :is(.panel,.question-card) { box-shadow: none; border-radius: 6px; }
+    .nusa-exam-theme .button { font-size: 14px; min-height: 44px; border-radius: 6px; line-height: 1.5; }
+    .nusa-exam-theme .button-muted { background: #fff; border: 1px solid #a6bdcf; color: #15477a; }
+    .nusa-exam-theme :is(.input,.select,.textarea) { border: 1px solid #8ca8c0; background: #fff; border-radius: 6px; font-size: 16px; min-height: 44px; }
+    .nusa-exam-theme :is(.button,.input,.select,.textarea,.nav-number,.option-card):focus-visible { outline: 3px solid #0f766e50; outline-offset: 2px; }
+    .nusa-exam-theme :is(.question-position,.answer-save-state,.finish-availability,.timer-label,.question-legend) { font-size: 14px; line-height: 1.5; }
+    .nusa-exam-theme .option-card { border-color: #bfd0de; border-radius: 6px; }
+    .nusa-exam-theme .option-card:has(input:checked) { border-color: #0f766e; background: #e8f5f1; }
+    .nusa-exam-theme .option-card:has(input:focus-visible) { outline: 3px solid #0f766e50; outline-offset: 1px; }
+    .nusa-exam-theme .nav-number.is-answered:not(.is-current):not(.is-doubt) { background: #e8f5f1; border-color: #a6cfc5; color: #0b5d56; }
+    .nusa-exam-theme :is(.exam-compact-timer,.timer) { background: #fff8d8; border-color: #dfc45f; }
+    .nusa-exam-theme .exam-compact-timer small { font-size: 12px; line-height: 1.4; }
+    .nusa-exam-theme .exam-compact-timer strong { font-size: 18px; line-height: 1.4; }
+    .nusa-exam-theme .question-actions .button:disabled,
+    .nusa-exam-theme .finish-action .button:disabled { opacity: 1; color: #566a7b; border-color: #cbd5de; background: #eef2f5; }
+    @media (max-width: 640px) {
+        .nusa-exam-theme .question-actions { gap: 8px; }
+        .nusa-exam-theme .finish-availability { font-size: 13px; }
+    }
+}

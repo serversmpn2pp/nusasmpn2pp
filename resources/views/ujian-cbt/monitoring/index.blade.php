@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Monitoring CBT - NUSA')
 
@@ -270,7 +271,7 @@
         </div>
     </div>
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section monitor-context" style="margin-bottom: 24px;">
         @if (session('berhasil'))
             <div class="alert" style="margin-bottom: 16px;">{{ session('berhasil') }}</div>
         @endif
@@ -361,7 +362,7 @@
         </div>
     </div>
 
-    <form action="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;" data-monitor-filter>
+    <form action="{{ route('ujian-cbt.monitoring.index', $ujianCbt) }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;" data-monitor-filter>
         <div class="monitor-filter-grid">
             <div class="field">
                 <label for="kelas_id">Kelas</label>
@@ -409,7 +410,7 @@
     </form>
 
     <section class="panel" id="monitoringPeserta" aria-live="polite">
-        <div class="desktop-only table-wrap">
+        <div class="desktop-only table-wrap feature-worktable monitor-worktable" tabindex="0" role="region" aria-label="Pemantauan peserta ujian">
             <table class="employee-table monitor-table">
                 <thead>
                     <tr>

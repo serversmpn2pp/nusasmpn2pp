@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Konfirmasi Privat Siswi - NUSA')
 
@@ -36,7 +37,7 @@
 
     <div class="private-layout">
         <div style="display:grid;gap:18px;">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="private-person">
                     <img src="{{ $periode->siswa?->foto ? asset('storage/'.$periode->siswa->foto) : asset('images/kartu-pelajar/default-user.png') }}" alt="">
                     <div><p class="eyebrow">{{ $periode->kelas?->nama ?? '-' }}</p><h2 class="panel-title" style="margin-top:3px;">{{ $periode->siswa?->nama_lengkap ?? '-' }}</h2><p class="person-meta">NISN {{ $periode->siswa?->nisn ?? '-' }}</p></div>
@@ -56,7 +57,7 @@
         </div>
 
         <div style="display:grid;gap:18px;">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Hasil konfirmasi</h2>
                 <p class="help-text">Pilih hasil sesuai keterangan siswi.</p>
 
@@ -101,7 +102,7 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Riwayat privat</h2>
                 <p class="help-text">Riwayat hanya tersedia bagi petugas yang berwenang.</p>
                 <div style="margin-top:10px;">

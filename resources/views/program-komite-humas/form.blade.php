@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($program->exists ? 'Edit' : 'Tambah').' Program Komite - NUSA')
 @section('program-actions')<a class="button button-muted" href="{{ $program->exists ? route('komite-humas.program.show', [$periode, $program]) : route('komite-humas.program.index', $periode) }}">Kembali</a>@endsection
 @section('content')

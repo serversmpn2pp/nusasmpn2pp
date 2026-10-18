@@ -1,11 +1,12 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($laporan->exists ? 'Edit' : 'Tambah').' Laporan Pelaksanaan Humas - NUSA')
 @section('program-actions')<a class="button button-muted" href="{{ $laporan->exists ? route('program-kerja-humas.laporan.show', [$program, $laporan]) : route('program-kerja-humas.show', $program) }}">Kembali</a>@endsection
 @section('content')
 <div class="publikasi-page humas-program-page">
     @include('program-kerja-humas._header', ['judulHalaman' => $laporan->exists ? 'Edit laporan pelaksanaan' : 'Tambah laporan pelaksanaan'])
     <p class="agenda-muted">{{ $program->nama }} &middot; {{ $program->tahunPelajaran->nama }}</p>
-    @if($bolehAgenda)<form method="GET" class="agenda-filter"><div class="field"><label for="cari_agenda">Cari agenda terkait (opsional)</label><input class="input" id="cari_agenda" name="cari_agenda" maxlength="120" value="{{ request('cari_agenda') }}"></div><div class="actions"><button type="submit" class="button button-muted">Cari agenda</button></div></form>@endif
+    @if($bolehAgenda)<form method="GET" class="feature-filter agenda-filter"><div class="field"><label for="cari_agenda">Cari agenda terkait (opsional)</label><input class="input" id="cari_agenda" name="cari_agenda" maxlength="120" value="{{ request('cari_agenda') }}"></div><div class="actions"><button type="submit" class="button button-muted">Cari agenda</button></div></form>@endif
     <form method="POST" action="{{ $laporan->exists ? route('program-kerja-humas.laporan.update', [$program, $laporan]) : route('program-kerja-humas.laporan.store', $program) }}" data-agenda-submit data-humas-report-form>
         @csrf
         @if($laporan->exists)@method('PUT')<input type="hidden" name="versi" value="{{ old('versi', $laporan->versi) }}">@else<input type="hidden" name="token_pembuatan" value="{{ old('token_pembuatan', $tokenPembuatan) }}">@endif

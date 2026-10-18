@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Akademik</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Kenaikan kelas</h1>
         </div>
 
@@ -13,7 +13,7 @@
     </div>
 
     @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
+        <x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>
     @endif
 
     @if ($errors->any())
@@ -31,9 +31,9 @@
         @php
             $ringkasan = session('ringkasan_kenaikan');
         @endphp
-        <div class="panel panel-pad" style="margin-bottom: 20px;">
+        <div class="panel panel-pad school-import-summary" style="margin-bottom: 20px;">
             <h2 class="panel-title">Ringkasan penempatan</h2>
-            <div class="stats-grid" style="margin: 16px 0 0;">
+            <div class="stats-grid school-inline-stats" style="margin: 16px 0 0;">
                 <div class="panel stat">
                     <p class="stat-label">Diproses</p>
                     <p class="stat-value">{{ $ringkasan['diproses'] }}</p>
@@ -61,7 +61,7 @@
         </div>
     @endif
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad ui-filter school-transition-filter" style="margin-bottom: 24px;">
         <h2 class="panel-title">Pilih Data Asal dan Tujuan</h2>
         <form action="{{ route('kenaikan-kelas.index') }}" method="GET">
             <div class="form-grid">
@@ -133,15 +133,15 @@
                 <p class="help-text">NUSA memberi saran awal berdasarkan tingkat dan rombel. Bapak/Ibu tetap bisa mengubah kelas tujuan; nomor absen akan disusun otomatis berdasarkan nama A-Z.</p>
             </div>
 
-            <div class="table-wrap">
-                <table class="employee-table placement-table">
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Daftar kenaikan kelas">
+                <table class="employee-table placement-table school-transition-table">
                     <thead>
                         <tr>
-                            <th>No.</th>
-                            <th>Siswa</th>
-                            <th>Status saat ini</th>
-                            <th>Kelas tujuan</th>
-                            <th>Keterangan</th>
+                            <th scope="col">No.</th>
+                            <th scope="col">Siswa</th>
+                            <th scope="col">Status saat ini</th>
+                            <th scope="col">Kelas tujuan</th>
+                            <th scope="col">Keterangan</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -164,7 +164,7 @@
                                     @endif
                                 </td>
                                 <td data-label="Kelas tujuan">
-                                    <select name="tujuan[{{ $anggota->id }}]" class="select select-sm">
+                                    <select name="tujuan[{{ $anggota->id }}]" class="select select-sm" aria-label="Kelas tujuan untuk {{ $anggota->siswa?->nama_lengkap }}">
                                         <option value="">Belum ditempatkan</option>
                                         @foreach ($kelasTujuan as $kelas)
                                             <option value="{{ $kelas->id }}" {{ (string) $kelasDipilih === (string) $kelas->id ? 'selected' : '' }}>
@@ -174,7 +174,7 @@
                                     </select>
                                 </td>
                                 <td data-label="Keterangan">
-                                    <input name="keterangan[{{ $anggota->id }}]" type="text" value="{{ old('keterangan.' . $anggota->id, 'Penempatan massal') }}" class="input input-sm">
+                                    <input name="keterangan[{{ $anggota->id }}]" type="text" value="{{ old('keterangan.' . $anggota->id, 'Penempatan massal') }}" class="input input-sm" aria-label="Keterangan untuk {{ $anggota->siswa?->nama_lengkap }}">
                                 </td>
                             </tr>
                         @empty

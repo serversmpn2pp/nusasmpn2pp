@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Rincian Media Resmi - NUSA')
 @section('content')
 @include('media-resmi-humas._style')

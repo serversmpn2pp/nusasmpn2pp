@@ -62,7 +62,7 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Identitas Mata Pelajaran</h2>
             <div class="form-grid">
                 <div class="field">
@@ -121,7 +121,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <div style="margin-bottom: 8px;">
                 <h2 class="panel-title" data-level-title>Pengaturan per Tingkat</h2>
                 <p class="help-text" data-level-help>Aktifkan tingkat yang memakai mata pelajaran ini, lalu isi kode dan KKM/KKTP-nya.</p>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Daftar Media Resmi - NUSA')
 @section('content')
 @include('media-resmi-humas._style')
@@ -6,7 +7,7 @@
     <div class="page-header"><div><p class="eyebrow">Humas</p><h1 class="page-title">Daftar Media Resmi</h1></div>@izin('media_resmi_humas.kelola')<a class="button button-primary" href="{{ route('media-resmi-humas.create') }}">Tambah media</a>@endizin</div>
     @include('agenda-humas._messages')
     <div class="agenda-metrics">@foreach (['aktif' => 'Media aktif', 'nonaktif' => 'Tidak aktif', 'arsip' => 'Diarsipkan', 'penanggung_jawab' => 'Penanggung jawab aktif'] as $kode => $label)<div class="agenda-metric"><span>{{ $label }}</span><strong>{{ $statistik[$kode] ?? 0 }}</strong></div>@endforeach</div>
-    <section class="agenda-section"><form class="media-filter" method="GET">
+    <section class="agenda-section"><form class="feature-filter media-filter" method="GET">
         <div class="field"><label for="kata_kunci">Cari media</label><input class="input" id="kata_kunci" name="kata_kunci" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120" placeholder="Nama, alamat, atau penanggung jawab"></div>
         <div class="field"><label for="jenis">Jenis media</label><select class="select" id="jenis" name="jenis"><option value="">Semua jenis</option>@foreach (\App\Models\MediaResmiHumas::JENIS as $kode => $label)<option value="{{ $kode }}" @selected(($filter['jenis'] ?? '') === $kode)>{{ $label }}</option>@endforeach</select></div>
         <div class="field"><label for="penanggung_jawab">Penanggung jawab</label><select class="select" id="penanggung_jawab" name="penanggung_jawab"><option value="">Semua petugas</option>@foreach ($penanggungJawab as $nama)<option value="{{ $nama }}" @selected(($filter['penanggung_jawab'] ?? '') === $nama)>{{ $nama }}</option>@endforeach</select></div>

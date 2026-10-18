@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Database sekolah</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Data pegawai</h1>
         </div>
 
@@ -37,16 +37,16 @@
     </div>
 
     @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
+        <x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>
     @endif
 
     @if (session('ringkasan_import'))
         @php
             $ringkasan = session('ringkasan_import');
         @endphp
-        <div class="panel panel-pad" style="margin-bottom: 20px;">
+        <div class="panel panel-pad school-import-summary" style="margin-bottom: 20px;">
             <h2 class="panel-title">Ringkasan import</h2>
-            <div class="stats-grid" style="margin: 16px 0 0;">
+            <div class="stats-grid school-inline-stats" style="margin: 16px 0 0;">
                 <div class="panel stat">
                     <p class="stat-label">Dibaca</p>
                     <p class="stat-value">{{ $ringkasan['dibaca'] }}</p>
@@ -78,7 +78,7 @@
         </div>
     @endif
 
-    <form action="{{ route('pegawai.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('pegawai.index') }}" method="GET" class="panel panel-pad ui-filter" style="margin-bottom: 24px;">
         <div class="filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari pegawai</label>
@@ -102,15 +102,16 @@
     </form>
 
     <section class="panel">
-        <div class="desktop-only table-wrap">
-            <table class="employee-table">
+        <div class="school-table-heading"><h2 class="panel-title">Daftar pegawai</h2><span class="school-table-count">{{ $pegawai->total() }} hasil</span></div>
+        <div class="desktop-only table-wrap" tabindex="0" role="region" aria-label="Daftar pegawai">
+            <table class="employee-table school-table--people">
                 <thead>
                     <tr>
-                        <th>Pegawai</th>
-                        <th>Identitas</th>
-                        <th>Kepegawaian</th>
-                        <th>Status</th>
-                        <th class="text-right">Aksi</th>
+                        <th scope="col">Pegawai</th>
+                        <th scope="col">Identitas</th>
+                        <th scope="col">Kepegawaian</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -148,16 +149,16 @@
                             </td>
                             <td>
                                 <div class="actions" style="justify-content: flex-end;">
-                                    <a href="{{ route('pegawai.show', $item) }}" class="button button-muted">Lihat</a>
+                                    <x-ui.action-link :href="route('pegawai.show', $item)" icon="eye" label="Lihat" :context="$item->nama_lengkap" variant="muted" />
                                     @izin('pegawai.kelola')
-                                        <a href="{{ route('pegawai.edit', $item) }}" class="button button-dark">Edit</a>
+                                        <x-ui.action-link :href="route('pegawai.edit', $item)" icon="square-pen" label="Edit" :context="$item->nama_lengkap" variant="dark" />
                                     @endizin
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="empty-state">Belum ada data pegawai.</td>
+                            <td colspan="5" class="ui-empty-cell"><x-ui.empty-state title="Belum ada data pegawai." description="Tidak ada data yang sesuai dengan pilihan saat ini." icon="users" /></td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -211,7 +212,7 @@
                     </div>
                 </article>
             @empty
-                <div class="empty-state">Belum ada data pegawai.</div>
+                <x-ui.empty-state title="Belum ada data pegawai." description="Tidak ada data yang sesuai dengan pilihan saat ini." icon="users" />
             @endforelse
         </div>
     </section>

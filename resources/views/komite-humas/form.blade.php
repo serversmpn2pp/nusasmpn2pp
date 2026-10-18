@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($periode->exists ? 'Edit kepengurusan komite' : 'Tambah kepengurusan komite').' - NUSA')
 @section('content')
 @include('komite-humas._style')

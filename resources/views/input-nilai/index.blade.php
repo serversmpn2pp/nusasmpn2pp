@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Input Nilai - NUSA')
 
@@ -192,7 +193,7 @@
         </div>
     @endif
 
-    <form id="filter-input-nilai" action="{{ route('input-nilai.index') }}" method="GET" class="grade-filter">
+    <form id="filter-input-nilai" action="{{ route('input-nilai.index') }}" method="GET" class="feature-filter grade-filter">
         <div class="input-nilai-filter">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -255,12 +256,12 @@
     </form>
 
     @if ($daftarKomponenNilai->isEmpty())
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Tidak ada komponen nilai yang sesuai</h2>
             <p class="help-text" style="margin-top: 8px;">Belum ada komponen nilai aktif untuk pilihan ini.</p>
         </section>
     @elseif (! $komponenDipilih)
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Pilih komponen nilai</h2>
             <p class="help-text" style="margin-top: 8px;">{{ $daftarKomponenNilai->count() }} komponen nilai tersedia sesuai pilihan Anda.</p>
         </section>
@@ -406,7 +407,7 @@
                         <input type="hidden" name="komponen_nilai_id" value="{{ $komponenDipilih->id }}">
                         @include('input-nilai._filter-fields')
 
-                        <div class="table-wrap">
+                        <div class="table-wrap grade-table-wrap" tabindex="0" role="region" aria-label="Daftar nilai siswa">
                             <table class="employee-table placement-table grade-table {{ $penilaianPredikat ? 'grade-table--predikat' : '' }}">
                                 <colgroup>
                                     <col class="grade-col-absence">
@@ -450,6 +451,7 @@
                                                 @if ($penilaianPredikat)
                                                     <select
                                                         id="predikat_{{ $siswaId }}"
+                                                        aria-label="Predikat {{ $anggota->siswa?->nama_lengkap }}"
                                                         name="predikat[{{ $siswaId }}]"
                                                         data-grade-value data-saved-value="{{ $nilaiTersimpan->get($siswaId)?->predikat }}"
                                                         class="select input-sm @error('predikat.' . $siswaId) is-invalid @enderror"
@@ -473,6 +475,7 @@
                                                 @else
                                                     <input
                                                         id="nilai_{{ $siswaId }}"
+                                                        aria-label="Nilai {{ $anggota->siswa?->nama_lengkap }}"
                                                         name="nilai[{{ $siswaId }}]"
                                                         type="text"
                                                         inputmode="decimal"
@@ -491,6 +494,7 @@
                                             <td data-label="Catatan">
                                                 <input
                                                     id="catatan_{{ $siswaId }}"
+                                                    aria-label="Catatan {{ $anggota->siswa?->nama_lengkap }}"
                                                     name="catatan[{{ $siswaId }}]"
                                                     type="text"
                                                     value="{{ $ambilCatatan($siswaId) }}"

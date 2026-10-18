@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Analisis Soal CBT - NUSA')
 
@@ -145,7 +146,7 @@
         <div class="alert" style="margin-bottom: 20px;">Data baru berasal dari {{ $analisis['peserta_selesai'] }} peserta selesai. Gunakan persentase ini sebagai gambaran awal, bukan kesimpulan kualitas soal.</div>
     @endif
 
-    <form action="{{ route('ujian-cbt.hasil.analisis-soal', $ujianCbt) }}" method="GET" class="analisis-filter">
+    <form action="{{ route('ujian-cbt.hasil.analisis-soal', $ujianCbt) }}" method="GET" class="feature-filter analisis-filter">
         <div class="field">
             <label for="kelas_id">Kelas peserta</label>
             <select id="kelas_id" name="kelas_id" class="select">

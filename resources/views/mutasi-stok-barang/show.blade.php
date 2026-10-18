@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Detail Mutasi Stok - NUSA')
 
@@ -40,7 +41,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi Mutasi</h2>
 
                 <dl class="detail-grid">
@@ -83,7 +84,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Jejak Audit</h2>
                 <p class="help-text" style="margin-top: 8px;">Riwayat mutasi disimpan sebagai catatan tetap. Jika terdapat kesalahan pencatatan, buat transaksi penyesuaian stok agar perubahan tetap dapat ditelusuri.</p>
             </section>

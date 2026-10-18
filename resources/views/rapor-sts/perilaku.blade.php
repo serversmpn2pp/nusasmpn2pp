@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 @section('title', 'Lampiran Perilaku STS - NUSA')
 @section('content')
     <style>
@@ -41,7 +42,7 @@
         @media(max-width:640px) { .behavior-filters,.behavior-grid,.behavior-content-grid { grid-template-columns:minmax(0,1fr); } .behavior-actions .button { width:100%; } .behavior-state { margin:8px 0 0; } }
     </style>
     <div class="page-header"><div><p class="eyebrow">Kesiswaan & BK</p><h1 class="page-title">Lampiran Perilaku STS</h1></div></div>
-    <form method="GET" class="behavior-filters" action="{{ route('lampiran-perilaku-sts.index') }}">
+    <form method="GET" class="feature-filter behavior-filters" action="{{ route('lampiran-perilaku-sts.index') }}">
         <div class="field"><label for="behavior-event">Kegiatan STS</label><select class="select" id="behavior-event" name="kegiatan_id">
             @forelse($daftarKegiatan as $item)<option value="{{ $item->id }}" @selected($kegiatan?->id === $item->id)>{{ $item->nama }} · {{ $item->tahunPelajaran?->nama }}</option>@empty<option value="">Belum ada kegiatan STS</option>@endforelse
         </select></div>

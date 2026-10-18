@@ -107,7 +107,7 @@ class SidebarNavigasiTest extends TestCase
             ->assertDontSee('Pusat CBT');
 
         $this->assertMatchesRegularExpression(
-            '/<a\s+(?=[^>]*href="'.preg_quote(route('pusat-cbt.index'), '/').'")(?=[^>]*class="sidebar-section-summary")[^>]*>\s*<span class="sidebar-section-title">Ujian &amp; Asesmen<\/span>/s',
+            '/<a\s+(?=[^>]*href="'.preg_quote(route('pusat-cbt.index'), '/').'")(?=[^>]*class="sidebar-section-summary")[^>]*>\s*(?:<i[^>]*><\/i>\s*)?<span class="sidebar-section-title">Ujian &amp; Asesmen<\/span>/s',
             $response->getContent(),
         );
     }

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Susun Jadwal Kelas - NUSA')
 
@@ -237,7 +238,7 @@
         </div>
     @endif
 
-    <form action="{{ route('jadwal-pelajaran.susun') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('jadwal-pelajaran.susun') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="filter-grid schedule-builder-filter">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -269,12 +270,12 @@
     </form>
 
     @if (! $kelasDipilih)
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Pilih kelas</h2>
             <p class="help-text" style="margin-top: 8px;">Jadwal mingguan akan ditampilkan setelah tahun pelajaran dan kelas dipilih.</p>
         </section>
     @elseif ($jamPelajaran->isEmpty())
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Jam pelajaran belum tersedia</h2>
             <p class="help-text" style="margin-top: 8px;">Tambahkan jam pelajaran terlebih dahulu sebelum menyusun jadwal kelas.</p>
         </section>

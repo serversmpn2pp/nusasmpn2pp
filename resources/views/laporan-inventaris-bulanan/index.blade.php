@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Laporan Inventaris Bulanan - NUSA')
 
@@ -241,7 +242,7 @@
         </div>
     </div>
 
-    <form action="{{ route('laporan-inventaris-bulanan.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('laporan-inventaris-bulanan.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="inventory-report-filter-grid">
             <div class="field inventory-report-period">
                 <label for="periode">Bulan laporan</label>

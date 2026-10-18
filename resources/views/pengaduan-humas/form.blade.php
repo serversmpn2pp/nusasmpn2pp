@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($tiket->exists ? 'Koreksi tiket' : 'Catat tiket').' - NUSA')
 @section('content')
 @include('pengaduan-humas._style')

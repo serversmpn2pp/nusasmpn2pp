@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Rekap Berhalangan - NUSA')
 
@@ -57,7 +58,7 @@
         <strong>Dokumen internal dan privat.</strong> Rekap tidak menampilkan isi catatan percakapan dan tidak digabungkan ke laporan ibadah umum.
     </div>
 
-    <form method="GET" action="{{ route('rekap-berhalangan-ibadah.index') }}" class="panel panel-pad" style="margin-top:18px;" data-auto-filter>
+    <form method="GET" action="{{ route('rekap-berhalangan-ibadah.index') }}" class="feature-filter panel panel-pad" style="margin-top:18px;" data-auto-filter>
         <div class="private-recap-filter">
             <div class="field">
                 <label for="bulan">Bulan</label>

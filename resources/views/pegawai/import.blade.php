@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Pegawai</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Import Excel pegawai</h1>
         </div>
 
@@ -28,7 +28,7 @@
         </div>
     @endif
 
-    <form action="{{ route('pegawai.import.store') }}" method="POST" enctype="multipart/form-data" class="panel panel-pad">
+    <form action="{{ route('pegawai.import.store') }}" method="POST" enctype="multipart/form-data" class="panel panel-pad school-import-form">
         @csrf
 
         <div class="form-grid">

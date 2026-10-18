@@ -26,7 +26,9 @@ use App\Models\SanksiPoinSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Models\TransaksiPoinSiswa;
+use App\Services\Absensi\GrafikPresensiAdminService;
 use App\Services\Cbt\DaftarUjianSiswaService;
+use App\Services\StatistikDashboardAdminService;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
 
@@ -193,7 +195,8 @@ class BerandaController extends Controller
         ];
 
         $logScanTerakhir = LogScanAbsensi::query()
-            ->with('siswa:id,nama_lengkap,nisn')
+            ->with(['siswa:id,nama_lengkap,nisn', 'absensiSiswa.kelas:id,nama'])
+            ->whereDate('tanggal', $tanggalHariIni)
             ->latest('waktu_scan')
             ->limit(5)
             ->get();
@@ -257,7 +260,10 @@ class BerandaController extends Controller
             ->limit(5)
             ->get();
 
-        return view('beranda.index', compact(
+        $grafikPresensi = app(GrafikPresensiAdminService::class)->bangun($hariIni, $tahunPelajaranAktif);
+        $grafikTambahan = app(StatistikDashboardAdminService::class)->bangun($hariIni, $tahunPelajaranAktif);
+
+        return view('beranda.admin', compact(
             'hariIni',
             'tahunPelajaranAktif',
             'ringkasanUtama',
@@ -273,7 +279,9 @@ class BerandaController extends Controller
             'pegawaiTerlambatHariIni',
             'pegawaiBelumScanHariIni',
             'laporanPembinaanPerluPerhatian',
-        ));
+            'grafikPresensi',
+            'grafikTambahan',
+        ))->with('tampilanDashboardAdmin', true);
     }
 
     private function dataDashboardSiswa(

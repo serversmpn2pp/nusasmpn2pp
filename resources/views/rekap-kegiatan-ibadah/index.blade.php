@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Rekap Kegiatan Ibadah - NUSA')
 
@@ -37,7 +38,7 @@
         </div>
     </div>
 
-    <form method="GET" action="{{ route('rekap-kegiatan-ibadah.index') }}" class="panel panel-pad" style="margin-bottom:18px;">
+    <form method="GET" action="{{ route('rekap-kegiatan-ibadah.index') }}" class="feature-filter panel panel-pad" style="margin-bottom:18px;">
         <div class="filter-grid filter-grid-wide">
             <div class="field"><label for="tanggal">Tanggal</label><input id="tanggal" name="tanggal" type="date" max="{{ now()->toDateString() }}" value="{{ $tanggal }}" class="input" onchange="this.form.submit()"></div>
             <div class="field"><label for="kegiatan_ibadah_id">Kegiatan</label><select id="kegiatan_ibadah_id" name="kegiatan_ibadah_id" class="select" onchange="this.form.submit()">@foreach($daftarKegiatan as $kegiatan)<option value="{{ $kegiatan->id }}" @selected((int)$kegiatanId===(int)$kegiatan->id)>{{ $kegiatan->nama }}{{ $kegiatan->aktif ? '' : ' - nonaktif' }}</option>@endforeach</select></div>
@@ -47,9 +48,9 @@
     </form>
 
     @if(!$tahunPelajaran)
-        <section class="panel panel-pad"><h2 class="panel-title">Tahun pelajaran aktif belum tersedia</h2><p class="help-text" style="margin-top:7px;">Aktifkan tahun pelajaran terlebih dahulu agar rekap per kelas dapat dihitung.</p></section>
+        <section class="panel panel-pad feature-section"><h2 class="panel-title">Tahun pelajaran aktif belum tersedia</h2><p class="help-text" style="margin-top:7px;">Aktifkan tahun pelajaran terlebih dahulu agar rekap per kelas dapat dihitung.</p></section>
     @elseif(!$kegiatanDipilih)
-        <section class="panel panel-pad"><h2 class="panel-title">Kegiatan ibadah belum tersedia</h2><p class="help-text" style="margin-top:7px;">Tambahkan kegiatan ibadah sebelum membuka rekap.</p></section>
+        <section class="panel panel-pad feature-section"><h2 class="panel-title">Kegiatan ibadah belum tersedia</h2><p class="help-text" style="margin-top:7px;">Tambahkan kegiatan ibadah sebelum membuka rekap.</p></section>
     @else
         @if($jadwal)
             <div class="worship-schedule-note"><div><strong>{{ $kegiatanDipilih->nama }} &middot; {{ $tanggalLabel }}</strong><span>{{ $jadwal->aktif ? 'Jadwal aktif' : 'Jadwal saat ini nonaktif' }}{{ $jadwal->keterangan ? ' · '.$jadwal->keterangan : '' }}</span></div><div class="worship-schedule-times">Pelaksanaan {{ $jadwal->formatJam($jadwal->jam_pelaksanaan) }} &middot; Scan {{ $jadwal->rentangScan() }}</div></div>
@@ -93,7 +94,7 @@
         </section>
 
         @if($kelasDipilih)
-            <form method="GET" action="{{ route('rekap-kegiatan-ibadah.index') }}" class="panel panel-pad" style="margin-bottom:16px;">
+            <form method="GET" action="{{ route('rekap-kegiatan-ibadah.index') }}" class="feature-filter panel panel-pad" style="margin-bottom:16px;">
                 <input type="hidden" name="tanggal" value="{{ $tanggal }}"><input type="hidden" name="kegiatan_ibadah_id" value="{{ $kegiatanId }}"><input type="hidden" name="kelas_id" value="{{ $kelasId }}">
                 <div class="worship-status-layout"><div class="filter-grid"><div class="field"><label for="cari">Cari siswa</label><input id="cari" name="cari" value="{{ $cari }}" class="input" placeholder="Nama, NIS, atau NISN"></div><div class="field"><label for="status">Status ibadah</label><select id="status" name="status" class="select" onchange="this.form.submit()"><option value="semua" @selected($status==='semua')>Semua status</option><option value="sudah" @selected($status==='sudah')>Sudah salat</option><option value="belum" @selected($status==='belum')>Belum salat</option><option value="berhalangan" @selected($status==='berhalangan')>Berhalangan</option><option value="tidak_wajib" @selected($status==='tidak_wajib')>Tidak wajib (pulang)</option><option value="tidak_hadir" @selected($status==='tidak_hadir')>Tidak hadir sekolah</option></select></div></div><div class="actions"><button class="button button-dark" type="submit">Cari</button><a href="{{ route('rekap-kegiatan-ibadah.index',['tanggal'=>$tanggal,'kegiatan_ibadah_id'=>$kegiatanId,'kelas_id'=>$kelasId]) }}" class="button button-muted">Reset</a></div></div>
             </form>
@@ -143,7 +144,7 @@
             </section>
             @if($anggotaKelas->hasPages())<div style="margin-top:16px;">{{ $anggotaKelas->links() }}</div>@endif
         @else
-            <section class="panel panel-pad"><h2 class="panel-title">Pilih kelas untuk melihat siswa</h2><p class="help-text" style="margin-top:7px;">Ringkasan seluruh kelas sudah tampil di atas. Tekan salah satu kelas untuk melihat status ibadah dan kehadiran sekolah setiap siswa.</p></section>
+            <section class="panel panel-pad feature-section"><h2 class="panel-title">Pilih kelas untuk melihat siswa</h2><p class="help-text" style="margin-top:7px;">Ringkasan seluruh kelas sudah tampil di atas. Tekan salah satu kelas untuk melihat status ibadah dan kehadiran sekolah setiap siswa.</p></section>
         @endif
     @endif
 @endsection

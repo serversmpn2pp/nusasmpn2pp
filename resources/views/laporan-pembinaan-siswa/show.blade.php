@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Detail Laporan Siswa - NUSA')
 
@@ -124,14 +125,14 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad"><h2 class="panel-title">Informasi Kejadian</h2><dl class="detail-grid"><div class="detail-item"><dt>Jenis laporan</dt><dd>{{ $laporanPembinaanSiswa->labelJenisLaporan() }}</dd></div><div class="detail-item"><dt>Sumber</dt><dd>{{ $laporanPembinaanSiswa->berasalDariAbsensi() ? 'Rekap presensi otomatis' : 'Laporan manual' }}</dd></div><div class="detail-item"><dt>Tanggal dan waktu</dt><dd>{{ $laporanPembinaanSiswa->tanggal_kejadian?->format('d/m/Y') }} {{ $laporanPembinaanSiswa->waktuKejadianRingkas()?'pukul '.$laporanPembinaanSiswa->waktuKejadianRingkas():'' }}</dd></div><div class="detail-item"><dt>Tempat</dt><dd>{{ $teks($laporanPembinaanSiswa->tempat_kejadian) }}</dd></div><div class="detail-item"><dt>Kategori</dt><dd>{{ $laporanPembinaanSiswa->kategoriPembinaanSiswa?->nama ?: '-' }}</dd></div><div class="detail-item"><dt>Pelapor</dt><dd>{{ $laporanPembinaanSiswa->pelaporPegawai?->nama_lengkap ?: ($laporanPembinaanSiswa->berasalDariAbsensi() ? 'Sistem NUSA' : '-') }}</dd></div><div class="detail-item"><dt>Dibuat pada</dt><dd>{{ $laporanPembinaanSiswa->created_at?->format('d/m/Y H:i') }}</dd></div></dl></section>
+            <section class="panel panel-pad feature-section"><h2 class="panel-title">Informasi Kejadian</h2><dl class="detail-grid"><div class="detail-item"><dt>Jenis laporan</dt><dd>{{ $laporanPembinaanSiswa->labelJenisLaporan() }}</dd></div><div class="detail-item"><dt>Sumber</dt><dd>{{ $laporanPembinaanSiswa->berasalDariAbsensi() ? 'Rekap presensi otomatis' : 'Laporan manual' }}</dd></div><div class="detail-item"><dt>Tanggal dan waktu</dt><dd>{{ $laporanPembinaanSiswa->tanggal_kejadian?->format('d/m/Y') }} {{ $laporanPembinaanSiswa->waktuKejadianRingkas()?'pukul '.$laporanPembinaanSiswa->waktuKejadianRingkas():'' }}</dd></div><div class="detail-item"><dt>Tempat</dt><dd>{{ $teks($laporanPembinaanSiswa->tempat_kejadian) }}</dd></div><div class="detail-item"><dt>Kategori</dt><dd>{{ $laporanPembinaanSiswa->kategoriPembinaanSiswa?->nama ?: '-' }}</dd></div><div class="detail-item"><dt>Pelapor</dt><dd>{{ $laporanPembinaanSiswa->pelaporPegawai?->nama_lengkap ?: ($laporanPembinaanSiswa->berasalDariAbsensi() ? 'Sistem NUSA' : '-') }}</dd></div><div class="detail-item"><dt>Dibuat pada</dt><dd>{{ $laporanPembinaanSiswa->created_at?->format('d/m/Y H:i') }}</dd></div></dl></section>
 
             @if($laporanPembinaanSiswa->jenis_laporan==='pelanggaran' && $laporanPembinaanSiswa->butirPelanggaranLaporan->isNotEmpty())
-                <section class="panel panel-pad"><h2 class="panel-title">Butir Pelanggaran</h2><div class="violation-detail-list">@foreach($laporanPembinaanSiswa->butirPelanggaranLaporan as $butir)<article class="violation-detail"><div><p class="person-meta">{{ $butir->kode_pelanggaran }} · {{ str($butir->tingkat)->headline() }}</p><p class="person-name">{{ $butir->nama_pelanggaran }}</p></div><span class="violation-points"><strong>{{ $butir->poin }}</strong> poin</span></article>@endforeach</div></section>
+                <section class="panel panel-pad feature-section"><h2 class="panel-title">Butir Pelanggaran</h2><div class="violation-detail-list">@foreach($laporanPembinaanSiswa->butirPelanggaranLaporan as $butir)<article class="violation-detail"><div><p class="person-meta">{{ $butir->kode_pelanggaran }} · {{ str($butir->tingkat)->headline() }}</p><p class="person-name">{{ $butir->nama_pelanggaran }}</p></div><span class="violation-points"><strong>{{ $butir->poin }}</strong> poin</span></article>@endforeach</div></section>
             @endif
 
             @if($melaluiPemeriksaanBk)
-                <section class="panel panel-pad"><h2 class="panel-title">Pemeriksaan BK & Pengesahan Wakil Kesiswaan</h2><p class="help-text">BK memeriksa fakta. Pembinaan tanpa poin dan tidak terbukti selesai di BK; rekomendasi pelanggaran berpoin harus disahkan Wakil Kesiswaan.</p>
+                <section class="panel panel-pad feature-section"><h2 class="panel-title">Pemeriksaan BK & Pengesahan Wakil Kesiswaan</h2><p class="help-text">BK memeriksa fakta. Pembinaan tanpa poin dan tidak terbukti selesai di BK; rekomendasi pelanggaran berpoin harus disahkan Wakil Kesiswaan.</p>
                     <div class="decision-grid" style="margin-top:16px">
                         <article class="decision-item"><p class="person-meta">Pemeriksa dan Pemberi Keputusan</p><h3>Guru BK</h3>@if($laporanPembinaanSiswa->verifikasiBkPelanggaran->isNotEmpty())@foreach($laporanPembinaanSiswa->verifikasiBkPelanggaran as $verifikasi)<div style="margin-top:10px"><span class="badge {{ in_array($verifikasi->hasil,['sanksi_poin','pembinaan','terbukti'],true)?'badge-active':($verifikasi->hasil==='tidak_terbukti'?'badge-inactive':'badge-warning') }}">{{ $verifikasi->labelHasil() }}</span><p class="person-meta">{{ $verifikasi->bkPegawai?->nama_lengkap ?: $verifikasi->pengguna?->nama }} &middot; {{ $verifikasi->diverifikasi_pada?->format('d/m/Y H:i') }}</p><p>{{ $teks($verifikasi->catatan) }}</p></div>@endforeach @else<p class="help-text">Belum diperiksa.</p>@endif
                             @if($bolehVerifikasiBk)
@@ -201,7 +202,7 @@
                 </section>
             @endif
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Bukti Pendukung</h2><p class="help-text">File tersimpan privat dan hanya dapat dibuka oleh pengguna yang berhak melihat laporan.</p></div><span class="badge badge-muted">{{ $laporanPembinaanSiswa->buktiLaporanPembinaanSiswa->count() }} file</span></div>
                 <div class="fact-list">
                     @forelse($laporanPembinaanSiswa->buktiLaporanPembinaanSiswa as $bukti)
@@ -214,7 +215,7 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Saksi Kejadian</h2><p class="help-text">Pernyataan saksi dicatat terpisah dari kronologi pelapor.</p></div><span class="badge badge-muted">{{ $laporanPembinaanSiswa->saksiLaporanPembinaanSiswa->count() }} saksi</span></div>
                 <div class="fact-list">
                     @forelse($laporanPembinaanSiswa->saksiLaporanPembinaanSiswa as $saksi)
@@ -227,7 +228,7 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Klarifikasi Siswa</h2><p class="help-text">Keterangan siswa tidak mengganti kronologi pelapor dan menjadi bagian pemeriksaan fakta.</p></div></div>
                 <div class="fact-list">
                     @forelse($laporanPembinaanSiswa->klarifikasiSiswaPembinaan as $klarifikasi)
@@ -239,13 +240,13 @@
                 @endif
             </section>
 
-            <section class="panel panel-pad"><h2 class="panel-title">Linimasa Proses</h2><p class="help-text">Jejak perubahan utama disimpan berurutan dan tidak dapat diedit dari halaman ini.</p><div class="timeline-list">@forelse($laporanPembinaanSiswa->riwayatProsesPembinaanSiswa as $riwayat)<article class="timeline-item"><p class="person-name">{{ $riwayat->judul }}</p><p class="person-meta">{{ $riwayat->terjadi_pada?->format('d/m/Y H:i') }} &middot; {{ $riwayat->pengguna?->nama ?? 'Sistem' }}</p>@if($riwayat->status_sebelum!==$riwayat->status_sesudah && $riwayat->status_sesudah)<p class="timeline-status">{{ $riwayat->status_sebelum?str($riwayat->status_sebelum)->headline():'Awal' }} &rarr; {{ str($riwayat->status_sesudah)->headline() }}</p>@endif @if($riwayat->keterangan)<p style="margin:5px 0 0">{{ $riwayat->keterangan }}</p>@endif</article>@empty<div class="empty-state">Belum ada riwayat proses.</div>@endforelse</div></section>
+            <section class="panel panel-pad feature-section"><h2 class="panel-title">Linimasa Proses</h2><p class="help-text">Jejak perubahan utama disimpan berurutan dan tidak dapat diedit dari halaman ini.</p><div class="timeline-list">@forelse($laporanPembinaanSiswa->riwayatProsesPembinaanSiswa as $riwayat)<article class="timeline-item"><p class="person-name">{{ $riwayat->judul }}</p><p class="person-meta">{{ $riwayat->terjadi_pada?->format('d/m/Y H:i') }} &middot; {{ $riwayat->pengguna?->nama ?? 'Sistem' }}</p>@if($riwayat->status_sebelum!==$riwayat->status_sesudah && $riwayat->status_sesudah)<p class="timeline-status">{{ $riwayat->status_sebelum?str($riwayat->status_sebelum)->headline():'Awal' }} &rarr; {{ str($riwayat->status_sesudah)->headline() }}</p>@endif @if($riwayat->keterangan)<p style="margin:5px 0 0">{{ $riwayat->keterangan }}</p>@endif</article>@empty<div class="empty-state">Belum ada riwayat proses.</div>@endforelse</div></section>
 
-            <section class="panel panel-pad"><h2 class="panel-title">Kronologi</h2><p style="white-space:pre-line;margin-bottom:0">{{ $laporanPembinaanSiswa->kronologi }}</p></section>
-            <section class="panel panel-pad"><h2 class="panel-title">Tindakan Awal</h2><p style="white-space:pre-line;margin-bottom:0">{{ $teks($laporanPembinaanSiswa->tindakan_awal) }}</p></section>
-            @izin('bk.kelola')<section class="panel panel-pad"><h2 class="panel-title">Catatan Rahasia BK</h2><p style="white-space:pre-line;margin-bottom:0">{{ $teks($laporanPembinaanSiswa->catatan_rahasia) }}</p></section>@endizin
+            <section class="panel panel-pad feature-section"><h2 class="panel-title">Kronologi</h2><p style="white-space:pre-line;margin-bottom:0">{{ $laporanPembinaanSiswa->kronologi }}</p></section>
+            <section class="panel panel-pad feature-section"><h2 class="panel-title">Tindakan Awal</h2><p style="white-space:pre-line;margin-bottom:0">{{ $teks($laporanPembinaanSiswa->tindakan_awal) }}</p></section>
+            @izin('bk.kelola')<section class="panel panel-pad feature-section"><h2 class="panel-title">Catatan Rahasia BK</h2><p style="white-space:pre-line;margin-bottom:0">{{ $teks($laporanPembinaanSiswa->catatan_rahasia) }}</p></section>@endizin
 
-            <section class="panel panel-pad"><div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Riwayat Tindak Lanjut</h2><p class="help-text">Konseling, pemanggilan, mediasi, dan keputusan akhir.</p></div>@izin('bk.kelola')@if($bolehMemprosesBk && $laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah</a>@endif @endizin</div><div class="follow-up-list">@forelse($laporanPembinaanSiswa->tindakLanjutPembinaanSiswa as $tindak)<article class="follow-up-item"><div class="mobile-card-head"><div><p class="person-name">{{ $tindak->labelJenis() }}</p><p class="person-meta">{{ $tindak->tanggal_tindak_lanjut?->format('d/m/Y') }} · {{ $tindak->petugasPegawai?->nama_lengkap ?: '-' }}</p></div><span class="badge badge-muted">{{ $tindak->labelStatusLaporan() }}</span></div><div class="follow-up-body"><div><p class="person-meta">Ringkasan</p><p style="white-space:pre-line">{{ $tindak->ringkasan }}</p></div><div><p class="person-meta">Hasil</p><p style="white-space:pre-line">{{ $teks($tindak->hasil) }}</p></div></div>@izin('bk.kelola')@if($bolehMemprosesBk)<div class="actions"><a href="{{ route('tindak-lanjut-pembinaan-siswa.edit',$tindak) }}" class="button button-muted button-sm">Edit</a></div>@endif @endizin</article>@empty<div class="empty-state">Belum ada tindak lanjut.</div>@endforelse</div></section>
+            <section class="panel panel-pad feature-section"><div class="page-header" style="margin-bottom:0"><div><h2 class="panel-title">Riwayat Tindak Lanjut</h2><p class="help-text">Konseling, pemanggilan, mediasi, dan keputusan akhir.</p></div>@izin('bk.kelola')@if($bolehMemprosesBk && $laporanPembinaanSiswa->status!=='dibatalkan')<a href="{{ route('tindak-lanjut-pembinaan-siswa.create',$laporanPembinaanSiswa) }}" class="button button-primary">Tambah</a>@endif @endizin</div><div class="follow-up-list">@forelse($laporanPembinaanSiswa->tindakLanjutPembinaanSiswa as $tindak)<article class="follow-up-item"><div class="mobile-card-head"><div><p class="person-name">{{ $tindak->labelJenis() }}</p><p class="person-meta">{{ $tindak->tanggal_tindak_lanjut?->format('d/m/Y') }} · {{ $tindak->petugasPegawai?->nama_lengkap ?: '-' }}</p></div><span class="badge badge-muted">{{ $tindak->labelStatusLaporan() }}</span></div><div class="follow-up-body"><div><p class="person-meta">Ringkasan</p><p style="white-space:pre-line">{{ $tindak->ringkasan }}</p></div><div><p class="person-meta">Hasil</p><p style="white-space:pre-line">{{ $teks($tindak->hasil) }}</p></div></div>@izin('bk.kelola')@if($bolehMemprosesBk)<div class="actions"><a href="{{ route('tindak-lanjut-pembinaan-siswa.edit',$tindak) }}" class="button button-muted button-sm">Edit</a></div>@endif @endizin</article>@empty<div class="empty-state">Belum ada tindak lanjut.</div>@endforelse</div></section>
         </div>
     </div>
     <script>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Detail Prestasi - NUSA')
 @section('prestasi-actions')<a class="button button-muted" href="{{ route('prestasi-sekolah.index') }}">Kembali</a>@izin('prestasi_sekolah.kelola')<a class="button button-primary" href="{{ route('prestasi-sekolah.edit', $prestasi) }}">Edit prestasi</a>@endizin @endsection
 @section('content')

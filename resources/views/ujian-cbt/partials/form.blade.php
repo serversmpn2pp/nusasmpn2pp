@@ -137,7 +137,7 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">{{ $asesmenKelas ? 'Informasi asesmen' : 'Informasi Paket' }}</h2>
             @if ($asesmenKelas)
                 <dl class="quick-facts" style="margin-top: 14px;">
@@ -239,7 +239,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Jadwal dan Token</h2>
             <div class="form-grid">
                 <div class="field">
@@ -271,7 +271,7 @@
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Kelas Peserta dan Tujuan Nilai</h2>
             <p class="help-text">Pilih kelas peserta. Jika jenis ujian diterapkan ke nilai, setiap kelas wajib memiliki komponen nilai tujuan yang sesuai.</p>
 

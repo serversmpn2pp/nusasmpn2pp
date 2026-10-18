@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', ($halamanPribadi ?? false) ? 'Rekap Presensi Saya - NUSA' : 'Rekap Presensi Pegawai Harian - NUSA')
 
@@ -140,7 +141,7 @@
         @endif
     </div>
 
-    <form action="{{ route($routeRekap) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route($routeRekap) }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="employee-attendance-filter {{ $halamanPribadi ? 'personal-filter' : '' }}">
             <div class="field filter-date">
                 <label for="tanggal">Tanggal</label>
@@ -252,7 +253,7 @@
             </p>
         </div>
 
-        <div class="desktop-only table-wrap">
+        <div class="desktop-only table-wrap feature-worktable identity-worktable" tabindex="0" role="region" aria-label="Rekap presensi harian pegawai">
             <table class="employee-table placement-table" style="min-width: 1260px;">
                 <thead>
                     <tr>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Peserta dan Sesi CBT - NUSA')
 
@@ -120,7 +121,7 @@
         </div>
     </div>
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
         <div class="cbt-toolbar">
             <div>
                 <h2 class="panel-title">{{ $ujianCbt->nama }}</h2>
@@ -139,7 +140,7 @@
         </dl>
     </section>
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
         <h2 class="panel-title">Tambah Sesi Ujian</h2>
         <form action="{{ route('ujian-cbt.sesi.store', $ujianCbt) }}" method="POST" class="cbt-session-form" style="margin-top: 16px;">
             @csrf
@@ -222,7 +223,7 @@
         </div>
     </section>
 
-    <form action="{{ route('ujian-cbt.peserta.index', $ujianCbt) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('ujian-cbt.peserta.index', $ujianCbt) }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="cbt-filter-grid">
             <div class="field">
                 <label for="kelas_id">Kelas</label>

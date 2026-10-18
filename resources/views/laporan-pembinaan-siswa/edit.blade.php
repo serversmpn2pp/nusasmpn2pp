@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Edit '.$laporanPembinaanSiswa->labelJenisLaporan().' - NUSA')
 

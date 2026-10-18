@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Detail Skema Bobot Nilai - NUSA')
 
@@ -53,7 +54,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Ruang Lingkup</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -79,7 +80,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Bobot Nilai Rapor</h2>
                 <div class="stats-grid" style="margin: 16px 0 0;">
                     <div class="panel stat">

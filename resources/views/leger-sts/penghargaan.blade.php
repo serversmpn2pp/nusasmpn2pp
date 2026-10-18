@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Kandidat Penghargaan STS - NUSA')
 
@@ -63,7 +64,7 @@
         </div>
     </div>
 
-    <form class="panel award-filter" method="GET" action="{{ route('leger-sts.penghargaan') }}">
+    <form class="feature-filter panel award-filter" method="GET" action="{{ route('leger-sts.penghargaan') }}">
         <div class="field">
             <label for="award-kegiatan">Kegiatan STS</label>
             <select class="select" id="award-kegiatan" name="kegiatan_id" required>

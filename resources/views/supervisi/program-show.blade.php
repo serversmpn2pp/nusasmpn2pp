@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'supervisi')
 @section('title','Rincian Program Supervisi - NUSA')
 @section('content')
 <div class="sp-workspace"><div class="page-header"><div><p class="eyebrow">Supervisi Akademik</p><h1 class="page-title">{{ $program['nama'] }}</h1></div><div class="sp-actions">@if($hak_akses['kelola'])<a class="button button-muted" href="{{ route('supervisi.program.edit',$program['id']) }}">Edit program</a>@if($program['status']!=='diarsipkan')<a class="button button-primary" href="{{ route('supervisi.jadwal.create',$program['id']) }}">Tambah jadwal</a>@endif @endif</div></div>@include('supervisi._style')

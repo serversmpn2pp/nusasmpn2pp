@@ -123,7 +123,7 @@
 
     <div class="page-header">
         <div>
-            <p class="eyebrow">Akademik</p>
+            <p class="eyebrow">Data Sekolah</p>
             <h1 class="page-title">Penempatan siswa</h1>
         </div>
 
@@ -131,7 +131,7 @@
     </div>
 
     @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
+        <x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>
     @endif
 
     @if ($cakupanWaliKelas ?? false)
@@ -149,7 +149,7 @@
         </div>
     @endif
 
-    <form action="{{ route('penempatan-siswa.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('penempatan-siswa.index') }}" method="GET" class="panel panel-pad ui-filter" style="margin-bottom: 24px;">
         <div class="placement-filter-grid">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>
@@ -233,47 +233,9 @@
             <p class="help-text" style="margin-top: 8px;">Pilih tahun pelajaran dan kelas untuk melihat anggota kelas.</p>
         </section>
     @else
+        @include('penempatan-siswa.partials.kelas')
         <div class="placement-shell">
             <aside class="placement-side">
-                <section class="panel panel-pad placement-class-card">
-                    <div class="placement-class-title">
-                        <div>
-                            <p class="eyebrow">Kelas tujuan</p>
-                            <h2 class="panel-title">{{ $kelasDipilih->nama }}</h2>
-                        </div>
-                        @if ($kelasDipilih->aktif)
-                            <span class="badge badge-active">Aktif</span>
-                        @else
-                            <span class="badge badge-inactive">Nonaktif</span>
-                        @endif
-                    </div>
-
-                    <dl class="quick-facts">
-                        <div>
-                            <dt>Tahun</dt>
-                            <dd>{{ $kelasDipilih->tahunPelajaran?->nama ?: '-' }}</dd>
-                        </div>
-                        <div>
-                            <dt>Wali kelas</dt>
-                            <dd>{{ $kelasDipilih->waliKelas?->nama_lengkap ?: '-' }}</dd>
-                        </div>
-                        <div>
-                            <dt>Kapasitas</dt>
-                            <dd>{{ $kelasDipilih->kapasitas ?: '-' }}</dd>
-                        </div>
-                        <div>
-                            <dt>Sisa kursi</dt>
-                            <dd>{{ $sisaKursi === null ? '-' : $sisaKursi }}</dd>
-                        </div>
-                    </dl>
-
-                    <div class="actions">
-                        <a href="{{ route('kelas.show', $kelasDipilih) }}" class="button button-muted">Detail kelas</a>
-                        @izin('kelas.kelola')
-                            <a href="{{ route('kelas.edit', $kelasDipilih) }}" class="button button-dark">Edit kelas</a>
-                        @endizin
-                    </div>
-                </section>
 
                 @izin('kelas.kelola')
                     <section class="panel panel-pad">
@@ -300,7 +262,8 @@
 
                                 <div class="actions" style="margin: 14px 0;">
                                     <button type="button" class="button button-muted" data-placement-select-all>Pilih semua</button>
-                                    <button type="button" class="button button-muted" data-placement-clear>Pilih nol</button>
+                                    <button type="button" class="button button-muted" data-placement-clear>Batalkan pilihan</button>
+                                    <span class="school-selection-count" data-placement-count role="status">0 siswa dipilih</span>
                                 </div>
 
                                 <div class="available-list">
@@ -349,7 +312,7 @@
                     <p class="help-text" style="margin-top: 6px;">Nomor absen otomatis mengikuti urutan nama A-Z dan diperbarui setiap kali anggota kelas berubah.</p>
                 </div>
 
-                <div class="desktop-only table-wrap">
+                <div class="desktop-only table-wrap placement-members-wrap" tabindex="0" role="region" aria-label="Daftar anggota kelas">
                     <table class="employee-table placement-table compact-member-table">
                         <thead>
                             <tr>
@@ -433,6 +396,8 @@
             const checkboxes = Array.from(form.querySelectorAll('[data-placement-checkbox]'));
 
             function updateSelectedState() {
+                const counter = form.querySelector('[data-placement-count]');
+                if (counter) counter.textContent = `${checkboxes.filter(checkbox => checkbox.checked).length} siswa dipilih`;
                 checkboxes.forEach((checkbox) => {
                     checkbox.closest('.available-check')?.classList.toggle('is-selected', checkbox.checked);
                 });

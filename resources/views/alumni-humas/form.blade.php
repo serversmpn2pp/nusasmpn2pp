@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($alumni->exists ? 'Edit' : 'Tambah').' Alumni - NUSA')
 @section('alumni-actions')<a class="button button-muted" href="{{ $alumni->exists ? route('alumni-humas.show', $alumni) : route('alumni-humas.index') }}">Kembali</a>@endsection
 @section('content')

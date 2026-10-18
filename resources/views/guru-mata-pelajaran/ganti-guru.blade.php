@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Ganti Guru Pengampu - NUSA')
 
@@ -189,7 +190,7 @@
         </aside>
 
         <div class="replacement-flow">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Guru Pengganti</h2>
                 <div class="form-grid" style="margin-top: 16px;">
                     <div class="field">
@@ -243,7 +244,7 @@
                 </div>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <div class="replacement-toolbar">
                     <div>
                         <h2 class="panel-title">Kelas yang Dialihkan</h2>

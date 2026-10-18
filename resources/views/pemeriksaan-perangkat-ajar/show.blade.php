@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Detail Kelengkapan Perangkat Ajar - NUSA')
 
@@ -80,7 +81,7 @@
         <div class="alert">{{ session('berhasil') }}</div>
     @endif
 
-    <form action="{{ route('pemeriksaan-perangkat-ajar.show', $pegawai) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('pemeriksaan-perangkat-ajar.show', $pegawai) }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="teacher-document-filter">
             <div class="field">
                 <label for="tahun_pelajaran_id">Tahun pelajaran</label>

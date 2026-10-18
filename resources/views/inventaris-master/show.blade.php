@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sarpras')
 
 @section('title', 'Detail ' . $judul . ' - NUSA')
 
@@ -49,7 +50,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi {{ $judul }}</h2>
 
                 <dl class="detail-grid">
@@ -76,7 +77,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Penggunaan</h2>
                 <p class="help-text" style="margin-top: 8px;">{{ $teksPenggunaan }}</p>
             </section>

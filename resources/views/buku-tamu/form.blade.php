@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($tamu->exists ? 'Koreksi kunjungan' : 'Catat kedatangan').' - NUSA')
 @section('content')
 @include('buku-tamu._style')

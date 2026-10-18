@@ -1,0 +1,210 @@
+/* Shared admin controls. Feature layouts, print views and the dashboard keep their own structure. */
+.nusa-admin-shell {
+    --ui-blue: #15477a;
+    --ui-blue-hover: #10395f;
+    --ui-blue-soft: #edf4fc;
+    --ui-teal: #0f766e;
+    --ui-teal-soft: #e8f5f1;
+    --ui-yellow: #f1c40f;
+    --ui-yellow-soft: #fff8d8;
+    --ui-warning-text: #775700;
+    --ui-red: #b42332;
+    --ui-red-soft: #fff0f1;
+    --ui-ink: #172d3e;
+    --ui-muted: #4d6476;
+    --ui-border: #c3d2df;
+    --ui-divider: #dce5ed;
+    --ui-control-bg: #fbfcfe;
+    --ui-radius: 6px;
+    --ui-focus: 0 0 0 3px #0f766e26;
+}
+
+.nusa-admin-shell:not(.nusa-dashboard-admin) .content-shell {
+    --text: var(--ui-ink);
+    --muted: var(--ui-muted);
+    --line: var(--ui-divider);
+    --primary: var(--ui-blue);
+    --primary-dark: var(--ui-blue-hover);
+    --primary-soft: var(--ui-blue-soft);
+    --accent: var(--ui-yellow);
+    --accent-soft: var(--ui-yellow-soft);
+    --accent-text: var(--ui-warning-text);
+    --danger: var(--ui-red);
+    --danger-soft: var(--ui-red-soft);
+    color: var(--ui-ink);
+    font-size: 16px;
+    line-height: 1.55;
+}
+
+.nusa-admin-shell .content-shell :is(.page-header, .field, .form-grid > *, .filter-grid > *) { min-width: 0; }
+.nusa-admin-shell .content-shell .page-title { font-size: 30px; line-height: 1.25; overflow-wrap: anywhere; }
+.nusa-admin-shell .content-shell .page-header { align-items: center; }
+.nusa-admin-shell .content-shell .eyebrow { font-size: 14px; color: var(--ui-teal); }
+.nusa-admin-shell .content-shell .panel-title { font-size: 18px; color: var(--ui-ink); line-height: 1.4; }
+.nusa-admin-shell .content-shell .panel { border-color: var(--ui-divider); box-shadow: 0 2px 6px #172d3e06; }
+
+/* Existing native buttons use these same variants; no submit behavior is changed. */
+.nusa-admin-shell .content-shell .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    max-width: 100%;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius);
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.4;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.nusa-admin-shell .content-shell :is(.button-primary, .button-dark) { background: var(--ui-blue); color: #fff; border-color: var(--ui-blue); }
+.nusa-admin-shell .content-shell :is(.button-primary, .button-dark):hover { background: var(--ui-blue-hover); border-color: var(--ui-blue-hover); }
+.nusa-admin-shell .content-shell .button-muted { background: #fff; color: var(--ui-blue); }
+.nusa-admin-shell .content-shell .button-muted:hover { background: var(--ui-blue-soft); border-color: #8da8c1; }
+.nusa-admin-shell .content-shell .button-danger { background: #fff; color: var(--ui-red); border-color: #df9ca4; }
+.nusa-admin-shell .content-shell .button-danger:hover { background: var(--ui-red-soft); border-color: var(--ui-red); }
+.nusa-admin-shell .content-shell .button-success { background: var(--ui-teal); color: #fff; border-color: var(--ui-teal); }
+.nusa-admin-shell .content-shell .button-success:hover { background: #0b5d56; border-color: #0b5d56; }
+.nusa-admin-shell .content-shell .button-sm { min-height: 36px; padding: 7px 11px; font-size: 14px; }
+.nusa-admin-shell .content-shell .button-icon { width: 44px; flex: 0 0 44px; padding: 10px; }
+.nusa-admin-shell .content-shell .button svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.8; }
+.nusa-admin-shell .content-shell .button:is(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
+    background: #eef2f5; color: #566a7b; border-color: #cbd5de; box-shadow: none; cursor: not-allowed; opacity: 1;
+}
+.nusa-admin-shell .content-shell .button[aria-busy="true"] { cursor: wait; }
+.nusa-admin-shell .content-shell .button[aria-busy="true"]::before {
+    content: ""; width: 15px; height: 15px; flex: 0 0 15px; border: 2px solid #9aadb9; border-top-color: var(--ui-blue); border-radius: 50%; animation: ui-spin .8s linear infinite;
+}
+
+/* Do not match unclassified editor, score, camera, checkbox or radio controls. */
+.nusa-admin-shell .content-shell :is(.input, .select, .textarea) {
+    min-width: 0;
+    min-height: 44px;
+    border: 1px solid #9fb4c7;
+    border-radius: var(--ui-radius);
+    background: var(--ui-control-bg);
+    color: var(--ui-ink);
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.4;
+    outline: none;
+    box-shadow: 0 1px 2px #172d3e05;
+}
+.nusa-admin-shell .content-shell :is(.input, .select, .textarea)::placeholder { color: #597084; opacity: 1; }
+.nusa-admin-shell .content-shell :is(.input, .select, .textarea):hover:not(:disabled):not([readonly]) { border-color: #6d8ca7; }
+.nusa-admin-shell .content-shell :is(.input, .select, .textarea):focus { border-color: var(--ui-teal); background: #fff; box-shadow: var(--ui-focus); }
+.nusa-admin-shell .content-shell :is(.input, .select, .textarea):is(:disabled, [readonly]) { background: #f0f4f7; color: #4d6476; border-color: #c5d2dd; box-shadow: none; }
+.nusa-admin-shell .content-shell :is(.input, .select, .textarea):disabled { cursor: not-allowed; }
+.nusa-admin-shell .content-shell :is(.input-sm, .select-sm) { min-height: 38px; font-size: 14px; padding: 8px 10px; }
+.nusa-admin-shell .content-shell .textarea { min-height: 112px; resize: vertical; }
+.nusa-admin-shell .content-shell :is(.input, .select, .textarea):is(.is-invalid, [aria-invalid="true"]) { border-color: var(--ui-red); background: #fff8f8; }
+.nusa-admin-shell .content-shell :is(.input, .select, .textarea):is(.is-invalid, [aria-invalid="true"]):focus { box-shadow: 0 0 0 3px #b423321f; }
+.nusa-admin-shell .content-shell :is(.field label, .form-label) { font-size: 14px; font-weight: 650; color: var(--ui-ink); line-height: 1.5; }
+.nusa-admin-shell .content-shell :is(.help-text, .person-meta) { color: var(--ui-muted); font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
+.nusa-admin-shell .content-shell .error-text { font-size: 14px; color: var(--ui-red); font-weight: 550; line-height: 1.5; }
+.nusa-admin-shell .content-shell .file-input { border: 1px solid #9fb4c7; border-radius: var(--ui-radius); padding: 8px; background: var(--ui-control-bg); font-size: 14px; max-width: 100%; }
+.nusa-admin-shell .content-shell .file-input::file-selector-button { border: 0; border-radius: 4px; background: var(--ui-blue-soft); color: var(--ui-blue); font: inherit; font-weight: 650; padding: 9px 12px; margin-right: 10px; cursor: pointer; }
+.nusa-admin-shell .content-shell :is(.field, .status-toggle, .ui-filter) input:is([type="checkbox"], [type="radio"]) { accent-color: var(--ui-teal); width: 18px; height: 18px; flex-shrink: 0; }
+.nusa-admin-shell .content-shell :is(.button, .file-input, .status-toggle input, .ui-filter input[type="checkbox"], .ui-dialog-close):focus-visible { outline: 3px solid #0f766e80; outline-offset: 3px; }
+.nusa-admin-shell .content-shell .status-toggle { background: #f5f9fc; border-color: var(--ui-border); border-radius: var(--ui-radius); }
+.nusa-admin-shell .content-shell .status-toggle:has(input:checked) { background: var(--ui-teal-soft); border-color: #94c6bc; }
+.nusa-admin-shell .content-shell :is(.filter-grid, .filter-grid-wide) { gap: 16px; }
+.nusa-admin-shell .content-shell :is(.ui-filter, form.panel[method="GET" i]) { background: #f0f5fa; border: 1px solid #ccdae7; border-radius: 8px; }
+.nusa-admin-shell .content-shell .ui-filter { padding: 20px; margin-bottom: 24px; }
+.nusa-admin-shell .content-shell .ui-filter .actions { align-items: center; }
+.nusa-admin-shell .content-shell .ui-filter-count { color: var(--ui-muted); font-size: 14px; }
+
+.nusa-admin-shell .content-shell :is(.employee-table, .ui-table) { font-size: 15px; line-height: 1.5; border-collapse: collapse; width: 100%; }
+.nusa-admin-shell .content-shell :is(.employee-table, .ui-table) th {
+    background: #edf3f9; color: #254c6c; font-size: 13px; font-weight: 650; text-transform: none; border-bottom: 1px solid #c5d6e5; line-height: 1.5;
+}
+.nusa-admin-shell .content-shell :is(.employee-table, .ui-table) :is(th, td) { padding: 14px 16px; }
+.nusa-admin-shell .content-shell :is(.employee-table, .ui-table) td { border-color: var(--ui-divider); }
+.nusa-admin-shell .content-shell :is(.employee-table, .ui-table) .ui-empty-cell { padding: 0; }
+.nusa-admin-shell .content-shell :is(.employee-table, .ui-table) .text-right { text-align: right; }
+.nusa-admin-shell .content-shell :is(.employee-table, .ui-table) tbody tr:hover { background: #f5f9fc; }
+.nusa-admin-shell .content-shell :is(.employee-table, .ui-table) tbody tr:focus-within { background: #eef7f5; }
+.nusa-admin-shell .content-shell .ui-table caption { text-align: left; padding: 16px; color: var(--ui-muted); font-size: 14px; }
+.nusa-admin-shell .content-shell :is(.table-wrap, .surat-shell):focus-visible { outline: 3px solid #0f766e80; outline-offset: -3px; }
+.nusa-admin-shell .content-shell .ui-table-shell { border: 1px solid var(--ui-divider); border-radius: 8px; background: #fff; }
+.nusa-admin-shell .content-shell .ui-table-shell > .table-wrap { border-radius: inherit; }
+.nusa-admin-shell .content-shell .ui-table-shell .ui-table { min-width: 640px; }
+
+.nusa-admin-shell .content-shell :is(.badge, .surat-status) { display: inline-flex; align-items: center; max-width: 100%; font-size: 13px; font-weight: 650; padding: 5px 9px; line-height: 1.4; border-radius: 5px; white-space: normal; overflow-wrap: anywhere; }
+.nusa-admin-shell .content-shell :is(.badge-active, .badge-success) { background: var(--ui-teal-soft); color: #0a645d; }
+.nusa-admin-shell .content-shell .badge-info { background: var(--ui-blue-soft); color: var(--ui-blue); }
+.nusa-admin-shell .content-shell :is(.badge-inactive, .badge-warning) { background: var(--ui-yellow-soft); color: var(--ui-warning-text); }
+.nusa-admin-shell .content-shell .badge-danger { background: var(--ui-red-soft); color: var(--ui-red); }
+.nusa-admin-shell .content-shell .badge-muted { background: #eef2f5; color: var(--ui-muted); }
+.nusa-admin-shell .content-shell :is(.surat-status--draf) { background: #eef2f5; color: var(--ui-muted); }
+.nusa-admin-shell .content-shell :is(.surat-status--tercatat, .surat-status--diproses) { background: var(--ui-blue-soft); color: var(--ui-blue); }
+.nusa-admin-shell .content-shell :is(.surat-status--disahkan, .surat-status--dikirim, .surat-status--selesai) { background: var(--ui-teal-soft); color: #0a645d; }
+.nusa-admin-shell .content-shell :is(.surat-status--diajukan, .surat-status--dikembalikan, .surat-status--menunggu_pemeriksaan, .surat-status--perlu_perbaikan) { background: var(--ui-yellow-soft); color: var(--ui-warning-text); }
+.nusa-admin-shell .content-shell .surat-status--dibatalkan { background: var(--ui-red-soft); color: var(--ui-red); }
+
+.nusa-admin-shell .content-shell .alert {
+    background: var(--ui-blue-soft); color: #16466f; border: 1px solid #b9cfe3; border-radius: var(--ui-radius); padding: 14px 16px; font-size: 15px; line-height: 1.6; font-weight: 400; overflow-wrap: anywhere;
+}
+.nusa-admin-shell .content-shell .alert-success { background: var(--ui-teal-soft); color: #0a645d; border-color: #9ccfc2; }
+.nusa-admin-shell .content-shell .alert-warning { background: var(--ui-yellow-soft); color: var(--ui-warning-text); border-color: #e2cb72; }
+.nusa-admin-shell .content-shell .alert-danger { background: var(--ui-red-soft); color: #9f2030; border-color: #e4acb3; }
+.nusa-admin-shell .content-shell .alert ul { padding-left: 20px; margin: 6px 0 0; }
+.nusa-admin-shell .content-shell .alert a { text-decoration: underline; text-underline-offset: 3px; }
+.nusa-admin-shell .content-shell .ui-alert { display: flex; gap: 12px; align-items: flex-start; }
+.nusa-admin-shell .content-shell .ui-alert > svg { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 2px; }
+.nusa-admin-shell .content-shell .ui-alert-content { min-width: 0; }
+.nusa-admin-shell .content-shell .ui-alert-title { display: block; font-weight: 650; margin-bottom: 3px; }
+.nusa-admin-shell .content-shell .empty-state { color: var(--ui-muted); background: #f8fbfd; padding: 40px 20px; font-size: 15px; text-align: center; }
+.nusa-admin-shell .content-shell .ui-empty-icon { display: grid; place-items: center; margin: 0 auto 14px; width: 48px; height: 48px; background: #e8f0f8; color: var(--ui-blue); border-radius: 8px; }
+.nusa-admin-shell .content-shell .ui-empty-icon svg { width: 24px; height: 24px; }
+.nusa-admin-shell .content-shell .ui-empty-title { color: var(--ui-ink); font-size: 16px; font-weight: 650; margin: 0; }
+.nusa-admin-shell .content-shell .ui-empty-description { margin: 6px auto 0; max-width: 52ch; overflow-wrap: anywhere; }
+.nusa-admin-shell .content-shell .ui-empty-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+.nusa-admin-shell .content-shell dialog { color: var(--ui-ink); background: #fff; border: 1px solid var(--ui-border); border-radius: 8px; box-shadow: 0 20px 60px #172d3e33; }
+.nusa-admin-shell .content-shell dialog::backdrop { background: #172d3e80; }
+.nusa-admin-shell .content-shell .ui-dialog { width: min(560px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; margin: auto; overflow-y: auto; overscroll-behavior: contain; }
+.nusa-admin-shell .content-shell .ui-dialog-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--ui-divider); background: #f0f5fa; }
+.nusa-admin-shell .content-shell .ui-dialog-title { font-size: 20px; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+.nusa-admin-shell .content-shell .ui-dialog-body { padding: 24px; overflow-wrap: anywhere; }
+.nusa-admin-shell .content-shell .ui-dialog-footer { padding: 16px 24px; border-top: 1px solid var(--ui-divider); display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.nusa-admin-shell .content-shell .ui-dialog-close { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: #fff; color: var(--ui-blue); cursor: pointer; }
+.nusa-admin-shell .content-shell .ui-dialog-close:hover { background: var(--ui-blue-soft); }
+.nusa-admin-shell .content-shell .ui-dialog-close svg { width: 18px; height: 18px; }
+.nusa-admin-shell:has(.ui-dialog[open]) .app-content { overflow-y: hidden; }
+.nusa-admin-shell:has(.ui-dialog[open]) { overflow: hidden; }
+.nusa-admin-shell:not(.nusa-dashboard-admin) .content-shell .stat-label { font-size: 14px; color: var(--ui-muted); }
+.nusa-admin-shell:not(.nusa-dashboard-admin) .content-shell .stat-value { font-size: 30px; color: var(--ui-blue); font-variant-numeric: tabular-nums; }
+.nusa-admin-shell:not(.nusa-dashboard-admin) .content-shell .stat.active { background: var(--ui-teal-soft); border-color: #b1d9ce; }
+.nusa-admin-shell:not(.nusa-dashboard-admin) .content-shell .stat.active .stat-value { color: var(--ui-teal); }
+.nusa-admin-shell:not(.nusa-dashboard-admin) .content-shell .stat.inactive { background: var(--ui-yellow-soft); border-color: #e4d493; }
+.nusa-admin-shell:not(.nusa-dashboard-admin) .content-shell .stat.inactive .stat-value { color: var(--ui-warning-text); }
+
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) {
+    .nusa-admin-shell .content-shell .page-title { font-size: 26px; }
+    .nusa-admin-shell .content-shell .page-header { align-items: stretch; }
+    .nusa-admin-shell .content-shell .ui-filter { padding: 16px; }
+    .nusa-admin-shell .content-shell .button-icon { width: 44px; }
+    .nusa-admin-shell .content-shell .ui-dialog-header { padding: 16px; }
+    .nusa-admin-shell .content-shell .ui-dialog-body { padding: 20px 16px; }
+    .nusa-admin-shell .content-shell .ui-dialog-footer { padding: 16px; }
+    .nusa-admin-shell .content-shell .ui-dialog-footer .button { flex: 1 1 140px; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .nusa-admin-shell .content-shell .button { transition: none; }
+    .nusa-admin-shell .content-shell .button[aria-busy="true"]::before { animation: none; }
+}
+@media print {
+    .nusa-admin-shell .content-shell .button { box-shadow: none; }
+    .nusa-admin-shell .content-shell .ui-dialog:not([open]) { display: none; }
+}

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', 'Ringkasan Ibadah Bulanan - NUSA')
 
@@ -32,7 +33,7 @@
         <div class="actions"><a href="{{ route('rekap-kegiatan-ibadah.index') }}" class="button button-muted">Rekap harian</a></div>
     </div>
 
-    <form method="GET" action="{{ route('rekap-kegiatan-ibadah.bulanan') }}" class="panel panel-pad">
+    <form method="GET" action="{{ route('rekap-kegiatan-ibadah.bulanan') }}" class="feature-filter panel panel-pad">
         <div class="monthly-worship-filter">
             <div class="field">
                 <label for="bulan">Bulan</label>
@@ -57,9 +58,9 @@
     </form>
 
     @if(!$tahunPelajaran)
-        <section class="panel panel-pad" style="margin-top:20px;"><h2 class="panel-title">Tahun pelajaran aktif belum tersedia</h2></section>
+        <section class="panel panel-pad feature-section" style="margin-top:20px;"><h2 class="panel-title">Tahun pelajaran aktif belum tersedia</h2></section>
     @elseif(!$kegiatanDipilih)
-        <section class="panel panel-pad" style="margin-top:20px;"><h2 class="panel-title">Kegiatan ibadah belum tersedia</h2></section>
+        <section class="panel panel-pad feature-section" style="margin-top:20px;"><h2 class="panel-title">Kegiatan ibadah belum tersedia</h2></section>
     @else
         @if($kegiatanDipilih->khususLakiLaki())
             <div class="alert" style="margin-top:20px;">Sholat Jumat hanya menghitung siswa laki-laki. Siswi yang langsung pulang tidak menjadi target dan tidak dihitung sebagai belum tercatat.</div>
@@ -73,7 +74,7 @@
             <div class="panel stat"><p class="stat-label">Capaian</p><p class="stat-value">{{ $formatPersen($ringkasan['persentase']) }}</p></div>
         </div>
 
-        <section class="panel panel-pad" style="margin-bottom:20px;">
+        <section class="panel panel-pad feature-section" style="margin-bottom:20px;">
             <h2 class="panel-title">{{ $kegiatanDipilih->nama }} &middot; {{ $bulanLabel }}</h2>
             @if($tanggalKegiatan->isEmpty())
                 <p class="help-text" style="margin-top:7px;">Belum ada jadwal yang berlangsung atau presensi yang tercatat pada bulan ini.</p>

@@ -11,14 +11,13 @@
 @endphp
 
 @if ($errors->any())
-    <div class="alert alert-danger">
-        <strong>Ada data yang perlu diperbaiki.</strong>
+    <x-ui.alert type="danger" title="Ada data yang perlu diperbaiki.">
         <ul>
             @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
-    </div>
+    </x-ui.alert>
 @endif
 
 <div class="form-shell">
@@ -42,77 +41,77 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad">
+        <section class="panel panel-pad school-data-section">
             <h2 class="panel-title">Identitas Utama</h2>
             <div class="form-grid">
                 <div class="field span-2">
                     <label for="nama_lengkap">Nama lengkap</label>
-                    <input id="nama_lengkap" name="nama_lengkap" type="text" value="{{ $nilai('nama_lengkap') }}" class="{{ $inputClass('nama_lengkap') }}" required autofocus>
+                    <input id="nama_lengkap" name="nama_lengkap" type="text" value="{{ $nilai('nama_lengkap') }}" class="{{ $inputClass('nama_lengkap') }}" required autofocus @error('nama_lengkap') aria-invalid="true" aria-describedby="nama_lengkap-error" @enderror>
                     @error('nama_lengkap')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nama_lengkap-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nis">NIS</label>
-                    <input id="nis" name="nis" type="text" value="{{ $nilai('nis') }}" class="{{ $inputClass('nis') }}">
+                    <input id="nis" name="nis" type="text" value="{{ $nilai('nis') }}" class="{{ $inputClass('nis') }}" @error('nis') aria-invalid="true" aria-describedby="nis-error" @enderror>
                     @error('nis')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nis-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nisn">NISN</label>
-                    <input id="nisn" name="nisn" type="text" value="{{ $nilai('nisn') }}" class="{{ $inputClass('nisn') }}">
+                    <input id="nisn" name="nisn" type="text" value="{{ $nilai('nisn') }}" class="{{ $inputClass('nisn') }}" @error('nisn') aria-invalid="true" aria-describedby="nisn-error" @enderror>
                     @error('nisn')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nisn-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nik">NIK</label>
-                    <input id="nik" name="nik" type="text" value="{{ $nilai('nik') }}" class="{{ $inputClass('nik') }}">
+                    <input id="nik" name="nik" type="text" value="{{ $nilai('nik') }}" class="{{ $inputClass('nik') }}" @error('nik') aria-invalid="true" aria-describedby="nik-error" @enderror>
                     @error('nik')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nik-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="jenis_kelamin">Jenis kelamin</label>
-                    <select id="jenis_kelamin" name="jenis_kelamin" class="select @error('jenis_kelamin') is-invalid @enderror">
+                    <select id="jenis_kelamin" name="jenis_kelamin" class="select @error('jenis_kelamin') is-invalid @enderror" @error('jenis_kelamin') aria-invalid="true" aria-describedby="jenis_kelamin-error" @enderror>
                         <option value="">Pilih</option>
                         <option value="L" @selected($nilai('jenis_kelamin') === 'L')>Laki-laki</option>
                         <option value="P" @selected($nilai('jenis_kelamin') === 'P')>Perempuan</option>
                     </select>
                     @error('jenis_kelamin')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="jenis_kelamin-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad school-data-section">
             <h2 class="panel-title">Data Pribadi</h2>
             <div class="form-grid">
                 <div class="field">
                     <label for="tempat_lahir">Tempat lahir</label>
-                    <input id="tempat_lahir" name="tempat_lahir" type="text" value="{{ $nilai('tempat_lahir') }}" class="{{ $inputClass('tempat_lahir') }}">
+                    <input id="tempat_lahir" name="tempat_lahir" type="text" value="{{ $nilai('tempat_lahir') }}" class="{{ $inputClass('tempat_lahir') }}" @error('tempat_lahir') aria-invalid="true" aria-describedby="tempat_lahir-error" @enderror>
                     @error('tempat_lahir')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="tempat_lahir-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="tanggal_lahir">Tanggal lahir</label>
-                    <input id="tanggal_lahir" name="tanggal_lahir" type="date" value="{{ $tanggal('tanggal_lahir') }}" class="{{ $inputClass('tanggal_lahir') }}">
+                    <input id="tanggal_lahir" name="tanggal_lahir" type="date" value="{{ $tanggal('tanggal_lahir') }}" class="{{ $inputClass('tanggal_lahir') }}" @error('tanggal_lahir') aria-invalid="true" aria-describedby="tanggal_lahir-error" @enderror>
                     @error('tanggal_lahir')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="tanggal_lahir-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="agama">Agama</label>
-                    <input id="agama" name="agama" type="text" value="{{ $nilai('agama') }}" class="{{ $inputClass('agama') }}" list="agama-list">
+                    <input id="agama" name="agama" type="text" value="{{ $nilai('agama') }}" class="{{ $inputClass('agama') }}" list="agama-list" @error('agama') aria-invalid="true" aria-describedby="agama-error" @enderror>
                     <datalist id="agama-list">
                         <option value="Islam">
                         <option value="Kristen">
@@ -122,148 +121,148 @@
                         <option value="Konghucu">
                     </datalist>
                     @error('agama')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="agama-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="sekolah_asal">Sekolah asal</label>
-                    <input id="sekolah_asal" name="sekolah_asal" type="text" value="{{ $nilai('sekolah_asal') }}" class="{{ $inputClass('sekolah_asal') }}">
+                    <input id="sekolah_asal" name="sekolah_asal" type="text" value="{{ $nilai('sekolah_asal') }}" class="{{ $inputClass('sekolah_asal') }}" @error('sekolah_asal') aria-invalid="true" aria-describedby="sekolah_asal-error" @enderror>
                     @error('sekolah_asal')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="sekolah_asal-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad school-data-section">
             <h2 class="panel-title">Data Keluarga</h2>
             <div class="form-grid">
                 <div class="field">
                     <label for="status_dalam_keluarga">Status dalam keluarga</label>
-                    <input id="status_dalam_keluarga" name="status_dalam_keluarga" type="text" value="{{ $nilai('status_dalam_keluarga') }}" class="{{ $inputClass('status_dalam_keluarga') }}" list="status-keluarga-list">
+                    <input id="status_dalam_keluarga" name="status_dalam_keluarga" type="text" value="{{ $nilai('status_dalam_keluarga') }}" class="{{ $inputClass('status_dalam_keluarga') }}" list="status-keluarga-list" @error('status_dalam_keluarga') aria-invalid="true" aria-describedby="status_dalam_keluarga-error" @enderror>
                     <datalist id="status-keluarga-list">
                         <option value="Anak Kandung">
                         <option value="Anak Angkat">
                         <option value="Anak Tiri">
                     </datalist>
                     @error('status_dalam_keluarga')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="status_dalam_keluarga-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="anak_ke">Anak ke</label>
-                    <input id="anak_ke" name="anak_ke" type="number" min="1" max="30" value="{{ $nilai('anak_ke') }}" class="{{ $inputClass('anak_ke') }}">
+                    <input id="anak_ke" name="anak_ke" type="number" min="1" max="30" value="{{ $nilai('anak_ke') }}" class="{{ $inputClass('anak_ke') }}" @error('anak_ke') aria-invalid="true" aria-describedby="anak_ke-error" @enderror>
                     @error('anak_ke')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="anak_ke-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nama_ayah">Nama ayah</label>
-                    <input id="nama_ayah" name="nama_ayah" type="text" value="{{ $nilai('nama_ayah') }}" class="{{ $inputClass('nama_ayah') }}">
+                    <input id="nama_ayah" name="nama_ayah" type="text" value="{{ $nilai('nama_ayah') }}" class="{{ $inputClass('nama_ayah') }}" @error('nama_ayah') aria-invalid="true" aria-describedby="nama_ayah-error" @enderror>
                     @error('nama_ayah')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nama_ayah-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nama_ibu">Nama ibu</label>
-                    <input id="nama_ibu" name="nama_ibu" type="text" value="{{ $nilai('nama_ibu') }}" class="{{ $inputClass('nama_ibu') }}">
+                    <input id="nama_ibu" name="nama_ibu" type="text" value="{{ $nilai('nama_ibu') }}" class="{{ $inputClass('nama_ibu') }}" @error('nama_ibu') aria-invalid="true" aria-describedby="nama_ibu-error" @enderror>
                     @error('nama_ibu')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nama_ibu-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nomor_wa_ayah">Nomor WA ayah</label>
-                    <input id="nomor_wa_ayah" name="nomor_wa_ayah" type="text" value="{{ $nilai('nomor_wa_ayah') }}" class="{{ $inputClass('nomor_wa_ayah') }}" placeholder="08xxxxxxxxxx">
+                    <input id="nomor_wa_ayah" name="nomor_wa_ayah" type="text" value="{{ $nilai('nomor_wa_ayah') }}" class="{{ $inputClass('nomor_wa_ayah') }}" placeholder="08xxxxxxxxxx" @error('nomor_wa_ayah') aria-invalid="true" aria-describedby="nomor_wa_ayah-error" @enderror>
                     @error('nomor_wa_ayah')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nomor_wa_ayah-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nomor_wa_ibu">Nomor WA ibu</label>
-                    <input id="nomor_wa_ibu" name="nomor_wa_ibu" type="text" value="{{ $nilai('nomor_wa_ibu') }}" class="{{ $inputClass('nomor_wa_ibu') }}" placeholder="08xxxxxxxxxx">
+                    <input id="nomor_wa_ibu" name="nomor_wa_ibu" type="text" value="{{ $nilai('nomor_wa_ibu') }}" class="{{ $inputClass('nomor_wa_ibu') }}" placeholder="08xxxxxxxxxx" @error('nomor_wa_ibu') aria-invalid="true" aria-describedby="nomor_wa_ibu-error" @enderror>
                     @error('nomor_wa_ibu')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nomor_wa_ibu-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="pekerjaan_ayah">Pekerjaan ayah</label>
-                    <input id="pekerjaan_ayah" name="pekerjaan_ayah" type="text" value="{{ $nilai('pekerjaan_ayah') }}" class="{{ $inputClass('pekerjaan_ayah') }}">
+                    <input id="pekerjaan_ayah" name="pekerjaan_ayah" type="text" value="{{ $nilai('pekerjaan_ayah') }}" class="{{ $inputClass('pekerjaan_ayah') }}" @error('pekerjaan_ayah') aria-invalid="true" aria-describedby="pekerjaan_ayah-error" @enderror>
                     @error('pekerjaan_ayah')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="pekerjaan_ayah-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="pekerjaan_ibu">Pekerjaan ibu</label>
-                    <input id="pekerjaan_ibu" name="pekerjaan_ibu" type="text" value="{{ $nilai('pekerjaan_ibu') }}" class="{{ $inputClass('pekerjaan_ibu') }}">
+                    <input id="pekerjaan_ibu" name="pekerjaan_ibu" type="text" value="{{ $nilai('pekerjaan_ibu') }}" class="{{ $inputClass('pekerjaan_ibu') }}" @error('pekerjaan_ibu') aria-invalid="true" aria-describedby="pekerjaan_ibu-error" @enderror>
                     @error('pekerjaan_ibu')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="pekerjaan_ibu-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nama_wali">Nama wali lain</label>
-                    <input id="nama_wali" name="nama_wali" type="text" value="{{ $nilai('nama_wali') }}" class="{{ $inputClass('nama_wali') }}">
+                    <input id="nama_wali" name="nama_wali" type="text" value="{{ $nilai('nama_wali') }}" class="{{ $inputClass('nama_wali') }}" @error('nama_wali') aria-invalid="true" aria-describedby="nama_wali-error" @enderror>
                     @error('nama_wali')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nama_wali-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="hubungan_wali">Hubungan wali</label>
-                    <input id="hubungan_wali" name="hubungan_wali" type="text" value="{{ $nilai('hubungan_wali') }}" class="{{ $inputClass('hubungan_wali') }}" placeholder="Contoh: paman, kakak, nenek">
+                    <input id="hubungan_wali" name="hubungan_wali" type="text" value="{{ $nilai('hubungan_wali') }}" class="{{ $inputClass('hubungan_wali') }}" placeholder="Contoh: paman, kakak, nenek" @error('hubungan_wali') aria-invalid="true" aria-describedby="hubungan_wali-error" @enderror>
                     @error('hubungan_wali')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="hubungan_wali-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="nomor_wa_wali">Nomor WA wali lain</label>
-                    <input id="nomor_wa_wali" name="nomor_wa_wali" type="text" value="{{ $nilai('nomor_wa_wali') }}" class="{{ $inputClass('nomor_wa_wali') }}" placeholder="08xxxxxxxxxx">
+                    <input id="nomor_wa_wali" name="nomor_wa_wali" type="text" value="{{ $nilai('nomor_wa_wali') }}" class="{{ $inputClass('nomor_wa_wali') }}" placeholder="08xxxxxxxxxx" @error('nomor_wa_wali') aria-invalid="true" aria-describedby="nomor_wa_wali-error" @enderror>
                     @error('nomor_wa_wali')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="nomor_wa_wali-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field">
                     <label for="kontak_absensi_utama">Tujuan notifikasi presensi</label>
-                    <select id="kontak_absensi_utama" name="kontak_absensi_utama" class="select @error('kontak_absensi_utama') is-invalid @enderror">
+                    <select id="kontak_absensi_utama" name="kontak_absensi_utama" class="select @error('kontak_absensi_utama') is-invalid @enderror" @error('kontak_absensi_utama') aria-invalid="true" aria-describedby="kontak_absensi_utama-error" @enderror>
                         <option value="">Otomatis dari nomor yang tersedia</option>
                         <option value="ayah" @selected($nilai('kontak_absensi_utama') === 'ayah')>Ayah</option>
                         <option value="ibu" @selected($nilai('kontak_absensi_utama') === 'ibu')>Ibu</option>
                         <option value="wali" @selected($nilai('kontak_absensi_utama') === 'wali')>Wali lain</option>
                     </select>
                     @error('kontak_absensi_utama')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="kontak_absensi_utama-error" class="error-text">{{ $message }}</p>
                     @enderror
                     <p class="help-text">Jika kosong, sistem memilih nomor ayah, lalu ibu, lalu wali lain.</p>
                 </div>
             </div>
         </section>
 
-        <section class="panel panel-pad">
+        <section class="panel panel-pad school-data-section">
             <h2 class="panel-title">Alamat & Catatan</h2>
             <div class="form-grid">
                 <div class="field span-2">
                     <label for="alamat">Alamat</label>
-                    <textarea id="alamat" name="alamat" class="{{ $textareaClass('alamat') }}">{{ $nilai('alamat') }}</textarea>
+                    <textarea id="alamat" name="alamat" class="{{ $textareaClass('alamat') }}" @error('alamat') aria-invalid="true" aria-describedby="alamat-error" @enderror>{{ $nilai('alamat') }}</textarea>
                     @error('alamat')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="alamat-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="field span-2">
                     <label for="keterangan">Keterangan</label>
-                    <textarea id="keterangan" name="keterangan" class="{{ $textareaClass('keterangan') }}">{{ $nilai('keterangan') }}</textarea>
+                    <textarea id="keterangan" name="keterangan" class="{{ $textareaClass('keterangan') }}" @error('keterangan') aria-invalid="true" aria-describedby="keterangan-error" @enderror>{{ $nilai('keterangan') }}</textarea>
                     @error('keterangan')
-                        <p class="error-text">{{ $message }}</p>
+                        <p id="keterangan-error" class="error-text">{{ $message }}</p>
                     @enderror
                 </div>
             </div>

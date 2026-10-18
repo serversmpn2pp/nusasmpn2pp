@@ -16,7 +16,7 @@
 @if ($bolehUbah && $bolehDokumen)
     <section class="agenda-section">
         <h2>Hubungkan dokumen</h2>
-        <form method="GET" action="{{ route('agenda-humas.show', $agendaHumas) }}" class="agenda-actions" style="align-items:end">
+        <form method="GET" action="{{ route('agenda-humas.show', $agendaHumas) }}" class="feature-filter agenda-actions" style="align-items:end">
             <input type="hidden" name="tab" value="dokumen">
             <div class="field" style="flex:1;min-width:160px"><label for="cari_dokumen">Cari judul / nomor dokumen</label><input id="cari_dokumen" name="cari_dokumen" class="input" value="{{ request('cari_dokumen') }}" maxlength="120"></div><button type="submit" class="button button-muted">Cari</button>
         </form>

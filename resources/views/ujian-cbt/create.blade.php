@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', ($alur === 'kelas' ? 'Siapkan Asesmen Kelas' : 'Tambah Paket CBT') . ' - NUSA')
 

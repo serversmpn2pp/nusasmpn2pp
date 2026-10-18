@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 
 @section('title', ($halamanPribadi ?? false) ? 'Laporan Presensi Saya - NUSA' : 'Laporan Presensi Pegawai Bulanan - NUSA')
 
@@ -127,7 +128,7 @@
         </div>
     </div>
 
-    <form action="{{ route($routeLaporan) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route($routeLaporan) }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="employee-report-filter {{ $halamanPribadi ? 'personal-filter' : '' }}">
             <div class="field report-month">
                 <label for="bulan">Bulan</label>
@@ -225,7 +226,7 @@
             </p>
         </div>
 
-        <div class="desktop-only table-wrap">
+        <div class="desktop-only table-wrap feature-worktable identity-worktable" tabindex="0" role="region" aria-label="Laporan presensi bulanan pegawai">
             <table class="employee-table placement-table" style="min-width: 1380px;">
                 <thead>
                     <tr>

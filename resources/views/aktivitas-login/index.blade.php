@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'sistem')
 
 @section('title', 'Aktivitas Login - NUSA')
 
@@ -284,7 +285,7 @@
         <div class="alert alert-danger">Filter belum dapat diterapkan. Periksa kembali periode yang dipilih.</div>
     @endif
 
-    <form method="GET" action="{{ route('aktivitas-login.index') }}" class="panel panel-pad login-activity-filter" data-login-filter>
+    <form method="GET" action="{{ route('aktivitas-login.index') }}" class="feature-filter panel panel-pad login-activity-filter" data-login-filter>
         <input type="hidden" name="tampilan" value="{{ $tampilan }}">
 
         <div class="login-activity-filter-grid {{ $tampilan === 'riwayat' ? 'history' : '' }}">

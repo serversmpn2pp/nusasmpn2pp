@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', ($mou->exists ? 'Edit MoU' : 'Tambah MoU').' - NUSA')
 @section('content')
 @include('kemitraan-humas._style')

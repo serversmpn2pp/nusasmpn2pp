@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Asesmen Kelas - NUSA')
 
@@ -7,6 +8,10 @@
         .assessment-list {
             display: grid;
             gap: 12px;
+        }
+
+        .assessment-filter-grid {
+            grid-template-columns: minmax(240px, 1fr) minmax(180px, .45fr) auto;
         }
 
         .assessment-item {
@@ -54,8 +59,8 @@
 
     @if (session('berhasil'))<div class="alert">{{ session('berhasil') }}</div>@endif
 
-    <form method="GET" class="panel panel-pad filter-form" style="margin-bottom: 18px;">
-        <div class="filter-grid" style="grid-template-columns: minmax(240px, 1fr) minmax(180px, .45fr) auto;">
+    <form method="GET" class="feature-filter panel panel-pad filter-form" style="margin-bottom: 18px;">
+        <div class="filter-grid assessment-filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari asesmen</label>
                 <input id="kata_kunci" name="kata_kunci" type="search" value="{{ $kataKunci }}" class="input" placeholder="Nama, mapel, atau kelas">

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'supervisi')
 @section('title','Rekap Supervisi - NUSA')
 @section('content')
 @php
@@ -15,7 +16,7 @@
     @if($global)<nav class="sp-stage-nav" aria-label="Jenis rekap">
         @foreach(['sesi'=>'Rekap sesi','belum_terjadwal'=>'Guru belum terjadwal'] as $tab=>$label)<a href="{{ route('supervisi.rekap.index', [...collect($query)->except(['tab','supervisor_id','tahap','terlambat'])->all(), 'tab'=>$tab]) }}" @if($filter['tab']===$tab) aria-current="page" @endif>{{ $label }}</a>@endforeach
     </nav>@endif
-    <form method="get" action="{{ route('supervisi.rekap.index') }}" class="sp-filters sp-recap-filters" id="sp-recap-filter">
+    <form method="get" action="{{ route('supervisi.rekap.index') }}" class="feature-filter sp-filters sp-recap-filters" id="sp-recap-filter">
         <input type="hidden" name="tab" value="{{ $filter['tab'] }}">
         <div class="field"><label for="tahun">Tahun pelajaran</label><select class="select" name="tahun_pelajaran_id" id="tahun" data-reset-options>@foreach($pilihan['tahun'] as $v)<option value="{{ $v->id }}" @selected($filter['tahun_pelajaran_id']===$v->id)>{{ $v->nama }}</option>@endforeach</select></div>
         <div class="field"><label for="semester">Semester</label><select class="select" name="semester" id="semester" data-reset-options>@foreach(['ganjil','genap'] as $v)<option @selected($filter['semester']===$v) value="{{ $v }}">{{ ucfirst($v) }}</option>@endforeach</select></div>

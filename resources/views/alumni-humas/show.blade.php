@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Detail Alumni - NUSA')
 @section('alumni-actions')
     <a class="button button-muted" href="{{ route('alumni-humas.index') }}">Kembali</a>

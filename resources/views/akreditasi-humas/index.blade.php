@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'humas')
 @section('title', 'Portofolio Akreditasi Humas - NUSA')
 @section('ak-actions')
     @if(auth()->user()->memilikiIzin('akreditasi_humas.kelola'))<a class="button button-primary" href="{{ route('akreditasi-humas.create') }}">Tambah portofolio</a>@endif
@@ -7,7 +8,7 @@
 <main class="ak-page">
     @include('akreditasi-humas._header', ['judulHalaman' => 'Portofolio Akreditasi'])
     <div class="agenda-metrics agenda-metrics--three">@foreach(\App\Models\PortofolioAkreditasiHumas::STATUS as $kode => $label)<div class="agenda-metric"><span>{{ $label }}</span><strong>{{ $jumlah[$kode] ?? 0 }}</strong></div>@endforeach</div>
-    <form method="GET" class="ak-filter">
+    <form method="GET" class="feature-filter ak-filter">
         <div class="field"><label for="kata_kunci">Nama / instrumen</label><input class="input" id="kata_kunci" name="kata_kunci" maxlength="120" value="{{ $filter['kata_kunci'] ?? '' }}"></div>
         <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select class="select" id="tahun_pelajaran_id" name="tahun_pelajaran_id"><option value="">Semua tahun</option>@foreach($tahun as $t)<option value="{{ $t->id }}" @selected((string)($filter['tahun_pelajaran_id'] ?? '') === (string)$t->id)>{{ $t->nama }}</option>@endforeach</select></div>
         <div class="field"><label for="status">Status</label><select class="select" id="status" name="status"><option value="">Semua status</option>@foreach(\App\Models\PortofolioAkreditasiHumas::STATUS as $kode => $label)<option value="{{ $kode }}" @selected(($filter['status'] ?? '') === $kode)>{{ $label }}</option>@endforeach</select></div>

@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Detail Jenis Perangkat Ajar - NUSA')
 
@@ -55,7 +56,7 @@
         </aside>
 
         <div class="section-stack">
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Informasi Jenis Perangkat</h2>
                 <dl class="detail-grid">
                     <div class="detail-item">
@@ -81,7 +82,7 @@
                 </dl>
             </section>
 
-            <section class="panel panel-pad">
+            <section class="panel panel-pad feature-section">
                 <h2 class="panel-title">Penggunaan berikutnya</h2>
                 <p class="help-text" style="margin-top: 8px;">Jenis perangkat ini akan menjadi daftar dokumen unggahan guru dan dapat dihitung dalam progres kelengkapan perangkat ajar.</p>
             </section>

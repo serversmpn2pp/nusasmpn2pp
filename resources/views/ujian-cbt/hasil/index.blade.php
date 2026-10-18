@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'ujian-asesmen')
 
 @section('title', 'Rekap Hasil CBT - NUSA')
 
@@ -222,7 +223,7 @@
         @php
             $kesiapan = $finalisasiHasil['kesiapan'];
         @endphp
-        <section class="panel panel-pad" style="margin-bottom: 24px;">
+        <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
             <div style="display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
                 <div>
                     <h2 class="panel-title">Finalisasi & publikasi</h2>
@@ -294,7 +295,7 @@
         </section>
     @endif
 
-    <section class="panel panel-pad" style="margin-bottom: 24px;">
+    <section class="panel panel-pad feature-section" style="margin-bottom: 24px;">
         <div style="display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
             <div>
                 <h2 class="panel-title">{{ $ujianCbt->nama }}</h2>
@@ -344,7 +345,7 @@
         </div>
     </div>
 
-    <form action="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('ujian-cbt.hasil.index', $ujianCbt) }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="hasil-filter-grid">
             <div class="field">
                 <label for="kelas_id">Kelas</label>

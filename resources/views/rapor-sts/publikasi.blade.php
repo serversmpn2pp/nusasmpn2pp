@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 @section('title', 'Publikasi Rapor STS')
 @section('content')
     <style>

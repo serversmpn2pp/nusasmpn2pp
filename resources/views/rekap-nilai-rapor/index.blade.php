@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'akademik')
 
 @section('title', 'Rekap Nilai Rapor - NUSA')
 
@@ -34,7 +35,7 @@
         </div>
     </div>
 
-    <form action="{{ route('rekap-nilai-rapor.index') }}" method="GET" class="panel panel-pad" style="margin-bottom: 24px;">
+    <form action="{{ route('rekap-nilai-rapor.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
         <div class="filter-grid">
             <div class="field">
                 <label for="guru_mata_pelajaran_id">Guru mata pelajaran</label>
@@ -64,12 +65,12 @@
     </form>
 
     @if ($daftarGuruMataPelajaran->isEmpty())
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Belum ada guru mata pelajaran</h2>
             <p class="help-text" style="margin-top: 8px;">Buat penugasan guru mata pelajaran terlebih dahulu agar rekap nilai rapor dapat dihitung.</p>
         </section>
     @elseif (! $guruMataPelajaranDipilih)
-        <section class="panel panel-pad">
+        <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Pilih data rekap</h2>
             <p class="help-text" style="margin-top: 8px;">Rekap dihitung per guru mata pelajaran dan semester berdasarkan nilai yang sudah diinput pada setiap komponen.</p>
         </section>

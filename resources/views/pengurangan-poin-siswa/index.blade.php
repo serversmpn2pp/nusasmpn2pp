@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kesiswaan-bk')
 
 @section('title', 'Penghargaan & Pengurangan Poin - NUSA')
 
@@ -70,7 +71,7 @@
         <div class="alert alert-warning">Aktifkan tahun pelajaran terlebih dahulu sebelum mengajukan penghargaan.</div>
     @endunless
 
-    <form method="GET" class="panel panel-pad" style="margin-bottom:20px">
+    <form method="GET" class="feature-filter panel panel-pad" style="margin-bottom:20px">
         <div class="reward-filter-grid">
             <div class="field">
                 <label for="kelas_id">Kelas</label>

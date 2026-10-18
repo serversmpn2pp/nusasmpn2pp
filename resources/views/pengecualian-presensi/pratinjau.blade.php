@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('admin-module', 'kehadiran')
 @section('title', 'Pratinjau Pengecualian Presensi - NUSA')
 @section('content')
     @include('pengecualian-presensi._style')
