@@ -28,13 +28,17 @@ use App\Models\TahunPelajaran;
 use App\Models\TransaksiPoinSiswa;
 use App\Services\Absensi\GrafikPresensiAdminService;
 use App\Services\Cbt\DaftarUjianSiswaService;
+use App\Services\DashboardPegawaiService;
 use App\Services\StatistikDashboardAdminService;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
 
 class BerandaController extends Controller
 {
-    public function __construct(private readonly DaftarUjianSiswaService $daftarUjianSiswa) {}
+    public function __construct(
+        private readonly DaftarUjianSiswaService $daftarUjianSiswa,
+        private readonly DashboardPegawaiService $dashboardPegawai,
+    ) {}
 
     public function index()
     {
@@ -562,7 +566,8 @@ class BerandaController extends Controller
 
         $absensiPegawaiBulan = AbsensiPegawai::query()
             ->where('pegawai_id', $pengguna->pegawai_id ?: 0)
-            ->whereBetween('tanggal', [$awalBulanTanggal, $akhirBulanTanggal]);
+            ->whereDate('tanggal', '>=', $awalBulanTanggal)
+            ->whereDate('tanggal', '<=', $hariIni->toDateString());
         $jumlahStatusPegawaiBulan = (clone $absensiPegawaiBulan)
             ->selectRaw('status_kehadiran, count(*) as jumlah')
             ->groupBy('status_kehadiran')
@@ -586,6 +591,7 @@ class BerandaController extends Controller
             'cuti' => (int) ($jumlahStatusPegawaiBulan['cuti'] ?? 0),
             'alfa' => (int) ($jumlahStatusPegawaiBulan['alfa'] ?? 0),
             'terlambat' => (clone $absensiPegawaiBulan)->where('menit_terlambat', '>', 0)->count(),
+            'total_menit_terlambat' => (int) (clone $absensiPegawaiBulan)->sum('menit_terlambat'),
             'pulang_cepat' => (clone $absensiPegawaiBulan)->where('menit_pulang_cepat', '>', 0)->count(),
             'belum_pulang' => (clone $absensiPegawaiBulan)
                 ->where('status_kehadiran', 'hadir')
@@ -756,6 +762,7 @@ class BerandaController extends Controller
             'maksGrafikPembinaanWali' => max((int) $rekapPembinaanWaliBulan->max('jumlah'), 1),
             'jadwalPiketSaya' => $jadwalPiketSaya,
             'jadwalPiketHariIni' => $jadwalPiketHariIni,
+            ...$this->dashboardPegawai->data($pengguna, $hariIni, $tahunPelajaranAktif),
         ];
     }
 
