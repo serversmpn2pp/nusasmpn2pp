@@ -115,3 +115,138 @@ body.nusa-scanner {
     .nusa-scanner .brand-title { font-size: 22px; }
     .nusa-scanner .server-clock strong { font-size: 20px; }
 }
+
+/* Student-facing monitors may be short or zoomed: never crop the scan result. */
+.nusa-scanner[data-scan-kind="siswa"] .scan-shell {
+    min-height: 100vh; min-height: 100dvh; height: auto;
+    grid-template-rows: auto 1fr; gap: 16px; padding: 16px;
+}
+.nusa-scanner[data-scan-kind="siswa"] .scan-header { margin: -16px -16px 0; padding: 12px 16px; }
+.nusa-scanner[data-scan-kind="siswa"] .brand-mark { width: 48px; flex-basis: 48px; }
+.nusa-scanner[data-scan-kind="siswa"] .scan-main { gap: 16px; align-items: stretch; min-width: 0; }
+.nusa-scanner[data-scan-kind="siswa"] :is(.time-panel,.scanner-panel) { min-width: 0; overflow: visible; padding: 18px; }
+.nusa-scanner[data-scan-kind="siswa"] .time-panel { gap: 20px; }
+.nusa-scanner[data-scan-kind="siswa"] .scanner-panel { grid-template-rows: auto auto minmax(260px,1fr) auto; gap: 12px; }
+.nusa-scanner[data-scan-kind="siswa"] .result-card { min-height: 260px; grid-template-columns: clamp(144px,28%,240px) minmax(0,1fr); gap: 16px; padding: 18px; }
+.nusa-scanner[data-scan-kind="siswa"] .student-photo { max-width: 240px; width: 100%; justify-self: center; box-shadow: none; }
+.nusa-scanner[data-scan-kind="siswa"] .result-meta:empty { display: none; }
+.nusa-scanner[data-scan-kind="siswa"] .meta-pill { overflow-wrap: anywhere; }
+.nusa-scanner[data-scan-kind="siswa"] .history-list { max-height: 140px; min-height: 0; }
+.nusa-scanner[data-scan-kind="siswa"] .offline-note { color: #775700; background: #fff8d8; border-color: #dfc45f; }
+@media (min-width: 900px) {
+    .nusa-scanner[data-scan-kind="siswa"] .scan-main { grid-template-columns: minmax(260px,.65fr) minmax(0,1.35fr); }
+    .nusa-scanner[data-scan-kind="siswa"] .time-panel { grid-template-columns: minmax(0,1fr); }
+    .nusa-scanner[data-scan-kind="siswa"] .schedule-grid { grid-template-columns: minmax(0,1fr); }
+    .nusa-scanner[data-scan-kind="siswa"] .schedule-item { grid-template-rows: auto auto auto; }
+    .nusa-scanner[data-scan-kind="siswa"] .schedule-label { min-height: 0; }
+}
+@media (min-width: 900px) and (max-height: 800px) {
+    .nusa-scanner[data-scan-kind="siswa"] .scan-shell { gap: 12px; padding: 12px; }
+    .nusa-scanner[data-scan-kind="siswa"] .scan-header { margin: -12px -12px 0; padding: 10px 12px; }
+    .nusa-scanner[data-scan-kind="siswa"] :is(.time-panel,.scanner-panel) { padding: 14px; gap: 10px; }
+    .nusa-scanner[data-scan-kind="siswa"] .clock { font-size: 48px; }
+    .nusa-scanner[data-scan-kind="siswa"] .date-line { margin-top: 6px; }
+    .nusa-scanner[data-scan-kind="siswa"] .schedule-item { padding: 12px; }
+    .nusa-scanner[data-scan-kind="siswa"] :is(.schedule-note,.schedule-time) { margin-top: 6px; }
+    .nusa-scanner[data-scan-kind="siswa"] .scanner-title { font-size: 24px; }
+    .nusa-scanner[data-scan-kind="siswa"] .scan-capture { min-height: 46px; padding: 8px 12px; font-size: 16px; }
+    .nusa-scanner[data-scan-kind="siswa"] .scanner-panel { grid-template-rows: auto auto minmax(220px,1fr) auto; }
+    .nusa-scanner[data-scan-kind="siswa"] .result-card { min-height: 220px; grid-template-columns: clamp(136px,26%,180px) minmax(0,1fr); padding: 14px; gap: 14px; }
+    .nusa-scanner[data-scan-kind="siswa"] .result-name { font-size: 24px; line-height: 1.3; }
+    .nusa-scanner[data-scan-kind="siswa"] :is(.result-nisn,.result-message) { margin-top: 6px; font-size: 15px; }
+    .nusa-scanner[data-scan-kind="siswa"] .result-meta { margin-top: 10px; gap: 6px; }
+    .nusa-scanner[data-scan-kind="siswa"] .meta-pill { padding: 4px 8px; }
+    .nusa-scanner[data-scan-kind="siswa"] .result-status { margin-bottom: 8px; }
+    .nusa-scanner[data-scan-kind="siswa"] .history-list { max-height: 88px; }
+    .nusa-scanner[data-scan-kind="siswa"] .history-item { padding: 6px 8px; }
+}
+@media (max-width: 899px) {
+    .nusa-scanner[data-scan-kind="siswa"] .scan-main { grid-template-columns: minmax(0,1fr); }
+    .nusa-scanner[data-scan-kind="siswa"] .time-panel { align-content: start; }
+}
+@media (max-width: 540px) {
+    .nusa-scanner[data-scan-kind="siswa"] .scan-shell { padding: 12px; gap: 12px; }
+    .nusa-scanner[data-scan-kind="siswa"] .scan-header { margin: -12px -12px 0; padding: 12px; }
+    .nusa-scanner[data-scan-kind="siswa"] :is(.time-panel,.scanner-panel) { padding: 14px; }
+    .nusa-scanner[data-scan-kind="siswa"] .result-card { grid-template-columns: minmax(0,1fr); padding: 16px; }
+    .nusa-scanner[data-scan-kind="siswa"] .student-photo { width: min(160px,100%); }
+}
+
+/* Employee schedules use natural height; a single schedule never needs an inner scrollbar. */
+.nusa-scanner[data-scan-kind="pegawai"] .office-shell {
+    min-height: 100vh; min-height: 100dvh; height: auto;
+    grid-template-columns: minmax(300px,34%) minmax(0,1fr); gap: 20px; padding: 20px;
+}
+.nusa-scanner[data-scan-kind="pegawai"] .office-side {
+    grid-template-columns: minmax(0,1fr); grid-template-rows: repeat(4,auto);
+    align-content: start; gap: 14px; overflow: visible; padding: 18px;
+}
+.nusa-scanner[data-scan-kind="pegawai"] .brand-mark { width: 48px; flex-basis: 48px; }
+.nusa-scanner[data-scan-kind="pegawai"] .brand-title { font-size: 24px; }
+.nusa-scanner[data-scan-kind="pegawai"] .clock-panel { gap: 5px; }
+.nusa-scanner[data-scan-kind="pegawai"] .mode-panel { grid-template-columns: minmax(0,1fr) auto; gap: 4px 10px; padding: 10px 12px; background: #e8f5f1; border-color: #b3d6cd; }
+.nusa-scanner[data-scan-kind="pegawai"] .mode-panel > :is(.label,.mode-value) { grid-column: 1; }
+.nusa-scanner[data-scan-kind="pegawai"] .mode-value { font-size: 20px; line-height: 1.3; }
+.nusa-scanner[data-scan-kind="pegawai"] .status-line { grid-column: 2; grid-row: 1/3; align-self: center; font-size: 14px; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-panel { grid-template-rows: auto auto; overflow: visible; background: transparent; border: 0; border-top: 1px solid #bdd2e2; border-radius: 0; padding: 12px 0 0; gap: 10px; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-panel > .panel-head { background: transparent; padding: 0; flex-direction: row; align-items: center; gap: 8px; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-panel .queue-badge { min-height: 30px; padding: 4px 8px; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-list { max-height: none; overflow: visible; padding: 0; gap: 10px; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-item { min-width: 0; padding: 12px; gap: 12px; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-item-head { min-width: 0; flex-direction: row; flex-wrap: wrap; gap: 8px; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-item-head > div { min-width: 0; flex: 1 1 140px; }
+.nusa-scanner[data-scan-kind="pegawai"] :is(.schedule-name,.schedule-target) { overflow-wrap: anywhere; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-mode { align-self: flex-start; }
+.nusa-scanner[data-scan-kind="pegawai"] details.schedule-item { display: block; }
+.nusa-scanner[data-scan-kind="pegawai"] summary.schedule-item-head { cursor: pointer; display: list-item; list-style-position: inside; color: #15477a; }
+.nusa-scanner[data-scan-kind="pegawai"] summary.schedule-item-head > div { display: inline-block; vertical-align: top; max-width: calc(100% - 24px); }
+.nusa-scanner[data-scan-kind="pegawai"] summary.schedule-item-head .schedule-mode { display: inline-flex; margin-top: 6px; }
+.nusa-scanner[data-scan-kind="pegawai"] summary.schedule-item-head:focus-visible { outline: 3px solid #0f766e40; outline-offset: 4px; }
+.nusa-scanner[data-scan-kind="pegawai"] details.schedule-item[open] > .schedule-time-grid { margin-top: 12px; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-time-grid { background: transparent; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-time { padding: 10px; grid-template-rows: auto auto 1fr; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-time > span { font-size: 13px; line-height: 1.45; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-time > span:first-child { min-height: 2.9em; }
+.nusa-scanner[data-scan-kind="pegawai"] .schedule-time strong { font-size: 26px; }
+.nusa-scanner[data-scan-kind="pegawai"] .office-main { overflow: visible; gap: 12px; }
+.nusa-scanner[data-scan-kind="pegawai"] .top-strip { padding: 0; min-height: 48px; }
+.nusa-scanner[data-scan-kind="pegawai"] .scanner-panel { overflow: visible; padding: 16px; gap: 12px; grid-template-rows: auto minmax(240px,1fr) auto; }
+.nusa-scanner[data-scan-kind="pegawai"] .result-card { min-height: 240px; grid-template-columns: clamp(144px,28%,240px) minmax(0,1fr); padding: 18px; gap: 16px; }
+.nusa-scanner[data-scan-kind="pegawai"] .employee-photo { max-width: 240px; width: 100%; justify-self: center; box-shadow: none; }
+.nusa-scanner[data-scan-kind="pegawai"] .result-meta:empty { display: none; }
+.nusa-scanner[data-scan-kind="pegawai"] .meta-pill { overflow-wrap: anywhere; }
+.nusa-scanner[data-scan-kind="pegawai"] .history-list { max-height: 120px; }
+@media (min-width: 900px) and (max-height: 800px) {
+    .nusa-scanner[data-scan-kind="pegawai"] .office-shell { padding: 12px; gap: 16px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .office-side { padding: 14px; gap: 10px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .clock { font-size: 48px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .label { font-size: 14px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .page-title { font-size: 24px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .scan-capture { min-height: 46px; font-size: 16px; padding: 8px 12px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .scanner-panel { padding: 14px; grid-template-rows: auto minmax(220px,1fr) auto; }
+    .nusa-scanner[data-scan-kind="pegawai"] .result-card { min-height: 220px; grid-template-columns: clamp(136px,26%,180px) minmax(0,1fr); padding: 14px; gap: 14px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .result-name { font-size: 24px; line-height: 1.3; }
+    .nusa-scanner[data-scan-kind="pegawai"] :is(.result-nip,.result-message) { margin-top: 6px; font-size: 15px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .result-meta { margin-top: 10px; gap: 6px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .meta-pill { padding: 4px 8px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .result-status { margin-bottom: 8px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .history-list { max-height: 88px; }
+}
+@media (max-width: 899px) {
+    .nusa-scanner[data-scan-kind="pegawai"] .office-shell { grid-template-columns: minmax(0,1fr); padding: 16px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .office-side { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: auto auto auto; }
+    .nusa-scanner[data-scan-kind="pegawai"] .office-side > :is(.brand,.schedule-panel) { grid-column: 1/-1; }
+    .nusa-scanner[data-scan-kind="pegawai"] .mode-panel { grid-template-columns: minmax(0,1fr); align-content: start; }
+    .nusa-scanner[data-scan-kind="pegawai"] .status-line { grid-column: 1; grid-row: auto; }
+}
+@media (max-width: 540px) {
+    .nusa-scanner[data-scan-kind="pegawai"] .office-shell { padding: 12px; gap: 16px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .office-side { grid-template-columns: minmax(0,1fr); padding: 14px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .clock { font-size: 40px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .mode-panel { grid-template-columns: minmax(0,1fr) auto; }
+    .nusa-scanner[data-scan-kind="pegawai"] .status-line { grid-column: 2; grid-row: 1/3; }
+    .nusa-scanner[data-scan-kind="pegawai"] .schedule-time-grid { grid-template-columns: minmax(0,1fr); }
+    .nusa-scanner[data-scan-kind="pegawai"] .schedule-time > span:first-child { min-height: 0; }
+    .nusa-scanner[data-scan-kind="pegawai"] .result-card { grid-template-columns: minmax(0,1fr); padding: 16px; }
+    .nusa-scanner[data-scan-kind="pegawai"] .employee-photo { width: min(160px,100%); }
+}

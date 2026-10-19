@@ -155,10 +155,8 @@ try {
   assert.ok(await page.locator('.page-footer').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight+1),'Footer must remain reachable');
   await page.screenshot({path:resolve(output,'footer-desktop.png')});
   await page.locator('.app-content').evaluate(element=>element.scrollTop=0);
-  assert.ok(await page.locator('.admin-school-sketch').evaluate(e=>{
-    const box=e.getBoundingClientRect(),image=e.querySelector('img').getBoundingClientRect(),text=e.querySelector('p').getBoundingClientRect();
-    return Math.abs((image.left+image.right)/2-(box.left+box.right)/2)<1&&Math.abs((text.left+text.right)/2-(box.left+box.right)/2)<1&&getComputedStyle(e.querySelector('p')).textAlign==='center';
-  }),'Sketch and slogan must be centered');
+  assert.equal(await page.locator('#admin-sidebar .sidebar-foot').count(),0,'Sidebar footer must not consume menu space');
+  assert.equal(await page.locator('.app-topbar .account-menu-dropdown').count(),1,'Account menu stays in the header');
   const originalChartWidth=await page.locator('#attendance-chart').evaluate(e=>e.getBoundingClientRect().width);
   const originalChartData=await page.locator('#attendance-chart').evaluate(e=>Chart.getChart(e).data.datasets.map(d=>d.data));
   await page.locator('[data-admin-sidebar-toggle]').click();

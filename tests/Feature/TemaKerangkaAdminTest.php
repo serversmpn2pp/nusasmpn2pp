@@ -43,10 +43,12 @@ class TemaKerangkaAdminTest extends TestCase
             $response = $this->get(route($route, $params))->assertOk()
                 ->assertSee('data-admin-shell', false)->assertSee('css/admin-shell.css')
                 ->assertSee('css/admin-components.css')->assertSee('js/admin-components.js')
-                ->assertSee('js/admin-shell.js')->assertSee('admin-school-sketch');
+                ->assertSee('js/admin-shell.js')->assertDontSee('admin-school-sketch')->assertDontSee('admin-sidebar-account');
             $html = $response->getContent();
             $dom = $this->dom($html);
             $this->assertSame(1, $dom->query('//aside[@id="admin-sidebar"]')->length, $route);
+            $this->assertSame(0, $dom->query('//aside//*[contains(@class,"sidebar-foot")]')->length, $route);
+            $this->assertSame(1, $dom->query('//header//details[contains(@class,"account-menu-dropdown")]')->length, $route);
             $this->assertSame(1, $dom->query('//*[@id="admin-tooltip"]')->length, $route);
             $this->assertSame(3, $dom->query('//input[@data-admin-sidebar-mode]')->length, $route);
             $this->assertSame(1, $dom->query('//input[@data-admin-sidebar-mode][@value="hidden"]')->length, $route);

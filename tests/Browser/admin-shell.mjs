@@ -63,6 +63,8 @@ try {
       assert.ok(result.title.trim().length>0&&result.titleWidth>=0,'Missing breadcrumb');
       assert.ok(result.images,`Missing sidebar asset ${path}`);
       assert.ok(result.icons>0,`Missing sidebar icons ${path}`);
+      assert.equal(await page.locator('#admin-sidebar .sidebar-foot').count(),0);
+      assert.equal(await page.locator('.app-topbar .account-menu-dropdown').count(),1);
       assert.equal(result.chartAsset,path==='/beranda',`Chart library loaded outside dashboard: ${path}`);
       assert.equal(result.contentInert,false);
       if(width>760){
@@ -86,6 +88,10 @@ try {
         await page.waitForFunction(()=>Math.abs(document.querySelector('.app-sidebar').getBoundingClientRect().left)<1);
         assert.equal(await page.locator('.app-sidebar').getAttribute('aria-hidden'),'false');
         assert.ok(await page.locator('.app-content').evaluate(e=>e.inert));
+        assert.ok(await page.locator('.sidebar-nav').evaluate(e=>{
+          const nav=e.getBoundingClientRect(),side=e.closest('.app-sidebar').getBoundingClientRect();
+          return nav.height>=innerHeight-190&&Math.abs(nav.bottom-side.bottom)<2;
+        }),'Mobile navigation should use the space down to the bottom edge');
         await page.keyboard.press('Shift+Tab');
         assert.ok(await page.evaluate(()=>document.querySelector('.app-sidebar').contains(document.activeElement)),'Focus escaped mobile drawer');
         await page.keyboard.press('Escape');
@@ -167,6 +173,16 @@ try {
   await page.locator('[data-admin-sidebar-toggle]').click();
   await page.waitForFunction(()=>Math.abs(document.querySelector('.app-sidebar').getBoundingClientRect().left)<1);
   await page.screenshot({path:resolve(output,'drawer-mobile.png')});
+  const lastSection=page.locator('#admin-sidebar details[data-sidebar-section]').last();
+  if(!await lastSection.evaluate(e=>e.open))await lastSection.locator(':scope > summary').click();
+  const lastMenu=lastSection.locator('.sidebar-link').last();
+  await lastMenu.waitFor({state:'visible'});
+  await lastMenu.scrollIntoViewIfNeeded();
+  assert.ok(await lastMenu.evaluate(e=>{
+    const item=e.getBoundingClientRect(),nav=e.closest('.sidebar-nav').getBoundingClientRect();
+    return item.top>=nav.top-1&&item.bottom<=nav.bottom+1;
+  }),'The final menu item must remain reachable on a phone');
+  await page.screenshot({path:resolve(output,'drawer-mobile-bottom.png')});
   await page.locator('.sidebar-backdrop').click({position:{x:350,y:500}});
   assert.ok(await page.locator('.app-sidebar').evaluate(e=>e.inert));
   await page.locator('.content-shell').evaluate(e=>{

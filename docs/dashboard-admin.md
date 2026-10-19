@@ -9,7 +9,7 @@ dan izin yang sama; notifikasi, menu akun, pencarian sidebar, dan tautan operasi
 
 - Seluruh akun terautentikasi yang memakai layouts.app memuat css/admin-shell.css dan
   js/admin-shell.js secara otomatis. Tema visual tidak memberikan izin administrator.
-- Sidebar putih, logo, sketsa, pencarian, header, notifikasi, dan kontrol gulir memakai sumber yang sama.
+- Sidebar putih, logo, pencarian, header, notifikasi, dan kontrol gulir memakai sumber yang sama.
   Menu aktif mengikuti route yang sudah ada. Breadcrumb memakai kelompok menu aktif dan judul halaman.
 - Kode navigasi tidak bergantung pada canvas, Chart.js, atau elemen dashboard. Pustaka grafik serta CSS
   isi dashboard tetap hanya dimuat pada dashboard. Formulir, tabel, validasi, API, dan izin tidak diubah.
@@ -57,7 +57,8 @@ dan izin yang sama; notifikasi, menu akun, pencarian sidebar, dan tautan operasi
 - Ringkasan tetap menghitung data tanpa jam valid; grafik harian tidak membuat jam fiktif.
   JSON grafik hanya berisi agregat, tanpa identitas siswa, kronologi, atau catatan rahasia.
 - Desktop menggunakan satu gulir konten; mobile satu gulir halaman. Footer tetap dapat dijangkau
-  tanpa ruang kosong tambahan. Sketsa dan slogan sidebar dipusatkan tanpa posisi absolut.
+  tanpa ruang kosong tambahan. Blok sketsa, slogan dan akun di bawah sidebar dihapus agar
+  area menu lebih luas; identitas dan menu akun tetap tersedia di header.
 
 ## Keterbacaan
 
@@ -74,7 +75,7 @@ dan izin yang sama; notifikasi, menu akun, pencarian sidebar, dan tautan operasi
 ## Aset Lokal
 
 Chart.js 4.5.1 dan Lucide disimpan lokal di public/vendor/ dengan lisensinya.
-Sketsa sekolah memakai aset halaman login yang sudah disetujui.
+Aset sketsa sekolah tetap tersedia untuk halaman login, tetapi tidak lagi dimuat di sidebar.
 CSS dan JavaScript dashboard menggunakan versi filemtime; tidak memerlukan npm build atau CDN saat dipakai.
 
 ## Verifikasi
@@ -88,7 +89,7 @@ node tests/Browser/admin-shell.mjs
 ```
 
 Browser QA memerlukan Playwright/Chrome dan variabel PLAYWRIGHT_MODULE bila memakai runtime bundel.
-QA mencakup ketiga grafik, isolasi filter, perhitungan, pusat sidebar, gulir desktop/mobile, dan tabel.
+QA mencakup ketiga grafik, isolasi filter, perhitungan, ruang gulir sidebar, gulir desktop/mobile, dan tabel.
 QA menggunakan hasil render Blade dari SQLite sementara dengan aset aplikasi asli; tidak login,
 mengubah database lokal, atau mengirim formulir ke server. Snapshot ada di storage/logs/dashboard-admin-qa/.
 

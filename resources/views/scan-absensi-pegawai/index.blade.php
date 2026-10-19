@@ -589,22 +589,6 @@
                 font-weight: 850;
             }
 
-            @media (min-width: 1101px) {
-                html,
-                body,
-                .office-scan-page,
-                .office-shell {
-                    height: 100vh;
-                    height: 100dvh;
-                    min-height: 0;
-                }
-
-                html,
-                body {
-                    overflow: hidden;
-                }
-            }
-
             @media (min-width: 1101px) and (max-height: 850px) {
                 .office-side {
                     gap: 12px;
@@ -860,22 +844,28 @@
                                 Belum ada jadwal presensi pegawai aktif untuk hari ini.
                             </div>
                         @else
+                            @php
+                                $jadwalDapatDilipat = $jadwalHariIni->count() > 1;
+                                $tagJadwal = $jadwalDapatDilipat ? 'details' : 'article';
+                                $tagJudulJadwal = $jadwalDapatDilipat ? 'summary' : 'div';
+                            @endphp
                             <div class="schedule-list" id="scheduleList">
                                 @foreach ($jadwalHariIni as $jadwal)
-                                    <article
+                                    <{{ $tagJadwal }}
                                         class="schedule-item"
+                                        @if ($jadwalDapatDilipat && $loop->first) open @endif
                                         data-masuk-mulai="{{ $jadwal->formatJam($jadwal->jam_scan_masuk_mulai) }}"
                                         data-masuk-selesai="{{ $jadwal->formatJam($jadwal->jam_scan_masuk_selesai) }}"
                                         data-pulang-mulai="{{ $jadwal->formatJam($jadwal->jam_scan_pulang_mulai) }}"
                                         data-pulang-selesai="{{ $jadwal->formatJam($jadwal->jam_scan_pulang_selesai) }}"
                                     >
-                                        <div class="schedule-item-head">
+                                        <{{ $tagJudulJadwal }} class="schedule-item-head">
                                             <div>
                                                 <p class="schedule-name">{{ $jadwal->nama_jadwal }}</p>
                                                 <p class="schedule-target">{{ $jadwal->labelCakupan() }} · {{ $jadwal->labelSasaran() }}</p>
                                             </div>
                                             <span class="schedule-mode">Menunggu</span>
-                                        </div>
+                                        </{{ $tagJudulJadwal }}>
                                         <div class="schedule-time-grid">
                                             <div class="schedule-time">
                                                 <span>Batas Tepat Waktu</span>
@@ -888,7 +878,7 @@
                                                 <span class="schedule-window"><b>Waktu scan pulang:</b> {{ $jadwal->formatJam($jadwal->jam_scan_pulang_mulai) }} - {{ $jadwal->formatJam($jadwal->jam_scan_pulang_selesai) }}</span>
                                             </div>
                                         </div>
-                                    </article>
+                                    </{{ $tagJadwal }}>
                                 @endforeach
                             </div>
                         @endif

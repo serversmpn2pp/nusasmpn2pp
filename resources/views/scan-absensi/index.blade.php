@@ -54,7 +54,6 @@
             .scan-page {
                 position: relative;
                 min-height: 100vh;
-                overflow: hidden;
                 background-image:
                     linear-gradient(rgba(7, 28, 54, .78), rgba(7, 28, 54, .78)),
                     url("{{ asset('images/background-scanner.jpg') }}");
@@ -576,48 +575,6 @@
                 padding: 12px 14px;
                 color: #fff;
                 font-weight: 850;
-            }
-
-            @media (min-width: 1001px) {
-                html,
-                body {
-                    height: 100%;
-                    overflow: hidden;
-                }
-
-                .scan-page,
-                .scan-shell {
-                    height: 100vh;
-                    height: 100dvh;
-                    min-height: 0;
-                }
-
-                .scan-shell {
-                    grid-template-rows: auto minmax(0, 1fr);
-                }
-
-                .scan-main,
-                .time-panel,
-                .scanner-panel {
-                    min-height: 0;
-                }
-
-                .scan-main,
-                .scanner-panel {
-                    overflow: hidden;
-                }
-
-                .scanner-panel {
-                    grid-template-rows: auto auto minmax(0, 1fr) minmax(92px, 160px);
-                }
-
-                .result-card {
-                    min-height: 0;
-                }
-
-                .history-list {
-                    max-height: none;
-                }
             }
 
             @media (min-width: 1001px) and (max-height: 850px) {

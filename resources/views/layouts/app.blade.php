@@ -1206,15 +1206,6 @@
                 display: none !important;
             }
 
-            .sidebar-foot {
-                margin-top: auto;
-                border-top: 1px solid rgba(255, 255, 255, .16);
-                padding-top: 14px;
-                color: rgba(255, 255, 255, .7);
-                font-size: .78rem;
-                font-weight: 700;
-            }
-
             .app-content {
                 display: flex;
                 min-height: 0;
@@ -2500,15 +2491,6 @@
                     </div>
                 </nav>
 
-                <div class="sidebar-foot">
-                    @if ($temaAntarmukaNusa)
-                        <div class="admin-school-sketch"><img src="{{ asset('images/nusa/login/sekolah-sketsa.webp') }}" width="1448" height="1086" alt=""><p>Satu pintu. Terhubung<br>untuk <span>bertumbuh.</span></p></div>
-                        <div class="admin-sidebar-account"><span class="admin-account-avatar">{{ $inisialPengguna ?: 'N' }}</span><span><strong>{{ $namaPenggunaAktif }}</strong><small>{{ $labelPeranAktif }}</small></span><i data-lucide="shield-check" aria-hidden="true"></i></div>
-                    @else
-                        <span>NUSA</span><br>
-                        <span>Data sekolah terpadu.</span>
-                    @endif
-                </div>
             </aside>
 
             <label for="sidebar-toggle" class="sidebar-backdrop" aria-hidden="true"></label>

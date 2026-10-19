@@ -49,6 +49,8 @@ class TampilanLintasRoleTest extends TestCase
                 $dom = $this->dom($html);
                 $this->assertSame(1, $dom->query('//body[@data-nusa-theme]')->length, $role.' '.$route);
                 $this->assertSame(1, $dom->query('//aside[@id="admin-sidebar"]')->length);
+                $this->assertSame(0, $dom->query('//aside//*[contains(@class,"sidebar-foot")]')->length);
+                $this->assertSame(1, $dom->query('//header//details[contains(@class,"account-menu-dropdown")]')->length);
                 $this->assertSame(1, substr_count($html, 'css/admin-shell.css'));
                 $this->assertSame(1, substr_count($html, 'css/nusa-account-pages.css'));
                 $this->assertStringNotContainsString('css/dashboard-admin.css', $html);
@@ -107,6 +109,10 @@ class TampilanLintasRoleTest extends TestCase
                 if (in_array($kind, ['siswa', 'pegawai'], true)) {
                     $this->assertSame(1, $dom->query('//input[@id="scanInput"][@autofocus]')->length);
                     $this->assertSame(1, $dom->query('//*[@id="resultCard"]')->length);
+                    if ($kind === 'pegawai') {
+                        $this->assertSame(1, $dom->query('//*[@id="scheduleList"]/article')->length);
+                        $this->assertSame(0, $dom->query('//*[@id="scheduleList"]/details')->length);
+                    }
                 } else {
                     $this->assertSame(1, $dom->query('//video[@id="camera-video"][@playsinline]')->length);
                     $this->assertSame(1, $dom->query('//input[@id="manual-nisn"]')->length);
@@ -119,6 +125,43 @@ class TampilanLintasRoleTest extends TestCase
                 $this->capture('scan-'.$kind.'-'.$state, $html, 'scan', '/scan-audit/'.$kind.'/'.$state, $manifest);
             }
         }
+        $this->actingAs($admin);
+        $this->travelTo(now()->setDate(2026, 10, 23)->setTime(8, 5));
+        $jumat = PengaturanAbsensi::updateOrCreate(['hari' => 'jumat'], [
+            'urutan_hari' => 5, 'jam_scan_masuk_mulai' => '06:00', 'jam_masuk' => '07:00',
+            'jam_scan_masuk_selesai' => '10:00', 'jam_scan_pulang_mulai' => '13:00',
+            'jam_pulang' => '13:10', 'jam_scan_pulang_selesai' => '14:00',
+            'pulang_jumat_dibedakan' => true, 'jam_scan_pulang_perempuan_mulai' => '11:15',
+            'jam_pulang_perempuan' => '11:30', 'jam_scan_pulang_perempuan_selesai' => '12:00', 'aktif' => true,
+        ]);
+        $response = $this->get(route('scan-absensi.index'))->assertOk()
+            ->assertSee('Jam Pulang Jumat')->assertSee('Siswi')->assertSee('Siswa laki-laki');
+        $this->capture('scan-siswa-jumat', $response->getContent(), 'scan', '/scan-audit/siswa/jumat', $manifest);
+        $jumat->update(['aktif' => false]);
+        $response = $this->get(route('scan-absensi.index'))->assertOk()
+            ->assertSee('Pengaturan presensi hari ini belum aktif.')->assertSee('id="scanInput"', false);
+        $this->capture('scan-siswa-tanpa-jadwal', $response->getContent(), 'scan', '/scan-audit/siswa/tanpa-jadwal', $manifest);
+
+        $this->travelTo(now()->setDate(2026, 10, 19)->setTime(8, 5));
+        foreach (['Guru Kegiatan Pagi dan Pendampingan Pembelajaran', 'Tenaga Kependidikan Pelayanan Administrasi Sekolah'] as $name) {
+            PengaturanAbsensiPegawai::create([
+                'nama_jadwal' => $name, 'cakupan' => 'jenis_pegawai', 'jenis_pegawai' => 'Guru',
+                'hari' => 'senin', 'urutan_hari' => 1, 'jam_scan_masuk_mulai' => '07:00',
+                'jam_masuk' => '08:00', 'jam_scan_masuk_selesai' => '10:00',
+                'jam_scan_pulang_mulai' => '14:00', 'jam_pulang' => '14:10',
+                'jam_scan_pulang_selesai' => '16:00', 'aktif' => true,
+            ]);
+        }
+        $response = $this->get(route('scan-absensi-pegawai.index'))->assertOk();
+        $dom = $this->dom($response->getContent());
+        $this->assertSame(3, $dom->query('//*[@id="scheduleList"]/details/summary')->length);
+        $this->assertSame(1, $dom->query('//*[@id="scheduleList"]/details[@open]')->length);
+        $this->capture('scan-pegawai-banyak-jadwal', $response->getContent(), 'scan', '/scan-audit/pegawai/banyak-jadwal', $manifest);
+        PengaturanAbsensiPegawai::query()->update(['aktif' => false]);
+        $response = $this->get(route('scan-absensi-pegawai.index'))->assertOk()
+            ->assertSee('Belum ada jadwal presensi pegawai aktif untuk hari ini.')
+            ->assertSee('id="scanInput"', false);
+        $this->capture('scan-pegawai-tanpa-jadwal', $response->getContent(), 'scan', '/scan-audit/pegawai/tanpa-jadwal', $manifest);
         $this->writeManifest('manifest-scan.json', $manifest);
     }
 

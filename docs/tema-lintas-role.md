@@ -14,6 +14,9 @@ nama class tersebut bukan tanda bahwa akun memiliki hak admin.
   anak yang terhubung; parameter anak asing tidak membuka data anak tersebut.
 - Pilihan sidebar, pencarian menu, notifikasi, tooltip dan komponen kontrol
   menggunakan implementasi yang sama. Preferensi sidebar tetap terpisah per akun.
+- Blok ilustrasi, slogan dan kartu akun di bawah sidebar dihapus untuk semua
+  role agar daftar menu memakai tinggi yang tersedia, terutama pada HP.
+  Identitas dan menu akun tetap ada di header; menu terakhir tetap bisa digulir.
 - Filter/bagian formulir kelompok yang sudah ditandai tetap memakai stylesheet
   kelompok. Halaman pribadi yang belum mempunyai penanda memakai fallback
   `pribadi`. Dashboard admin dan Data Sekolah tidak menerima fallback tersebut.
@@ -31,6 +34,26 @@ Pemindai ibadah tetap memerlukan petugas yang diizinkan berdasarkan penugasan.
 Pemindai berhalangan tetap privat: tidak menambahkan daftar scan terbaru.
 Warna teks/status mempunyai kontras terhadap latar putih; keberhasilan,
 duplikat, penolakan dan kegagalan jaringan tetap mempunyai label yang berbeda.
+
+Terminal siswa memakai dua kolom mulai lebar 900px, termasuk monitor 1024x768.
+Tinggi halaman mengikuti konten, bukan dikunci lalu dipotong. Pada layar pendek,
+spasi dan foto dipadatkan tanpa menyembunyikan hasil scan; riwayat mempunyai area
+gulir tersendiri. Layar sempit memakai satu kolom dengan gulir halaman normal.
+Foto siswa tetap berasio 3:4, membesar mengikuti lebar panel hingga 240px;
+pada layar pendek lebarnya 136-180px dan pada ponsel 160px. Nama panjang dan
+detail hasil tidak boleh tertutup atau terpotong oleh foto.
+Aturan ini hanya berlaku untuk `data-scan-kind="siswa"`, tidak mengubah terminal
+pegawai, kamera ibadah, waktu presensi, antrean, atau fokus pembaca kartu.
+
+Terminal pegawai juga mengikuti tinggi konten, termasuk area efektif 1280x720
+pada monitor 1920x1080 dengan skala Windows 150%. Identitas, jam dan mode
+dipadatkan pada layar pendek. Panel jadwal tidak mempunyai gulir internal.
+Satu jadwal tampil penuh sebagai `article`; beberapa jadwal memakai `details`
+dengan jadwal pertama terbuka. Semua jadwal tetap ada di DOM/JSON dan semua
+label status tetap diperbarui oleh pemroses scan yang sama. Jika detail banyak
+dibuka atau layar sangat kecil, halaman boleh bergulir tanpa memotong data.
+Foto pegawai mengikuti ukuran responsif yang sama dengan foto siswa: hingga
+240px di layar besar, 136-180px di layar pendek, dan 160px di ponsel, berasio 3:4.
 
 ## CBT Dan Cetak
 
@@ -51,6 +74,14 @@ halaman, tanda tangan dan data rapor tidak diubah oleh tema aplikasi.
   role; RFID berhasil/duplikat/gagal/offline; penolakan izin kamera, mulai/stop,
   pratinjau video serta input NISN cadangan. Aliran video virtual berasal dari
   frame canvas dan respons HTTP disimulasikan; tidak menulis presensi ke server.
+- `tests/Browser/scan-student-viewport.mjs`: 15 ukuran layar/ruang browser,
+  termasuk 1024x768 dan 1024x680, nama panjang dan foto, jadwal Jumat, tanpa
+  jadwal, riwayat penuh, status gagal/duplikat, fokus input, dan reset hasil.
+  Memeriksa batas vertikal hasil scan, bukan hanya luapan horizontal halaman.
+- `tests/Browser/scan-employee-viewport.mjs`: 16 ukuran layar pada DPR 1.5,
+  termasuk ruang browser 1280x720 dan 1280x640, jadwal tunggal/banyak/tidak ada,
+  buka-tutup detail jadwal, nama panjang/foto, status hasil, riwayat dan resize
+  jendela. Panel kiri diperiksa agar tidak mempunyai gulir internal tersembunyi.
 - Rapor diperiksa dengan `rapor-sts-print.mjs` dan `perilaku-sts-print.mjs`:
   A4, urutan halaman siswa/lampiran, paginasi catatan panjang, logo, nilai kosong
   dan tidak terpotong.

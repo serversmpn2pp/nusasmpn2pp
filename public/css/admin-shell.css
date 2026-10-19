@@ -21,7 +21,7 @@
 .nusa-admin-shell .sidebar-search-control>svg{color:#7b8c9d;stroke:currentColor;left:12px;top:13px;width:17px;height:17px}
 .nusa-admin-shell .sidebar-search-clear{color:#627486}
 .nusa-admin-shell .sidebar-search-clear:hover{background:#edf4fc;color:#15477a}
-.nusa-admin-shell .sidebar-nav{display:flex;flex-direction:column;padding:0 12px;gap:2px;flex:1;overflow-y:auto;min-height:0;margin:0;scrollbar-width:thin}
+.nusa-admin-shell .sidebar-nav{display:flex;flex-direction:column;padding:0 12px max(12px,env(safe-area-inset-bottom,0px));gap:2px;flex:1;overflow-y:auto;min-height:0;margin:0;scrollbar-width:thin;scroll-padding-block:12px}
 .nusa-admin-shell .sidebar-section{border:0;margin:0;flex-shrink:0}
 .nusa-admin-shell .sidebar-section[open]{background:transparent}
 .nusa-admin-shell .sidebar-section-summary{display:flex;gap:11px;min-height:48px;padding:11px 12px;color:#40596d;border-radius:6px;font-weight:600}
@@ -43,17 +43,6 @@
 .nusa-admin-shell .sidebar-link-initial{width:19px;height:19px;background:none;border-radius:0;color:inherit}
 .nusa-admin-shell .sidebar-link-initial svg{width:16px;height:16px}
 .nusa-admin-shell .sidebar-search-empty{color:#4d6476;border:1px dashed #cfdce7;font-size:14px;font-weight:400}
-.nusa-admin-shell .sidebar-foot{border:0;padding:0;margin:0;background:#fff;flex-shrink:0}
-.nusa-admin-shell .admin-school-sketch{display:flex;flex-direction:column-reverse;align-items:center;gap:5px;margin:12px 20px;text-align:center}
-.nusa-admin-shell .admin-school-sketch img{display:block;width:168px;height:88px;object-fit:contain;opacity:.55;flex-shrink:0;transform:none}
-.nusa-admin-shell .admin-school-sketch p{margin:0;width:100%;font-size:13px;line-height:1.5;color:#15477a;font-weight:550;font-style:normal}
-.nusa-admin-shell .admin-school-sketch p span{box-shadow:inset 0 -5px #f1c40f72}
-.nusa-admin-shell .admin-sidebar-account{display:flex;gap:10px;align-items:center;min-height:74px;padding:17px 20px;border-top:1px solid #dce5eb}
-.nusa-admin-shell .admin-account-avatar{display:grid;place-items:center;background:#edf4fc;color:#15477a;font-weight:650;border-radius:7px;width:34px;height:34px;flex-shrink:0;font-size:13px}
-.nusa-admin-shell .admin-sidebar-account>span:nth-child(2){min-width:0;flex:1}
-.nusa-admin-shell .admin-sidebar-account strong,.nusa-admin-shell .admin-sidebar-account small{display:block;overflow-wrap:anywhere;font-size:14px;color:#172d3e;line-height:1.5;font-weight:650}
-.nusa-admin-shell .admin-sidebar-account small{font-size:13px;color:#4d6476;font-weight:400}
-.nusa-admin-shell .admin-sidebar-account>svg{width:17px;height:17px;color:#0f766e}
 .nusa-admin-shell .app-content{position:relative;background:#f5f8fa}
 .nusa-admin-shell .app-topbar{min-height:68px;padding:10px 30px;gap:15px;background:#fffffff5;flex-shrink:0}
 .nusa-admin-shell .admin-breadcrumb{display:flex;align-items:center;gap:12px;font-size:14px;color:#172d3e;min-width:0}
@@ -93,10 +82,9 @@
     .nusa-admin-shell .app-sidebar{position:relative;transform:none;width:auto;height:100dvh;max-height:100dvh}
     .nusa-admin-shell .app-content{display:flex;height:100dvh;overflow-y:auto;overscroll-behavior-y:contain}
     .nusa-admin-shell.admin-sidebar-collapsed .app-shell{grid-template-columns:76px minmax(0,1fr)}
-    .nusa-admin-shell.admin-sidebar-collapsed .sidebar-brand>span:last-child,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-search,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-title,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-chevron,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-content,.nusa-admin-shell.admin-sidebar-collapsed .admin-school-sketch,.nusa-admin-shell.admin-sidebar-collapsed .admin-sidebar-account>span:nth-child(2),.nusa-admin-shell.admin-sidebar-collapsed .admin-sidebar-account>svg{display:none}
+    .nusa-admin-shell.admin-sidebar-collapsed .sidebar-brand>span:last-child,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-search,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-title,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-chevron,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-content{display:none}
     .nusa-admin-shell.admin-sidebar-collapsed .sidebar-brand{padding-inline:16px}
     .nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-summary{justify-content:center;padding-inline:7px}
-    .nusa-admin-shell.admin-sidebar-collapsed .admin-sidebar-account{justify-content:center;padding-inline:0}
     .nusa-admin-shell.admin-sidebar-hidden .app-shell{grid-template-columns:minmax(0,1fr)}
     .nusa-admin-shell.admin-sidebar-hidden .app-sidebar{display:none}
 }
