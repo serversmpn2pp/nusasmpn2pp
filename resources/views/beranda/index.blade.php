@@ -17,7 +17,7 @@
         $bolehRekapPribadi = auth()->user()->memilikiIzin('absensi_pegawai.pribadi');
     @endphp
 
-    <div class="pegawai-home" data-pegawai-dashboard>
+    <div class="pegawai-home account-home" data-pegawai-dashboard>
         @if (session('berhasil'))
             <div class="alert" role="status">{{ session('berhasil') }}</div>
         @endif

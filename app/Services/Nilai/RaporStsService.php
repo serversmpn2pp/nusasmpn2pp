@@ -171,8 +171,13 @@ class RaporStsService
                 'hari_tercatat' => $rekaman->count(),
             ];
             $koreksiSiswa = $koreksi->get($siswa->id);
+            $sumberBerubah = $koreksiSiswa && $koreksiSiswa->rekap_sumber !== $sumber;
+            $koreksiManual = $koreksiSiswa && collect(['sakit', 'izin', 'alfa'])->contains(
+                fn ($jenis) => $koreksiSiswa->{$jenis} !== ($koreksiSiswa->rekap_sumber[$jenis] ?? null),
+            );
             $diperiksa = $koreksiSiswa?->diperiksa_pada && $koreksiSiswa->rekap_sumber === $sumber;
-            $kehadiran = collect(['sakit', 'izin', 'alfa'])->mapWithKeys(fn ($jenis) => [$jenis => $koreksiSiswa ? $koreksiSiswa->{$jenis} : $sumber[$jenis]])->all();
+            // An unedited snapshot follows current attendance; deliberate corrections remain intact.
+            $kehadiran = collect(['sakit', 'izin', 'alfa'])->mapWithKeys(fn ($jenis) => [$jenis => $koreksiManual ? $koreksiSiswa->{$jenis} : $sumber[$jenis]])->all();
             $lengkap = $nilai->isNotEmpty() && $nilai->every(fn ($n) => $n['nilai'] !== null);
             $tuntas = $nilai->isNotEmpty() && $nilai->every(fn ($n) => $n['nilai'] !== null || $n['dikecualikan']);
             $bernilai = $nilai->whereNotNull('nilai');
@@ -184,7 +189,8 @@ class RaporStsService
                 'rata' => $tuntas && $bernilai->isNotEmpty() ? round($bernilai->avg('nilai'), 2) : null,
                 'sumber' => $sumber, 'sidik_sumber' => $this->sidikSumber($sumber), 'koreksi' => $koreksiSiswa,
                 'kehadiran' => $kehadiran, 'keterlambatan' => $keterlambatan, 'diperiksa' => (bool) $diperiksa,
-                'sumber_berubah' => $koreksiSiswa && $koreksiSiswa->rekap_sumber !== $sumber,
+                'sumber_berubah' => (bool) $sumberBerubah,
+                'rekap_diperbarui' => $sumberBerubah && ! $koreksiManual,
                 'siap' => $pengaturan->exists && $diperiksa && $kelas->waliKelas !== null
                     && $pengaturan->tanggal_akhir_presensi->copy()->endOfDay()->isPast(),
             ];

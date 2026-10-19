@@ -4,10 +4,12 @@ import {resolve, sep, extname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 const {chromium} = await import(process.env.PLAYWRIGHT_MODULE ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : 'playwright');
-const fixtures = resolve('storage/framework/testing/dashboard-pegawai');
-const output = resolve('storage/logs/dashboard-pegawai-qa');
+const family = process.argv.includes('--keluarga');
+const group = family ? 'dashboard-keluarga' : 'dashboard-pegawai';
+const fixtures = resolve('storage/framework/testing', group);
+const output = resolve('storage/logs', group + '-qa');
 const publicRoot = resolve('public');
-const roles = ['guru_mapel', 'tata_usaha', 'pimpinan', 'kosong'];
+const roles = family ? ['siswa', 'orang_tua', 'siswa-kosong', 'ortu-belum-terhubung'] : ['guru_mapel', 'tata_usaha', 'pimpinan', 'kosong'];
 const errors = [], missing = [], issues = [], checks = [];
 await mkdir(output, {recursive: true});
 const browser = await chromium.launch({headless: true, channel: process.env.PLAYWRIGHT_CHANNEL || undefined});
@@ -36,9 +38,9 @@ try {
         for (const role of roles) {
             await page.goto(`http://localhost/dashboard-audit/${role}`);
             await page.evaluate(() => document.fonts.ready);
-            await page.waitForFunction(() => !!document.querySelector('[data-admin-sidebar-toggle] svg.lucide') && !!window.Chart?.getChart(document.querySelector('[data-chart-canvas]')));
+            await page.waitForFunction(() => !!document.querySelector('[data-admin-sidebar-toggle] svg.lucide') && (!document.querySelector('[data-chart-canvas]') || !!window.Chart?.getChart(document.querySelector('[data-chart-canvas]'))));
             const layout = await page.evaluate(() => {
-                const root = document.querySelector('.pegawai-home');
+                const root = document.querySelector('.account-home');
                 const visible = e => !!e.getClientRects().length;
                 return {
                     pageWidth: document.documentElement.scrollWidth,
@@ -49,6 +51,12 @@ try {
                 };
             });
             if (layout.pageWidth > width + 1 || layout.scroll > layout.width + 2 || layout.clipped.length || layout.missingImages.length) issues.push({role, width, ...layout});
+            if (role === 'ortu-belum-terhubung') {
+                assert.equal(await page.locator('[data-chart-canvas]').count(), 0);
+                assert.match(await page.locator('h1').textContent(), /Akun belum terhubung/);
+                checks.push({role, width, state: 'unlinked'});
+                continue;
+            }
             if (width >= 1024) {
                 assert.equal(await page.locator('.ph-row').first().evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), 2, 'Desktop should retain two columns');
             }
@@ -68,8 +76,9 @@ try {
                     assert.ok(chart.painted > 100, 'Chart canvas must not be blank');
                     assert.equal(await page.locator(`[data-chart-range="${range}"]`).getAttribute('aria-pressed'), 'true');
                     assert.equal(await page.locator(`[data-chart-type="${type}"]`).getAttribute('aria-pressed'), 'true');
-                    assert.equal(await page.locator('[data-chart-empty]').isVisible(), role === 'kosong');
-                    if (role !== 'kosong') assert.equal(chart.values.filter(v => v === 7).length, 1);
+                    const empty = role === 'kosong' || role === 'siswa-kosong';
+                    assert.equal(await page.locator('[data-chart-empty]').isVisible(), empty);
+                    if (!empty) assert.equal(chart.values.filter(v => v === 7).length, 1);
                     checks.push({role, width, range, type});
                 }
             }

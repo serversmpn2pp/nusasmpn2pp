@@ -1,0 +1,47 @@
+/* Family dashboards reuse the shared account dashboard components. */
+.family-home .fh-identity { display: flex; align-items: center; gap: 16px; }
+.family-home .fh-identity > div { min-width: 0; }
+.family-home .fh-photo { display: block; width: 66px; height: 82px; object-fit: cover; flex: 0 0 auto; border: 1px solid #cbdbe8; border-radius: 6px; background: #fff; }
+.family-home .ph-heading-side { flex-basis: 245px; }
+.family-home .ph-heading-side .ph-badge { text-align: center; }
+.family-home .fh-detail-link { margin-top: 16px; }
+.family-home .fh-report-section > .ph-section-head { background: var(--ph-teal-soft); }
+.family-home .fh-report-section .ph-task-icon { background: var(--ph-teal-soft); color: var(--ph-teal); }
+.family-home .fh-profile { padding: 20px 18px; }
+.family-home .fh-profile > div { padding-bottom: 10px; border-bottom: 1px solid #edf1f4; }
+.family-home .fh-profile > div:last-child { padding-bottom: 0; border: 0; }
+.family-home .fh-profile dd { min-width: 0; overflow-wrap: anywhere; max-width: 67%; }
+.family-home .fh-worship { padding: 18px 0; border-bottom: 1px solid #edf1f4; }
+.family-home .fh-worship:last-child { border: 0; }
+.family-home .fh-worship-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.family-home .fh-worship-head > strong { min-width: 0; font-size: 15px; font-weight: 650; }
+.family-home .fh-worship-head > .ph-badge { max-width: 46%; flex: 0 0 auto; text-align: center; }
+.family-home .fh-worship > p { font-size: 13px; color: var(--ph-muted); margin-top: 5px; }
+.family-home .fh-progress-label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 14px 0 6px; color: var(--ph-muted); font-size: 13px; }
+.family-home .fh-progress-label strong { color: var(--ph-teal); }
+.family-home .fh-progress { height: 7px; overflow: hidden; border-radius: 3px; background: #e5efed; }
+.family-home .fh-progress > span { display: block; height: 100%; background: var(--ph-teal); }
+.family-home .fh-point-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; padding: 18px; background: #f4f8fc; }
+.family-home .fh-point-summary > span { display: grid; gap: 5px; color: var(--ph-muted); font-size: 14px; }
+.family-home .fh-point-summary strong { color: var(--ph-blue); font-size: 24px; font-variant-numeric: tabular-nums; font-weight: 700; }
+.family-home .fh-point-row { display: flex; justify-content: space-between; align-items: start; gap: 14px; padding: 15px 0; border-bottom: 1px solid #edf1f4; }
+.family-home .fh-point-row:last-child { border: 0; }
+.family-home .fh-point-row > div { min-width: 0; }
+.family-home .fh-point-row strong { display: block; font-size: 15px; font-weight: 600; }
+.family-home .fh-point-row small { display: block; font-size: 13px; color: var(--ph-muted); margin-top: 3px; }
+.family-home .fh-point-row .ph-badge { flex: 0 0 auto; }
+.family-home .fh-empty-note { padding: 20px 0; font-size: 14px; color: var(--ph-muted); }
+.family-home .fh-unlinked { display: grid; justify-items: start; gap: 12px; background: #fff; padding: 24px; border-bottom: 1px solid var(--ph-line); }
+.family-home .fh-unlinked > svg { width: 32px; height: 32px; color: var(--ph-teal); }
+.family-home .fh-unlinked > p:last-child { font-size: 15px; color: var(--ph-muted); }
+@container (max-width: 850px) {
+    .family-home .ph-heading-side { flex-basis: 100%; }
+}
+@container (max-width: 360px) {
+    .family-home .fh-identity { align-items: flex-start; gap: 10px; }
+    .family-home .fh-photo { width: 48px; height: 62px; }
+    .nusa-admin-shell .family-home .fh-heading h1 { font-size: 22px; }
+    .family-home .fh-point-summary { gap: 10px; padding: 14px 12px; }
+    .family-home .fh-point-summary > span { font-size: 13px; }
+    .family-home .fh-profile { padding-inline: 12px; }
+}

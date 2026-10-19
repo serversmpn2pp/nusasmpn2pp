@@ -29,6 +29,7 @@ use App\Models\TransaksiPoinSiswa;
 use App\Services\Absensi\GrafikPresensiAdminService;
 use App\Services\Cbt\DaftarUjianSiswaService;
 use App\Services\DashboardPegawaiService;
+use App\Services\Nilai\PublikasiRaporStsService;
 use App\Services\StatistikDashboardAdminService;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
@@ -54,13 +55,13 @@ class BerandaController extends Controller
         $akhirBulan = $hariIni->copy()->endOfMonth();
 
         if ($pengguna?->akunSiswa()) {
-            return view('beranda.siswa', $this->dataDashboardSiswa(
+            return response()->view('beranda.siswa', $this->dataDashboardSiswa(
                 pengguna: $pengguna,
                 hariIni: $hariIni,
                 tahunPelajaranAktif: $tahunPelajaranAktif,
                 awalBulan: $awalBulan,
                 akhirBulan: $akhirBulan,
-            ));
+            ))->header('Cache-Control', 'private, no-store, max-age=0');
         }
 
         if ($pengguna?->akunOrangTua()) {
@@ -72,7 +73,7 @@ class BerandaController extends Controller
                 ->firstWhere('id', $orangTua->siswa_acuan_username_id)
                 ?: $orangTua?->siswa->first();
 
-            return view('beranda.orang-tua', array_merge($this->dataDashboardSiswa(
+            return response()->view('beranda.orang-tua', array_merge($this->dataDashboardSiswa(
                 pengguna: $pengguna,
                 hariIni: $hariIni,
                 tahunPelajaranAktif: $tahunPelajaranAktif,
@@ -81,7 +82,7 @@ class BerandaController extends Controller
                 siswaTerkait: $siswaTerkait,
             ), [
                 'orangTua' => $orangTua,
-            ]));
+            ]))->header('Cache-Control', 'private, no-store, max-age=0');
         }
 
         if (! $pengguna?->administrator()) {
@@ -350,7 +351,8 @@ class BerandaController extends Controller
 
         $absensiBulan = AbsensiSiswa::query()
             ->where('siswa_id', $siswa?->id ?: 0)
-            ->whereBetween('tanggal', [$awalBulan->toDateString(), $akhirBulan->toDateString()])
+            ->whereDate('tanggal', '>=', $awalBulan->toDateString())
+            ->whereDate('tanggal', '<=', $hariIni->toDateString())
             ->when($tahunDashboard, fn ($query) => $query->where('tahun_pelajaran_id', $tahunDashboard->id));
         $jumlahStatusBulan = (clone $absensiBulan)
             ->selectRaw('status_kehadiran, count(*) as jumlah')
@@ -427,6 +429,35 @@ class BerandaController extends Controller
             ? $this->daftarUjianSiswa->siapkan($siswa)['ringkasanUjian']
             : ['aktif' => 0, 'akan_datang' => 0, 'selesai' => 0, 'total' => 0];
 
+        $awalMinggu = $hariIni->copy()->subDays(6)->startOfDay();
+        $awalGrafik = $awalMinggu->lt($awalBulan) ? $awalMinggu : $awalBulan;
+        $catatanGrafik = AbsensiSiswa::where('siswa_id', $siswa?->id ?: 0)
+            ->whereDate('tanggal', '>=', $awalGrafik->toDateString())
+            ->whereDate('tanggal', '<=', $hariIni->toDateString())
+            ->when($tahunDashboard, fn ($q) => $q->where('tahun_pelajaran_id', $tahunDashboard->id))
+            ->orderBy('tanggal')->get()->keyBy(fn ($a) => $a->tanggal->toDateString());
+        $grafikKedatanganSiswa = collect(['minggu' => $awalMinggu, 'bulan' => $awalBulan])->map(fn ($awal) => collect(CarbonPeriod::create($awal->toDateString(), $hariIni->toDateString()))->map(function ($tanggal) use ($catatanGrafik) {
+            $a = $catatanGrafik->get($tanggal->toDateString());
+            $hadir = $a?->status_kehadiran === 'hadir' && filled($a->jam_masuk);
+
+            return ['tanggal' => $tanggal->format('d/m'), 'lengkap' => $tanggal->locale('id')->translatedFormat('l, d F Y'),
+                'menit' => $hadir ? max(0, (int) $a->menit_terlambat) : null,
+                'status' => match ($a?->status_kehadiran) {
+                    'hadir' => 'Hadir', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa', default => 'Belum ada catatan',
+                },
+                'jam' => $hadir ? substr($a->jam_masuk, 0, 5) : null];
+        })->all())->all();
+
+        $raporUntukAkun = app(PublikasiRaporStsService::class)->untukPenerima($pengguna)
+            ->where('siswa_id', $siswa?->id ?: 0);
+        $jumlahRaporDashboard = (clone $raporUntukAkun)->count();
+        $raporDashboard = $raporUntukAkun->orderByDesc('dipublikasikan_pada')->orderByDesc('id')->limit(3)
+            ->get(['id', 'salinan', 'dipublikasikan_pada'])->map(fn ($p) => [
+                'id' => $p->id, 'nama' => $p->salinan['kegiatan']['nama'] ?? 'Rapor STS',
+                'tahun' => $p->salinan['kegiatan']['tahun_pelajaran'] ?? '',
+                'tanggal' => $p->dipublikasikan_pada,
+            ]);
+
         return [
             'hariIni' => $hariIni,
             'labelBulan' => $hariIni->copy()->locale('id')->translatedFormat('F Y'),
@@ -447,6 +478,9 @@ class BerandaController extends Controller
             'urlFotoSiswa' => $urlFotoSiswa,
             'jumlahNilaiDipublikasikan' => $jumlahNilaiDipublikasikan,
             'ringkasanUjianSaya' => $ringkasanUjianSaya,
+            'grafikKedatanganSiswa' => $grafikKedatanganSiswa,
+            'jumlahRaporDashboard' => $jumlahRaporDashboard,
+            'raporDashboard' => $raporDashboard,
         ];
     }
 

@@ -40,6 +40,11 @@
         .sts-review:has(input:checked) { border-color: #9fcab0; background: #edf8f1; color: #236443; }
         .sts-review-state { color: #64748b; }
         .sts-review-state.is-pending { color: #946200; }
+        .sts-field-error { display: block; margin-top: 7px; color: #a12b23; font-size: .85rem; line-height: 1.5; }
+        .sts-table [aria-invalid="true"] { border: 2px solid #b7382f; background: #fffafa; }
+        .sts-row-has-error > td { background: #fffaf4; }
+        .sts-feedback { margin-bottom: 18px; }
+        .sts-feedback ul { margin: 8px 0 0; padding-left: 20px; }
         .sts-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; padding: 14px 0; }
         .sts-table .button { min-height: 38px; padding: 8px 10px; font-size: .8rem; border-radius: 5px; }
         .sts-detail-button { margin-top: 10px; }
@@ -115,6 +120,14 @@
             @if($laporan)<a class="button button-primary" href="{{ route('rapor-sts.publikasi.index', [$kegiatan, $kelas]) }}">Kelola publikasi</a>@endif
         </div>
     </div>
+    @if ($errors->any())
+        <div class="alert alert-danger sts-feedback" id="sts-feedback" role="alert" tabindex="-1">
+            <strong>Perubahan rapor belum tersimpan. Perbaiki bagian yang ditandai, lalu simpan kembali.</strong>
+            <ul>@foreach ($errors->all() as $pesan)<li>{{ $pesan }}</li>@endforeach</ul>
+        </div>
+    @elseif (session('berhasil'))
+        <div class="alert sts-feedback" id="sts-feedback" role="status" tabindex="-1">{{ session('berhasil') }}</div>
+    @endif
     <form method="GET" action="{{ route('rapor-sts.index') }}" class="feature-filter sts-section sts-filters">
         <div class="field"><label for="sts-kegiatan">Kegiatan STS</label>
             <select class="select" id="sts-kegiatan" name="kegiatan_id" required>
@@ -171,6 +184,9 @@
             <div class="sts-band-head"><div class="sts-band-title"><span class="sts-step" aria-hidden="true">03</span><div><h2>Pemeriksaan nilai dan kehadiran</h2><p>{{ $diperiksa }} dari {{ $baris->count() }} siswa sudah diperiksa</p></div></div><button class="button button-primary" form="sts-kehadiran-form" @disabled(! $pengaturan->exists || $baris->isEmpty())>Simpan pemeriksaan</button></div>
             <div class="sts-band-body">
             <p class="sts-section-note">Rekap awal mengikuti presensi sekolah. Hari presensi aktif tanpa catatan atau konfirmasi dihitung alfa setelah hari berakhir. Koreksi di sini hanya berlaku pada rapor, tidak mengubah presensi harian.</p>
+            @if ($baris->where('rekap_diperbarui', true)->isNotEmpty())
+                <p class="sts-notice" role="status">Periode atau presensi berubah: rekap {{ $baris->where('rekap_diperbarui', true)->count() }} siswa telah mengikuti sumber terbaru dan perlu diperiksa ulang. Koreksi manual yang tersimpan tetap dipertahankan.</p>
+            @endif
             <form method="POST" action="{{ route('rapor-sts.kehadiran', [$kegiatan, $kelas]) }}" id="sts-kehadiran-form">
                 @csrf @method('PUT')<input type="hidden" name="versi" value="{{ $pengaturan->versi }}">
                 <div class="sts-actions">
@@ -185,7 +201,7 @@
                     </tr></thead><tbody>
                     @forelse ($baris as $item)
                         @php $id = $item['anggota']->id; $nama = $item['anggota']->siswa->nama_lengkap; @endphp
-                        <tr data-sts-row>
+                        <tr data-sts-row @class(['sts-row-has-error' => $errors->has('siswa.'.$id.'.*')])>
                             <td class="sts-person">
                                 <div class="sts-identity"><span class="sts-order">{{ $item['anggota']->nomor_absen }}</span><strong>{{ $nama }}</strong></div>
                                 <span class="sts-badge {{ $item['nilai_lengkap'] ? 'is-complete' : '' }}">{{ $item['nilai']->whereNotNull('nilai')->count() }}/{{ $laporan['mapel']->count() }} mapel final</span>
@@ -195,7 +211,7 @@
                             <td>
                                 <div class="sts-attendance">
                             @foreach (['sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa'] as $jenis => $label)
-                                    <div><label for="sts-{{ $jenis }}-{{ $id }}">{{ $label }}</label><input class="input sts-number" id="sts-{{ $jenis }}-{{ $id }}" type="number" name="siswa[{{ $id }}][{{ $jenis }}]" value="{{ old('siswa.'.$id.'.'.$jenis, $item['kehadiran'][$jenis]) }}" min="0" max="366" step="1" required aria-label="{{ $label }} {{ $nama }}" data-sts-original="{{ $item['sumber'][$jenis] }}" @disabled(! $pengaturan->exists)><span class="sts-original">Rekap awal: {{ $item['sumber'][$jenis] }}</span></div>
+                                    <div><label for="sts-{{ $jenis }}-{{ $id }}">{{ $label }}</label><input class="input sts-number" id="sts-{{ $jenis }}-{{ $id }}" type="number" name="siswa[{{ $id }}][{{ $jenis }}]" value="{{ old('siswa.'.$id.'.'.$jenis, $item['kehadiran'][$jenis]) }}" min="0" max="366" step="1" required aria-label="{{ $label }} {{ $nama }}" @if ($errors->has('siswa.'.$id.'.'.$jenis)) aria-invalid="true" aria-describedby="sts-error-{{ $jenis }}-{{ $id }}" @endif data-sts-original="{{ $item['sumber'][$jenis] }}" @disabled(! $pengaturan->exists)><span class="sts-original">Rekap awal: {{ $item['sumber'][$jenis] }}</span>@error('siswa.'.$id.'.'.$jenis)<span class="sts-field-error" id="sts-error-{{ $jenis }}-{{ $id }}">{{ $message }}</span>@enderror</div>
                             @endforeach
                                 </div>
                                 <span class="sts-original">{{ $item['sumber']['hari_tercatat'] }} hari presensi tercatat</span>
@@ -204,12 +220,14 @@
                                     <div><dt>Total keterlambatan</dt><dd><span data-sts-late-minutes>{{ $item['keterlambatan']['total_menit'] }}</span> menit</dd></div>
                                 </dl>
                             </td>
-                            <td><textarea class="input sts-note" name="siswa[{{ $id }}][catatan_koreksi]" maxlength="500" placeholder="Catatan koreksi..." aria-label="Alasan koreksi {{ $nama }}" @disabled(! $pengaturan->exists)>{{ old('siswa.'.$id.'.catatan_koreksi', $item['koreksi']?->catatan_koreksi) }}</textarea><button type="button" class="sts-reset" data-sts-reset @disabled(! $pengaturan->exists)>Kembalikan ke rekap awal</button></td>
+                            <td><textarea class="input sts-note" id="sts-catatan-{{ $id }}" name="siswa[{{ $id }}][catatan_koreksi]" maxlength="500" placeholder="Catatan koreksi..." aria-label="Alasan koreksi {{ $nama }}" @if ($errors->has('siswa.'.$id.'.catatan_koreksi')) aria-invalid="true" aria-describedby="sts-error-catatan-{{ $id }}" @endif @disabled(! $pengaturan->exists)>{{ old('siswa.'.$id.'.catatan_koreksi', $item['koreksi']?->catatan_koreksi) }}</textarea>@error('siswa.'.$id.'.catatan_koreksi')<span class="sts-field-error" id="sts-error-catatan-{{ $id }}">{{ $message }}</span>@enderror<button type="button" class="sts-reset" data-sts-reset @disabled(! $pengaturan->exists)>Kembalikan ke rekap awal</button></td>
                             <td>
                                 <input type="hidden" name="siswa[{{ $id }}][sidik_sumber]" value="{{ $item['sidik_sumber'] }}">
                                 <input type="hidden" name="siswa[{{ $id }}][diperiksa]" value="0">
                                 <label class="sts-check sts-review"><input type="checkbox" name="siswa[{{ $id }}][diperiksa]" value="1" data-sts-reviewed data-sts-saved="{{ (int) $item['diperiksa'] }}" data-sts-source-changed="{{ (int) $item['sumber_berubah'] }}" @checked(old('siswa.'.$id.'.diperiksa', $item['diperiksa'])) @disabled(! $pengaturan->exists)> Diperiksa</label>
                                 <span class="sts-status sts-review-state" data-sts-review-state>{{ $item['sumber_berubah'] ? 'Rekap presensi berubah. Periksa ulang.' : ($item['diperiksa'] ? 'Tersimpan' : 'Belum diperiksa') }}</span>
+                                @error('siswa.'.$id.'.sidik_sumber')<span class="sts-field-error">{{ $message }}</span>@enderror
+                                @error('siswa.'.$id.'.diperiksa')<span class="sts-field-error">{{ $message }}</span>@enderror
                                 @if ($item['koreksi']?->diperiksa_pada)<span class="sts-original">{{ $item['koreksi']->pemeriksa?->nama }}<br>{{ $item['koreksi']->diperiksa_pada->format('d-m-Y H:i') }}</span>@endif
                             </td>
                             <td><div class="sts-report-actions"><a class="button button-muted" target="_blank" rel="noopener" aria-label="Pratinjau rapor {{ $nama }}" href="{{ route('rapor-sts.cetak', [$kegiatan, $kelas, 'anggota_id' => $id, 'pratinjau' => 1]) }}">Pratinjau</a>
@@ -320,6 +338,7 @@
             document.getElementById('sts-kelas').disabled = true;
         });
         (() => {
+            document.getElementById('sts-feedback')?.focus();
             const form = document.getElementById('sts-kehadiran-form');
             if (!form) return;
             const checks = [...form.querySelectorAll('[data-sts-reviewed]')];

@@ -33,6 +33,7 @@ use App\Services\Nilai\LegerStsService;
 use App\Services\Nilai\RaporStsService;
 use App\Services\Nilai\StsManualService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\File;
 use PDO;
 use Tests\TestCase;
 
@@ -1231,6 +1232,7 @@ class RaporStsTest extends TestCase
         $this->get(route('rapor-sts.cetak', [$d['kegiatan'], $d['kelas'], 'anggota_id' => $d['anggota'][1]->id]))->assertOk();
         $this->simpanPeriode($d, ['tanggal_akhir_presensi' => '2026-09-28', 'tanggal_rapor' => '2026-09-30']);
         $payload = $this->payload($d);
+        $payload['siswa'][$id]['alfa'] = 0;
         $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $payload)->assertSessionHasErrors("siswa.$id.catatan_koreksi");
         $payload['siswa'][$id]['alfa'] = 1;
         $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $payload)->assertSessionHasNoErrors();
@@ -1458,6 +1460,99 @@ class RaporStsTest extends TestCase
                 'sidik_kondisi' => $nilai['sidik_kondisi'],
             ]],
         ];
+    }
+
+    public function test_rekap_lama_tanpa_koreksi_manual_mengikuti_periode_baru_dan_32_siswa_dapat_disimpan(): void
+    {
+        Carbon::setTestNow('2026-10-19 10:00');
+        $d = $this->fondasi();
+        $d['kelas']->update(['nama' => 'IX.A Bilingual']);
+        for ($i = 3; $i <= 32; $i++) {
+            $siswa = Siswa::create(['nama_lengkap' => 'Siswa Pemeriksaan '.$i, 'aktif' => true]);
+            $d['anggota']->push(AnggotaKelas::create(['tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelas']->id,
+                'siswa_id' => $siswa->id, 'nomor_absen' => $i, 'status_keanggotaan' => 'aktif']));
+        }
+        foreach ($d['anggota'] as $a) {
+            foreach (['2026-08-31' => 'izin', '2026-10-08' => 'sakit'] as $tanggal => $status) {
+                AbsensiSiswa::create(['tanggal' => $tanggal, 'tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelas']->id,
+                    'anggota_kelas_id' => $a->id, 'siswa_id' => $a->siswa_id, 'status_kehadiran' => $status]);
+            }
+        }
+        $this->simpanPeriode($d, ['tanggal_awal_presensi' => '2026-08-31', 'tanggal_akhir_presensi' => '2026-10-02', 'tanggal_rapor' => '2026-10-16']);
+        $url = route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]);
+        $this->put($url, $this->payload($d))->assertSessionHasNoErrors();
+        $snapshot = KehadiranRaporSts::orderBy('id')->get()->toArray();
+        $presensi = AbsensiSiswa::orderBy('id')->get()->toArray();
+        $this->simpanPeriode($d, ['tanggal_awal_presensi' => '2026-09-01', 'tanggal_akhir_presensi' => '2026-10-14', 'tanggal_rapor' => '2026-10-16']);
+        $laporan = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertCount(32, $laporan['baris']);
+        $this->assertSame(32, $laporan['baris']->where('rekap_diperbarui', true)->count());
+        $this->assertSame(0, $laporan['baris']->where('diperiksa', true)->count());
+        $this->assertTrue($laporan['baris']->every(fn ($b) => $b['kehadiran']['sakit'] === 1 && $b['kehadiran']['izin'] === 0));
+        $index = route('rapor-sts.index', ['kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $d['kelas']->id]);
+        $r = $this->get($index)->assertOk()->assertSeeText('rekap 32 siswa telah mengikuti sumber terbaru');
+        $this->capturePemeriksaan('rekap-baru', $r->getContent());
+        $this->assertSame($snapshot, KehadiranRaporSts::orderBy('id')->get()->toArray(), 'Loading a refreshed form must not write reviews.');
+        $this->put($url, $this->payload($d))->assertSessionHasNoErrors()->assertSessionHas('berhasil');
+        $baru = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $this->assertSame(32, $baru['baris']->where('diperiksa', true)->count());
+        $this->assertSame(0, $baru['baris']->where('sumber_berubah', true)->count());
+        $this->assertDatabaseCount('kehadiran_rapor_sts', 32);
+        $this->assertSame($presensi, AbsensiSiswa::orderBy('id')->get()->toArray());
+        $r = $this->get($index)->assertOk()->assertSeeText('Pemeriksaan kehadiran rapor disimpan.')->assertSeeText('32 dari 32 siswa sudah diperiksa');
+        $this->capturePemeriksaan('tersimpan', $r->getContent());
+    }
+
+    public function test_koreksi_manual_beralasan_tetap_dipertahankan_saat_periode_berubah(): void
+    {
+        $d = $this->fondasi();
+        $this->simpanPeriode($d);
+        $id = $d['anggota'][0]->id;
+        $payload = $this->payload($d);
+        $payload['siswa'][$id]['sakit'] = 3;
+        $payload['siswa'][$id]['catatan_koreksi'] = 'Koreksi sesuai surat sakit yang diverifikasi wali kelas.';
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $payload)->assertSessionHasNoErrors();
+        $this->simpanPeriode($d, ['tanggal_awal_presensi' => '2026-08-01']);
+        $baru = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas']);
+        $b = $baru['baris']->firstWhere('anggota.id', $id);
+        $this->assertSame(0, $b['sumber']['sakit']);
+        $this->assertSame(3, $b['kehadiran']['sakit']);
+        $this->assertSame($payload['siswa'][$id]['catatan_koreksi'], $b['koreksi']->catatan_koreksi);
+        $this->assertFalse($b['rekap_diperbarui']);
+        $this->assertTrue($b['sumber_berubah']);
+        $this->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $this->payload($d))->assertSessionHasNoErrors();
+        $this->assertTrue(app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas'])['baris'][0]['diperiksa']);
+        $this->assertDatabaseHas('kehadiran_rapor_sts', ['anggota_kelas_id' => $id, 'sakit' => 3]);
+    }
+
+    public function test_gagal_simpan_menampilkan_pesan_dan_field_koreksi_tanpa_menghilangkan_isian(): void
+    {
+        $d = $this->fondasi();
+        $this->simpanPeriode($d);
+        $id = $d['anggota'][0]->id;
+        $payload = $this->payload($d);
+        $payload['siswa'][$id]['sakit'] = 2;
+        $payload['siswa'][$id]['catatan_koreksi'] = '';
+        $index = route('rapor-sts.index', ['kegiatan_id' => $d['kegiatan']->id, 'kelas_id' => $d['kelas']->id]);
+        $r = $this->followingRedirects()->from($index)->put(route('rapor-sts.kehadiran', [$d['kegiatan'], $d['kelas']]), $payload)->assertOk();
+        $this->assertDatabaseCount('kehadiran_rapor_sts', 0);
+        $this->capturePemeriksaan('gagal-simpan', $r->getContent());
+        $r->assertSeeText('Perubahan rapor belum tersimpan.')
+            ->assertSeeText('Isi alasan koreksi karena jumlah berbeda dari presensi sumber.')
+            ->assertSee('id="sts-catatan-'.$id.'"', false)->assertSee('aria-invalid="true"', false)
+            ->assertSee('class="sts-row-has-error"', false);
+        $doc = new \DOMDocument;
+        @$doc->loadHTML($r->getContent());
+        $this->assertSame('2', $doc->getElementById('sts-sakit-'.$id)->getAttribute('value'));
+        $this->capturePemeriksaan('gagal-simpan', $r->getContent());
+    }
+
+    private function capturePemeriksaan(string $nama, string $html): void
+    {
+        if (getenv('NUSA_CAPTURE_PEMERIKSAAN_STS')) {
+            File::ensureDirectoryExists(storage_path('framework/testing/pemeriksaan-sts'));
+            File::put(storage_path('framework/testing/pemeriksaan-sts/'.$nama.'.html'), $html);
+        }
     }
 
     private function simpanPeriode(array $d, array $ganti = []): void
