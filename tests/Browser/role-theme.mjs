@@ -62,6 +62,12 @@ try {
     for(const role of ['guru','tu','pimpinan','siswa','orang_tua']){
         const path=Object.keys(pages).find(p=>p===`/role-audit/${role}/beranda`);
         await page.setViewportSize({width:1440,height:960});await ready(path);
+        const section=page.locator('#admin-sidebar details[data-sidebar-section]').first();
+        if(!await section.evaluate(e=>e.open))await section.locator(':scope > summary').click();
+        assert.equal(await section.locator('.sidebar-section-content').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(242, 246, 250)',`Submenu background for ${role}`);
+        assert.equal(await section.locator(':scope > summary').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(234, 241, 247)',`Expanded category heading for ${role}`);
+        await section.scrollIntoViewIfNeeded();
+        await page.screenshot({path:resolve(output,`submenu-${role}-1440.png`)});
         await page.locator('[data-admin-sidebar-toggle]').click();
         assert.ok(await page.locator('body').evaluate(e=>e.classList.contains('admin-sidebar-hidden')));
         await page.locator('[data-admin-sidebar-toggle]').click();
@@ -70,6 +76,10 @@ try {
         await page.locator('[data-admin-sidebar-toggle]').click();
         assert.ok(await page.locator('.app-content').evaluate(e=>e.inert));
         assert.ok(await page.locator('#admin-sidebar').evaluate(e=>e.contains(document.activeElement)));
+        assert.ok(await section.locator('.sidebar-section-content').isVisible(),`Expanded submenu on mobile for ${role}`);
+        assert.equal(await section.locator('.sidebar-section-content').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(242, 246, 250)');
+        await section.scrollIntoViewIfNeeded();
+        await page.screenshot({path:resolve(output,`submenu-${role}-390.png`)});
         await page.keyboard.press('Escape');
         assert.ok(!await page.locator('.app-content').evaluate(e=>e.inert));
     }

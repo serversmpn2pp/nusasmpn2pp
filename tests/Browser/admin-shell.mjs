@@ -104,8 +104,37 @@ try {
       }
     }
   }
+  for(const [width,height] of [[390,844],[1024,768],[1440,960]]){
+    await page.setViewportSize({width,height});
+    await ready('/input-nilai');
+    if(width>760)await selectMode('expanded');
+    else{
+      await page.locator('[data-admin-sidebar-toggle]').click();
+      await page.waitForFunction(()=>Math.abs(document.querySelector('.app-sidebar').getBoundingClientRect().left)<1);
+    }
+    const section=page.locator('details[data-sidebar-section-id="akademik"]');
+    assert.ok(await section.evaluate(e=>e.open));
+    assert.deepEqual(await section.evaluate(e=>{
+      const panel=e.querySelector('.sidebar-section-content'),heading=e.querySelector('summary'),link=panel.querySelector('.sidebar-link');
+      return{panel:getComputedStyle(panel).backgroundColor,heading:getComputedStyle(heading).backgroundColor,
+        indent:Math.round(link.getBoundingClientRect().left-heading.getBoundingClientRect().left),
+        panelWithinSection:panel.getBoundingClientRect().right<=e.getBoundingClientRect().right+1};
+    }),{panel:'rgb(242, 246, 250)',heading:'rgb(234, 241, 247)',indent:12,panelWithinSection:true});
+    const active=section.locator('.sidebar-link.active');
+    assert.deepEqual(await active.evaluate(e=>({background:getComputedStyle(e).backgroundColor,color:getComputedStyle(e).color,accent:getComputedStyle(e).boxShadow})),
+      {background:'rgb(21, 71, 122)',color:'rgb(255, 255, 255)',accent:'rgb(241, 196, 15) 3px 0px 0px 0px inset'});
+    const sibling=section.locator('.sidebar-link:not(.active)').first();
+    await sibling.hover();
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('details[data-sidebar-section-id="akademik"] .sidebar-link:not(.active):hover')).backgroundColor==='rgb(226, 236, 245)');
+    await active.scrollIntoViewIfNeeded();
+    await page.screenshot({path:resolve(output,`submenu-group-${width}.png`)});
+    await section.locator(':scope > summary').click();
+    assert.ok(await section.locator('.sidebar-section-content').isHidden(),'Closing a category must hide the tinted panel');
+    if(width<=760)await page.keyboard.press('Escape');
+  }
   await page.setViewportSize({width:1440,height:960});
   await ready('/beranda');
+  assert.equal(await page.locator('.admin-home-link[aria-current="page"]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(21, 71, 122)');
   await selectMode('collapsed');
   assert.ok(await page.locator('body').evaluate(e=>e.classList.contains('admin-sidebar-collapsed')));
   await page.locator('#admin-sidebar .admin-home-link').click();

@@ -25,21 +25,22 @@
 .nusa-admin-shell .sidebar-section{border:0;margin:0;flex-shrink:0}
 .nusa-admin-shell .sidebar-section[open]{background:transparent}
 .nusa-admin-shell .sidebar-section-summary{display:flex;gap:11px;min-height:48px;padding:11px 12px;color:#40596d;border-radius:6px;font-weight:600}
-.nusa-admin-shell .sidebar-section-summary:hover,.nusa-admin-shell .sidebar-section[open]>.sidebar-section-summary{color:#15477a;background:#f0f5f9}
+.nusa-admin-shell .sidebar-section-summary:hover{color:#15477a;background:#f0f5f9}
 .nusa-admin-shell .sidebar-section-title{font-size:15px;font-weight:600;text-transform:none;overflow-wrap:anywhere}
 .nusa-admin-shell .sidebar-section.has-active>.sidebar-section-summary{color:#15477a;background:#edf4fc}
+.nusa-admin-shell .sidebar-section[open]>.sidebar-section-summary{color:#15477a;background:#eaf1f7;border-radius:6px 6px 0 0}
 .nusa-admin-shell .sidebar-section.has-active>.sidebar-section-summary .sidebar-section-title{color:inherit}
 .nusa-admin-shell .sidebar-section.has-active>.admin-home-link[aria-current=page]{background:#15477a;color:#fff}
 .nusa-admin-shell .admin-home-link .active-dot{width:5px;height:5px;background:#f1c40f;border-radius:50%;margin-left:auto}
 .nusa-admin-shell .sidebar-category-icon{width:19px;height:19px;flex:0 0 auto}
 .nusa-admin-shell .sidebar-section-chevron{margin-left:auto;width:14px;height:14px;color:#8292a0}
 .nusa-admin-shell .sidebar-section-count{display:none}
-.nusa-admin-shell .sidebar-section-content{padding:4px 0 8px 12px}
-.nusa-admin-shell .sidebar-subgroup+.sidebar-subgroup{border-top:1px solid #edf1f4;margin-top:4px;padding-top:6px}
-.nusa-admin-shell .sidebar-subgroup-title{font-size:13px;color:#4d6476;font-weight:600;margin:12px 12px 7px;text-transform:none}
+.nusa-admin-shell .sidebar-section-content{padding:4px 0 8px 12px;background:#f2f6fa;border-radius:0 0 6px 6px}
+.nusa-admin-shell .sidebar-subgroup+.sidebar-subgroup{border-top:1px solid #dde6ef;margin-top:4px;padding-top:6px}
+.nusa-admin-shell .sidebar-subgroup-title{font-size:13px;color:#40596d;font-weight:600;margin:12px 12px 7px;text-transform:none}
 .nusa-admin-shell .sidebar-link{min-height:44px;font-size:14px;font-weight:550;color:#40596d;padding:9px 11px;gap:10px;border-radius:6px}
 .nusa-admin-shell .sidebar-link.active{background:#15477a;color:#fff;border-color:#15477a;box-shadow:inset 3px 0 0 #f1c40f}
-.nusa-admin-shell .sidebar-link:not(.active):hover{background:#edf4fc;color:#15477a;border-color:transparent}
+.nusa-admin-shell .sidebar-link:not(.active):hover{background:#e2ecf5;color:#15477a;border-color:transparent}
 .nusa-admin-shell .sidebar-link-initial{width:19px;height:19px;background:none;border-radius:0;color:inherit}
 .nusa-admin-shell .sidebar-link-initial svg{width:16px;height:16px}
 .nusa-admin-shell .sidebar-search-empty{color:#4d6476;border:1px dashed #cfdce7;font-size:14px;font-weight:400}
@@ -84,7 +85,7 @@
     .nusa-admin-shell.admin-sidebar-collapsed .app-shell{grid-template-columns:76px minmax(0,1fr)}
     .nusa-admin-shell.admin-sidebar-collapsed .sidebar-brand>span:last-child,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-search,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-title,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-chevron,.nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-content{display:none}
     .nusa-admin-shell.admin-sidebar-collapsed .sidebar-brand{padding-inline:16px}
-    .nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-summary{justify-content:center;padding-inline:7px}
+    .nusa-admin-shell.admin-sidebar-collapsed .sidebar-section-summary{justify-content:center;padding-inline:7px;border-radius:6px}
     .nusa-admin-shell.admin-sidebar-hidden .app-shell{grid-template-columns:minmax(0,1fr)}
     .nusa-admin-shell.admin-sidebar-hidden .app-sidebar{display:none}
 }
