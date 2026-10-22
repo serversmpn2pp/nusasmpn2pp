@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\V1\Humas\PengaduanSayaController;
 use App\Http\Controllers\Api\V1\Humas\PertemuanSayaController;
 use App\Http\Controllers\Api\V1\Humas\UmpanBalikController;
 use App\Http\Controllers\Api\V1\Humas\UmpanBalikSayaController;
+use App\Http\Controllers\FaqHumasController;
+use App\Http\Controllers\KinerjaSemesterHumasController;
 use App\Http\Controllers\KontakHumasController;
 use App\Http\Controllers\PaketPertemuanHumasController;
 use App\Http\Controllers\PendukungKemitraanController;
@@ -20,6 +22,26 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('humas')->name('humas.')->middleware('throttle:120,1,humas-akses:')
     ->where(array_fill_keys(['agendaHumas', 'pesertaPertemuanHumas', 'tindakLanjutAgendaHumas', 'tiket', 'lampiran', 'formulir', 'pertanyaan', 'tindak', 'dokumenHumas', 'riwayatDokumenHumas', 'kontak', 'mou', 'publikasi'], '[0-9]{1,18}') + ['token' => '[A-Za-z0-9]{64}'])
     ->group(function () {
+        Route::prefix('faq')->name('faq.')->where(['faq' => '[0-9]{1,18}'])->controller(FaqHumasController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/referensi', 'referensi')->name('referensi');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{faq}', 'show')->name('show');
+            Route::patch('/{faq}', 'update')->name('update');
+            Route::patch('/{faq}/status', 'status')->name('status');
+            Route::get('/{faq}/riwayat', 'riwayat')->name('riwayat');
+        });
+        Route::prefix('kinerja')->name('kinerja.')->where(['kinerja' => '[0-9]{1,18}'])->controller(KinerjaSemesterHumasController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/referensi', 'referensi')->name('referensi');
+            Route::get('/pratinjau', 'pratinjau')->name('pratinjau');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{kinerja}', 'show')->name('show');
+            Route::patch('/{kinerja}', 'update')->name('update');
+            Route::post('/{kinerja}/tindakan/{aksi}', 'tindakan')->whereIn('aksi', ['perbarui-data', 'finalisasi', 'buka-revisi'])->name('tindakan');
+            Route::get('/{kinerja}/riwayat', 'riwayat')->name('riwayat');
+            Route::get('/{kinerja}/cetak', 'cetak')->name('cetak');
+        });
         Route::prefix('kontak')->name('kontak.')->controller(KontakHumasController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/referensi', 'referensi')->name('referensi');

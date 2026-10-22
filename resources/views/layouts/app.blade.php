@@ -2176,6 +2176,7 @@
                     'title' => 'Akun Saya',
                     'items' => [
                         ['label' => 'Profil & Akun', 'route' => 'profil-siswa.show', 'active' => ['profil-siswa.*', 'kata-sandi.*'], 'initial' => 'PA', 'izin' => null],
+                        ['label' => 'FAQ & Bantuan', 'route' => 'faq-humas.index', 'active' => ['faq-humas.*'], 'initial' => 'FQ', 'izin' => null],
                     ],
                 ],
             ];
@@ -2206,6 +2207,7 @@
                     'title' => 'Akun Saya',
                     'items' => [
                         ['label' => 'Ganti Password', 'route' => 'kata-sandi.edit', 'active' => ['kata-sandi.*'], 'initial' => 'KS', 'izin' => null],
+                        ['label' => 'FAQ & Bantuan', 'route' => 'faq-humas.index', 'active' => ['faq-humas.*'], 'initial' => 'FQ', 'izin' => null],
                     ],
                 ],
             ];

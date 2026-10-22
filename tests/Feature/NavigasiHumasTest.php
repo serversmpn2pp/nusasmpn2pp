@@ -143,7 +143,8 @@ class NavigasiHumasTest extends TestCase
     public function test_izin_dashboard_saja_tidak_membuka_bidang_dan_pemeriksa_konten_tidak_mendapat_hak_kelola(): void
     {
         $akun = $this->terbatas(['dashboard_humas.lihat']);
-        $this->actingAs($akun)->get(route('dashboard-humas.index'))->assertOk()->assertViewHas('ruangKerja', [])->assertViewHas('layananPendukung', []);
+        $this->actingAs($akun)->get(route('dashboard-humas.index'))->assertOk()->assertViewHas('ruangKerja', [])
+            ->assertViewHas('layananPendukung', fn ($items) => array_column($items, 'kode') === ['faq-humas']);
         $this->withToken($akun->createToken('uji', ['mobile'])->plainTextToken)
             ->getJson(route('api.v1.humas.dashboard.index'))->assertOk()->assertJsonCount(0, 'data.ruang_kerja');
 

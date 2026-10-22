@@ -52,7 +52,7 @@ class HumasApiTest extends TestCase
     public function test_semua_rute_memerlukan_token_mobile_aktif_dan_sandi_baru(): void
     {
         $routes = collect(Route::getRoutes())->filter(fn ($r) => str_starts_with($r->getName() ?? '', 'api.v1.humas.'));
-        $this->assertCount(93, $routes);
+        $this->assertCount(109, $routes);
         foreach ($routes as $r) {
             foreach (['auth:sanctum', 'abilities:mobile', 'akun_api_aktif', 'kata_sandi_api_bukan_default'] as $guard) {
                 $this->assertContains($guard, $r->gatherMiddleware(), $r->uri());

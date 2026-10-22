@@ -1,9 +1,10 @@
 # API Humas
 
-Base path: `/api/v1/humas`. Tersedia 93 endpoint (50 tahap pertama, 20 dashboard/arsip, 4 klasifikasi/kaitan, dan 19 operasional).
+Base path: `/api/v1/humas`. Tersedia 109 endpoint (50 tahap pertama, 20 dashboard/arsip, 4 klasifikasi/kaitan, 19 operasional, dan 16 FAQ/kinerja).
 Pembaruan klasifikasi/kaitan memerlukan migrasi
 `2026_10_22_000001_tambah_klasifikasi_dan_kaitan_dokumen_humas` dan
-`2026_10_22_000002_lengkapi_operasional_humas`.
+`2026_10_22_000002_lengkapi_operasional_humas`, serta
+`2026_10_22_000003_buat_faq_dan_kinerja_semester_humas` untuk FAQ/laporan semester.
 Lihat `docs/arsip-humas.md` untuk penataan metadata lama. Layar/menu Android Humas
 yang sudah tersedia tetap kompatibel; lihat `docs/mobile-humas.md` untuk cakupan
 APK. Kontrak API baru tidak berarti layar klasifikasi/kaitan sudah ada di APK lama.
@@ -23,6 +24,9 @@ Jangan mengirim token lewat query string, menyimpan kredensial di dokumen, atau 
 tanpa header Authorization. Gunakan HTTPS pada server sekolah.
 
 Semua endpoint memerlukan akun aktif dan kata sandi yang sudah diganti jika diwajibkan.
+Pengecualian layanan petugas: pembacaan FAQ tersedia juga untuk siswa/orang tua,
+hanya untuk FAQ terbit yang sesuai identitas akun. Detail kontrak baru ada di
+`faq-kinerja-humas.md`. Endpoint FAQ/kinerja belum menambahkan layar native pada APK.
 Petugas mengikuti izin NUSA; orang tua dan siswa tidak dapat mengakses endpoint petugas meskipun
 secara keliru mendapatkan peran Humas. Endpoint `*-saya` memerlukan akun orang tua yang benar-benar
 terhubung, bukan sekadar nama peran. Pengaduan hanya milik pelapor; undangan dan evaluasi juga

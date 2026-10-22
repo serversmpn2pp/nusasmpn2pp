@@ -1,0 +1,14 @@
+@extends('layouts.app')
+@section('admin-module', 'humas')
+@section('title', 'Laporan Kinerja Semester Humas - NUSA')
+@section('content')
+@include('humas._operasional-style')
+@include('humas._faq-kinerja-style')
+<div class="page-header"><div><p class="eyebrow">Humas / Dokumen Kedinasan</p><h1 class="page-title">Laporan kinerja semester</h1></div>@if($kelola)<a class="button button-primary" href="{{ route('kinerja-humas.create') }}"><i data-lucide="file-plus" aria-hidden="true"></i>Himpun laporan</a>@endif</div>
+@include('agenda-humas._messages')
+<form class="ho-band ho-band--blue ho-filter" method="GET" action="{{ route('kinerja-humas.index') }}"><div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select class="select" id="tahun_pelajaran_id" name="tahun_pelajaran_id"><option value="">Semua tahun</option>@foreach($tahun as $t)<option value="{{ $t->id }}" @selected(($filter['tahun_pelajaran_id'] ?? '')==$t->id)>{{ $t->nama }}</option>@endforeach</select></div>
+@foreach(['semester'=>['Semester',\App\Models\KinerjaSemesterHumas::SEMESTER],'status'=>['Status',\App\Models\KinerjaSemesterHumas::STATUS]] as $k=>[$label,$opsi])<div class="field"><label for="{{ $k }}">{{ $label }}</label><select class="select" id="{{ $k }}" name="{{ $k }}"><option value="">Semua {{ strtolower($label) }}</option>@foreach($opsi as $key=>$v)<option value="{{ $key }}" @selected(($filter[$k] ?? '')===$key)>{{ $v }}</option>@endforeach</select></div>@endforeach
+<div class="actions"><button class="button button-primary"><i data-lucide="search" aria-hidden="true"></i>Cari</button><a class="button button-muted" href="{{ route('kinerja-humas.index') }}">Reset</a></div></form>
+<div class="fk-list-heading"><h2>Arsip laporan semester</h2><span>{{ $daftar->total() }} laporan</span></div>
+<table class="ho-table"><colgroup><col style="width:40%"><col><col style="width:140px"><col style="width:116px"></colgroup><thead><tr><th>Laporan</th><th>Periode & data</th><th>Status</th><th></th></tr></thead><tbody>@forelse($daftar as $l)<tr><td><strong><a href="{{ route('kinerja-humas.show',$l) }}">{{ $l->judul }}</a></strong><small>{{ $l->nama_penyusun }} &middot; {{ $l->tanggal_laporan->format('d-m-Y') }}</small></td><td data-label="Periode & data">{{ $l->snapshot['tahun_pelajaran'] }} &middot; {{ ucfirst($l->semester) }}<small>Data s.d. {{ \Carbon\Carbon::parse($l->snapshot['data_sampai'])->format('d-m-Y') }}</small></td><td data-label="Status"><span class="badge {{ $l->status==='final'?'badge-active':'badge-warning' }}">{{ \App\Models\KinerjaSemesterHumas::STATUS[$l->status] }}</span>@if($l->snapshot['sementara'])<small>Semester berjalan</small>@endif</td><td><a class="button button-muted" href="{{ route('kinerja-humas.show',$l) }}">Lihat</a></td></tr>@empty<tr><td colspan="4" class="empty-state">Belum ada laporan kinerja untuk periode ini.</td></tr>@endforelse</tbody></table>{{ $daftar->links() }}
+@endsection

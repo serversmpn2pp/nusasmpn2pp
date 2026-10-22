@@ -1,0 +1,1 @@
+<table class="fk-month"><thead><tr><th>Bulan</th>@foreach($snapshot['kolom_bulanan'] as $label)<th>{{ $label }}</th>@endforeach</tr></thead><tbody>@foreach($snapshot['bulan'] as $b)<tr><td>{{ $b['label'] }}</td>@foreach($snapshot['kolom_bulanan'] as $kode=>$label)<td>{{ $b['jumlah'][$kode] ?? 0 }}</td>@endforeach</tr>@endforeach</tbody></table>

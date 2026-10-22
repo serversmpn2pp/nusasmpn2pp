@@ -9,7 +9,7 @@ Hak akses diperiksa per layanan, bukan berdasarkan nama role Humas semata.
 
 | Bidang | Layanan |
 | --- | --- |
-| Dokumen Kedinasan Humas | Program kerja, pusat dokumen, portofolio akreditasi |
+| Dokumen Kedinasan Humas | Program kerja, laporan kinerja semester, pusat dokumen, portofolio akreditasi, direktori kontak |
 | Dokumen Komite Sekolah | Kepengurusan/program komite, rapat komite |
 | Hubungan Orang Tua/Wali | Pertemuan orang tua, umpan balik |
 | Kemitraan & Kerja Sama | Mitra/MoU, pertemuan mitra |
@@ -17,7 +17,7 @@ Hak akses diperiksa per layanan, bukan berdasarkan nama role Humas semata.
 | Database & Portofolio Alumni | Database alumni |
 | Aspirasi & Pengaduan | Tiket dan penanganan pengaduan |
 
-Agenda umum dan buku tamu tetap tersedia sebagai layanan pendukung. Statistik,
+Agenda umum, buku tamu, dan FAQ tetap tersedia sebagai layanan pendukung. Statistik,
 periode, cetak ringkasan, URL modul, data, dan format cetak lama tetap dipertahankan.
 Pertemuan komite/orang tua/mitra membuka agenda dengan filter jenis yang sudah
 didukung. Pada halaman detail, satu menu aktif dipilih berdasarkan jenis agenda.
@@ -61,8 +61,9 @@ Metadata arsip per bidang memakai menu native dokumen yang sama dengan filter
 `urusan`. Penambahan kontrak API tidak otomatis memperbarui layar APK yang sudah
 terpasang. Tahap operasional menambahkan direktori kontak pada bidang Kedinasan,
 paket pertemuan di agenda, pendukung MoU, serta akses publikasi milik sendiri.
-Lihat `operasional-humas.md`. FAQ dan laporan kinerja semester resmi tetap di luar
-cakupan saat ini.
+Lihat `operasional-humas.md`. FAQ dan laporan kinerja semester ditambahkan melalui
+migrasi tahap keempat; lihat `faq-kinerja-humas.md`. FAQ tersedia di Akun Saya untuk
+siswa/orang tua, dengan isi terbit sesuai pembaca, bukan navigasi petugas Humas.
 
 ## Setelah Pull
 
@@ -74,3 +75,6 @@ seeder atau memasang ulang role untuk perubahan ini.
 Tahap operasional membutuhkan migrasi `2026_10_22_000002_lengkapi_operasional_humas`.
 Role Kontributor Publikasi disiapkan tanpa otomatis dipasangkan kepada guru mana
 pun. Administrator dapat memasangnya melalui pengelolaan akun/role yang sudah ada.
+
+FAQ/laporan semester membutuhkan migrasi `2026_10_22_000003_buat_faq_dan_kinerja_semester_humas`.
+Tidak ada FAQ, laporan, atau isi kebijakan contoh yang ditambahkan ke data sekolah.

@@ -26,6 +26,7 @@ use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenHumasController;
 use App\Http\Controllers\DokumenPoinSiswaController;
 use App\Http\Controllers\ExportHasilUjianCbtController;
+use App\Http\Controllers\FaqHumasController;
 use App\Http\Controllers\FinalisasiHasilUjianTerpusatController;
 use App\Http\Controllers\FotoIdentitasController;
 use App\Http\Controllers\GuruMataPelajaranController;
@@ -53,6 +54,7 @@ use App\Http\Controllers\KelasController;
 use App\Http\Controllers\KelasWaliController;
 use App\Http\Controllers\KemitraanHumasController;
 use App\Http\Controllers\KenaikanKelasController;
+use App\Http\Controllers\KinerjaSemesterHumasController;
 use App\Http\Controllers\KlarifikasiSiswaPembinaanController;
 use App\Http\Controllers\KlipingBeritaHumasController;
 use App\Http\Controllers\KomiteHumasController;
@@ -897,6 +899,26 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
                 Route::get('/{aset}', 'show')->name('show');
                 Route::get('/{aset}/berkas/{berkas}', 'berkas')->name('berkas');
             });
+        });
+
+        Route::prefix('faq-humas')->name('faq-humas.')->where(['faq' => '[0-9]{1,18}'])->controller(FaqHumasController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/tambah', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{faq}', 'show')->name('show');
+            Route::get('/{faq}/edit', 'edit')->name('edit');
+            Route::put('/{faq}', 'update')->name('update');
+            Route::patch('/{faq}/status', 'status')->name('status');
+        });
+        Route::prefix('kinerja-humas')->name('kinerja-humas.')->where(['kinerja' => '[0-9]{1,18}'])->controller(KinerjaSemesterHumasController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/tambah', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{kinerja}', 'show')->name('show');
+            Route::get('/{kinerja}/edit', 'edit')->name('edit');
+            Route::put('/{kinerja}', 'update')->name('update');
+            Route::get('/{kinerja}/cetak', 'cetak')->name('cetak');
+            Route::post('/{kinerja}/tindakan/{aksi}', 'tindakan')->whereIn('aksi', ['perbarui-data', 'finalisasi', 'buka-revisi'])->name('tindakan');
         });
 
         Route::prefix('kontak-humas')->name('kontak-humas.')->controller(KontakHumasController::class)->group(function () {

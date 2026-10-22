@@ -101,7 +101,7 @@ class OperasionalHumasTest extends TestCase
         $this->token($a);
         $this->getJson(route('api.v1.humas.publikasi.show', $p))->assertOk()->assertJsonPath('data.hak_akses.dapat_edit', true)->assertJsonPath('data.hak_akses.dapat_tayang', false);
         $menus = app(NavigasiHumasService::class)->sidebar($a);
-        $this->assertSame(['publikasi-humas'], array_column($menus, 'kode'));
+        $this->assertSame(['publikasi-humas', 'faq-humas'], array_column($menus, 'kode'));
         $this->assertFalse($a->memilikiIzin('publikasi_humas.periksa'));
         $this->assertFalse($a->memilikiIzin('publikasi_humas.kelola'));
     }

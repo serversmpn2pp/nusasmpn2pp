@@ -37,7 +37,7 @@ class NavigasiHumasService
             return [];
         }
 
-        $items = [];
+        $items = [$this->item('faq-humas', 'FAQ & Bantuan', 'faq-humas.index', null, 'circle-help')];
         if ($akun->memilikiIzin(['agenda_humas.lihat', 'agenda_humas.kelola'])) {
             $items[] = $this->item('agenda-humas', 'Agenda & Pertemuan', 'agenda-humas.index', ['agenda_humas.lihat', 'agenda_humas.kelola'], 'calendar-days');
         }
@@ -144,6 +144,7 @@ class NavigasiHumasService
         return [
             ['kode' => 'kedinasan', 'label' => 'Dokumen Kedinasan Humas', 'ikon' => 'school', 'warna' => 'blue', 'items' => [
                 $this->item('program-kerja-humas', 'Program Kerja Humas', 'program-kerja-humas.index', ['program_kerja_humas.lihat', 'program_kerja_humas.kelola'], 'clipboard-list'),
+                $this->item('kinerja-humas', 'Laporan Kinerja Semester', 'kinerja-humas.index', ['kinerja_humas.lihat', 'kinerja_humas.kelola'], 'file-chart-column'),
                 $this->item('dokumen-humas', 'Pusat Dokumen Humas', 'dokumen-humas.index', ['dokumen_humas.lihat', 'dokumen_humas.kelola'], 'files'),
                 $this->item('akreditasi-humas', 'Portofolio Akreditasi', 'akreditasi-humas.index', ['akreditasi_humas.lihat', 'akreditasi_humas.kelola'], 'clipboard-check'),
                 $this->item('kontak-humas', 'Direktori Kontak', 'kontak-humas.index', KontakHumas::IZIN, 'contact-round'),
