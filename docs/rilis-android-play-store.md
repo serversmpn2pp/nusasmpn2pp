@@ -4,7 +4,91 @@ Upload key dibuat dan disimpan oleh pengelola sekolah pada komputer pengembang,
 bukan server Laravel. Kunci tersebut berbeda dari service-account Firebase.
 Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
-## AAB terbaru — 1.0.2+3, 13 Oktober 2026
+## AAB terbaru — 1.0.3+4, 23 Oktober 2026
+
+File untuk diunggah ke pembaruan **closed testing — Alpha**:
+[app-release-1.0.3-4.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.3-4.aab).
+Salinan bernama versi ini identik dengan keluaran
+`mobile/build/app/outputs/bundle/release/app-release.aab` yang selesai pada
+**06.25.44 WIB**. Ukuran **95.782.125 byte** (sekitar **95,8 MB / 91,3 MiB**).
+Versi sebelumnya 1.0.0+1, 1.0.1+2, dan 1.0.2+3 tetap disimpan di
+`mobile/build/releases/`; jangan mengunggah berkas lama untuk pembaruan ini.
+
+SHA-256:
+
+```text
+4173D5B62928527E36434A92C5FA34D6A1469D70487F9FDBD39F00303F592315
+```
+
+### Isi dan verifikasi build
+
+- Source HEAD `634d78c`, dengan kenaikan versi di `mobile/pubspec.yaml` menjadi
+  **1.0.3+4**. Package tetap `id.sch.smpn2padangpanjang.nusa`; manifest final
+  memakai min SDK **24**, target SDK **36**, bukan debug, `allowBackup=false`,
+  dan `extractNativeLibs=false`.
+- Flutter **3.47.1 / Dart 3.13.1**; build memakai perintah produksi di bawah,
+  dependensi terkunci tanpa upgrade (`pub get --offline --enforce-lockfile`,
+  kemudian `--no-pub`), API HTTPS sekolah, dan upload key yang sama dengan
+  1.0.2+3. Keystore/password tidak diganti atau dicetak.
+- Memuat pembaruan native Humas: FAQ/bantuan, laporan kinerja semester,
+  direktori kontak, publikasi/persetujuan, program kerja, komite, kemitraan,
+  portofolio akreditasi, aset promosi, media resmi, kliping, prestasi, dan alumni
+  sesuai izin akun. Ketiga `libapp.so` memuat seluruh **13 penanda Humas** serta
+  penanda API produksi, STS, privasi, dan permintaan penghapusan akun.
+- Analyzer bersih; seluruh **800 tes Flutter lulus**. Subset API Humas/menu/
+  notifikasi: **148 tes / 5.515 assertion lulus**. Tes memakai fixture sintetis
+  dan SQLite di memori, bukan database sekolah atau pengguna produksi.
+- `bundletool validate` CLI **1.18.3**, `jar --validate`, pemeriksaan CRC/
+  duplikasi ZIP, dan `jarsigner -verify` lulus. Fingerprint sertifikat upload
+  cocok dengan AAB 1.0.2+3.
+- Konfigurasi AAB meminta `PAGE_ALIGNMENT_16K`; seluruh **14 ELF 64-bit** lolos
+  pemeriksa Android Studio untuk LOAD/RELRO (**0 masalah**). Metrik mentah akhir
+  RELRO pada skrip Python hanya informasional, bukan penentu kelulusan.
+- APK universal **diagnostik** yang dibuat dari AAB lulus
+  `zipalign -v -c -P 16 4`. Berkas `diagnostic-16kb.apks` dan
+  `diagnostic-16kb.apk` di `mobile/build/aab-validation-1.0.3-4/` memakai
+  **debug key standar**, bukan artefak rilis; jangan unggah/pasang untuk
+  distribusi. Pemeriksaan ini bukan uji runtime perangkat 16 KB atau validasi
+  APK split aktual dari Google Play.
+- Log build/tes tersedia di `mobile/build/build-release-1.0.3-4.log` dan
+  `mobile/build/test-release-1.0.3-4.log`; bukti validasi artefak ada di
+  `mobile/build/aab-validation-1.0.3-4/`.
+
+Peringatan Java/KGP plugin `firebase_core`/`mobile_scanner`, font Cupertino,
+sertifikat self-signed/tanpa timestamp, dan pembaca streaming JDK masih muncul
+tanpa menggagalkan build/verifikasi. Tidak mengubah dependensi atau mengurangi
+perlindungan aplikasi untuk menyembunyikan peringatan.
+
+### Sebelum mengunggah versi ini
+
+1. Pastikan backend produksi memuat API/menu Humas terbaru dan migrasi Humas
+   `2026_10_22_000001` sampai `2026_10_22_000004` yang dijelaskan dalam
+   [panduan mobile Humas](D:/nusasmpn2pp/docs/mobile-humas.md). Build ini tidak
+   melakukan deployment, migrasi, seeder, restart worker, atau perubahan server.
+2. Pada track **closed testing — Alpha yang sama**, buat rilis baru dan unggah
+   salinan `app-release-1.0.3-4.aab`. Version code **4** harus belum pernah
+   digunakan di Play Console; riwayat Console tidak diakses dalam pekerjaan ini.
+   Jangan mengakhiri track atau menghapus daftar tester untuk melakukan update.
+3. Setelah disetujui/dipublikasikan, uji update melalui Play Store: login,
+   akses Humas menurut peran, kamera/galeri/QR, unggahan/unduhan, formulir,
+   notifikasi, serta ekspor/cetak. Kamera/push dan perilaku HP nyata belum diuji
+   dari AAB ini. Tinjau deklarasi Data Safety jika cakupan data berubah.
+
+Contoh catatan rilis:
+
+```text
+<id>
+Pembaruan layanan Humas dengan menu native dan navigasi yang lebih konsisten.
+Penambahan FAQ, laporan kinerja semester, direktori kontak, dan alur publikasi.
+Akses program kerja, komite, kemitraan, akreditasi, aset promosi, media resmi, kliping, prestasi, dan alumni sesuai izin akun.
+Penyempurnaan formulir, unggahan lampiran, pencarian, dan riwayat perubahan.
+</id>
+```
+
+Belum mengunggah atau menerbitkan AAB ini di Play Console. Pemeriksaan lokal
+bukan jaminan persetujuan reviewer atau pengganti pre-launch report/uji perangkat.
+
+## Riwayat AAB — 1.0.2+3, 13 Oktober 2026
 
 File untuk diunggah:
 [app-release-1.0.2-3.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.2-3.aab).
