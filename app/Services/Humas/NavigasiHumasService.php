@@ -94,7 +94,7 @@ class NavigasiHumasService
 
     public function untukApi(Pengguna $akun): array
     {
-        $native = ['agenda-humas', 'dokumen-humas', 'pengaduan-humas', 'umpan-balik-humas'];
+        $native = ['agenda-humas', 'dokumen-humas', 'pengaduan-humas', 'umpan-balik-humas', 'faq-humas', 'kinerja-humas', 'kontak-humas', 'publikasi-humas', 'program-kerja-humas', 'komite-humas', 'kemitraan-humas', 'akreditasi-humas'];
 
         return array_map(function ($ruang) use ($native) {
             $ruang['items'] = array_map(function ($item) use ($native) {
@@ -122,7 +122,7 @@ class NavigasiHumasService
             }
         }
 
-        return $kode === 'agenda-humas' ? 'Agenda & Layanan Pendukung' : null;
+        return in_array($kode, ['agenda-humas', 'faq-humas'], true) ? 'Agenda & Layanan Pendukung' : null;
     }
 
     private function bolehMembuka(Pengguna $akun): bool

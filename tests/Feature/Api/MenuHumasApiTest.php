@@ -25,7 +25,7 @@ class MenuHumasApiTest extends TestCase
             ->assertJsonMissing(['kode' => 'pertemuan-saya']);
         $groups = collect($response->json('data.kelompok'))->where('kode', 'humas');
         $this->assertCount(1, $groups);
-        $this->assertCount(5, $groups->first()['items']);
+        $this->assertCount(13, $groups->first()['items']);
         $codes = collect($response->json('data.kelompok'))->pluck('items')->flatten(1)->pluck('kode');
         $this->assertCount($codes->count(), $codes->unique());
     }
@@ -63,7 +63,8 @@ class MenuHumasApiTest extends TestCase
         $user->update(['siswa_id' => $student->id]);
         $user->daftarPeran()->attach(Peran::where('kode', 'wakil_pimpinan_humas')->firstOrFail());
         $this->withToken($user->createToken('test', ['mobile'])->plainTextToken)
-            ->getJson(route('api.v1.menu'))->assertOk()->assertJsonMissing(['kode' => 'humas']);
+            ->getJson(route('api.v1.menu'))->assertOk()->assertJsonFragment(['kode' => 'faq-humas'])
+            ->assertJsonMissing(['kode' => 'agenda-humas'])->assertJsonMissing(['kode' => 'kinerja-humas']);
     }
 
     private function user(string $username): Pengguna

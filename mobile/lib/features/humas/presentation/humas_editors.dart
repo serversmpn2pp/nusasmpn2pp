@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -247,6 +245,32 @@ Future<bool> editHumasDocument(
         maxLength: 120,
         initial: data['nomor_dokumen'],
       ),
+      if (humasMap(references['urusan']).isNotEmpty)
+        HumasField(
+          'urusan',
+          'Urusan',
+          kind: HumasFieldKind.choice,
+          options: humasOptions(references['urusan']),
+          initial: data['urusan'],
+          required: document == null,
+          selectFirst: false,
+        ),
+      if (humasMap(references['jenis_dokumen']).isNotEmpty)
+        HumasField(
+          'jenis_dokumen',
+          'Jenis dokumen',
+          kind: HumasFieldKind.choice,
+          options: humasOptions(references['jenis_dokumen']),
+          initial: data['jenis_dokumen'],
+          required: document == null,
+          selectFirst: false,
+        ),
+      if (document != null && humasMap(references['urusan']).isNotEmpty)
+        const HumasField(
+          'konfirmasi_klasifikasi',
+          'Konfirmasi urusan dan jenis dokumen sudah diperiksa',
+          kind: HumasFieldKind.boolean,
+        ),
       HumasField(
         'deskripsi',
         'Deskripsi',
@@ -298,6 +322,26 @@ Future<bool> editHumasDocument(
           )
         : null,
     onSave: (values) async {
+      final confirmed = values.remove('konfirmasi_klasifikasi') == true;
+      final supportsClassification =
+          humasMap(references['urusan']).isNotEmpty &&
+          humasMap(references['jenis_dokumen']).isNotEmpty;
+      final classificationChanged =
+          humasText(values['urusan'], '') != humasText(data['urusan'], '') ||
+          humasText(values['jenis_dokumen'], '') !=
+              humasText(data['jenis_dokumen'], '');
+      if (supportsClassification &&
+          (confirmed || classificationChanged || document == null)) {
+        if (humasText(values['urusan'], '').isEmpty ||
+            humasText(values['jenis_dokumen'], '').isEmpty) {
+          throw const ValidationException(
+            'Pilih urusan dan jenis dokumen sebelum mengonfirmasi klasifikasi.',
+          );
+        }
+      } else {
+        values.remove('urusan');
+        values.remove('jenis_dokumen');
+      }
       final payload = {
         ...values,
         if (document != null) 'sidik': document['sidik'],
@@ -327,24 +371,22 @@ Future<bool> editHumasDocument(
   );
 }
 
-class HumasPickedFile {
-  const HumasPickedFile(this.name, this.bytes);
-  final String name;
-  final Uint8List bytes;
-}
-
 class HumasFilesField extends StatefulWidget {
   const HumasFilesField({
     required this.maxFiles,
     required this.maxMb,
     required this.extensions,
     required this.onChanged,
+    this.enabled = true,
+    this.onBusyChanged,
     super.key,
   });
   final int maxFiles;
   final int maxMb;
   final List<String> extensions;
   final ValueChanged<List<HumasPickedFile>> onChanged;
+  final bool enabled;
+  final ValueChanged<bool>? onBusyChanged;
   @override
   State<HumasFilesField> createState() => _HumasFilesFieldState();
 }
@@ -354,10 +396,12 @@ class _HumasFilesFieldState extends State<HumasFilesField> {
   bool _picking = false;
   String? _error;
   Future<void> _pick() async {
+    if (_picking || !widget.enabled) return;
     setState(() {
       _picking = true;
       _error = null;
     });
+    widget.onBusyChanged?.call(true);
     try {
       final picked = widget.maxFiles == 1
           ? [
@@ -390,7 +434,10 @@ class _HumasFilesFieldState extends State<HumasFilesField> {
     } catch (error) {
       if (mounted) setState(() => _error = humasError(error));
     } finally {
-      if (mounted) setState(() => _picking = false);
+      if (mounted) {
+        setState(() => _picking = false);
+        widget.onBusyChanged?.call(false);
+      }
     }
   }
 
@@ -409,14 +456,17 @@ class _HumasFilesFieldState extends State<HumasFilesField> {
             title: Text(_files[i].name),
             trailing: IconButton(
               icon: const Icon(Icons.close),
-              onPressed: () {
-                setState(() => _files.removeAt(i));
-                widget.onChanged(List.unmodifiable(_files));
-              },
+              onPressed: !widget.enabled
+                  ? null
+                  : () {
+                      setState(() => _files.removeAt(i));
+                      widget.onChanged(List.unmodifiable(_files));
+                    },
             ),
           ),
         OutlinedButton.icon(
-          onPressed: _picking || _files.length >= widget.maxFiles
+          onPressed:
+              !widget.enabled || _picking || _files.length >= widget.maxFiles
               ? null
               : _pick,
           icon: const Icon(Icons.attach_file),

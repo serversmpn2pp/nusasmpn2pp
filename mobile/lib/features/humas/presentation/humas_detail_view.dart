@@ -7,7 +7,10 @@ import 'package:nusa/features/humas/presentation/humas_agenda_content.dart';
 import 'package:nusa/features/humas/presentation/humas_complaint_content.dart';
 import 'package:nusa/features/humas/presentation/humas_document_content.dart';
 import 'package:nusa/features/humas/presentation/humas_feedback_content.dart';
+import 'package:nusa/features/humas/presentation/humas_faq_kinerja_content.dart';
+import 'package:nusa/features/humas/presentation/humas_contact_publication_content.dart';
 import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
+import 'package:nusa/features/humas/presentation/humas_work_views.dart';
 
 class HumasDetailView extends ConsumerStatefulWidget {
   const HumasDetailView({required this.module, required this.id, super.key});
@@ -94,6 +97,31 @@ class _HumasDetailViewState extends ConsumerState<HumasDetailView> {
                     if (_error != null) HumasErrorView(_error!, onRetry: _load),
                     if (!_loading && _error == null && _data != null)
                       switch (widget.module) {
+                        HumasModule.programs ||
+                        HumasModule.committee ||
+                        HumasModule.partners ||
+                        HumasModule.accreditation => HumasWorkContent(
+                          kind: widget.module.path,
+                          base: widget.module.path,
+                          data: _data!,
+                          repository: repo,
+                          onChanged: _load,
+                        ),
+                        HumasModule.contacts || HumasModule.publications =>
+                          HumasContactPublicationContent(
+                            module: widget.module,
+                            data: _data!,
+                            repository: repo,
+                            onChanged: _load,
+                          ),
+                        HumasModule.faq ||
+                        HumasModule.performance => HumasFaqKinerjaContent(
+                          module: widget.module,
+                          data: _data!,
+                          repository: repo,
+                          manage: manage,
+                          onChanged: _load,
+                        ),
                         HumasModule.agenda ||
                         HumasModule.invitations => HumasAgendaContent(
                           data: _data!,

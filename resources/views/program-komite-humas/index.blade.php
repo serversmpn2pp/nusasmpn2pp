@@ -7,7 +7,7 @@
 @section('content')
 <div class="publikasi-page komite-page">
     @include('program-komite-humas._header', ['judulHalaman' => 'Program kerja komite'])
-    <div class="agenda-metrics">@foreach ($statistik as $kode => $jumlah)<div class="agenda-metric"><span>{{ \App\Models\ProgramKomiteHumas::STATUS[$kode] }}</span><strong>{{ $jumlah }}</strong></div>@endforeach</div>
+    <div class="agenda-metrics">@foreach ($statistik as $kode => $jumlah)<div class="agenda-metric" data-tone="{{ ['rencana' => 'warning', 'berjalan' => 'success', 'selesai' => 'success'][$kode] ?? 'neutral' }}"><span>{{ \App\Models\ProgramKomiteHumas::STATUS[$kode] }}</span><strong>{{ $jumlah }}</strong></div>@endforeach</div>
     <section class="agenda-section">
         <form method="GET" class="feature-filter program-filter">
             <div class="field"><label for="kata_kunci">Cari program</label><input id="kata_kunci" name="kata_kunci" class="input" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120"></div>
@@ -16,7 +16,7 @@
             <div class="actions"><button class="button button-primary" type="submit">Terapkan</button><a class="button button-muted" href="{{ route('komite-humas.program.index', $periode) }}">Reset</a></div>
         </form>
     </section>
-    <ul class="program-list">@forelse ($daftar as $program)<li class="program-row">
+    <ul class="program-list humas-records">@forelse ($daftar as $program)<li class="program-row">
         <div><div class="komite-tags"><span class="program-badge program-badge--{{ $program->status }}">{{ \App\Models\ProgramKomiteHumas::STATUS[$program->status] }}</span>@if ($program->terlambat())<span class="program-badge program-badge--terlambat">Lewat target</span>@endif</div><h2><a href="{{ route('komite-humas.program.show', [$periode, $program]) }}">{{ $program->nama }}</a></h2><p class="agenda-muted">{{ $program->tanggal_mulai->format('d-m-Y') }} s.d. {{ $program->tanggal_selesai->format('d-m-Y') }}</p></div>
         <div><p>Penanggung jawab</p><strong>{{ $program->penanggungJawab?->nama ?: 'Belum ditentukan' }}</strong>@if ($program->penanggungJawab && ! $program->penanggungJawab->aktif)<p class="agenda-muted">Pengurus tidak aktif</p>@endif<p class="agenda-muted">{{ $program->agenda_count }} rapat terkait</p></div>
         <a class="button button-muted" href="{{ route('komite-humas.program.show', [$periode, $program]) }}">Buka program</a>

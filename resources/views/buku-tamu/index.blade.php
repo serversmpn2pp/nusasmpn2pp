@@ -11,11 +11,11 @@
     @endif
     <div class="tamu-metrics">
         <div class="tamu-metric"><span>Total kunjungan</span><strong>{{ $ringkasan['total'] }}</strong></div>
-        <div class="tamu-metric tamu-metric--active"><span>Masih berkunjung</span><strong>{{ $ringkasan['berkunjung'] }}</strong></div>
-        <div class="tamu-metric"><span>Sudah pulang</span><strong>{{ $ringkasan['selesai'] }}</strong></div>
-        <div class="tamu-metric tamu-metric--cancel"><span>Dibatalkan</span><strong>{{ $ringkasan['dibatalkan'] }}</strong></div>
+        <div class="tamu-metric" data-tone="warning"><span>Masih berkunjung</span><strong>{{ $ringkasan['berkunjung'] }}</strong></div>
+        <div class="tamu-metric" data-tone="success"><span>Sudah pulang</span><strong>{{ $ringkasan['selesai'] }}</strong></div>
+        <div class="tamu-metric"><span>Dibatalkan</span><strong>{{ $ringkasan['dibatalkan'] }}</strong></div>
     </div>
-    <form method="GET" action="{{ route('buku-tamu.index') }}">
+    <form class="feature-filter" method="GET" action="{{ route('buku-tamu.index') }}">
         @if ($rekap)<input type="hidden" name="tab" value="rekap">@endif
         <div class="tamu-filter">
             <div class="field"><label for="kata_kunci">Cari tamu</label><input id="kata_kunci" class="input" name="kata_kunci" maxlength="180" value="{{ $filter['kata_kunci'] ?? '' }}" placeholder="Nama, instansi, atau pihak yang dituju"></div>
@@ -40,6 +40,7 @@
     </form>
     @if ($rekap)<p class="tamu-hint">{{ $filter['label_periode'] }} &middot; {{ \Illuminate\Support\Carbon::parse($filter['dari'])->format('d-m-Y') }} s.d. {{ \Illuminate\Support\Carbon::parse($filter['sampai'])->format('d-m-Y') }}</p>@endif
     @if ($ringkasan['kategori']->isNotEmpty())<div class="tamu-summary">@foreach ($ringkasan['kategori'] as $kategori => $jumlah)<span>{{ \App\Models\KunjunganTamu::KATEGORI[$kategori] ?? $kategori }} <strong>{{ $jumlah }}</strong></span>@endforeach</div>@endif
+    <section class="humas-records" aria-label="Daftar kunjungan tamu">
     @if ($kunjungan->isEmpty())
         <div class="tamu-empty">Belum ada kunjungan yang sesuai.</div>
     @else
@@ -54,6 +55,7 @@
         </tbody></table>
     @endif
     <div style="margin-top:20px">{{ $kunjungan->links() }}</div>
+    </section>
 </div>
 @include('buku-tamu._script')
 @endsection

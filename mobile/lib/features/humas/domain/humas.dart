@@ -1,8 +1,15 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:nusa/features/auth/domain/pengguna.dart';
 
 typedef HumasData = Map<String, dynamic>;
+
+class HumasPickedFile {
+  const HumasPickedFile(this.name, this.bytes);
+  final String name;
+  final Uint8List bytes;
+}
 
 bool humasParentUser(Pengguna? user) => user?.jenisAkun == 'Orang tua';
 bool humasStudentUser(Pengguna? user) => user?.jenisAkun == 'Siswa';
@@ -45,6 +52,14 @@ enum HumasModule {
   documents('dokumen', 'Pusat Dokumen Humas', 'dokumen_humas'),
   complaints('pengaduan', 'Aspirasi & Pengaduan', 'pengaduan_humas'),
   feedback('umpan-balik', 'Rekap Umpan Balik', 'umpan_balik_humas'),
+  faq('faq', 'FAQ & Bantuan', 'faq_humas'),
+  performance('kinerja', 'Laporan Kinerja Semester', 'kinerja_humas'),
+  contacts('kontak', 'Direktori Kontak', 'kontak_humas'),
+  publications('publikasi', 'Publikasi & Persetujuan', 'publikasi_humas'),
+  programs('program', 'Program Kerja Humas', 'program_kerja_humas'),
+  committee('komite', 'Komite Sekolah', 'komite_humas'),
+  partners('mitra', 'Kemitraan & MoU', 'kemitraan_humas'),
+  accreditation('akreditasi', 'Portofolio Akreditasi', 'akreditasi_humas'),
   invitations('pertemuan-saya', 'Undangan Pertemuan Saya', ''),
   myComplaints('pengaduan-saya', 'Aspirasi & Pengaduan Saya', ''),
   myFeedback('umpan-balik-saya', 'Umpan Balik Saya', '');
@@ -59,6 +74,14 @@ enum HumasModule {
     documents => 'dokumen-humas',
     complaints => 'pengaduan-humas',
     feedback => 'umpan-balik-humas',
+    faq => 'faq-humas',
+    performance => 'kinerja-humas',
+    contacts => 'kontak-humas',
+    publications => 'publikasi-humas',
+    programs => 'program-kerja-humas',
+    committee => 'komite-humas',
+    partners => 'kemitraan-humas',
+    accreditation => 'akreditasi-humas',
     invitations => 'pertemuan-saya',
     myComplaints => 'pengaduan-saya',
     myFeedback => 'umpan-balik-saya',
@@ -74,6 +97,7 @@ enum HumasModule {
   bool get parentOnly => permission.isEmpty;
   bool canOpen(Pengguna? user) {
     if (user == null) return false;
+    if (this == faq) return true;
     if (parentOnly) return humasParentUser(user);
     if (humasParentUser(user) || humasStudentUser(user)) return false;
     return user.administrator ||
@@ -81,6 +105,12 @@ enum HumasModule {
           (p) =>
               p == '$permission.lihat' ||
               p == '$permission.kelola' ||
+              (this == contacts && p == '$permission.kontak') ||
+              (this == publications &&
+                  [
+                    '$permission.kontribusi',
+                    '$permission.periksa',
+                  ].contains(p)) ||
               (this == complaints && p == '$permission.tangani'),
         );
   }
@@ -88,7 +118,22 @@ enum HumasModule {
   bool canManage(Pengguna? user) =>
       canOpen(user) &&
       !parentOnly &&
-      (user!.administrator || user.izin.contains('$permission.kelola'));
+      !humasParentUser(user) &&
+      !humasStudentUser(user) &&
+      (user!.administrator ||
+          user.izin.contains('$permission.kelola') ||
+          (this == publications &&
+              user.izin.contains('$permission.kontribusi')));
+
+  bool canCreate(Pengguna? user) =>
+      canManage(user) &&
+      (this != performance ||
+          user!.administrator ||
+          user.izin.any(
+            (p) =>
+                p == 'program_kerja_humas.lihat' ||
+                p == 'program_kerja_humas.kelola',
+          ));
 }
 
 class HumasPage {

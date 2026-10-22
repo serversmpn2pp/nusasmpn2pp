@@ -1,0 +1,217 @@
+/* Humas shares the document centre workspace. Standalone print views never load this sheet. */
+@media screen {
+    .nusa-shared-theme[data-admin-module="humas"] .page-header:is(.ak-head,.uf-head) {
+        padding: 0;
+        background: transparent;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .page-header .page-title {
+        color: #172d3e;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.publikasi-page,.mitra-page,.ak-page,.uf-page,.tamu-page) {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        margin-inline: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metrics,.tamu-metrics) {
+        display: grid;
+        grid-template-columns: repeat(auto-fit,minmax(min(100%,180px),1fr));
+        gap: 12px;
+        margin: 0 0 20px;
+        padding: 0;
+        background: transparent;
+        border: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metric,.tamu-metric) {
+        min-width: 0;
+        padding: 16px 18px;
+        border: 1px solid #d5e2ee;
+        border-radius: 8px;
+        background: #fff;
+        color: #15477a;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metric,.tamu-metric) span {
+        display: block;
+        color: #526879;
+        font-size: 14px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metric,.tamu-metric) strong {
+        display: block;
+        margin-top: 6px;
+        color: inherit;
+        font-size: 28px;
+        line-height: 1.25;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metric,.tamu-metric)[data-tone="success"] {
+        background: #e7f4f0;
+        border-color: #aad8ce;
+        color: #0f766e;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metric,.tamu-metric)[data-tone="warning"] {
+        background: #fff8d8;
+        border-color: #ead477;
+        color: #806000;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metric,.tamu-metric)[data-tone="danger"] {
+        background: #fff0f1;
+        border-color: #ecc9cd;
+        color: #a42d40;
+    }
+
+    /* Remove the old separator band around filters, not the filter itself. */
+    .nusa-shared-theme[data-admin-module="humas"] .agenda-section:has(> .feature-filter:only-child) {
+        padding: 0;
+        margin: 0;
+        border: 0;
+        background: transparent;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .feature-filter {
+        padding: 20px;
+        margin: 0 0 20px;
+        background: #edf4fc;
+        border: 1px solid #cadbea;
+        border-radius: 8px;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .feature-filter :is(.field,.actions,.agenda-actions) {
+        min-width: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .feature-filter :is(.agenda-filter,.mitra-filters,.publikasi-filter,.tamu-filter) {
+        padding: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .feature-filter > :is(.agenda-actions,.tamu-filter-actions):last-child {
+        margin-bottom: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .feature-filter .agenda-filter-bottom {
+        padding: 14px 0 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-records,.agenda-table-shell) {
+        min-width: 0;
+        margin: 0 0 20px;
+        padding: 22px;
+        background: #fff;
+        border: 0;
+        border-radius: 0;
+        list-style: none;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .humas-records > :is(.agenda-empty,.tamu-empty) {
+        border: 0;
+        margin: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-records,.agenda-table-shell) table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-records,.agenda-table-shell) th {
+        padding: 13px 12px;
+        background: #edf4fc;
+        color: #36536c;
+        font-size: 13px;
+        line-height: 1.5;
+        text-align: left;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-records,.agenda-table-shell) td {
+        font-size: 15px;
+        line-height: 1.55;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-program-row,.program-row,.komite-row,.media-row,.kliping-row,.prestasi-row,.alumni-row,.pengaduan-row,.ak-row,.uf-row) {
+        padding-block: 20px;
+        margin: 0;
+        border-bottom: 1px solid #dce5eb;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-program-row,.program-row,.komite-row,.media-row,.kliping-row,.prestasi-row,.alumni-row,.pengaduan-row,.ak-row,.uf-row):first-child {
+        padding-top: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-program-row,.program-row,.komite-row,.media-row,.kliping-row,.prestasi-row,.alumni-row,.pengaduan-row,.ak-row,.uf-row):last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-program-row,.program-row,.komite-row,.media-row,.kliping-row,.prestasi-row,.alumni-row,.pengaduan-row,.ak-row,.uf-row) h2 {
+        font-size: 17px;
+        line-height: 1.5;
+        color: #15477a;
+        overflow-wrap: anywhere;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.humas-program-row,.program-row,.komite-row,.media-row,.kliping-row,.prestasi-row,.alumni-row,.pengaduan-row,.ak-row,.uf-row) p {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-section,.ak-section,.uf-section,.tamu-section):not(.humas-records):not(:has(> .feature-filter:only-child)) {
+        padding: 22px;
+        margin-block: 0 22px;
+        background: #fff;
+        border: 0;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-section,.ak-section,.uf-section,.tamu-section):not(.humas-records) > h2 {
+        margin: -22px -22px 22px;
+        padding: 14px 22px;
+        background: #e7f4f0;
+        color: #0d5f59;
+        border: 0;
+        font-size: 18px;
+        line-height: 1.5;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .aset-grid > .agenda-empty {
+        grid-column: 1/-1;
+        background: #fff;
+        margin: 0;
+        padding: 46px 22px;
+    }
+
+    .nusa-shared-theme[data-admin-module="humas"] .humas-records > .pagination-simple:last-child {
+        padding-bottom: 0;
+    }
+
+    @media (max-width: 1100px) {
+        .nusa-shared-theme[data-admin-module="humas"] :is(.media-filter,.aset-filter,.publikasi-filter,.mitra-filters,.ak-filter,.uf-filter) {
+            grid-template-columns: repeat(2,minmax(0,1fr));
+        }
+    }
+
+    @media (max-width: 600px) {
+        .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metrics,.tamu-metrics,.humas-summary) {
+            grid-template-columns: repeat(2,minmax(0,1fr));
+        }
+
+        .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metrics,.tamu-metrics,.humas-summary) > :last-child:nth-child(odd) {
+            grid-column: 1/-1;
+        }
+
+        .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-metric,.tamu-metric) { padding: 14px; }
+        .nusa-shared-theme[data-admin-module="humas"] .feature-filter { padding: 16px; }
+        .nusa-shared-theme[data-admin-module="humas"] :is(.media-filter,.aset-filter,.publikasi-filter,.mitra-filters,.ak-filter,.uf-filter) { grid-template-columns: minmax(0,1fr); }
+        .nusa-shared-theme[data-admin-module="humas"] :is(.humas-records,.agenda-table-shell) { padding: 16px; }
+        .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-section,.ak-section,.uf-section,.tamu-section):not(.humas-records):not(:has(> .feature-filter:only-child)) { padding: 16px; }
+        .nusa-shared-theme[data-admin-module="humas"] :is(.agenda-section,.ak-section,.uf-section,.tamu-section):not(.humas-records) > h2 { margin: -16px -16px 18px; padding: 12px 16px; }
+        .nusa-shared-theme[data-admin-module="humas"] :is(.humas-records,.agenda-table-shell) table.agenda-table--list td { font-size: 15px; }
+    }
+}

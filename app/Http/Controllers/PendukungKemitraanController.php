@@ -15,11 +15,12 @@ class PendukungKemitraanController extends Controller
     public function show(Request $r, KerjaSamaHumas $mou)
     {
         $this->service->akses($r->user());
-        $r->validate(['halaman' => ['nullable', 'integer', 'min:1'], 'kata_kunci' => ['nullable', 'string', 'max:120']]);
-        $daftar = DokumenPendukungKemitraan::where('kerja_sama_humas_id', $mou->id)->with('berkas.dokumen')->orderByDesc('id')->paginate(15, ['*'], 'halaman')->withQueryString();
+        $p = $r->validate(['halaman' => ['nullable', 'integer', 'min:1'], 'per_halaman' => ['nullable', 'integer', 'min:1', 'max:50'], 'kata_kunci' => ['nullable', 'string', 'max:120']]);
+        $daftar = DokumenPendukungKemitraan::where('kerja_sama_humas_id', $mou->id)->with('berkas.dokumen')->orderByDesc('id')->paginate($r->routeIs('api.v1.*') ? ($p['per_halaman'] ?? 20) : 15, ['*'], 'halaman', $p['halaman'] ?? 1)->withQueryString();
         if ($r->routeIs('api.v1.*')) {
             return $this->json(app(HumasMobileService::class)->paginasi($daftar, fn ($l) => $this->data($l))
-                + ['mou' => $mou->only(['id', 'judul', 'versi']), 'jenis' => DokumenPendukungKemitraan::JENIS]);
+                + ['mou' => $mou->only(['id', 'judul', 'versi']), 'jenis' => DokumenPendukungKemitraan::JENIS,
+                    'dapat_kelola' => $r->user()->memilikiIzin('kemitraan_humas.kelola') && $mou->status !== 'diakhiri']);
         }
 
         return response()->view('kemitraan-humas.pendukung', ['mou' => $mou, 'daftar' => $daftar,
@@ -48,7 +49,7 @@ class PendukungKemitraanController extends Controller
     private function data(DokumenPendukungKemitraan $l): array
     {
         return ['id' => $l->id, 'id_dokumen' => $l->berkas->dokumen_humas_id, 'id_versi' => $l->riwayat_dokumen_humas_id,
-            'judul' => $l->berkas->dokumen->judul, 'versi_berkas' => $l->berkas->versi, 'jenis' => $l->jenis,
+            'judul' => $l->berkas->dokumen->judul, 'versi_berkas' => $l->berkas->versi, 'jenis' => $l->jenis, 'nama_berkas' => $l->berkas->nama_file_asli,
             'catatan' => $l->catatan, 'dilepas_pada' => $l->dilepas_pada?->toIso8601String(),
             'url_unduh' => route('api.v1.humas.dokumen.riwayat.unduh', [$l->berkas->dokumen_humas_id, $l->riwayat_dokumen_humas_id])];
     }

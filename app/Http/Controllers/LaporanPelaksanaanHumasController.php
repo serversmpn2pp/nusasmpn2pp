@@ -8,6 +8,7 @@ use App\Models\DokumenHumas;
 use App\Models\LaporanPelaksanaanHumas;
 use App\Models\ProgramKerjaHumas;
 use App\Services\Humas\KelolaProgramKerjaHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -287,6 +288,9 @@ class LaporanPelaksanaanHumasController extends Controller
 
     private function kembali(ProgramKerjaHumas $program, LaporanPelaksanaanHumas $laporan, string $pesan, ?Request $request = null)
     {
+        if (request()->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($laporan);
+        }
         $url = route('program-kerja-humas.laporan.show', [$program, $laporan]);
         if ($request?->expectsJson()) {
             $request->session()->flash('berhasil', $pesan);

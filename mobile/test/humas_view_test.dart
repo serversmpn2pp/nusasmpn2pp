@@ -47,6 +47,15 @@ const _staff = Pengguna(
     'pengaduan_humas.kelola',
     'dokumen_humas.kelola',
     'umpan_balik_humas.kelola',
+    'faq_humas.kelola',
+    'kinerja_humas.kelola',
+    'program_kerja_humas.lihat',
+    'kontak_humas.kelola',
+    'publikasi_humas.kelola',
+    'program_kerja_humas.kelola',
+    'komite_humas.kelola',
+    'kemitraan_humas.kelola',
+    'akreditasi_humas.kelola',
   ],
 );
 const _questions = <HumasData>[
@@ -195,7 +204,14 @@ void main() {
       peran: const ['administrator'],
       izin: _staff.izin,
     );
-    expect(HumasModule.values.any((m) => m.canOpen(student)), isFalse);
+    expect(
+      HumasModule.values
+          .where((m) => m != HumasModule.faq)
+          .any((m) => m.canOpen(student)),
+      isFalse,
+    );
+    expect(HumasModule.faq.canOpen(student), isTrue);
+    expect(HumasModule.faq.canManage(student), isFalse);
   });
   test('paginasi membaca semua halaman, nilai nol bukan data kosong', () {
     final page = HumasPage.fromJson({
@@ -730,6 +746,20 @@ class _FakeRepo extends HumasRepository {
         return pending[key]!.future;
       }
       final result = _list('Pertemuan orang tua');
+      if (path == 'kontak') {
+        result['items'] = [
+          {'id': 4, 'nama': 'Pertemuan orang tua', 'status_label': 'Aktif'},
+        ];
+      }
+      if (path == 'faq') {
+        result['items'] = [
+          {
+            'id': 4,
+            'pertanyaan': 'Pertemuan orang tua',
+            'status_label': 'Diterbitkan',
+          },
+        ];
+      }
       if (path == 'pertemuan-saya') {
         result['items'] = [
           {'agenda': humasItems(result['items']).single, 'kehadiran': {}},
@@ -775,6 +805,14 @@ class _FakeRepo extends HumasRepository {
       return {
         'agenda': record,
         'kehadiran': {'status_label': 'Belum dicatat'},
+      };
+    }
+    if (path == 'faq/4') {
+      return {
+        ...record,
+        'pertanyaan': 'Pertanyaan sekolah',
+        'jawaban': 'Hubungi operator sekolah.',
+        'dapat_kelola': true,
       };
     }
     return record;

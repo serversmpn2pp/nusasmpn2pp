@@ -1,10 +1,13 @@
 # API Humas
 
-Base path: `/api/v1/humas`. Tersedia 109 endpoint (50 tahap pertama, 20 dashboard/arsip, 4 klasifikasi/kaitan, 19 operasional, dan 16 FAQ/kinerja).
+Base path: `/api/v1/humas`. Tersedia 179 endpoint (111 endpoint sebelumnya dan 68 endpoint native tahap 2).
 Pembaruan klasifikasi/kaitan memerlukan migrasi
 `2026_10_22_000001_tambah_klasifikasi_dan_kaitan_dokumen_humas` dan
 `2026_10_22_000002_lengkapi_operasional_humas`, serta
 `2026_10_22_000003_buat_faq_dan_kinerja_semester_humas` untuk FAQ/laporan semester.
+Native tahap 2 memerlukan migrasi `2026_10_22_000004_tambah_token_pembuatan_kemitraan_mobile`.
+Migrasi ini hanya menambahkan token unik dan identitas pembuat nullable pada mitra/MoU;
+arsip lama tidak dihapus atau diberi token otomatis.
 Lihat `docs/arsip-humas.md` untuk penataan metadata lama. Layar/menu Android Humas
 yang sudah tersedia tetap kompatibel; lihat `docs/mobile-humas.md` untuk cakupan
 APK. Kontrak API baru tidak berarti layar klasifikasi/kaitan sudah ada di APK lama.
@@ -26,7 +29,8 @@ tanpa header Authorization. Gunakan HTTPS pada server sekolah.
 Semua endpoint memerlukan akun aktif dan kata sandi yang sudah diganti jika diwajibkan.
 Pengecualian layanan petugas: pembacaan FAQ tersedia juga untuk siswa/orang tua,
 hanya untuk FAQ terbit yang sesuai identitas akun. Detail kontrak baru ada di
-`faq-kinerja-humas.md`. Endpoint FAQ/kinerja belum menambahkan layar native pada APK.
+`faq-kinerja-humas.md`. FAQ/kinerja sudah terhubung ke layar native Flutter;
+perlu APK baru untuk menggunakannya, lihat `mobile-humas.md`.
 Petugas mengikuti izin NUSA; orang tua dan siswa tidak dapat mengakses endpoint petugas meskipun
 secara keliru mendapatkan peran Humas. Endpoint `*-saya` memerlukan akun orang tua yang benar-benar
 terhubung, bukan sekadar nama peran. Pengaduan hanya milik pelapor; undangan dan evaluasi juga
@@ -232,7 +236,7 @@ sesudah}`. Snapshot API hanya memuat urusan, jenis, dan sumber klasifikasi, tida
 memuat ID target surat atau judul rahasia. Teks alasan tetap data petugas; jangan
 menaruh rahasia surat di alasan pada arsip yang dapat dibaca petugas dokumen lain.
 
-## Operasional Humas (19 Endpoint)
+## Operasional Humas (21 Endpoint)
 
 Kontrak lengkap dan aturan akses: `docs/operasional-humas.md`.
 
@@ -241,6 +245,7 @@ Kontrak lengkap dan aturan akses: `docs/operasional-humas.md`.
 | GET / POST | `/kontak` | Direktori sesuai izin / catat kontak dengan UUID |
 | GET | `/kontak/referensi` | Urusan, status, UUID dan hak akses |
 | GET / PATCH | `/kontak/{kontak}` | Detail / ubah dengan `versi` dan alasan |
+| GET | `/kontak/{kontak}/riwayat` | Audit nama kolom/alasan, memerlukan akses kontak privat |
 | GET | `/agenda/{agenda}/paket` | Kelengkapan peserta, presensi, notulen, lampiran dan bundel |
 | GET / POST | `/kemitraan/{mou}/pendukung` | Riwayat pendukung / tautkan versi berkas |
 | GET | `/kemitraan/{mou}/pendukung/pilihan` | Cari versi terkini dokumen aktif dengan berkas tersedia |
@@ -249,15 +254,127 @@ Kontrak lengkap dan aturan akses: `docs/operasional-humas.md`.
 | GET | `/publikasi/referensi` | Jenis, kanal, status, UUID, cakupan |
 | GET | `/publikasi/pilihan-aset` | Pilihan aset; tetap memerlukan izin sumber |
 | GET / PATCH | `/publikasi/{publikasi}` | Detail / koreksi draf milik sendiri atau editor |
+| GET | `/publikasi/{publikasi}/riwayat` | Riwayat aksi, petugas, catatan, versi; tanpa snapshot privat |
 | POST | `/publikasi/{publikasi}/tindakan/{aksi}` | Ajukan, tarik, periksa, revisi, atau catat tayang sesuai izin |
 | GET | `/publikasi/{publikasi}/lampiran/{lampiran}` | Foto/bukti privat, bukan URL publik |
 | GET | `/publikasi/{publikasi}/naskah` | Unduh naskah privat |
 
-API siap dipakai untuk pengembangan layar baru, tetapi modul native Android lama
-tidak otomatis memiliki layar kontak/publikasi/pendukung. Metadata dashboard tidak
-menandai layar tersebut tersedia mobile. Kontributor hanya menerima daftar,
+Kontak dan publikasi memiliki layar native Android pada build tahap pertama;
+katalog menu serta metadata dashboard menandainya tersedia mobile sesuai izin.
+Pengelolaan pendukung kemitraan juga tersedia native pada build tahap kedua. Kontributor hanya menerima daftar,
 statistik, detail dan lampiran miliknya; pemantau direktori tanpa izin nomor/email
 menerima nilai null, bukan nomor yang hanya disembunyikan oleh UI.
+
+Detail kontak menyediakan `hak_akses.dapat_kelola` dan `dapat_lihat_kontak`.
+Riwayat memakai `halaman` mulai 1 dan `per_halaman` 1-50; respons `private, no-store`.
+Riwayat kontak tidak menyalin nilai nomor/email, hanya nama kolom yang berubah.
+
+Referensi publikasi menerima `publikasi_id` saat mengedit dan `cari_agenda` (maksimal
+120 karakter). Agenda hanya dikirim kepada pembaca/pengelola agenda, maksimal
+100 pilihan ditambah agenda yang sedang terhubung. Referensi dengan ID milik
+kontributor lain ditolak 404. `dapat_buat`, `dapat_pilih_agenda`, `dapat_pilih_aset`,
+`cakupan`, serta `batas_foto` menjadi kontrak formulir mobile.
+
+Detail publikasi menyediakan label jenis/kanal/status, nama pembuat/pemeriksa,
+hak tindakan per status termasuk `dapat_buka_revisi`, serta MIME/ukuran lampiran.
+Metadata aset terpakai dibatasi menjadi ID, nama snapshot dan versi; hanya dikirim
+sesuai izin sumber. Riwayat publikasi tidak memuat snapshot, token pembuatan,
+lokasi berkas server atau lampiran yang telah dihapus.
+
+Unggah foto menggunakan multipart `foto[]`, maksimal 5 foto aktif dan 2 MB/foto,
+JPG/JPEG/PNG/WebP. Edit multipart memakai POST dengan `_method=PATCH`, `versi`
+asli dan opsional `hapus_foto[]`. Jangan kirim `aset_dikirim` kecuali sengaja
+menyinkronkan aset; jika dihilangkan, aset dan snapshot lama dipertahankan.
+`perbarui_aset[]` hanya untuk aset yang sengaja diperbarui ke versi terbaru.
+Pencatatan tayang memerlukan URL HTTP(S) dan `waktu_tayang` format
+`Y-m-d\TH:i` (waktu sekolah), serta opsional `bukti` PDF/gambar maksimal 5 MB.
+Ini mencatat tayangan yang sudah dilakukan, bukan mengirim otomatis ke media sosial.
+
+## Native Tahap 2 (68 Endpoint)
+
+Seluruh endpoint berikut berada di base path Humas dan menggunakan paginasi,
+autentikasi, respons privat, serta penanganan konflik yang sama. Baca memerlukan
+izin `.lihat` atau `.kelola`; mutasi memerlukan `.kelola`. Akun siswa/orang tua
+tidak dapat membuka endpoint petugas, termasuk bila keliru diberi role admin.
+
+| Resource | Base path | Izin modul |
+| --- | --- | --- |
+| Program kerja | `/program` | `program_kerja_humas` |
+| Laporan pelaksanaan | `/program/{id}/laporan` | `program_kerja_humas` |
+| Periode komite | `/komite` | `komite_humas` |
+| Program komite | `/komite/{id}/program` | `komite_humas` |
+| Mitra | `/mitra` | `kemitraan_humas` |
+| MoU | `/mitra/{id}/mou` | `kemitraan_humas` |
+| Portofolio | `/akreditasi` | `akreditasi_humas` |
+| Butir | `/akreditasi/{id}/butir` | `akreditasi_humas` |
+
+Semua base menyediakan GET daftar, GET `/referensi`, POST buat, GET `/{record}`,
+dan PATCH `/{record}`. Selain butir, tersedia GET `/{record}/riwayat`.
+ID anak diperiksa terhadap induknya; mengganti ID induk tidak memberi akses
+ke laporan/program/MoU/butir milik induk lain. Butir yang dikeluarkan ditolak 404.
+
+Referensi menerima `record_id` saat edit, `cari_dokumen` dan `cari_agenda`
+(maksimal 120 karakter). Pilihan sumber maksimal 100; dokumen MoU dan agenda laporan yang sedang
+terpilih tetap disertakan. Dokumen hanya dikirim sesuai izin dokumen; nomor
+pengurus komite hanya kepada pengelola. Pengurus yang dibutuhkan untuk memilih
+penanggung jawab tidak menyertakan nomor telepon.
+
+Daftar menerima `kata_kunci`, `status`, `halaman`, `per_halaman`, serta filter
+yang sesuai resource: `tahun_pelajaran_id`, `semester`, `bidang`, `jenis`,
+`terlambat`, `masa_berlaku`. `dapat_kelola` pada daftar/referensi dan `hak_akses`
+pada detail menentukan ketersediaan tindakan. Status final/siap dan induk
+tertutup mengunci pengubahan anak. Data mutasi mengembalikan ID, versi dan
+status terkini, bukan model/snapshot audit mentah.
+
+Pembuatan program, komite, laporan, program komite, mitra, MoU dan portofolio
+memerlukan UUID `token_pembuatan`. Retry pembuat dengan token yang sama
+mengembalikan record yang sama; token orang lain ditolak. Edit memakai `versi`
+asli. Butir dan bukti akreditasi memakai versi portofolio induk, bukan versi
+butir. Membuat butir memakai `versi` induk, bukan UUID baru. Bukti akreditasi
+tetap memakai UUID seperti web. Alasan/catatan perubahan mengikuti aturan web.
+
+| Metode | Path tambahan | Kegunaan |
+| --- | --- | --- |
+| GET | `/program/{id}/cetak` | HTML cetak program asli |
+| GET | `/program/{id}/laporan/{record}/cetak` | HTML cetak laporan asli |
+| POST | `/program/{id}/laporan/{record}/tindakan/{aksi}` | `finalisasi`, `revisi`, `batalkan` |
+| POST / DELETE / GET | `/program/{id}/laporan/{record}/bukti[/{bukti}]` | Tambah, lepas, unduh bukti |
+| GET | `/komite/{id}/berkas/{berkas}` | SK kini/riwayat yang benar-benar terhubung |
+| GET / POST / DELETE | `/komite/{id}/program/{record}/rapat[/{agenda}]` | Daftar, hubungkan, lepas rapat |
+| GET / POST / DELETE | `/mitra/{id}/agenda[/{agenda}]` | Daftar, hubungkan, lepas agenda |
+| POST | `/akreditasi/{id}/status` | `draf`, `siap`, `arsip` dengan alasan |
+| GET | `/akreditasi/{id}/cetak` | HTML cetak portofolio asli |
+| POST | `/akreditasi/{id}/bundel` | ZIP; memerlukan `akreditasi_humas.ekspor`, izin baca dan dokumen |
+| DELETE | `/akreditasi/{id}/butir/{record}` | Keluarkan butir dengan alasan |
+| POST | `/akreditasi/{id}/butir/{record}/periksa` | Status dan catatan pemeriksaan |
+| POST / DELETE / GET | `/akreditasi/{id}/butir/{record}/bukti[/{bukti}]` | Tautkan versi, lepas, unduh bukti |
+
+Hubungan agenda memerlukan izin sumber agenda juga. Hubungan rapat program
+komite memerlukan `agenda_humas.kelola`; komite yang diarsipkan tidak dapat
+diubah programnya. Pelepasan hubungan tidak menghapus sumber.
+
+Komite menerima `pengurus` maksimal 50 baris `{id?, nama, jabatan,
+nomor_telepon?, aktif}`. ID lama harus tetap ada; nonaktifkan pengurus lama,
+bukan menghapus barisnya. `aktif` berupa boolean untuk JSON, `1`/`0` untuk
+multipart. `metode` SK baru: `tanpa|dokumen|unggah`; edit:
+`tetap|dokumen|unggah|lepas`. `dokumen_humas_id` hanya untuk metode dokumen;
+`berkas` hanya untuk unggah. SK PDF/JPG/PNG/WebP maksimal 20 MB dan unggah
+memerlukan `dokumen_humas.kelola`. Edit multipart memakai POST `_method=PATCH`.
+Aktivasi wajib SK tersedia, nomor/tanggal SK, satu ketua aktif dan masa tidak tumpang tindih.
+
+MoU aktif wajib memiliki tanggal dan dokumen aktif yang tersedia. Pengakhiran
+wajib alasan. Dokumen utama dapat diunggah lewat `/dokumen` dengan
+`kerja_sama_humas_id` dan UUID `token_unggahan_mou`; alur ini tetap idempoten.
+Dokumen pendukung tetap memakai endpoint `/kemitraan/{mou}/pendukung`.
+
+Bukti laporan: judul, versi laporan, UUID dan salah satu `dokumen_humas_id`
+atau berkas PDF/gambar maksimal 10 MB. Bukti butir: versi portofolio, UUID,
+`riwayat_dokumen_humas_id`, serta catatan opsional. Perubahan bukti mereset
+pemeriksaan butir. Status siap memerlukan butir terpenuhi dengan bukti tersedia;
+bundel mempertahankan versi berkas yang dipilih, maksimal 200 bukti / 200 MB.
+
+Cetak API memanggil renderer web yang sama. Layar native tidak mengubah kop,
+tabel maupun tanda tangan. Jangan memperlakukan hasil HTML/ZIP sebagai JSON.
 
 ## Dokumen Agenda (3 Endpoint)
 

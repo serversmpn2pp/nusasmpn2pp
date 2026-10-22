@@ -107,8 +107,14 @@ sama oleh pembuat yang sama mengembalikan data yang ada tanpa menggandakannya.
 
 FAQ memerlukan `pertanyaan`, `jawaban`, `urusan`, `sasaran`, `urutan`. Token tidak
 boleh dikirim saat update. Tampilkan jawaban/narasi API sebagai teks ter-escape.
-API baru belum menambahkan menu atau layar native pada APK; jumlah endpoint
-Humas kini 109, dengan 16 tambahan FAQ/kinerja.
+API FAQ dan kinerja sudah dihubungkan ke layar native Flutter. Jumlah endpoint
+Humas tetap 109, dengan 16 endpoint FAQ/kinerja. Lihat `mobile-humas.md` untuk
+kemampuan native, batas cetak HTML, dan pengujian lintas role.
+
+API daftar/riwayat menerima `halaman` mulai 1 dan `per_halaman` 1-50 (default 20).
+Alias `page` diterima untuk kompatibilitas; `halaman` didahulukan. Web tetap
+memakai `page` dan 15 baris. Label status/semester/urusan/pembaca serta izin kelola
+diberikan oleh API, bukan ditebak dari nama role pada aplikasi Android.
 
 ## Pemasangan
 

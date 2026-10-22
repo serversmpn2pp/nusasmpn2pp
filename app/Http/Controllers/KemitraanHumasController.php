@@ -7,8 +7,10 @@ use App\Models\DokumenHumas;
 use App\Models\KerjaSamaHumas;
 use App\Models\MitraHumas;
 use App\Services\Humas\KelolaKemitraanHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use App\Support\PenulisExcelKemitraanHumas;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -41,13 +43,30 @@ class KemitraanHumasController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate($this->aturanMitra());
+        $data = $request->validate($this->aturanMitra() + ($request->routeIs('api.v1.*') ? ['token_pembuatan' => ['required', 'uuid']] : []));
         $mitra = DB::transaction(function () use ($request, $data) {
-            $mitra = MitraHumas::create($data + ['diubah_oleh_pengguna_id' => $request->user()->id]);
+            if ($request->routeIs('api.v1.*')) {
+                DB::table('izin')->where('kode', 'kemitraan_humas.kelola')->lockForUpdate()->firstOrFail();
+                $lama = MitraHumas::where('token_pembuatan', $data['token_pembuatan'])->first();
+                if ($lama) {
+                    abort_unless($lama->dibuat_oleh_pengguna_id === $request->user()->id, 403);
+
+                    return $lama;
+                }
+            }
+            $mitra = new MitraHumas(Arr::except($data, 'token_pembuatan') + ['diubah_oleh_pengguna_id' => $request->user()->id]);
+            if ($request->routeIs('api.v1.*')) {
+                $mitra->forceFill(['token_pembuatan' => $data['token_pembuatan'], 'dibuat_oleh_pengguna_id' => $request->user()->id]);
+            }
+            $mitra->save();
             $this->kelola->catat($mitra, null, 'Mitra ditambahkan', null, $mitra->attributesToArray(), $request->user());
 
             return $mitra;
         });
+
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($mitra);
+        }
 
         return redirect()->route('kemitraan-humas.show', $mitra)->with('berhasil', 'Data mitra berhasil disimpan.');
     }
@@ -92,6 +111,10 @@ class KemitraanHumasController extends Controller
             }
         });
 
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($mitra);
+        }
+
         return redirect()->route('kemitraan-humas.show', $mitra)->with('berhasil', 'Data mitra berhasil diperbarui.');
     }
 
@@ -104,19 +127,37 @@ class KemitraanHumasController extends Controller
 
     public function storeMou(Request $request, MitraHumas $mitra)
     {
-        $data = $request->validate($this->aturanMou());
+        $data = $request->validate($this->aturanMou() + ($request->routeIs('api.v1.*') ? ['token_pembuatan' => ['required', 'uuid']] : []));
         $mou = DB::transaction(function () use ($data, $mitra, $request) {
+            if ($request->routeIs('api.v1.*')) {
+                DB::table('izin')->where('kode', 'kemitraan_humas.kelola')->lockForUpdate()->firstOrFail();
+            }
             $mitra = MitraHumas::lockForUpdate()->findOrFail($mitra->id);
+            if ($request->routeIs('api.v1.*')) {
+                $lama = KerjaSamaHumas::where('token_pembuatan', $data['token_pembuatan'])->first();
+                if ($lama) {
+                    abort_unless($lama->mitra_humas_id === $mitra->id && $lama->dibuat_oleh_pengguna_id === $request->user()->id, 403);
+
+                    return $lama;
+                }
+            }
             $this->kelola->pastikanMitraAktif($mitra);
             $this->pastikanDokumenBolehDiubah($request, $data, null);
-            $mou = $mitra->kerjaSama()->make($data);
+            $mou = $mitra->kerjaSama()->make(Arr::except($data, 'token_pembuatan'));
             $this->pastikanStatusMou($mou);
             $mou->diubah_oleh_pengguna_id = $request->user()->id;
+            if ($request->routeIs('api.v1.*')) {
+                $mou->forceFill(['token_pembuatan' => $data['token_pembuatan'], 'dibuat_oleh_pengguna_id' => $request->user()->id]);
+            }
             $mou->save();
             $this->kelola->catat($mitra, $mou, 'MoU ditambahkan', null, $mou->attributesToArray(), $request->user());
 
             return $mou;
         });
+
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($mou);
+        }
 
         return redirect()->route('kemitraan-humas.mou.show', [$mitra, $mou])->with('berhasil', 'MoU berhasil disimpan.');
     }
@@ -167,6 +208,10 @@ class KemitraanHumasController extends Controller
             }
         });
 
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($mou);
+        }
+
         return redirect()->route('kemitraan-humas.mou.show', [$mitra, $mou])->with('berhasil', 'MoU berhasil diperbarui.');
     }
 
@@ -183,6 +228,10 @@ class KemitraanHumasController extends Controller
             }
         });
 
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($mitra);
+        }
+
         return redirect()->route('kemitraan-humas.show', [$mitra, 'tab' => 'kegiatan'])->with('berhasil', 'Agenda berhasil dihubungkan.');
     }
 
@@ -194,6 +243,10 @@ class KemitraanHumasController extends Controller
             $mitra->agenda()->detach($agenda->id);
             $this->kelola->catat($mitra, null, 'Hubungan agenda dilepas', ['agenda' => $agenda->judul, 'agenda_humas_id' => $agenda->id], null, $request->user());
         });
+
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($mitra);
+        }
 
         return redirect()->route('kemitraan-humas.show', [$mitra, 'tab' => 'kegiatan'])->with('berhasil', 'Hubungan dilepas. Agenda dan dokumen tetap tersimpan.');
     }

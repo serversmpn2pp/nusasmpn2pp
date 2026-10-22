@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
-import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/menu/application/menu_controller.dart';
 import 'package:nusa/features/menu/domain/menu_catalog.dart';
 import 'package:nusa/features/menu/presentation/menu_visuals.dart';
-import 'package:nusa/features/menu/presentation/widgets/menu_cards.dart';
+import 'package:nusa/features/menu/presentation/widgets/menu_group_content.dart';
 import 'package:nusa/shared/widgets/nusa_section_title.dart';
 
 class MenuGroupView extends ConsumerWidget {
@@ -65,12 +64,12 @@ class _MenuGroupContent extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          _MenuGroupHeader(group: group),
+          NusaMenuGroupHeader(group: group),
           const SizedBox(height: 22),
           for (final section in groupedItems.entries) ...[
             NusaSectionTitle(title: section.key),
             const SizedBox(height: 10),
-            _SubmenuGrid(
+            NusaSubmenuGrid(
               items: section.value,
               color: nusaMenuGroupColor(group.code),
               onOpen: (item) => _openMenu(context, item),
@@ -98,132 +97,6 @@ class _MenuGroupContent extends StatelessWidget {
           ),
         ),
       );
-  }
-}
-
-class _MenuGroupHeader extends StatelessWidget {
-  const _MenuGroupHeader({required this.group});
-
-  final MenuGroup group;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = nusaMenuGroupColor(group.code);
-    final availableCount = group.items.where((item) => item.isAvailable).length;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [NusaColors.primary, color],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: NusaColors.primary.withValues(alpha: 0.13),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(17),
-            ),
-            child: Icon(
-              nusaMenuGroupIcon(group.icon),
-              color: Colors.white,
-              size: 30,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Menu ${group.label}',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  group.description,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  '${group.items.length} sub-menu · $availableCount tersedia',
-                  style: const TextStyle(
-                    color: NusaColors.accent,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SubmenuGrid extends StatelessWidget {
-  const _SubmenuGrid({
-    required this.items,
-    required this.color,
-    required this.onOpen,
-  });
-
-  final List<MenuEntry> items;
-  final Color color;
-  final ValueChanged<MenuEntry> onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth < 280 ? 2 : 3;
-        const spacing = 10.0;
-        final cardWidth =
-            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: spacing,
-            crossAxisSpacing: spacing,
-            childAspectRatio: cardWidth / 116,
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return NusaMenuEntryCard(
-              item: item,
-              color: color,
-              onTap: () => onOpen(item),
-            );
-          },
-        );
-      },
-    );
   }
 }
 

@@ -42,6 +42,11 @@ class HumasDocumentContent extends StatelessWidget {
           HumasBadge(humasText(data['status_label'])),
           HumasFacts({
             'Kategori': data['kategori_label'],
+            'Urusan': data['urusan_label'],
+            'Jenis dokumen': data['jenis_dokumen_label'],
+            'Klasifikasi': humasMap(data['klasifikasi'])['perlu_tinjau'] == true
+                ? 'Perlu ditinjau'
+                : 'Sudah diperiksa',
             'Nomor': data['nomor_dokumen'],
             'Mulai berlaku': humasDate(data['berlaku_mulai']),
             'Berlaku sampai': humasDate(data['berlaku_sampai']),

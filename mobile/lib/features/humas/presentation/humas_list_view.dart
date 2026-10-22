@@ -3,17 +3,29 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/humas/data/humas_repository.dart';
 import 'package:nusa/features/humas/domain/humas.dart';
 import 'package:nusa/features/humas/presentation/humas_editors.dart';
+import 'package:nusa/features/humas/presentation/humas_faq_kinerja_editors.dart';
+import 'package:nusa/features/humas/presentation/humas_contact_publication_editors.dart';
 import 'package:nusa/features/humas/presentation/humas_scan_view.dart';
 import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
+import 'package:nusa/features/humas/presentation/humas_work_views.dart';
+import 'package:nusa/features/humas/presentation/humas_work_forms.dart';
 
 class HumasListView extends ConsumerStatefulWidget {
-  const HumasListView({required this.module, super.key});
+  const HumasListView({
+    required this.module,
+    this.initialUrusan,
+    this.initialJenis,
+    super.key,
+  });
   final HumasModule module;
+  final String? initialUrusan;
+  final String? initialJenis;
   @override
   ConsumerState<HumasListView> createState() => _HumasListViewState();
 }
@@ -26,17 +38,25 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
   bool _loading = true;
   Object? _error;
   String _filter = '';
+  HumasData _references = {};
+  String _urusan = '',
+      _documentType = '',
+      _year = '',
+      _semester = '',
+      _kind = '',
+      _channel = '';
   int _request = 0;
   @override
   void initState() {
     super.initState();
+    _urusan = widget.initialUrusan ?? '';
     _filter = switch (widget.module) {
       HumasModule.invitations => 'mendatang',
       HumasModule.myFeedback => 'aktif',
       HumasModule.complaints => 'aktif',
       _ => '',
     };
-    Future.microtask(_load);
+    if (!humasWorkKinds.contains(widget.module.path)) Future.microtask(_load);
   }
 
   @override
@@ -47,6 +67,10 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
   }
 
   Map<String, String> get _filters => switch (widget.module) {
+    HumasModule.programs ||
+    HumasModule.committee ||
+    HumasModule.partners ||
+    HumasModule.accreditation => {'': 'Semua status'},
     HumasModule.agenda => {
       '': 'Semua status',
       'terjadwal': 'Terjadwal',
@@ -87,6 +111,30 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
       'semua': 'Semua formulir',
     },
     HumasModule.invitations => {'mendatang': 'Mendatang', 'riwayat': 'Riwayat'},
+    HumasModule.faq =>
+      widget.module.canManage(
+            ref.read(authControllerProvider).value?.session?.pengguna,
+          )
+          ? {
+              '': 'Semua status',
+              'draf': 'Draf',
+              'terbit': 'Diterbitkan',
+              'arsip': 'Arsip',
+            }
+          : {'': 'Pertanyaan terbit'},
+    HumasModule.performance => {
+      '': 'Semua status',
+      'draf': 'Draf',
+      'final': 'Final',
+    },
+    HumasModule.contacts => {
+      '': 'Semua status',
+      ...humasOptions(_references['status']),
+    },
+    HumasModule.publications => {
+      '': 'Semua status',
+      ...humasOptions(_references['status']),
+    },
   };
   Future<void> _load({bool append = false}) async {
     if (!mounted) return;
@@ -99,8 +147,25 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
     setState(() {
       _loading = true;
       _error = null;
+      if (!append) {
+        _items.clear();
+        _page = null;
+      }
     });
     try {
+      if ([
+        HumasModule.faq,
+        HumasModule.performance,
+        HumasModule.documents,
+        HumasModule.contacts,
+        HumasModule.publications,
+      ].contains(widget.module)) {
+        final references = await ref
+            .read(humasRepositoryProvider)
+            .get('${widget.module.path}/referensi');
+        if (!mounted || request != _request) return;
+        _references = references;
+      }
       final page = await ref.read(humasRepositoryProvider).page(
         widget.module.path,
         {
@@ -118,6 +183,15 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
                     ? 'tab'
                     : 'status'):
                 _filter,
+          if (_urusan.isNotEmpty) 'urusan': _urusan,
+          if (_documentType.isNotEmpty) 'jenis_dokumen': _documentType,
+          if (_year.isNotEmpty) 'tahun_pelajaran_id': _year,
+          if (_semester.isNotEmpty) 'semester': _semester,
+          if (_kind.isNotEmpty) 'jenis': _kind,
+          if (_channel.isNotEmpty) 'kanal': _channel,
+          if (widget.module == HumasModule.agenda &&
+              widget.initialJenis != null)
+            'jenis': widget.initialJenis,
         },
       );
       if (!mounted || request != _request) return;
@@ -132,6 +206,12 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
         setState(() {
           _error = error;
           _loading = false;
+          if (error is UnauthorizedException ||
+              error is NetworkException &&
+                  [403, 404].contains(error.statusCode)) {
+            _items.clear();
+            _page = null;
+          }
         });
       }
     }
@@ -144,6 +224,34 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
   }
 
   Future<void> _create() async {
+    if ([
+      HumasModule.contacts,
+      HumasModule.publications,
+    ].contains(widget.module)) {
+      await humasRun(context, () async {
+        final changed = await editContactPublication(
+          context,
+          ref.read(humasRepositoryProvider),
+          widget.module,
+        );
+        if (changed && mounted) await _load();
+      });
+      return;
+    }
+    if ([HumasModule.faq, HumasModule.performance].contains(widget.module)) {
+      await humasRun(context, () async {
+        final changed = await editFaqKinerja(
+          context,
+          ref.read(humasRepositoryProvider),
+          widget.module,
+          userName:
+              ref.read(authControllerProvider).value?.session?.pengguna.nama ??
+              '',
+        );
+        if (changed && mounted) await _load();
+      });
+      return;
+    }
     final changed = await createHumasRecord(
       context,
       ref.read(humasRepositoryProvider),
@@ -154,15 +262,22 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
 
   @override
   Widget build(BuildContext context) {
+    if (humasWorkKinds.contains(widget.module.path)) {
+      return HumasWorkList(kind: widget.module.path, base: widget.module.path);
+    }
     final user = ref.watch(authControllerProvider).value?.session?.pengguna;
     final canOpen = widget.module.canOpen(user);
     final canCreate =
         widget.module == HumasModule.myComplaints ||
-        (widget.module.canManage(user) &&
+        (widget.module.canCreate(user) &&
             [
               HumasModule.agenda,
               HumasModule.documents,
               HumasModule.complaints,
+              HumasModule.faq,
+              HumasModule.performance,
+              HumasModule.contacts,
+              HumasModule.publications,
             ].contains(widget.module));
     return Scaffold(
       appBar: AppBar(
@@ -189,7 +304,26 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
             ),
         ],
       ),
-      floatingActionButton: canOpen && canCreate
+      floatingActionButton:
+          canOpen &&
+              canCreate &&
+              (![
+                    HumasModule.contacts,
+                    HumasModule.publications,
+                  ].contains(widget.module) ||
+                  (!_loading &&
+                      _error == null &&
+                      (widget.module == HumasModule.contacts
+                          ? humasMap(
+                                  _references['hak_akses'],
+                                )['dapat_kelola'] ==
+                                true
+                          : _references['dapat_buat'] == true))) &&
+              (_references['dapat_kelola'] != false) &&
+              (humasMap(_references['hak_akses'])['dapat_kelola'] != false) &&
+              (_references['dapat_buat'] != false) &&
+              (widget.module != HumasModule.performance ||
+                  _references['dapat_himpun'] != false)
           ? FloatingActionButton(
               onPressed: _create,
               tooltip: 'Tambah',
@@ -210,6 +344,7 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
                     if (![
                       HumasModule.invitations,
                       HumasModule.myFeedback,
+                      HumasModule.performance,
                     ].contains(widget.module)) ...[
                       TextField(
                         controller: _search,
@@ -241,6 +376,68 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    if ([
+                      HumasModule.documents,
+                      HumasModule.faq,
+                      HumasModule.contacts,
+                    ].contains(widget.module))
+                      _referenceFilter(
+                        'Urusan',
+                        'urusan',
+                        _urusan,
+                        humasOptions(_references['urusan']),
+                        (v) => _urusan = v,
+                      ),
+                    if (widget.module == HumasModule.publications) ...[
+                      _referenceFilter(
+                        'Jenis konten',
+                        'jenis',
+                        _kind,
+                        humasOptions(_references['jenis']),
+                        (v) => _kind = v,
+                      ),
+                      _referenceFilter(
+                        'Media tujuan',
+                        'kanal',
+                        _channel,
+                        humasOptions(_references['kanal']),
+                        (v) => _channel = v,
+                      ),
+                      if (_references['cakupan'] == 'milik_sendiri')
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: HumasBadge('Kontribusi publikasi saya'),
+                        ),
+                    ],
+                    if (widget.module == HumasModule.documents)
+                      _referenceFilter(
+                        'Jenis dokumen',
+                        'jenis_dokumen',
+                        _documentType,
+                        humasOptions(_references['jenis_dokumen']),
+                        (v) => _documentType = v,
+                      ),
+                    if (widget.module == HumasModule.performance) ...[
+                      _referenceFilter(
+                        'Tahun pelajaran',
+                        'tahun_pelajaran_id',
+                        _year,
+                        {
+                          for (final t in humasItems(
+                            _references['tahun_pelajaran'],
+                          ))
+                            '${t['id']}': humasText(t['nama']),
+                        },
+                        (v) => _year = v,
+                      ),
+                      _referenceFilter(
+                        'Semester',
+                        'semester',
+                        _semester,
+                        humasOptions(_references['semester']),
+                        (v) => _semester = v,
+                      ),
+                    ],
                     if (_page != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -277,6 +474,10 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
         ? humasMap(item['agenda'])
         : item;
     final subtitle = switch (widget.module) {
+      HumasModule.programs ||
+      HumasModule.committee ||
+      HumasModule.partners ||
+      HumasModule.accreditation => '',
       HumasModule.agenda || HumasModule.invitations =>
         '${humasDate(record['waktu_mulai'])}\n${humasText(record['tempat'])}',
       HumasModule.documents =>
@@ -289,9 +490,22 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
         record['dikirim_pada'] != null
             ? 'Diisi ${humasDate(record['dikirim_pada'])}'
             : 'Batas pengisian: ${humasDate(record['selesai_pada'])}',
+      HumasModule.faq => humasText(record['urusan_label']),
+      HumasModule.performance =>
+        '${humasText(record['tahun_pelajaran'])} / ${humasText(record['semester_label'])}\nData s.d. ${humasDate(record['data_sampai'])}',
+      HumasModule.contacts =>
+        '${humasText(record['instansi'])}\n${humasText(record['jabatan'])} / ${humasText(record['urusan_label'])}',
+      HumasModule.publications =>
+        '${humasText(record['jenis_label'])} / ${humasText(record['kanal_label'])}\n${humasText(record['pembuat'])}',
     };
     return HumasCard(
-      title: humasText(record['judul']),
+      title: humasText(
+        record[widget.module == HumasModule.faq
+            ? 'pertanyaan'
+            : widget.module == HumasModule.contacts
+            ? 'nama'
+            : 'judul'],
+      ),
       subtitle: subtitle,
       trailing: const Icon(Icons.chevron_right_rounded),
       children: [
@@ -304,4 +518,29 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
       },
     );
   }
+
+  Widget _referenceFilter(
+    String label,
+    String key,
+    String value,
+    Map<String, String> options,
+    void Function(String) change,
+  ) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: NusaDropdownField<String>(
+      fieldKey: Key('humas-filter-$key'),
+      value: options.containsKey(value) ? value : '',
+      options: [
+        NusaDropdownOption(value: '', label: 'Semua ${label.toLowerCase()}'),
+        for (final e in options.entries)
+          NusaDropdownOption(value: e.key, label: e.value),
+      ],
+      decoration: InputDecoration(labelText: label),
+      onChanged: (v) {
+        change(v ?? '');
+        _debounce?.cancel();
+        _load();
+      },
+    ),
+  );
 }

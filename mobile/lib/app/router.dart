@@ -416,7 +416,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       for (final module in HumasModule.values)
         GoRoute(
           path: module.route,
-          builder: (context, state) => HumasListView(module: module),
+          builder: (context, state) => HumasListView(
+            module: module,
+            initialUrusan: state.uri.queryParameters['urusan'],
+            initialJenis: state.uri.queryParameters['jenis'],
+          ),
           routes: [
             GoRoute(
               path: ':id',

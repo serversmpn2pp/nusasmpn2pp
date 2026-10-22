@@ -6,6 +6,7 @@ use App\Models\AgendaHumas;
 use App\Models\PeriodeKomiteHumas;
 use App\Models\ProgramKomiteHumas;
 use App\Services\Humas\KelolaProgramKomiteHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -187,6 +188,10 @@ class ProgramKomiteHumasController extends Controller
 
     private function kembali(PeriodeKomiteHumas $periode, ProgramKomiteHumas $program, string $pesan)
     {
+        if (request()->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($program);
+        }
+
         return redirect()->route('komite-humas.program.show', [$periode, $program])->with('berhasil', $pesan);
     }
 }

@@ -151,7 +151,7 @@ class KinerjaSemesterHumasService
                 $l->fill(Arr::only($data, KinerjaSemesterHumas::KOLOM));
                 if (! $laporan) {
                     $l->forceFill(['token_pembuatan' => $data['token_pembuatan'], 'tahun_pelajaran_id' => $periode['filter']['tahun_pelajaran_id'],
-                        'semester' => $periode['filter']['periode'], 'snapshot' => $this->himpun($r->user(), $periode), 'dibuat_oleh_pengguna_id' => $r->user()->id]);
+                        'semester' => $periode['filter']['periode'], 'status' => 'draf', 'snapshot' => $this->himpun($r->user(), $periode), 'dibuat_oleh_pengguna_id' => $r->user()->id]);
                 }
                 if ($l->tanggal_laporan->lt(CarbonImmutable::parse($l->snapshot['data_sampai']))) {
                     throw ValidationException::withMessages(['tanggal_laporan' => 'Tanggal laporan tidak boleh mendahului batas data yang dihimpun.']);

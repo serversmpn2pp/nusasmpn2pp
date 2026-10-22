@@ -10,6 +10,7 @@ use App\Models\PortofolioAkreditasiHumas;
 use App\Models\RiwayatDokumenHumas;
 use App\Models\TahunPelajaran;
 use App\Services\Humas\PortofolioAkreditasiHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -154,6 +155,10 @@ class PortofolioAkreditasiHumasController extends Controller
             return $b;
         });
 
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($b);
+        }
+
         return redirect()->route('akreditasi-humas.butir', [$portofolio, $b])->with('berhasil', 'Butir tersimpan. Pemeriksaan perlu dilakukan kembali setelah perubahan.');
     }
 
@@ -231,6 +236,10 @@ class PortofolioAkreditasiHumasController extends Controller
             $this->kelola->catat($p, $request, 'Bukti ditautkan pada butir '.$b->kode);
         });
 
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($portofolio);
+        }
+
         return redirect()->route('akreditasi-humas.butir', [$portofolio, $butir])->with('berhasil', 'Bukti ditautkan. Versi dokumen terpilih tetap tersimpan.');
     }
 
@@ -248,6 +257,10 @@ class PortofolioAkreditasiHumasController extends Controller
             $this->kelola->resetPemeriksaan($b);
             $this->kelola->catat($p, $request, 'Bukti dilepas dari butir '.$b->kode, $data['alasan']);
         });
+
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($portofolio);
+        }
 
         return redirect()->route('akreditasi-humas.butir', [$portofolio, $butir])->with('berhasil', 'Tautan bukti dilepas. Dokumen asli tidak dihapus.');
     }
@@ -268,6 +281,10 @@ class PortofolioAkreditasiHumasController extends Controller
                 'diperiksa_oleh_pengguna_id' => $request->user()->id, 'diperiksa_pada' => now()])->save();
             $this->kelola->catat($p, $request, 'Butir '.$b->kode.': '.ButirAkreditasiHumas::STATUS[$b->status], $data['catatan_pemeriksaan']);
         });
+
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($portofolio);
+        }
 
         return redirect()->route('akreditasi-humas.butir', [$portofolio, $butir])->with('berhasil', 'Hasil pemeriksaan tersimpan.');
     }
@@ -357,6 +374,10 @@ class PortofolioAkreditasiHumasController extends Controller
 
     private function kembali(PortofolioAkreditasiHumas $p, string $pesan)
     {
+        if (request()->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($p);
+        }
+
         return redirect()->route('akreditasi-humas.show', $p)->with('berhasil', $pesan);
     }
 

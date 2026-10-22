@@ -8,9 +8,21 @@ use App\Models\PengaduanHumas;
 use App\Models\PesertaPertemuanHumas;
 use App\Models\UmpanBalikHumas;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Request;
 
 class HumasMobileService
 {
+    public function halaman(Request $request): array
+    {
+        if (! $request->routeIs('api.v1.*')) {
+            return ['per_halaman' => 15, 'nama_halaman' => 'page', 'halaman' => null];
+        }
+        $data = $request->validate(['halaman' => ['nullable', 'integer', 'min:1'], 'page' => ['nullable', 'integer', 'min:1'],
+            'per_halaman' => ['nullable', 'integer', 'min:1', 'max:50']]);
+
+        return ['per_halaman' => $data['per_halaman'] ?? 20, 'nama_halaman' => 'halaman', 'halaman' => $data['halaman'] ?? $data['page'] ?? 1];
+    }
+
     public function dokumen(DokumenHumas $d, string $sidik, bool $detail = false): array
     {
         $data = $d->only(['id', 'judul', 'kategori', 'nomor_dokumen', 'status']) + [

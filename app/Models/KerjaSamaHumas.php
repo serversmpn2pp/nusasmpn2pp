@@ -11,7 +11,7 @@ class KerjaSamaHumas extends Model
 {
     protected $table = 'kerja_sama_humas';
 
-    protected $hidden = ['token_unggahan_mou'];
+    protected $hidden = ['token_unggahan_mou', 'token_pembuatan'];
 
     public const BIDANG = ['pendidikan' => 'Pendidikan', 'kesehatan' => 'Kesehatan', 'lingkungan' => 'Lingkungan', 'seni_budaya' => 'Seni & budaya',
         'teknologi' => 'Teknologi', 'keamanan' => 'Keamanan', 'kewirausahaan' => 'Kewirausahaan', 'sosial' => 'Sosial', 'lainnya' => 'Lainnya'];

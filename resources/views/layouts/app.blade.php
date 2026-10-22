@@ -1789,6 +1789,9 @@
             @endif
             @if ($temaFiturAdmin)
                 <link rel="stylesheet" href="{{ asset('css/admin-feature-pages.css') }}?v={{ filemtime(public_path('css/admin-feature-pages.css')) }}">
+                @if ($kelompokFiturAdmin === 'humas')
+                    <link rel="stylesheet" href="{{ asset('css/humas-pages.css') }}?v={{ filemtime(public_path('css/humas-pages.css')) }}">
+                @endif
             @endif
         @endif
     </head>

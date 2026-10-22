@@ -26,7 +26,8 @@ class KinerjaSemesterHumasController extends Controller
                 $q->where($k, $v);
             }
         }
-        $daftar = $q->orderByDesc('tanggal_laporan')->orderByDesc('id')->paginate(15)->withQueryString();
+        $p = app(HumasMobileService::class)->halaman($r);
+        $daftar = $q->orderByDesc('tanggal_laporan')->orderByDesc('id')->paginate($p['per_halaman'], ['*'], $p['nama_halaman'], $p['halaman'])->withQueryString();
         if ($r->routeIs('api.v1.*')) {
             return $this->json(app(HumasMobileService::class)->paginasi($daftar, fn ($l) => $this->data($r, $l, false)));
         }
@@ -40,7 +41,8 @@ class KinerjaSemesterHumasController extends Controller
         $this->service->akses($r->user());
 
         return $this->json(['tahun_pelajaran' => $this->tahun(), 'semester' => KinerjaSemesterHumas::SEMESTER, 'status' => KinerjaSemesterHumas::STATUS,
-            'dapat_kelola' => $r->user()->memilikiIzin('kinerja_humas.kelola')]
+            'dapat_kelola' => $r->user()->memilikiIzin('kinerja_humas.kelola'),
+            'dapat_himpun' => $r->user()->memilikiIzin('kinerja_humas.kelola') && $r->user()->memilikiIzin(['program_kerja_humas.lihat', 'program_kerja_humas.kelola'])]
             + ($r->user()->memilikiIzin('kinerja_humas.kelola') ? ['token_pembuatan' => (string) Str::uuid()] : []));
     }
 
@@ -104,7 +106,9 @@ class KinerjaSemesterHumasController extends Controller
     {
         $this->service->akses($r->user());
 
-        return $this->json(app(HumasMobileService::class)->paginasi($this->audit($kinerja)->paginate(15), fn ($a) => (array) $a));
+        $p = app(HumasMobileService::class)->halaman($r);
+
+        return $this->json(app(HumasMobileService::class)->paginasi($this->audit($kinerja)->paginate($p['per_halaman'], ['*'], $p['nama_halaman'], $p['halaman']), fn ($a) => (array) $a));
     }
 
     private function tahun()
@@ -122,7 +126,9 @@ class KinerjaSemesterHumasController extends Controller
         $s = $this->service->tampil($l->snapshot, $r->user());
 
         return $l->only(['id', 'tahun_pelajaran_id', 'semester', 'judul', 'status', 'versi']) + ['tahun_pelajaran' => $l->snapshot['tahun_pelajaran'],
-            'tanggal_laporan' => $l->tanggal_laporan->toDateString(), 'dapat_kelola' => $r->user()->memilikiIzin('kinerja_humas.kelola') && ! $s['akses_dibatasi']]
+            'tanggal_laporan' => $l->tanggal_laporan->toDateString(), 'dapat_kelola' => $r->user()->memilikiIzin('kinerja_humas.kelola') && ! $s['akses_dibatasi'],
+            'status_label' => KinerjaSemesterHumas::STATUS[$l->status], 'semester_label' => KinerjaSemesterHumas::SEMESTER[$l->semester],
+            'sementara' => $s['sementara'], 'data_sampai' => $s['data_sampai']]
             + ($rinci ? $l->only(KinerjaSemesterHumas::KOLOM) + ['snapshot' => $s] : []);
     }
 

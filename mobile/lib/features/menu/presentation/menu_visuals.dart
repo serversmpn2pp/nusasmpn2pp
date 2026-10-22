@@ -118,8 +118,16 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'pengajuan-saya' => Icons.request_page_rounded,
     'dashboard-sarpras' => Icons.dashboard_rounded,
     'dashboard-humas' => Icons.dashboard_rounded,
+    'program-kerja-humas' => Icons.assignment_rounded,
+    'komite-humas' => Icons.groups_rounded,
+    'kemitraan-humas' => Icons.handshake_rounded,
+    'akreditasi-humas' => Icons.fact_check_rounded,
     'agenda-humas' || 'pertemuan-saya' => Icons.event_available_rounded,
     'dokumen-humas' => Icons.folder_copy_rounded,
+    'faq-humas' => Icons.help_outline_rounded,
+    'kinerja-humas' => Icons.assessment_rounded,
+    'kontak-humas' => Icons.contact_page_rounded,
+    'publikasi-humas' => Icons.campaign_rounded,
     'pengaduan-humas' || 'pengaduan-saya' => Icons.support_agent_rounded,
     'umpan-balik-humas' || 'umpan-balik-saya' => Icons.rate_review_rounded,
     'inventaris-barang' => Icons.inventory_2_rounded,
@@ -149,6 +157,26 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
 }
 
 IconData _fallbackMenuIcon(MenuEntry item) {
+  final icon = switch (item.icon) {
+    'clipboard-list' => Icons.assignment_rounded,
+    'clipboard-check' => Icons.fact_check_rounded,
+    'files' || 'folder-open' => Icons.folder_copy_rounded,
+    'file-chart-column' => Icons.assessment_rounded,
+    'contact-round' => Icons.contact_page_rounded,
+    'users-round' || 'users' => Icons.groups_rounded,
+    'calendar-days' => Icons.event_available_rounded,
+    'handshake' => Icons.handshake_rounded,
+    'megaphone' => Icons.campaign_rounded,
+    'images' => Icons.photo_library_rounded,
+    'globe' => Icons.language_rounded,
+    'newspaper' => Icons.feed_rounded,
+    'trophy' => Icons.emoji_events_rounded,
+    'graduation-cap' => Icons.school_rounded,
+    'messages-square' => Icons.support_agent_rounded,
+    'message-square' => Icons.rate_review_rounded,
+    _ => null,
+  };
+  if (icon != null) return icon;
   final value = '${item.code} ${item.label}'.toLowerCase();
 
   if (value.contains('jadwal')) return Icons.calendar_month_rounded;

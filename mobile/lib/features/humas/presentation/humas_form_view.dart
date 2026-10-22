@@ -35,12 +35,16 @@ class HumasFormView extends StatefulWidget {
     required this.onSave,
     this.description,
     this.extra,
+    this.extraBuilder,
+    this.busy = false,
     super.key,
   });
   final String title;
   final String? description;
   final List<HumasField> fields;
   final Widget? extra;
+  final Widget Function(BuildContext, bool saving)? extraBuilder;
+  final bool busy;
   final Future<void> Function(HumasData values) onSave;
   @override
   State<HumasFormView> createState() => _HumasFormViewState();
@@ -86,7 +90,7 @@ class _HumasFormViewState extends State<HumasFormView> {
   }
 
   Future<void> _save() async {
-    if (_saving || !_formKey.currentState!.validate()) return;
+    if (_saving || widget.busy || !_formKey.currentState!.validate()) return;
     for (final field in widget.fields.where(
       (f) => f.kind == HumasFieldKind.choice && f.required,
     )) {
@@ -157,7 +161,7 @@ class _HumasFormViewState extends State<HumasFormView> {
 
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop: !_saving,
+    canPop: !_saving && !widget.busy,
     child: Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: SafeArea(
@@ -177,6 +181,8 @@ class _HumasFormViewState extends State<HumasFormView> {
                   child: _field(field),
                 ),
               if (widget.extra != null) widget.extra!,
+              if (widget.extraBuilder != null)
+                widget.extraBuilder!(context, _saving),
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -188,7 +194,7 @@ class _HumasFormViewState extends State<HumasFormView> {
                   ),
                 ),
               FilledButton(
-                onPressed: _saving ? null : _save,
+                onPressed: _saving || widget.busy ? null : _save,
                 child: Text(_saving ? 'Menyimpan…' : 'Simpan'),
               ),
             ],

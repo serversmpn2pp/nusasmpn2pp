@@ -45,6 +45,27 @@ class HumasRepository {
   Future<HumasPage> page(String path, [HumasData query = const {}]) async =>
       HumasPage.fromJson(await get(path, query));
 
+  Future<Uint8List> bytes(String path) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        'humas/$path',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(response.data ?? []);
+    } on DioException catch (error) {
+      if (error.response?.data is List<int>) {
+        try {
+          error.response!.data = jsonDecode(
+            utf8.decode(error.response!.data as List<int>),
+          );
+        } catch (_) {
+          error.response!.data = null;
+        }
+      }
+      throw mapDioException(error);
+    }
+  }
+
   // Only construct authenticated download paths locally, never attach a token to a supplied URL.
   Future<bool> download(String path, String fileName, {HumasData? data}) async {
     try {

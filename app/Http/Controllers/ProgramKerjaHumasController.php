@@ -6,6 +6,7 @@ use App\Models\Izin;
 use App\Models\ProgramKerjaHumas;
 use App\Models\TahunPelajaran;
 use App\Services\Humas\KelolaProgramKerjaHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +66,10 @@ class ProgramKerjaHumasController extends Controller
             return $program;
         });
 
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($program);
+        }
+
         return redirect()->route('program-kerja-humas.show', $program)->with('berhasil', 'Program kerja berhasil disimpan.');
     }
 
@@ -99,6 +104,10 @@ class ProgramKerjaHumasController extends Controller
                 $this->kelola->catat($program, $request, 'Program diperbarui', $data['catatan_perubahan']);
             }
         });
+
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($program);
+        }
 
         return redirect()->route('program-kerja-humas.show', $program)->with('berhasil', 'Perubahan program berhasil disimpan.');
     }

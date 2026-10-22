@@ -89,12 +89,14 @@ class NusaMenuEntryCard extends StatelessWidget {
     required this.item,
     required this.color,
     required this.onTap,
+    this.unavailableLabel = 'Segera hadir',
     super.key,
   });
 
   final MenuEntry item;
   final Color color;
   final VoidCallback onTap;
+  final String unavailableLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +143,7 @@ class NusaMenuEntryCard extends StatelessWidget {
               ),
               if (!item.isAvailable) ...[
                 const SizedBox(height: 5),
-                const _ComingSoonLabel(),
+                _ComingSoonLabel(label: unavailableLabel),
               ],
             ],
           ),
@@ -152,7 +154,9 @@ class NusaMenuEntryCard extends StatelessWidget {
 }
 
 class _ComingSoonLabel extends StatelessWidget {
-  const _ComingSoonLabel();
+  const _ComingSoonLabel({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -162,11 +166,11 @@ class _ComingSoonLabel extends StatelessWidget {
         color: NusaColors.textSecondary.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Text(
-        'Segera hadir',
+      child: Text(
+        label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
+        style: const TextStyle(
           color: NusaColors.textSecondary,
           fontSize: 8.5,
           fontWeight: FontWeight.w700,

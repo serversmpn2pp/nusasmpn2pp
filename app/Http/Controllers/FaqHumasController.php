@@ -31,9 +31,10 @@ class FaqHumasController extends Controller
                 }
             }
         }
-        $daftar = $q->orderBy('urutan')->orderBy('pertanyaan')->orderBy('id')->paginate(15)->withQueryString();
+        $p = app(HumasMobileService::class)->halaman($r);
+        $daftar = $q->orderBy('urutan')->orderBy('pertanyaan')->orderBy('id')->paginate($p['per_halaman'], ['*'], $p['nama_halaman'], $p['halaman'])->withQueryString();
         if ($r->routeIs('api.v1.*')) {
-            return $this->json(app(HumasMobileService::class)->paginasi($daftar, fn ($f) => $this->service->data($f)) + ['dapat_kelola' => $kelola]);
+            return $this->json(app(HumasMobileService::class)->paginasi($daftar, fn ($f) => $this->data($r, $f)) + ['dapat_kelola' => $kelola]);
         }
 
         return response()->view('faq-humas.index', compact('daftar', 'filter', 'kelola'), 200, ['Cache-Control' => 'private, no-store']);
@@ -66,7 +67,7 @@ class FaqHumasController extends Controller
     {
         $faq = $this->service->query($r->user())->findOrFail($faq->id);
         if ($r->routeIs('api.v1.*')) {
-            return $this->json($this->service->data($faq));
+            return $this->json($this->data($r, $faq));
         }
 
         return response()->view('faq-humas.show', ['faq' => $faq, 'kelola' => $this->service->kelola($r->user()),
@@ -91,7 +92,8 @@ class FaqHumasController extends Controller
     public function riwayat(Request $r, FaqHumas $faq)
     {
         abort_unless($this->service->kelola($r->user()), 403);
-        $p = $this->audit($faq)->paginate(15);
+        $page = app(HumasMobileService::class)->halaman($r);
+        $p = $this->audit($faq)->paginate($page['per_halaman'], ['*'], $page['nama_halaman'], $page['halaman']);
 
         return $this->json(app(HumasMobileService::class)->paginasi($p, fn ($a) => (array) $a));
     }
@@ -103,12 +105,18 @@ class FaqHumasController extends Controller
 
     private function selesai(Request $r, FaqHumas $f)
     {
-        return $r->routeIs('api.v1.*') ? $this->json($this->service->data($f), $f->wasRecentlyCreated ? 201 : 200)
+        return $r->routeIs('api.v1.*') ? $this->json($this->data($r, $f), $f->wasRecentlyCreated ? 201 : 200)
             : redirect()->route('faq-humas.show', $f)->with('berhasil', 'FAQ berhasil disimpan.');
     }
 
     private function json(array $data, int $status = 200)
     {
         return response()->json(['data' => $data], $status)->header('Cache-Control', 'private, no-store');
+    }
+
+    private function data(Request $r, FaqHumas $f): array
+    {
+        return $this->service->data($f) + ['status_label' => FaqHumas::STATUS[$f->status], 'urusan_label' => DokumenHumas::URUSAN[$f->urusan],
+            'sasaran_label' => FaqHumas::SASARAN[$f->sasaran], 'dapat_kelola' => $this->service->kelola($r->user())];
     }
 }

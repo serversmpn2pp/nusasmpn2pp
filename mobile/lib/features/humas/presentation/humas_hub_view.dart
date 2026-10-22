@@ -5,10 +5,12 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/humas/data/humas_repository.dart';
 import 'package:nusa/features/humas/domain/humas.dart';
+import 'package:nusa/features/humas/presentation/humas_menu_sections.dart';
 import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
 import 'package:nusa/features/menu/application/menu_controller.dart';
 import 'package:nusa/features/menu/domain/menu_catalog.dart';
-import 'package:nusa/features/menu/presentation/widgets/menu_cards.dart';
+import 'package:nusa/features/menu/presentation/menu_visuals.dart';
+import 'package:nusa/features/menu/presentation/widgets/menu_group_content.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_section_title.dart';
 
@@ -48,6 +50,7 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
     setState(() {
       _loading = true;
       _error = null;
+      _data = null;
     });
     try {
       final repository = ref.read(humasRepositoryProvider);
@@ -81,7 +84,10 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
     ]);
   }
 
-  Future<void> _openMenu(MenuEntry item) async {
+  Future<void> _openMenu(
+    MenuEntry item, [
+    Map<String, String> filter = const {},
+  ]) async {
     final module = HumasModule.fromMenuCode(item.code);
     final user = ref.read(authControllerProvider).value?.session?.pengguna;
     if (module == null || !module.canOpen(user) || !item.isAvailable) {
@@ -94,8 +100,27 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
       );
       return;
     }
-    await context.push(module.route);
+    await context.push(
+      Uri(
+        path: module.route,
+        queryParameters: filter.isEmpty ? null : filter,
+      ).toString(),
+    );
     if (mounted) await _load();
+  }
+
+  void _openLink(HumasMenuLink link) {
+    if (link.entry.status == 'web') {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('${link.entry.label} tersedia melalui NUSA web.'),
+          ),
+        );
+      return;
+    }
+    _openMenu(link.native ?? link.entry, link.filter);
   }
 
   @override
@@ -104,12 +129,15 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
     final canViewDashboard = humasCanViewDashboard(user);
     final menu = ref.watch(menuControllerProvider);
     final group = menu.value?.groupByCode('humas');
-    final items =
-        group?.items.where((item) {
-          final module = HumasModule.fromMenuCode(item.code);
-          return module != null && module.canOpen(user);
-        }).toList() ??
-        [];
+    final sections = humasMenuSections(
+      group: group,
+      user: user,
+      workspaces: menu.hasError ? [] : humasItems(_data?['ruang_kerja']),
+    );
+    final items = [
+      for (final section in sections)
+        for (final link in section.items) link.entry,
+    ];
     return Scaffold(
       appBar: AppBar(
         title: const Text('Humas'),
@@ -125,45 +153,41 @@ class _HumasHubViewState extends ConsumerState<HumasHubView> {
         child: RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(
+            key: const PageStorageKey('humas-hub-scroll'),
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
-              HumasCard(
-                title: 'Hubungan Sekolah & Masyarakat',
-                subtitle: 'Agenda, komunikasi, dan layanan sekolah dalam satu tempat.',
-                trailing: const Icon(
-                  Icons.forum_rounded,
-                  color: NusaColors.primary,
+              NusaMenuGroupHeader(
+                key: const Key('humas-menu-header'),
+                group: MenuGroup(
+                  code: 'humas',
+                  label: 'Humas',
+                  description:
+                      group?.description ??
+                      'Agenda, komunikasi, dan layanan sekolah.',
+                  icon: 'humas',
+                  items: items,
                 ),
               ),
+              const SizedBox(height: 22),
               if (menu.isLoading) const LinearProgressIndicator(),
               if (menu.hasError) HumasErrorView(menu.error!, onRetry: _refresh),
-              if (items.isNotEmpty) ...[
-                const NusaSectionTitle(title: 'Menu Humas'),
-                const SizedBox(height: 12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns = constraints.maxWidth < 340 ? 2 : 3;
-                    final textScale = MediaQuery.textScalerOf(context).scale(1);
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: columns,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        mainAxisExtent: 132 * textScale.clamp(1.0, 2.0),
-                      ),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) => NusaMenuEntryCard(
-                        item: items[index],
-                        color: NusaColors.primary,
-                        onTap: () => _openMenu(items[index]),
-                      ),
-                    );
-                  },
+              for (final section in sections) ...[
+                NusaSectionTitle(
+                  key: Key('humas-workspace-${section.code}'),
+                  title: section.label,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 10),
+                NusaSubmenuGrid(
+                  items: section.items.map((link) => link.entry).toList(),
+                  color: nusaMenuGroupColor('humas'),
+                  onOpen: (item) => _openLink(
+                    section.items.firstWhere(
+                      (link) => link.entry.code == item.code,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
               ],
               if (canViewDashboard) ...[
                 const NusaSectionTitle(title: 'Ringkasan Humas'),

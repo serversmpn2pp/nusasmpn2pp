@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('humas')->name('humas.')->middleware('throttle:120,1,humas-akses:')
     ->where(array_fill_keys(['agendaHumas', 'pesertaPertemuanHumas', 'tindakLanjutAgendaHumas', 'tiket', 'lampiran', 'formulir', 'pertanyaan', 'tindak', 'dokumenHumas', 'riwayatDokumenHumas', 'kontak', 'mou', 'publikasi'], '[0-9]{1,18}') + ['token' => '[A-Za-z0-9]{64}'])
     ->group(function () {
+        require __DIR__.'/api_humas_tahap_dua.php';
         Route::prefix('faq')->name('faq.')->where(['faq' => '[0-9]{1,18}'])->controller(FaqHumasController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/referensi', 'referensi')->name('referensi');
@@ -47,6 +48,7 @@ Route::prefix('humas')->name('humas.')->middleware('throttle:120,1,humas-akses:'
             Route::get('/referensi', 'referensi')->name('referensi');
             Route::post('/', 'store')->middleware('throttle:30,1,humas-kontak:')->name('store');
             Route::get('/{kontak}', 'show')->name('show');
+            Route::get('/{kontak}/riwayat', 'riwayat')->name('riwayat');
             Route::patch('/{kontak}', 'update')->name('update');
         });
         Route::get('/agenda/{agendaHumas}/paket', [PaketPertemuanHumasController::class, 'show'])->name('agenda.paket');
@@ -62,6 +64,7 @@ Route::prefix('humas')->name('humas.')->middleware('throttle:120,1,humas-akses:'
             Route::get('/pilihan-aset', 'pilihanAset')->name('pilihan-aset');
             Route::post('/', 'store')->middleware('throttle:15,1,humas-publikasi-baru:')->name('store');
             Route::get('/{publikasi}', 'show')->name('show');
+            Route::get('/{publikasi}/riwayat', 'riwayat')->name('riwayat');
             Route::patch('/{publikasi}', 'update')->middleware('throttle:15,1,humas-publikasi-edit:')->name('update');
             Route::post('/{publikasi}/tindakan/{aksi}', 'ubahStatus')->whereIn('aksi', ['ajukan', 'tarik', 'buka-revisi', 'tayang', 'setujui', 'minta-revisi'])->name('tindakan');
             Route::get('/{publikasi}/lampiran/{lampiran}', 'berkas')->name('berkas');

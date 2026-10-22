@@ -8,7 +8,7 @@
 @section('content')
 <div class="publikasi-page prestasi-page">
     @include('prestasi-sekolah._header', ['judulHalaman' => 'Database prestasi sekolah'])
-    <div class="agenda-metrics">@foreach(['total' => 'Prestasi sesuai filter', 'terverifikasi' => 'Terverifikasi', 'siswa' => 'Siswa NUSA berprestasi', 'sekolah' => 'Prestasi atas nama sekolah'] as $key => $label)<div class="agenda-metric"><span>{{ $label }}</span><strong>{{ $statistik[$key] }}</strong></div>@endforeach</div>
+    <div class="agenda-metrics">@foreach(['total' => 'Prestasi sesuai filter', 'terverifikasi' => 'Terverifikasi', 'siswa' => 'Siswa NUSA berprestasi', 'sekolah' => 'Prestasi atas nama sekolah'] as $key => $label)<div class="agenda-metric" data-tone="{{ $key === 'terverifikasi' ? 'success' : 'neutral' }}"><span>{{ $label }}</span><strong>{{ $statistik[$key] }}</strong></div>@endforeach</div>
     <nav class="agenda-tabs" aria-label="Bagian prestasi"><a href="{{ route('prestasi-sekolah.index', array_replace($filter, ['tab' => 'data'])) }}" @if(($filter['tab'] ?? 'data') === 'data') aria-current="page" @endif>Data prestasi</a><a href="{{ route('prestasi-sekolah.index', array_replace($filter, ['tab' => 'statistik'])) }}" @if(($filter['tab'] ?? 'data') === 'statistik') aria-current="page" @endif>Statistik prestasi</a></nav>
     <section class="agenda-section"><form class="feature-filter prestasi-filter" method="GET"><input type="hidden" name="tab" value="{{ $filter['tab'] ?? 'data' }}"><div class="field"><label for="kata_kunci">Cari kegiatan / penerima / capaian</label><input class="input" id="kata_kunci" name="kata_kunci" maxlength="120" value="{{ $filter['kata_kunci'] ?? '' }}"></div>
         <div class="field"><label for="tahun">Tahun prestasi</label><select class="select" id="tahun" name="tahun"><option value="">Semua tahun</option>@foreach($tahun as $t)<option value="{{ $t }}" @selected((string)($filter['tahun'] ?? '') === (string)$t)>{{ $t }}</option>@endforeach</select></div>
@@ -19,9 +19,11 @@
     @if(($filter['tab'] ?? 'data') === 'statistik')
         @include('prestasi-sekolah._statistik')
     @else
+        <section class="humas-records" aria-label="Daftar prestasi">
         @forelse($daftar as $p)<article class="prestasi-row"><div><span class="prestasi-badge prestasi-badge--{{ $p->status }}">{{ \App\Models\PrestasiSekolah::STATUS[$p->status] }}</span><h2><a href="{{ route('prestasi-sekolah.show', $p) }}">{{ $p->capaian }}</a></h2><p><strong>{{ $p->nama_kegiatan }}</strong></p><p class="agenda-muted">{{ $p->tanggal_prestasi->translatedFormat('d M Y') }} &middot; {{ \App\Models\PrestasiSekolah::TINGKAT[$p->tingkat] }} &middot; {{ \App\Models\PrestasiSekolah::KATEGORI[$p->kategori] }}</p></div>
             <div><p><strong>{{ $p->penerima === 'sekolah' ? 'SMP Negeri 2 Padang Panjang' : ($p->bentuk === 'tim' ? $p->nama_tim : $p->peserta->first()?->nama) }}</strong></p><p class="agenda-muted">{{ \App\Models\PrestasiSekolah::PENERIMA[$p->penerima] }} &middot; {{ \App\Models\PrestasiSekolah::BENTUK[$p->bentuk] }} @if($p->bentuk === 'tim') &middot; {{ $p->peserta->count() }} penerima @endif</p></div><a class="button button-muted" href="{{ route('prestasi-sekolah.show', $p) }}">Buka prestasi</a></article>@empty<div class="agenda-empty"><strong>Belum ada prestasi yang sesuai filter.</strong></div>@endforelse
         {{ $daftar->links() }}
+        </section>
     @endif
     @izin('prestasi_sekolah.ekspor')<form method="POST" action="{{ route('prestasi-sekolah.export') }}" class="agenda-actions">@csrf @foreach($filter as $key => $value)@if(filled($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif @endforeach<button type="submit" class="button button-muted">Ekspor Excel sesuai filter</button></form>@endizin
 </div>

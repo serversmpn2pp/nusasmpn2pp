@@ -19,6 +19,8 @@ class MitraHumas extends Model
 
     protected $casts = ['versi' => 'integer'];
 
+    protected $hidden = ['token_pembuatan'];
+
     public function kerjaSama(): HasMany
     {
         return $this->hasMany(KerjaSamaHumas::class)->orderByDesc('tanggal_mulai')->orderByDesc('id');

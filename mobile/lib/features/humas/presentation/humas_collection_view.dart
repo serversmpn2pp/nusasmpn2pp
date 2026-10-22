@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/features/humas/data/humas_repository.dart';
 import 'package:nusa/features/humas/domain/humas.dart';
 import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
@@ -40,6 +41,10 @@ class _HumasCollectionViewState extends State<HumasCollectionView> {
     setState(() {
       _loading = true;
       _error = null;
+      if (!append) {
+        _items.clear();
+        _page = null;
+      }
     });
     try {
       final page = await widget.repository.page(widget.path, {
@@ -58,6 +63,12 @@ class _HumasCollectionViewState extends State<HumasCollectionView> {
         setState(() {
           _error = error;
           _loading = false;
+          if (error is UnauthorizedException ||
+              error is NetworkException &&
+                  [403, 404].contains(error.statusCode)) {
+            _items.clear();
+            _page = null;
+          }
         });
       }
     }

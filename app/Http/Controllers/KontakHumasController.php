@@ -72,6 +72,20 @@ class KontakHumasController extends Controller
             200, ['Cache-Control' => 'private, no-store']);
     }
 
+    public function riwayat(Request $r, KontakHumas $kontak)
+    {
+        $this->service->akses($r->user());
+        abort_unless($this->service->rinci($r->user()), 403);
+        $filter = $r->validate(['halaman' => ['nullable', 'integer', 'min:1'], 'per_halaman' => ['nullable', 'integer', 'min:1', 'max:50']]);
+        $page = DB::table('riwayat_kontak_humas')->where('kontak_humas_id', $kontak->id)->orderByDesc('id')
+            ->paginate($filter['per_halaman'] ?? 20, ['id', 'aksi', 'kolom_berubah', 'alasan', 'created_at'], 'halaman', $filter['halaman'] ?? 1);
+
+        return $this->json(app(HumasMobileService::class)->paginasi($page, fn ($row) => [
+            'id' => $row->id, 'aksi' => $row->aksi, 'kolom_berubah' => json_decode($row->kolom_berubah, true),
+            'alasan' => $row->alasan, 'created_at' => $row->created_at,
+        ]));
+    }
+
     private function selesai(Request $r, KontakHumas $k)
     {
         return $r->routeIs('api.v1.*') ? $this->json($this->service->data($k, $r->user()), $k->wasRecentlyCreated ? 201 : 200)

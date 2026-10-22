@@ -7,6 +7,7 @@ use App\Models\PengurusKomiteHumas;
 use App\Models\PeriodeKomiteHumas;
 use App\Models\RiwayatDokumenHumas;
 use App\Services\Humas\KelolaKomiteHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -243,6 +244,9 @@ class KomiteHumasController extends Controller
 
     private function selesai(Request $request, PeriodeKomiteHumas $periode, string $pesan)
     {
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($periode);
+        }
         $request->session()->flash('berhasil', $pesan);
         $url = route('komite-humas.show', $periode);
 

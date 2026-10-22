@@ -42,7 +42,8 @@ class DirektoriKontakHumasService
     {
         $this->akses($u);
 
-        return $k->only(['id', 'nama', 'instansi', 'jabatan', 'urusan', 'status', 'versi']) + ['urusan_label' => DokumenHumas::URUSAN[$k->urusan],
+        return $k->only(['id', 'nama', 'instansi', 'jabatan', 'urusan', 'status', 'versi']) + ['urusan_label' => DokumenHumas::URUSAN[$k->urusan], 'status_label' => KontakHumas::STATUS[$k->status],
+            'hak_akses' => ['dapat_kelola' => $u->memilikiIzin('kontak_humas.kelola'), 'dapat_lihat_kontak' => $this->rinci($u)],
             'kontak_terbatas' => ! $this->rinci($u), 'nomor_kontak' => $this->rinci($u) ? $k->nomor_kontak : null,
             'email' => $this->rinci($u) ? $k->email : null, 'dasar_penggunaan' => $this->rinci($u) ? $k->dasar_penggunaan : null,
             'catatan' => $this->rinci($u) ? $k->catatan : null];

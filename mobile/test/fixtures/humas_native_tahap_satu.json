@@ -1,0 +1,1568 @@
+{
+    "humas": {
+        "user": {
+            "id": 2,
+            "nama": "Uji wakil_pimpinan_humas",
+            "username": "native.282e9673-8ca7-4157-bb1d-26147f24836b",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "wakil_pimpinan_humas"
+            ],
+            "izin": [
+                "agenda_humas.bundel",
+                "agenda_humas.kelola",
+                "agenda_humas.lihat",
+                "akreditasi_humas.ekspor",
+                "akreditasi_humas.kelola",
+                "akreditasi_humas.lihat",
+                "alumni_humas.ekspor",
+                "alumni_humas.kelola",
+                "alumni_humas.lihat",
+                "aset_promosi_humas.kelola",
+                "aset_promosi_humas.lihat",
+                "buku_tamu.kelola",
+                "buku_tamu.lihat",
+                "dashboard_humas.lihat",
+                "dokumen_humas.kelola",
+                "dokumen_humas.lihat",
+                "faq_humas.kelola",
+                "kemitraan_humas.kelola",
+                "kemitraan_humas.lihat",
+                "kinerja_humas.kelola",
+                "kinerja_humas.lihat",
+                "kliping_berita_humas.kelola",
+                "kliping_berita_humas.lihat",
+                "komite_humas.kelola",
+                "komite_humas.lihat",
+                "kontak_humas.kelola",
+                "kontak_humas.kontak",
+                "kontak_humas.lihat",
+                "media_resmi_humas.kelola",
+                "media_resmi_humas.lihat",
+                "pengaduan_humas.kelola",
+                "pengaduan_humas.lihat",
+                "pengaduan_humas.tangani",
+                "prestasi_sekolah.ekspor",
+                "prestasi_sekolah.kelola",
+                "prestasi_sekolah.lihat",
+                "program_kerja_humas.kelola",
+                "program_kerja_humas.lihat",
+                "publikasi_humas.kelola",
+                "publikasi_humas.lihat",
+                "umpan_balik_humas.kelola",
+                "umpan_balik_humas.lihat"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 17,
+            "kelompok": [
+                {
+                    "kode": "sarana-prasarana",
+                    "label": "Sarana Prasarana",
+                    "deskripsi": "Inventaris, stok, peminjaman, pengajuan, dan laporan barang.",
+                    "ikon": "inventory",
+                    "items": [
+                        {
+                            "kode": "katalog-barang",
+                            "label": "Katalog Barang",
+                            "deskripsi": "Modul Katalog Barang NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Layanan Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/katalog-barang"
+                        },
+                        {
+                            "kode": "pengajuan-saya",
+                            "label": "Pengajuan Saya",
+                            "deskripsi": "Modul Pengajuan Saya NUSA.",
+                            "inisial": "PS",
+                            "subkelompok": "Layanan Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pengajuan-saya"
+                        }
+                    ]
+                },
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "dashboard-humas",
+                            "label": "Dashboard Humas",
+                            "deskripsi": "Modul Dashboard Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas"
+                        },
+                        {
+                            "kode": "agenda-humas",
+                            "label": "Agenda & Pertemuan",
+                            "deskripsi": "Modul Agenda & Pertemuan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/agenda"
+                        },
+                        {
+                            "kode": "dokumen-humas",
+                            "label": "Pusat Dokumen Humas",
+                            "deskripsi": "Modul Pusat Dokumen Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/dokumen"
+                        },
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "deskripsi": "Modul Aspirasi & Pengaduan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Aspirasi & Pengaduan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/pengaduan"
+                        },
+                        {
+                            "kode": "umpan-balik-humas",
+                            "label": "Rekap Umpan Balik",
+                            "deskripsi": "Modul Rekap Umpan Balik NUSA.",
+                            "inisial": "UB",
+                            "subkelompok": "Hubungan Orang Tua\/Wali",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/umpan-balik"
+                        },
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/faq",
+                            "api": "\/api\/v1\/humas\/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kinerja-humas",
+                            "label": "Laporan Kinerja Semester",
+                            "deskripsi": "Modul Laporan Kinerja Semester NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/kinerja",
+                            "api": "\/api\/v1\/humas\/kinerja",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kontak-humas",
+                            "label": "Direktori Kontak",
+                            "deskripsi": "Modul Direktori Kontak NUSA.",
+                            "inisial": "DK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/kontak",
+                            "api": "\/api\/v1\/humas\/kontak",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "deskripsi": "Modul Publikasi & Persetujuan NUSA.",
+                            "inisial": "PP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/publikasi",
+                            "api": "\/api\/v1\/humas\/publikasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "program-kerja-humas",
+                            "label": "Program Kerja Humas",
+                            "deskripsi": "Modul Program Kerja Humas NUSA.",
+                            "inisial": "PK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/program",
+                            "api": "\/api\/v1\/humas\/program",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "komite-humas",
+                            "label": "Komite Sekolah",
+                            "deskripsi": "Modul Komite Sekolah NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Komite Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/komite",
+                            "api": "\/api\/v1\/humas\/komite",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kemitraan-humas",
+                            "label": "Kemitraan & MoU",
+                            "deskripsi": "Modul Kemitraan & MoU NUSA.",
+                            "inisial": "KM",
+                            "subkelompok": "Kemitraan & Kerja Sama",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/mitra",
+                            "api": "\/api\/v1\/humas\/mitra",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "akreditasi-humas",
+                            "label": "Portofolio Akreditasi",
+                            "deskripsi": "Modul Portofolio Akreditasi NUSA.",
+                            "inisial": "PA",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/akreditasi",
+                            "api": "\/api\/v1\/humas\/akreditasi",
+                            "api_tersedia": true
+                        }
+                    ]
+                },
+                {
+                    "kode": "persuratan-arsip",
+                    "label": "Persuratan & Arsip",
+                    "deskripsi": "Arsip surat, pengesahan, disposisi, dan laporan pelaksanaan tugas.",
+                    "ikon": "archive",
+                    "items": [
+                        {
+                            "kode": "surat-saya",
+                            "label": "Surat & Penugasan Saya",
+                            "deskripsi": "Modul Surat & Penugasan Saya NUSA.",
+                            "inisial": "SS",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/surat-saya",
+                            "api": "\/api\/v1\/surat-saya",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "tindak-lanjut-surat-saya",
+                            "label": "Tindak Lanjut Surat Saya",
+                            "deskripsi": "Modul Tindak Lanjut Surat Saya NUSA.",
+                            "inisial": "TL",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/tindak-lanjut-surat",
+                            "api": "\/api\/v1\/tindak-lanjut-surat",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "dashboard-humas",
+                    "agenda-humas",
+                    "pengaduan-humas",
+                    "dokumen-humas"
+                ]
+            }
+        },
+        "kontak": {
+            "id": 1,
+            "nama": "Narahubung Kemitraan Sekolah",
+            "instansi": "Instansi Mitra",
+            "jabatan": "Koordinator",
+            "urusan": "kedinasan",
+            "status": "aktif",
+            "versi": 0,
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "status_label": "Aktif",
+            "hak_akses": {
+                "dapat_kelola": true,
+                "dapat_lihat_kontak": true
+            },
+            "kontak_terbatas": false,
+            "nomor_kontak": "081234567890",
+            "email": "privat@example.test",
+            "dasar_penggunaan": "Koordinasi resmi program sekolah.",
+            "catatan": null
+        },
+        "kontak_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua\/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "status": {
+                "aktif": "Aktif",
+                "arsip": "Diarsipkan"
+            },
+            "token_pembuatan": "68fe8f74-4715-4e2f-9748-601c6c830164",
+            "hak_akses": {
+                "dapat_kelola": true,
+                "dapat_lihat_kontak": true
+            }
+        },
+        "publikasi": {
+            "id": 1,
+            "judul": "Kolaborasi Sekolah dan Masyarakat",
+            "jenis": "berita",
+            "ringkasan": null,
+            "kanal": "website",
+            "status": "draf",
+            "versi": 0,
+            "rencana_tayang": null,
+            "jenis_label": "Berita kegiatan",
+            "kanal_label": "Website sekolah",
+            "status_label": "Draf",
+            "pembuat": "Uji wakil_pimpinan_humas",
+            "pemeriksa": null,
+            "hak_akses": {
+                "dapat_edit": true,
+                "dapat_ajukan": true,
+                "dapat_tarik": false,
+                "dapat_periksa": false,
+                "dapat_tayang": false,
+                "dapat_buka_revisi": false
+            },
+            "isi": "Kegiatan pembelajaran bersama masyarakat dan orang tua siswa.",
+            "catatan_pemeriksaan": null,
+            "url_tayang": null,
+            "waktu_tayang": null,
+            "lampiran": [],
+            "agenda_humas_id": null,
+            "aset": []
+        },
+        "publikasi_referensi": {
+            "jenis": {
+                "berita": "Berita kegiatan",
+                "pengumuman": "Pengumuman",
+                "rilis_pers": "Rilis pers"
+            },
+            "kanal": {
+                "website": "Website sekolah",
+                "instagram": "Instagram",
+                "facebook": "Facebook",
+                "youtube": "YouTube",
+                "media_massa": "Media massa",
+                "lainnya": "Media lainnya"
+            },
+            "status": {
+                "draf": "Draf",
+                "diajukan": "Menunggu pemeriksaan",
+                "revisi": "Perlu revisi",
+                "disetujui": "Disetujui",
+                "tayang": "Sudah tayang"
+            },
+            "agenda": [],
+            "dapat_pilih_agenda": true,
+            "dapat_pilih_aset": true,
+            "batas_foto": {
+                "jumlah": 5,
+                "ukuran_mb": 2,
+                "ekstensi": [
+                    "jpg",
+                    "jpeg",
+                    "png",
+                    "webp"
+                ]
+            },
+            "token_pembuatan": "c3829996-9f6b-496c-addd-55c12a1deae2",
+            "dapat_buat": true,
+            "cakupan": "seluruh"
+        }
+    },
+    "pimpinan": {
+        "user": {
+            "id": 3,
+            "nama": "Uji pimpinan",
+            "username": "native.3e8c31c3-36ae-470c-ae98-064a2dfab9b7",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "pimpinan"
+            ],
+            "izin": [
+                "absensi.laporan",
+                "absensi.lihat",
+                "agenda_humas.bundel",
+                "agenda_humas.lihat",
+                "akreditasi_humas.lihat",
+                "akun.lihat",
+                "alumni_humas.lihat",
+                "aset_promosi_humas.lihat",
+                "barang.lihat",
+                "beranda.akses",
+                "bk.lihat",
+                "buku_tamu.lihat",
+                "cbt.lihat",
+                "cbt.terpusat_lihat",
+                "dashboard_humas.lihat",
+                "dokumen_humas.lihat",
+                "guru_mapel.lihat",
+                "jadwal.lihat",
+                "kartu_pelajar.lihat",
+                "keamanan.lihat",
+                "kebersihan.lihat",
+                "kelas.lihat",
+                "kemitraan_humas.lihat",
+                "kinerja_humas.lihat",
+                "kliping_berita_humas.lihat",
+                "komite_humas.lihat",
+                "kontak_humas.lihat",
+                "laporan.export",
+                "mata_pelajaran.lihat",
+                "media_resmi_humas.lihat",
+                "nilai.lihat",
+                "nilai.rekap",
+                "pegawai.lihat",
+                "pengaduan_humas.lihat",
+                "pengaduan_humas.tangani",
+                "peran.lihat",
+                "perangkat_ajar.lihat",
+                "poin_siswa.lihat",
+                "prestasi_sekolah.lihat",
+                "program_kerja_humas.lihat",
+                "publikasi_humas.lihat",
+                "publikasi_humas.periksa",
+                "sarpras.lihat",
+                "siswa.lihat",
+                "supervisi.lihat",
+                "surat.disposisi",
+                "surat.lihat",
+                "surat.rahasia",
+                "surat.sahkan",
+                "tahun_pelajaran.lihat",
+                "umpan_balik_humas.lihat"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 67,
+            "kelompok": [
+                {
+                    "kode": "data-sekolah",
+                    "label": "Data Sekolah",
+                    "deskripsi": "Data induk sekolah, pegawai, siswa, kelas, dan identitas.",
+                    "ikon": "school",
+                    "items": [
+                        {
+                            "kode": "tahun-pelajaran",
+                            "label": "Tahun Pelajaran",
+                            "deskripsi": "Modul Tahun Pelajaran NUSA.",
+                            "inisial": "TP",
+                            "subkelompok": "Periode Akademik",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/tahun-pelajaran"
+                        },
+                        {
+                            "kode": "pegawai",
+                            "label": "Pegawai",
+                            "deskripsi": "Modul Pegawai NUSA.",
+                            "inisial": "PG",
+                            "subkelompok": "Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pegawai"
+                        },
+                        {
+                            "kode": "siswa",
+                            "label": "Siswa",
+                            "deskripsi": "Modul Siswa NUSA.",
+                            "inisial": "SW",
+                            "subkelompok": "Siswa dan Kelas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/siswa"
+                        },
+                        {
+                            "kode": "kelas",
+                            "label": "Kelas",
+                            "deskripsi": "Modul Kelas NUSA.",
+                            "inisial": "KL",
+                            "subkelompok": "Siswa dan Kelas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/kelas"
+                        },
+                        {
+                            "kode": "penempatan-siswa",
+                            "label": "Penempatan Siswa",
+                            "deskripsi": "Modul Penempatan Siswa NUSA.",
+                            "inisial": "PS",
+                            "subkelompok": "Siswa dan Kelas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/penempatan-siswa"
+                        },
+                        {
+                            "kode": "kartu-pegawai",
+                            "label": "Kartu Pegawai",
+                            "deskripsi": "Modul Kartu Pegawai NUSA.",
+                            "inisial": "KG",
+                            "subkelompok": "Identitas dan Kartu",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/kartu-pegawai"
+                        },
+                        {
+                            "kode": "kartu-pelajar",
+                            "label": "Kartu Pelajar",
+                            "deskripsi": "Modul Kartu Pelajar NUSA.",
+                            "inisial": "KP",
+                            "subkelompok": "Identitas dan Kartu",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/kartu-pelajar"
+                        }
+                    ]
+                },
+                {
+                    "kode": "akademik",
+                    "label": "Akademik",
+                    "deskripsi": "Pembelajaran, penilaian, survei, dan perangkat ajar.",
+                    "ikon": "academic",
+                    "items": [
+                        {
+                            "kode": "mata-pelajaran",
+                            "label": "Mata Pelajaran",
+                            "deskripsi": "Modul Mata Pelajaran NUSA.",
+                            "inisial": "MP",
+                            "subkelompok": "Pembelajaran",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/mata-pelajaran"
+                        },
+                        {
+                            "kode": "guru-mata-pelajaran",
+                            "label": "Guru Mata Pelajaran",
+                            "deskripsi": "Modul Guru Mata Pelajaran NUSA.",
+                            "inisial": "GM",
+                            "subkelompok": "Pembelajaran",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/guru-mata-pelajaran"
+                        },
+                        {
+                            "kode": "jadwal-pelajaran",
+                            "label": "Jadwal Pelajaran",
+                            "deskripsi": "Modul Jadwal Pelajaran NUSA.",
+                            "inisial": "JP",
+                            "subkelompok": "Pembelajaran",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/kelas?mode=jadwal"
+                        },
+                        {
+                            "kode": "rekap-nilai-rapor",
+                            "label": "Rekap Nilai Rapor",
+                            "deskripsi": "Modul Rekap Nilai Rapor NUSA.",
+                            "inisial": "RR",
+                            "subkelompok": "Penilaian",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/rekap-nilai-rapor"
+                        },
+                        {
+                            "kode": "pemeriksaan-perangkat-ajar",
+                            "label": "Pemeriksaan Perangkat Ajar",
+                            "deskripsi": "Modul Pemeriksaan Perangkat Ajar NUSA.",
+                            "inisial": "PP",
+                            "subkelompok": "Perangkat Ajar",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pemeriksaan-perangkat-ajar"
+                        },
+                        {
+                            "kode": "supervisi-akademik",
+                            "label": "Supervisi Akademik",
+                            "deskripsi": "Modul Supervisi Akademik NUSA.",
+                            "inisial": "SA",
+                            "subkelompok": "Supervisi",
+                            "ikon": null,
+                            "status": "segera_hadir",
+                            "rute": null,
+                            "api": "\/api\/v1\/supervisi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "program-supervisi",
+                            "label": "Program Supervisi",
+                            "deskripsi": "Modul Program Supervisi NUSA.",
+                            "inisial": "SP",
+                            "subkelompok": "Supervisi",
+                            "ikon": null,
+                            "status": "segera_hadir",
+                            "rute": null,
+                            "api": "\/api\/v1\/supervisi\/program",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "rekap-supervisi",
+                            "label": "Rekap Supervisi",
+                            "deskripsi": "Modul Rekap Supervisi NUSA.",
+                            "inisial": "SR",
+                            "subkelompok": "Supervisi",
+                            "ikon": null,
+                            "status": "segera_hadir",
+                            "rute": null,
+                            "api": "\/api\/v1\/supervisi\/rekap",
+                            "api_tersedia": true
+                        }
+                    ]
+                },
+                {
+                    "kode": "ujian-asesmen",
+                    "label": "Ujian & Asesmen",
+                    "deskripsi": "Pusat pengelolaan asesmen dan ujian CBT.",
+                    "ikon": "quiz",
+                    "items": [
+                        {
+                            "kode": "pusat-cbt",
+                            "label": "Ujian & Asesmen",
+                            "deskripsi": "Buka seluruh pengelolaan asesmen dan ujian CBT.",
+                            "inisial": "UA",
+                            "subkelompok": "CBT",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pusat-cbt"
+                        },
+                        {
+                            "kode": "ujian-terpusat",
+                            "label": "Ujian Terpusat",
+                            "deskripsi": "Siapkan kegiatan, panitia, sesi, ruang, peserta, dan jadwal ujian.",
+                            "inisial": "UT",
+                            "subkelompok": "Ujian Terpusat",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/ujian-terpusat",
+                            "api": "\/api\/v1\/ujian-terpusat",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "pelaksanaan-ujian-terpusat",
+                            "label": "Pelaksanaan Ujian",
+                            "deskripsi": "Pantau ruang, pengawas, presensi, pengerjaan peserta, dan ujian susulan.",
+                            "inisial": "PU",
+                            "subkelompok": "Ujian Terpusat",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pelaksanaan-ujian-terpusat",
+                            "api": "\/api\/v1\/pelaksanaan-ujian-terpusat",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "hasil-ujian-terpusat",
+                            "label": "Nilai & Hasil",
+                            "deskripsi": "Tinjau hasil, koreksi uraian, finalisasi, publikasi, dan penerapan nilai.",
+                            "inisial": "NH",
+                            "subkelompok": "Ujian Terpusat",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/hasil-ujian-terpusat",
+                            "api": "\/api\/v1\/hasil-ujian-terpusat",
+                            "api_tersedia": true
+                        }
+                    ]
+                },
+                {
+                    "kode": "kehadiran",
+                    "label": "Kehadiran",
+                    "deskripsi": "Piket, kegiatan ibadah, serta presensi siswa dan pegawai.",
+                    "ikon": "attendance",
+                    "items": [
+                        {
+                            "kode": "scan-presensi-siswa",
+                            "label": "Status Scan Presensi Siswa",
+                            "deskripsi": "Modul Status Scan Presensi Siswa NUSA.",
+                            "inisial": "SS",
+                            "subkelompok": "Presensi Siswa",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/status-scan-presensi-siswa"
+                        },
+                        {
+                            "kode": "rekap-presensi-siswa",
+                            "label": "Rekap & Koreksi Presensi Siswa",
+                            "deskripsi": "Modul Rekap & Koreksi Presensi Siswa NUSA.",
+                            "inisial": "RS",
+                            "subkelompok": "Presensi Siswa",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/rekap-presensi-siswa"
+                        },
+                        {
+                            "kode": "laporan-presensi-siswa",
+                            "label": "Laporan Presensi Siswa",
+                            "deskripsi": "Modul Laporan Presensi Siswa NUSA.",
+                            "inisial": "LS",
+                            "subkelompok": "Presensi Siswa",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/laporan-presensi-siswa"
+                        },
+                        {
+                            "kode": "scan-presensi-pegawai",
+                            "label": "Status Scan Presensi Pegawai",
+                            "deskripsi": "Modul Status Scan Presensi Pegawai NUSA.",
+                            "inisial": "SP",
+                            "subkelompok": "Presensi Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/status-scan-presensi-pegawai"
+                        },
+                        {
+                            "kode": "rekap-presensi-pegawai",
+                            "label": "Rekap Presensi Pegawai",
+                            "deskripsi": "Modul Rekap Presensi Pegawai NUSA.",
+                            "inisial": "RP",
+                            "subkelompok": "Presensi Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/rekap-presensi-pegawai"
+                        },
+                        {
+                            "kode": "laporan-presensi-pegawai",
+                            "label": "Laporan Presensi Pegawai",
+                            "deskripsi": "Modul Laporan Presensi Pegawai NUSA.",
+                            "inisial": "LP",
+                            "subkelompok": "Presensi Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/laporan-presensi-pegawai"
+                        }
+                    ]
+                },
+                {
+                    "kode": "kesiswaan-bk",
+                    "label": "Kesiswaan & BK",
+                    "deskripsi": "Pembinaan, poin, pendampingan, dan pemantauan siswa.",
+                    "ikon": "counseling",
+                    "items": [
+                        {
+                            "kode": "pemeriksaan-pengesahan",
+                            "label": "Pemeriksaan & Pengesahan",
+                            "deskripsi": "Modul Pemeriksaan & Pengesahan NUSA.",
+                            "inisial": "VP",
+                            "subkelompok": "Operasional",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pemeriksaan-pengesahan"
+                        },
+                        {
+                            "kode": "daftar-laporan-siswa",
+                            "label": "Daftar Laporan Siswa",
+                            "deskripsi": "Modul Daftar Laporan Siswa NUSA.",
+                            "inisial": "LS",
+                            "subkelompok": "Operasional",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/daftar-laporan-siswa"
+                        },
+                        {
+                            "kode": "pendampingan-siswa",
+                            "label": "Pendampingan Siswa",
+                            "deskripsi": "Modul Pendampingan Siswa NUSA.",
+                            "inisial": "PD",
+                            "subkelompok": "Operasional",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pendampingan-siswa"
+                        },
+                        {
+                            "kode": "pelaksanaan-sanksi-siswa",
+                            "label": "Pelaksanaan Sanksi Siswa",
+                            "deskripsi": "Modul Pelaksanaan Sanksi Siswa NUSA.",
+                            "inisial": "PS",
+                            "subkelompok": "Operasional",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pelaksanaan-sanksi-siswa"
+                        },
+                        {
+                            "kode": "peringatan-dini-siswa",
+                            "label": "Peringatan Dini Siswa",
+                            "deskripsi": "Modul Peringatan Dini Siswa NUSA.",
+                            "inisial": "PD",
+                            "subkelompok": "Monitoring",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/peringatan-dini-siswa"
+                        },
+                        {
+                            "kode": "rekap-poin-siswa",
+                            "label": "Rekap Poin Siswa",
+                            "deskripsi": "Modul Rekap Poin Siswa NUSA.",
+                            "inisial": "RP",
+                            "subkelompok": "Monitoring",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/rekap-poin-siswa"
+                        }
+                    ]
+                },
+                {
+                    "kode": "sarana-prasarana",
+                    "label": "Sarana Prasarana",
+                    "deskripsi": "Inventaris, stok, peminjaman, pengajuan, dan laporan barang.",
+                    "ikon": "inventory",
+                    "items": [
+                        {
+                            "kode": "katalog-barang",
+                            "label": "Katalog Barang",
+                            "deskripsi": "Modul Katalog Barang NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Layanan Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/katalog-barang"
+                        },
+                        {
+                            "kode": "pengajuan-saya",
+                            "label": "Pengajuan Saya",
+                            "deskripsi": "Modul Pengajuan Saya NUSA.",
+                            "inisial": "PS",
+                            "subkelompok": "Layanan Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pengajuan-saya"
+                        },
+                        {
+                            "kode": "dashboard-sarpras",
+                            "label": "Dashboard Sarpras",
+                            "deskripsi": "Modul Dashboard Sarpras NUSA.",
+                            "inisial": "DS",
+                            "subkelompok": "Ringkasan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/dashboard-sarpras"
+                        },
+                        {
+                            "kode": "inventaris-barang",
+                            "label": "Inventaris Barang",
+                            "deskripsi": "Modul Inventaris Barang NUSA.",
+                            "inisial": "IB",
+                            "subkelompok": "Inventaris",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/barang"
+                        },
+                        {
+                            "kode": "unit-aset",
+                            "label": "Unit Aset",
+                            "deskripsi": "Modul Unit Aset NUSA.",
+                            "inisial": "UA",
+                            "subkelompok": "Inventaris",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/unit-aset"
+                        },
+                        {
+                            "kode": "label-inventaris",
+                            "label": "Label Inventaris",
+                            "deskripsi": "Modul Label Inventaris NUSA.",
+                            "inisial": "LI",
+                            "subkelompok": "Inventaris",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/label-inventaris"
+                        },
+                        {
+                            "kode": "barang-datang",
+                            "label": "Barang Datang",
+                            "deskripsi": "Modul Barang Datang NUSA.",
+                            "inisial": "BD",
+                            "subkelompok": "Stok Barang",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/barang-datang"
+                        },
+                        {
+                            "kode": "saldo-stok",
+                            "label": "Saldo Stok",
+                            "deskripsi": "Modul Saldo Stok NUSA.",
+                            "inisial": "SS",
+                            "subkelompok": "Stok Barang",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/saldo-stok"
+                        },
+                        {
+                            "kode": "mutasi-stok",
+                            "label": "Mutasi Stok",
+                            "deskripsi": "Modul Mutasi Stok NUSA.",
+                            "inisial": "MS",
+                            "subkelompok": "Stok Barang",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/mutasi-stok"
+                        },
+                        {
+                            "kode": "peminjaman-barang",
+                            "label": "Peminjaman Barang",
+                            "deskripsi": "Modul Peminjaman Barang NUSA.",
+                            "inisial": "PB",
+                            "subkelompok": "Peminjaman",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/peminjaman-barang"
+                        },
+                        {
+                            "kode": "rekap-peminjaman",
+                            "label": "Rekap Peminjaman",
+                            "deskripsi": "Modul Rekap Peminjaman NUSA.",
+                            "inisial": "RP",
+                            "subkelompok": "Peminjaman",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/rekap-peminjaman-barang"
+                        },
+                        {
+                            "kode": "laporan-inventaris",
+                            "label": "Laporan Inventaris",
+                            "deskripsi": "Modul Laporan Inventaris NUSA.",
+                            "inisial": "LI",
+                            "subkelompok": "Laporan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/laporan-inventaris"
+                        },
+                        {
+                            "kode": "kategori-barang",
+                            "label": "Kategori Barang",
+                            "deskripsi": "Modul Kategori Barang NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Pengaturan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/kategori-barang"
+                        },
+                        {
+                            "kode": "satuan-barang",
+                            "label": "Satuan Barang",
+                            "deskripsi": "Modul Satuan Barang NUSA.",
+                            "inisial": "SB",
+                            "subkelompok": "Pengaturan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/satuan-barang"
+                        },
+                        {
+                            "kode": "lokasi-barang",
+                            "label": "Lokasi Barang",
+                            "deskripsi": "Modul Lokasi Barang NUSA.",
+                            "inisial": "LK",
+                            "subkelompok": "Pengaturan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/lokasi-barang"
+                        },
+                        {
+                            "kode": "sumber-perolehan",
+                            "label": "Sumber Perolehan",
+                            "deskripsi": "Modul Sumber Perolehan NUSA.",
+                            "inisial": "SP",
+                            "subkelompok": "Pengaturan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/sumber-perolehan"
+                        }
+                    ]
+                },
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "dashboard-humas",
+                            "label": "Dashboard Humas",
+                            "deskripsi": "Modul Dashboard Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas"
+                        },
+                        {
+                            "kode": "agenda-humas",
+                            "label": "Agenda & Pertemuan",
+                            "deskripsi": "Modul Agenda & Pertemuan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/agenda"
+                        },
+                        {
+                            "kode": "dokumen-humas",
+                            "label": "Pusat Dokumen Humas",
+                            "deskripsi": "Modul Pusat Dokumen Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/dokumen"
+                        },
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "deskripsi": "Modul Aspirasi & Pengaduan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Aspirasi & Pengaduan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/pengaduan"
+                        },
+                        {
+                            "kode": "umpan-balik-humas",
+                            "label": "Rekap Umpan Balik",
+                            "deskripsi": "Modul Rekap Umpan Balik NUSA.",
+                            "inisial": "UB",
+                            "subkelompok": "Hubungan Orang Tua\/Wali",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/umpan-balik"
+                        },
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/faq",
+                            "api": "\/api\/v1\/humas\/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kinerja-humas",
+                            "label": "Laporan Kinerja Semester",
+                            "deskripsi": "Modul Laporan Kinerja Semester NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/kinerja",
+                            "api": "\/api\/v1\/humas\/kinerja",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kontak-humas",
+                            "label": "Direktori Kontak",
+                            "deskripsi": "Modul Direktori Kontak NUSA.",
+                            "inisial": "DK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/kontak",
+                            "api": "\/api\/v1\/humas\/kontak",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "deskripsi": "Modul Publikasi & Persetujuan NUSA.",
+                            "inisial": "PP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/publikasi",
+                            "api": "\/api\/v1\/humas\/publikasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "program-kerja-humas",
+                            "label": "Program Kerja Humas",
+                            "deskripsi": "Modul Program Kerja Humas NUSA.",
+                            "inisial": "PK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/program",
+                            "api": "\/api\/v1\/humas\/program",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "komite-humas",
+                            "label": "Komite Sekolah",
+                            "deskripsi": "Modul Komite Sekolah NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Komite Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/komite",
+                            "api": "\/api\/v1\/humas\/komite",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kemitraan-humas",
+                            "label": "Kemitraan & MoU",
+                            "deskripsi": "Modul Kemitraan & MoU NUSA.",
+                            "inisial": "KM",
+                            "subkelompok": "Kemitraan & Kerja Sama",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/mitra",
+                            "api": "\/api\/v1\/humas\/mitra",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "akreditasi-humas",
+                            "label": "Portofolio Akreditasi",
+                            "deskripsi": "Modul Portofolio Akreditasi NUSA.",
+                            "inisial": "PA",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/akreditasi",
+                            "api": "\/api\/v1\/humas\/akreditasi",
+                            "api_tersedia": true
+                        }
+                    ]
+                },
+                {
+                    "kode": "persuratan-arsip",
+                    "label": "Persuratan & Arsip",
+                    "deskripsi": "Arsip surat, pengesahan, disposisi, dan laporan pelaksanaan tugas.",
+                    "ikon": "archive",
+                    "items": [
+                        {
+                            "kode": "arsip-surat",
+                            "label": "Arsip Surat",
+                            "deskripsi": "Modul Arsip Surat NUSA.",
+                            "inisial": "AS",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/persuratan",
+                            "api": "\/api\/v1\/persuratan",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "pengesahan-surat",
+                            "label": "Pengesahan Surat",
+                            "deskripsi": "Modul Pengesahan Surat NUSA.",
+                            "inisial": "PS",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/persuratan\/pengesahan",
+                            "api": "\/api\/v1\/persuratan\/pengesahan",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "surat-saya",
+                            "label": "Surat & Penugasan Saya",
+                            "deskripsi": "Modul Surat & Penugasan Saya NUSA.",
+                            "inisial": "SS",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/surat-saya",
+                            "api": "\/api\/v1\/surat-saya",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "monitoring-tindak-lanjut-surat",
+                            "label": "Monitoring Tindak Lanjut Surat",
+                            "deskripsi": "Modul Monitoring Tindak Lanjut Surat NUSA.",
+                            "inisial": "MT",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/persuratan\/tindak-lanjut",
+                            "api": "\/api\/v1\/persuratan\/tindak-lanjut",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "tindak-lanjut-surat-saya",
+                            "label": "Tindak Lanjut Surat Saya",
+                            "deskripsi": "Modul Tindak Lanjut Surat Saya NUSA.",
+                            "inisial": "TL",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/tindak-lanjut-surat",
+                            "api": "\/api\/v1\/tindak-lanjut-surat",
+                            "api_tersedia": true
+                        }
+                    ]
+                },
+                {
+                    "kode": "sistem",
+                    "label": "Sistem",
+                    "deskripsi": "Akun, role, hak akses, aktivitas login, dan pencadangan.",
+                    "ikon": "security",
+                    "items": [
+                        {
+                            "kode": "akun-pegawai",
+                            "label": "Akun Pegawai",
+                            "deskripsi": "Modul Akun Pegawai NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/akun-pegawai"
+                        },
+                        {
+                            "kode": "role-hak-akses",
+                            "label": "Role & Hak Akses",
+                            "deskripsi": "Modul Role & Hak Akses NUSA.",
+                            "inisial": "RA",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/role-hak-akses"
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "rekap-presensi-siswa",
+                    "rekap-presensi-pegawai",
+                    "rekap-nilai-rapor",
+                    "dashboard-sarpras"
+                ]
+            }
+        },
+        "kontak": {
+            "id": 1,
+            "nama": "Narahubung Kemitraan Sekolah",
+            "instansi": "Instansi Mitra",
+            "jabatan": "Koordinator",
+            "urusan": "kedinasan",
+            "status": "aktif",
+            "versi": 0,
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "status_label": "Aktif",
+            "hak_akses": {
+                "dapat_kelola": false,
+                "dapat_lihat_kontak": false
+            },
+            "kontak_terbatas": true,
+            "nomor_kontak": null,
+            "email": null,
+            "dasar_penggunaan": null,
+            "catatan": null
+        },
+        "kontak_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua\/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "status": {
+                "aktif": "Aktif",
+                "arsip": "Diarsipkan"
+            },
+            "token_pembuatan": "2de6dbfb-ba86-43c0-8e11-d0d6de57adcc",
+            "hak_akses": {
+                "dapat_kelola": false,
+                "dapat_lihat_kontak": false
+            }
+        },
+        "publikasi": {
+            "id": 1,
+            "judul": "Kolaborasi Sekolah dan Masyarakat",
+            "jenis": "berita",
+            "ringkasan": null,
+            "kanal": "website",
+            "status": "draf",
+            "versi": 0,
+            "rencana_tayang": null,
+            "jenis_label": "Berita kegiatan",
+            "kanal_label": "Website sekolah",
+            "status_label": "Draf",
+            "pembuat": "Uji wakil_pimpinan_humas",
+            "pemeriksa": null,
+            "hak_akses": {
+                "dapat_edit": false,
+                "dapat_ajukan": false,
+                "dapat_tarik": false,
+                "dapat_periksa": false,
+                "dapat_tayang": false,
+                "dapat_buka_revisi": false
+            },
+            "isi": "Kegiatan pembelajaran bersama masyarakat dan orang tua siswa.",
+            "catatan_pemeriksaan": null,
+            "url_tayang": null,
+            "waktu_tayang": null,
+            "lampiran": [],
+            "agenda_humas_id": null,
+            "aset": []
+        },
+        "publikasi_referensi": {
+            "jenis": {
+                "berita": "Berita kegiatan",
+                "pengumuman": "Pengumuman",
+                "rilis_pers": "Rilis pers"
+            },
+            "kanal": {
+                "website": "Website sekolah",
+                "instagram": "Instagram",
+                "facebook": "Facebook",
+                "youtube": "YouTube",
+                "media_massa": "Media massa",
+                "lainnya": "Media lainnya"
+            },
+            "status": {
+                "draf": "Draf",
+                "diajukan": "Menunggu pemeriksaan",
+                "revisi": "Perlu revisi",
+                "disetujui": "Disetujui",
+                "tayang": "Sudah tayang"
+            },
+            "agenda": [],
+            "dapat_pilih_agenda": true,
+            "dapat_pilih_aset": true,
+            "batas_foto": {
+                "jumlah": 5,
+                "ukuran_mb": 2,
+                "ekstensi": [
+                    "jpg",
+                    "jpeg",
+                    "png",
+                    "webp"
+                ]
+            },
+            "token_pembuatan": "3522e8d3-8009-4552-9e6e-bbdabf744d7d",
+            "dapat_buat": false,
+            "cakupan": "seluruh"
+        }
+    },
+    "kontributor": {
+        "user": {
+            "id": 4,
+            "nama": "Uji kontributor_publikasi",
+            "username": "native.14984c70-ca61-46cb-886a-54cd7cc995b6",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "kontributor_publikasi"
+            ],
+            "izin": [
+                "publikasi_humas.kontribusi"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 6,
+            "kelompok": [
+                {
+                    "kode": "sarana-prasarana",
+                    "label": "Sarana Prasarana",
+                    "deskripsi": "Inventaris, stok, peminjaman, pengajuan, dan laporan barang.",
+                    "ikon": "inventory",
+                    "items": [
+                        {
+                            "kode": "katalog-barang",
+                            "label": "Katalog Barang",
+                            "deskripsi": "Modul Katalog Barang NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Layanan Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/katalog-barang"
+                        },
+                        {
+                            "kode": "pengajuan-saya",
+                            "label": "Pengajuan Saya",
+                            "deskripsi": "Modul Pengajuan Saya NUSA.",
+                            "inisial": "PS",
+                            "subkelompok": "Layanan Pegawai",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/pengajuan-saya"
+                        }
+                    ]
+                },
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/faq",
+                            "api": "\/api\/v1\/humas\/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "deskripsi": "Modul Publikasi & Persetujuan NUSA.",
+                            "inisial": "PP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/publikasi",
+                            "api": "\/api\/v1\/humas\/publikasi",
+                            "api_tersedia": true
+                        }
+                    ]
+                },
+                {
+                    "kode": "persuratan-arsip",
+                    "label": "Persuratan & Arsip",
+                    "deskripsi": "Arsip surat, pengesahan, disposisi, dan laporan pelaksanaan tugas.",
+                    "ikon": "archive",
+                    "items": [
+                        {
+                            "kode": "surat-saya",
+                            "label": "Surat & Penugasan Saya",
+                            "deskripsi": "Modul Surat & Penugasan Saya NUSA.",
+                            "inisial": "SS",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/surat-saya",
+                            "api": "\/api\/v1\/surat-saya",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "tindak-lanjut-surat-saya",
+                            "label": "Tindak Lanjut Surat Saya",
+                            "deskripsi": "Modul Tindak Lanjut Surat Saya NUSA.",
+                            "inisial": "TL",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/tindak-lanjut-surat",
+                            "api": "\/api\/v1\/tindak-lanjut-surat",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "pengajuan-saya",
+                    "katalog-barang",
+                    "faq-humas",
+                    "publikasi-humas"
+                ]
+            }
+        },
+        "publikasi": {
+            "id": 2,
+            "judul": "Kolaborasi Sekolah dan Masyarakat",
+            "jenis": "berita",
+            "ringkasan": null,
+            "kanal": "website",
+            "status": "draf",
+            "versi": 0,
+            "rencana_tayang": null,
+            "jenis_label": "Berita kegiatan",
+            "kanal_label": "Website sekolah",
+            "status_label": "Draf",
+            "pembuat": "Uji kontributor_publikasi",
+            "pemeriksa": null,
+            "hak_akses": {
+                "dapat_edit": true,
+                "dapat_ajukan": true,
+                "dapat_tarik": false,
+                "dapat_periksa": false,
+                "dapat_tayang": false,
+                "dapat_buka_revisi": false
+            },
+            "isi": "Kegiatan pembelajaran bersama masyarakat dan orang tua siswa.",
+            "catatan_pemeriksaan": null,
+            "url_tayang": null,
+            "waktu_tayang": null,
+            "lampiran": [],
+            "agenda_humas_id": null,
+            "aset": []
+        },
+        "publikasi_referensi": {
+            "jenis": {
+                "berita": "Berita kegiatan",
+                "pengumuman": "Pengumuman",
+                "rilis_pers": "Rilis pers"
+            },
+            "kanal": {
+                "website": "Website sekolah",
+                "instagram": "Instagram",
+                "facebook": "Facebook",
+                "youtube": "YouTube",
+                "media_massa": "Media massa",
+                "lainnya": "Media lainnya"
+            },
+            "status": {
+                "draf": "Draf",
+                "diajukan": "Menunggu pemeriksaan",
+                "revisi": "Perlu revisi",
+                "disetujui": "Disetujui",
+                "tayang": "Sudah tayang"
+            },
+            "agenda": [],
+            "dapat_pilih_agenda": false,
+            "dapat_pilih_aset": false,
+            "batas_foto": {
+                "jumlah": 5,
+                "ukuran_mb": 2,
+                "ekstensi": [
+                    "jpg",
+                    "jpeg",
+                    "png",
+                    "webp"
+                ]
+            },
+            "token_pembuatan": "b6ef649a-01fd-41f1-b79e-3cfe84113fd2",
+            "dapat_buat": true,
+            "cakupan": "milik_sendiri"
+        }
+    }
+}

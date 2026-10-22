@@ -46,6 +46,8 @@ class TujuanNotifikasiMobileService
             '/dashboard-humas' => '/humas',
             '/agenda-humas' => '/humas/agenda',
             '/dokumen-humas' => '/humas/dokumen',
+            '/kontak-humas' => '/humas/kontak',
+            '/publikasi-humas' => '/humas/publikasi',
             '/pengaduan-humas' => '/humas/pengaduan',
             '/umpan-balik-humas' => '/humas/umpan-balik',
             '/pertemuan-saya' => '/humas/pertemuan-saya',

@@ -40,6 +40,36 @@ Master kategori/satuan/sumber inventaris menggunakan view `inventaris-master`.
   Struktur kolom, editor soal, formulir penilaian, dialog dan tampilan mobile
   bawaan setiap fitur tetap dipertahankan.
 
+## Konsistensi Humas
+
+`public/css/humas-pages.css` melengkapi tema kelompok khusus halaman aplikasi
+Humas, dengan Pusat Dokumen sebagai acuan. Layout memuatnya hanya untuk
+`admin-module=humas`; versi asset mengikuti `filemtime`.
+
+- Halaman daftar/form/detail menggunakan lebar ruang kerja bersama, bukan
+  batas lama 1200/1280 px di dalam content shell.
+- `agenda-metrics` dan `tamu-metrics` berisi kartu terpisah. `data-tone` pada
+  kartu menentukan `neutral`, `success`, `warning`, atau `danger` berdasarkan
+  makna status, bukan urutan kartu. Label tetap ditampilkan.
+- Filter GET menggunakan `feature-filter`, dengan panel biru muda dan jarak
+  kontrol yang sama. Pembungkus `agenda-section` khusus filter tidak
+  menambahkan panel atau garis pemisah kedua.
+- `humas-records` adalah area putih penuh untuk daftar, tabel, dan kondisi
+  kosong. Bank aset tetap menggunakan grid item individual. Formulir/detail
+  memakai bidang putih dengan judul teal tanpa mengubah workflow.
+- Rapat komite, pertemuan orang tua, dan pertemuan mitra mengikuti Agenda
+  Humas dengan filter jenis yang sama seperti sidebar.
+
+`TampilanHumasKonsistenTest` memeriksa daftar kosong/berisi, formulir, detail,
+filter jenis, dan pemisahan asset dari modul lain/cetak. Jalankan dengan
+`NUSA_CAPTURE_HUMAS_THEME=1` untuk menghasilkan fixture HTML pada
+`storage/framework/testing/humas-theme`. `tests/Browser/humas-theme.mjs`
+memeriksa enam viewport (320-1920 px), warna/jarak kartu, lebar konten,
+luapan teks, pesan validasi, dan navigasi filter GET. Hasil tersimpan di
+`storage/logs/humas-theme-audit`.
+
+Tidak ada migrasi, izin, endpoint/API, atau template cetak yang diubah.
+
 ## Halaman Padat
 
 - Input nilai tetap satu kolom penuh. Identitas komponen dan publikasi terpisah

@@ -11,7 +11,7 @@
     <p class="agenda-muted">{{ $cakupanSendiri ? 'Kontribusi publikasi saya' : 'Seluruh konten sekolah' }}</p>
     <div class="agenda-metrics">
         @foreach (['diajukan' => 'Menunggu pemeriksaan', 'revisi' => 'Perlu revisi', 'disetujui' => 'Siap ditayangkan', 'tayang' => 'Sudah tayang'] as $kode => $label)
-            <div class="agenda-metric"><span>{{ $label }}</span><strong>{{ $statistik[$kode] ?? 0 }}</strong></div>
+            <div class="agenda-metric" data-tone="{{ in_array($kode, ['diajukan', 'revisi'], true) ? 'warning' : 'success' }}"><span>{{ $label }}</span><strong>{{ $statistik[$kode] ?? 0 }}</strong></div>
         @endforeach
     </div>
     <nav class="agenda-tabs" aria-label="Status publikasi">
@@ -20,7 +20,7 @@
             <a href="{{ route('publikasi-humas.index', ['status' => $kode]) }}" @if (($filter['status'] ?? '') === $kode) aria-current="page" @endif>{{ $label }} <span class="agenda-count">{{ $statistik[$kode] ?? 0 }}</span></a>
         @endforeach
     </nav>
-    <form method="GET" action="{{ route('publikasi-humas.index') }}">
+    <form class="feature-filter" method="GET" action="{{ route('publikasi-humas.index') }}">
         <div class="publikasi-filter">
             <div class="field"><label for="kata_kunci">Cari judul / ringkasan</label><input id="kata_kunci" name="kata_kunci" class="input" maxlength="120" value="{{ $filter['kata_kunci'] ?? '' }}"></div>
             <div class="field"><label for="status">Status</label><select id="status" name="status" class="select"><option value="">Semua status</option>@foreach (\App\Models\PublikasiHumas::STATUS as $kode => $label)<option value="{{ $kode }}" @selected(($filter['status'] ?? '') === $kode)>{{ $label }}</option>@endforeach</select></div>
@@ -29,6 +29,7 @@
         </div>
         <div class="agenda-actions" style="margin-bottom:22px"><button type="submit" class="button button-primary">Tampilkan</button><a class="button button-muted" href="{{ route('publikasi-humas.index') }}">Reset</a></div>
     </form>
+    <section class="humas-records" aria-label="Daftar publikasi">
     <table class="agenda-table agenda-table--list publikasi-table"><thead><tr><th>Konten</th><th>Media / rencana</th><th>Status</th><th></th></tr></thead><tbody>
         @forelse ($daftar as $item)
             <tr><td><a href="{{ route('publikasi-humas.show', $item) }}">{{ $item->judul }}</a><small>{{ \App\Models\PublikasiHumas::JENIS[$item->jenis] }} &middot; {{ $item->jumlah_foto }} foto</small><small>{{ $item->pembuat?->nama ?: 'Akun tidak tersedia' }}</small></td>
@@ -40,5 +41,6 @@
         @endforelse
     </tbody></table>
     <div style="margin-top:18px">{{ $daftar->links() }}</div>
+    </section>
 </div>
 @endsection

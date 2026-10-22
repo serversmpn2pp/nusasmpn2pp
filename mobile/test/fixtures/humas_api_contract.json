@@ -1,0 +1,4367 @@
+{
+    "administrator": {
+        "user": {
+            "id": 3,
+            "nama": "Uji administrator",
+            "username": "align.administrator.2",
+            "jenis_akun": "Pegawai",
+            "administrator": true,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "administrator"
+            ],
+            "izin": [
+                "absensi.koreksi",
+                "absensi.laporan",
+                "absensi.lihat",
+                "absensi.pengaturan_kelola",
+                "absensi.scan",
+                "absensi_pegawai.pribadi",
+                "agenda_humas.bundel",
+                "akreditasi_humas.ekspor",
+                "akreditasi_humas.kelola",
+                "akreditasi_humas.lihat",
+                "aktivitas_login.lihat",
+                "akun.kelola",
+                "akun.lihat",
+                "akun_orang_tua.cetak",
+                "akun_orang_tua.kelola",
+                "akun_orang_tua.lihat",
+                "akun_siswa.cetak",
+                "akun_siswa.kelola",
+                "akun_siswa.lihat",
+                "alumni_humas.ekspor",
+                "alumni_humas.kelola",
+                "alumni_humas.lihat",
+                "barang.kelola",
+                "barang.lihat",
+                "barang.peminjaman_kelola",
+                "beranda.akses",
+                "bk.kelola",
+                "bk.lihat",
+                "bk.penugasan_tingkat_kelola",
+                "cadangan_database.kelola",
+                "cbt.asesmen_kelola",
+                "cbt.kelola",
+                "cbt.lihat",
+                "cbt.presensi",
+                "cbt.soal_kelola",
+                "cbt.terpusat_lihat",
+                "dashboard_humas.lihat",
+                "guru_mapel.kelola",
+                "guru_mapel.lihat",
+                "guru_wali.kelola",
+                "guru_wali.lihat",
+                "ibadah.koreksi",
+                "ibadah.pengaturan_kelola",
+                "ibadah.rekap",
+                "ibadah.scan",
+                "jadwal.kelola",
+                "jadwal.lihat",
+                "jadwal.pribadi",
+                "kartu_pelajar.cetak",
+                "kartu_pelajar.lihat",
+                "keamanan.kelola",
+                "keamanan.lihat",
+                "kebersihan.kelola",
+                "kebersihan.lihat",
+                "kelas.kelola",
+                "kelas.lihat",
+                "kenaikan_kelas.kelola",
+                "laporan.export",
+                "mata_pelajaran.kelola",
+                "mata_pelajaran.lihat",
+                "nilai.input",
+                "nilai.komponen_kelola",
+                "nilai.lihat",
+                "nilai.rekap",
+                "nilai.skema_kelola",
+                "pegawai.kelola",
+                "pegawai.lihat",
+                "pegawai.profil",
+                "peran.kelola",
+                "peran.lihat",
+                "perangkat_ajar.jenis_kelola",
+                "perangkat_ajar.lihat",
+                "perangkat_ajar.periksa",
+                "perangkat_ajar.upload",
+                "piket_guru.catat_kehadiran",
+                "piket_guru.kelola",
+                "piket_guru.lihat_pribadi",
+                "poin_siswa.lapor",
+                "poin_siswa.lihat",
+                "poin_siswa.pendampingan_kelola",
+                "poin_siswa.pengaturan",
+                "poin_siswa.putus_konflik",
+                "poin_siswa.reward_kelola",
+                "poin_siswa.sahkan_wakil",
+                "poin_siswa.sanksi_kelola",
+                "poin_siswa.verifikasi_bk",
+                "prestasi_sekolah.ekspor",
+                "prestasi_sekolah.kelola",
+                "prestasi_sekolah.lihat",
+                "program_kerja_humas.kelola",
+                "program_kerja_humas.lihat",
+                "sarpras.kelola",
+                "sarpras.lihat",
+                "siswa.kelola",
+                "siswa.lihat",
+                "supervisi.instrumen_kelola",
+                "supervisi.kelola",
+                "supervisi.lihat",
+                "surat.disposisi",
+                "surat.kelola",
+                "surat.lihat",
+                "surat.rahasia",
+                "surat.sahkan",
+                "tahun_pelajaran.kelola",
+                "tahun_pelajaran.lihat",
+                "umpan_balik_humas.kelola",
+                "umpan_balik_humas.lihat"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 13,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "dashboard-humas",
+                            "label": "Dashboard Humas",
+                            "deskripsi": "Modul Dashboard Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas"
+                        },
+                        {
+                            "kode": "agenda-humas",
+                            "label": "Agenda & Pertemuan",
+                            "deskripsi": "Modul Agenda & Pertemuan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/agenda"
+                        },
+                        {
+                            "kode": "dokumen-humas",
+                            "label": "Pusat Dokumen Humas",
+                            "deskripsi": "Modul Pusat Dokumen Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/dokumen"
+                        },
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "deskripsi": "Modul Aspirasi & Pengaduan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Aspirasi & Pengaduan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pengaduan"
+                        },
+                        {
+                            "kode": "umpan-balik-humas",
+                            "label": "Rekap Umpan Balik",
+                            "deskripsi": "Modul Rekap Umpan Balik NUSA.",
+                            "inisial": "UB",
+                            "subkelompok": "Hubungan Orang Tua/Wali",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/umpan-balik"
+                        },
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kinerja-humas",
+                            "label": "Laporan Kinerja Semester",
+                            "deskripsi": "Modul Laporan Kinerja Semester NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kinerja",
+                            "api": "/api/v1/humas/kinerja",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kontak-humas",
+                            "label": "Direktori Kontak",
+                            "deskripsi": "Modul Direktori Kontak NUSA.",
+                            "inisial": "DK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kontak",
+                            "api": "/api/v1/humas/kontak",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "deskripsi": "Modul Publikasi & Persetujuan NUSA.",
+                            "inisial": "PP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/publikasi",
+                            "api": "/api/v1/humas/publikasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "program-kerja-humas",
+                            "label": "Program Kerja Humas",
+                            "deskripsi": "Modul Program Kerja Humas NUSA.",
+                            "inisial": "PK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/program",
+                            "api": "/api/v1/humas/program",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "komite-humas",
+                            "label": "Komite Sekolah",
+                            "deskripsi": "Modul Komite Sekolah NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Komite Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/komite",
+                            "api": "/api/v1/humas/komite",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kemitraan-humas",
+                            "label": "Kemitraan & MoU",
+                            "deskripsi": "Modul Kemitraan & MoU NUSA.",
+                            "inisial": "KM",
+                            "subkelompok": "Kemitraan & Kerja Sama",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/mitra",
+                            "api": "/api/v1/humas/mitra",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "akreditasi-humas",
+                            "label": "Portofolio Akreditasi",
+                            "deskripsi": "Modul Portofolio Akreditasi NUSA.",
+                            "inisial": "PA",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/akreditasi",
+                            "api": "/api/v1/humas/akreditasi",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "jadwal-mengajar-saya",
+                    "piket-saya",
+                    "laporkan-kejadian",
+                    "pengajuan-saya"
+                ]
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 5,
+                    "pertanyaan": "FAQ RAHASIA DRAF",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "draf",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Draf",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": true
+                },
+                {
+                    "id": 3,
+                    "pertanyaan": "FAQ orang_tua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "orang_tua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Orang tua",
+                    "dapat_kelola": true
+                },
+                {
+                    "id": 2,
+                    "pertanyaan": "FAQ pegawai",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "pegawai",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Pegawai",
+                    "dapat_kelola": true
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": true
+                },
+                {
+                    "id": 4,
+                    "pertanyaan": "FAQ siswa",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "siswa",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Siswa",
+                    "dapat_kelola": true
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 5,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": true
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": true
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": true,
+            "sasaran": {
+                "semua": "Semua akun",
+                "orang_tua": "Orang tua",
+                "siswa": "Siswa",
+                "pegawai": "Pegawai"
+            },
+            "status": {
+                "draf": "Draf",
+                "terbit": "Diterbitkan",
+                "arsip": "Diarsipkan"
+            }
+        },
+        "kinerja_referensi": {
+            "tahun_pelajaran": [
+                {
+                    "id": 1,
+                    "nama": "2026/2027",
+                    "aktif": true
+                }
+            ],
+            "semester": {
+                "ganjil": "Semester ganjil",
+                "genap": "Semester genap"
+            },
+            "status": {
+                "draf": "Draf",
+                "final": "Final"
+            },
+            "dapat_kelola": true,
+            "dapat_himpun": true
+        },
+        "dashboard": {
+            "ruang_kerja": [
+                {
+                    "kode": "kedinasan",
+                    "label": "Dokumen Kedinasan Humas",
+                    "ikon": "school",
+                    "warna": "blue",
+                    "items": [
+                        {
+                            "kode": "program-kerja-humas",
+                            "label": "Program Kerja Humas",
+                            "ikon": "clipboard-list",
+                            "menu_mobile": "program-kerja-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kinerja-humas",
+                            "label": "Laporan Kinerja Semester",
+                            "ikon": "file-chart-column",
+                            "menu_mobile": "kinerja-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "dokumen-humas",
+                            "label": "Pusat Dokumen Humas",
+                            "ikon": "files",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "akreditasi-humas",
+                            "label": "Portofolio Akreditasi",
+                            "ikon": "clipboard-check",
+                            "menu_mobile": "akreditasi-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kontak-humas",
+                            "label": "Direktori Kontak",
+                            "ikon": "contact-round",
+                            "menu_mobile": "kontak-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-kedinasan-humas",
+                            "label": "Arsip Kedinasan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "kedinasan"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "komite",
+                    "label": "Dokumen Komite Sekolah",
+                    "ikon": "users-round",
+                    "warna": "teal",
+                    "items": [
+                        {
+                            "kode": "komite-humas",
+                            "label": "Komite Sekolah",
+                            "ikon": "users-round",
+                            "menu_mobile": "komite-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "rapat-komite-humas",
+                            "label": "Rapat Komite",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "komite"
+                            }
+                        },
+                        {
+                            "kode": "arsip-komite-humas",
+                            "label": "Arsip Komite",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "komite"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "orang-tua",
+                    "label": "Hubungan Orang Tua/Wali",
+                    "ikon": "users",
+                    "warna": "yellow",
+                    "items": [
+                        {
+                            "kode": "pertemuan-orang-tua-humas",
+                            "label": "Pertemuan Orang Tua",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "orang_tua"
+                            }
+                        },
+                        {
+                            "kode": "umpan-balik-humas",
+                            "label": "Umpan Balik Orang Tua",
+                            "ikon": "message-square",
+                            "menu_mobile": "umpan-balik-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-orang-tua-humas",
+                            "label": "Arsip Orang Tua",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "orang_tua"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "kemitraan",
+                    "label": "Kemitraan & Kerja Sama",
+                    "ikon": "handshake",
+                    "warna": "cyan",
+                    "items": [
+                        {
+                            "kode": "kemitraan-humas",
+                            "label": "Kemitraan & MoU",
+                            "ikon": "handshake",
+                            "menu_mobile": "kemitraan-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "pertemuan-mitra-humas",
+                            "label": "Pertemuan Mitra",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "kemitraan"
+                            }
+                        },
+                        {
+                            "kode": "arsip-kemitraan-humas",
+                            "label": "Arsip Kemitraan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "kemitraan"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "publikasi",
+                    "label": "Publikasi & Promosi Sekolah",
+                    "ikon": "megaphone",
+                    "warna": "rose",
+                    "items": [
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "ikon": "megaphone",
+                            "menu_mobile": "publikasi-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "aset-promosi-humas",
+                            "label": "Bank Aset Promosi",
+                            "ikon": "images",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "media-resmi-humas",
+                            "label": "Daftar Media Resmi",
+                            "ikon": "globe",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kliping-berita-humas",
+                            "label": "Kliping Berita",
+                            "ikon": "newspaper",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "prestasi-sekolah",
+                            "label": "Database Prestasi",
+                            "ikon": "trophy",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-publikasi-humas",
+                            "label": "Arsip Publikasi",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "publikasi"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "alumni",
+                    "label": "Database & Portofolio Alumni",
+                    "ikon": "graduation-cap",
+                    "warna": "green",
+                    "items": [
+                        {
+                            "kode": "alumni-humas",
+                            "label": "Database Alumni",
+                            "ikon": "graduation-cap",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-alumni-humas",
+                            "label": "Arsip Alumni",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "alumni"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "pengaduan",
+                    "label": "Aspirasi & Pengaduan",
+                    "ikon": "messages-square",
+                    "warna": "amber",
+                    "items": [
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "ikon": "messages-square",
+                            "menu_mobile": "pengaduan-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-pengaduan-humas",
+                            "label": "Arsip Pengaduan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "pengaduan"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "filter": {
+                "tahun_pelajaran_id": 1,
+                "periode": "tahunan",
+                "tanggal_mulai": "2026-07-01",
+                "tanggal_selesai": "2027-06-30"
+            },
+            "label_periode": "2026/2027 / Satu tahun",
+            "metrik": {
+                "program": {
+                    "label": "Program selesai",
+                    "jumlah": 0,
+                    "dasar": "Dari 0 program yang beririsan dengan periode",
+                    "warna": "green"
+                },
+                "laporan": {
+                    "label": "Laporan kegiatan final",
+                    "jumlah": 0,
+                    "dasar": "Tanggal selesai kegiatan; program tidak dibatalkan",
+                    "warna": "teal"
+                },
+                "agenda": {
+                    "label": "Pertemuan selesai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal mulai agenda; status selesai",
+                    "warna": "green"
+                },
+                "kemitraan": {
+                    "label": "Kerja sama dimulai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal mulai kerja sama; draf tidak dihitung",
+                    "warna": "teal"
+                },
+                "publikasi": {
+                    "label": "Publikasi tayang",
+                    "jumlah": 0,
+                    "dasar": "Tanggal tayang; persetujuan saja belum dihitung",
+                    "warna": "blue"
+                },
+                "prestasi": {
+                    "label": "Prestasi terverifikasi",
+                    "jumlah": 0,
+                    "dasar": "Tanggal prestasi; draf dan arsip tidak dihitung",
+                    "warna": "violet"
+                },
+                "tamu": {
+                    "label": "Kunjungan tamu",
+                    "jumlah": 0,
+                    "dasar": "Tanggal kedatangan; kunjungan batal tidak dihitung",
+                    "warna": "blue"
+                },
+                "pengaduan_masuk": {
+                    "label": "Aspirasi / aduan diterima",
+                    "jumlah": 0,
+                    "dasar": "Tanggal diterima; sesuai cakupan akun",
+                    "warna": "amber"
+                },
+                "pengaduan_selesai": {
+                    "label": "Aspirasi / aduan selesai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal penyelesaian; tiket ditutup tidak dihitung",
+                    "warna": "green"
+                },
+                "kliping": {
+                    "label": "Pemberitaan media luar",
+                    "jumlah": 0,
+                    "dasar": "Tanggal terbit; kliping aktif",
+                    "warna": "violet"
+                },
+                "alumni": {
+                    "label": "Alumni lulus",
+                    "jumlah": 0,
+                    "dasar": "Tanggal kelulusan yang tercatat; alumni aktif",
+                    "warna": "teal"
+                }
+            },
+            "perhatian": [],
+            "distribusi": {
+                "program": {
+                    "judul": "Status program kerja",
+                    "label": {
+                        "rencana": "Direncanakan",
+                        "berjalan": "Sedang berjalan",
+                        "selesai": "Selesai",
+                        "dibatalkan": "Dibatalkan"
+                    },
+                    "jumlah": {
+                        "rencana": 0,
+                        "berjalan": 0,
+                        "selesai": 0,
+                        "dibatalkan": 0
+                    }
+                },
+                "agenda": {
+                    "judul": "Status agenda",
+                    "label": {
+                        "terjadwal": "Terjadwal",
+                        "selesai": "Selesai",
+                        "dibatalkan": "Dibatalkan"
+                    },
+                    "jumlah": {
+                        "terjadwal": 0,
+                        "selesai": 0,
+                        "dibatalkan": 0
+                    }
+                }
+            },
+            "kolom_bulanan": {
+                "laporan": "Laporan final",
+                "agenda": "Pertemuan selesai",
+                "publikasi": "Publikasi tayang",
+                "prestasi": "Prestasi",
+                "tamu": "Kunjungan",
+                "pengaduan": "Tiket diterima"
+            },
+            "bulan": {
+                "2026-07": {
+                    "label": "Jul 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-08": {
+                    "label": "Agt 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-09": {
+                    "label": "Sep 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-10": {
+                    "label": "Okt 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-11": {
+                    "label": "Nov 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-12": {
+                    "label": "Des 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-01": {
+                    "label": "Jan 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-02": {
+                    "label": "Feb 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-03": {
+                    "label": "Mar 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-04": {
+                    "label": "Apr 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-05": {
+                    "label": "Mei 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-06": {
+                    "label": "Jun 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                }
+            },
+            "jumlah_program": 0,
+            "program": [],
+            "agenda": []
+        },
+        "kinerja": {
+            "id": 1,
+            "tahun_pelajaran_id": 1,
+            "semester": "ganjil",
+            "judul": "Laporan Kinerja Humas Semester Ganjil",
+            "status": "draf",
+            "versi": 0,
+            "tahun_pelajaran": "2026/2027",
+            "tanggal_laporan": "2026-10-22",
+            "dapat_kelola": true,
+            "status_label": "Draf",
+            "semester_label": "Semester ganjil",
+            "sementara": true,
+            "data_sampai": "2026-10-22",
+            "ringkasan": "Ringkasan kegiatan semester berjalan.",
+            "capaian": "Koordinasi program berjalan lancar.",
+            "kendala": "Penyesuaian jadwal beberapa kegiatan.",
+            "tindak_lanjut": "Koordinasikan jadwal kegiatan berikutnya.",
+            "rekomendasi": "Pertahankan koordinasi bersama mitra.",
+            "nama_penyusun": "Wakil Humas Uji",
+            "nip_penyusun": null,
+            "nama_pimpinan": "Kepala Sekolah Uji",
+            "nip_pimpinan": null,
+            "snapshot": {
+                "skema": 1,
+                "tahun_pelajaran": "2026/2027",
+                "semester": "ganjil",
+                "tanggal_mulai": "2026-07-01",
+                "tanggal_selesai": "2026-12-31",
+                "data_sampai": "2026-10-22",
+                "sementara": true,
+                "dihimpun_pada": "2026-10-22T10:00:00+07:00",
+                "metrik": {
+                    "program": {
+                        "label": "Program selesai",
+                        "jumlah": 0,
+                        "dasar": "Program semester terpilih dan tahunan; status saat dihimpun; program dibatalkan dikecualikan."
+                    },
+                    "laporan": {
+                        "label": "Laporan kegiatan final",
+                        "jumlah": 0,
+                        "dasar": "Tanggal selesai kegiatan dalam periode data; hanya program semester terpilih/tahunan yang tidak dibatalkan."
+                    },
+                    "agenda": {
+                        "label": "Pertemuan selesai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal mulai agenda; status selesai"
+                    },
+                    "kemitraan": {
+                        "label": "Kerja sama dimulai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal mulai kerja sama; draf tidak dihitung"
+                    },
+                    "publikasi": {
+                        "label": "Publikasi tayang",
+                        "jumlah": 0,
+                        "dasar": "Tanggal tayang; persetujuan saja belum dihitung"
+                    },
+                    "prestasi": {
+                        "label": "Prestasi terverifikasi",
+                        "jumlah": 0,
+                        "dasar": "Tanggal prestasi; draf dan arsip tidak dihitung"
+                    },
+                    "tamu": {
+                        "label": "Kunjungan tamu",
+                        "jumlah": 0,
+                        "dasar": "Tanggal kedatangan; kunjungan batal tidak dihitung"
+                    },
+                    "pengaduan_masuk": {
+                        "label": "Aspirasi / aduan diterima",
+                        "jumlah": 0,
+                        "dasar": "Tanggal diterima; sesuai cakupan akun"
+                    },
+                    "pengaduan_selesai": {
+                        "label": "Aspirasi / aduan selesai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal penyelesaian; tiket ditutup tidak dihitung"
+                    },
+                    "kliping": {
+                        "label": "Pemberitaan media luar",
+                        "jumlah": 0,
+                        "dasar": "Tanggal terbit; kliping aktif"
+                    },
+                    "alumni": {
+                        "label": "Alumni lulus",
+                        "jumlah": 0,
+                        "dasar": "Tanggal kelulusan yang tercatat; alumni aktif"
+                    },
+                    "evaluasi": {
+                        "label": "Instrumen evaluasi dibuka",
+                        "jumlah": 0,
+                        "dasar": "Tanggal pertama instrumen dibuka; sesuai tahun pelajaran."
+                    },
+                    "respons_evaluasi": {
+                        "label": "Respons evaluasi diterima",
+                        "jumlah": 0,
+                        "dasar": "Tanggal pengiriman; tidak menyertakan identitas atau isi jawaban."
+                    }
+                },
+                "program": [],
+                "jumlah_program": 0,
+                "kolom_bulanan": {
+                    "laporan": "Laporan final",
+                    "agenda": "Pertemuan selesai",
+                    "publikasi": "Publikasi tayang",
+                    "prestasi": "Prestasi",
+                    "tamu": "Kunjungan",
+                    "pengaduan": "Tiket diterima"
+                },
+                "bulan": {
+                    "2026-07": {
+                        "label": "Jul 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-08": {
+                        "label": "Agt 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-09": {
+                        "label": "Sep 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-10": {
+                        "label": "Okt 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    }
+                },
+                "akses_dibatasi": false
+            }
+        }
+    },
+    "wakil_pimpinan_humas": {
+        "user": {
+            "id": 4,
+            "nama": "Uji wakil_pimpinan_humas",
+            "username": "align.wakil_pimpinan_humas.3",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "wakil_pimpinan_humas"
+            ],
+            "izin": [
+                "agenda_humas.bundel",
+                "agenda_humas.kelola",
+                "agenda_humas.lihat",
+                "akreditasi_humas.ekspor",
+                "akreditasi_humas.kelola",
+                "akreditasi_humas.lihat",
+                "alumni_humas.ekspor",
+                "alumni_humas.kelola",
+                "alumni_humas.lihat",
+                "aset_promosi_humas.kelola",
+                "aset_promosi_humas.lihat",
+                "buku_tamu.kelola",
+                "buku_tamu.lihat",
+                "dashboard_humas.lihat",
+                "dokumen_humas.kelola",
+                "dokumen_humas.lihat",
+                "faq_humas.kelola",
+                "kemitraan_humas.kelola",
+                "kemitraan_humas.lihat",
+                "kinerja_humas.kelola",
+                "kinerja_humas.lihat",
+                "kliping_berita_humas.kelola",
+                "kliping_berita_humas.lihat",
+                "komite_humas.kelola",
+                "komite_humas.lihat",
+                "kontak_humas.kelola",
+                "kontak_humas.kontak",
+                "kontak_humas.lihat",
+                "media_resmi_humas.kelola",
+                "media_resmi_humas.lihat",
+                "pengaduan_humas.kelola",
+                "pengaduan_humas.lihat",
+                "pengaduan_humas.tangani",
+                "prestasi_sekolah.ekspor",
+                "prestasi_sekolah.kelola",
+                "prestasi_sekolah.lihat",
+                "program_kerja_humas.kelola",
+                "program_kerja_humas.lihat",
+                "publikasi_humas.kelola",
+                "publikasi_humas.lihat",
+                "umpan_balik_humas.kelola",
+                "umpan_balik_humas.lihat"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 13,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "dashboard-humas",
+                            "label": "Dashboard Humas",
+                            "deskripsi": "Modul Dashboard Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas"
+                        },
+                        {
+                            "kode": "agenda-humas",
+                            "label": "Agenda & Pertemuan",
+                            "deskripsi": "Modul Agenda & Pertemuan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/agenda"
+                        },
+                        {
+                            "kode": "dokumen-humas",
+                            "label": "Pusat Dokumen Humas",
+                            "deskripsi": "Modul Pusat Dokumen Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/dokumen"
+                        },
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "deskripsi": "Modul Aspirasi & Pengaduan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Aspirasi & Pengaduan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pengaduan"
+                        },
+                        {
+                            "kode": "umpan-balik-humas",
+                            "label": "Rekap Umpan Balik",
+                            "deskripsi": "Modul Rekap Umpan Balik NUSA.",
+                            "inisial": "UB",
+                            "subkelompok": "Hubungan Orang Tua/Wali",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/umpan-balik"
+                        },
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kinerja-humas",
+                            "label": "Laporan Kinerja Semester",
+                            "deskripsi": "Modul Laporan Kinerja Semester NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kinerja",
+                            "api": "/api/v1/humas/kinerja",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kontak-humas",
+                            "label": "Direktori Kontak",
+                            "deskripsi": "Modul Direktori Kontak NUSA.",
+                            "inisial": "DK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kontak",
+                            "api": "/api/v1/humas/kontak",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "deskripsi": "Modul Publikasi & Persetujuan NUSA.",
+                            "inisial": "PP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/publikasi",
+                            "api": "/api/v1/humas/publikasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "program-kerja-humas",
+                            "label": "Program Kerja Humas",
+                            "deskripsi": "Modul Program Kerja Humas NUSA.",
+                            "inisial": "PK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/program",
+                            "api": "/api/v1/humas/program",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "komite-humas",
+                            "label": "Komite Sekolah",
+                            "deskripsi": "Modul Komite Sekolah NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Komite Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/komite",
+                            "api": "/api/v1/humas/komite",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kemitraan-humas",
+                            "label": "Kemitraan & MoU",
+                            "deskripsi": "Modul Kemitraan & MoU NUSA.",
+                            "inisial": "KM",
+                            "subkelompok": "Kemitraan & Kerja Sama",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/mitra",
+                            "api": "/api/v1/humas/mitra",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "akreditasi-humas",
+                            "label": "Portofolio Akreditasi",
+                            "deskripsi": "Modul Portofolio Akreditasi NUSA.",
+                            "inisial": "PA",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/akreditasi",
+                            "api": "/api/v1/humas/akreditasi",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "dashboard-humas",
+                    "agenda-humas",
+                    "pengaduan-humas",
+                    "dokumen-humas"
+                ]
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 5,
+                    "pertanyaan": "FAQ RAHASIA DRAF",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "draf",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Draf",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": true
+                },
+                {
+                    "id": 3,
+                    "pertanyaan": "FAQ orang_tua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "orang_tua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Orang tua",
+                    "dapat_kelola": true
+                },
+                {
+                    "id": 2,
+                    "pertanyaan": "FAQ pegawai",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "pegawai",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Pegawai",
+                    "dapat_kelola": true
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": true
+                },
+                {
+                    "id": 4,
+                    "pertanyaan": "FAQ siswa",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "siswa",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Siswa",
+                    "dapat_kelola": true
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 5,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": true
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": true
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": true,
+            "sasaran": {
+                "semua": "Semua akun",
+                "orang_tua": "Orang tua",
+                "siswa": "Siswa",
+                "pegawai": "Pegawai"
+            },
+            "status": {
+                "draf": "Draf",
+                "terbit": "Diterbitkan",
+                "arsip": "Diarsipkan"
+            }
+        },
+        "kinerja_referensi": {
+            "tahun_pelajaran": [
+                {
+                    "id": 1,
+                    "nama": "2026/2027",
+                    "aktif": true
+                }
+            ],
+            "semester": {
+                "ganjil": "Semester ganjil",
+                "genap": "Semester genap"
+            },
+            "status": {
+                "draf": "Draf",
+                "final": "Final"
+            },
+            "dapat_kelola": true,
+            "dapat_himpun": true
+        },
+        "dashboard": {
+            "ruang_kerja": [
+                {
+                    "kode": "kedinasan",
+                    "label": "Dokumen Kedinasan Humas",
+                    "ikon": "school",
+                    "warna": "blue",
+                    "items": [
+                        {
+                            "kode": "program-kerja-humas",
+                            "label": "Program Kerja Humas",
+                            "ikon": "clipboard-list",
+                            "menu_mobile": "program-kerja-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kinerja-humas",
+                            "label": "Laporan Kinerja Semester",
+                            "ikon": "file-chart-column",
+                            "menu_mobile": "kinerja-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "dokumen-humas",
+                            "label": "Pusat Dokumen Humas",
+                            "ikon": "files",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "akreditasi-humas",
+                            "label": "Portofolio Akreditasi",
+                            "ikon": "clipboard-check",
+                            "menu_mobile": "akreditasi-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kontak-humas",
+                            "label": "Direktori Kontak",
+                            "ikon": "contact-round",
+                            "menu_mobile": "kontak-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-kedinasan-humas",
+                            "label": "Arsip Kedinasan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "kedinasan"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "komite",
+                    "label": "Dokumen Komite Sekolah",
+                    "ikon": "users-round",
+                    "warna": "teal",
+                    "items": [
+                        {
+                            "kode": "komite-humas",
+                            "label": "Komite Sekolah",
+                            "ikon": "users-round",
+                            "menu_mobile": "komite-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "rapat-komite-humas",
+                            "label": "Rapat Komite",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "komite"
+                            }
+                        },
+                        {
+                            "kode": "arsip-komite-humas",
+                            "label": "Arsip Komite",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "komite"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "orang-tua",
+                    "label": "Hubungan Orang Tua/Wali",
+                    "ikon": "users",
+                    "warna": "yellow",
+                    "items": [
+                        {
+                            "kode": "pertemuan-orang-tua-humas",
+                            "label": "Pertemuan Orang Tua",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "orang_tua"
+                            }
+                        },
+                        {
+                            "kode": "umpan-balik-humas",
+                            "label": "Umpan Balik Orang Tua",
+                            "ikon": "message-square",
+                            "menu_mobile": "umpan-balik-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-orang-tua-humas",
+                            "label": "Arsip Orang Tua",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "orang_tua"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "kemitraan",
+                    "label": "Kemitraan & Kerja Sama",
+                    "ikon": "handshake",
+                    "warna": "cyan",
+                    "items": [
+                        {
+                            "kode": "kemitraan-humas",
+                            "label": "Kemitraan & MoU",
+                            "ikon": "handshake",
+                            "menu_mobile": "kemitraan-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "pertemuan-mitra-humas",
+                            "label": "Pertemuan Mitra",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "kemitraan"
+                            }
+                        },
+                        {
+                            "kode": "arsip-kemitraan-humas",
+                            "label": "Arsip Kemitraan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "kemitraan"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "publikasi",
+                    "label": "Publikasi & Promosi Sekolah",
+                    "ikon": "megaphone",
+                    "warna": "rose",
+                    "items": [
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "ikon": "megaphone",
+                            "menu_mobile": "publikasi-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "aset-promosi-humas",
+                            "label": "Bank Aset Promosi",
+                            "ikon": "images",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "media-resmi-humas",
+                            "label": "Daftar Media Resmi",
+                            "ikon": "globe",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kliping-berita-humas",
+                            "label": "Kliping Berita",
+                            "ikon": "newspaper",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "prestasi-sekolah",
+                            "label": "Database Prestasi",
+                            "ikon": "trophy",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-publikasi-humas",
+                            "label": "Arsip Publikasi",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "publikasi"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "alumni",
+                    "label": "Database & Portofolio Alumni",
+                    "ikon": "graduation-cap",
+                    "warna": "green",
+                    "items": [
+                        {
+                            "kode": "alumni-humas",
+                            "label": "Database Alumni",
+                            "ikon": "graduation-cap",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-alumni-humas",
+                            "label": "Arsip Alumni",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "alumni"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "pengaduan",
+                    "label": "Aspirasi & Pengaduan",
+                    "ikon": "messages-square",
+                    "warna": "amber",
+                    "items": [
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "ikon": "messages-square",
+                            "menu_mobile": "pengaduan-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-pengaduan-humas",
+                            "label": "Arsip Pengaduan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "pengaduan"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "filter": {
+                "tahun_pelajaran_id": 1,
+                "periode": "tahunan",
+                "tanggal_mulai": "2026-07-01",
+                "tanggal_selesai": "2027-06-30"
+            },
+            "label_periode": "2026/2027 / Satu tahun",
+            "metrik": {
+                "program": {
+                    "label": "Program selesai",
+                    "jumlah": 0,
+                    "dasar": "Dari 0 program yang beririsan dengan periode",
+                    "warna": "green"
+                },
+                "laporan": {
+                    "label": "Laporan kegiatan final",
+                    "jumlah": 0,
+                    "dasar": "Tanggal selesai kegiatan; program tidak dibatalkan",
+                    "warna": "teal"
+                },
+                "agenda": {
+                    "label": "Pertemuan selesai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal mulai agenda; status selesai",
+                    "warna": "green"
+                },
+                "kemitraan": {
+                    "label": "Kerja sama dimulai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal mulai kerja sama; draf tidak dihitung",
+                    "warna": "teal"
+                },
+                "publikasi": {
+                    "label": "Publikasi tayang",
+                    "jumlah": 0,
+                    "dasar": "Tanggal tayang; persetujuan saja belum dihitung",
+                    "warna": "blue"
+                },
+                "prestasi": {
+                    "label": "Prestasi terverifikasi",
+                    "jumlah": 0,
+                    "dasar": "Tanggal prestasi; draf dan arsip tidak dihitung",
+                    "warna": "violet"
+                },
+                "tamu": {
+                    "label": "Kunjungan tamu",
+                    "jumlah": 0,
+                    "dasar": "Tanggal kedatangan; kunjungan batal tidak dihitung",
+                    "warna": "blue"
+                },
+                "pengaduan_masuk": {
+                    "label": "Aspirasi / aduan diterima",
+                    "jumlah": 0,
+                    "dasar": "Tanggal diterima; sesuai cakupan akun",
+                    "warna": "amber"
+                },
+                "pengaduan_selesai": {
+                    "label": "Aspirasi / aduan selesai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal penyelesaian; tiket ditutup tidak dihitung",
+                    "warna": "green"
+                },
+                "kliping": {
+                    "label": "Pemberitaan media luar",
+                    "jumlah": 0,
+                    "dasar": "Tanggal terbit; kliping aktif",
+                    "warna": "violet"
+                },
+                "alumni": {
+                    "label": "Alumni lulus",
+                    "jumlah": 0,
+                    "dasar": "Tanggal kelulusan yang tercatat; alumni aktif",
+                    "warna": "teal"
+                }
+            },
+            "perhatian": [],
+            "distribusi": {
+                "program": {
+                    "judul": "Status program kerja",
+                    "label": {
+                        "rencana": "Direncanakan",
+                        "berjalan": "Sedang berjalan",
+                        "selesai": "Selesai",
+                        "dibatalkan": "Dibatalkan"
+                    },
+                    "jumlah": {
+                        "rencana": 0,
+                        "berjalan": 0,
+                        "selesai": 0,
+                        "dibatalkan": 0
+                    }
+                },
+                "agenda": {
+                    "judul": "Status agenda",
+                    "label": {
+                        "terjadwal": "Terjadwal",
+                        "selesai": "Selesai",
+                        "dibatalkan": "Dibatalkan"
+                    },
+                    "jumlah": {
+                        "terjadwal": 0,
+                        "selesai": 0,
+                        "dibatalkan": 0
+                    }
+                }
+            },
+            "kolom_bulanan": {
+                "laporan": "Laporan final",
+                "agenda": "Pertemuan selesai",
+                "publikasi": "Publikasi tayang",
+                "prestasi": "Prestasi",
+                "tamu": "Kunjungan",
+                "pengaduan": "Tiket diterima"
+            },
+            "bulan": {
+                "2026-07": {
+                    "label": "Jul 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-08": {
+                    "label": "Agt 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-09": {
+                    "label": "Sep 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-10": {
+                    "label": "Okt 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-11": {
+                    "label": "Nov 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-12": {
+                    "label": "Des 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-01": {
+                    "label": "Jan 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-02": {
+                    "label": "Feb 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-03": {
+                    "label": "Mar 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-04": {
+                    "label": "Apr 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-05": {
+                    "label": "Mei 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-06": {
+                    "label": "Jun 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                }
+            },
+            "jumlah_program": 0,
+            "program": [],
+            "agenda": []
+        },
+        "kinerja": {
+            "id": 1,
+            "tahun_pelajaran_id": 1,
+            "semester": "ganjil",
+            "judul": "Laporan Kinerja Humas Semester Ganjil",
+            "status": "draf",
+            "versi": 0,
+            "tahun_pelajaran": "2026/2027",
+            "tanggal_laporan": "2026-10-22",
+            "dapat_kelola": true,
+            "status_label": "Draf",
+            "semester_label": "Semester ganjil",
+            "sementara": true,
+            "data_sampai": "2026-10-22",
+            "ringkasan": "Ringkasan kegiatan semester berjalan.",
+            "capaian": "Koordinasi program berjalan lancar.",
+            "kendala": "Penyesuaian jadwal beberapa kegiatan.",
+            "tindak_lanjut": "Koordinasikan jadwal kegiatan berikutnya.",
+            "rekomendasi": "Pertahankan koordinasi bersama mitra.",
+            "nama_penyusun": "Wakil Humas Uji",
+            "nip_penyusun": null,
+            "nama_pimpinan": "Kepala Sekolah Uji",
+            "nip_pimpinan": null,
+            "snapshot": {
+                "skema": 1,
+                "tahun_pelajaran": "2026/2027",
+                "semester": "ganjil",
+                "tanggal_mulai": "2026-07-01",
+                "tanggal_selesai": "2026-12-31",
+                "data_sampai": "2026-10-22",
+                "sementara": true,
+                "dihimpun_pada": "2026-10-22T10:00:00+07:00",
+                "metrik": {
+                    "program": {
+                        "label": "Program selesai",
+                        "jumlah": 0,
+                        "dasar": "Program semester terpilih dan tahunan; status saat dihimpun; program dibatalkan dikecualikan."
+                    },
+                    "laporan": {
+                        "label": "Laporan kegiatan final",
+                        "jumlah": 0,
+                        "dasar": "Tanggal selesai kegiatan dalam periode data; hanya program semester terpilih/tahunan yang tidak dibatalkan."
+                    },
+                    "agenda": {
+                        "label": "Pertemuan selesai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal mulai agenda; status selesai"
+                    },
+                    "kemitraan": {
+                        "label": "Kerja sama dimulai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal mulai kerja sama; draf tidak dihitung"
+                    },
+                    "publikasi": {
+                        "label": "Publikasi tayang",
+                        "jumlah": 0,
+                        "dasar": "Tanggal tayang; persetujuan saja belum dihitung"
+                    },
+                    "prestasi": {
+                        "label": "Prestasi terverifikasi",
+                        "jumlah": 0,
+                        "dasar": "Tanggal prestasi; draf dan arsip tidak dihitung"
+                    },
+                    "tamu": {
+                        "label": "Kunjungan tamu",
+                        "jumlah": 0,
+                        "dasar": "Tanggal kedatangan; kunjungan batal tidak dihitung"
+                    },
+                    "pengaduan_masuk": {
+                        "label": "Aspirasi / aduan diterima",
+                        "jumlah": 0,
+                        "dasar": "Tanggal diterima; sesuai cakupan akun"
+                    },
+                    "pengaduan_selesai": {
+                        "label": "Aspirasi / aduan selesai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal penyelesaian; tiket ditutup tidak dihitung"
+                    },
+                    "kliping": {
+                        "label": "Pemberitaan media luar",
+                        "jumlah": 0,
+                        "dasar": "Tanggal terbit; kliping aktif"
+                    },
+                    "alumni": {
+                        "label": "Alumni lulus",
+                        "jumlah": 0,
+                        "dasar": "Tanggal kelulusan yang tercatat; alumni aktif"
+                    },
+                    "evaluasi": {
+                        "label": "Instrumen evaluasi dibuka",
+                        "jumlah": 0,
+                        "dasar": "Tanggal pertama instrumen dibuka; sesuai tahun pelajaran."
+                    },
+                    "respons_evaluasi": {
+                        "label": "Respons evaluasi diterima",
+                        "jumlah": 0,
+                        "dasar": "Tanggal pengiriman; tidak menyertakan identitas atau isi jawaban."
+                    }
+                },
+                "program": [],
+                "jumlah_program": 0,
+                "kolom_bulanan": {
+                    "laporan": "Laporan final",
+                    "agenda": "Pertemuan selesai",
+                    "publikasi": "Publikasi tayang",
+                    "prestasi": "Prestasi",
+                    "tamu": "Kunjungan",
+                    "pengaduan": "Tiket diterima"
+                },
+                "bulan": {
+                    "2026-07": {
+                        "label": "Jul 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-08": {
+                        "label": "Agt 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-09": {
+                        "label": "Sep 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-10": {
+                        "label": "Okt 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    }
+                },
+                "akses_dibatasi": false
+            }
+        }
+    },
+    "pimpinan": {
+        "user": {
+            "id": 5,
+            "nama": "Uji pimpinan",
+            "username": "align.pimpinan.4",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "pimpinan"
+            ],
+            "izin": [
+                "absensi.laporan",
+                "absensi.lihat",
+                "agenda_humas.bundel",
+                "agenda_humas.lihat",
+                "akreditasi_humas.lihat",
+                "akun.lihat",
+                "alumni_humas.lihat",
+                "aset_promosi_humas.lihat",
+                "barang.lihat",
+                "beranda.akses",
+                "bk.lihat",
+                "buku_tamu.lihat",
+                "cbt.lihat",
+                "cbt.terpusat_lihat",
+                "dashboard_humas.lihat",
+                "dokumen_humas.lihat",
+                "guru_mapel.lihat",
+                "jadwal.lihat",
+                "kartu_pelajar.lihat",
+                "keamanan.lihat",
+                "kebersihan.lihat",
+                "kelas.lihat",
+                "kemitraan_humas.lihat",
+                "kinerja_humas.lihat",
+                "kliping_berita_humas.lihat",
+                "komite_humas.lihat",
+                "kontak_humas.lihat",
+                "laporan.export",
+                "mata_pelajaran.lihat",
+                "media_resmi_humas.lihat",
+                "nilai.lihat",
+                "nilai.rekap",
+                "pegawai.lihat",
+                "pengaduan_humas.lihat",
+                "pengaduan_humas.tangani",
+                "peran.lihat",
+                "perangkat_ajar.lihat",
+                "poin_siswa.lihat",
+                "prestasi_sekolah.lihat",
+                "program_kerja_humas.lihat",
+                "publikasi_humas.lihat",
+                "publikasi_humas.periksa",
+                "sarpras.lihat",
+                "siswa.lihat",
+                "supervisi.lihat",
+                "surat.disposisi",
+                "surat.lihat",
+                "surat.rahasia",
+                "surat.sahkan",
+                "tahun_pelajaran.lihat",
+                "umpan_balik_humas.lihat"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 13,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "dashboard-humas",
+                            "label": "Dashboard Humas",
+                            "deskripsi": "Modul Dashboard Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas"
+                        },
+                        {
+                            "kode": "agenda-humas",
+                            "label": "Agenda & Pertemuan",
+                            "deskripsi": "Modul Agenda & Pertemuan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/agenda"
+                        },
+                        {
+                            "kode": "dokumen-humas",
+                            "label": "Pusat Dokumen Humas",
+                            "deskripsi": "Modul Pusat Dokumen Humas NUSA.",
+                            "inisial": "DH",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/dokumen"
+                        },
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "deskripsi": "Modul Aspirasi & Pengaduan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Aspirasi & Pengaduan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pengaduan"
+                        },
+                        {
+                            "kode": "umpan-balik-humas",
+                            "label": "Rekap Umpan Balik",
+                            "deskripsi": "Modul Rekap Umpan Balik NUSA.",
+                            "inisial": "UB",
+                            "subkelompok": "Hubungan Orang Tua/Wali",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/umpan-balik"
+                        },
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kinerja-humas",
+                            "label": "Laporan Kinerja Semester",
+                            "deskripsi": "Modul Laporan Kinerja Semester NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kinerja",
+                            "api": "/api/v1/humas/kinerja",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kontak-humas",
+                            "label": "Direktori Kontak",
+                            "deskripsi": "Modul Direktori Kontak NUSA.",
+                            "inisial": "DK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kontak",
+                            "api": "/api/v1/humas/kontak",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "deskripsi": "Modul Publikasi & Persetujuan NUSA.",
+                            "inisial": "PP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/publikasi",
+                            "api": "/api/v1/humas/publikasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "program-kerja-humas",
+                            "label": "Program Kerja Humas",
+                            "deskripsi": "Modul Program Kerja Humas NUSA.",
+                            "inisial": "PK",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/program",
+                            "api": "/api/v1/humas/program",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "komite-humas",
+                            "label": "Komite Sekolah",
+                            "deskripsi": "Modul Komite Sekolah NUSA.",
+                            "inisial": "KS",
+                            "subkelompok": "Dokumen Komite Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/komite",
+                            "api": "/api/v1/humas/komite",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kemitraan-humas",
+                            "label": "Kemitraan & MoU",
+                            "deskripsi": "Modul Kemitraan & MoU NUSA.",
+                            "inisial": "KM",
+                            "subkelompok": "Kemitraan & Kerja Sama",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/mitra",
+                            "api": "/api/v1/humas/mitra",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "akreditasi-humas",
+                            "label": "Portofolio Akreditasi",
+                            "deskripsi": "Modul Portofolio Akreditasi NUSA.",
+                            "inisial": "PA",
+                            "subkelompok": "Dokumen Kedinasan Humas",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/akreditasi",
+                            "api": "/api/v1/humas/akreditasi",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "rekap-presensi-siswa",
+                    "rekap-presensi-pegawai",
+                    "rekap-nilai-rapor",
+                    "dashboard-sarpras"
+                ]
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 2,
+                    "pertanyaan": "FAQ pegawai",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "pegawai",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Pegawai",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": {
+            "tahun_pelajaran": [
+                {
+                    "id": 1,
+                    "nama": "2026/2027",
+                    "aktif": true
+                }
+            ],
+            "semester": {
+                "ganjil": "Semester ganjil",
+                "genap": "Semester genap"
+            },
+            "status": {
+                "draf": "Draf",
+                "final": "Final"
+            },
+            "dapat_kelola": false,
+            "dapat_himpun": false
+        },
+        "dashboard": {
+            "ruang_kerja": [
+                {
+                    "kode": "kedinasan",
+                    "label": "Dokumen Kedinasan Humas",
+                    "ikon": "school",
+                    "warna": "blue",
+                    "items": [
+                        {
+                            "kode": "program-kerja-humas",
+                            "label": "Program Kerja Humas",
+                            "ikon": "clipboard-list",
+                            "menu_mobile": "program-kerja-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kinerja-humas",
+                            "label": "Laporan Kinerja Semester",
+                            "ikon": "file-chart-column",
+                            "menu_mobile": "kinerja-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "dokumen-humas",
+                            "label": "Pusat Dokumen Humas",
+                            "ikon": "files",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "akreditasi-humas",
+                            "label": "Portofolio Akreditasi",
+                            "ikon": "clipboard-check",
+                            "menu_mobile": "akreditasi-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kontak-humas",
+                            "label": "Direktori Kontak",
+                            "ikon": "contact-round",
+                            "menu_mobile": "kontak-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-kedinasan-humas",
+                            "label": "Arsip Kedinasan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "kedinasan"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "komite",
+                    "label": "Dokumen Komite Sekolah",
+                    "ikon": "users-round",
+                    "warna": "teal",
+                    "items": [
+                        {
+                            "kode": "komite-humas",
+                            "label": "Komite Sekolah",
+                            "ikon": "users-round",
+                            "menu_mobile": "komite-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "rapat-komite-humas",
+                            "label": "Rapat Komite",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "komite"
+                            }
+                        },
+                        {
+                            "kode": "arsip-komite-humas",
+                            "label": "Arsip Komite",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "komite"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "orang-tua",
+                    "label": "Hubungan Orang Tua/Wali",
+                    "ikon": "users",
+                    "warna": "yellow",
+                    "items": [
+                        {
+                            "kode": "pertemuan-orang-tua-humas",
+                            "label": "Pertemuan Orang Tua",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "orang_tua"
+                            }
+                        },
+                        {
+                            "kode": "umpan-balik-humas",
+                            "label": "Umpan Balik Orang Tua",
+                            "ikon": "message-square",
+                            "menu_mobile": "umpan-balik-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-orang-tua-humas",
+                            "label": "Arsip Orang Tua",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "orang_tua"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "kemitraan",
+                    "label": "Kemitraan & Kerja Sama",
+                    "ikon": "handshake",
+                    "warna": "cyan",
+                    "items": [
+                        {
+                            "kode": "kemitraan-humas",
+                            "label": "Kemitraan & MoU",
+                            "ikon": "handshake",
+                            "menu_mobile": "kemitraan-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "pertemuan-mitra-humas",
+                            "label": "Pertemuan Mitra",
+                            "ikon": "calendar-days",
+                            "menu_mobile": "agenda-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "jenis": "kemitraan"
+                            }
+                        },
+                        {
+                            "kode": "arsip-kemitraan-humas",
+                            "label": "Arsip Kemitraan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "kemitraan"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "publikasi",
+                    "label": "Publikasi & Promosi Sekolah",
+                    "ikon": "megaphone",
+                    "warna": "rose",
+                    "items": [
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "ikon": "megaphone",
+                            "menu_mobile": "publikasi-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "aset-promosi-humas",
+                            "label": "Bank Aset Promosi",
+                            "ikon": "images",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "media-resmi-humas",
+                            "label": "Daftar Media Resmi",
+                            "ikon": "globe",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "kliping-berita-humas",
+                            "label": "Kliping Berita",
+                            "ikon": "newspaper",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "prestasi-sekolah",
+                            "label": "Database Prestasi",
+                            "ikon": "trophy",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-publikasi-humas",
+                            "label": "Arsip Publikasi",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "publikasi"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "alumni",
+                    "label": "Database & Portofolio Alumni",
+                    "ikon": "graduation-cap",
+                    "warna": "green",
+                    "items": [
+                        {
+                            "kode": "alumni-humas",
+                            "label": "Database Alumni",
+                            "ikon": "graduation-cap",
+                            "menu_mobile": null,
+                            "tersedia_mobile": false,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-alumni-humas",
+                            "label": "Arsip Alumni",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "alumni"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "kode": "pengaduan",
+                    "label": "Aspirasi & Pengaduan",
+                    "ikon": "messages-square",
+                    "warna": "amber",
+                    "items": [
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "ikon": "messages-square",
+                            "menu_mobile": "pengaduan-humas",
+                            "tersedia_mobile": true,
+                            "filter": []
+                        },
+                        {
+                            "kode": "arsip-pengaduan-humas",
+                            "label": "Arsip Pengaduan",
+                            "ikon": "folder-open",
+                            "menu_mobile": "dokumen-humas",
+                            "tersedia_mobile": true,
+                            "filter": {
+                                "urusan": "pengaduan"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "filter": {
+                "tahun_pelajaran_id": 1,
+                "periode": "tahunan",
+                "tanggal_mulai": "2026-07-01",
+                "tanggal_selesai": "2027-06-30"
+            },
+            "label_periode": "2026/2027 / Satu tahun",
+            "metrik": {
+                "program": {
+                    "label": "Program selesai",
+                    "jumlah": 0,
+                    "dasar": "Dari 0 program yang beririsan dengan periode",
+                    "warna": "green"
+                },
+                "laporan": {
+                    "label": "Laporan kegiatan final",
+                    "jumlah": 0,
+                    "dasar": "Tanggal selesai kegiatan; program tidak dibatalkan",
+                    "warna": "teal"
+                },
+                "agenda": {
+                    "label": "Pertemuan selesai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal mulai agenda; status selesai",
+                    "warna": "green"
+                },
+                "kemitraan": {
+                    "label": "Kerja sama dimulai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal mulai kerja sama; draf tidak dihitung",
+                    "warna": "teal"
+                },
+                "publikasi": {
+                    "label": "Publikasi tayang",
+                    "jumlah": 0,
+                    "dasar": "Tanggal tayang; persetujuan saja belum dihitung",
+                    "warna": "blue"
+                },
+                "prestasi": {
+                    "label": "Prestasi terverifikasi",
+                    "jumlah": 0,
+                    "dasar": "Tanggal prestasi; draf dan arsip tidak dihitung",
+                    "warna": "violet"
+                },
+                "tamu": {
+                    "label": "Kunjungan tamu",
+                    "jumlah": 0,
+                    "dasar": "Tanggal kedatangan; kunjungan batal tidak dihitung",
+                    "warna": "blue"
+                },
+                "pengaduan_masuk": {
+                    "label": "Aspirasi / aduan diterima",
+                    "jumlah": 0,
+                    "dasar": "Tanggal diterima; sesuai cakupan akun",
+                    "warna": "amber"
+                },
+                "pengaduan_selesai": {
+                    "label": "Aspirasi / aduan selesai",
+                    "jumlah": 0,
+                    "dasar": "Tanggal penyelesaian; tiket ditutup tidak dihitung",
+                    "warna": "green"
+                },
+                "kliping": {
+                    "label": "Pemberitaan media luar",
+                    "jumlah": 0,
+                    "dasar": "Tanggal terbit; kliping aktif",
+                    "warna": "violet"
+                },
+                "alumni": {
+                    "label": "Alumni lulus",
+                    "jumlah": 0,
+                    "dasar": "Tanggal kelulusan yang tercatat; alumni aktif",
+                    "warna": "teal"
+                }
+            },
+            "perhatian": [],
+            "distribusi": {
+                "program": {
+                    "judul": "Status program kerja",
+                    "label": {
+                        "rencana": "Direncanakan",
+                        "berjalan": "Sedang berjalan",
+                        "selesai": "Selesai",
+                        "dibatalkan": "Dibatalkan"
+                    },
+                    "jumlah": {
+                        "rencana": 0,
+                        "berjalan": 0,
+                        "selesai": 0,
+                        "dibatalkan": 0
+                    }
+                },
+                "agenda": {
+                    "judul": "Status agenda",
+                    "label": {
+                        "terjadwal": "Terjadwal",
+                        "selesai": "Selesai",
+                        "dibatalkan": "Dibatalkan"
+                    },
+                    "jumlah": {
+                        "terjadwal": 0,
+                        "selesai": 0,
+                        "dibatalkan": 0
+                    }
+                }
+            },
+            "kolom_bulanan": {
+                "laporan": "Laporan final",
+                "agenda": "Pertemuan selesai",
+                "publikasi": "Publikasi tayang",
+                "prestasi": "Prestasi",
+                "tamu": "Kunjungan",
+                "pengaduan": "Tiket diterima"
+            },
+            "bulan": {
+                "2026-07": {
+                    "label": "Jul 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-08": {
+                    "label": "Agt 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-09": {
+                    "label": "Sep 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-10": {
+                    "label": "Okt 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-11": {
+                    "label": "Nov 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2026-12": {
+                    "label": "Des 2026",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-01": {
+                    "label": "Jan 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-02": {
+                    "label": "Feb 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-03": {
+                    "label": "Mar 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-04": {
+                    "label": "Apr 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-05": {
+                    "label": "Mei 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                },
+                "2027-06": {
+                    "label": "Jun 2027",
+                    "jumlah": {
+                        "laporan": 0,
+                        "agenda": 0,
+                        "publikasi": 0,
+                        "prestasi": 0,
+                        "tamu": 0,
+                        "pengaduan": 0
+                    }
+                }
+            },
+            "jumlah_program": 0,
+            "program": [],
+            "agenda": []
+        },
+        "kinerja": {
+            "id": 1,
+            "tahun_pelajaran_id": 1,
+            "semester": "ganjil",
+            "judul": "Laporan Kinerja Humas Semester Ganjil",
+            "status": "draf",
+            "versi": 0,
+            "tahun_pelajaran": "2026/2027",
+            "tanggal_laporan": "2026-10-22",
+            "dapat_kelola": false,
+            "status_label": "Draf",
+            "semester_label": "Semester ganjil",
+            "sementara": true,
+            "data_sampai": "2026-10-22",
+            "ringkasan": "Ringkasan kegiatan semester berjalan.",
+            "capaian": "Koordinasi program berjalan lancar.",
+            "kendala": "Penyesuaian jadwal beberapa kegiatan.",
+            "tindak_lanjut": "Koordinasikan jadwal kegiatan berikutnya.",
+            "rekomendasi": "Pertahankan koordinasi bersama mitra.",
+            "nama_penyusun": "Wakil Humas Uji",
+            "nip_penyusun": null,
+            "nama_pimpinan": "Kepala Sekolah Uji",
+            "nip_pimpinan": null,
+            "snapshot": {
+                "skema": 1,
+                "tahun_pelajaran": "2026/2027",
+                "semester": "ganjil",
+                "tanggal_mulai": "2026-07-01",
+                "tanggal_selesai": "2026-12-31",
+                "data_sampai": "2026-10-22",
+                "sementara": true,
+                "dihimpun_pada": "2026-10-22T10:00:00+07:00",
+                "metrik": {
+                    "program": {
+                        "label": "Program selesai",
+                        "jumlah": 0,
+                        "dasar": "Program semester terpilih dan tahunan; status saat dihimpun; program dibatalkan dikecualikan."
+                    },
+                    "laporan": {
+                        "label": "Laporan kegiatan final",
+                        "jumlah": 0,
+                        "dasar": "Tanggal selesai kegiatan dalam periode data; hanya program semester terpilih/tahunan yang tidak dibatalkan."
+                    },
+                    "agenda": {
+                        "label": "Pertemuan selesai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal mulai agenda; status selesai"
+                    },
+                    "kemitraan": {
+                        "label": "Kerja sama dimulai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal mulai kerja sama; draf tidak dihitung"
+                    },
+                    "publikasi": {
+                        "label": "Publikasi tayang",
+                        "jumlah": 0,
+                        "dasar": "Tanggal tayang; persetujuan saja belum dihitung"
+                    },
+                    "prestasi": {
+                        "label": "Prestasi terverifikasi",
+                        "jumlah": 0,
+                        "dasar": "Tanggal prestasi; draf dan arsip tidak dihitung"
+                    },
+                    "tamu": {
+                        "label": "Kunjungan tamu",
+                        "jumlah": 0,
+                        "dasar": "Tanggal kedatangan; kunjungan batal tidak dihitung"
+                    },
+                    "pengaduan_masuk": {
+                        "label": "Aspirasi / aduan diterima",
+                        "jumlah": 0,
+                        "dasar": "Tanggal diterima; sesuai cakupan akun"
+                    },
+                    "pengaduan_selesai": {
+                        "label": "Aspirasi / aduan selesai",
+                        "jumlah": 0,
+                        "dasar": "Tanggal penyelesaian; tiket ditutup tidak dihitung"
+                    },
+                    "kliping": {
+                        "label": "Pemberitaan media luar",
+                        "jumlah": 0,
+                        "dasar": "Tanggal terbit; kliping aktif"
+                    },
+                    "alumni": {
+                        "label": "Alumni lulus",
+                        "jumlah": 0,
+                        "dasar": "Tanggal kelulusan yang tercatat; alumni aktif"
+                    },
+                    "evaluasi": {
+                        "label": "Instrumen evaluasi dibuka",
+                        "jumlah": 0,
+                        "dasar": "Tanggal pertama instrumen dibuka; sesuai tahun pelajaran."
+                    },
+                    "respons_evaluasi": {
+                        "label": "Respons evaluasi diterima",
+                        "jumlah": 0,
+                        "dasar": "Tanggal pengiriman; tidak menyertakan identitas atau isi jawaban."
+                    }
+                },
+                "program": [],
+                "jumlah_program": 0,
+                "kolom_bulanan": {
+                    "laporan": "Laporan final",
+                    "agenda": "Pertemuan selesai",
+                    "publikasi": "Publikasi tayang",
+                    "prestasi": "Prestasi",
+                    "tamu": "Kunjungan",
+                    "pengaduan": "Tiket diterima"
+                },
+                "bulan": {
+                    "2026-07": {
+                        "label": "Jul 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-08": {
+                        "label": "Agt 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-09": {
+                        "label": "Sep 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    },
+                    "2026-10": {
+                        "label": "Okt 2026",
+                        "jumlah": {
+                            "laporan": 0,
+                            "agenda": 0,
+                            "publikasi": 0,
+                            "prestasi": 0,
+                            "tamu": 0,
+                            "pengaduan": 0
+                        }
+                    }
+                },
+                "akses_dibatasi": false
+            }
+        }
+    },
+    "guru_mapel": {
+        "user": {
+            "id": 6,
+            "nama": "Uji guru_mapel",
+            "username": "align.guru_mapel.5",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "guru_mapel"
+            ],
+            "izin": [
+                "beranda.akses",
+                "buku_tamu.catat_piket",
+                "cbt.asesmen_kelola",
+                "cbt.lihat",
+                "cbt.presensi",
+                "cbt.soal_kelola",
+                "guru_mapel.lihat",
+                "ibadah.koreksi",
+                "ibadah.rekap",
+                "ibadah.scan",
+                "jadwal.pribadi",
+                "kelas.lihat",
+                "mata_pelajaran.lihat",
+                "nilai.input",
+                "nilai.komponen_kelola",
+                "nilai.lihat",
+                "nilai.rekap",
+                "pengaduan_humas.tangani",
+                "perangkat_ajar.upload",
+                "piket_guru.catat_kehadiran",
+                "piket_guru.lihat_pribadi",
+                "poin_siswa.lapor",
+                "survei.hasil_pribadi"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 2,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "deskripsi": "Modul Aspirasi & Pengaduan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Aspirasi & Pengaduan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pengaduan"
+                        },
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "jadwal-mengajar-saya",
+                    "input-nilai",
+                    "perangkat-ajar-saya",
+                    "pusat-cbt"
+                ]
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 2,
+                    "pertanyaan": "FAQ pegawai",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "pegawai",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Pegawai",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": [],
+        "dashboard": [],
+        "kinerja": null
+    },
+    "tata_usaha": {
+        "user": {
+            "id": 7,
+            "nama": "Uji tata_usaha",
+            "username": "align.tata_usaha.6",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "tata_usaha"
+            ],
+            "izin": [
+                "absensi_pegawai.pribadi",
+                "beranda.akses",
+                "pegawai.profil",
+                "surat.kelola",
+                "surat.lihat",
+                "surat.rahasia"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 1,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "arsip-surat",
+                    "monitoring-tindak-lanjut-surat",
+                    "surat-saya",
+                    "tindak-lanjut-surat-saya"
+                ]
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 2,
+                    "pertanyaan": "FAQ pegawai",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "pegawai",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Pegawai",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": [],
+        "dashboard": [],
+        "kinerja": null
+    },
+    "bk": {
+        "user": {
+            "id": 8,
+            "nama": "Uji bk",
+            "username": "align.bk.7",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "bk"
+            ],
+            "izin": [
+                "absensi.lihat",
+                "beranda.akses",
+                "bk.kelola",
+                "bk.lihat",
+                "laporan.export",
+                "pengaduan_humas.tangani",
+                "poin_siswa.lapor",
+                "poin_siswa.lihat",
+                "poin_siswa.pendampingan_kelola",
+                "poin_siswa.reward_kelola",
+                "poin_siswa.sanksi_kelola",
+                "poin_siswa.verifikasi_bk",
+                "siswa.lihat"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 2,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "deskripsi": "Modul Aspirasi & Pengaduan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Aspirasi & Pengaduan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pengaduan"
+                        },
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "pemeriksaan-pengesahan",
+                    "pendampingan-siswa",
+                    "peringatan-dini-siswa",
+                    "rekap-poin-siswa"
+                ]
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 2,
+                    "pertanyaan": "FAQ pegawai",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "pegawai",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Pegawai",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": [],
+        "dashboard": [],
+        "kinerja": null
+    },
+    "kontributor_publikasi": {
+        "user": {
+            "id": 9,
+            "nama": "Uji kontributor_publikasi",
+            "username": "align.kontributor_publikasi.8",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "kontributor_publikasi"
+            ],
+            "izin": [
+                "publikasi_humas.kontribusi"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 2,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "publikasi-humas",
+                            "label": "Publikasi & Persetujuan",
+                            "deskripsi": "Modul Publikasi & Persetujuan NUSA.",
+                            "inisial": "PP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/publikasi",
+                            "api": "/api/v1/humas/publikasi",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "pengajuan-saya",
+                    "katalog-barang",
+                    "faq-humas",
+                    "publikasi-humas"
+                ]
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 2,
+                    "pertanyaan": "FAQ pegawai",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "pegawai",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Pegawai",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": [],
+        "dashboard": [],
+        "kinerja": null
+    },
+    "pegawai": {
+        "user": {
+            "id": 10,
+            "nama": "Uji pegawai",
+            "username": "align.pegawai.9",
+            "jenis_akun": "Pegawai",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "pegawai"
+            ],
+            "izin": [
+                "absensi_pegawai.pribadi",
+                "beranda.akses",
+                "pegawai.profil",
+                "pengaduan_humas.tangani",
+                "poin_siswa.lapor"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 2,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "pengaduan-humas",
+                            "label": "Aspirasi & Pengaduan",
+                            "deskripsi": "Modul Aspirasi & Pengaduan NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Aspirasi & Pengaduan",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pengaduan"
+                        },
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": true,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "rekomendasi_peran",
+                "kode_menu": [
+                    "laporkan-kejadian",
+                    "pengajuan-saya",
+                    "katalog-barang",
+                    "rekap-presensi-pegawai"
+                ]
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 2,
+                    "pertanyaan": "FAQ pegawai",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "pegawai",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Pegawai",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": [],
+        "dashboard": [],
+        "kinerja": null
+    },
+    "orang_tua_a": {
+        "user": {
+            "id": 11,
+            "nama": "Uji orang_tua_a",
+            "username": "align.orang_tua_a.10",
+            "jenis_akun": "Orang tua",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "pegawai"
+            ],
+            "izin": [
+                "absensi_pegawai.pribadi",
+                "beranda.akses",
+                "pegawai.profil",
+                "pengaduan_humas.tangani",
+                "poin_siswa.lapor"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 4,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "pertemuan-saya",
+                            "label": "Undangan Pertemuan Saya",
+                            "deskripsi": "Modul Undangan Pertemuan Saya NUSA.",
+                            "inisial": "UP",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pertemuan-saya"
+                        },
+                        {
+                            "kode": "pengaduan-saya",
+                            "label": "Aspirasi & Pengaduan Saya",
+                            "deskripsi": "Modul Aspirasi & Pengaduan Saya NUSA.",
+                            "inisial": "PS",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pengaduan-saya"
+                        },
+                        {
+                            "kode": "umpan-balik-saya",
+                            "label": "Umpan Balik Saya",
+                            "deskripsi": "Modul Umpan Balik Saya NUSA.",
+                            "inisial": "US",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/umpan-balik-saya"
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": false,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "bawaan",
+                "kode_menu": []
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 3,
+                    "pertanyaan": "FAQ orang_tua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "orang_tua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Orang tua",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": [],
+        "dashboard": [],
+        "kinerja": null
+    },
+    "orang_tua_b": {
+        "user": {
+            "id": 12,
+            "nama": "Uji orang_tua_b",
+            "username": "align.orang_tua_b.11",
+            "jenis_akun": "Orang tua",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "pegawai"
+            ],
+            "izin": [
+                "absensi_pegawai.pribadi",
+                "beranda.akses",
+                "pegawai.profil",
+                "pengaduan_humas.tangani",
+                "poin_siswa.lapor"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 4,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "pertemuan-saya",
+                            "label": "Undangan Pertemuan Saya",
+                            "deskripsi": "Modul Undangan Pertemuan Saya NUSA.",
+                            "inisial": "UP",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pertemuan-saya"
+                        },
+                        {
+                            "kode": "pengaduan-saya",
+                            "label": "Aspirasi & Pengaduan Saya",
+                            "deskripsi": "Modul Aspirasi & Pengaduan Saya NUSA.",
+                            "inisial": "PS",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/pengaduan-saya"
+                        },
+                        {
+                            "kode": "umpan-balik-saya",
+                            "label": "Umpan Balik Saya",
+                            "deskripsi": "Modul Umpan Balik Saya NUSA.",
+                            "inisial": "US",
+                            "subkelompok": null,
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/umpan-balik-saya"
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": false,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "bawaan",
+                "kode_menu": []
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 3,
+                    "pertanyaan": "FAQ orang_tua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "orang_tua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Orang tua",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": [],
+        "dashboard": [],
+        "kinerja": null
+    },
+    "siswa": {
+        "user": {
+            "id": 13,
+            "nama": "Uji siswa",
+            "username": "align.siswa.12",
+            "jenis_akun": "Siswa",
+            "administrator": false,
+            "wajib_ganti_kata_sandi": false,
+            "peran": [
+                "pegawai"
+            ],
+            "izin": [
+                "absensi_pegawai.pribadi",
+                "beranda.akses",
+                "pegawai.profil",
+                "pengaduan_humas.tangani",
+                "poin_siswa.lapor"
+            ],
+            "terakhir_login_pada": null
+        },
+        "menu": {
+            "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
+            "jumlah_menu": 1,
+            "kelompok": [
+                {
+                    "kode": "humas",
+                    "label": "Humas",
+                    "deskripsi": "Agenda, komunikasi sekolah, arsip, dan layanan orang tua.",
+                    "ikon": "humas",
+                    "items": [
+                        {
+                            "kode": "faq-humas",
+                            "label": "FAQ & Bantuan",
+                            "deskripsi": "Modul FAQ & Bantuan NUSA.",
+                            "inisial": "FQ",
+                            "subkelompok": "Agenda & Layanan Pendukung",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/faq",
+                            "api": "/api/v1/humas/faq",
+                            "api_tersedia": true
+                        }
+                    ]
+                }
+            ],
+            "akses_cepat": {
+                "dapat_diatur": false,
+                "dikustomisasi": false,
+                "maksimal": 4,
+                "sumber": "bawaan",
+                "kode_menu": []
+            }
+        },
+        "faq": {
+            "items": [
+                {
+                    "id": 1,
+                    "pertanyaan": "FAQ semua",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "semua",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Semua akun",
+                    "dapat_kelola": false
+                },
+                {
+                    "id": 4,
+                    "pertanyaan": "FAQ siswa",
+                    "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+                    "urusan": "kedinasan",
+                    "sasaran": "siswa",
+                    "urutan": 0,
+                    "status": "terbit",
+                    "versi": 0,
+                    "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+                    "status_label": "Diterbitkan",
+                    "urusan_label": "Dokumen Kedinasan Humas",
+                    "sasaran_label": "Siswa",
+                    "dapat_kelola": false
+                }
+            ],
+            "paginasi": {
+                "halaman": 1,
+                "halaman_terakhir": 1,
+                "per_halaman": 20,
+                "total": 2,
+                "ada_halaman_berikutnya": false
+            },
+            "dapat_kelola": false
+        },
+        "faq_detail": {
+            "id": 1,
+            "pertanyaan": "FAQ semua",
+            "jawaban": "Hubungi operator sekolah untuk informasi lebih lanjut.",
+            "urusan": "kedinasan",
+            "sasaran": "semua",
+            "urutan": 0,
+            "status": "terbit",
+            "versi": 0,
+            "diterbitkan_pada": "2026-10-22T10:00:00+07:00",
+            "status_label": "Diterbitkan",
+            "urusan_label": "Dokumen Kedinasan Humas",
+            "sasaran_label": "Semua akun",
+            "dapat_kelola": false
+        },
+        "faq_referensi": {
+            "urusan": {
+                "kedinasan": "Dokumen Kedinasan Humas",
+                "komite": "Dokumen Komite Sekolah",
+                "orang_tua": "Hubungan Orang Tua/Wali",
+                "kemitraan": "Kemitraan & Kerja Sama",
+                "publikasi": "Publikasi & Promosi Sekolah",
+                "alumni": "Database & Portofolio Alumni",
+                "pengaduan": "Aspirasi & Pengaduan"
+            },
+            "dapat_kelola": false
+        },
+        "kinerja_referensi": [],
+        "dashboard": [],
+        "kinerja": null
+    }
+}

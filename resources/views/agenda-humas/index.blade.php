@@ -10,11 +10,11 @@
     @include('agenda-humas._messages')
     <div class="agenda-metrics">
         <div class="agenda-metric"><span>Akan datang / berlangsung</span><strong>{{ $jumlahMendatang }}</strong></div>
-        <div class="agenda-metric"><span>Pertemuan selesai</span><strong>{{ $jumlahSelesai }}</strong></div>
-        <div class="agenda-metric agenda-metric--warning"><span>Jadwal lewat, belum ditutup</span><strong>{{ $jumlahLewat }}</strong></div>
-        <div class="agenda-metric agenda-metric--warning"><span>Tindak lanjut terlambat</span><strong>{{ $jumlahTerlambat }}</strong></div>
+        <div class="agenda-metric" data-tone="success"><span>Pertemuan selesai</span><strong>{{ $jumlahSelesai }}</strong></div>
+        <div class="agenda-metric" data-tone="warning"><span>Jadwal lewat, belum ditutup</span><strong>{{ $jumlahLewat }}</strong></div>
+        <div class="agenda-metric" data-tone="warning"><span>Tindak lanjut terlambat</span><strong>{{ $jumlahTerlambat }}</strong></div>
     </div>
-    <form method="GET" action="{{ route('agenda-humas.index') }}">
+    <form class="feature-filter" method="GET" action="{{ route('agenda-humas.index') }}">
         <div class="agenda-filter">
             <div class="field"><label for="kata_kunci">Cari agenda</label><input class="input" id="kata_kunci" name="kata_kunci" value="{{ $filter['kata_kunci'] ?? '' }}" maxlength="120" placeholder="Nama agenda, tempat, atau peserta undangan"></div>
             <div class="field"><label for="jenis">Jenis pertemuan</label><select id="jenis" name="jenis" class="select"><option value="">Semua jenis</option>@foreach (\App\Models\AgendaHumas::JENIS as $kode => $nama)<option value="{{ $kode }}" @selected(($filter['jenis'] ?? '') === $kode)>{{ $nama }}</option>@endforeach</select></div>
