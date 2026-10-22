@@ -3,7 +3,9 @@
 @section('title', e($mou->judul).' - MoU')
 @section('content')
 @include('kemitraan-humas._style')
-@php($statusBerlaku = $mou->statusBerlaku())
+@php
+    $statusBerlaku = $mou->statusBerlaku();
+@endphp
 <div class="mitra-page"><div class="page-header"><div class="mitra-heading"><p class="eyebrow">{{ $mitra->nama }}</p><h1 class="page-title">{{ $mou->judul }}</h1></div><div class="actions"><a class="button button-muted" href="{{ route('kemitraan-humas.show', $mitra) }}">Kembali ke mitra</a>@izin('kemitraan_humas.kelola')<a class="button button-muted" href="{{ route('kemitraan-humas.mou.edit', [$mitra, $mou]) }}">Edit MoU</a>@endizin</div></div>
     @include('agenda-humas._messages')
     <div class="mitra-summary"><span class="mitra-badge mitra-badge--{{ $statusBerlaku }}">{{ \App\Models\KerjaSamaHumas::STATUS_BERLAKU[$statusBerlaku] }}</span>@if ($mou->tanggal_selesai)<span class="agenda-muted">Berakhir {{ $mou->tanggal_selesai->format('d-m-Y') }}</span>@endif</div>
@@ -34,5 +36,6 @@
             @endizin
         @endif
     </section>
+    @if($bolehDokumen)<section class="agenda-section"><h2>Dokumen pendukung</h2><a class="button button-primary" href="{{ route('kemitraan-humas.pendukung',$mou) }}"><i data-lucide="paperclip" aria-hidden="true"></i>Kelola dokumen pendukung</a></section>@endif
     <section class="agenda-section"><h2>Jejak perubahan MoU</h2>@include('kemitraan-humas._riwayat')</section>
 </div>@endsection

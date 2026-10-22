@@ -76,19 +76,7 @@ class BundelPertemuanHumasService
         $dokumen = $bolehDokumen ? $agenda->dokumen()->with(['riwayat' => fn ($q) => $q->limit(1)])->orderBy('judul')->get() : collect();
         $formulir = $bolehUmpan ? UmpanBalikHumas::where('agenda_humas_id', $agenda->id)->where('cakupan', 'agenda')->whereNotNull('dibuka_pada')
             ->where('status', '!=', 'draf')->withCount(['sasaran', 'sasaran as respons_count' => fn ($q) => $q->whereNotNull('dikirim_pada')])->orderBy('id')->get() : collect();
-        $hambatan = [];
-        if ($agenda->status !== 'selesai') {
-            $hambatan[] = 'Agenda belum berstatus Selesai.';
-        }
-        if (blank($agenda->pembahasan) || blank($agenda->keputusan)) {
-            $hambatan[] = 'Pembahasan dan keputusan notulen belum lengkap.';
-        }
-        if ($agenda->peserta->isEmpty()) {
-            $hambatan[] = 'Daftar peserta belum tersedia.';
-        }
-        if ($agenda->peserta->contains('status_kehadiran', 'belum_dicatat')) {
-            $hambatan[] = 'Masih ada peserta yang kehadirannya belum dicatat.';
-        }
+        $hambatan = $this->hambatan($agenda, $agenda->peserta->count(), $agenda->peserta->where('status_kehadiran', 'belum_dicatat')->count());
         $sidik = hash('sha256', json_encode([
             $agenda->getAttributes(), $agenda->peserta->map->getAttributes()->all(), $agenda->tindakLanjut->map->getAttributes()->all(),
             $dokumen->map(fn ($d) => [$d->id, $d->judul, $d->status, $d->riwayat->first()?->getAttributes()])->all(),
@@ -131,6 +119,28 @@ class BundelPertemuanHumasService
         return $konteks + ['daftar' => $daftar, 'rekapUmpan' => $rekap, 'foto' => collect($daftar)->where('foto', true)->values(),
             'offline' => $offline, 'dibuatPada' => now(), 'logoKota' => $offline ? 'assets/logo-kota.png' : asset('images/logo-padang-panjang.png'),
             'logoSekolah' => $offline ? 'assets/logo-sekolah.png' : asset('images/kartu-pelajar/logo-smpn2pp.png')];
+    }
+
+    public function hambatan(AgendaHumas $agenda, int $peserta, int $belumDicatat): array
+    {
+        $hasil = [];
+        if ($agenda->status !== 'selesai') {
+            $hasil[] = 'Agenda belum berstatus Selesai.';
+        }
+        if (blank($agenda->pembahasan) || blank($agenda->keputusan)) {
+            $hasil[] = 'Pembahasan dan keputusan notulen belum lengkap.';
+        }
+        if (! $peserta) {
+            $hasil[] = 'Daftar peserta belum tersedia.';
+        }
+        if ($belumDicatat) {
+            $hasil[] = 'Masih ada peserta yang kehadirannya belum dicatat.';
+        }
+        if ($peserta > self::MAKS_PESERTA) {
+            $hasil[] = 'Maksimal 5.000 peserta per bundel pertemuan.';
+        }
+
+        return $hasil;
     }
 
     public function bundel(array $konteks, array $pilihan, Pengguna $u): array

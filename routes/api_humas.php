@@ -10,12 +10,41 @@ use App\Http\Controllers\Api\V1\Humas\PengaduanSayaController;
 use App\Http\Controllers\Api\V1\Humas\PertemuanSayaController;
 use App\Http\Controllers\Api\V1\Humas\UmpanBalikController;
 use App\Http\Controllers\Api\V1\Humas\UmpanBalikSayaController;
+use App\Http\Controllers\KontakHumasController;
+use App\Http\Controllers\PaketPertemuanHumasController;
+use App\Http\Controllers\PendukungKemitraanController;
+use App\Http\Controllers\PublikasiHumasController;
 use Illuminate\Support\Facades\Route;
 
 // Loaded inside the existing Sanctum mobile authentication group.
 Route::prefix('humas')->name('humas.')->middleware('throttle:120,1,humas-akses:')
-    ->where(array_fill_keys(['agendaHumas', 'pesertaPertemuanHumas', 'tindakLanjutAgendaHumas', 'tiket', 'lampiran', 'formulir', 'pertanyaan', 'tindak', 'dokumenHumas', 'riwayatDokumenHumas'], '[0-9]{1,18}') + ['token' => '[A-Za-z0-9]{64}'])
+    ->where(array_fill_keys(['agendaHumas', 'pesertaPertemuanHumas', 'tindakLanjutAgendaHumas', 'tiket', 'lampiran', 'formulir', 'pertanyaan', 'tindak', 'dokumenHumas', 'riwayatDokumenHumas', 'kontak', 'mou', 'publikasi'], '[0-9]{1,18}') + ['token' => '[A-Za-z0-9]{64}'])
     ->group(function () {
+        Route::prefix('kontak')->name('kontak.')->controller(KontakHumasController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/referensi', 'referensi')->name('referensi');
+            Route::post('/', 'store')->middleware('throttle:30,1,humas-kontak:')->name('store');
+            Route::get('/{kontak}', 'show')->name('show');
+            Route::patch('/{kontak}', 'update')->name('update');
+        });
+        Route::get('/agenda/{agendaHumas}/paket', [PaketPertemuanHumasController::class, 'show'])->name('agenda.paket');
+        Route::prefix('kemitraan/{mou}/pendukung')->name('kemitraan.pendukung.')->controller(PendukungKemitraanController::class)->group(function () {
+            Route::get('/', 'show')->name('index');
+            Route::get('/pilihan', 'pilihan')->name('pilihan');
+            Route::post('/', 'store')->name('store');
+            Route::delete('/{lampiran}', 'destroy')->name('destroy');
+        });
+        Route::prefix('publikasi')->name('publikasi.')->controller(PublikasiHumasController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/referensi', 'referensi')->name('referensi');
+            Route::get('/pilihan-aset', 'pilihanAset')->name('pilihan-aset');
+            Route::post('/', 'store')->middleware('throttle:15,1,humas-publikasi-baru:')->name('store');
+            Route::get('/{publikasi}', 'show')->name('show');
+            Route::patch('/{publikasi}', 'update')->middleware('throttle:15,1,humas-publikasi-edit:')->name('update');
+            Route::post('/{publikasi}/tindakan/{aksi}', 'ubahStatus')->whereIn('aksi', ['ajukan', 'tarik', 'buka-revisi', 'tayang', 'setujui', 'minta-revisi'])->name('tindakan');
+            Route::get('/{publikasi}/lampiran/{lampiran}', 'berkas')->name('berkas');
+            Route::get('/{publikasi}/naskah', 'naskah')->name('naskah');
+        });
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
         Route::get('/dashboard/referensi', [DashboardController::class, 'referensi'])->name('dashboard.referensi');
         Route::prefix('dokumen')->name('dokumen.')->controller(DokumenController::class)->group(function () {

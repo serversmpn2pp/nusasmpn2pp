@@ -59,8 +59,10 @@ untuk Android. Lihat `api-humas.md` untuk kontrak respons.
 API dokumen mendukung klasifikasi, penataan kolektif, dan hubungan sumber.
 Metadata arsip per bidang memakai menu native dokumen yang sama dengan filter
 `urusan`. Penambahan kontrak API tidak otomatis memperbarui layar APK yang sudah
-terpasang. Direktori kontak, FAQ, dan laporan kinerja semester resmi tetap di luar
-cakupan dua tahap ini.
+terpasang. Tahap operasional menambahkan direktori kontak pada bidang Kedinasan,
+paket pertemuan di agenda, pendukung MoU, serta akses publikasi milik sendiri.
+Lihat `operasional-humas.md`. FAQ dan laporan kinerja semester resmi tetap di luar
+cakupan saat ini.
 
 ## Setelah Pull
 
@@ -68,3 +70,7 @@ Tahap pertama hanya membutuhkan `php artisan optimize:clear`. Mulai tahap kedua,
 cadangkan database, jalankan migrasi, dan pratinjau penataan arsip lama sebelum
 menerapkannya. Urutan lengkap tersedia di `arsip-humas.md`. Tidak perlu menjalankan
 seeder atau memasang ulang role untuk perubahan ini.
+
+Tahap operasional membutuhkan migrasi `2026_10_22_000002_lengkapi_operasional_humas`.
+Role Kontributor Publikasi disiapkan tanpa otomatis dipasangkan kepada guru mana
+pun. Administrator dapat memasangnya melalui pengelolaan akun/role yang sudah ada.

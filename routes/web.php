@@ -58,6 +58,7 @@ use App\Http\Controllers\KlipingBeritaHumasController;
 use App\Http\Controllers\KomiteHumasController;
 use App\Http\Controllers\KomponenNilaiController;
 use App\Http\Controllers\KonfirmasiBerhalanganIbadahController;
+use App\Http\Controllers\KontakHumasController;
 use App\Http\Controllers\KoreksiKegiatanIbadahController;
 use App\Http\Controllers\KoreksiManualUjianCbtController;
 use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
@@ -79,6 +80,7 @@ use App\Http\Controllers\MutasiStokBarangController;
 use App\Http\Controllers\NilaiSayaController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
 use App\Http\Controllers\NotifikasiPenggunaController;
+use App\Http\Controllers\PaketPertemuanHumasController;
 use App\Http\Controllers\PaketSoalUjianTerpusatController;
 use App\Http\Controllers\PanitiaUjianTerpusatController;
 use App\Http\Controllers\PegawaiController;
@@ -89,6 +91,7 @@ use App\Http\Controllers\PembinaanPoinAnakController;
 use App\Http\Controllers\PemeriksaanPerangkatAjarController;
 use App\Http\Controllers\PeminjamanBarangController;
 use App\Http\Controllers\PendampinganSiswaController;
+use App\Http\Controllers\PendukungKemitraanController;
 use App\Http\Controllers\PenempatanSiswaController;
 use App\Http\Controllers\PenerimaanBarangController;
 use App\Http\Controllers\PengaduanHumasController;
@@ -896,8 +899,17 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             });
         });
 
+        Route::prefix('kontak-humas')->name('kontak-humas.')->controller(KontakHumasController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/tambah', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{kontak}', 'show')->whereNumber('kontak')->name('show');
+            Route::get('/{kontak}/edit', 'edit')->whereNumber('kontak')->name('edit');
+            Route::put('/{kontak}', 'update')->whereNumber('kontak')->name('update');
+        });
+
         Route::prefix('publikasi-humas')->name('publikasi-humas.')->controller(PublikasiHumasController::class)->group(function () {
-            Route::middleware('izin:publikasi_humas.kelola')->group(function () {
+            Route::middleware('izin:publikasi_humas.kelola,publikasi_humas.kontribusi')->group(function () {
                 Route::get('/tambah', 'create')->name('create');
                 Route::post('/', 'store')->name('store');
                 Route::get('/{publikasi}/edit', 'edit')->name('edit');
@@ -907,7 +919,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             });
             Route::post('/{publikasi}/pemeriksaan/{aksi}', 'ubahStatus')->whereIn('aksi', ['setujui', 'minta-revisi'])
                 ->middleware('izin:publikasi_humas.periksa')->name('pemeriksaan');
-            Route::middleware('izin:publikasi_humas.lihat,publikasi_humas.kelola,publikasi_humas.periksa')->group(function () {
+            Route::middleware('izin:publikasi_humas.lihat,publikasi_humas.kelola,publikasi_humas.periksa,publikasi_humas.kontribusi')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::get('/{publikasi}', 'show')->name('show');
                 Route::get('/{publikasi}/lampiran/{lampiran}', 'berkas')->name('berkas');
@@ -915,6 +927,11 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             });
         });
 
+        Route::prefix('kemitraan-humas/mou/{mou}/pendukung')->whereNumber('mou')->name('kemitraan-humas.pendukung')->controller(PendukungKemitraanController::class)->group(function () {
+            Route::get('/', 'show');
+            Route::post('/', 'store')->name('.store');
+            Route::delete('/{lampiran}', 'destroy')->whereNumber('lampiran')->name('.destroy');
+        });
         Route::prefix('kemitraan-humas')->name('kemitraan-humas.')->controller(KemitraanHumasController::class)->group(function () {
             Route::middleware('izin:kemitraan_humas.kelola')->group(function () {
                 Route::get('/tambah', 'create')->name('create');
@@ -983,6 +1000,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('agenda-humas/{agendaHumas}/pantau-presensi', [PresensiPertemuanHumasController::class, 'pantau'])->name('agenda-humas.pantau-presensi');
             Route::get('agenda-humas/{agendaHumas}/cetak-qr', [PresensiPertemuanHumasController::class, 'cetak'])->name('agenda-humas.cetak-qr');
             Route::get('agenda-humas/{agendaHumas}/bundel', [BundelPertemuanHumasController::class, 'show'])->name('agenda-humas.bundel');
+            Route::get('agenda-humas/{agendaHumas}/paket', [PaketPertemuanHumasController::class, 'show'])->name('agenda-humas.paket');
             Route::post('agenda-humas/{agendaHumas}/bundel/cetak', [BundelPertemuanHumasController::class, 'cetak'])->middleware('throttle:30,1')->name('agenda-humas.bundel.cetak');
             Route::post('agenda-humas/{agendaHumas}/bundel/unduh', [BundelPertemuanHumasController::class, 'export'])->middleware(['izin:agenda_humas.bundel', 'throttle:6,1'])->name('agenda-humas.bundel.export');
         });

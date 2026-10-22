@@ -43,7 +43,10 @@ class KelolaPublikasiHumasService
     {
         $this->pastikanVersi($publikasi, (int) $data['versi']);
         $pemeriksaan = in_array($aksi, ['setujui', 'minta-revisi'], true);
-        abort_unless($pengguna->aktif && $pengguna->memilikiIzin($pemeriksaan ? 'publikasi_humas.periksa' : 'publikasi_humas.kelola'), 403);
+        $akses = app(AksesPublikasiHumasService::class);
+        $akses->pastikan($pengguna, $publikasi);
+        abort_unless($pemeriksaan ? $pengguna->memilikiIzin('publikasi_humas.periksa')
+            : (in_array($aksi, ['ajukan', 'tarik'], true) ? $akses->dapatKelola($pengguna, $publikasi) : $pengguna->memilikiIzin('publikasi_humas.kelola')), 403);
         $asal = match ($aksi) {
             'ajukan' => ['draf', 'revisi'], 'tarik', 'setujui', 'minta-revisi' => ['diajukan'],
             'buka-revisi', 'tayang' => ['disetujui'], default => [],
@@ -88,9 +91,15 @@ class KelolaPublikasiHumasService
             'minta-revisi' => 'Revisi diminta', 'buka-revisi' => 'Persetujuan dibuka untuk revisi', 'tayang' => 'Bukti tayang dicatat'][$aksi];
         $this->catat($publikasi, $pengguna, $label, $data['catatan'] ?? null);
         if ($aksi === 'ajukan' || $pemeriksaan) {
-            $penerima = $this->notifikasi->penggunaDenganIzin($aksi === 'ajukan' ? 'publikasi_humas.periksa' : 'publikasi_humas.kelola', $pengguna->id);
+            $penerima = $this->notifikasi->penggunaDenganIzin($aksi === 'ajukan' ? ['publikasi_humas.periksa', 'publikasi_humas.kelola'] : 'publikasi_humas.kelola', $pengguna->id)
+                ->filter(fn ($u) => ! $u->akunSiswa() && ! $u->akunOrangTua());
             if ($aksi === 'ajukan') {
                 $penerima = $penerima->where('id', '!=', $publikasi->dibuat_oleh_pengguna_id);
+            } else {
+                $pembuat = $publikasi->pembuat;
+                if ($pembuat && $pembuat->id !== $pengguna->id && $akses->dapatKelola($pembuat, $publikasi)) {
+                    $penerima = $penerima->push($pembuat)->unique('id');
+                }
             }
             $this->notifikasi->kirimKeBanyak($penerima, $aksi === 'minta-revisi' ? 'peringatan' : 'informasi', $label,
                 $publikasi->judul, '/publikasi-humas/'.$publikasi->id, 'publikasi-humas-'.$publikasi->id.'-'.$publikasi->versi);

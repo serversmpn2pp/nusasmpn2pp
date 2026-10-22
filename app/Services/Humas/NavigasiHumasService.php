@@ -4,7 +4,9 @@ namespace App\Services\Humas;
 
 use App\Models\AgendaHumas;
 use App\Models\DokumenHumas;
+use App\Models\KontakHumas;
 use App\Models\Pengguna;
+use App\Models\PublikasiHumas;
 use Illuminate\Http\Request;
 
 class NavigasiHumasService
@@ -144,6 +146,7 @@ class NavigasiHumasService
                 $this->item('program-kerja-humas', 'Program Kerja Humas', 'program-kerja-humas.index', ['program_kerja_humas.lihat', 'program_kerja_humas.kelola'], 'clipboard-list'),
                 $this->item('dokumen-humas', 'Pusat Dokumen Humas', 'dokumen-humas.index', ['dokumen_humas.lihat', 'dokumen_humas.kelola'], 'files'),
                 $this->item('akreditasi-humas', 'Portofolio Akreditasi', 'akreditasi-humas.index', ['akreditasi_humas.lihat', 'akreditasi_humas.kelola'], 'clipboard-check'),
+                $this->item('kontak-humas', 'Direktori Kontak', 'kontak-humas.index', KontakHumas::IZIN, 'contact-round'),
             ]],
             ['kode' => 'komite', 'label' => 'Dokumen Komite Sekolah', 'ikon' => 'users-round', 'warna' => 'teal', 'items' => [
                 $this->item('komite-humas', 'Komite Sekolah', 'komite-humas.index', ['komite_humas.lihat', 'komite_humas.kelola'], 'users-round'),
@@ -158,7 +161,7 @@ class NavigasiHumasService
                 $this->item('pertemuan-mitra-humas', 'Pertemuan Mitra', 'agenda-humas.index', $agenda, 'calendar-days', ['jenis' => 'kemitraan']),
             ]],
             ['kode' => 'publikasi', 'label' => 'Publikasi & Promosi Sekolah', 'ikon' => 'megaphone', 'warna' => 'rose', 'items' => [
-                $this->item('publikasi-humas', 'Publikasi & Persetujuan', 'publikasi-humas.index', ['publikasi_humas.lihat', 'publikasi_humas.kelola', 'publikasi_humas.periksa'], 'megaphone'),
+                $this->item('publikasi-humas', 'Publikasi & Persetujuan', 'publikasi-humas.index', PublikasiHumas::IZIN_AKSES, 'megaphone'),
                 $this->item('aset-promosi-humas', 'Bank Aset Promosi', 'aset-promosi-humas.index', ['aset_promosi_humas.lihat', 'aset_promosi_humas.kelola'], 'images'),
                 $this->item('media-resmi-humas', 'Daftar Media Resmi', 'media-resmi-humas.index', ['media_resmi_humas.lihat', 'media_resmi_humas.kelola'], 'globe'),
                 $this->item('kliping-berita-humas', 'Kliping Berita', 'kliping-berita-humas.index', ['kliping_berita_humas.lihat', 'kliping_berita_humas.kelola'], 'newspaper'),

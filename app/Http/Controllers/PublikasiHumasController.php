@@ -6,8 +6,10 @@ use App\Models\AgendaHumas;
 use App\Models\AsetPromosiHumas;
 use App\Models\LampiranPublikasiHumas;
 use App\Models\PublikasiHumas;
+use App\Services\Humas\AksesPublikasiHumasService;
 use App\Services\Humas\KelolaAsetPromosiHumasService;
 use App\Services\Humas\KelolaPublikasiHumasService;
+use App\Services\Mobile\HumasMobileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -26,39 +28,53 @@ class PublikasiHumasController extends Controller
             'status' => ['nullable', Rule::in(array_keys(PublikasiHumas::STATUS))],
             'jenis' => ['nullable', Rule::in(array_keys(PublikasiHumas::JENIS))],
             'kanal' => ['nullable', Rule::in(array_keys(PublikasiHumas::KANAL))]]);
-        $query = PublikasiHumas::with('pembuat:id,nama')->withCount(['lampiran as jumlah_foto' => fn ($q) => $q->where('jenis', 'foto')->whereNull('dihapus_pada')])
+        $akses = app(AksesPublikasiHumasService::class);
+        $query = $akses->query($request->user())->with('pembuat:id,nama')->withCount(['lampiran as jumlah_foto' => fn ($q) => $q->where('jenis', 'foto')->whereNull('dihapus_pada')])
             ->when($filter['kata_kunci'] ?? null, fn ($q, $kata) => $q->where(fn ($q) => $q->whereLike('judul', '%'.$kata.'%')->orWhereLike('ringkasan', '%'.$kata.'%')));
         foreach (['status', 'jenis', 'kanal'] as $kolom) {
             if (! empty($filter[$kolom])) {
                 $query->where($kolom, $filter[$kolom]);
             }
         }
-        $statistik = PublikasiHumas::selectRaw('status, COUNT(*) AS jumlah')->groupBy('status')->pluck('jumlah', 'status');
+        $statistik = $akses->query($request->user())->selectRaw('status, COUNT(*) AS jumlah')->groupBy('status')->pluck('jumlah', 'status');
+        $page = $request->routeIs('api.v1.*') ? $request->validate(['halaman' => ['nullable', 'integer', 'min:1'], 'per_halaman' => ['nullable', 'integer', 'min:1', 'max:50']]) : [];
+        $daftar = $query->latest('updated_at')->orderByDesc('id')->paginate($page['per_halaman'] ?? 20, ['*'], $request->routeIs('api.v1.*') ? 'halaman' : 'page', $page['halaman'] ?? null)->withQueryString();
+        if ($request->routeIs('api.v1.*')) {
+            return response()->json(['data' => app(HumasMobileService::class)->paginasi($daftar, fn ($p) => $this->dataApi($request, $p))
+                + ['filter' => $filter, 'statistik' => (object) $statistik->all(), 'cakupan' => $akses->sendiri($request->user()) ? 'milik_sendiri' : 'seluruh']])->header('Cache-Control', 'private, no-store');
+        }
 
-        return view('publikasi-humas.index', ['daftar' => $query->latest('updated_at')->orderByDesc('id')->paginate(20)->withQueryString(),
-            'filter' => $filter, 'statistik' => $statistik]);
+        return view('publikasi-humas.index', ['daftar' => $daftar, 'filter' => $filter, 'statistik' => $statistik,
+            'cakupanSendiri' => $akses->sendiri($request->user()), 'dapatBuat' => $akses->dapatKelola($request->user())]);
     }
 
     public function create(Request $request)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), null, true);
+
         return $this->form($request, new PublikasiHumas(['jenis' => 'berita', 'kanal' => 'website']));
     }
 
     public function pilihanAset(Request $request)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), null, true);
         abort_unless($request->user()->memilikiIzin(AsetPromosiHumas::IZIN_LIHAT), 403);
         $data = $request->validate(['cari' => ['nullable', 'string', 'max:120']]);
         $bolehDokumen = $request->user()->memilikiIzin(['dokumen_humas.lihat', 'dokumen_humas.kelola']);
 
-        return response()->json(['aset' => AsetPromosiHumas::where('status', 'aktif')
+        $aset = AsetPromosiHumas::where('status', 'aktif')
             ->when(! $bolehDokumen, fn ($q) => $q->where('sumber', 'tautan'))
             ->when($data['cari'] ?? null, fn ($q, $kata) => $q->where(fn ($q) => $q->whereLike('nama', '%'.$kata.'%')->orWhereLike('kata_kunci', '%'.$kata.'%')))
             ->latest('updated_at')->limit(100)->get(['id', 'nama', 'kategori', 'versi'])->map(fn ($item) => ['id' => $item->id, 'nama' => $item->nama,
-                'kategori' => AsetPromosiHumas::KATEGORI[$item->kategori], 'versi' => $item->versi + 1])]);
+                'kategori' => AsetPromosiHumas::KATEGORI[$item->kategori], 'versi' => $item->versi + 1]);
+
+        return response()->json($request->routeIs('api.v1.*') ? ['data' => ['items' => $aset]] : ['aset' => $aset])
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function store(Request $request)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), null, true);
         $data = $request->validate($this->aturanKonten() + ['token_pembuatan' => ['required', 'uuid']]);
         $this->pastikanAgenda($request, $data, null);
         $files = $this->simpanFoto($request);
@@ -89,6 +105,10 @@ class PublikasiHumasController extends Controller
 
     public function show(Request $request, PublikasiHumas $publikasi)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), $publikasi);
+        if ($request->routeIs('api.v1.*')) {
+            return response()->json(['data' => $this->dataApi($request, $publikasi, true)])->header('Cache-Control', 'private, no-store');
+        }
         $publikasi->load(['pembuat:id,nama', 'pemeriksa:id,nama', 'lampiran']);
         $bolehAgenda = $request->user()->memilikiIzin(['agenda_humas.lihat', 'agenda_humas.kelola']);
         if ($bolehAgenda) {
@@ -106,6 +126,7 @@ class PublikasiHumasController extends Controller
 
     public function edit(Request $request, PublikasiHumas $publikasi)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), $publikasi, true);
         $this->kelola->pastikanBolehEdit($publikasi);
 
         return $this->form($request, $publikasi);
@@ -113,6 +134,7 @@ class PublikasiHumasController extends Controller
 
     public function update(Request $request, PublikasiHumas $publikasi)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), $publikasi, true);
         $data = $request->validate($this->aturanKonten() + ['versi' => ['required', 'integer', 'min:0']]);
         $files = $this->simpanFoto($request);
         try {
@@ -149,6 +171,7 @@ class PublikasiHumasController extends Controller
 
     public function ubahStatus(Request $request, PublikasiHumas $publikasi, string $aksi)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), $publikasi);
         $data = $request->validate(['versi' => ['required', 'integer', 'min:0'],
             'catatan' => [in_array($aksi, ['minta-revisi', 'buka-revisi']) ? 'required' : 'nullable', 'string', 'min:5', 'max:2000'],
             'url_tayang' => [$aksi === 'tayang' ? 'required' : 'nullable', 'url:http,https', 'max:2000'],
@@ -171,6 +194,7 @@ class PublikasiHumasController extends Controller
 
     public function berkas(PublikasiHumas $publikasi, LampiranPublikasiHumas $lampiran, Request $request)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), $publikasi);
         abort_unless($lampiran->publikasi_humas_id === $publikasi->id, 404);
         $disk = Storage::disk('local');
         abort_unless($disk->exists($lampiran->lokasi_file), 404);
@@ -180,8 +204,10 @@ class PublikasiHumasController extends Controller
             : $disk->response($lampiran->lokasi_file, $lampiran->nama_file_asli, $headers);
     }
 
-    public function naskah(PublikasiHumas $publikasi)
+    public function naskah(Request $request, PublikasiHumas $publikasi)
     {
+        app(AksesPublikasiHumasService::class)->pastikan($request->user(), $publikasi);
+
         return response()->streamDownload(function () use ($publikasi) {
             echo $publikasi->judul."\r\n\r\n".$publikasi->isi;
         }, 'naskah-publikasi-'.$publikasi->id.'.txt', ['Content-Type' => 'text/plain; charset=UTF-8', 'Cache-Control' => 'private, no-store']);
@@ -275,9 +301,44 @@ class PublikasiHumasController extends Controller
 
     private function selesai(Request $request, PublikasiHumas $publikasi, string $pesan)
     {
+        if ($request->routeIs('api.v1.*')) {
+            $publikasi->refresh();
+
+            return response()->json(['data' => $this->dataApi($request, $publikasi, true), 'pesan' => $pesan], $publikasi->wasRecentlyCreated ? 201 : 200)
+                ->header('Cache-Control', 'private, no-store');
+        }
         $url = route('publikasi-humas.show', $publikasi);
         $request->session()->flash('berhasil', $pesan);
 
         return $request->expectsJson() ? response()->json(['redirect' => $url, 'pesan' => $pesan]) : redirect($url);
+    }
+
+    public function referensi(Request $request)
+    {
+        $akses = app(AksesPublikasiHumasService::class);
+        $akses->pastikan($request->user());
+
+        return response()->json(['data' => ['jenis' => PublikasiHumas::JENIS, 'kanal' => PublikasiHumas::KANAL, 'status' => PublikasiHumas::STATUS,
+            'token_pembuatan' => (string) Str::uuid(), 'dapat_buat' => $akses->dapatKelola($request->user()), 'cakupan' => $akses->sendiri($request->user()) ? 'milik_sendiri' : 'seluruh']])
+            ->header('Cache-Control', 'private, no-store');
+    }
+
+    private function dataApi(Request $r, PublikasiHumas $p, bool $detail = false): array
+    {
+        $akses = app(AksesPublikasiHumasService::class);
+        $ubah = $akses->dapatKelola($r->user(), $p);
+        $data = $p->only(['id', 'judul', 'jenis', 'ringkasan', 'kanal', 'status', 'versi']) + ['rencana_tayang' => $p->rencana_tayang?->format('Y-m-d'),
+            'hak_akses' => ['dapat_edit' => $ubah && $p->bolehDiedit(), 'dapat_ajukan' => $ubah && $p->bolehDiedit(), 'dapat_tarik' => $ubah && $p->status === 'diajukan',
+                'dapat_periksa' => $r->user()->memilikiIzin('publikasi_humas.periksa') && $p->status === 'diajukan' && ! in_array($r->user()->id, [$p->dibuat_oleh_pengguna_id, $p->diajukan_oleh_pengguna_id], true),
+                'dapat_tayang' => $r->user()->memilikiIzin('publikasi_humas.kelola') && $p->status === 'disetujui']];
+        if ($detail) {
+            $data += $p->only(['isi', 'catatan_pemeriksaan', 'url_tayang']);
+            $data['waktu_tayang'] = $p->waktu_tayang?->toIso8601String();
+            $data['lampiran'] = $p->lampiran()->whereNull('dihapus_pada')->get()->map(fn ($l) => ['id' => $l->id, 'jenis' => $l->jenis, 'nama' => $l->nama_file_asli,
+                'url' => route('api.v1.humas.publikasi.berkas', [$p, $l])])->all();
+            $data['agenda_humas_id'] = $r->user()->memilikiIzin(['agenda_humas.lihat', 'agenda_humas.kelola']) ? $p->agenda_humas_id : null;
+        }
+
+        return $data;
     }
 }

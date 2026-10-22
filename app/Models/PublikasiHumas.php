@@ -18,6 +18,8 @@ class PublikasiHumas extends Model
 
     public const IZIN_LIHAT = ['publikasi_humas.lihat', 'publikasi_humas.kelola', 'publikasi_humas.periksa'];
 
+    public const IZIN_AKSES = [...self::IZIN_LIHAT, 'publikasi_humas.kontribusi'];
+
     protected $fillable = ['token_pembuatan', 'judul', 'jenis', 'ringkasan', 'isi', 'kanal', 'rencana_tayang', 'agenda_humas_id', 'dibuat_oleh_pengguna_id'];
 
     protected $hidden = ['token_pembuatan'];

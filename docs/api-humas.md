@@ -1,8 +1,9 @@
-# API Humas Tahap 1 Dan 2
+# API Humas
 
-Base path: `/api/v1/humas`. Tersedia 74 endpoint (50 tahap pertama, 20 dashboard/arsip, dan 4 klasifikasi/kaitan),
+Base path: `/api/v1/humas`. Tersedia 93 endpoint (50 tahap pertama, 20 dashboard/arsip, 4 klasifikasi/kaitan, dan 19 operasional).
 Pembaruan klasifikasi/kaitan memerlukan migrasi
-`2026_10_22_000001_tambah_klasifikasi_dan_kaitan_dokumen_humas`.
+`2026_10_22_000001_tambah_klasifikasi_dan_kaitan_dokumen_humas` dan
+`2026_10_22_000002_lengkapi_operasional_humas`.
 Lihat `docs/arsip-humas.md` untuk penataan metadata lama. Layar/menu Android Humas
 yang sudah tersedia tetap kompatibel; lihat `docs/mobile-humas.md` untuk cakupan
 APK. Kontrak API baru tidak berarti layar klasifikasi/kaitan sudah ada di APK lama.
@@ -226,6 +227,33 @@ Riwayat klasifikasi terpisah dari riwayat berkas: `{id, aksi, alasan, waktu, seb
 sesudah}`. Snapshot API hanya memuat urusan, jenis, dan sumber klasifikasi, tidak
 memuat ID target surat atau judul rahasia. Teks alasan tetap data petugas; jangan
 menaruh rahasia surat di alasan pada arsip yang dapat dibaca petugas dokumen lain.
+
+## Operasional Humas (19 Endpoint)
+
+Kontrak lengkap dan aturan akses: `docs/operasional-humas.md`.
+
+| Metode | Path | Kegunaan |
+| --- | --- | --- |
+| GET / POST | `/kontak` | Direktori sesuai izin / catat kontak dengan UUID |
+| GET | `/kontak/referensi` | Urusan, status, UUID dan hak akses |
+| GET / PATCH | `/kontak/{kontak}` | Detail / ubah dengan `versi` dan alasan |
+| GET | `/agenda/{agenda}/paket` | Kelengkapan peserta, presensi, notulen, lampiran dan bundel |
+| GET / POST | `/kemitraan/{mou}/pendukung` | Riwayat pendukung / tautkan versi berkas |
+| GET | `/kemitraan/{mou}/pendukung/pilihan` | Cari versi terkini dokumen aktif dengan berkas tersedia |
+| DELETE | `/kemitraan/{mou}/pendukung/{lampiran}` | Lepas hubungan dengan versi MoU dan catatan |
+| GET / POST | `/publikasi` | Daftar berizin / buat draf dan foto |
+| GET | `/publikasi/referensi` | Jenis, kanal, status, UUID, cakupan |
+| GET | `/publikasi/pilihan-aset` | Pilihan aset; tetap memerlukan izin sumber |
+| GET / PATCH | `/publikasi/{publikasi}` | Detail / koreksi draf milik sendiri atau editor |
+| POST | `/publikasi/{publikasi}/tindakan/{aksi}` | Ajukan, tarik, periksa, revisi, atau catat tayang sesuai izin |
+| GET | `/publikasi/{publikasi}/lampiran/{lampiran}` | Foto/bukti privat, bukan URL publik |
+| GET | `/publikasi/{publikasi}/naskah` | Unduh naskah privat |
+
+API siap dipakai untuk pengembangan layar baru, tetapi modul native Android lama
+tidak otomatis memiliki layar kontak/publikasi/pendukung. Metadata dashboard tidak
+menandai layar tersebut tersedia mobile. Kontributor hanya menerima daftar,
+statistik, detail dan lampiran miliknya; pemantau direktori tanpa izin nomor/email
+menerima nilai null, bukan nomor yang hanya disembunyikan oleh UI.
 
 ## Dokumen Agenda (3 Endpoint)
 
@@ -471,12 +499,12 @@ Tes kontrak/security/alur: `tests/Feature/Api/HumasApiTest.php`,
 karena kedua kanal berbagi layanan command dan transaksi yang sama. Pengujian otomatis menggunakan
 SQLite terisolasi; belum merupakan uji Android pada perangkat nyata maupun uji beban server sekolah.
 
-Daftar rute aplikasi memuat 74 endpoint. Seluruh rute memakai autentikasi, ability
+Daftar rute aplikasi memuat 93 endpoint. Seluruh rute memakai autentikasi, ability
 mobile, pemeriksaan akun aktif dan kewajiban mengganti kata sandi. Perubahan
 klasifikasi diuji untuk kompatibilitas client lama, versi usang, transaksi kolektif,
 backfill idempoten, pembatasan surat rahasia, serta penolakan akun siswa/orang tua.
 
-Tahap berikutnya: API buku tamu, kemitraan,
-publikasi/aset/media/kliping, komite/program kerja, alumni/prestasi, portofolio akreditasi;
+Tahap berikutnya: API buku tamu, pengelolaan data induk kemitraan,
+aset/media/kliping, komite/program kerja, alumni/prestasi, portofolio akreditasi;
 kemudian layar Android dan menu sesuai kemampuan yang benar-benar sudah diimplementasikan.
-Kesiapan 74 endpoint ini tidak berarti seluruh modul Humas atau versi Android telah selesai.
+Kesiapan 93 endpoint ini tidak berarti seluruh modul Humas atau versi Android telah selesai.

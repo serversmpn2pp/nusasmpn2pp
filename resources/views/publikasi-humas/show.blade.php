@@ -4,7 +4,8 @@
 @section('content')
 @include('publikasi-humas._style')
 @php
-    $kelola = auth()->user()->memilikiIzin('publikasi_humas.kelola');
+    $editor = auth()->user()->memilikiIzin('publikasi_humas.kelola');
+    $kelola = app(\App\Services\Humas\AksesPublikasiHumasService::class)->dapatKelola(auth()->user(), $publikasi);
     $periksa = auth()->user()->memilikiIzin('publikasi_humas.periksa');
     $sendiri = in_array(auth()->id(), [$publikasi->dibuat_oleh_pengguna_id, $publikasi->diajukan_oleh_pengguna_id], true);
 @endphp
@@ -46,7 +47,7 @@
             @if ($kelola)<form method="POST" action="{{ route('publikasi-humas.tindakan', [$publikasi, 'tarik']) }}" data-publikasi-submit style="margin-top:22px">@csrf<input type="hidden" name="versi" value="{{ $publikasi->versi }}"><button class="button button-muted" type="submit">Tarik pengajuan untuk diedit</button></form>@endif
         </section>
     @endif
-    @if ($kelola && $publikasi->status === 'disetujui')
+    @if ($editor && $publikasi->status === 'disetujui')
         <section class="agenda-section"><h2>Catat publikasi yang sudah tayang</h2>
             <form method="POST" enctype="multipart/form-data" action="{{ route('publikasi-humas.tindakan', [$publikasi, 'tayang']) }}" data-publikasi-upload>@csrf<input type="hidden" name="versi" value="{{ $publikasi->versi }}"><div class="agenda-field-grid">
                 <div class="field span-2"><label for="url_tayang">Tautan publikasi</label><input class="input" type="url" id="url_tayang" name="url_tayang" maxlength="2000" value="{{ old('url_tayang') }}" required></div>

@@ -4,6 +4,7 @@ namespace App\Services\Humas;
 
 use App\Models\AgendaHumas;
 use App\Models\DokumenHumas;
+use App\Models\DokumenPendukungKemitraan;
 use App\Models\Pengguna;
 use App\Models\ProgramKerjaHumas;
 use App\Models\ProgramKomiteHumas;
@@ -97,6 +98,14 @@ class KaitanDokumenHumasService
             $targets = $this->query($akun, $kode)->whereHas($t['balik'], fn ($q) => $q->where('dokumen_humas.id', $d->id))->latest('id')->limit(50)->get();
             foreach ($targets as $target) {
                 $items[] = $this->item($akun, $kode, $target) + ['dapat_lepas' => isset($this->jenis($akun, true)[$kode]) && $akun->memilikiIzin('dokumen_humas.kelola')];
+            }
+        }
+        if ($akun->aktif && ! $akun->akunSiswa() && ! $akun->akunOrangTua() && $akun->memilikiIzin(['kemitraan_humas.lihat', 'kemitraan_humas.kelola'])) {
+            $pendukung = DokumenPendukungKemitraan::with('mou')->whereNull('dilepas_pada')
+                ->whereHas('berkas', fn ($q) => $q->where('dokumen_humas_id', $d->id))->latest('id')->limit(50)->get();
+            foreach ($pendukung as $l) {
+                $items[] = ['jenis' => 'kemitraan_pendukung', 'id' => $l->id, 'kelompok' => 'Pendukung kemitraan', 'label' => $l->mou->judul,
+                    'url' => route('kemitraan-humas.pendukung', $l->mou), 'dapat_lepas' => false];
             }
         }
 

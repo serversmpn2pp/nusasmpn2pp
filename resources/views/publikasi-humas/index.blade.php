@@ -5,10 +5,10 @@
 @include('publikasi-humas._style')
 <div class="publikasi-page">
     <div class="page-header"><div><p class="eyebrow">Humas</p><h1 class="page-title">Publikasi & Persetujuan</h1></div>
-        @izin('publikasi_humas.kelola')<a class="button button-primary" href="{{ route('publikasi-humas.create') }}">Buat draf</a>@endizin
+        @if($dapatBuat)<a class="button button-primary" href="{{ route('publikasi-humas.create') }}">Buat draf</a>@endif
     </div>
     @include('agenda-humas._messages')
-    <p class="agenda-muted">Seluruh konten sekolah</p>
+    <p class="agenda-muted">{{ $cakupanSendiri ? 'Kontribusi publikasi saya' : 'Seluruh konten sekolah' }}</p>
     <div class="agenda-metrics">
         @foreach (['diajukan' => 'Menunggu pemeriksaan', 'revisi' => 'Perlu revisi', 'disetujui' => 'Siap ditayangkan', 'tayang' => 'Sudah tayang'] as $kode => $label)
             <div class="agenda-metric"><span>{{ $label }}</span><strong>{{ $statistik[$kode] ?? 0 }}</strong></div>

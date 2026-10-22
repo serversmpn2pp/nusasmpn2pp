@@ -131,6 +131,12 @@ class KlasifikasiDokumenHumasService
             $urusan[] = 'publikasi';
             $jenis[] = 'kliping';
         }
+        foreach (DB::table('dokumen_pendukung_kemitraan')->whereIn('riwayat_dokumen_humas_id', clone $versi)->whereNull('dilepas_pada')->pluck('jenis') as $pendukung) {
+            $urusan[] = 'kemitraan';
+            $jenis[] = match ($pendukung) {
+                'proposal', 'berita_acara', 'dokumentasi' => $pendukung, 'laporan' => 'laporan_kegiatan', default => null,
+            };
+        }
         if (DB::table('aset_promosi_humas')->whereIn('riwayat_dokumen_humas_id', clone $versi)->exists()
             || DB::table('prestasi_sekolah')->whereIn('riwayat_dokumen_humas_id', clone $versi)->exists()) {
             $urusan[] = 'publikasi';
