@@ -1,6 +1,6 @@
 # API Humas
 
-Base path: `/api/v1/humas`. Tersedia 179 endpoint (111 endpoint sebelumnya dan 68 endpoint native tahap 2).
+Base path: `/api/v1/humas`. Tersedia 219 endpoint (179 sebelumnya dan 40 endpoint native tahap 3).
 Pembaruan klasifikasi/kaitan memerlukan migrasi
 `2026_10_22_000001_tambah_klasifikasi_dan_kaitan_dokumen_humas` dan
 `2026_10_22_000002_lengkapi_operasional_humas`, serta
@@ -620,12 +620,60 @@ Tes kontrak/security/alur: `tests/Feature/Api/HumasApiTest.php`,
 karena kedua kanal berbagi layanan command dan transaksi yang sama. Pengujian otomatis menggunakan
 SQLite terisolasi; belum merupakan uji Android pada perangkat nyata maupun uji beban server sekolah.
 
-Daftar rute aplikasi memuat 93 endpoint. Seluruh rute memakai autentikasi, ability
+Cakupan awal berisi 93 endpoint; cakupan terkini 219 endpoint. Seluruh rute memakai autentikasi, ability
 mobile, pemeriksaan akun aktif dan kewajiban mengganti kata sandi. Perubahan
 klasifikasi diuji untuk kompatibilitas client lama, versi usang, transaksi kolektif,
 backfill idempoten, pembatasan surat rahasia, serta penolakan akun siswa/orang tua.
 
-Tahap berikutnya: API buku tamu, pengelolaan data induk kemitraan,
-aset/media/kliping, komite/program kerja, alumni/prestasi, portofolio akreditasi;
-kemudian layar Android dan menu sesuai kemampuan yang benar-benar sudah diimplementasikan.
-Kesiapan 93 endpoint ini tidak berarti seluruh modul Humas atau versi Android telah selesai.
+API dan layar native untuk kemitraan, komite, program, akreditasi, aset,
+media resmi, kliping, prestasi dan alumni sudah tersedia. Buku tamu digital
+belum termasuk pengembangan native ini.
+
+## Native Tahap 3 (40 Endpoint)
+
+Lima resource: `aset`, `media`, `kliping`, `prestasi`, `alumni`.
+Masing-masing menyediakan:
+
+| Metode | Path | Kegunaan |
+| --- | --- | --- |
+| GET | `/{resource}` | Daftar, statistik, filter dan paginasi |
+| GET | `/{resource}/referensi` | Pilihan enum, hak akses dan pencarian dokumen |
+| POST | `/{resource}` | Tambah dengan UUID `token_pembuatan` |
+| GET | `/{resource}/{id}` | Rincian sesuai izin |
+| PATCH | `/{resource}/{id}` | Edit dengan `versi` asli |
+| GET | `/{resource}/{id}/riwayat` | Riwayat tanpa snapshot mentah |
+
+Endpoint tambahan:
+
+- GET `/aset/{id}/pemakaian`: publikasi yang memakai aset; perlu izin lihat publikasi global.
+- GET `/{aset|kliping|prestasi}/{id}/berkas/{bukti}`: versi lampiran yang memang
+  terhubung dengan catatan tersebut, perlu izin dokumen. `unduh=1` mengunduh berkas.
+- GET `/{prestasi|alumni}/cetak`: HTML cetak yang sama dengan web, mengikuti filter.
+- GET `/{prestasi|alumni}/ekspor`: XLSX mengikuti filter. Alumni hanya menyertakan
+  kontak bila `sertakan_kontak=1` dan pemanggil memiliki `alumni_humas.kelola`.
+- GET `/prestasi/pilihan?jenis=siswa|pegawai&q=...&page=1`: pemilihan penerima.
+- GET `/alumni/pilihan?q=...&page=1&alumni_id=...`: sumber siswa dan riwayat kelas IX.
+  Kedua pemilih memerlukan izin kelola, merespons `data.items` dan `data.next_page`.
+
+Daftar/riwayat memakai `halaman` dan `per_halaman` (1-50). Filter dan statistik
+mengikuti web; status bawaan adalah data aktif (prestasi termasuk draf).
+Referensi dokumen dicari dengan `cari_dokumen`, maksimal 50 hasil per pencarian.
+
+Payload tambah/edit mengikuti form web, termasuk alasan perubahan dan validasi
+publikasi bukti. Aset menggunakan `metode=tautan|unggah|dokumen` saat tambah,
+ditambah `tetap` saat edit. Kliping/prestasi menggunakan `tanpa|unggah|dokumen`
+saat tambah dan `tetap|unggah|dokumen|hapus` saat edit. Lampiran disimpan privat.
+Unggahan memerlukan `dokumen_humas.kelola`; pemilihan/unduhan arsip memerlukan
+izin lihat/kelola dokumen. Batas aset/kliping 20 MB, prestasi 10 MB.
+Edit multipart memakai POST dengan `_method=PATCH`.
+
+Prestasi hanya dihitung terverifikasi setelah bukti/tautan tersedia dan
+`konfirmasi_prestasi` diterima. Penerima individu/tim/sekolah divalidasi seperti web.
+Alumni memerlukan `konfirmasi_lulus`; penambahan alumni tidak menonaktifkan
+siswa atau mengubah akun. WhatsApp, email, catatan penelusuran dan alasan
+perubahan alumni hanya untuk pengelola, tidak dikirim ke pembaca biasa.
+UUID dipertahankan untuk retry, konflik versi menghasilkan 422 tanpa menimpa
+perubahan pengguna lain. Siswa/orang tua tetap ditolak walau memiliki role admin.
+
+Tidak ada migrasi atau seeder tambahan khusus tahap 3. Perbarui backend,
+jalankan `php artisan optimize:clear`, lalu pasang APK yang baru.

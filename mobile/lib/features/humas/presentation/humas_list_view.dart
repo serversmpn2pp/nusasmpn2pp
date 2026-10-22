@@ -15,6 +15,7 @@ import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/features/humas/presentation/humas_work_views.dart';
 import 'package:nusa/features/humas/presentation/humas_work_forms.dart';
+import 'package:nusa/features/humas/presentation/humas_catalog_forms.dart';
 
 class HumasListView extends ConsumerStatefulWidget {
   const HumasListView({
@@ -56,7 +57,12 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
       HumasModule.complaints => 'aktif',
       _ => '',
     };
-    if (!humasWorkKinds.contains(widget.module.path)) Future.microtask(_load);
+    if (![
+      ...humasWorkKinds,
+      ...humasCatalogKinds,
+    ].contains(widget.module.path)) {
+      Future.microtask(_load);
+    }
   }
 
   @override
@@ -68,6 +74,11 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
 
   Map<String, String> get _filters => switch (widget.module) {
     HumasModule.programs ||
+    HumasModule.assets ||
+    HumasModule.media ||
+    HumasModule.clippings ||
+    HumasModule.achievements ||
+    HumasModule.alumni ||
     HumasModule.committee ||
     HumasModule.partners ||
     HumasModule.accreditation => {'': 'Semua status'},
@@ -262,7 +273,10 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
 
   @override
   Widget build(BuildContext context) {
-    if (humasWorkKinds.contains(widget.module.path)) {
+    if ([
+      ...humasWorkKinds,
+      ...humasCatalogKinds,
+    ].contains(widget.module.path)) {
       return HumasWorkList(kind: widget.module.path, base: widget.module.path);
     }
     final user = ref.watch(authControllerProvider).value?.session?.pengguna;
@@ -475,6 +489,11 @@ class _HumasListViewState extends ConsumerState<HumasListView> {
         : item;
     final subtitle = switch (widget.module) {
       HumasModule.programs ||
+      HumasModule.assets ||
+      HumasModule.media ||
+      HumasModule.clippings ||
+      HumasModule.achievements ||
+      HumasModule.alumni ||
       HumasModule.committee ||
       HumasModule.partners ||
       HumasModule.accreditation => '',

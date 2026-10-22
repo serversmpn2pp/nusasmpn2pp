@@ -329,16 +329,33 @@ void main() {
   ) async {
     final c = humasMap(_contracts['wakil_pimpinan_humas']),
         repo = _ContractRepo(c);
+    c['dashboard'] = {
+      ...humasMap(c['dashboard']),
+      'ruang_kerja': [
+        ...humasItems(humasMap(c['dashboard'])['ruang_kerja']),
+        {
+          'kode': 'layanan-uji',
+          'label': 'Layanan tambahan',
+          'items': [
+            {
+              'kode': 'buku-tamu',
+              'label': 'Buku Tamu Digital',
+              'ikon': 'book-user',
+              'tersedia_mobile': false,
+              'menu_mobile': null,
+              'filter': <String, dynamic>{},
+            },
+          ],
+        },
+      ],
+    };
     final container = await _mount(tester, repo, c, route: '/humas');
-    await _scroll(
-      tester,
-      find.byKey(const Key('menu-item-aset-promosi-humas')),
-    );
+    await _scroll(tester, find.byKey(const Key('menu-item-buku-tamu')));
     final before = repo.paths.length;
-    await tester.tap(find.byKey(const Key('menu-item-aset-promosi-humas')));
+    await tester.tap(find.byKey(const Key('menu-item-buku-tamu')));
     await tester.pumpAndSettle();
     expect(
-      find.text('Bank Aset Promosi tersedia melalui NUSA web.'),
+      find.text('Buku Tamu Digital tersedia melalui NUSA web.'),
       findsOneWidget,
     );
     expect(

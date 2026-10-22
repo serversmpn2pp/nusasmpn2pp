@@ -11,6 +11,7 @@ use App\Models\RiwayatDokumenHumas;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Services\Humas\KelolaPrestasiSekolahService;
+use App\Services\Mobile\HumasTahapDuaService;
 use App\Support\PenulisExcelPrestasiSekolah;
 use App\Support\TautanPublikHumas;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -33,9 +34,11 @@ class PrestasiSekolahController extends Controller
         $filter = $this->filter($request);
         $query = $this->query($filter);
 
-        return $this->halaman('index', ['filter' => $filter, 'daftar' => (clone $query)->with('peserta')->orderByDesc('tanggal_prestasi')->orderByDesc('id')->paginate(20)->withQueryString(),
+        $data = ['filter' => $filter, 'daftar' => (clone $query)->with('peserta')->orderByDesc('tanggal_prestasi')->orderByDesc('id')->paginate($request->routeIs('api.v1.*') ? $request->integer('per_halaman', 20) : 20, ['*'], 'page', $request->routeIs('api.v1.*') ? $request->integer('halaman', 1) : null)->withQueryString(),
             'tahun' => PrestasiSekolah::select('tanggal_prestasi')->get()->map(fn ($p) => $p->tanggal_prestasi->year)->unique()->sortDesc()->values(),
-            'tahunPelajaran' => TahunPelajaran::orderByDesc('tanggal_mulai')->get(['id', 'nama']), ...$this->statistik($query)]);
+            'tahunPelajaran' => TahunPelajaran::orderByDesc('tanggal_mulai')->get(['id', 'nama']), ...$this->statistik($query)];
+
+        return $request->routeIs('api.v1.*') ? $data : $this->halaman('index', $data);
     }
 
     public function create(Request $request)
@@ -323,6 +326,9 @@ class PrestasiSekolahController extends Controller
 
     private function selesai(Request $request, PrestasiSekolah $prestasi, string $pesan)
     {
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($prestasi);
+        }
         $request->session()->flash('berhasil', $pesan);
         $url = route('prestasi-sekolah.show', $prestasi);
 

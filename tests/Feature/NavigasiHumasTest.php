@@ -133,8 +133,8 @@ class NavigasiHumasTest extends TestCase
             ->getJson(route('api.v1.humas.dashboard.index'))->assertOk()->assertJsonCount(7, 'data.ruang_kerja')
             ->assertJsonPath('data.ruang_kerja.1.items.1.menu_mobile', 'agenda-humas')
             ->assertJsonPath('data.ruang_kerja.1.items.1.filter.jenis', 'komite')
-            ->assertJsonPath('data.ruang_kerja.5.items.0.tersedia_mobile', false)
-            ->assertJsonPath('data.ruang_kerja.5.items.0.menu_mobile', null);
+            ->assertJsonPath('data.ruang_kerja.5.items.0.tersedia_mobile', true)
+            ->assertJsonPath('data.ruang_kerja.5.items.0.menu_mobile', 'alumni-humas');
         $this->assertSame(array_column(app(NavigasiHumasService::class)->ruangKerja($akun), 'kode'), array_column($response->json('data.ruang_kerja'), 'kode'));
         $response->assertJsonMissingPath('data.ruang_kerja.0.items.0.izin')->assertJsonMissingPath('data.ruang_kerja.0.items.0.route');
         $this->assertFalse($akun->fresh()->memilikiIzin('publikasi_humas.periksa'));

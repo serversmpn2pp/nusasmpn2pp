@@ -6,6 +6,7 @@ use App\Models\AlumniHumas;
 use App\Models\Izin;
 use App\Models\Siswa;
 use App\Services\Humas\KelolaAlumniHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use App\Support\PenulisExcelAlumniHumas;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -25,9 +26,11 @@ class AlumniHumasController extends Controller
         $filter = $this->filter($request);
         $query = $this->query($filter);
 
-        return $this->halaman('index', ['filter' => $filter, 'tahun' => AlumniHumas::distinct()->orderByDesc('tahun_lulus')->pluck('tahun_lulus'),
-            'daftar' => (clone $query)->select(['id', ...AlumniHumas::PUBLIK])->orderBy('nama_lengkap')->orderBy('id')->paginate(25)->withQueryString(),
-            ...$this->statistik($query)]);
+        $data = ['filter' => $filter, 'tahun' => AlumniHumas::distinct()->orderByDesc('tahun_lulus')->pluck('tahun_lulus'),
+            'daftar' => (clone $query)->select(['id', 'versi', ...AlumniHumas::PUBLIK])->orderBy('nama_lengkap')->orderBy('id')->paginate($request->routeIs('api.v1.*') ? $request->integer('per_halaman', 20) : 25, ['*'], 'page', $request->routeIs('api.v1.*') ? $request->integer('halaman', 1) : null)->withQueryString(),
+            ...$this->statistik($query)];
+
+        return $request->routeIs('api.v1.*') ? $data : $this->halaman('index', $data);
     }
 
     public function create(Request $request)
@@ -59,6 +62,10 @@ class AlumniHumasController extends Controller
             });
         } catch (UniqueConstraintViolationException $e) {
             throw ValidationException::withMessages(['nisn' => 'Siswa, NISN, atau NIS pada angkatan ini sudah terdaftar. Periksa data alumni aktif maupun arsip.']);
+        }
+
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($alumni);
         }
 
         return redirect()->route('alumni-humas.show', $alumni)->with('berhasil', 'Alumni berhasil ditambahkan. Status dan akun siswa tidak diubah.');
@@ -104,6 +111,10 @@ class AlumniHumasController extends Controller
             });
         } catch (UniqueConstraintViolationException $e) {
             throw ValidationException::withMessages(['nisn' => 'Identitas ini sudah terdaftar pada alumni lain, termasuk data yang diarsipkan.']);
+        }
+
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($alumni);
         }
 
         return redirect()->route('alumni-humas.show', $alumni)->with('berhasil', 'Perubahan alumni berhasil disimpan.');

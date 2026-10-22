@@ -3,7 +3,7 @@
         "user": {
             "id": 2,
             "nama": "Uji wakil_pimpinan_humas",
-            "username": "native.282e9673-8ca7-4157-bb1d-26147f24836b",
+            "username": "native.78480ba0-c0c6-4111-a013-a2b1e33be6f6",
             "jenis_akun": "Pegawai",
             "administrator": false,
             "wajib_ganti_kata_sandi": false,
@@ -58,7 +58,7 @@
         },
         "menu": {
             "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
-            "jumlah_menu": 17,
+            "jumlah_menu": 22,
             "kelompok": [
                 {
                     "kode": "sarana-prasarana",
@@ -239,6 +239,66 @@
                             "rute": "\/humas\/akreditasi",
                             "api": "\/api\/v1\/humas\/akreditasi",
                             "api_tersedia": true
+                        },
+                        {
+                            "kode": "aset-promosi-humas",
+                            "label": "Bank Aset Promosi",
+                            "deskripsi": "Modul Bank Aset Promosi NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/aset",
+                            "api": "\/api\/v1\/humas\/aset",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "media-resmi-humas",
+                            "label": "Media Resmi",
+                            "deskripsi": "Modul Media Resmi NUSA.",
+                            "inisial": "MR",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/media",
+                            "api": "\/api\/v1\/humas\/media",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kliping-berita-humas",
+                            "label": "Kliping Berita",
+                            "deskripsi": "Modul Kliping Berita NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/kliping",
+                            "api": "\/api\/v1\/humas\/kliping",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "prestasi-sekolah",
+                            "label": "Database Prestasi",
+                            "deskripsi": "Modul Database Prestasi NUSA.",
+                            "inisial": "DP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/prestasi",
+                            "api": "\/api\/v1\/humas\/prestasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "alumni-humas",
+                            "label": "Database Alumni",
+                            "deskripsi": "Modul Database Alumni NUSA.",
+                            "inisial": "DA",
+                            "subkelompok": "Database & Portofolio Alumni",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/alumni",
+                            "api": "\/api\/v1\/humas\/alumni",
+                            "api_tersedia": true
                         }
                     ]
                 },
@@ -322,7 +382,7 @@
                 "aktif": "Aktif",
                 "arsip": "Diarsipkan"
             },
-            "token_pembuatan": "68fe8f74-4715-4e2f-9748-601c6c830164",
+            "token_pembuatan": "45b06340-023f-4f32-938d-c0a3f23d9e81",
             "hak_akses": {
                 "dapat_kelola": true,
                 "dapat_lihat_kontak": true
@@ -392,7 +452,7 @@
                     "webp"
                 ]
             },
-            "token_pembuatan": "c3829996-9f6b-496c-addd-55c12a1deae2",
+            "token_pembuatan": "a95caabd-c0e9-4184-9702-ecd58c7b7ba0",
             "dapat_buat": true,
             "cakupan": "seluruh"
         }
@@ -401,7 +461,7 @@
         "user": {
             "id": 3,
             "nama": "Uji pimpinan",
-            "username": "native.3e8c31c3-36ae-470c-ae98-064a2dfab9b7",
+            "username": "native.1a73bc39-65a9-417c-a8a1-6b803aa50992",
             "jenis_akun": "Pegawai",
             "administrator": false,
             "wajib_ganti_kata_sandi": false,
@@ -465,7 +525,7 @@
         },
         "menu": {
             "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
-            "jumlah_menu": 67,
+            "jumlah_menu": 72,
             "kelompok": [
                 {
                     "kode": "data-sekolah",
@@ -1148,6 +1208,66 @@
                             "rute": "\/humas\/akreditasi",
                             "api": "\/api\/v1\/humas\/akreditasi",
                             "api_tersedia": true
+                        },
+                        {
+                            "kode": "aset-promosi-humas",
+                            "label": "Bank Aset Promosi",
+                            "deskripsi": "Modul Bank Aset Promosi NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/aset",
+                            "api": "\/api\/v1\/humas\/aset",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "media-resmi-humas",
+                            "label": "Media Resmi",
+                            "deskripsi": "Modul Media Resmi NUSA.",
+                            "inisial": "MR",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/media",
+                            "api": "\/api\/v1\/humas\/media",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kliping-berita-humas",
+                            "label": "Kliping Berita",
+                            "deskripsi": "Modul Kliping Berita NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/kliping",
+                            "api": "\/api\/v1\/humas\/kliping",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "prestasi-sekolah",
+                            "label": "Database Prestasi",
+                            "deskripsi": "Modul Database Prestasi NUSA.",
+                            "inisial": "DP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/prestasi",
+                            "api": "\/api\/v1\/humas\/prestasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "alumni-humas",
+                            "label": "Database Alumni",
+                            "deskripsi": "Modul Database Alumni NUSA.",
+                            "inisial": "DA",
+                            "subkelompok": "Database & Portofolio Alumni",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "\/humas\/alumni",
+                            "api": "\/api\/v1\/humas\/alumni",
+                            "api_tersedia": true
                         }
                     ]
                 },
@@ -1295,7 +1415,7 @@
                 "aktif": "Aktif",
                 "arsip": "Diarsipkan"
             },
-            "token_pembuatan": "2de6dbfb-ba86-43c0-8e11-d0d6de57adcc",
+            "token_pembuatan": "4cf927ae-cd03-42ce-8550-8156b6432f37",
             "hak_akses": {
                 "dapat_kelola": false,
                 "dapat_lihat_kontak": false
@@ -1365,7 +1485,7 @@
                     "webp"
                 ]
             },
-            "token_pembuatan": "3522e8d3-8009-4552-9e6e-bbdabf744d7d",
+            "token_pembuatan": "298956f8-5c22-47a3-8bd2-a1f14a934db6",
             "dapat_buat": false,
             "cakupan": "seluruh"
         }
@@ -1374,7 +1494,7 @@
         "user": {
             "id": 4,
             "nama": "Uji kontributor_publikasi",
-            "username": "native.14984c70-ca61-46cb-886a-54cd7cc995b6",
+            "username": "native.1ecfc219-5ce0-4d68-a37f-69fa4f8652de",
             "jenis_akun": "Pegawai",
             "administrator": false,
             "wajib_ganti_kata_sandi": false,
@@ -1560,7 +1680,7 @@
                     "webp"
                 ]
             },
-            "token_pembuatan": "b6ef649a-01fd-41f1-b79e-3cfe84113fd2",
+            "token_pembuatan": "015f05d1-867c-4f2d-a02b-f7e8f27d03c2",
             "dapat_buat": true,
             "cakupan": "milik_sendiri"
         }

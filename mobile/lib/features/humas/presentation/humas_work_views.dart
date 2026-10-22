@@ -15,6 +15,7 @@ import 'package:nusa/features/humas/presentation/humas_work_forms.dart';
 import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/features/humas/presentation/humas_work_relations.dart';
+import 'package:nusa/features/humas/presentation/humas_catalog_forms.dart';
 
 class HumasWorkList extends ConsumerStatefulWidget {
   const HumasWorkList({required this.kind, required this.base, super.key});
@@ -30,6 +31,7 @@ class _WorkListState extends ConsumerState<HumasWorkList> {
   HumasPage? _page;
   Object? _error;
   bool _loading = true, _manage = false;
+  bool _showFilters = false;
   int _request = 0;
   Timer? _timer;
   HumasRepository get repo => ref.read(humasRepositoryProvider);
@@ -144,15 +146,68 @@ class _WorkListState extends ConsumerState<HumasWorkList> {
                 },
               ),
               const SizedBox(height: 12),
-              for (final f in <String, String>{
-                'status': 'Status',
-                if (['program', 'akreditasi'].contains(widget.kind))
-                  'tahun_pelajaran_id': 'Tahun pelajaran',
-                if (widget.kind == 'program') 'semester': 'Periode',
-                if (['program', 'mou'].contains(widget.kind))
-                  'bidang': 'Bidang',
-                if (widget.kind == 'mitra') 'jenis': 'Jenis mitra',
-              }.entries)
+              if (humasCatalogKinds.contains(widget.kind))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            setState(() => _showFilters = !_showFilters),
+                        icon: const Icon(Icons.filter_list),
+                        label: Text(
+                          'Filter${_filters.values.where((v) => v.isNotEmpty).isEmpty ? '' : ' (${_filters.values.where((v) => v.isNotEmpty).length})'}',
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_filters.values.any((v) => v.isNotEmpty))
+                        IconButton(
+                          tooltip: 'Reset filter',
+                          onPressed: () {
+                            _filters.clear();
+                            _load();
+                          },
+                          icon: const Icon(Icons.filter_alt_off_outlined),
+                        ),
+                    ],
+                  ),
+                ),
+              for (final f
+                  in <String, String>{
+                    'status': 'Status',
+                    if ([
+                      'program',
+                      'akreditasi',
+                      'prestasi',
+                    ].contains(widget.kind))
+                      'tahun_pelajaran_id': 'Tahun pelajaran',
+                    if (widget.kind == 'program') 'semester': 'Periode',
+                    if (['program', 'mou'].contains(widget.kind))
+                      'bidang': 'Bidang',
+                    if (widget.kind == 'mitra') 'jenis': 'Jenis mitra',
+                    if (humasCatalogKinds.contains(widget.kind)) ...{
+                      if (['aset', 'prestasi'].contains(widget.kind))
+                        'kategori': 'Kategori',
+                      if (['media', 'kliping'].contains(widget.kind))
+                        'jenis': 'Jenis media',
+                      if (widget.kind == 'kliping') 'topik': 'Topik',
+                      if (widget.kind == 'prestasi') ...{
+                        'tahun': 'Tahun prestasi',
+                        'tingkat': 'Tingkat',
+                        'perolehan': 'Perolehan',
+                        'penerima': 'Penerima',
+                      },
+                      if (widget.kind == 'alumni') ...{
+                        'tahun_lulus': 'Angkatan',
+                        'status_penelusuran': 'Penelusuran',
+                        'jenis_sekolah': 'Sekolah lanjutan',
+                      },
+                    },
+                  }.entries.where(
+                    (_) =>
+                        !humasCatalogKinds.contains(widget.kind) ||
+                        _showFilters,
+                  ))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: NusaDropdownField<String>(
@@ -162,8 +217,19 @@ class _WorkListState extends ConsumerState<HumasWorkList> {
                     options: [
                       NusaDropdownOption(
                         value: '',
-                        label: 'Semua ${f.value.toLowerCase()}',
+                        label:
+                            f.key == 'status' &&
+                                humasCatalogKinds.contains(widget.kind)
+                            ? 'Data aktif'
+                            : 'Semua ${f.value.toLowerCase()}',
                       ),
+                      if (f.key == 'status' &&
+                          humasCatalogKinds.contains(widget.kind) &&
+                          widget.kind != 'aset')
+                        const NusaDropdownOption(
+                          value: 'semua',
+                          label: 'Aktif dan arsip',
+                        ),
                       if (f.key == 'tahun_pelajaran_id')
                         ...humasItems(_refs['tahun_pelajaran']).map(
                           (t) => NusaDropdownOption(
@@ -189,6 +255,77 @@ class _WorkListState extends ConsumerState<HumasWorkList> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text('${_page!.total} data'),
                 ),
+              if (humasCatalogKinds.contains(widget.kind) &&
+                  _page != null &&
+                  _error == null) ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final s in humasMap(_page!.data['statistik']).entries)
+                      if (s.value is num)
+                        Container(
+                          constraints: const BoxConstraints(minWidth: 124),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE7F4F0),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.key.replaceAll('_', ' '),
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              Text(
+                                '${s.value}${s.key == 'persen_terdata' ? '%' : ''}',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (['prestasi', 'alumni'].contains(widget.kind))
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final output in {
+                        'cetak': 'Simpan lembar cetak',
+                        'ekspor': 'Ekspor Excel',
+                      }.entries)
+                        OutlinedButton.icon(
+                          onPressed: _loading
+                              ? null
+                              : () => humasRun(context, () async {
+                                  final query = Uri(
+                                    queryParameters: {
+                                      'kata_kunci': _search.text.trim(),
+                                      ..._filters,
+                                    },
+                                  ).query;
+                                  await repo.download(
+                                    '${widget.base}/${output.key}?$query',
+                                    '${widget.kind}.${output.key == 'cetak' ? 'html' : 'xlsx'}',
+                                  );
+                                }),
+                          icon: Icon(
+                            output.key == 'cetak'
+                                ? Icons.print_outlined
+                                : Icons.download_outlined,
+                          ),
+                          label: Text(output.value),
+                        ),
+                    ],
+                  ),
+                const SizedBox(height: 16),
+              ],
               if (_error != null) HumasErrorView(_error!, onRetry: _load),
               for (final item in _items)
                 HumasCard(
@@ -198,6 +335,10 @@ class _WorkListState extends ConsumerState<HumasWorkList> {
                       : humasText(
                           item['masa_berlaku'] ??
                               item['instrumen'] ??
+                              item['capaian'] ??
+                              item['nama_sekolah'] ??
+                              item['kategori_label'] ??
+                              item['jenis_label'] ??
                               item['jenis'] ??
                               item['tanggal_selesai'],
                         ),
@@ -207,7 +348,10 @@ class _WorkListState extends ConsumerState<HumasWorkList> {
                     HumasBadge(humasText(item['status_label'])),
                   ],
                   onTap: () async {
-                    if (humasWorkKinds.contains(widget.kind)) {
+                    if ([
+                      ...humasWorkKinds,
+                      ...humasCatalogKinds,
+                    ].contains(widget.kind)) {
                       await context.push('/humas/${widget.base}/${item['id']}');
                     } else {
                       await Navigator.push(

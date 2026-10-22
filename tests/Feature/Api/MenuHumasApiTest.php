@@ -25,7 +25,7 @@ class MenuHumasApiTest extends TestCase
             ->assertJsonMissing(['kode' => 'pertemuan-saya']);
         $groups = collect($response->json('data.kelompok'))->where('kode', 'humas');
         $this->assertCount(1, $groups);
-        $this->assertCount(13, $groups->first()['items']);
+        $this->assertCount(18, $groups->first()['items']);
         $codes = collect($response->json('data.kelompok'))->pluck('items')->flatten(1)->pluck('kode');
         $this->assertCount($codes->count(), $codes->unique());
     }

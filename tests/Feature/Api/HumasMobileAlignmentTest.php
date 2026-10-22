@@ -192,7 +192,7 @@ class HumasMobileAlignmentTest extends TestCase
     {
         $this->token($this->humas);
         $r = $this->getJson(route('api.v1.humas.dashboard.index'))->assertOk()->assertJsonCount(7, 'data.ruang_kerja');
-        $native = ['agenda-humas', 'dokumen-humas', 'pengaduan-humas', 'umpan-balik-humas', 'kinerja-humas', 'kontak-humas', 'publikasi-humas', 'program-kerja-humas', 'komite-humas', 'kemitraan-humas', 'akreditasi-humas'];
+        $native = ['agenda-humas', 'dokumen-humas', 'pengaduan-humas', 'umpan-balik-humas', 'kinerja-humas', 'kontak-humas', 'publikasi-humas', 'program-kerja-humas', 'komite-humas', 'kemitraan-humas', 'akreditasi-humas', 'aset-promosi-humas', 'media-resmi-humas', 'kliping-berita-humas', 'prestasi-sekolah', 'alumni-humas'];
         foreach ($r->json('data.ruang_kerja') as $room) {
             foreach ($room['items'] as $item) {
                 if ($item['tersedia_mobile']) {

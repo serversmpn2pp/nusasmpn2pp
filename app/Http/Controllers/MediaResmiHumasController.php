@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MediaResmiHumas;
+use App\Services\Mobile\HumasTahapDuaService;
 use App\Support\TautanPublikHumas;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class MediaResmiHumasController extends Controller
         $statistik = MediaResmiHumas::selectRaw('status, COUNT(*) AS jumlah')->groupBy('status')->pluck('jumlah', 'status');
         $statistik['penanggung_jawab'] = MediaResmiHumas::where('status', 'aktif')->distinct()->count('penanggung_jawab');
 
-        return view('media-resmi-humas.index', ['daftar' => $query->orderBy('jenis')->orderBy('nama')->orderBy('id')->paginate(20)->withQueryString(),
+        return view('media-resmi-humas.index', ['daftar' => $query->orderBy('jenis')->orderBy('nama')->orderBy('id')->paginate($request->routeIs('api.v1.*') ? $request->integer('per_halaman', 20) : 20, ['*'], 'page', $request->routeIs('api.v1.*') ? $request->integer('halaman', 1) : null)->withQueryString(),
             'filter' => $filter, 'statistik' => $statistik,
             'penanggungJawab' => MediaResmiHumas::distinct()->orderBy('penanggung_jawab')->pluck('penanggung_jawab')]);
     }
@@ -131,6 +132,9 @@ class MediaResmiHumasController extends Controller
 
     private function selesai(Request $request, MediaResmiHumas $media, string $pesan)
     {
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($media);
+        }
         $request->session()->flash('berhasil', $pesan);
         $url = route('media-resmi-humas.show', $media);
 

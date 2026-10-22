@@ -287,3 +287,45 @@ Verifikasi tahap 2: 423 tes backend Humas/menu/notifikasi (9.469 assertions),
 mencakup formulir, hak akses, hubungan sumber dan halaman turunan.
 HTML cetak program, laporan dan akreditasi identik dengan web untuk admin,
 Humas dan pimpinan. Pengujian memakai SQLite/fixture sintetis, bukan data sekolah.
+
+### Native Tahap 3: Aset, Media, Kliping, Prestasi, Alumni
+
+Kelima menu berikut sudah native, bukan WebView: `/humas/aset`, `/humas/media`,
+`/humas/kliping`, `/humas/prestasi`, `/humas/alumni`. Header, ikon, daftar,
+filter, rincian, formulir dan status memakai komponen tema NUSA bersama.
+Filter dapat dibuka saat diperlukan agar daftar tetap ringkas di HP.
+
+- Bank aset: metadata, kategori, kredit, ketentuan penggunaan, tautan,
+  unggah/pilih arsip, unduhan privat, riwayat serta pemakaian dalam publikasi.
+- Media resmi: alamat publik, jenis kanal, penanggung jawab, tanggal pemeriksaan,
+  status aktif/nonaktif/arsip dan riwayat. Tidak menyimpan kata sandi/token akun.
+- Kliping: berita, media, topik, tanggal, penulis, ringkasan, tautan atau bukti.
+- Prestasi: kategori, tingkat, capaian, penerima siswa/pegawai manual atau data
+  NUSA, individu/tim/sekolah, bukti, konfirmasi verifikasi, statistik, cetak/XLSX.
+- Alumni: identitas manual atau sumber siswa NUSA, pilihan riwayat kelas IX,
+  kelulusan, sekolah lanjutan, penelusuran, kontak berizin, statistik, cetak/XLSX.
+
+Foto lampiran dapat diambil dari kamera/galeri; PDF dan dokumen lain melalui
+pemilih berkas. Kamera/galeri memakai pemilih foto yang sudah dipakai publikasi
+(maksimal 2 MB setelah pemrosesan gambar), sementara berkas langsung mengikuti
+batas API: aset/kliping 20 MB, prestasi 10 MB. Form mempertahankan UUID/isian
+dan versi ketika terjadi kesalahan jaringan atau konflik.
+
+Tes API `HumasNativeTahapTigaTest` menghasilkan fixture sintetis
+`humas_native_tahap_tiga.json` untuk kontrak admin, Humas, pimpinan dan pegawai.
+Tes Android `humas_native_tahap_tiga_test.dart` memeriksa akses, formulir,
+retry, konflik, pemilihan penerima, multipart kamera tiruan, cetak/ekspor,
+pencabutan akses dan layar 320/390/600/1024px pada skala teks 1-2.
+Template cetak prestasi/alumni tidak diubah dan diperiksa identik dengan web.
+Pengujian kamera/galeri dan unduhan pada HP sungguhan tetap diperlukan.
+
+Tahap 3 tidak menambah migrasi/seeder. Setelah pull jalankan
+`php artisan optimize:clear` dan pasang APK baru. Bila migrasi tahap 2 belum
+pernah dijalankan, tetap jalankan `php artisan migrate --force` terlebih dahulu.
+
+Verifikasi tahap 3: 429 tes regresi Humas/menu/notifikasi (9.984 assertions),
+22 tes prestasi web (254 assertions), 800 tes Flutter termasuk 73 tes khusus
+tahap 3, analisis statis, Pint dan pemeriksaan whitespace lolos. APK debug
+dibuat ulang sesudah seluruh tes Android selesai. Build berhasil dengan
+peringatan migrasi Kotlin dari plugin firebase_core/mobile_scanner; dependensi
+tersebut tidak diubah dalam tahap ini.

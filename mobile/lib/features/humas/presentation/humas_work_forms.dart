@@ -7,19 +7,27 @@ import 'package:nusa/features/humas/presentation/humas_form_view.dart';
 import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/core/errors/app_exception.dart';
+import 'package:nusa/features/humas/presentation/humas_catalog_forms.dart';
 
 const humasWorkKinds = ['program', 'komite', 'mitra', 'akreditasi'];
-String humasWorkTitle(String kind) => const {
-  'program': 'Program Kerja Humas',
-  'komite': 'Komite Sekolah',
-  'mitra': 'Kemitraan & MoU',
-  'akreditasi': 'Portofolio Akreditasi',
-  'laporan': 'Laporan Pelaksanaan',
-  'program-komite': 'Program Komite',
-  'mou': 'MoU',
-  'butir': 'Butir Akreditasi',
-}[kind]!;
+String humasWorkTitle(String kind) => humasCatalogKinds.contains(kind)
+    ? humasCatalogModule(kind).title
+    : const {
+        'program': 'Program Kerja Humas',
+        'komite': 'Komite Sekolah',
+        'mitra': 'Kemitraan & MoU',
+        'akreditasi': 'Portofolio Akreditasi',
+        'laporan': 'Laporan Pelaksanaan',
+        'program-komite': 'Program Komite',
+        'mou': 'MoU',
+        'butir': 'Butir Akreditasi',
+      }[kind]!;
 HumasModule humasWorkModule(String kind) => switch (kind) {
+  'aset' ||
+  'media' ||
+  'kliping' ||
+  'prestasi' ||
+  'alumni' => humasCatalogModule(kind),
   'laporan' || 'program' => HumasModule.programs,
   'program-komite' || 'komite' => HumasModule.committee,
   'mou' || 'mitra' => HumasModule.partners,
@@ -33,6 +41,9 @@ Future<bool> editHumasWork(
   String base, {
   HumasData? record,
 }) async {
+  if (humasCatalogKinds.contains(kind)) {
+    return editHumasCatalog(context, repo, kind, record: record);
+  }
   final refs = await repo.get('$base/referensi', {
     if (record != null) 'record_id': record['id'],
   });

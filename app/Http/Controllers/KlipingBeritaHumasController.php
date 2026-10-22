@@ -6,6 +6,7 @@ use App\Models\DokumenHumas;
 use App\Models\KlipingBeritaHumas;
 use App\Models\RiwayatDokumenHumas;
 use App\Services\Humas\KelolaKlipingBeritaHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use App\Support\TautanPublikHumas;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -38,7 +39,7 @@ class KlipingBeritaHumasController extends Controller
         }
         $aktif = KlipingBeritaHumas::where('status', 'aktif');
 
-        return view('kliping-berita-humas.index', ['daftar' => $query->latest('tanggal_terbit')->orderByDesc('id')->paginate(20)->withQueryString(), 'filter' => $filter, 'bolehDokumen' => $bolehDokumen,
+        return view('kliping-berita-humas.index', ['daftar' => $query->latest('tanggal_terbit')->orderByDesc('id')->paginate($request->routeIs('api.v1.*') ? $request->integer('per_halaman', 20) : 20, ['*'], 'page', $request->routeIs('api.v1.*') ? $request->integer('halaman', 1) : null)->withQueryString(), 'filter' => $filter, 'bolehDokumen' => $bolehDokumen,
             'daftarMedia' => KlipingBeritaHumas::distinct()->orderBy('nama_media')->pluck('nama_media'),
             'statistik' => ['aktif' => (clone $aktif)->count(), 'bulan_ini' => (clone $aktif)->whereBetween('tanggal_terbit', [today()->startOfMonth(), today()->endOfMonth()])->count(),
                 'media' => (clone $aktif)->distinct()->count('nama_media'), 'arsip' => KlipingBeritaHumas::where('status', 'arsip')->count()]]);
@@ -221,6 +222,9 @@ class KlipingBeritaHumasController extends Controller
 
     private function selesai(Request $request, KlipingBeritaHumas $kliping, string $pesan)
     {
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($kliping);
+        }
         $request->session()->flash('berhasil', $pesan);
         $url = route('kliping-berita-humas.show', $kliping);
 

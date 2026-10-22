@@ -23,6 +23,7 @@ Route::prefix('humas')->name('humas.')->middleware('throttle:120,1,humas-akses:'
     ->where(array_fill_keys(['agendaHumas', 'pesertaPertemuanHumas', 'tindakLanjutAgendaHumas', 'tiket', 'lampiran', 'formulir', 'pertanyaan', 'tindak', 'dokumenHumas', 'riwayatDokumenHumas', 'kontak', 'mou', 'publikasi'], '[0-9]{1,18}') + ['token' => '[A-Za-z0-9]{64}'])
     ->group(function () {
         require __DIR__.'/api_humas_tahap_dua.php';
+        require __DIR__.'/api_humas_tahap_tiga.php';
         Route::prefix('faq')->name('faq.')->where(['faq' => '[0-9]{1,18}'])->controller(FaqHumasController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/referensi', 'referensi')->name('referensi');

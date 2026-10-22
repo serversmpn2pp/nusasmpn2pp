@@ -123,7 +123,7 @@
         },
         "menu": {
             "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
-            "jumlah_menu": 13,
+            "jumlah_menu": 18,
             "kelompok": [
                 {
                     "kode": "humas",
@@ -275,6 +275,66 @@
                             "status": "tersedia",
                             "rute": "/humas/akreditasi",
                             "api": "/api/v1/humas/akreditasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "aset-promosi-humas",
+                            "label": "Bank Aset Promosi",
+                            "deskripsi": "Modul Bank Aset Promosi NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/aset",
+                            "api": "/api/v1/humas/aset",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "media-resmi-humas",
+                            "label": "Media Resmi",
+                            "deskripsi": "Modul Media Resmi NUSA.",
+                            "inisial": "MR",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/media",
+                            "api": "/api/v1/humas/media",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kliping-berita-humas",
+                            "label": "Kliping Berita",
+                            "deskripsi": "Modul Kliping Berita NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kliping",
+                            "api": "/api/v1/humas/kliping",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "prestasi-sekolah",
+                            "label": "Database Prestasi",
+                            "deskripsi": "Modul Database Prestasi NUSA.",
+                            "inisial": "DP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/prestasi",
+                            "api": "/api/v1/humas/prestasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "alumni-humas",
+                            "label": "Database Alumni",
+                            "deskripsi": "Modul Database Alumni NUSA.",
+                            "inisial": "DA",
+                            "subkelompok": "Database & Portofolio Alumni",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/alumni",
+                            "api": "/api/v1/humas/alumni",
                             "api_tersedia": true
                         }
                     ]
@@ -623,32 +683,32 @@
                             "kode": "aset-promosi-humas",
                             "label": "Bank Aset Promosi",
                             "ikon": "images",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "aset-promosi-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "media-resmi-humas",
                             "label": "Daftar Media Resmi",
                             "ikon": "globe",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "media-resmi-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "kliping-berita-humas",
                             "label": "Kliping Berita",
                             "ikon": "newspaper",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "kliping-berita-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "prestasi-sekolah",
                             "label": "Database Prestasi",
                             "ikon": "trophy",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "prestasi-sekolah",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
@@ -673,8 +733,8 @@
                             "kode": "alumni-humas",
                             "label": "Database Alumni",
                             "ikon": "graduation-cap",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "alumni-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
@@ -1186,7 +1246,7 @@
         },
         "menu": {
             "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
-            "jumlah_menu": 13,
+            "jumlah_menu": 18,
             "kelompok": [
                 {
                     "kode": "humas",
@@ -1338,6 +1398,66 @@
                             "status": "tersedia",
                             "rute": "/humas/akreditasi",
                             "api": "/api/v1/humas/akreditasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "aset-promosi-humas",
+                            "label": "Bank Aset Promosi",
+                            "deskripsi": "Modul Bank Aset Promosi NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/aset",
+                            "api": "/api/v1/humas/aset",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "media-resmi-humas",
+                            "label": "Media Resmi",
+                            "deskripsi": "Modul Media Resmi NUSA.",
+                            "inisial": "MR",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/media",
+                            "api": "/api/v1/humas/media",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kliping-berita-humas",
+                            "label": "Kliping Berita",
+                            "deskripsi": "Modul Kliping Berita NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kliping",
+                            "api": "/api/v1/humas/kliping",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "prestasi-sekolah",
+                            "label": "Database Prestasi",
+                            "deskripsi": "Modul Database Prestasi NUSA.",
+                            "inisial": "DP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/prestasi",
+                            "api": "/api/v1/humas/prestasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "alumni-humas",
+                            "label": "Database Alumni",
+                            "deskripsi": "Modul Database Alumni NUSA.",
+                            "inisial": "DA",
+                            "subkelompok": "Database & Portofolio Alumni",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/alumni",
+                            "api": "/api/v1/humas/alumni",
                             "api_tersedia": true
                         }
                     ]
@@ -1686,32 +1806,32 @@
                             "kode": "aset-promosi-humas",
                             "label": "Bank Aset Promosi",
                             "ikon": "images",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "aset-promosi-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "media-resmi-humas",
                             "label": "Daftar Media Resmi",
                             "ikon": "globe",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "media-resmi-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "kliping-berita-humas",
                             "label": "Kliping Berita",
                             "ikon": "newspaper",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "kliping-berita-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "prestasi-sekolah",
                             "label": "Database Prestasi",
                             "ikon": "trophy",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "prestasi-sekolah",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
@@ -1736,8 +1856,8 @@
                             "kode": "alumni-humas",
                             "label": "Database Alumni",
                             "ikon": "graduation-cap",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "alumni-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
@@ -2258,7 +2378,7 @@
         },
         "menu": {
             "dihasilkan_pada": "2026-10-22T03:00:00.000000Z",
-            "jumlah_menu": 13,
+            "jumlah_menu": 18,
             "kelompok": [
                 {
                     "kode": "humas",
@@ -2410,6 +2530,66 @@
                             "status": "tersedia",
                             "rute": "/humas/akreditasi",
                             "api": "/api/v1/humas/akreditasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "aset-promosi-humas",
+                            "label": "Bank Aset Promosi",
+                            "deskripsi": "Modul Bank Aset Promosi NUSA.",
+                            "inisial": "AP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/aset",
+                            "api": "/api/v1/humas/aset",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "media-resmi-humas",
+                            "label": "Media Resmi",
+                            "deskripsi": "Modul Media Resmi NUSA.",
+                            "inisial": "MR",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/media",
+                            "api": "/api/v1/humas/media",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "kliping-berita-humas",
+                            "label": "Kliping Berita",
+                            "deskripsi": "Modul Kliping Berita NUSA.",
+                            "inisial": "KB",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/kliping",
+                            "api": "/api/v1/humas/kliping",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "prestasi-sekolah",
+                            "label": "Database Prestasi",
+                            "deskripsi": "Modul Database Prestasi NUSA.",
+                            "inisial": "DP",
+                            "subkelompok": "Publikasi & Promosi Sekolah",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/prestasi",
+                            "api": "/api/v1/humas/prestasi",
+                            "api_tersedia": true
+                        },
+                        {
+                            "kode": "alumni-humas",
+                            "label": "Database Alumni",
+                            "deskripsi": "Modul Database Alumni NUSA.",
+                            "inisial": "DA",
+                            "subkelompok": "Database & Portofolio Alumni",
+                            "ikon": null,
+                            "status": "tersedia",
+                            "rute": "/humas/alumni",
+                            "api": "/api/v1/humas/alumni",
                             "api_tersedia": true
                         }
                     ]
@@ -2702,32 +2882,32 @@
                             "kode": "aset-promosi-humas",
                             "label": "Bank Aset Promosi",
                             "ikon": "images",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "aset-promosi-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "media-resmi-humas",
                             "label": "Daftar Media Resmi",
                             "ikon": "globe",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "media-resmi-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "kliping-berita-humas",
                             "label": "Kliping Berita",
                             "ikon": "newspaper",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "kliping-berita-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
                             "kode": "prestasi-sekolah",
                             "label": "Database Prestasi",
                             "ikon": "trophy",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "prestasi-sekolah",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {
@@ -2752,8 +2932,8 @@
                             "kode": "alumni-humas",
                             "label": "Database Alumni",
                             "ikon": "graduation-cap",
-                            "menu_mobile": null,
-                            "tersedia_mobile": false,
+                            "menu_mobile": "alumni-humas",
+                            "tersedia_mobile": true,
                             "filter": []
                         },
                         {

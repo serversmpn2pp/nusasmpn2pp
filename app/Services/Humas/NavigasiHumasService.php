@@ -94,7 +94,7 @@ class NavigasiHumasService
 
     public function untukApi(Pengguna $akun): array
     {
-        $native = ['agenda-humas', 'dokumen-humas', 'pengaduan-humas', 'umpan-balik-humas', 'faq-humas', 'kinerja-humas', 'kontak-humas', 'publikasi-humas', 'program-kerja-humas', 'komite-humas', 'kemitraan-humas', 'akreditasi-humas'];
+        $native = ['agenda-humas', 'dokumen-humas', 'pengaduan-humas', 'umpan-balik-humas', 'faq-humas', 'kinerja-humas', 'kontak-humas', 'publikasi-humas', 'program-kerja-humas', 'komite-humas', 'kemitraan-humas', 'akreditasi-humas', 'aset-promosi-humas', 'media-resmi-humas', 'kliping-berita-humas', 'prestasi-sekolah', 'alumni-humas'];
 
         return array_map(function ($ruang) use ($native) {
             $ruang['items'] = array_map(function ($item) use ($native) {

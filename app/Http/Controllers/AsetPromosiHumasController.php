@@ -7,6 +7,7 @@ use App\Models\DokumenHumas;
 use App\Models\PublikasiHumas;
 use App\Models\RiwayatDokumenHumas;
 use App\Services\Humas\KelolaAsetPromosiHumasService;
+use App\Services\Mobile\HumasTahapDuaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -35,7 +36,7 @@ class AsetPromosiHumasController extends Controller
             $query->where('status', 'aktif');
         }
 
-        return view('aset-promosi-humas.index', ['daftar' => $query->latest('updated_at')->orderByDesc('id')->paginate(18)->withQueryString(),
+        return view('aset-promosi-humas.index', ['daftar' => $query->latest('updated_at')->orderByDesc('id')->paginate($request->routeIs('api.v1.*') ? $request->integer('per_halaman', 20) : 18, ['*'], 'page', $request->routeIs('api.v1.*') ? $request->integer('halaman', 1) : null)->withQueryString(),
             'filter' => $filter, 'bolehDokumen' => $bolehDokumen,
             'statistik' => ['aktif' => AsetPromosiHumas::where('status', 'aktif')->count(), 'arsip' => AsetPromosiHumas::where('status', 'arsip')->count(),
                 'foto' => AsetPromosiHumas::where('status', 'aktif')->whereIn('kategori', ['foto', 'logo'])->count(),
@@ -203,6 +204,9 @@ class AsetPromosiHumasController extends Controller
 
     private function selesai(Request $request, AsetPromosiHumas $aset, string $pesan)
     {
+        if ($request->routeIs('api.v1.*')) {
+            return HumasTahapDuaService::tersimpan($aset);
+        }
         $request->session()->flash('berhasil', $pesan);
         $url = route('aset-promosi-humas.show', $aset);
 

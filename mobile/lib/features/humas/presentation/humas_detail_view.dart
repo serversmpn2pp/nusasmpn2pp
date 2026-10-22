@@ -11,6 +11,7 @@ import 'package:nusa/features/humas/presentation/humas_faq_kinerja_content.dart'
 import 'package:nusa/features/humas/presentation/humas_contact_publication_content.dart';
 import 'package:nusa/features/humas/presentation/widgets/humas_widgets.dart';
 import 'package:nusa/features/humas/presentation/humas_work_views.dart';
+import 'package:nusa/features/humas/presentation/humas_catalog_content.dart';
 
 class HumasDetailView extends ConsumerStatefulWidget {
   const HumasDetailView({required this.module, required this.id, super.key});
@@ -97,6 +98,16 @@ class _HumasDetailViewState extends ConsumerState<HumasDetailView> {
                     if (_error != null) HumasErrorView(_error!, onRetry: _load),
                     if (!_loading && _error == null && _data != null)
                       switch (widget.module) {
+                        HumasModule.assets ||
+                        HumasModule.media ||
+                        HumasModule.clippings ||
+                        HumasModule.achievements ||
+                        HumasModule.alumni => HumasCatalogContent(
+                          module: widget.module,
+                          data: _data!,
+                          repository: repo,
+                          onChanged: _load,
+                        ),
                         HumasModule.programs ||
                         HumasModule.committee ||
                         HumasModule.partners ||

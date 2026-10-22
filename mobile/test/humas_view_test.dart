@@ -56,6 +56,11 @@ const _staff = Pengguna(
     'komite_humas.kelola',
     'kemitraan_humas.kelola',
     'akreditasi_humas.kelola',
+    'aset_promosi_humas.kelola',
+    'media_resmi_humas.kelola',
+    'kliping_berita_humas.kelola',
+    'prestasi_sekolah.kelola',
+    'alumni_humas.kelola',
   ],
 );
 const _questions = <HumasData>[
@@ -284,6 +289,11 @@ void main() {
       '/humas',
     );
     expect(find.byType(HumasHubView), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Ringkasan Humas'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Ringkasan Humas'), findsOneWidget);
     expect(find.text('5 sub-menu · 5 tersedia'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -301,7 +311,12 @@ void main() {
         route: '/humas',
       );
       final card = find.byKey(Key('menu-item-${module.menuCode}'));
-      await tester.ensureVisible(card);
+      await tester.scrollUntilVisible(
+        card,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(card);
       await tester.pumpAndSettle();
       expect(find.byType(HumasListView), findsOneWidget);
