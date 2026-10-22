@@ -6,8 +6,33 @@
 <div class="humas-dashboard">
     <header class="hd-head">
         <div><span class="hd-kicker">Humas</span><h1>Dashboard Humas</h1><p class="hd-muted">{{ $labelPeriode }} &middot; {{ $mulai->format('d-m-Y') }} s.d. {{ $selesai->format('d-m-Y') }}</p></div>
-        <a class="button button-muted" href="{{ route('dashboard-humas.cetak', $filter) }}" target="_blank" rel="noopener">Cetak ringkasan</a>
+        <a class="button button-muted hd-command" href="{{ route('dashboard-humas.cetak', $filter) }}" target="_blank" rel="noopener"><i data-lucide="printer" aria-hidden="true"></i>Cetak ringkasan</a>
     </header>
+    @if($ruangKerja)
+    <section class="hd-workspace" aria-labelledby="hd-workspace-title">
+        <div class="hd-workspace-heading"><h2 id="hd-workspace-title">Bidang kerja Humas</h2></div>
+        <div class="hd-workspace-grid">
+            @foreach($ruangKerja as $ruang)
+            <article class="hd-workspace-card hd-workspace--{{ $ruang['warna'] }}" data-humas-workspace="{{ $ruang['kode'] }}" aria-labelledby="hd-workspace-{{ $ruang['kode'] }}">
+                <header><span class="hd-workspace-icon"><i data-lucide="{{ $ruang['ikon'] }}" aria-hidden="true"></i></span><h3 id="hd-workspace-{{ $ruang['kode'] }}">{{ $ruang['label'] }}</h3></header>
+                <ul>
+                    @foreach($ruang['items'] as $item)
+                    <li><a href="{{ route($item['route'], $item['parameters']) }}" data-humas-menu="{{ $item['kode'] }}"><i data-lucide="{{ $item['icon'] }}" aria-hidden="true"></i><span>{{ $item['label'] }}</span><i class="hd-workspace-arrow" data-lucide="arrow-up-right" aria-hidden="true"></i></a></li>
+                    @endforeach
+                </ul>
+            </article>
+            @endforeach
+        </div>
+    </section>
+    @endif
+    @if($layananPendukung)
+    <nav class="hd-support" aria-label="Layanan pendukung Humas">
+        <span>Layanan pendukung</span>
+        @foreach($layananPendukung as $item)
+        <a href="{{ route($item['route'], $item['parameters']) }}" data-humas-menu="{{ $item['kode'] }}"><i data-lucide="{{ $item['icon'] }}" aria-hidden="true"></i>{{ $item['label'] }}<i data-lucide="arrow-up-right" aria-hidden="true"></i></a>
+        @endforeach
+    </nav>
+    @endif
     <form method="GET" action="{{ route('dashboard-humas.index') }}" class="feature-filter hd-filter" data-dashboard-filter>
         <div class="field"><label for="tahun_pelajaran_id">Tahun pelajaran</label><select class="select" id="tahun_pelajaran_id" name="tahun_pelajaran_id">
             <option value="">Pilih tahun pelajaran</option>@foreach($tahun as $t)<option value="{{ $t->id }}" @selected((string)($filter['tahun_pelajaran_id'] ?? '') === (string)$t->id)>{{ $t->nama }}</option>@endforeach

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Humas\DashboardHumasService;
+use App\Services\Humas\NavigasiHumasService;
 use App\Services\Humas\PeriodeDashboardHumasService;
 use Illuminate\Http\Request;
 
@@ -24,8 +25,11 @@ class DashboardHumasController extends Controller
         abort_unless($akun->aktif && ! $akun->akunSiswa() && ! $akun->akunOrangTua(), 403);
         $periode = app(PeriodeDashboardHumasService::class)->periode($request);
 
-        return response()->view('dashboard-humas.'.$view, $periode + $dashboard->ringkasan(
-            $akun, $periode['mulai'], $periode['selesai'], $periode['filter']['tahun_pelajaran_id'],
-        ))->header('Cache-Control', 'private, no-store, max-age=0');
+        $navigasi = app(NavigasiHumasService::class);
+
+        return response()->view('dashboard-humas.'.$view, ['ruangKerja' => $navigasi->ruangKerja($akun),
+            'layananPendukung' => $navigasi->pendukung($akun)] + $periode + $dashboard->ringkasan(
+                $akun, $periode['mulai'], $periode['selesai'], $periode['filter']['tahun_pelajaran_id'],
+            ))->header('Cache-Control', 'private, no-store, max-age=0');
     }
 }

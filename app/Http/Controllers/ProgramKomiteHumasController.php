@@ -74,6 +74,7 @@ class ProgramKomiteHumasController extends Controller
         $program->load('penanggungJawab:id,nama,aktif');
 
         return $this->halaman('show', ['periode' => $periode, 'program' => $program, 'bolehAgenda' => $bolehAgenda, 'bolehHubungkan' => $bolehHubungkan,
+            'dokumenTerkait' => $request->user()->memilikiIzin(['dokumen_humas.lihat', 'dokumen_humas.kelola']) ? $program->dokumenHumas()->latest('dokumen_humas.id')->limit(50)->get() : collect(),
             'rapat' => $bolehAgenda ? $program->agenda()->withCount(['peserta', 'peserta as hadir_count' => fn ($q) => $q->where('status_kehadiran', 'hadir'),
                 'tindakLanjut as tertunda_count' => fn ($q) => $q->where('status', '<>', 'selesai')])->latest('waktu_mulai')->paginate(10, ['agenda_humas.*'], 'halaman_rapat')->withQueryString() : null,
             'pilihanRapat' => $bolehHubungkan && $program->status !== 'dibatalkan' ? AgendaHumas::where('jenis', 'komite')->where('status', '<>', 'dibatalkan')

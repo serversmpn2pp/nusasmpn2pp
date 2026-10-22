@@ -19,6 +19,7 @@
         @forelse($laporan as $l)<div class="humas-program-row"><div><span class="program-badge program-badge--{{ $l->status === 'final' ? 'selesai' : $l->status }}">{{ \App\Models\LaporanPelaksanaanHumas::STATUS[$l->status] }}</span><h2>{{ $l->judul }}</h2><p class="agenda-muted">{{ $l->tanggal_mulai->format('d-m-Y') }} s.d. {{ $l->tanggal_selesai->format('d-m-Y') }} &middot; {{ $l->tempat }}</p></div><div><p>{{ $l->jumlah_peserta }} peserta</p><p class="agenda-muted">{{ $l->bukti_count }} bukti</p></div><a class="button button-muted" href="{{ route('program-kerja-humas.laporan.show', [$program, $l]) }}">Buka laporan</a></div>@empty<div class="agenda-empty">Belum ada laporan pelaksanaan.</div>@endforelse
         {{ $laporan->links() }}
     </section>
+    @include('dokumen-humas._terkait')
     @include('program-kerja-humas._riwayat', ['jenisRiwayat' => 'program', 'bolehDokumen' => false, 'bolehAgenda' => false])
 </div>
 @endsection

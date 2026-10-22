@@ -25,13 +25,24 @@ try {
         for (const name of ['index','empty','custom','limited']) {
             await page.goto(`http://localhost/audit/${name}`);
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),`${name}@${width}: document overflow`);
-            const clipped = await page.locator('.humas-dashboard, .hd-metric, .hd-table td, .hd-status, .hd-agenda li, .hd-filter .button, .hd-head .button').evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2).map(el => el.textContent.trim().slice(0,90)));
+            const clipped = await page.locator('.humas-dashboard, .hd-workspace-card, .hd-workspace-card h3, .hd-workspace-card a, .hd-support, .hd-metric, .hd-table td, .hd-status, .hd-agenda li, .hd-filter .button, .hd-head .button').evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2).map(el => el.textContent.trim().slice(0,90)));
             assert.deepEqual(clipped,[],`${name}@${width}: clipped content`);
             for (const secret of ['IDENTITAS RAHASIA','ISI RAHASIA','JUDUL RAHASIA','NAMA TAMU PRIVAT','081299999999','BERKAS PRIVAT.pdf']) assert.ok(!(await page.content()).includes(secret));
             assert.equal(await page.evaluate(() => window.injected),undefined);
             if (name === 'limited') {
                 assert.equal(await page.locator('[data-metric]').count(),1);
                 assert.equal(await page.locator('[data-metric="prestasi"]').count(),1);
+                assert.equal(await page.locator('[data-humas-workspace]').count(),1);
+                assert.equal(await page.locator('[data-humas-workspace="publikasi"] [data-humas-menu]').count(),1);
+                assert.equal(await page.locator('[data-humas-menu="pengaduan-humas"]').count(),0);
+            } else {
+                assert.equal(await page.locator('[data-humas-workspace]').count(),7);
+                assert.equal(await page.locator('.hd-workspace-icon svg.lucide').count(),7,'All seven workspace icons must render');
+                assert.equal(await page.locator('.hd-workspace-card').evaluateAll(els=>new Set(els.map(el=>getComputedStyle(el).backgroundColor)).size),7);
+                assert.equal(new URL(await page.locator('[data-humas-menu="rapat-komite-humas"]').getAttribute('href')).searchParams.get('jenis'),'komite');
+                assert.equal(new URL(await page.locator('[data-humas-menu="pertemuan-orang-tua-humas"]').getAttribute('href')).searchParams.get('jenis'),'orang_tua');
+                assert.equal(new URL(await page.locator('[data-humas-menu="pertemuan-mitra-humas"]').getAttribute('href')).searchParams.get('jenis'),'kemitraan');
+                assert.ok(await page.locator('[data-humas-menu="buku-tamu"]').isVisible());
             }
             if (name === 'index') {
                 assert.ok(await page.locator('#tanggal_mulai').isDisabled());
@@ -50,8 +61,11 @@ try {
                 await page.locator('#periode').selectOption('tahunan');
             }
             if ([390,1366].includes(width) && ['index','limited','empty'].includes(name)) {
+                await page.evaluate(()=>{document.querySelector('.app-content').scrollTop=0;window.scrollTo(0,0);});
                 await page.screenshot({path:`${output}/${name}-${width}.png`});
                 if (name === 'index') {
+                    await page.locator('[data-humas-workspace="pengaduan"]').scrollIntoViewIfNeeded();
+                    await page.screenshot({path:`${output}/workspaces-bottom-${width}.png`});
                     await page.evaluate(() => {
                         const parent = document.querySelector('.app-content'), section = [...document.querySelectorAll('.hd-section')].find(el => el.textContent.includes('Perlu perhatian saat ini'));
                         const offset = section.getBoundingClientRect().top - document.querySelector('.app-topbar').getBoundingClientRect().height - 16;
@@ -81,5 +95,5 @@ try {
     await page.pdf({path:`${output}/ringkasan-humas.pdf`,preferCSSPageSize:true,printBackground:true});
     await page.screenshot({path:`${output}/cetak.png`,fullPage:true});
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({result:'passed',pages:5,widths:[320,390,600,768,981,1024,1366,1920],checks:['permissions','no-overflow','long-titles','no-private-data','semester-dates','custom-dates','invalid-range','submit-filters','print-filter','print-logos']}));
+    console.log(JSON.stringify({result:'passed',pages:5,widths:[320,390,600,768,981,1024,1366,1920],checks:['seven-workspaces','workspace-icons','agenda-filters','permission-filtered-links','permissions','no-overflow','long-titles','no-private-data','semester-dates','custom-dates','invalid-range','submit-filters','print-filter','print-logos']}));
 } finally { await browser.close(); }

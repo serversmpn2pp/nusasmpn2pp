@@ -18,6 +18,10 @@ class HumasMobileService
             'masa_berlaku' => $d->statusMasaBerlaku(), 'berlaku_mulai' => $d->berlaku_mulai?->format('Y-m-d'),
             'berlaku_sampai' => $d->berlaku_sampai?->format('Y-m-d'), 'sidik' => $sidik,
             'versi_berkas' => (int) ($d->riwayat_max_versi ?? 0),
+            'urusan' => $d->urusan, 'urusan_label' => DokumenHumas::URUSAN[$d->urusan] ?? null,
+            'jenis_dokumen' => $d->jenis_dokumen, 'jenis_dokumen_label' => DokumenHumas::JENIS_DOKUMEN[$d->jenis_dokumen] ?? null,
+            'klasifikasi' => ['perlu_tinjau' => $d->perluDitinjau(), 'sumber' => $d->sumber_klasifikasi,
+                'diperiksa_pada' => $d->klasifikasi_diperiksa_pada?->toIso8601String()],
         ];
         if ($detail) {
             $data += $d->only(['deskripsi', 'ingatkan_hari_sebelum']);

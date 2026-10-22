@@ -1,10 +1,11 @@
 # API Humas Tahap 1 Dan 2
 
-Base path: `/api/v1/humas`. Tersedia 70 endpoint (50 tahap pertama dan 20 dashboard/arsip),
-menggunakan tabel Humas yang sudah ada.
-Tidak ada migrasi baru untuk penambahan API ini. Layar/menu Android Humas tersedia
-secara native; lihat `docs/mobile-humas.md` untuk cakupan fitur, hak akses, dan
-langkah pemasangan APK terbaru.
+Base path: `/api/v1/humas`. Tersedia 74 endpoint (50 tahap pertama, 20 dashboard/arsip, dan 4 klasifikasi/kaitan),
+Pembaruan klasifikasi/kaitan memerlukan migrasi
+`2026_10_22_000001_tambah_klasifikasi_dan_kaitan_dokumen_humas`.
+Lihat `docs/arsip-humas.md` untuk penataan metadata lama. Layar/menu Android Humas
+yang sudah tersedia tetap kompatibel; lihat `docs/mobile-humas.md` untuk cakupan
+APK. Kontrak API baru tidak berarti layar klasifikasi/kaitan sudah ada di APK lama.
 
 ## Autentikasi Dan Akses
 
@@ -78,7 +79,7 @@ berurutan dan kurang dari 24 bulan. Tanpa filter, gunakan tahun aktif;
 jika tidak ada tahun aktif, gunakan 30 hari terakhir.
 
 Respons: `filter`, `label_periode`, `metrik`, `perhatian`, `distribusi`,
-`kolom_bulanan`, `bulan`, `jumlah_program`, `program`, `agenda`.
+`kolom_bulanan`, `bulan`, `jumlah_program`, `program`, `agenda`, `ruang_kerja`.
 `metrik`, `distribusi`, `kolom_bulanan`, `bulan` dan `bulan.{YYYY-MM}.jumlah`
 adalah objek dengan kunci kode, termasuk saat kosong. Program/agenda/perhatian berupa daftar.
 Tanggal referensi tahun dan tanggal selesai program menggunakan `YYYY-MM-DD`.
@@ -88,7 +89,21 @@ mencakup 14 hari ke depan seperti web. Metrik menyediakan `label`, `jumlah`, `da
 dan `warna`; URL web tidak dikirim karena beberapa modul belum memiliki API detail.
 Pengaduan, tamu, dan alumni hanya dihitung tanpa identitas atau isi laporan.
 
-## Arsip Dokumen (10 Endpoint)
+`ruang_kerja` adalah daftar bidang yang memiliki minimal satu menu berizin:
+`kedinasan`, `komite`, `orang-tua`, `kemitraan`, `publikasi`, `alumni`, `pengaduan`.
+Urutan, label, ikon Lucide, dan warna mengikuti dashboard/sidebar web.
+Setiap bidang memuat `kode`, `label`, `ikon`, `warna`, dan `items`. Setiap item
+memuat `kode`, `label`, `ikon`, `menu_mobile`, `tersedia_mobile`, dan objek `filter`.
+Contoh rapat komite mengacu ke `menu_mobile=agenda-humas`, `filter.jenis=komite`.
+Tautan arsip per bidang mengacu ke `menu_mobile=dokumen-humas` dengan `filter.urusan`;
+kode urusan orang tua adalah `orang_tua`, berbeda dari kode ruang kerja `orang-tua`.
+Tidak ada perubahan kode/rute menu native lama. Untuk modul yang belum memiliki
+layar native, `menu_mobile=null` dan `tersedia_mobile=false`; metadata ini bukan
+izin menampilkan tombol native yang belum diimplementasikan. Bidang dan item
+tanpa izin tidak dikirim, bukan sekadar dinonaktifkan oleh aplikasi Android.
+Field `subkelompok` pada menu mobile Humas mengikuti nama bidang yang sama.
+
+## Arsip Dokumen (14 Endpoint)
 
 Izin baca: `dokumen_humas.lihat` atau `dokumen_humas.kelola`.
 Unggah, ubah metadata, revisi dan perubahan status memerlukan kelola.
@@ -103,15 +118,27 @@ Unggah, ubah metadata, revisi dan perubahan status memerlukan kelola.
 | GET | `/dokumen/{id}/riwayat` | Riwayat versi, terbaru dahulu |
 | GET | `/dokumen/{id}/unduh` | Unduh berkas terkini |
 | GET | `/dokumen/{id}/riwayat/{versi}/unduh` | Unduh versi lama milik dokumen tersebut |
+| PATCH | `/dokumen/klasifikasi-kolektif` | Konfirmasi klasifikasi 1-50 dokumen sekaligus |
+| GET | `/dokumen/{id}/pilihan-kaitan` | Cari agenda/program/surat sesuai izin sumber |
+| PATCH | `/dokumen/{id}/kaitan` | Tambah atau lepas hubungan, bukan berkas |
+| GET | `/dokumen/{id}/riwayat-klasifikasi` | Riwayat metadata dan kaitan, berpaginasi |
 
 Filter daftar: `kata_kunci`, `kategori`, `status=aktif|arsip`,
-`masa_berlaku=tanpa_batas|masih_berlaku|segera_berakhir|kedaluwarsa`.
+`masa_berlaku=tanpa_batas|masih_berlaku|segera_berakhir|kedaluwarsa`,
+`urusan`, `jenis_dokumen`, `klasifikasi=perlu_tinjau|diperiksa`.
+Referensi menyediakan pilihan urusan dan jenis, terpisah dari kategori lama.
 Tanpa filter status, dokumen aktif dan arsip ditampilkan.
 Segera berakhir mencakup hari ini sampai 30 hari berikutnya; masih berlaku berarti
 tanggal akhir lebih dari 30 hari ke depan. Statistik daftar adalah seluruh dokumen aktif,
 bukan hanya hasil filter: `aktif`, `segera_berakhir`, `kedaluwarsa`.
+Statistik tambahan `perlu_tinjau` mencakup seluruh dokumen yang belum memiliki
+klasifikasi lengkap/konfirmasi, termasuk dokumen berstatus arsip.
 
-Input metadata wajib: `judul` (maksimal 180), `kategori`, `ingatkan_hari_sebelum` (0-365).
+Input metadata wajib: `judul` (maksimal 180), `ingatkan_hari_sebelum` (0-365), serta
+pasangan `urusan` dan `jenis_dokumen`. Untuk kompatibilitas, client lama masih dapat
+mengirim `kategori` tanpa pasangan tersebut. Jika salah satu field modern dikirim,
+keduanya wajib valid. Client lama tidak menghapus klasifikasi yang telah dikonfirmasi
+manual. `kategori` lama tetap disimpan; jangan menggunakannya sebagai pengganti urusan.
 Opsional: `nomor_dokumen`, `deskripsi`, `berlaku_mulai`, `berlaku_sampai`.
 Tanggal wajib format `YYYY-MM-DD`; tanggal akhir tidak boleh mendahului tanggal mulai.
 Unggahan baru wajib `berkas`, status aktif dan pembuat ditetapkan server.
@@ -146,6 +173,59 @@ Agenda dibatalkan ditolak. Unggah MoU wajib `token_unggahan_mou` UUID yang dibua
 retry oleh pembuat dengan token yang sama mengembalikan dokumen yang sama (200),
 tanpa duplikasi file. Mitra harus aktif; MoU yang diakhiri atau sudah memiliki berkas
 memerlukan alur revisi yang sesuai.
+
+### Klasifikasi dan Keterkaitan
+
+Daftar/detail menambahkan `urusan`, `urusan_label`, `jenis_dokumen`,
+`jenis_dokumen_label`, dan `klasifikasi: {perlu_tinjau, sumber, diperiksa_pada}`.
+Sumber `kategori_lama` atau `kategori_dan_kaitan` bukan konfirmasi petugas.
+Unggah/ubah dengan kedua field modern mengonfirmasi klasifikasi menggunakan akun
+dan waktu server. `alasan_klasifikasi` opsional, 5-1000 karakter bila diisi.
+
+PATCH kolektif memerlukan izin kelola dokumen. ID harus berbeda, maksimal 50;
+setiap ID wajib memiliki sidik dari daftar/detail terkini. Seluruh batch dibatalkan
+jika satu dokumen sudah berubah. Tidak ada versi berkas baru atau perubahan kategori lama.
+
+```json
+{
+  "ids": [31, 35],
+  "sidik": {"31": "<sidik dokumen 31>", "35": "<sidik dokumen 35>"},
+  "urusan": "komite",
+  "jenis_dokumen": "notulen",
+  "alasan": "Pemeriksaan arsip rapat komite semester ganjil."
+}
+```
+
+Detail juga menambahkan `hubungan`: daftar `{jenis, id, kelompok, label, url, dapat_lepas}`
+untuk sumber yang boleh dibaca akun. Maksimal 50 hubungan terbaru per jenis.
+GET pilihan menerima `jenis_kaitan=agenda|program|program_komite|surat` dan
+`kata_kunci` opsional (maksimal 120). Respons `jenis` berisi jenis yang boleh
+dikelola, `items` maksimal 30 hasil terbaru. Pencarian mempersempit daftar tersebut.
+Surat dapat dicari berdasarkan nomor atau perihal. Sumber yang dibatalkan tidak
+masuk pilihan kaitan baru; hubungan lama tetap dapat dibaca/dilepas sesuai izin.
+Pilihan dan mutasi memerlukan kelola dokumen dan izin kelola sumber. Untuk surat,
+cakupan mengikuti arsip berizin, penugasan surat tugas, atau disposisi milik pegawai.
+Dokumen tidak memberi hak baru untuk membaca surat di luar cakupan tersebut.
+
+```json
+{
+  "sidik": "<sidik dokumen terkini>",
+  "jenis_kaitan": "agenda",
+  "target_id": 7,
+  "aksi": "tambah",
+  "alasan": "Notulen untuk pertemuan orang tua kelas tujuh."
+}
+```
+
+`aksi` adalah `tambah` atau `lepas`; alasan wajib 5-1000 karakter. Penambahan hanya
+untuk dokumen aktif dan sumber yang tidak dibatalkan. Melepas kaitan tidak menghapus
+dokumen, versi, atau data sumber. Retry dengan sidik lama ditolak 422; muat ulang
+detail untuk memeriksa hasil sebelum mencoba kembali.
+
+Riwayat klasifikasi terpisah dari riwayat berkas: `{id, aksi, alasan, waktu, sebelum,
+sesudah}`. Snapshot API hanya memuat urusan, jenis, dan sumber klasifikasi, tidak
+memuat ID target surat atau judul rahasia. Teks alasan tetap data petugas; jangan
+menaruh rahasia surat di alasan pada arsip yang dapat dibaca petugas dokumen lain.
 
 ## Dokumen Agenda (3 Endpoint)
 
@@ -385,18 +465,18 @@ menghitung request yang ditolak. Setelah koneksi putus, periksa detail/riwayat d
 
 ## Verifikasi Dan Tahap Berikutnya
 
-Tes kontrak/security/alur: `tests/Feature/Api/HumasApiTest.php` dan
-`tests/Feature/Api/HumasDashboardArsipApiTest.php`. Tes web Humas tetap dijalankan
+Tes kontrak/security/alur: `tests/Feature/Api/HumasApiTest.php`,
+`tests/Feature/Api/HumasDashboardArsipApiTest.php`, dan
+`tests/Feature/KlasifikasiDokumenHumasTest.php`. Tes web Humas tetap dijalankan
 karena kedua kanal berbagi layanan command dan transaksi yang sama. Pengujian otomatis menggunakan
 SQLite terisolasi; belum merupakan uji Android pada perangkat nyata maupun uji beban server sekolah.
 
-Verifikasi implementasi: 47 tes API Humas (23 tahap pertama, 24 dashboard/arsip),
-468 tes pada seluruh suite API, dan 318 tes regresi Humas/modul terkait lulus.
-Daftar rute aplikasi memuat 70 endpoint; GET dashboard/dokumen tanpa token pada server lokal
-mengembalikan 401 JSON. Seluruh rute memakai autentikasi, ability mobile, pemeriksaan
-akun aktif dan kewajiban mengganti kata sandi.
+Daftar rute aplikasi memuat 74 endpoint. Seluruh rute memakai autentikasi, ability
+mobile, pemeriksaan akun aktif dan kewajiban mengganti kata sandi. Perubahan
+klasifikasi diuji untuk kompatibilitas client lama, versi usang, transaksi kolektif,
+backfill idempoten, pembatasan surat rahasia, serta penolakan akun siswa/orang tua.
 
 Tahap berikutnya: API buku tamu, kemitraan,
 publikasi/aset/media/kliping, komite/program kerja, alumni/prestasi, portofolio akreditasi;
 kemudian layar Android dan menu sesuai kemampuan yang benar-benar sudah diimplementasikan.
-Kesiapan 70 endpoint ini tidak berarti seluruh modul Humas atau versi Android telah selesai.
+Kesiapan 74 endpoint ini tidak berarti seluruh modul Humas atau versi Android telah selesai.

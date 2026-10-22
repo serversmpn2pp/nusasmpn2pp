@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\V1\Humas;
 
 use App\Models\DokumenHumas;
 use App\Models\RiwayatDokumenHumas;
+use App\Services\Humas\KaitanDokumenHumasService;
 use App\Services\Humas\KelolaDokumenHumasService;
+use App\Services\Humas\KlasifikasiDokumenHumasService;
 use App\Services\Mobile\HumasMobileService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +18,8 @@ class DokumenController extends HumasController
     public function index(Request $r)
     {
         $this->staff($r, ['dokumen_humas.lihat', 'dokumen_humas.kelola']);
-        $filter = $r->validate(['kata_kunci' => ['nullable', 'string', 'max:120'], 'kategori' => ['nullable', Rule::in(array_keys(DokumenHumas::KATEGORI))],
+        $klasifikasi = app(KlasifikasiDokumenHumasService::class);
+        $filter = $r->validate($klasifikasi->aturanFilter() + ['kata_kunci' => ['nullable', 'string', 'max:120'], 'kategori' => ['nullable', Rule::in(array_keys(DokumenHumas::KATEGORI))],
             'status' => ['nullable', Rule::in(array_keys(DokumenHumas::STATUS))],
             'masa_berlaku' => ['nullable', Rule::in(['tanpa_batas', 'masih_berlaku', 'segera_berakhir', 'kedaluwarsa'])]]) + $this->halaman($r);
         $q = DokumenHumas::withMax('riwayat', 'versi')->when($filter['kata_kunci'] ?? null, fn ($q, $s) => $q->where(fn ($q) => $q
@@ -24,6 +27,7 @@ class DokumenController extends HumasController
         foreach (['kategori', 'status'] as $key) {
             $q->when($filter[$key] ?? null, fn ($q, $v) => $q->where($key, $v));
         }
+        $klasifikasi->filter($q, $filter);
         switch ($filter['masa_berlaku'] ?? null) {
             case 'tanpa_batas': $q->whereNull('berlaku_sampai');
                 break;
@@ -40,7 +44,8 @@ class DokumenController extends HumasController
             ->paginate($filter['per_halaman'] ?? 20, ['*'], 'halaman', $filter['halaman'] ?? 1), fn ($d) => $this->mobile->dokumen($d, $this->kelola->sidik($d))) + [
                 'filter' => $filter, 'hak_akses' => ['dapat_kelola' => $r->user()->memilikiIzin('dokumen_humas.kelola')],
                 'statistik' => ['aktif' => (clone $aktif)->count(), 'segera_berakhir' => (clone $aktif)->whereBetween('berlaku_sampai', [today(), today()->addDays(30)])->count(),
-                    'kedaluwarsa' => (clone $aktif)->whereDate('berlaku_sampai', '<', today())->count()],
+                    'kedaluwarsa' => (clone $aktif)->whereDate('berlaku_sampai', '<', today())->count(),
+                    'perlu_tinjau' => $klasifikasi->filter(DokumenHumas::query(), ['klasifikasi' => 'perlu_tinjau'])->count()],
             ]);
     }
 
@@ -49,6 +54,8 @@ class DokumenController extends HumasController
         $this->staff($r, ['dokumen_humas.lihat', 'dokumen_humas.kelola']);
 
         return $this->json(['kategori' => DokumenHumas::KATEGORI, 'status' => DokumenHumas::STATUS,
+            'urusan' => DokumenHumas::URUSAN, 'jenis_dokumen' => DokumenHumas::JENIS_DOKUMEN,
+            'klasifikasi' => ['perlu_tinjau' => 'Perlu ditinjau', 'diperiksa' => 'Sudah diperiksa'],
             'masa_berlaku' => ['tanpa_batas' => 'Tanpa batas berlaku', 'masih_berlaku' => 'Masih berlaku', 'segera_berakhir' => 'Segera berakhir', 'kedaluwarsa' => 'Kedaluwarsa'],
             'batas_berkas_mb' => KelolaDokumenHumasService::BATAS_BERKAS_KB / 1024, 'format_berkas' => KelolaDokumenHumasService::EKSTENSI_BERKAS]);
     }
@@ -65,7 +72,44 @@ class DokumenController extends HumasController
         $d->loadMax('riwayat', 'versi');
 
         return $this->json($this->mobile->dokumen($d, $this->kelola->sidik($d), true)
+            + ['hubungan' => app(KaitanDokumenHumasService::class)->hubungan($r->user(), $d)]
             + ['hak_akses' => ['dapat_kelola' => $r->user()->memilikiIzin('dokumen_humas.kelola')]], $pesan, $status);
+    }
+
+    public function klasifikasiKolektif(Request $r)
+    {
+        $this->staff($r, 'dokumen_humas.kelola');
+
+        return $this->json(['jumlah' => app(KlasifikasiDokumenHumasService::class)->kolektif($r)], 'Klasifikasi dikonfirmasi.');
+    }
+
+    public function riwayatKlasifikasi(Request $r, DokumenHumas $dokumenHumas)
+    {
+        $this->staff($r, ['dokumen_humas.lihat', 'dokumen_humas.kelola']);
+        $p = $this->halaman($r);
+
+        return $this->json($this->mobile->paginasi($dokumenHumas->riwayatKlasifikasi()->paginate($p['per_halaman'] ?? 20, ['*'], 'halaman', $p['halaman'] ?? 1), fn ($item) => [
+            'id' => $item->id, 'aksi' => $item->aksi, 'alasan' => $item->alasan, 'waktu' => $item->created_at?->toIso8601String(),
+            'sebelum' => (object) array_intersect_key($item->sebelum ?? [], array_flip(['urusan', 'jenis_dokumen', 'sumber_klasifikasi'])),
+            'sesudah' => (object) array_intersect_key($item->sesudah, array_flip(['urusan', 'jenis_dokumen', 'sumber_klasifikasi'])),
+        ]));
+    }
+
+    public function pilihanKaitan(Request $r, DokumenHumas $dokumenHumas)
+    {
+        $this->staff($r, 'dokumen_humas.kelola');
+        $data = $r->validate(['jenis_kaitan' => ['required', Rule::in(['agenda', 'program', 'program_komite', 'surat'])], 'kata_kunci' => ['nullable', 'string', 'max:120']]);
+        $service = app(KaitanDokumenHumasService::class);
+
+        return $this->json(['jenis' => $service->jenis($r->user(), true), 'items' => $service->pilihan($r->user(), $data['jenis_kaitan'], $data['kata_kunci'] ?? null)]);
+    }
+
+    public function kaitan(Request $r, DokumenHumas $dokumenHumas)
+    {
+        $this->staff($r, 'dokumen_humas.kelola');
+        app(KaitanDokumenHumasService::class)->ubah($r, $dokumenHumas);
+
+        return $this->detail($r, $dokumenHumas->refresh(), 'Keterkaitan diperbarui.');
     }
 
     public function store(Request $r)

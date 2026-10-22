@@ -21,8 +21,12 @@ Route::prefix('humas')->name('humas.')->middleware('throttle:120,1,humas-akses:'
         Route::prefix('dokumen')->name('dokumen.')->controller(DokumenController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/referensi', 'referensi')->name('referensi');
+            Route::patch('/klasifikasi-kolektif', 'klasifikasiKolektif')->name('klasifikasi-kolektif');
             Route::post('/', 'store')->middleware('throttle:15,1,humas-dokumen:')->name('store');
             Route::get('/{dokumenHumas}', 'show')->name('show');
+            Route::get('/{dokumenHumas}/pilihan-kaitan', 'pilihanKaitan')->name('pilihan-kaitan');
+            Route::get('/{dokumenHumas}/riwayat-klasifikasi', 'riwayatKlasifikasi')->name('riwayat-klasifikasi');
+            Route::patch('/{dokumenHumas}/kaitan', 'kaitan')->name('kaitan');
             Route::patch('/{dokumenHumas}', 'update')->name('update');
             Route::post('/{dokumenHumas}/revisi', 'revisi')->middleware('throttle:15,1,humas-revisi-dokumen:')->name('revisi');
             Route::patch('/{dokumenHumas}/status', 'status')->name('status');

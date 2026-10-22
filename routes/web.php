@@ -129,10 +129,10 @@ use App\Http\Controllers\ProgramKomiteHumasController;
 use App\Http\Controllers\ProgressKasusSiswaController;
 use App\Http\Controllers\PublikasiHumasController;
 use App\Http\Controllers\PublikasiNilaiController;
+use App\Http\Controllers\PublikasiRaporStsController;
 use App\Http\Controllers\PusatCbtController;
 use App\Http\Controllers\PusatVerifikasiPelanggaranController;
 use App\Http\Controllers\RaporStsController;
-use App\Http\Controllers\PublikasiRaporStsController;
 use App\Http\Controllers\RaporStsSayaController;
 use App\Http\Controllers\RekapAbsensiHarianController;
 use App\Http\Controllers\RekapAbsensiPegawaiHarianController;
@@ -988,6 +988,8 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         });
 
         Route::middleware('izin:dokumen_humas.kelola')->group(function () {
+            Route::patch('dokumen-humas/klasifikasi-kolektif', [DokumenHumasController::class, 'klasifikasiKolektif'])->name('dokumen-humas.klasifikasi-kolektif');
+            Route::patch('dokumen-humas/{dokumenHumas}/kaitan', [DokumenHumasController::class, 'kaitan'])->name('dokumen-humas.kaitan');
             Route::get('dokumen-humas/tambah', [DokumenHumasController::class, 'create'])->name('dokumen-humas.create');
             Route::post('dokumen-humas', [DokumenHumasController::class, 'store'])->name('dokumen-humas.store');
             Route::get('dokumen-humas/{dokumenHumas}/edit', [DokumenHumasController::class, 'edit'])->name('dokumen-humas.edit');

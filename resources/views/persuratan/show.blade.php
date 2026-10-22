@@ -62,4 +62,5 @@
     @endif
     </article>
     @include('persuratan.tindak-lanjut._scripts')
+@include('dokumen-humas._terkait')
 @endsection

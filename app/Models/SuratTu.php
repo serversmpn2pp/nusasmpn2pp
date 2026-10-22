@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SuratTu extends Model
@@ -28,6 +29,11 @@ class SuratTu extends Model
     public function berkas(): HasMany
     {
         return $this->hasMany(BerkasSuratTu::class, 'surat_tu_id')->orderBy('id');
+    }
+
+    public function dokumenHumas(): BelongsToMany
+    {
+        return $this->belongsToMany(DokumenHumas::class, 'dokumen_humas_surat', 'target_id', 'dokumen_humas_id')->withTimestamps();
     }
 
     public function penugasan(): HasMany

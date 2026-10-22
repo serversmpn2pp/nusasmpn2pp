@@ -23,6 +23,7 @@
             {{ $pilihanRapat->fragment('rapat')->links() }}
         @endif
     </section>
+    @include('dokumen-humas._terkait')
     <section class="agenda-section">
         <h2>Riwayat program</h2>
         <ul class="publikasi-history">

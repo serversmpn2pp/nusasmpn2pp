@@ -6,6 +6,7 @@ use App\Models\AksesCepatPengguna;
 use App\Models\PengawasRuangUjianTerpusat;
 use App\Models\Pengguna;
 use App\Services\Absensi\PengecualianPresensiSiswaService;
+use App\Services\Humas\NavigasiHumasService;
 use App\Services\Ibadah\AksesBerhalanganIbadah;
 use App\Services\Ibadah\AksesScanKegiatanIbadah;
 use App\Services\Pembinaan\AksesRekapPoinSiswaService;
@@ -340,7 +341,7 @@ class MenuMobileService
             'label' => $item['label'],
             'deskripsi' => $item['deskripsi'] ?? 'Modul '.$item['label'].' NUSA.',
             'inisial' => $item['inisial'],
-            'subkelompok' => $item['subkelompok'] ?? null,
+            'subkelompok' => app(NavigasiHumasService::class)->subkelompokMobile($item['kode']) ?? $item['subkelompok'] ?? null,
             'ikon' => $item['ikon'] ?? null,
             'status' => $item['status'] ?? 'segera_hadir',
             'rute' => $item['rute'] ?? null,

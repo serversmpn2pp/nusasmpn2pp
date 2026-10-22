@@ -2,13 +2,26 @@
 
 namespace App\Models;
 
+use App\Services\Humas\KlasifikasiDokumenHumasService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DokumenHumas extends Model
 {
     protected $table = 'dokumen_humas';
+
+    public const URUSAN = ['kedinasan' => 'Dokumen Kedinasan Humas', 'komite' => 'Dokumen Komite Sekolah',
+        'orang_tua' => 'Hubungan Orang Tua/Wali', 'kemitraan' => 'Kemitraan & Kerja Sama',
+        'publikasi' => 'Publikasi & Promosi Sekolah', 'alumni' => 'Database & Portofolio Alumni', 'pengaduan' => 'Aspirasi & Pengaduan'];
+
+    public const JENIS_DOKUMEN = ['program_kerja' => 'Program kerja', 'sop' => 'SOP', 'surat_masuk' => 'Surat masuk',
+        'surat_keluar' => 'Surat keluar', 'surat_tugas' => 'Surat tugas', 'undangan' => 'Undangan', 'pemberitahuan' => 'Pemberitahuan',
+        'sk' => 'Surat keputusan', 'notulen' => 'Notulen', 'daftar_hadir' => 'Daftar hadir', 'laporan_kegiatan' => 'Laporan kegiatan',
+        'mou' => 'MoU / perjanjian kerja sama', 'proposal' => 'Proposal', 'berita_acara' => 'Berita acara', 'kuitansi' => 'Kuitansi',
+        'bukti_bantuan' => 'Bukti bantuan / sumbangan', 'dokumentasi' => 'Dokumentasi kegiatan', 'materi_publikasi' => 'Materi publikasi',
+        'kliping' => 'Kliping berita', 'portofolio_akreditasi' => 'Portofolio akreditasi', 'instrumen' => 'Instrumen / formulir', 'lainnya' => 'Dokumen lainnya'];
 
     public const KATEGORI = [
         'program_kerja' => 'Program kerja',
@@ -36,6 +49,8 @@ class DokumenHumas extends Model
 
     protected $fillable = [
         'kategori',
+        'urusan',
+        'jenis_dokumen',
         'judul',
         'nomor_dokumen',
         'deskripsi',
@@ -56,7 +71,50 @@ class DokumenHumas extends Model
         'berlaku_mulai' => 'date',
         'berlaku_sampai' => 'date',
         'ingatkan_hari_sebelum' => 'integer',
+        'versi_metadata' => 'integer',
+        'klasifikasi_pemeriksa_id' => 'integer',
+        'klasifikasi_diperiksa_pada' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (DokumenHumas $dokumen) {
+            $lama = KlasifikasiDokumenHumasService::dariKategori($dokumen->kategori);
+            $dokumen->urusan ??= $lama['urusan'];
+            $dokumen->jenis_dokumen ??= $lama['jenis_dokumen'];
+            $dokumen->sumber_klasifikasi ??= 'kategori_lama';
+        });
+    }
+
+    public function perluDitinjau(): bool
+    {
+        return ! $this->urusan || ! $this->jenis_dokumen || ! $this->klasifikasi_diperiksa_pada;
+    }
+
+    public function agenda(): BelongsToMany
+    {
+        return $this->belongsToMany(AgendaHumas::class, 'agenda_humas_dokumen')->withTimestamps();
+    }
+
+    public function program(): BelongsToMany
+    {
+        return $this->belongsToMany(ProgramKerjaHumas::class, 'dokumen_humas_program', 'dokumen_humas_id', 'target_id')->withTimestamps();
+    }
+
+    public function programKomite(): BelongsToMany
+    {
+        return $this->belongsToMany(ProgramKomiteHumas::class, 'dokumen_humas_program_komite', 'dokumen_humas_id', 'target_id')->withTimestamps();
+    }
+
+    public function surat(): BelongsToMany
+    {
+        return $this->belongsToMany(SuratTu::class, 'dokumen_humas_surat', 'dokumen_humas_id', 'target_id')->withTimestamps();
+    }
+
+    public function riwayatKlasifikasi(): HasMany
+    {
+        return $this->hasMany(RiwayatKlasifikasiDokumenHumas::class)->latest('id');
+    }
 
     public function riwayat(): HasMany
     {

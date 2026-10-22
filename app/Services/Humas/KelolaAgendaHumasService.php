@@ -221,9 +221,15 @@ class KelolaAgendaHumasService
     public function hubungkanDokumen(Request $request, AgendaHumas $agendaHumas)
     {
         $data = $request->validate(['dokumen_humas_id' => ['required', 'integer', 'exists:dokumen_humas,id']]);
-        DB::transaction(function () use ($agendaHumas, $data) {
+        DB::transaction(function () use ($agendaHumas, $data, $request) {
             $agenda = $this->kunciAgendaAktif($agendaHumas);
-            $agenda->dokumen()->syncWithoutDetaching([$data['dokumen_humas_id']]);
+            $dokumen = DokumenHumas::lockForUpdate()->findOrFail($data['dokumen_humas_id']);
+            $hasil = $agenda->dokumen()->syncWithoutDetaching([$dokumen->id]);
+            if ($hasil['attached']) {
+                $dokumen->forceFill(['versi_metadata' => $dokumen->versi_metadata + 1])->save();
+                app(KlasifikasiDokumenHumasService::class)->catat($dokumen, 'kaitan_tambah', null,
+                    ['jenis_kaitan' => 'agenda', 'target_id' => $agenda->id], 'Dihubungkan dari halaman agenda.', $request->user());
+            }
         });
 
         return $agendaHumas->fresh();
@@ -233,8 +239,12 @@ class KelolaAgendaHumasService
     {
         DB::transaction(function () use ($agendaHumas, $dokumenHumas) {
             $agenda = $this->kunciAgendaAktif($agendaHumas);
+            $dokumenHumas = DokumenHumas::lockForUpdate()->findOrFail($dokumenHumas->id);
             abort_unless($agenda->dokumen()->where('dokumen_humas.id', $dokumenHumas->id)->exists(), 404);
             $agenda->dokumen()->detach($dokumenHumas->id);
+            $dokumenHumas->forceFill(['versi_metadata' => $dokumenHumas->versi_metadata + 1])->save();
+            app(KlasifikasiDokumenHumasService::class)->catat($dokumenHumas, 'kaitan_lepas', null,
+                ['jenis_kaitan' => 'agenda', 'target_id' => $agenda->id], 'Kaitan dilepas dari halaman agenda.', request()->user());
         });
 
         return $agendaHumas->fresh();

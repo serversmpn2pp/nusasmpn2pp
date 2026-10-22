@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Humas;
 
 use App\Models\TahunPelajaran;
 use App\Services\Humas\DashboardHumasService;
+use App\Services\Humas\NavigasiHumasService;
 use App\Services\Humas\PeriodeDashboardHumasService;
 use Illuminate\Http\Request;
 
@@ -16,6 +17,7 @@ class DashboardController extends HumasController
         $k = $dashboard->ringkasan($request->user(), $p['mulai'], $p['selesai'], $p['filter']['tahun_pelajaran_id']);
 
         return $this->json([
+            'ruang_kerja' => app(NavigasiHumasService::class)->untukApi($request->user()),
             'filter' => $p['filter'], 'label_periode' => $p['labelPeriode'],
             'metrik' => (object) collect($k['metrik'])->map(fn ($m) => array_diff_key($m, ['url' => true]))->all(),
             'perhatian' => collect($k['perhatian'])->map(fn ($m) => array_diff_key($m, ['url' => true]))->values(),

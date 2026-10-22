@@ -43,7 +43,7 @@ class KelolaDokumenHumasService
         $this->validasiRentangTanggal($data);
 
         $file = $data['berkas'];
-        unset($data['berkas'], $data['catatan_revisi'], $data['agenda_humas_id'], $data['kerja_sama_humas_id'], $data['token_unggahan_mou']);
+        unset($data['berkas'], $data['catatan_revisi'], $data['agenda_humas_id'], $data['kerja_sama_humas_id'], $data['token_unggahan_mou'], $data['sidik'], $data['alasan_klasifikasi']);
         $lokasiFile = $this->simpanBerkas($file);
         $waktuUnggah = now();
 
@@ -69,15 +69,18 @@ class KelolaDokumenHumasService
                 if ($agenda?->status === 'dibatalkan') {
                     throw ValidationException::withMessages(['agenda_humas_id' => 'Agenda dibatalkan. Jadwalkan kembali sebelum menambahkan dokumen.']);
                 }
-                $dokumenHumas = DokumenHumas::create(array_merge(
-                    $data,
+                $klasifikasi = app(KlasifikasiDokumenHumasService::class);
+                $dokumenHumas = new DokumenHumas;
+                $dokumenHumas->forceFill(array_merge(
+                    $klasifikasi->data($data, null, $request->user()),
                     $this->dataBerkas($file, $lokasiFile),
                     [
                         'status' => 'aktif',
                         'dibuat_oleh_pengguna_id' => $request->user()->id,
                         'diubah_oleh_pengguna_id' => $request->user()->id,
                     ],
-                ));
+                ))->save();
+                $klasifikasi->catat($dokumenHumas, 'dokumen_dibuat', null, $klasifikasi->snapshot($dokumenHumas), 'Klasifikasi pada unggahan dokumen.', $request->user());
 
                 $this->buatRiwayat($dokumenHumas, $request, $file, $lokasiFile, 1, 'Dokumen pertama kali diunggah.', $waktuUnggah);
                 $agenda?->dokumen()->attach($dokumenHumas->id);
@@ -106,11 +109,13 @@ class KelolaDokumenHumasService
     public function update(Request $request, DokumenHumas $dokumenHumas, ?string $sidik = null)
     {
         $data = $request->validate($this->aturanValidasi(false));
+        $sidik ??= $data['sidik'] ?? null;
+        unset($data['sidik']);
         $this->validasiRentangTanggal($data);
 
         $file = $data['berkas'] ?? null;
         $catatanRevisi = $data['catatan_revisi'] ?? null;
-        unset($data['berkas'], $data['catatan_revisi']);
+        unset($data['berkas'], $data['catatan_revisi'], $data['alasan_klasifikasi']);
         $lokasiFile = $file ? $this->simpanBerkas($file) : null;
         $waktuUnggah = now();
 
@@ -126,8 +131,11 @@ class KelolaDokumenHumasService
             DB::transaction(function () use ($request, $dokumenHumas, $data, $file, $catatanRevisi, $lokasiFile, $waktuUnggah, $sidik) {
                 $dokumenHumas = DokumenHumas::query()->lockForUpdate()->findOrFail($dokumenHumas->id);
                 $this->periksaSidik($dokumenHumas, $sidik);
-                $dokumenHumas->fill(array_merge($data, [
+                $klasifikasi = app(KlasifikasiDokumenHumasService::class);
+                $sebelum = $klasifikasi->snapshot($dokumenHumas);
+                $dokumenHumas->forceFill(array_merge($klasifikasi->data($data, $dokumenHumas, $request->user()), [
                     'diubah_oleh_pengguna_id' => $request->user()->id,
+                    'versi_metadata' => $dokumenHumas->versi_metadata + 1,
                 ]));
 
                 if ($file && $lokasiFile) {
@@ -145,6 +153,10 @@ class KelolaDokumenHumasService
                 }
 
                 $dokumenHumas->save();
+                if ($sebelum !== $klasifikasi->snapshot($dokumenHumas)) {
+                    $klasifikasi->catat($dokumenHumas, 'klasifikasi_diperbarui', $sebelum, $klasifikasi->snapshot($dokumenHumas),
+                        $request->input('alasan_klasifikasi') ?: 'Klasifikasi diperiksa pada perubahan informasi dokumen.', $request->user());
+                }
             });
         } catch (Throwable $exception) {
             if ($lokasiFile) {
@@ -163,7 +175,7 @@ class KelolaDokumenHumasService
         DB::transaction(function () use ($request, $dokumenHumas, $sidik, $data) {
             $dokumen = DokumenHumas::lockForUpdate()->findOrFail($dokumenHumas->id);
             $this->periksaSidik($dokumen, $sidik);
-            $dokumen->update($data + ['diubah_oleh_pengguna_id' => $request->user()->id]);
+            $dokumen->forceFill($data + ['diubah_oleh_pengguna_id' => $request->user()->id, 'versi_metadata' => $dokumen->versi_metadata + 1])->save();
         });
 
         return $dokumenHumas->refresh();
@@ -171,13 +183,13 @@ class KelolaDokumenHumasService
 
     public function sidik(DokumenHumas $dokumen): string
     {
-        $data = Arr::only($dokumen->getAttributes(), ['id', ...$dokumen->getFillable(), 'created_at', 'updated_at']);
+        $data = Arr::only($dokumen->getAttributes(), ['id', ...$dokumen->getFillable(), 'versi_metadata', 'sumber_klasifikasi', 'klasifikasi_diperiksa_pada', 'klasifikasi_pemeriksa_id', 'created_at', 'updated_at']);
         ksort($data);
 
         return hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
     }
 
-    private function periksaSidik(DokumenHumas $dokumen, ?string $sidik): void
+    public function periksaSidik(DokumenHumas $dokumen, ?string $sidik): void
     {
         if ($sidik !== null && ! hash_equals($this->sidik($dokumen), $sidik)) {
             throw ValidationException::withMessages(['sidik' => 'Dokumen telah berubah. Muat ulang sebelum menyimpan revisi atau status.']);
@@ -209,7 +221,11 @@ class KelolaDokumenHumasService
     private function aturanValidasi(bool $berkasWajib): array
     {
         return [
-            'kategori' => ['required', Rule::in(array_keys(DokumenHumas::KATEGORI))],
+            'kategori' => ['required_without_all:urusan,jenis_dokumen', 'nullable', Rule::in(array_keys(DokumenHumas::KATEGORI))],
+            'urusan' => ['required_with:jenis_dokumen', 'nullable', Rule::in(array_keys(DokumenHumas::URUSAN))],
+            'jenis_dokumen' => ['required_with:urusan', 'nullable', Rule::in(array_keys(DokumenHumas::JENIS_DOKUMEN))],
+            'sidik' => [$berkasWajib ? 'prohibited' : 'nullable', 'string', 'regex:/^[a-f0-9]{64}$/D'],
+            'alasan_klasifikasi' => ['nullable', 'string', 'min:5', 'max:1000'],
             'judul' => ['required', 'string', 'max:180'],
             'nomor_dokumen' => ['nullable', 'string', 'max:120'],
             'deskripsi' => ['nullable', 'string', 'max:5000'],

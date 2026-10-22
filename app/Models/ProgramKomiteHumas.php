@@ -26,6 +26,11 @@ class ProgramKomiteHumas extends Model
         return $this->belongsTo(PeriodeKomiteHumas::class, 'periode_komite_humas_id');
     }
 
+    public function dokumenHumas(): BelongsToMany
+    {
+        return $this->belongsToMany(DokumenHumas::class, 'dokumen_humas_program_komite', 'target_id', 'dokumen_humas_id')->withTimestamps();
+    }
+
     public function penanggungJawab(): BelongsTo
     {
         return $this->belongsTo(PengurusKomiteHumas::class, 'pengurus_komite_humas_id');

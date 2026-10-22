@@ -74,6 +74,7 @@ class ProgramKerjaHumasController extends Controller
         $program->load('tahunPelajaran')->loadCount(['laporanFinal', 'laporan as draf_count' => fn ($q) => $q->where('status', 'draf')]);
 
         return $this->halaman('show', ['program' => $program,
+            'dokumenTerkait' => $request->user()->memilikiIzin(['dokumen_humas.lihat', 'dokumen_humas.kelola']) ? $program->dokumenHumas()->latest('dokumen_humas.id')->limit(50)->get() : collect(),
             'laporan' => $program->laporan()->withCount('bukti')->latest('tanggal_mulai')->paginate(15)->withQueryString(),
             'riwayat' => $program->riwayat()->whereNull('laporan_pelaksanaan_humas_id')->with('pengguna:id,nama')->paginate(10, ['*'], 'riwayat')]);
     }

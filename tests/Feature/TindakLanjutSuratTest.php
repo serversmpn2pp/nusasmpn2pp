@@ -300,14 +300,14 @@ class TindakLanjutSuratTest extends TestCase
     {
         $this->actingAs($this->tu)->get(route('tindak-lanjut-surat.monitoring'))->assertOk()
             ->assertSee('class="stats-grid surat-stats surat-stats--tindak"', false)
-            ->assertSee('class="panel panel-pad surat-filter surat-filter--tindak"', false)
+            ->assertSee('class="feature-filter panel panel-pad surat-filter surat-filter--tindak"', false)
             ->assertSee('class="panel surat-shell"', false)
             ->assertSee('0 tindak lanjut')
             ->assertSee('Belum ada tindak lanjut yang sesuai.');
         $t = $this->disposisi();
         $pribadi = $this->actingAs($this->guru)->get(route('tindak-lanjut-surat.index'))->assertOk()
             ->assertSee('class="stats-grid surat-stats surat-stats--tindak"', false)
-            ->assertSee('class="panel panel-pad surat-filter surat-filter--tindak"', false)
+            ->assertSee('class="feature-filter panel panel-pad surat-filter surat-filter--tindak"', false)
             ->assertSee('1 tindak lanjut')
             ->assertSee('scope="col">Aksi', false)
             ->assertDontSee('name="pemeriksaan_saya"', false);

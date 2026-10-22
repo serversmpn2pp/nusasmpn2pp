@@ -1878,6 +1878,8 @@
                 || $penggunaAktif?->memilikiPeran('siswa');
             $pakaiSidebarOrangTua = $penggunaAktif?->akunOrangTua()
                 || $penggunaAktif?->memilikiPeran('orang_tua');
+            $navigasiHumas = $penggunaAktif
+                ? app(\App\Services\Humas\NavigasiHumasService::class)->sidebar($penggunaAktif) : [];
 
             $semuaSidebarSections = [
                 [
@@ -1929,24 +1931,7 @@
                 [
                     'id' => 'humas',
                     'title' => 'Humas',
-                    'items' => [
-                        ['label' => 'Dashboard Humas', 'route' => 'dashboard-humas.index', 'active' => ['dashboard-humas.*'], 'initial' => 'DB', 'izin' => 'dashboard_humas.lihat'],
-                        ['label' => 'Portofolio Akreditasi', 'route' => 'akreditasi-humas.index', 'active' => ['akreditasi-humas.*'], 'initial' => 'PA', 'izin' => ['akreditasi_humas.lihat', 'akreditasi_humas.kelola']],
-                        ['label' => 'Umpan Balik Orang Tua', 'route' => 'umpan-balik-humas.index', 'active' => ['umpan-balik-humas.*'], 'initial' => 'UB', 'izin' => ['umpan_balik_humas.lihat', 'umpan_balik_humas.kelola']],
-                        ['label' => 'Pusat Dokumen Humas', 'route' => 'dokumen-humas.index', 'active' => ['dokumen-humas.*'], 'initial' => 'DH', 'izin' => ['dokumen_humas.lihat', 'dokumen_humas.kelola']],
-                        ['label' => 'Program Kerja Humas', 'route' => 'program-kerja-humas.index', 'active' => ['program-kerja-humas.*'], 'initial' => 'PH', 'izin' => ['program_kerja_humas.lihat', 'program_kerja_humas.kelola']],
-                        ['label' => 'Database Alumni', 'route' => 'alumni-humas.index', 'active' => ['alumni-humas.*'], 'initial' => 'DA', 'izin' => ['alumni_humas.lihat', 'alumni_humas.kelola']],
-                        ['label' => 'Database Prestasi', 'route' => 'prestasi-sekolah.index', 'active' => ['prestasi-sekolah.*'], 'initial' => 'DP', 'izin' => ['prestasi_sekolah.lihat', 'prestasi_sekolah.kelola']],
-                        ['label' => 'Komite Sekolah', 'route' => 'komite-humas.index', 'active' => ['komite-humas.*'], 'initial' => 'KS', 'izin' => ['komite_humas.lihat', 'komite_humas.kelola']],
-                        ['label' => 'Agenda & Pertemuan', 'route' => 'agenda-humas.index', 'active' => ['agenda-humas.*'], 'initial' => 'AP', 'izin' => ['agenda_humas.lihat', 'agenda_humas.kelola']],
-                        ['label' => 'Buku Tamu Digital', 'route' => 'buku-tamu.index', 'active' => ['buku-tamu.*'], 'initial' => 'BT', 'izin' => null, 'buku_tamu_only' => true],
-                        ['label' => 'Kemitraan & MoU', 'route' => 'kemitraan-humas.index', 'active' => ['kemitraan-humas.*'], 'initial' => 'KM', 'izin' => ['kemitraan_humas.lihat', 'kemitraan_humas.kelola']],
-                        ['label' => 'Publikasi & Persetujuan', 'route' => 'publikasi-humas.index', 'active' => ['publikasi-humas.*'], 'initial' => 'PP', 'izin' => ['publikasi_humas.lihat', 'publikasi_humas.kelola', 'publikasi_humas.periksa']],
-                        ['label' => 'Bank Aset Promosi', 'route' => 'aset-promosi-humas.index', 'active' => ['aset-promosi-humas.*'], 'initial' => 'AP', 'izin' => ['aset_promosi_humas.lihat', 'aset_promosi_humas.kelola']],
-                        ['label' => 'Daftar Media Resmi', 'route' => 'media-resmi-humas.index', 'active' => ['media-resmi-humas.*'], 'initial' => 'MR', 'izin' => ['media_resmi_humas.lihat', 'media_resmi_humas.kelola']],
-                        ['label' => 'Kliping Berita', 'route' => 'kliping-berita-humas.index', 'active' => ['kliping-berita-humas.*'], 'initial' => 'KB', 'izin' => ['kliping_berita_humas.lihat', 'kliping_berita_humas.kelola']],
-                        ['label' => 'Aspirasi & Pengaduan', 'route' => 'pengaduan-humas.index', 'active' => ['pengaduan-humas.*'], 'initial' => 'AD', 'izin' => ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'pengaduan_humas.tangani']],
-                    ],
+                    'items' => $navigasiHumas,
                 ],
                 [
                     'id' => 'ujian-asesmen',
@@ -2053,22 +2038,7 @@
                 [
                     'id' => 'layanan-humas',
                     'title' => 'Humas',
-                    'items' => [
-                        ['label' => 'Dashboard Humas', 'route' => 'dashboard-humas.index', 'active' => ['dashboard-humas.*'], 'initial' => 'DB', 'izin' => 'dashboard_humas.lihat'],
-                        ['label' => 'Portofolio Akreditasi', 'route' => 'akreditasi-humas.index', 'active' => ['akreditasi-humas.*'], 'initial' => 'PA', 'izin' => ['akreditasi_humas.lihat', 'akreditasi_humas.kelola']],
-                        ['label' => 'Umpan Balik Orang Tua', 'route' => 'umpan-balik-humas.index', 'active' => ['umpan-balik-humas.*'], 'initial' => 'UB', 'izin' => ['umpan_balik_humas.lihat', 'umpan_balik_humas.kelola']],
-                        ['label' => 'Program Kerja Humas', 'route' => 'program-kerja-humas.index', 'active' => ['program-kerja-humas.*'], 'initial' => 'PH', 'izin' => ['program_kerja_humas.lihat', 'program_kerja_humas.kelola']],
-                        ['label' => 'Database Alumni', 'route' => 'alumni-humas.index', 'active' => ['alumni-humas.*'], 'initial' => 'DA', 'izin' => ['alumni_humas.lihat', 'alumni_humas.kelola']],
-                        ['label' => 'Database Prestasi', 'route' => 'prestasi-sekolah.index', 'active' => ['prestasi-sekolah.*'], 'initial' => 'DP', 'izin' => ['prestasi_sekolah.lihat', 'prestasi_sekolah.kelola']],
-                        ['label' => 'Komite Sekolah', 'route' => 'komite-humas.index', 'active' => ['komite-humas.*'], 'initial' => 'KS', 'izin' => ['komite_humas.lihat', 'komite_humas.kelola']],
-                        ['label' => 'Publikasi & Persetujuan', 'route' => 'publikasi-humas.index', 'active' => ['publikasi-humas.*'], 'initial' => 'PP', 'izin' => ['publikasi_humas.lihat', 'publikasi_humas.kelola', 'publikasi_humas.periksa']],
-                        ['label' => 'Bank Aset Promosi', 'route' => 'aset-promosi-humas.index', 'active' => ['aset-promosi-humas.*'], 'initial' => 'AP', 'izin' => ['aset_promosi_humas.lihat', 'aset_promosi_humas.kelola']],
-                        ['label' => 'Daftar Media Resmi', 'route' => 'media-resmi-humas.index', 'active' => ['media-resmi-humas.*'], 'initial' => 'MR', 'izin' => ['media_resmi_humas.lihat', 'media_resmi_humas.kelola']],
-                        ['label' => 'Kliping Berita', 'route' => 'kliping-berita-humas.index', 'active' => ['kliping-berita-humas.*'], 'initial' => 'KB', 'izin' => ['kliping_berita_humas.lihat', 'kliping_berita_humas.kelola']],
-                        ['label' => 'Aspirasi & Pengaduan', 'route' => 'pengaduan-humas.index', 'active' => ['pengaduan-humas.*'], 'initial' => 'AD', 'izin' => ['pengaduan_humas.lihat', 'pengaduan_humas.kelola', 'pengaduan_humas.tangani']],
-                        ['label' => 'Kemitraan & MoU', 'route' => 'kemitraan-humas.index', 'active' => ['kemitraan-humas.*'], 'initial' => 'KM', 'izin' => ['kemitraan_humas.lihat', 'kemitraan_humas.kelola']],
-                        ['label' => 'Buku Tamu Digital', 'route' => 'buku-tamu.index', 'active' => ['buku-tamu.*'], 'initial' => 'BT', 'izin' => null, 'buku_tamu_only' => true],
-                    ],
+                    'items' => $navigasiHumas,
                 ],
                 [
                     'id' => 'verifikasi-poin',
@@ -2326,7 +2296,9 @@
                         })
                         ->map(function (array $item) {
                             $activePatterns = (array) ($item['active'] ?? $item['route']);
-                            $item['is_active'] = request()->routeIs(...$activePatterns);
+                            $item['is_active'] = ($item['humas_menu'] ?? false)
+                                ? app(\App\Services\Humas\NavigasiHumasService::class)->aktif($item, request())
+                                : request()->routeIs(...$activePatterns);
 
                             return $item;
                         })
@@ -2467,14 +2439,14 @@
                                             <div class="sidebar-links">
                                                 @foreach ($group['items'] as $item)
                                                     <a
-                                                        href="{{ route($item['route']) }}"
+                                                        href="{{ route($item['route'], $item['parameters'] ?? []) }}"
                                                         class="sidebar-link {{ $item['is_active'] ? 'active' : '' }}"
                                                         data-sidebar-item
                                                         data-sidebar-search-text="{{ str($section['title'] . ' ' . ($group['name'] ?? '') . ' ' . $item['label'])->lower() }}"
                                                         @if ($item['is_active']) aria-current="page" @endif
                                                         @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif
                                                     >
-                                                        <span class="sidebar-link-initial">@if ($temaAntarmukaNusa)<i data-lucide="{{ $ikonKategori[$section['id']] ?? 'folder' }}" aria-hidden="true"></i>@else{{ $item['initial'] }}@endif</span>
+                                                        <span class="sidebar-link-initial">@if ($temaAntarmukaNusa)<i data-lucide="{{ $item['icon'] ?? $ikonKategori[$section['id']] ?? 'folder' }}" aria-hidden="true"></i>@else{{ $item['initial'] }}@endif</span>
                                                         <span class="sidebar-link-label">{{ $item['label'] }}</span>
                                                     </a>
                                                 @endforeach

@@ -95,6 +95,7 @@ class PersuratanController extends Controller
         $revisi = $this->service->arsip($request->user())->where('revisi_dari_id', $surat->id)->get();
 
         return response()->view('persuratan.show', ['surat' => $surat, 'pribadi' => false, 'asal' => $asal, 'revisi' => $revisi,
+            'dokumenTerkait' => $request->user()->memilikiIzin(['dokumen_humas.lihat', 'dokumen_humas.kelola']) ? $surat->dokumenHumas()->latest('dokumen_humas.id')->limit(50)->get() : collect(),
             'penerimaDisposisi' => $surat->jenis === 'masuk' && $request->user()->memilikiIzin('surat.disposisi')
                 ? $this->service->pegawai()->whereNotIn('id', $surat->tindakLanjut->pluck('pegawai_id')->push($request->user()->pegawai_id)) : collect()],
             200, ['Cache-Control' => 'private, no-store']);

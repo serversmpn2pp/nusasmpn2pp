@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProgramKerjaHumas extends Model
@@ -27,6 +28,11 @@ class ProgramKerjaHumas extends Model
     public function tahunPelajaran(): BelongsTo
     {
         return $this->belongsTo(TahunPelajaran::class);
+    }
+
+    public function dokumenHumas(): BelongsToMany
+    {
+        return $this->belongsToMany(DokumenHumas::class, 'dokumen_humas_program', 'target_id', 'dokumen_humas_id')->withTimestamps();
     }
 
     public function laporan(): HasMany

@@ -1,11 +1,14 @@
 @extends('layouts.app')
 @section('admin-module', 'humas')
 
-@php($sedangEdit = $dokumenHumas->exists)
+@php
+    $sedangEdit = $dokumenHumas->exists;
+@endphp
 
 @section('title', ($sedangEdit ? 'Perbarui' : 'Tambah').' Dokumen Humas - NUSA')
 
 @section('content')
+    @include('dokumen-humas._klasifikasi-style')
     <div class="page-header">
         <div>
             <p class="eyebrow">Humas / Pusat Dokumen</p>
@@ -32,7 +35,11 @@
             <input type="hidden" name="agenda_humas_id" value="{{ $agendaTerkait->id }}">
             <p class="help-text">Agenda: {{ $agendaTerkait->judul }}</p>
         @endif
-        @if ($sedangEdit) @method('PUT') @endif
+        @if ($sedangEdit)
+            @method('PUT')
+            <input type="hidden" name="sidik" value="{{ old('sidik', $sidik) }}">
+            <input type="hidden" name="kategori" value="{{ $dokumenHumas->kategori }}">
+        @endif
         <div class="form-shell">
             <aside class="panel panel-pad">
                 <h2 class="panel-title">Berkas privat</h2>
@@ -50,14 +57,19 @@
                 <section class="panel panel-pad feature-section">
                     <h2 class="panel-title">Informasi dokumen</h2>
                     <div class="form-grid">
-                        <div class="field">
-                            <label for="kategori">Kategori</label>
-                            <select id="kategori" name="kategori" class="select @error('kategori') is-invalid @enderror" required>
-                                @foreach ($kategori as $kode => $label)
-                                    <option value="{{ $kode }}" @selected(old('kategori', $dokumenHumas->kategori ?: 'lainnya') === $kode)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @error('kategori')<p class="error-text">{{ $message }}</p>@enderror
+                        <div class="dh-classification span-2">
+                            <h2>Klasifikasi dokumen</h2>
+                            <div class="form-grid">
+                                <div class="field"><label for="urusan">Bidang urusan</label><select id="urusan" name="urusan" class="select" required>
+                                    <option value="">Pilih bidang urusan</option>
+                                    @foreach(\App\Models\DokumenHumas::URUSAN as $kode => $label)<option value="{{ $kode }}" @selected(old('urusan', $dokumenHumas->urusan) === $kode)>{{ $label }}</option>@endforeach
+                                </select>@error('urusan')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field"><label for="jenis_dokumen">Jenis dokumen</label><select id="jenis_dokumen" name="jenis_dokumen" class="select" required>
+                                    <option value="">Pilih jenis dokumen</option>
+                                    @foreach(\App\Models\DokumenHumas::JENIS_DOKUMEN as $kode => $label)<option value="{{ $kode }}" @selected(old('jenis_dokumen', $dokumenHumas->jenis_dokumen) === $kode)>{{ $label }}</option>@endforeach
+                                </select>@error('jenis_dokumen')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            </div>
+                            @if($sedangEdit)<small>Kategori lama: {{ $kategori[$dokumenHumas->kategori] ?? $dokumenHumas->kategori }} &middot; {{ $dokumenHumas->perluDitinjau() ? 'Perlu ditinjau' : 'Sudah diperiksa' }}</small>@endif
                         </div>
                         <div class="field">
                             <label for="nomor_dokumen">Nomor dokumen</label>
@@ -98,6 +110,7 @@
                             @error('berkas')<p class="error-text">{{ $message }}</p>@enderror
                         </div>
                         @if ($sedangEdit)
+                            <div class="field span-2"><label for="alasan_klasifikasi">Catatan perubahan klasifikasi</label><input id="alasan_klasifikasi" name="alasan_klasifikasi" class="input" minlength="5" maxlength="1000" value="{{ old('alasan_klasifikasi') }}" placeholder="Opsional">@error('alasan_klasifikasi')<p class="error-text">{{ $message }}</p>@enderror</div>
                             <div class="field span-2">
                                 <label for="catatan_revisi">Catatan revisi</label>
                                 <textarea id="catatan_revisi" name="catatan_revisi" class="textarea @error('catatan_revisi') is-invalid @enderror" maxlength="1000" placeholder="Wajib diisi bila mengunggah berkas revisi">{{ old('catatan_revisi') }}</textarea>
@@ -110,7 +123,7 @@
                 <div class="form-actions">
                     @if (isset($mouTerkait))<div data-mou-upload-state hidden role="status" aria-live="polite" style="flex-basis:100%;padding:16px;border:1px solid #a1bfd0;background:#eef6fa;border-radius:6px"><strong data-mou-upload-label></strong><progress max="100" value="0" style="width:100%;display:block;margin-top:10px" aria-label="Kemajuan unggahan MoU"></progress></div>@endif
                     <a href="{{ $sedangEdit ? route('dokumen-humas.show', $dokumenHumas) : route('dokumen-humas.index') }}" class="button button-muted">Batal</a>
-                    <button type="submit" class="button button-primary">{{ $sedangEdit ? 'Simpan perubahan' : 'Simpan dokumen' }}</button>
+                    <button type="submit" class="button button-primary">{{ $sedangEdit && $dokumenHumas->perluDitinjau() ? 'Simpan dan konfirmasi klasifikasi' : ($sedangEdit ? 'Simpan perubahan' : 'Simpan dokumen') }}</button>
                 </div>
             </div>
         </div>

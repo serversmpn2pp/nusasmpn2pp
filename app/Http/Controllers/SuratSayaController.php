@@ -36,7 +36,8 @@ class SuratSayaController extends Controller
             'tindakLanjut' => fn ($q) => $q->where('pegawai_id', $request->user()->pegawai_id),
             'penugasan' => fn ($q) => $q->where('pegawai_id', $request->user()->pegawai_id)]);
 
-        return response()->view('persuratan.show', ['surat' => $surat, 'pribadi' => true, 'asal' => null, 'revisi' => collect()], 200, ['Cache-Control' => 'private, no-store']);
+        return response()->view('persuratan.show', ['surat' => $surat, 'pribadi' => true, 'asal' => null, 'revisi' => collect(),
+            'dokumenTerkait' => $request->user()->memilikiIzin(['dokumen_humas.lihat', 'dokumen_humas.kelola']) ? $surat->dokumenHumas()->latest('dokumen_humas.id')->limit(50)->get() : collect()], 200, ['Cache-Control' => 'private, no-store']);
     }
 
     public function baca(Request $request, SuratTu $surat)
