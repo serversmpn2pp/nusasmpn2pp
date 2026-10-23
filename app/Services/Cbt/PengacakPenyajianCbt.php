@@ -5,6 +5,7 @@ namespace App\Services\Cbt;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Support\Collection;
 
 class PengacakPenyajianCbt
@@ -86,37 +87,31 @@ class PengacakPenyajianCbt
         array $pengecoh,
     ): Collection {
         $pilihanBenar = collect($pasangan)
-            ->map(fn ($item, $index) => [
-                'identitas' => 'pasangan-'.($item['nomor'] ?? $index + 1),
-                'teks' => trim((string) ($item['kanan'] ?? '')),
-            ]);
+            ->map(fn ($item) => trim((string) ($item['kanan'] ?? '')));
         $pilihanPengecoh = collect($pengecoh)
-            ->map(fn ($item, $index) => [
-                'identitas' => 'pengecoh-'.($index + 1),
-                'teks' => trim((string) $item),
-            ]);
+            ->map(fn ($item) => trim((string) $item));
         $pilihan = $pilihanBenar
             ->concat($pilihanPengecoh)
-            ->filter(fn ($item) => filled($item['teks']))
-            ->unique(fn ($item) => mb_strtolower($item['teks']))
+            ->filter(fn ($teks) => filled($teks))
+            ->unique(fn ($teks) => mb_strtolower($teks))
             ->values();
 
-        $identitasAwal = $pilihan->pluck('identitas')->all();
+        // Urutan hanya bergantung pada bank teks, bukan nomor/pemilik pasangan benar.
+        // ID publik saja tidak cukup untuk menghitung urutan tanpa rahasia server.
+        $kunciServer = app(Encrypter::class)->getKey();
         $identitasPeserta = $ujian->acak_jawaban ? (string) $peserta->id : 'tetap';
-        $pilihan = $pilihan->sortBy(fn ($item) => hash('sha256', implode('|', [
-            'nusa-cbt',
+        $pilihan = $pilihan->sortBy(fn ($teks) => hash_hmac('sha256', implode('|', [
+            'nusa-cbt-menjodohkan-v2',
             $ujian->id,
             $identitasPeserta,
-            'pasangan:'.$relasiSoal->id,
-            $item['identitas'],
-        ])))->values();
+            $relasiSoal->id,
+            mb_strtolower($teks),
+        ]), $kunciServer))->values();
 
-        if ($pilihan->count() > 1 && $pilihan->pluck('identitas')->all() === $identitasAwal) {
-            $pilihan = $pilihan->slice(1)->concat($pilihan->take(1))->values();
-        }
-
-        return $pilihan->mapWithKeys(fn ($item, $index) => [
-            chr(65 + $index) => $item['teks'],
+        // Jangan paksa berbeda dari urutan awal: dua opsi akan selalu tertukar dan bocor.
+        // Teks tetap utuh karena autosave dan koreksi menjodohkan memakai teks, bukan huruf.
+        return $pilihan->mapWithKeys(fn ($teks, $index) => [
+            chr(65 + $index) => $teks,
         ]);
     }
 

@@ -14,11 +14,13 @@ use App\Models\Siswa;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use Illuminate\Encryption\Encrypter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class UjianSayaApiTest extends TestCase
@@ -344,6 +346,105 @@ class UjianSayaApiTest extends TestCase
             'peserta_ujian_cbt_id' => $data['peserta']->id,
             'soal_ujian_cbt_id' => $relasi->id,
         ]);
+    }
+
+    #[DataProvider('modePengacakanMenjodohkan')]
+    public function test_relasi_menjodohkan_tidak_dapat_direkonstruksi_dengan_hash_publik_dan_jawaban_lama_tetap_dinilai(bool $acak): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $this->app->instance('encrypter', new Encrypter(hash('sha256', 'server-pengujian', true), 'AES-256-CBC'));
+        $data = $this->fondasi(hanyaObjektif: true);
+        $ujian = $data['peserta']->ujianCbt;
+        $ujian->update(['acak_jawaban' => $acak]);
+        $relasi = $data['soal_pg'];
+        $kunci = [];
+        $pasangan = [];
+        foreach (range(1, 8) as $nomor) {
+            $kanan = 'Opsi-'.hash('sha256', 'teks-kanan-'.$nomor);
+            $kunci[$nomor] = $kanan;
+            $pasangan[] = ['nomor' => $nomor, 'kiri' => 'Butir-'.$nomor, 'kanan' => $kanan];
+        }
+        $pengecoh = 'Opsi-tambahan';
+        $relasi->soalCbt->update([
+            'jenis_soal' => 'menjodohkan',
+            'pertanyaan' => 'Pasangkan setiap butir dengan opsi yang sesuai.',
+            'opsi' => ['pasangan' => $pasangan, 'pengecoh' => [$pengecoh]],
+            'kunci_jawaban' => ['jawaban' => $kunci],
+            'media' => null,
+        ]);
+        $relasi->update(['bobot' => 8]);
+        $token = $this->token($data['pengguna']);
+        $perangkat = 'NUSA Android Matching Security';
+        $respons = $this->withToken($token)->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => $perangkat,
+        ])->assertOk()->assertJsonMissingPath('data.soal.0.kunci_jawaban');
+        $kertas = $respons->json('data');
+        $soal = $kertas['soal'][0];
+
+        // Reproduksi algoritme rentan hanya memakai ID/nomor dari respons siswa.
+        $identitas = array_map(fn ($item) => 'pasangan-'.$item['nomor'], $soal['pasangan']);
+        $identitas[] = 'pengecoh-1';
+        $awal = $identitas;
+        $konteksPeserta = $acak ? (string) $kertas['peserta']['id'] : 'tetap';
+        $seedPublik = 'nusa-cbt|'.$kertas['ujian']['id'].'|'.$konteksPeserta.'|pasangan:'.$soal['id'].'|';
+        usort($identitas, fn ($a, $b) => strcmp(hash('sha256', $seedPublik.$a), hash('sha256', $seedPublik.$b)));
+        if ($identitas === $awal) {
+            $identitas[] = array_shift($identitas);
+        }
+        $tebakan = [];
+        foreach ($identitas as $index => $id) {
+            if (str_starts_with($id, 'pasangan-')) {
+                $tebakan[(int) substr($id, strlen('pasangan-'))] = $soal['pilihan'][$index]['teks'];
+            }
+        }
+        ksort($tebakan);
+        $this->assertNotSame($kunci, $tebakan, 'Algoritme publik lama tidak boleh merekonstruksi seluruh kunci fixture.');
+        foreach ($soal['pasangan'] as $item) {
+            $this->assertSame(['nomor', 'kiri', 'media'], array_keys($item));
+        }
+        foreach ($soal['pilihan'] as $item) {
+            $this->assertSame(['kode', 'teks', 'media', 'label'], array_keys($item));
+        }
+
+        // Format lama menyimpan teks, bukan posisi A/B/C: jangan migrasikan atau hapus jawaban ini.
+        $data['peserta']->jawabanPesertaUjianCbt()->create([
+            'soal_ujian_cbt_id' => $relasi->id,
+            'soal_cbt_id' => $relasi->soal_cbt_id,
+            'jawaban' => $kunci,
+            'ragu' => false,
+            'waktu_dijawab' => now(),
+        ]);
+        $urlLanjut = route('api.v1.ujian-saya.kerjakan', [
+            'pesertaUjianCbt' => $data['peserta'], 'perangkat' => $perangkat,
+        ]);
+        $lanjut = $this->withToken($token)->getJson($urlLanjut)->assertOk();
+        $this->assertSame($kunci, $lanjut->json('data.soal.0.jawaban'));
+        $this->assertSame($soal['pilihan'], $lanjut->json('data.soal.0.pilihan'));
+
+        $jawabanBaru = $kunci;
+        $jawabanBaru[8] = $pengecoh;
+        $this->withToken($token)->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
+            'soal_ujian_cbt_id' => $relasi->id,
+            'jawaban' => $jawabanBaru,
+            'ragu' => false,
+            'perangkat' => $perangkat,
+        ])->assertOk()->assertJsonPath('data.terjawab', true);
+        $this->withToken($token)->getJson($urlLanjut)->assertOk()
+            ->assertJsonPath('data.soal.0.jawaban', $jawabanBaru);
+        Carbon::setTestNow('2026-09-05 08:16:00');
+        $this->withToken($token)->postJson(route('api.v1.ujian-saya.selesai', $data['peserta']), [
+            'perangkat' => $perangkat,
+        ])->assertOk()->assertJsonPath('data.mode', 'selesai');
+
+        $tersimpan = $data['peserta']->jawabanPesertaUjianCbt()->firstOrFail();
+        $this->assertSame($jawabanBaru, $tersimpan->jawaban);
+        $this->assertEquals(7.0, (float) $tersimpan->skor);
+        $this->assertFalse($tersimpan->benar);
+    }
+
+    public static function modePengacakanMenjodohkan(): array
+    {
+        return ['seragam' => [false], 'per_peserta' => [true]];
     }
 
     public function test_siswa_dapat_mengunggah_berkas_jawaban_dan_menggantinya(): void
