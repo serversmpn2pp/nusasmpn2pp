@@ -184,6 +184,8 @@ class StudentExamSecurity {
     required this.locked,
     this.lockedAt,
     this.lastHeartbeatAt,
+    this.holdReason,
+    this.holdMessage,
   });
 
   factory StudentExamSecurity.fromJson(Map<String, dynamic> json) =>
@@ -192,7 +194,9 @@ class StudentExamSecurity {
         trackAppSwitch: json['catat_pindah_aplikasi'] as bool? ?? false,
         secureScreen: json['layar_aman'] as bool? ?? false,
         requireFullscreen: json['wajib_fullscreen'] as bool? ?? false,
-        graceSeconds: _positiveInteger(json['toleransi_detik'], 3),
+        graceSeconds: json['nol_toleransi_mobile'] == true
+            ? 0
+            : _positiveInteger(json['toleransi_detik'], 3),
         incidentLimit: _positiveInteger(json['batas_kejadian'], 3),
         action: json['tindakan'] as String? ?? 'catat',
         incidentCount: _integer(json['jumlah_kejadian']),
@@ -201,6 +205,8 @@ class StudentExamSecurity {
         locked: json['ditahan'] as bool? ?? false,
         lockedAt: _nullableDate(json['ditahan_pada']),
         lastHeartbeatAt: _nullableDate(json['heartbeat_terakhir_pada']),
+        holdReason: json['alasan_tahanan'] as String?,
+        holdMessage: json['pesan_tahanan'] as String?,
       );
 
   final bool enabled;
@@ -216,6 +222,8 @@ class StudentExamSecurity {
   final bool locked;
   final DateTime? lockedAt;
   final DateTime? lastHeartbeatAt;
+  final String? holdReason;
+  final String? holdMessage;
 }
 
 class StudentExamSecurityUpdate {
@@ -241,6 +249,51 @@ class StudentExamSecurityUpdate {
   final bool counted;
   final int incidentDurationSeconds;
   final String? message;
+}
+
+class StudentExamFilePermitResult {
+  const StudentExamFilePermitResult({
+    required this.accepted,
+    required this.update,
+    this.id,
+    this.questionId,
+    this.remainingSeconds = 0,
+  });
+
+  factory StudentExamFilePermitResult.fromJson(Map<String, dynamic> json) {
+    final permit = json['izin'];
+    if (json['protocol'] != 1 ||
+        json['diterima'] is! bool ||
+        !['pengerjaan', 'ditahan', 'selesai'].contains(json['mode']) ||
+        json['keamanan'] is! Map ||
+        (json['keamanan'] as Map)['aktif'] is! bool ||
+        (permit != null &&
+            (permit is! Map ||
+                permit['id'] is! String ||
+                permit['soal_ujian_cbt_id'] is! int ||
+                permit['sisa_detik'] is! int ||
+                (permit['sisa_detik'] as int) < 0 ||
+                (permit['sisa_detik'] as int) > 90)) ||
+        (json['diterima'] == true && permit == null)) {
+      throw const FormatException(
+        'Status izin pemilih berkas tidak dapat dipastikan.',
+      );
+    }
+    final data = _map(permit);
+    return StudentExamFilePermitResult(
+      accepted: json['diterima'] as bool,
+      update: StudentExamSecurityUpdate.fromJson(json),
+      id: data['id'] as String?,
+      questionId: data['soal_ujian_cbt_id'] as int?,
+      remainingSeconds: _integer(data['sisa_detik']),
+    );
+  }
+
+  final bool accepted;
+  final StudentExamSecurityUpdate update;
+  final String? id;
+  final int? questionId;
+  final int remainingSeconds;
 }
 
 class StudentExamProgress {
@@ -305,6 +358,7 @@ class StudentExamQuestion {
     required this.answer,
     required this.doubtful,
     this.stimulus,
+    this.serverVersion = '',
   });
 
   factory StudentExamQuestion.fromJson(Map<String, dynamic> json) =>
@@ -322,6 +376,7 @@ class StudentExamQuestion {
         pairs: _list(json['pasangan'], StudentExamPair.fromJson),
         answer: _stringMap(json['jawaban']),
         doubtful: json['ragu'] as bool? ?? false,
+        serverVersion: json['versi_jawaban'] as String? ?? '',
       );
 
   final int id;
@@ -337,6 +392,7 @@ class StudentExamQuestion {
   final List<StudentExamPair> pairs;
   final Map<String, String> answer;
   final bool doubtful;
+  final String serverVersion;
 
   bool get isAnswered {
     if (type == 'benar_salah' && statements.isNotEmpty) {
@@ -369,22 +425,26 @@ class StudentExamQuestion {
     return values.isEmpty ? null : values;
   }
 
-  StudentExamQuestion copyWith({Map<String, String>? answer, bool? doubtful}) =>
-      StudentExamQuestion(
-        id: id,
-        number: number,
-        type: type,
-        typeLabel: typeLabel,
-        stimulus: stimulus,
-        stimulusMedia: stimulusMedia,
-        question: question,
-        media: media,
-        options: options,
-        statements: statements,
-        pairs: pairs,
-        answer: answer ?? this.answer,
-        doubtful: doubtful ?? this.doubtful,
-      );
+  StudentExamQuestion copyWith({
+    Map<String, String>? answer,
+    bool? doubtful,
+    String? serverVersion,
+  }) => StudentExamQuestion(
+    id: id,
+    number: number,
+    type: type,
+    typeLabel: typeLabel,
+    stimulus: stimulus,
+    stimulusMedia: stimulusMedia,
+    question: question,
+    media: media,
+    options: options,
+    statements: statements,
+    pairs: pairs,
+    answer: answer ?? this.answer,
+    doubtful: doubtful ?? this.doubtful,
+    serverVersion: serverVersion ?? this.serverVersion,
+  );
 }
 
 class StudentExamOption {
@@ -509,6 +569,7 @@ class StudentExamSaveResult {
     required this.completed,
     required this.remainingSeconds,
     this.session,
+    this.serverVersion = '',
   });
 
   factory StudentExamSaveResult.fromJson(Map<String, dynamic> json) {
@@ -517,12 +578,14 @@ class StudentExamSaveResult {
       completed: completed,
       remainingSeconds: _integer(json['sisa_detik']),
       session: completed ? StudentExamSession.fromJson(json) : null,
+      serverVersion: json['versi_jawaban'] as String? ?? '',
     );
   }
 
   final bool completed;
   final int remainingSeconds;
   final StudentExamSession? session;
+  final String serverVersion;
 }
 
 class StudentExamPickedFile {
@@ -537,6 +600,7 @@ class StudentExamFileSaveResult {
     required this.fileName,
     required this.fileSizeLabel,
     required this.remainingSeconds,
+    this.serverVersion = '',
   });
 
   factory StudentExamFileSaveResult.fromJson(Map<String, dynamic> json) {
@@ -545,10 +609,12 @@ class StudentExamFileSaveResult {
       fileName: file['nama'] as String? ?? 'Berkas jawaban',
       fileSizeLabel: file['ukuran_label'] as String? ?? '',
       remainingSeconds: _integer(json['sisa_detik']),
+      serverVersion: json['versi_jawaban'] as String? ?? '',
     );
   }
 
   final String fileName;
+  final String serverVersion;
   final String fileSizeLabel;
   final int remainingSeconds;
 }

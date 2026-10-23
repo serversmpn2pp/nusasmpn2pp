@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PesertaUjianCbt;
 use App\Services\Cbt\JawabanBerkasUjianCbtService;
 use App\Services\Cbt\KeamananUjianService;
+use App\Services\Cbt\SesiPengerjaanUjianService;
 use App\Services\Mobile\UjianSayaMobileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,6 +74,7 @@ class UjianSayaController extends Controller
             'soal_ujian_cbt_id' => ['required', 'integer'],
             'jawaban' => ['nullable', 'array', 'max:100'],
             'jawaban.*' => ['nullable', 'string', 'max:10000'],
+            'versi_jawaban' => ['nullable', 'string', 'regex:/^[a-f0-9]{64}$/'],
             'ragu' => ['required', 'boolean'],
             'perangkat' => ['required', 'string', 'max:120'],
         ]);
@@ -86,6 +88,7 @@ class UjianSayaController extends Controller
                 $data['jawaban'] ?? null,
                 (bool) $data['ragu'],
                 $data['perangkat'],
+                $data['versi_jawaban'] ?? null,
             ),
         ]);
     }
@@ -145,12 +148,13 @@ class UjianSayaController extends Controller
         KeamananUjianService $service,
     ): JsonResponse {
         $data = $request->validate([
-            'peristiwa' => ['required', 'in:keluar,kembali,heartbeat,pemulihan'],
+            'peristiwa' => ['required', 'in:keluar,kembali,heartbeat,pemulihan,keluar_pengerjaan'],
             'perangkat' => ['required', 'string', 'max:120'],
-            'metadata' => ['nullable', 'array:kejadian_id,waktu_klien,dikirim_ulang,pemicu'],
+            'metadata' => ['nullable', 'array:kejadian_id,waktu_klien,dikirim_ulang,tertunda,pemicu'],
             'metadata.kejadian_id' => ['nullable', 'uuid'],
             'metadata.waktu_klien' => ['nullable', 'string', 'max:40'],
             'metadata.dikirim_ulang' => ['nullable', 'boolean'],
+            'metadata.tertunda' => ['nullable', 'boolean'],
             'metadata.pemicu' => ['nullable', 'string', 'max:40'],
         ]);
 
@@ -162,8 +166,31 @@ class UjianSayaController extends Controller
                 $data['perangkat'],
                 $request->ip(),
                 $data['metadata'] ?? [],
+                true,
             ),
         ]);
+    }
+
+    public function mulaiIzinBerkas(Request $request, PesertaUjianCbt $pesertaUjianCbt, KeamananUjianService $service, SesiPengerjaanUjianService $sesi): JsonResponse
+    {
+        $data = $request->validate([
+            'soal_ujian_cbt_id' => ['required', 'integer'], 'permintaan_id' => ['required', 'uuid'],
+            'perangkat' => ['required', 'string', 'max:120'],
+        ]);
+
+        return $this->tanpaCache(['data' => $service->mulaiIzinBerkas($request->user(), $pesertaUjianCbt,
+            (int) $data['soal_ujian_cbt_id'], $sesi->identitas($request, true), $data['permintaan_id'], $data['perangkat'], $request->ip())]);
+    }
+
+    public function selesaiIzinBerkas(Request $request, PesertaUjianCbt $pesertaUjianCbt, KeamananUjianService $service, SesiPengerjaanUjianService $sesi): JsonResponse
+    {
+        $data = $request->validate([
+            'izin_id' => ['required', 'uuid'], 'hasil' => ['required', 'in:dipilih,dibatalkan,gagal,masa_habis'],
+            'perangkat' => ['required', 'string', 'max:120'],
+        ]);
+
+        return $this->tanpaCache(['data' => $service->selesaiIzinBerkas($request->user(), $pesertaUjianCbt,
+            $data['izin_id'], $sesi->identitas($request, true), $data['hasil'], $data['perangkat'], $request->ip())]);
     }
 
     private function tanpaCache(array $data): JsonResponse

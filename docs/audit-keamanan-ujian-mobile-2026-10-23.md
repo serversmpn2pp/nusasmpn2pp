@@ -2,10 +2,26 @@
 
 ## Status tindak lanjut
 
+Pembaruan 24 Oktober 2026: [nol toleransi dan draft jawaban mobile](nol-toleransi-dan-draft-jawaban-mobile.md)
+menambahkan penghitungan langsung saat kehilangan fokus serta pemulihan draft
+terenkripsi yang dibatasi sesi, versi jawaban, dan deadline. Tetap patch lokal,
+bukan verifikasi ulang server produksi atau pengujian HP fisik.
+
+Paket perbaikan lokal **NUSA-EXAM-01 dan NUSA-EXAM-03** juga disiapkan pada
+23 Oktober 2026. Lihat
+[Mode Aman dan Simpan & Keluar](perbaikan-mode-aman-dan-keluar-ujian.md).
+Paket ini memerlukan backend baru dan APK/AAB baru untuk perlindungan mobile
+lengkap; belum di-deploy atau dibangun menjadi AAB dalam pekerjaan ini.
+
 Pada 23 Oktober 2026, perbaikan lokal untuk **NUSA-EXAM-02** disiapkan di backend
 beserta pengujian regresi. Lihat
 [rincian perbaikan dan panduan penerapan](perbaikan-keamanan-menjodohkan-cbt.md).
-Belum diterapkan ke produksi. Temuan lain belum diperbaiki. Isi audit di bawah
+Pengguna melaporkan patch menjodohkan sudah di-pull dan langkah deployment
+dijalankan di server; server produksi belum diverifikasi langsung. Temuan
+**NUSA-EXAM-04 dan NUSA-EXAM-05** kini juga memiliki patch lokal:
+[proteksi layar dan izin berkas](proteksi-layar-dan-izin-berkas-ujian.md).
+Memerlukan backend dan APK/AAB baru; belum diuji pada HP fisik atau diterapkan
+ke produksi. Isi audit di bawah
 tetap mencatat kondisi awal pada HEAD `70d1e24`, bukan hasil audit ulang server.
 
 ## Kesimpulan

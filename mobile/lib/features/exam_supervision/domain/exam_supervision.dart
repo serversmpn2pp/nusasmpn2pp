@@ -194,6 +194,7 @@ class SupervisionParticipant {
     this.device,
     this.lastHeartbeat,
     this.blockedAt,
+    this.holdMessage,
   });
 
   factory SupervisionParticipant.fromJson(Map<String, dynamic> json) =>
@@ -220,6 +221,9 @@ class SupervisionParticipant {
         reviewCount: _integer(json['jumlah_perlu_ditinjau']),
         lastHeartbeat: _date(json['heartbeat_terakhir_pada']),
         blockedAt: _date(json['ditahan_mode_aman_pada']),
+        holdMessage: json['keamanan'] is Map
+            ? (json['keamanan'] as Map)['pesan_tahanan'] as String?
+            : null,
       );
 
   final int id;
@@ -244,6 +248,7 @@ class SupervisionParticipant {
   final int reviewCount;
   final DateTime? lastHeartbeat;
   final DateTime? blockedAt;
+  final String? holdMessage;
 }
 
 class SupervisionEvidence {

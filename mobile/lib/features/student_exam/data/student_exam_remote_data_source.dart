@@ -21,6 +21,7 @@ abstract interface class StudentExamRemoteDataSource {
     required Object? answer,
     required bool doubtful,
     required String device,
+    String? serverVersion,
   });
   Future<StudentExamFileSaveResult> uploadAnswerFile({
     required int participantId,
@@ -32,6 +33,14 @@ abstract interface class StudentExamRemoteDataSource {
   Future<StudentExamSession> finish({
     required int participantId,
     required String device,
+  });
+  Future<StudentExamFilePermitResult> filePermit({
+    required int participantId,
+    required String device,
+    int? questionId,
+    String? requestId,
+    String? permitId,
+    String? outcome,
   });
   Future<StudentExamSecurityUpdate> securityEvent({
     required int participantId,
@@ -99,6 +108,7 @@ final class DioStudentExamRemoteDataSource
     required Object? answer,
     required bool doubtful,
     required String device,
+    String? serverVersion,
   }) async {
     try {
       final response = await _dio.put<Map<String, dynamic>>(
@@ -108,6 +118,7 @@ final class DioStudentExamRemoteDataSource
           'jawaban': answer,
           'ragu': doubtful,
           'perangkat': device,
+          if (serverVersion?.isNotEmpty == true) 'versi_jawaban': serverVersion,
         },
       );
       return StudentExamSaveResult.fromJson(_data(response));
@@ -170,6 +181,35 @@ final class DioStudentExamRemoteDataSource
         data: {'peristiwa': event, 'perangkat': device, 'metadata': metadata},
       );
       return StudentExamSecurityUpdate.fromJson(_data(response));
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<StudentExamFilePermitResult> filePermit({
+    required int participantId,
+    required String device,
+    int? questionId,
+    String? requestId,
+    String? permitId,
+    String? outcome,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        'ujian-saya/$participantId/izin-berkas${permitId == null ? '' : '/selesai'}',
+        data: {
+          'perangkat': device,
+          if (permitId == null) ...{
+            'soal_ujian_cbt_id': questionId,
+            'permintaan_id': requestId,
+          } else ...{
+            'izin_id': permitId,
+            'hasil': outcome,
+          },
+        },
+      );
+      return StudentExamFilePermitResult.fromJson(_data(response));
     } on DioException catch (exception) {
       throw mapDioException(exception);
     }

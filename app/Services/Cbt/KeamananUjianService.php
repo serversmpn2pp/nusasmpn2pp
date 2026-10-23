@@ -6,11 +6,15 @@ use App\Models\AktivitasKeamananUjianCbt;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class KeamananUjianService
 {
+    private const BATAS_JEDA_HEARTBEAT_DETIK = 120;
+
     private const JENDELA_POLA_KELUAR_SINGKAT_DETIK = 60;
 
     private const MINIMAL_POLA_KELUAR_SINGKAT = 3;
@@ -22,6 +26,7 @@ class KeamananUjianService
         string $perangkat,
         ?string $ip,
         array $metadata = [],
+        bool $nolToleransiMobile = false,
     ): array {
         $peserta = $this->pesertaMilikSiswa($pengguna, $peserta);
         $perangkat = trim($perangkat);
@@ -35,6 +40,7 @@ class KeamananUjianService
             $perangkat,
             $ip,
             $metadata,
+            $nolToleransiMobile,
             &$dihitung,
             &$durasi,
             &$polaKeluarSingkat,
@@ -66,12 +72,13 @@ class KeamananUjianService
                 return; // No heartbeat/status/penalty changes once the exam is closed.
             }
 
-            $heartbeatSebelumnya = $terkunci->heartbeat_terakhir_pada ?? $terkunci->sesi_ujian_mulai_pada;
-            $adaJeda = $heartbeatSebelumnya && $heartbeatSebelumnya->lt(now()->subMinutes(2));
+            $heartbeatSebelumnya = $terkunci->heartbeat_terakhir_pada ?? $terkunci->sesi_ujian_mulai_pada ?? $terkunci->waktu_mulai;
+            $this->periksaIzinBerkas($terkunci, $perangkat, $ip);
+            $adaJeda = $this->adaJeda($terkunci);
 
             if ($peristiwa === 'heartbeat') {
                 if ($adaJeda && $terkunci->ujianCbt->deteksi_pindah_tab) {
-                    $this->catatPeninjauan($terkunci, $perangkat, $ip, [
+                    $this->tinjauKesinambungan($terkunci, $perangkat, $ip, [
                         'pemicu' => 'jeda-heartbeat',
                         'heartbeat_sebelumnya' => $heartbeatSebelumnya->toISOString(),
                     ]);
@@ -86,24 +93,91 @@ class KeamananUjianService
                 return;
             }
 
-            // Client time and a queued retry are evidence for review, not a trusted clock.
-            // A network outage/force-stop must not automatically penalize the student.
+            // The API, never client metadata, selects zero tolerance. One open
+            // interval covers inactive/hidden/paused and all UUID retries.
+            if ($nolToleransiMobile && in_array($peristiwa, ['keluar', 'kembali'], true)) {
+                $aktivitas = $terkunci->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')
+                    ->whereNull('selesai_pada')->latest('id')->first();
+                if (app(BatasWaktuPesertaUjianCbtService::class)->sisaDetik($terkunci) <= 0) {
+                    $this->catatPeninjauan($terkunci, $perangkat, $ip, array_merge($metadata, ['pemicu' => 'kejadian-setelah-deadline']));
+
+                    return;
+                }
+                if ($peristiwa === 'keluar') {
+                    if (! $aktivitas) {
+                        AktivitasKeamananUjianCbt::create([
+                            'peserta_ujian_cbt_id' => $terkunci->id, 'jenis' => 'keluar_aplikasi',
+                            'mulai_pada' => now(), 'dihitung' => true, 'perangkat' => $perangkat, 'ip' => $ip,
+                            'metadata' => array_merge($metadata, ['nol_toleransi_mobile' => true,
+                                'menahan_sesi' => $terkunci->status === 'sedang_mengerjakan' && $this->modeKetat($terkunci)
+                                    && (int) $terkunci->jumlah_pindah_aplikasi + 1 >= max(1, (int) $terkunci->ujianCbt->batas_pindah_aplikasi),
+                                'alasan_tahanan' => 'batas_kejadian']),
+                        ]);
+                        $dihitung = true;
+                        $this->tambahKejadian($terkunci);
+                    }
+                    if (($metadata['dikirim_ulang'] ?? false) || ($metadata['tertunda'] ?? false) || $adaJeda) {
+                        $this->tinjauKesinambungan($terkunci, $perangkat, $ip, array_merge($metadata, ['pemicu' => 'keluar-mobile-tertunda']));
+                    }
+
+                    return;
+                }
+                if ($aktivitas && ($aktivitas->metadata['nol_toleransi_mobile'] ?? false)) {
+                    $durasi = max(0, (int) floor($aktivitas->mulai_pada->diffInSeconds(now())));
+                    $aktivitas->update(['selesai_pada' => now(), 'durasi_detik' => $durasi,
+                        'metadata' => array_merge($aktivitas->metadata ?? [], $metadata)]);
+                    $terkunci->forceFill(['durasi_di_luar_aplikasi_detik' => (int) $terkunci->durasi_di_luar_aplikasi_detik + $durasi,
+                        'heartbeat_terakhir_pada' => now()])->save();
+                    if (($metadata['dikirim_ulang'] ?? false) || ($metadata['tertunda'] ?? false)) {
+                        $this->tinjauKesinambungan($terkunci, $perangkat, $ip, array_merge($metadata, ['pemicu' => 'kembali-mobile-tertunda']));
+                    }
+
+                    return; // Already counted on departure, including while held.
+                }
+            }
+
+            if ($peristiwa === 'keluar_pengerjaan') {
+                $menahan = $this->modeKetat($terkunci) && $terkunci->status === 'sedang_mengerjakan';
+                AktivitasKeamananUjianCbt::create([
+                    'peserta_ujian_cbt_id' => $terkunci->id,
+                    'jenis' => 'keluar_pengerjaan',
+                    'mulai_pada' => now(), 'selesai_pada' => now(),
+                    'perangkat' => $perangkat, 'ip' => $ip, 'dihitung' => false,
+                    'catatan' => 'Siswa menyimpan dan meninggalkan halaman pengerjaan. Bukan penyelesaian ujian.',
+                    'metadata' => array_merge($metadata, ['menahan_sesi' => $menahan, 'alasan_tahanan' => 'keluar_pengerjaan']),
+                ]);
+                if ($menahan) {
+                    $this->tahanUntukPeninjauan($terkunci);
+                }
+                if ($terkunci->status === 'terblokir') {
+                    return;
+                }
+                // Mode catat tetap menyimpan interval keluar sampai siswa kembali.
+                $peristiwa = 'keluar';
+            }
+
+            // UUID penerimaan, bukan flag client, menentukan apakah ini duplikat.
+            // Klaim retry/tertunda hanya dapat memperketat akses, tidak membuka pengecualian.
+            if ($terkunci->status === 'terblokir') {
+                $this->catatPeninjauan($terkunci, $perangkat, $ip, array_merge($metadata, [
+                    'peristiwa' => $peristiwa, 'pemicu' => 'sinkronisasi-saat-ditahan',
+                ]));
+
+                return;
+            }
             $jedaTidakTerjelaskan = $adaJeda && ($peristiwa !== 'kembali'
                 || ! $terkunci->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')->exists());
-            if ($peristiwa === 'pemulihan' || ($metadata['dikirim_ulang'] ?? false) || $jedaTidakTerjelaskan) {
-                $this->catatPeninjauan($terkunci, $perangkat, $ip, array_merge($metadata, [
+            $adaKeluarTerbuka = $terkunci->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')->exists();
+            if ($peristiwa === 'pemulihan' || ($metadata['dikirim_ulang'] ?? false)
+                || ($metadata['tertunda'] ?? false) || $jedaTidakTerjelaskan) {
+                $perluRekonsiliasi = $peristiwa !== 'pemulihan' || $adaKeluarTerbuka || $adaJeda
+                    || ($metadata['dikirim_ulang'] ?? false) || ($metadata['tertunda'] ?? false)
+                    || in_array($metadata['pemicu'] ?? null, ['buka-ulang-sesi', 'halaman-ditutup', 'proteksi-layar-gagal', 'pemilih-berkas'], true);
+                $this->tinjauKesinambungan($terkunci, $perangkat, $ip, array_merge($metadata, [
                     'peristiwa' => $peristiwa,
                     'pemicu' => $metadata['pemicu'] ?? ($adaJeda ? 'jeda-heartbeat' : 'sinkronisasi-ulang'),
-                ]));
-                if (in_array($peristiwa, ['kembali', 'pemulihan'], true)) {
-                    AktivitasKeamananUjianCbt::query()->where('peserta_ujian_cbt_id', $terkunci->id)
-                        ->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')
-                        ->get()->each(fn ($aktivitas) => $aktivitas->update([
-                            'selesai_pada' => now(),
-                            'dihitung' => false,
-                            'metadata' => array_merge($aktivitas->metadata ?? [], ['perlu_ditinjau' => true]),
-                        ]));
-                }
+                ]), $perluRekonsiliasi);
+                // Bukti keluar tidak ditutup/dihapus oleh klaim pemulihan dari siswa.
                 $terkunci->forceFill(['heartbeat_terakhir_pada' => now()])->save();
 
                 return;
@@ -150,7 +224,7 @@ class KeamananUjianService
             $selesai = now();
             $durasi = max(0, (int) floor($aktivitas->mulai_pada->diffInSeconds($selesai)));
             $batasToleransi = max(1, (int) $terkunci->ujianCbt->toleransi_pindah_aplikasi_detik);
-            $dihitung = $durasi >= $batasToleransi;
+            $dihitung = $nolToleransiMobile || $durasi >= $batasToleransi;
             $aktivitas->update([
                 'selesai_pada' => $selesai,
                 'durasi_detik' => $durasi,
@@ -230,6 +304,7 @@ class KeamananUjianService
                     'selesai_pada' => now(),
                     'metadata' => array_merge($aktivitas->metadata ?? [], ['perlu_ditinjau' => true]),
                 ]));
+            $this->tutupIzinBerkasPetugas($terkunci, $pengguna);
             AktivitasKeamananUjianCbt::create([
                 'peserta_ujian_cbt_id' => $terkunci->id, 'jenis' => 'reset_perangkat',
                 'mulai_pada' => now(), 'selesai_pada' => now(),
@@ -265,7 +340,20 @@ class KeamananUjianService
                 'ditahan_mode_aman_pada' => null,
                 'dibuka_mode_aman_pada' => $dibukaPada,
                 'dibuka_mode_aman_oleh_pengguna_id' => $pengguna->id,
+                'heartbeat_terakhir_pada' => $dibukaPada,
             ])->save();
+
+            // Hanya keputusan petugas yang menyelesaikan interval ambigu tanpa sanksi.
+            $this->tutupIzinBerkasPetugas($terkunci, $pengguna);
+            $terkunci->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')
+                ->whereNull('selesai_pada')->get()->each(fn ($aktivitas) => $aktivitas->update([
+                    'selesai_pada' => $dibukaPada,
+                    'durasi_detik' => max(0, (int) floor($aktivitas->mulai_pada->diffInSeconds($dibukaPada))),
+                    'metadata' => array_merge($aktivitas->metadata ?? [], [
+                        'perlu_ditinjau' => true, 'diselesaikan_oleh_pengguna_id' => $pengguna->id,
+                        'diselesaikan_pada' => $dibukaPada->toISOString(),
+                    ]),
+                ]));
 
             AktivitasKeamananUjianCbt::create([
                 'peserta_ujian_cbt_id' => $terkunci->id,
@@ -293,6 +381,16 @@ class KeamananUjianService
         $peserta->loadMissing('ujianCbt');
         $ujian = $peserta->ujianCbt;
         $batas = max(1, (int) $ujian->batas_pindah_aplikasi);
+        $alasanTahanan = null;
+        if ($peserta->status === 'terblokir') {
+            $terakhir = $peserta->aktivitasKeamananUjianCbt()->where(function ($query) {
+                $query->where(fn ($query) => $query->where('dihitung', true)
+                    ->whereNull('metadata->nol_toleransi_mobile'))->orWhere('metadata->menahan_sesi', true)
+                    ->orWhere('jenis', 'buka_mode_aman');
+            })->latest('id')->first();
+            $alasanTahanan = data_get($terakhir?->metadata, 'menahan_sesi') === true
+                ? data_get($terakhir->metadata, 'alasan_tahanan', 'peninjauan_sesi') : 'batas_kejadian';
+        }
 
         return [
             'aktif' => (bool) ($ujian->deteksi_pindah_tab || $ujian->wajib_fullscreen || $ujian->blokir_tangkapan_layar),
@@ -300,12 +398,21 @@ class KeamananUjianService
             'layar_aman' => (bool) $ujian->blokir_tangkapan_layar,
             'wajib_fullscreen' => (bool) $ujian->wajib_fullscreen,
             'toleransi_detik' => max(1, (int) $ujian->toleransi_pindah_aplikasi_detik),
+            'nol_toleransi_mobile' => (bool) $ujian->deteksi_pindah_tab,
+            'toleransi_mobile_detik' => 0,
             'batas_kejadian' => $batas,
             'tindakan' => $ujian->tindakan_pindah_aplikasi ?: 'catat',
             'jumlah_kejadian' => (int) $peserta->jumlah_pindah_aplikasi,
             'sisa_kejadian' => max(0, $batas - (int) $peserta->jumlah_pindah_aplikasi),
             'durasi_total_detik' => (int) $peserta->durasi_di_luar_aplikasi_detik,
             'ditahan' => $peserta->status === 'terblokir',
+            'alasan_tahanan' => $alasanTahanan,
+            'pesan_tahanan' => match ($alasanTahanan) {
+                'peninjauan_sesi' => 'Kesinambungan sesi perlu diperiksa pengawas. Ini bukan penetapan kecurangan. Jawaban tersimpan tetap ada dan waktu ujian tetap berjalan.',
+                'keluar_pengerjaan' => 'Halaman pengerjaan telah ditinggalkan. Hubungi pengawas untuk melanjutkan; jawaban tersimpan tetap ada dan waktu ujian tetap berjalan.',
+                'batas_kejadian' => 'Batas keluar aplikasi tercapai. Hubungi pengawas untuk melanjutkan. Waktu ujian tetap berjalan.',
+                default => null,
+            },
             'ditahan_pada' => $peserta->ditahan_mode_aman_pada?->toISOString(),
             'heartbeat_terakhir_pada' => $peserta->heartbeat_terakhir_pada?->toISOString(),
             'jumlah_perlu_ditinjau' => $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'pemulihan_koneksi')->count(),
@@ -325,6 +432,174 @@ class KeamananUjianService
             'catatan' => 'Koneksi atau sesi ujian terputus/dipulihkan. Perlu ditinjau pengawas, bukan bukti otomatis kecurangan.',
             'metadata' => $metadata,
         ]);
+    }
+
+    private function modeKetat(PesertaUjianCbt $peserta): bool
+    {
+        return $peserta->ujianCbt->deteksi_pindah_tab && $peserta->ujianCbt->tindakan_pindah_aplikasi === 'tahan';
+    }
+
+    private function tambahKejadian(PesertaUjianCbt $peserta): void
+    {
+        $jumlah = (int) $peserta->jumlah_pindah_aplikasi + 1;
+        $perubahan = ['jumlah_pindah_aplikasi' => $jumlah];
+        if ($peserta->status === 'sedang_mengerjakan' && $peserta->ujianCbt->tindakan_pindah_aplikasi === 'tahan'
+            && $jumlah >= max(1, (int) $peserta->ujianCbt->batas_pindah_aplikasi)) {
+            $perubahan['status'] = 'terblokir';
+            $perubahan['ditahan_mode_aman_pada'] = now();
+        }
+        $peserta->forceFill($perubahan)->save();
+    }
+
+    private function adaJeda(PesertaUjianCbt $peserta): bool
+    {
+        $terakhir = $peserta->heartbeat_terakhir_pada ?? $peserta->sesi_ujian_mulai_pada ?? $peserta->waktu_mulai;
+
+        return $terakhir && $terakhir->lt(now()->subSeconds(self::BATAS_JEDA_HEARTBEAT_DETIK));
+    }
+
+    private function tahanUntukPeninjauan(PesertaUjianCbt $peserta): void
+    {
+        $peserta->forceFill(['status' => 'terblokir', 'ditahan_mode_aman_pada' => now()])->save();
+    }
+
+    private function tinjauKesinambungan(PesertaUjianCbt $peserta, string $perangkat, ?string $ip, array $metadata, bool $rekonsiliasi = true): void
+    {
+        $menahan = $rekonsiliasi && $this->modeKetat($peserta) && $peserta->status === 'sedang_mengerjakan';
+        $this->catatPeninjauan($peserta, $perangkat, $ip, array_merge($metadata, [
+            'menahan_sesi' => $menahan, 'alasan_tahanan' => 'peninjauan_sesi',
+        ]));
+        if ($menahan) {
+            $this->tahanUntukPeninjauan($peserta);
+        }
+    }
+
+    // Dipanggil dalam transaksi/lock peserta yang juga melindungi penulisan jawaban.
+    public function periksaKesinambungan(PesertaUjianCbt $peserta, string $perangkat, ?string $ip, bool $membukaKertas = false): void
+    {
+        $this->periksaIzinBerkas($peserta, $perangkat, $ip, $membukaKertas);
+        if ($peserta->status !== 'sedang_mengerjakan' || ! $peserta->ujianCbt->deteksi_pindah_tab
+            || app(BatasWaktuPesertaUjianCbtService::class)->sisaDetik($peserta) <= 0) {
+            return;
+        }
+        $adaKeluar = $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')->exists();
+        if ((! $adaKeluar && $this->adaJeda($peserta)) || ($membukaKertas && $adaKeluar)) {
+            $this->tinjauKesinambungan($peserta, $perangkat, $ip, [
+                'pemicu' => $adaKeluar ? 'buka-kertas-sebelum-rekonsiliasi' : 'jeda-heartbeat-pada-akses',
+            ]);
+            if ($peserta->status !== 'terblokir') {
+                $peserta->forceFill(['heartbeat_terakhir_pada' => now()])->save();
+            }
+        }
+    }
+
+    public function adaKeluarBelumSelesai(PesertaUjianCbt $peserta): bool
+    {
+        return $this->modeKetat($peserta) && $peserta->status === 'sedang_mengerjakan'
+            && $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')->exists();
+    }
+
+    public function izinBerkasAktif(PesertaUjianCbt $peserta): ?AktivitasKeamananUjianCbt
+    {
+        return $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'pemilih_berkas')
+            ->whereNull('selesai_pada')->latest('id')->first();
+    }
+
+    // Pemanggil API wajib menahan lock peserta melalui SesiPengerjaanUjian.
+    public function mulaiIzinBerkas(Pengguna $pengguna, PesertaUjianCbt $peserta, int $soalId, string $identitas, string $permintaanId, string $perangkat, ?string $ip): array
+    {
+        $peserta = $this->pesertaMilikSiswa($pengguna, $peserta);
+        $lama = $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'pemilih_berkas')
+            ->where('metadata->permintaan_id', $permintaanId)->first();
+        if ($lama) {
+            abort_unless(hash_equals($lama->metadata['sesi_hash'], $identitas) && (int) $lama->metadata['soal_id'] === $soalId, 403);
+
+            return $this->responsIzinBerkas($peserta, $lama, $lama->selesai_pada === null);
+        }
+        abort_unless($peserta->status === 'sedang_mengerjakan' && app(BatasWaktuPesertaUjianCbtService::class)->sisaDetik($peserta) > 0, 422, 'Ujian tidak sedang dapat dikerjakan.');
+        abort_if($peserta->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')->exists(), 422, 'Kembali ke ujian dan selesaikan rekonsiliasi sesi terlebih dahulu.');
+        $soal = app(PengacakPenyajianCbt::class)->urutkanSoal($peserta->ujianCbt, $peserta,
+            $peserta->ujianCbt->soalUjianCbt()->with('soalCbt')->get())
+            ->take($peserta->ujianCbt->jumlah_soal)->firstWhere('id', $soalId);
+        abort_unless($soal && $soal->soalCbt?->jenis_soal === 'upload_file', 422, 'Izin berkas hanya tersedia untuk soal unggah berkas dalam paket peserta.');
+        abort_if($this->izinBerkasAktif($peserta), 422, 'Izin pemilih berkas sebelumnya belum ditutup.');
+        $batasId = (int) $peserta->aktivitasKeamananUjianCbt()->whereIn('jenis', ['buka_mode_aman', 'reset_perangkat'])->max('id');
+        $jumlah = $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'pemilih_berkas')->where('id', '>', $batasId)
+            ->where('metadata->soal_id', $soalId)->count();
+        if ($jumlah >= max(1, (int) config('keamanan_ujian_mobile.izin_berkas_per_soal', 3))) {
+            $this->tinjauKesinambungan($peserta, $perangkat, $ip, ['pemicu' => 'batas-pemilih-berkas', 'soal_id' => $soalId]);
+
+            return $this->responsIzinBerkas($peserta, null, false);
+        }
+        $detik = min(max(10, min(90, (int) config('keamanan_ujian_mobile.izin_berkas_detik', 60))), app(BatasWaktuPesertaUjianCbtService::class)->sisaDetik($peserta));
+        $izin = AktivitasKeamananUjianCbt::create([
+            'peserta_ujian_cbt_id' => $peserta->id, 'jenis' => 'pemilih_berkas',
+            'mulai_pada' => now(), 'perangkat' => $perangkat, 'ip' => $ip, 'dihitung' => false,
+            'catatan' => 'Izin sementara pemilih berkas sistem; bukan pengecualian pindah aplikasi tanpa batas.',
+            'metadata' => ['izin_id' => (string) Str::uuid(), 'permintaan_id' => $permintaanId,
+                'soal_id' => $soalId, 'sesi_hash' => $identitas, 'batas_pada' => now()->addSeconds($detik)->toISOString()],
+        ]);
+        $peserta->forceFill(['heartbeat_terakhir_pada' => now()])->save();
+
+        return $this->responsIzinBerkas($peserta, $izin, true);
+    }
+
+    public function selesaiIzinBerkas(Pengguna $pengguna, PesertaUjianCbt $peserta, string $izinId, string $identitas, string $hasil, string $perangkat, ?string $ip): array
+    {
+        $peserta = $this->pesertaMilikSiswa($pengguna, $peserta);
+        $izin = $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'pemilih_berkas')->where('metadata->izin_id', $izinId)->firstOrFail();
+        abort_unless(hash_equals($izin->metadata['sesi_hash'], $identitas), 403);
+        if ($izin->selesai_pada === null) {
+            $valid = now()->lt(Carbon::parse($izin->metadata['batas_pada'])) && $hasil !== 'masa_habis';
+            $izin->update(['selesai_pada' => now(),
+                'durasi_detik' => max(0, (int) floor($izin->mulai_pada->diffInSeconds(now()))),
+                'metadata' => array_merge($izin->metadata, ['hasil' => $valid ? $hasil : 'masa_habis', 'valid' => $valid]),
+            ]);
+            if (! $valid && $peserta->status === 'sedang_mengerjakan') {
+                $this->tinjauKesinambungan($peserta, $perangkat, $ip, ['pemicu' => 'izin-berkas-habis', 'izin_id' => $izinId]);
+            }
+            if ($valid && $peserta->status === 'sedang_mengerjakan'
+                && ! $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'keluar_aplikasi')->whereNull('selesai_pada')->exists()) {
+                // Only a timely, server-approved interval can advance continuity.
+                $peserta->forceFill(['heartbeat_terakhir_pada' => now()])->save();
+            }
+        }
+
+        return $this->responsIzinBerkas($peserta, $izin, ($izin->metadata['valid'] ?? false) === true);
+    }
+
+    private function responsIzinBerkas(PesertaUjianCbt $peserta, ?AktivitasKeamananUjianCbt $izin, bool $diterima): array
+    {
+        $sisa = $izin && $izin->selesai_pada === null ? max(0, (int) floor(now()->diffInSeconds(Carbon::parse($izin->metadata['batas_pada'])))) : 0;
+
+        return ['protocol' => 1, 'diterima' => $diterima,
+            'mode' => $peserta->status === 'selesai' ? 'selesai' : ($peserta->status === 'terblokir' ? 'ditahan' : 'pengerjaan'),
+            'keamanan' => $this->ringkas($peserta),
+            'izin' => $izin ? ['id' => $izin->metadata['izin_id'], 'soal_ujian_cbt_id' => (int) $izin->metadata['soal_id'],
+                'sisa_detik' => $sisa, 'berlaku_sampai' => $izin->metadata['batas_pada']] : null];
+    }
+
+    private function periksaIzinBerkas(PesertaUjianCbt $peserta, string $perangkat, ?string $ip, bool $membukaKertas = false): void
+    {
+        $izin = $this->izinBerkasAktif($peserta);
+        if (! $izin || $peserta->status !== 'sedang_mengerjakan') {
+            return;
+        }
+        if ($membukaKertas || now()->gte(Carbon::parse($izin->metadata['batas_pada']))) {
+            $izin->update(['selesai_pada' => now(), 'durasi_detik' => max(0, (int) floor($izin->mulai_pada->diffInSeconds(now()))),
+                'metadata' => array_merge($izin->metadata, ['valid' => false, 'hasil' => $membukaKertas ? 'buka-ulang-kertas' : 'masa_habis'])]);
+            if (app(BatasWaktuPesertaUjianCbtService::class)->sisaDetik($peserta) > 0) {
+                $this->tinjauKesinambungan($peserta, $perangkat, $ip, ['pemicu' => 'izin-berkas-belum-rekonsiliasi', 'izin_id' => $izin->metadata['izin_id']]);
+            }
+        }
+    }
+
+    private function tutupIzinBerkasPetugas(PesertaUjianCbt $peserta, Pengguna $pengguna): void
+    {
+        $izin = $this->izinBerkasAktif($peserta);
+        $izin?->update(['selesai_pada' => now(), 'metadata' => array_merge($izin->metadata, [
+            'valid' => false, 'hasil' => 'keputusan-petugas', 'diselesaikan_oleh_pengguna_id' => $pengguna->id,
+        ])]);
     }
 
     private function pesertaMilikSiswa(Pengguna $pengguna, PesertaUjianCbt $peserta): PesertaUjianCbt
@@ -443,7 +718,7 @@ class KeamananUjianService
     private function pesan(array $keamanan, bool $dihitung, ?array $polaKeluarSingkat = null): ?string
     {
         if ($keamanan['ditahan']) {
-            return 'Ujian ditahan karena batas keluar aplikasi tercapai. Minta pengawas membuka ujian.';
+            return $keamanan['pesan_tahanan'];
         }
 
         if (! $dihitung) {

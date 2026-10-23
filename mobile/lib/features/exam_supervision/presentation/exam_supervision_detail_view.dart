@@ -275,7 +275,7 @@ class _ExamSupervisionDetailViewState
     final confirmed = await _confirm(
       title: 'Buka Mode Aman?',
       message:
-          '${participant.name} dapat melanjutkan ujian. Jumlah keluar aplikasi tetap tersimpan.',
+          '${participant.name} dapat melanjutkan ujian setelah pemeriksaan Anda. Penahanan dapat berasal dari gangguan sesi, bukan selalu pelanggaran. Jawaban dan riwayat tetap tersimpan.',
       action: 'Buka Ujian',
     );
     if (!confirmed) return;
@@ -993,6 +993,16 @@ class _ParticipantCard extends StatelessWidget {
                   ),
               ],
             ),
+            if (blocked && participant.holdMessage != null) ...[
+              const SizedBox(height: 9),
+              Text(
+                participant.holdMessage!,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: NusaColors.textSecondary,
+                ),
+              ),
+            ],
             if (participant.status == 'sedang_mengerjakan' || blocked) ...[
               const SizedBox(height: 10),
               Row(

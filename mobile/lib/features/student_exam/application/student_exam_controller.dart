@@ -40,6 +40,7 @@ class StudentExamActions {
           questionId: question.id,
           answer: question.answerPayload,
           doubtful: question.doubtful,
+          serverVersion: question.serverVersion,
         ),
   );
 
@@ -60,6 +61,24 @@ class StudentExamActions {
 
   Future<StudentExamSession> finish(int participantId) => _guard(
     () => ref.read(studentExamRepositoryProvider).finish(participantId),
+  );
+
+  Future<StudentExamFilePermitResult> filePermit({
+    required int participantId,
+    int? questionId,
+    String? requestId,
+    String? permitId,
+    String? outcome,
+  }) => _guard(
+    () => ref
+        .read(studentExamRepositoryProvider)
+        .filePermit(
+          participantId: participantId,
+          questionId: questionId,
+          requestId: requestId,
+          permitId: permitId,
+          outcome: outcome,
+        ),
   );
 
   Future<StudentExamSecurityUpdate> securityEvent(

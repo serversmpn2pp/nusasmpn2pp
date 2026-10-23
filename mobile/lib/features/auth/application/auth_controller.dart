@@ -5,6 +5,7 @@ import 'package:nusa/features/auth/data/auth_repository.dart';
 import 'package:nusa/features/auth/domain/auth_session.dart';
 import 'package:nusa/features/auth/domain/pengguna.dart';
 import 'package:nusa/features/push_notifications/application/push_device_service.dart';
+import 'package:nusa/features/student_exam/data/exam_answer_draft_store.dart';
 
 class AuthState {
   const AuthState({
@@ -106,6 +107,11 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
 
     await ref.read(pushDeviceServiceProvider).unregisterCurrentDevice();
+    try {
+      await ref.read(examAnswerDraftStoreProvider).clearCurrentScope();
+    } catch (_) {
+      // Credential revocation must still proceed if platform storage is unavailable.
+    }
     await ref.read(authRepositoryProvider).logout();
     ref.read(passwordChangeGateProvider.notifier).clear();
     state = const AsyncData(AuthState());

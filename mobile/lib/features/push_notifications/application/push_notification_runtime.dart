@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/app/app_keys.dart';
 import 'package:nusa/app/router.dart';
+import 'package:nusa/features/student_exam/application/exam_navigation_guard.dart';
 import 'package:nusa/features/home/application/home_controller.dart';
 import 'package:nusa/features/push_notifications/application/push_device_service.dart';
 import 'package:nusa/features/push_notifications/data/push_notification_remote_data_source.dart';
@@ -115,6 +116,7 @@ final class NusaPushNotificationRuntime implements PushNotificationRuntime {
   void openDestination(String destination) => unawaited(_navigate(destination));
 
   Future<void> _navigate(String destination) async {
+    if (_ref.read(examNavigationGuardProvider).active) return;
     try {
       await _ref.read(appRouterProvider).push<void>(destination);
     } catch (_) {

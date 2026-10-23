@@ -1887,7 +1887,7 @@
             if (isExamHeld) {
                 setExamHeld({
                     mode: 'ditahan',
-                    pesan: 'Ujian ditahan karena batas keluar aplikasi tercapai. Minta pengawas membuka ujian.',
+                    pesan: @json(app(\App\Services\Cbt\KeamananUjianService::class)->ringkas($peserta)['pesan_tahanan']),
                     keamanan: {
                         jumlah_kejadian: {{ (int) $peserta->jumlah_pindah_aplikasi }},
                         batas_kejadian: {{ max(1, (int) $ujian->batas_pindah_aplikasi) }},

@@ -547,6 +547,10 @@ Route::prefix('v1')
         Route::post('/ujian-saya/{pesertaUjianCbt}/jawaban-berkas', [UjianSayaController::class, 'simpanBerkasJawaban'])
             ->middleware(['throttle:20,1', SesiPengerjaanUjian::class])
             ->name('ujian-saya.jawaban-berkas.store');
+        Route::post('/ujian-saya/{pesertaUjianCbt}/izin-berkas', [UjianSayaController::class, 'mulaiIzinBerkas'])
+            ->middleware(['throttle:20,1', SesiPengerjaanUjian::class])->name('ujian-saya.izin-berkas.mulai');
+        Route::post('/ujian-saya/{pesertaUjianCbt}/izin-berkas/selesai', [UjianSayaController::class, 'selesaiIzinBerkas'])
+            ->middleware(['throttle:30,1', SesiPengerjaanUjian::class])->name('ujian-saya.izin-berkas.selesai');
         Route::post('/ujian-saya/{pesertaUjianCbt}/selesai', [UjianSayaController::class, 'selesai'])
             ->middleware(SesiPengerjaanUjian::class)
             ->name('ujian-saya.selesai');

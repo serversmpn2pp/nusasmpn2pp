@@ -89,6 +89,29 @@
                         <h3>Koneksi / sesi perlu ditinjau</h3>
                         <p>{{ $item->catatan }}</p>
                         <p class="security-entry-note">Tidak dihitung otomatis sebagai pelanggaran. Waktu klien hanya informasi pendukung.</p>
+                        @php
+                            $gangguan = match (data_get($item->metadata, 'pemicu')) {
+                                'proteksi-layar-gagal' => 'Proteksi layar Android tidak dapat dikonfirmasi.',
+                                'pemilih-berkas' => 'Client lama melaporkan pemilih berkas tanpa protokol izin server.',
+                                'batas-pemilih-berkas' => 'Batas pembukaan pemilih berkas per soal tercapai.',
+                                'izin-berkas-habis', 'izin-berkas-belum-rekonsiliasi' => 'Izin pemilih berkas habis atau belum direkonsiliasi.',
+                                default => null,
+                            };
+                        @endphp
+                        @if($gangguan)<p class="security-entry-note">{{ $gangguan }}</p>@endif
+                        @if(data_get($item->metadata, 'menahan_sesi') === true)
+                            <p>Sesi ditahan untuk pemeriksaan pengawas, bukan penetapan kecurangan.</p>
+                        @endif
+                    @elseif($item->jenis === 'pemilih_berkas')
+                        <h3>Pemilih berkas jawaban</h3>
+                        <p class="security-entry-note">Izin sementara, bukan pelanggaran otomatis.
+                            Soal #{{ data_get($item->metadata, 'soal_id', '-') }} ·
+                            {{ $item->selesai_pada ? str_replace('_', ' ', data_get($item->metadata, 'hasil', 'ditutup')) : 'Izin belum ditutup' }}
+                        </p>
+                    @elseif($item->jenis === 'keluar_pengerjaan')
+                        <h3>Simpan &amp; Keluar dari pengerjaan</h3>
+                        <p>{{ $item->catatan }}</p>
+                        <p class="security-entry-note">{{ data_get($item->metadata, 'menahan_sesi') ? 'Memerlukan pembukaan oleh pengawas untuk melanjutkan.' : 'Interval keluar tetap dicatat.' }} Waktu ujian tetap berjalan.</p>
                     @elseif($item->jenis === 'pola_keluar_singkat')
                         <h3>Pola keluar singkat berulang</h3>
                         <p>

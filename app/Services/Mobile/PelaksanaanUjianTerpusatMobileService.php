@@ -11,6 +11,7 @@ use App\Models\PesertaUjianCbt;
 use App\Models\RiwayatPergantianPengawasUjian;
 use App\Models\RuangKegiatanUjianCbt;
 use App\Models\RuangUjianCbt;
+use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\NotifikasiUjianTerpusatService;
 use App\Services\Cbt\SinkronkanPelaksanaanUjianTerpusat;
 use Carbon\Carbon;
@@ -436,6 +437,7 @@ class PelaksanaanUjianTerpusatMobileService
                     'heartbeat_terakhir_pada' => $item->heartbeat_terakhir_pada?->toISOString(),
                     'heartbeat_terlambat' => (bool) $terlambatHeartbeat,
                     'dapat_dibuka_mode_aman' => $item->status === 'terblokir',
+                    'keamanan' => $item->status === 'terblokir' ? app(KeamananUjianService::class)->ringkas($item) : null,
                     'dapat_dibuka_susulan' => $bolehMengelola && $item->dapatDibukaUntukSusulan(),
                     'nilai_diterapkan' => $bolehMengelola && $item->nilaiSiswa ? $item->nilaiSiswa->nilai : null,
                     'status_susulan' => $item->status_susulan,

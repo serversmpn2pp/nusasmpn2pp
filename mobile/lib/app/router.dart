@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nusa/features/student_exam/application/exam_navigation_guard.dart';
 import 'package:nusa/features/persuratan/domain/persuratan.dart';
 import 'package:nusa/features/persuratan/presentation/persuratan_list_view.dart';
 import 'package:nusa/features/persuratan/presentation/persuratan_detail_view.dart';
@@ -344,13 +345,27 @@ final splashGateProvider = FutureProvider<void>((ref) async {
 });
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authAsync = ref.watch(authControllerProvider);
-  final passwordChangeRequired = ref.watch(passwordChangeGateProvider);
-  final splashGate = ref.watch(splashGateProvider);
+  final examNavigation = ref.read(examNavigationGuardProvider);
   final router = GoRouter(
     initialLocation: AppRoutes.startup,
+    onEnter: (context, current, next, router) {
+      // Authentication/password recovery must never be trapped by the exam UI.
+      final authAsync = ref.read(authControllerProvider);
+      final passwordChangeRequired = ref.read(passwordChangeGateProvider);
+      if (authAsync.isLoading || authAsync.hasError) return const Allow();
+      final user = authAsync.value?.session?.pengguna;
+      if (user == null || user.wajibGantiKataSandi || passwordChangeRequired) {
+        return const Allow();
+      }
+      return examNavigation.allows(next.uri.path)
+          ? const Allow()
+          : const Block.stop();
+    },
     redirect: (context, routerState) {
       final location = routerState.matchedLocation;
+      final authAsync = ref.read(authControllerProvider);
+      final passwordChangeRequired = ref.read(passwordChangeGateProvider);
+      final splashGate = ref.read(splashGateProvider);
 
       if (!splashGate.hasValue || authAsync.isLoading || authAsync.hasError) {
         return location == AppRoutes.startup ? null : AppRoutes.startup;
@@ -1592,6 +1607,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 
+  // Refresh the existing router; recreating/disposal during an onEnter decision
+  // races startup/login navigation and can drop the active exam's route state.
+  ref.listen(authControllerProvider, (_, next) => router.refresh());
+  ref.listen(passwordChangeGateProvider, (_, next) => router.refresh());
+  ref.listen(splashGateProvider, (_, next) => router.refresh());
   ref.onDispose(router.dispose);
 
   return router;

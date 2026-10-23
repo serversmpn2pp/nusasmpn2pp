@@ -12,6 +12,17 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val examSecurityChannel = "id.sch.smpn2padangpanjang.nusa/exam_security"
+    private var examProtectionActive = false
+    private var overlaysHidden = false
+
+    private fun examSecurityStatus(): Map<String, Any> = mapOf(
+        "protocol" to 1,
+        "apiLevel" to Build.VERSION.SDK_INT,
+        "active" to examProtectionActive,
+        "secureScreen" to ((window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE) != 0),
+        "overlaysHidden" to overlaysHidden,
+        "multiWindow" to isInMultiWindowMode,
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,17 +61,26 @@ class MainActivity : FlutterActivity() {
                         val enabled = call.argument<Boolean>("enabled") ?: false
                         val active = call.argument<Boolean>("active") ?: enabled
                         runOnUiThread {
-                            if (enabled) {
-                                window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                            } else {
-                                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                            }
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                window.setHideOverlayWindows(active)
+                            try {
+                                if (enabled) {
+                                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                                } else {
+                                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    window.setHideOverlayWindows(active)
+                                    overlaysHidden = active
+                                }
+                                examProtectionActive = active
+                                // Acknowledge only after the UI-thread operations have completed.
+                                result.success(examSecurityStatus())
+                            } catch (_: Exception) {
+                                examProtectionActive = false
+                                result.error("SCREEN_PROTECTION_FAILED", "Proteksi layar tidak dapat dipasang pada perangkat ini.", null)
                             }
                         }
-                        result.success(null)
                     }
+                    "getSecurityStatus" -> runOnUiThread { result.success(examSecurityStatus()) }
                     "isMultiWindow" -> result.success(isInMultiWindowMode)
                     else -> result.notImplemented()
                 }

@@ -29,11 +29,13 @@ class StudentExamRepository {
     required int questionId,
     required Object? answer,
     required bool doubtful,
+    String? serverVersion,
   }) async => _remote.saveAnswer(
     participantId: participantId,
     questionId: questionId,
     answer: answer,
     doubtful: doubtful,
+    serverVersion: serverVersion,
     device: await _deviceIdentity.readName(),
   );
 
@@ -53,6 +55,21 @@ class StudentExamRepository {
   Future<StudentExamSession> finish(int participantId) async => _remote.finish(
     participantId: participantId,
     device: await _deviceIdentity.readName(),
+  );
+
+  Future<StudentExamFilePermitResult> filePermit({
+    required int participantId,
+    int? questionId,
+    String? requestId,
+    String? permitId,
+    String? outcome,
+  }) async => _remote.filePermit(
+    participantId: participantId,
+    device: await _deviceIdentity.readName(),
+    questionId: questionId,
+    requestId: requestId,
+    permitId: permitId,
+    outcome: outcome,
   );
 
   Future<StudentExamSecurityUpdate> securityEvent(

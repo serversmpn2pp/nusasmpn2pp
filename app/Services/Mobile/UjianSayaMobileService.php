@@ -14,6 +14,7 @@ use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\KelayakanPenyelesaianUjianCbtService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use App\Services\Cbt\PengacakPenyajianCbt;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,11 @@ class UjianSayaMobileService
     public function rincian(Pengguna $pengguna, PesertaUjianCbt $peserta): array
     {
         $peserta = $this->pesertaMilikSiswa($pengguna, $peserta);
+        DB::transaction(function () use ($peserta): void {
+            $terkunci = PesertaUjianCbt::query()->with('ujianCbt')->lockForUpdate()->findOrFail($peserta->id);
+            $this->keamananUjian->periksaKesinambungan($terkunci, $terkunci->perangkat_terakhir ?? 'Mobile', null, true);
+        });
+        $peserta->refresh();
 
         if (in_array($peserta->status, ['sedang_mengerjakan', 'terblokir'], true)
             && $this->hitungSisaDetik($peserta) <= 0) {
@@ -185,6 +191,7 @@ class UjianSayaMobileService
         mixed $jawaban,
         bool $ragu,
         string $perangkat,
+        ?string $versiJawaban = null,
     ): array {
         $peserta = $this->pesertaMilikSiswa($pengguna, $peserta);
 
@@ -211,6 +218,9 @@ class UjianSayaMobileService
             ->where('peserta_ujian_cbt_id', $peserta->id)
             ->where('soal_ujian_cbt_id', $soalUjian->id)
             ->first();
+        if ($versiJawaban !== null && ! hash_equals($this->versiJawaban($peserta->id, $soalUjian->id, $jawabanLama), $versiJawaban)) {
+            throw ValidationException::withMessages(['versi_jawaban' => 'Jawaban server sudah berubah. Muat ulang sebelum memulihkan draft HP.']);
+        }
         $nilaiJawaban = $soalUjian->soalCbt?->jenis_soal === 'upload_file'
             ? ($jawabanLama?->lokasi_file ? ['berkas' => $jawabanLama->nama_file_asli] : null)
             : $this->normalisasiJawaban($jawaban);
@@ -236,6 +246,7 @@ class UjianSayaMobileService
             'terjawab' => $tersimpan->jawaban !== null,
             'ragu' => (bool) $tersimpan->ragu,
             'tersimpan_pada' => now()->toISOString(),
+            'versi_jawaban' => $this->versiJawaban($peserta->id, $soalUjian->id, $tersimpan),
             'sisa_detik' => $this->hitungSisaDetik($peserta),
         ];
     }
@@ -273,6 +284,7 @@ class UjianSayaMobileService
             'terjawab' => true,
             'ragu' => (bool) $jawaban->ragu,
             'berkas' => $this->jawabanBerkas->metadata($jawaban),
+            'versi_jawaban' => $this->versiJawaban($peserta->id, $soalUjian->id, $jawaban),
             'tersimpan_pada' => now()->toISOString(),
             'sisa_detik' => $this->hitungSisaDetik($peserta),
         ];
@@ -537,12 +549,35 @@ class UjianSayaMobileService
                         'media' => $this->mediaKonten($soal, $item['media_kiri_key'] ?? null),
                     ])->values(),
                     'jawaban' => $this->jawabanUntukApi($tersimpan?->jawaban),
+                    'versi_jawaban' => $this->versiJawaban($peserta->id, $relasi->id, $tersimpan),
                     'berkas_jawaban' => $this->jawabanBerkas->metadata($tersimpan),
                     'ragu' => (bool) ($tersimpan?->ragu ?? false),
                 ];
             }),
             'keamanan' => $this->keamananUjian->ringkas($peserta),
         ];
+    }
+
+    private function versiJawaban(int $pesertaId, int $soalId, ?JawabanPesertaUjianCbt $jawaban): string
+    {
+        // Opaque revision, not a question key or an authorization to extend time.
+        $normalisasi = function ($nilai) use (&$normalisasi) {
+            if (is_array($nilai)) {
+                if (! array_is_list($nilai)) {
+                    ksort($nilai);
+                }
+
+                return array_map($normalisasi, $nilai);
+            }
+
+            return $nilai;
+        };
+
+        return hash_hmac('sha256', json_encode([
+            'nusa-jawaban-v1', $pesertaId, $soalId, $jawaban?->id,
+            $normalisasi($jawaban?->jawaban), (bool) $jawaban?->ragu,
+            $jawaban?->lokasi_file, $jawaban?->nama_file_asli, $jawaban?->updated_at?->toISOString(),
+        ], JSON_THROW_ON_ERROR), app(Encrypter::class)->getKey());
     }
 
     private function ditahan(PesertaUjianCbt $peserta): array

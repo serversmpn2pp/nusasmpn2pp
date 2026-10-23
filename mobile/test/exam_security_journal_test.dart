@@ -6,6 +6,44 @@ import 'package:nusa/features/student_exam/data/exam_security_journal.dart';
 import 'package:nusa/features/student_exam/domain/student_exam.dart';
 
 void main() {
+  test(
+    'kejadian tertunda dibedakan dari retry request dengan UUID yang sama',
+    () async {
+      final storage = _MemoryStorage();
+      final journal = ExamSecurityJournal(storage, () async => 'session-a');
+      await journal.record(31, 'kembali');
+      final key = storage.values.keys.single;
+      final state = jsonDecode(storage.values[key]!);
+      state['events'][0]['metadata']['waktu_klien'] = DateTime.now()
+          .toUtc()
+          .subtract(const Duration(minutes: 1))
+          .toIso8601String();
+      storage.values[key] = jsonEncode(state);
+      await journal.flush(31, (event, metadata) async {
+        expect(metadata['dikirim_ulang'], isFalse);
+        expect(metadata['tertunda'], isTrue);
+        return _update();
+      });
+    },
+  );
+
+  test('keluar terencana ditutup oleh kembali, bukan pemulihan yang menghapus interval', () async {
+    final storage = _MemoryStorage();
+    final journal = ExamSecurityJournal(storage, () async => 'session-a');
+    await journal.begin(31);
+    await journal.record(31, 'keluar_pengerjaan');
+    await journal.flush(31, (event, metadata) async => _update());
+    await journal.complete(31);
+    final restarted = ExamSecurityJournal(storage, () async => 'session-a');
+    await restarted.begin(31);
+    final events = <String>[];
+    await restarted.flush(31, (event, metadata) async {
+      events.add(event);
+      return _update();
+    });
+    expect(events, ['kembali']);
+  });
+
   test('kejadian offline bertahan setelah restart dan dikirim berurutan dengan ID tetap', () async {
     final storage = _MemoryStorage();
     final journal = ExamSecurityJournal(
@@ -35,7 +73,7 @@ void main() {
         expect(metadata['kejadian_id'], firstId);
         expect(metadata['dikirim_ulang'], isTrue);
       }
-      if (event == 'kembali') expect(metadata['dikirim_ulang'], isTrue);
+      if (event == 'kembali') expect(metadata['dikirim_ulang'], isFalse);
       return _update();
     });
     expect(events, ['keluar', 'kembali', 'pemulihan']);

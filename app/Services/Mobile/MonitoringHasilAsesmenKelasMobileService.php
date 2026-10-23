@@ -6,6 +6,7 @@ use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
 use App\Models\SoalUjianCbt;
 use App\Models\UjianCbt;
+use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\KoreksiOtomatisCbtService;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -270,6 +271,7 @@ class MonitoringHasilAsesmenKelasMobileService
             'durasi_di_luar_aplikasi_detik' => (int) $peserta->durasi_di_luar_aplikasi_detik,
             'heartbeat_terakhir_pada' => $peserta->heartbeat_terakhir_pada?->toISOString(),
             'ditahan_mode_aman_pada' => $peserta->ditahan_mode_aman_pada?->toISOString(),
+            'keamanan' => $peserta->status === 'terblokir' ? app(KeamananUjianService::class)->ringkas($peserta) : null,
         ];
     }
 

@@ -480,6 +480,16 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
                 'jendela_detik' => 60,
             ],
         ]);
+        AktivitasKeamananUjianCbt::create([
+            'peserta_ujian_cbt_id' => $pesertaDitahan->id, 'jenis' => 'pemilih_berkas',
+            'mulai_pada' => now()->subSeconds(20), 'selesai_pada' => now()->subSeconds(15),
+            'metadata' => ['soal_id' => 123, 'hasil' => 'dibatalkan', 'sesi_hash' => 'hash-internal-tidak-untuk-ditampilkan'],
+        ]);
+        AktivitasKeamananUjianCbt::create([
+            'peserta_ujian_cbt_id' => $pesertaDitahan->id, 'jenis' => 'pemulihan_koneksi',
+            'mulai_pada' => now()->subSeconds(10), 'selesai_pada' => now()->subSeconds(10),
+            'metadata' => ['pemicu' => 'proteksi-layar-gagal'],
+        ]);
         $ruteBukaModeAman = route('tugas-pengawas-ujian.mode-aman.buka', [$ruangOperasional, $pesertaDitahan]);
         $ruteRiwayatModeAman = route('tugas-pengawas-ujian.mode-aman.riwayat', [$ruangOperasional, $pesertaDitahan]);
         $halamanDitahan = $this->actingAs($akunPengawas)
@@ -503,6 +513,9 @@ class UjianTerpusatPelaksanaanNilaiTest extends TestCase
             ->assertSeeText('Dihitung sebagai 1 kejadian Mode Aman')
             ->assertSeeText('Fokus berpindah ke jendela atau layar lain')
             ->assertSeeText('Perangkat terdeteksi memakai lebih dari satu layar')
+            ->assertSeeText('Pemilih berkas jawaban')->assertSeeText('dibatalkan')
+            ->assertSeeText('Proteksi layar Android tidak dapat dikonfirmasi.')
+            ->assertDontSee('hash-internal-tidak-untuk-ditampilkan')
             ->assertSee($ruteBukaModeAman, false);
         if (getenv('CBT_SUPERVISOR_FIXTURE')) {
             file_put_contents(storage_path('logs/cbt-supervisor-mode-aman-history.html'), $halamanRiwayat->getContent());

@@ -63,26 +63,34 @@ class ExamSecurityJournal {
   }
 
   Map<String, dynamic> _event(String type, Map<String, dynamic> metadata) {
-    final bytes = List<int>.generate(16, (_) => Random.secure().nextInt(256));
-    bytes[6] = (bytes[6] & 15) | 64;
-    bytes[8] = (bytes[8] & 63) | 128;
-    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     return {
       'type': type,
       'attempted': false,
       'metadata': {
         ...metadata,
-        'kejadian_id':
-            '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}',
+        'kejadian_id': newEventId(),
         'waktu_klien': DateTime.now().toUtc().toIso8601String(),
       },
     };
   }
 
+  static String newEventId() {
+    final bytes = List<int>.generate(16, (_) => Random.secure().nextInt(256));
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
+  }
+
   Future<void> begin(int id) => _serial(() async {
     final key = await _key(id);
     final state = await _read(key);
-    if (state['active'] == true) {
+    if (state['left'] == true) {
+      (state['events'] as List).add(
+        _event('kembali', {'pemicu': 'lanjut-setelah-keluar'}),
+      );
+      state['left'] = false;
+    } else if (state['active'] == true) {
       (state['events'] as List).add(
         _event('pemulihan', {'pemicu': 'buka-ulang-sesi'}),
       );
@@ -107,6 +115,7 @@ class ExamSecurityJournal {
     final key = await _key(id);
     final state = await _read(key);
     (state['events'] as List).add(_event(event, metadata));
+    if (event == 'keluar_pengerjaan') state['left'] = true;
     await storage.write(key, jsonEncode(state));
   });
 
@@ -124,7 +133,6 @@ class ExamSecurityJournal {
   ) async {
     final key = await _key(id);
     StudentExamSecurityUpdate? latest;
-    var recoveringBatch = false;
     while (true) {
       if (await _key(id) != key) throw StateError('Sesi pengguna berubah.');
       final pending = await _serial(() async {
@@ -143,14 +151,13 @@ class ExamSecurityJournal {
       final recordedAt = DateTime.tryParse(
         (pending['metadata'] as Map)['waktu_klien'] as String? ?? '',
       );
-      recoveringBatch =
-          recoveringBatch ||
-          pending['retry'] == true ||
-          (recordedAt != null &&
-              DateTime.now().toUtc().difference(recordedAt).inSeconds > 30);
       latest = await send(pending['type'] as String, {
         ...Map<String, dynamic>.from(pending['metadata'] as Map),
-        'dikirim_ulang': recoveringBatch,
+        // Retry belongs to this UUID, not every later event in the batch.
+        'dikirim_ulang': pending['retry'] == true,
+        'tertunda':
+            recordedAt != null &&
+            DateTime.now().toUtc().difference(recordedAt).inSeconds > 30,
       });
       if (await _key(id) != key) throw StateError('Sesi pengguna berubah.');
       await _serial(() async {
