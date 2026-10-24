@@ -36,6 +36,44 @@ class UjianSayaApiTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_media_dan_konten_pratinjau_guru_sama_dengan_soal_siswa(): void
+    {
+        Storage::fake('public');
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi();
+        $soal = $data['soal_pg']->soalCbt;
+        $bundles = [];
+        foreach (['utama', 'stimulus', 'pilihan_A'] as $nama) {
+            $path = 'soal-cbt/'.$nama.'.png';
+            Storage::disk('public')->put($path, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='));
+            $bundles[$nama] = ['gambar' => ['path' => $path, 'alt' => 'Diagram '.$nama]];
+        }
+        $soal->update(['media' => [...$bundles['utama'], 'konten' => $bundles]]);
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $preview = $this->withToken($this->token($administrator))
+            ->getJson(route('api.v1.bank-soal.pratinjau', $soal))
+            ->assertOk()->json('data.soal');
+        $this->assertNull($data['peserta']->fresh()->waktu_mulai);
+        $this->app['auth']->forgetGuards();
+
+        $siswa = $this->withToken($this->token($data['pengguna']))
+            ->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+                'token' => 'MULAI1', 'perangkat' => 'Android Media',
+            ])
+            ->assertOk()->json('data.soal.0');
+        foreach (['jenis', 'label_jenis', 'pertanyaan', 'stimulus', 'media', 'stimulus_media', 'pilihan', 'pernyataan', 'pasangan'] as $key) {
+            $this->assertSame($preview[$key], $siswa[$key], $key);
+        }
+        foreach (['media', 'stimulus_media'] as $key) {
+            $this->assertStringContainsString('/storage/soal-cbt/', $siswa[$key]['gambar']['url']);
+        }
+        $this->assertStringContainsString('/storage/soal-cbt/pilihan_A.png', $siswa['pilihan'][0]['media']['gambar']['url']);
+        $this->assertArrayNotHasKey('kunci_jawaban', $siswa);
+        $this->assertArrayNotHasKey('pembahasan', $siswa);
+        $this->withToken($this->token($data['pengguna']))
+            ->getJson(route('api.v1.bank-soal.pratinjau', $soal))->assertForbidden();
+    }
+
     public function test_siswa_mengerjakan_ujian_native_dengan_autosave_dan_pembatasan_perangkat(): void
     {
         Carbon::setTestNow('2026-09-05 08:00:00');

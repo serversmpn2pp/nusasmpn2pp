@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/network/api_exception_mapper.dart';
 import 'package:nusa/core/network/dio_provider.dart';
 import 'package:nusa/features/question_bank/domain/question_bank.dart';
+import 'package:nusa/features/student_exam/domain/student_exam.dart';
 
 abstract interface class QuestionBankRemoteDataSource {
   Future<QuestionBankPage> fetch({
@@ -17,6 +18,7 @@ abstract interface class QuestionBankRemoteDataSource {
   });
 
   Future<BankQuestionDetail> detail(int id);
+  Future<StudentExamQuestion> preview(int id);
   Future<BankQuestionDetail> create(QuestionFormValue value);
   Future<BankQuestionDetail> update(int id, QuestionFormValue value);
   Future<void> archive(int id);
@@ -68,6 +70,20 @@ final class DioQuestionBankRemoteDataSource
   @override
   Future<BankQuestionDetail> create(QuestionFormValue value) =>
       _send('bank-soal', value);
+
+  @override
+  Future<StudentExamQuestion> preview(int id) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        'bank-soal/$id/pratinjau',
+      );
+      return StudentExamQuestion.fromJson(
+        _data(response)['soal'] as Map<String, dynamic>,
+      );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
 
   @override
   Future<BankQuestionDetail> update(int id, QuestionFormValue value) =>

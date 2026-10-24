@@ -574,6 +574,8 @@ Route::prefix('v1')
         Route::get('/bank-soal/{soalCbt}', [BankSoalController::class, 'show'])
             ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola')
             ->name('bank-soal.show');
+        Route::get('/bank-soal/{soalCbt}/pratinjau', [BankSoalController::class, 'pratinjau'])
+            ->middleware('izin:cbt.lihat,cbt.kelola,cbt.soal_kelola')->name('bank-soal.pratinjau');
         Route::post('/bank-soal/{soalCbt}', [BankSoalController::class, 'update'])
             ->middleware('izin:cbt.kelola,cbt.soal_kelola')
             ->name('bank-soal.update');

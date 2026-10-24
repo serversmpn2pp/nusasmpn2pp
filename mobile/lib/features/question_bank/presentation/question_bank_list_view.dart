@@ -442,6 +442,16 @@ class _QuestionCard extends StatelessWidget {
                     ),
                 ],
               ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: Key('question-bank-preview-${question.id}'),
+                  onPressed: () =>
+                      context.push('/bank-soal/${question.id}/pratinjau'),
+                  icon: const Icon(Icons.preview_outlined, size: 18),
+                  label: const Text('Pratinjau Siswa'),
+                ),
+              ),
             ],
           ),
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/question_package/application/question_package_controller.dart';
@@ -305,6 +306,16 @@ class _QuestionPackageDetailViewState
               ),
               const SizedBox(height: 5),
               Text(question.question, style: const TextStyle(height: 1.55)),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                key: Key('question-package-student-preview-${question.id}'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  this.context.push('/bank-soal/${question.id}/pratinjau');
+                },
+                icon: const Icon(Icons.preview_outlined),
+                label: const Text('Pratinjau Tampilan Siswa'),
+              ),
               if (question.imageUrl != null) ...[
                 const SizedBox(height: 12),
                 Image.network(

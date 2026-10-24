@@ -7,6 +7,13 @@ import 'package:nusa/features/question_bank/data/question_bank_remote_data_sourc
 import 'package:nusa/features/question_bank/domain/question_bank.dart';
 import 'package:nusa/features/question_bank/presentation/question_bank_form_view.dart';
 import 'package:nusa/features/question_bank/presentation/question_bank_list_view.dart';
+import 'package:nusa/features/question_bank/presentation/question_bank_preview_view.dart';
+import 'package:nusa/features/question_bank/presentation/question_bank_detail_view.dart';
+import 'package:nusa/features/student_exam/domain/student_exam.dart';
+import 'package:nusa/features/student_exam/presentation/student_exam_question_view.dart';
+import 'package:nusa/features/student_exam/presentation/exam_question_image.dart';
+
+import 'support/question_image_http.dart';
 
 void main() {
   test('domain membaca soal, kunci, media, dan hak akses', () {
@@ -20,6 +27,16 @@ void main() {
     expect(detail.media.table?.rows, hasLength(2));
     expect(detail.media.formula?.latex, r'f = \frac{n}{t}');
     expect(detail.access.canArchive, isTrue);
+    final mediaDetail = BankQuestionDetail.fromJson(_detailWithImagesJson());
+    expect(mediaDetail.stimulusMedia.image?.url, contains('/stimulus.png'));
+    expect(
+      mediaDetail.answer.options.first.media.image?.url,
+      contains('/pilihan_A.png'),
+    );
+    expect(
+      StudentExamMedia.fromJson(mediaDetail.stimulusMedia.toJson()).image?.url,
+      mediaDetail.stimulusMedia.image?.url,
+    );
   });
 
   testWidgets('daftar Bank Soal rapi pada layar Android sempit', (
@@ -52,8 +69,134 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('question-bank-add')), findsOneWidget);
+    expect(find.byKey(const Key('question-bank-preview-7')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final fromDetail in [false, true]) {
+    testWidgets(
+      'tombol pratinjau dari ${fromDetail ? 'detail' : 'daftar'} memakai tampilan siswa tanpa menyimpan',
+      (tester) async {
+        tester.view.physicalSize = const Size(360, 780);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final remote = _FakeQuestionBankRemoteDataSource();
+        final router = GoRouter(
+          initialLocation: fromDetail ? '/bank-soal/7' : '/bank-soal',
+          routes: [
+            GoRoute(
+              path: '/bank-soal',
+              builder: (_, _) => const QuestionBankListView(),
+            ),
+            GoRoute(
+              path: '/bank-soal/:id',
+              builder: (_, _) => const QuestionBankDetailView(questionId: 7),
+            ),
+            GoRoute(
+              path: '/bank-soal/:id/pratinjau',
+              builder: (_, _) => const QuestionBankPreviewView(questionId: 7),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              questionBankRemoteDataSourceProvider.overrideWithValue(remote),
+            ],
+            child: MaterialApp.router(
+              theme: AppTheme.light,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final button = find.byKey(
+          Key(fromDetail ? 'question-bank-preview' : 'question-bank-preview-7'),
+        );
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(find.text('Pratinjau Siswa'), findsOneWidget);
+        expect(find.byType(StudentExamQuestionView), findsOneWidget);
+        expect(remote.previewCalls, 1);
+        await tester.tap(find.text('Hertz'));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<StudentExamQuestionView>(
+                find.byType(StudentExamQuestionView),
+              )
+              .question
+              .answer,
+          {'0': 'B'},
+        );
+        await tester.ensureVisible(find.byType(SwitchListTile));
+        await tester.tap(find.byType(SwitchListTile));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<StudentExamQuestionView>(
+                find.byType(StudentExamQuestionView),
+              )
+              .question
+              .doubtful,
+          isTrue,
+        );
+        await tester.tap(find.byTooltip('Ulangi Pratinjau'));
+        await tester.pumpAndSettle();
+        final reset = tester
+            .widget<StudentExamQuestionView>(
+              find.byType(StudentExamQuestionView),
+            )
+            .question;
+        expect(reset.answer, isEmpty);
+        expect(reset.doubtful, isFalse);
+        expect(remote.createCalls, 0);
+        expect(remote.updateCalls, 0);
+        expect(remote.previewCalls, 1);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'detail memuat gambar stimulus, soal dan pilihan pada layar sempit',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 740);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final http = QuestionImageHttp()..install();
+      addTearDown(http.uninstall);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            questionBankRemoteDataSourceProvider.overrideWithValue(
+              _FakeQuestionBankRemoteDataSource(images: true),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const QuestionBankDetailView(questionId: 7),
+          ),
+        ),
+      );
+      await _finishImages(tester);
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await _finishImages(tester);
+      expect(find.byType(ExamQuestionImage), findsWidgets);
+      await tester.drag(find.byType(ListView), const Offset(0, -450));
+      await _finishImages(tester);
+      expect(
+        http.requests.map((url) => url.path),
+        containsAll(['/stimulus.png', '/utama.png', '/pilihan_A.png']),
+      );
+      expect(find.text('Muat Ulang Gambar'), findsNothing);
+      http.uninstall();
+    },
+  );
 
   testWidgets('editor menyesuaikan bentuk jawaban tanpa overflow', (
     tester,
@@ -193,9 +336,22 @@ void main() {
   });
 }
 
+Future<void> _finishImages(WidgetTester tester) async {
+  for (var i = 0; i < 3; i++) {
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 30)),
+    );
+  }
+  await tester.pumpAndSettle();
+}
+
 class _FakeQuestionBankRemoteDataSource
     implements QuestionBankRemoteDataSource {
+  _FakeQuestionBankRemoteDataSource({this.images = false});
+  final bool images;
   int createCalls = 0;
+  int updateCalls = 0;
   QuestionFormValue? lastValue;
 
   @override
@@ -210,7 +366,28 @@ class _FakeQuestionBankRemoteDataSource
 
   @override
   Future<BankQuestionDetail> detail(int id) async =>
-      BankQuestionDetail.fromJson(_detailJson());
+      BankQuestionDetail.fromJson(
+        images ? _detailWithImagesJson() : _detailJson(),
+      );
+
+  int previewCalls = 0;
+  @override
+  Future<StudentExamQuestion> preview(int id) async {
+    previewCalls++;
+    return StudentExamQuestion.fromJson({
+      'id': id,
+      'nomor': 1,
+      'jenis': 'pilihan_ganda',
+      'label_jenis': 'Pilihan Ganda',
+      'pertanyaan': 'Satuan frekuensi adalah ....',
+      'pilihan': [
+        {'kode': 'A', 'teks': 'Meter'},
+        {'kode': 'B', 'teks': 'Hertz'},
+      ],
+      'jawaban': {},
+      'ragu': false,
+    });
+  }
 
   @override
   Future<BankQuestionDetail> create(QuestionFormValue value) async {
@@ -221,6 +398,7 @@ class _FakeQuestionBankRemoteDataSource
 
   @override
   Future<BankQuestionDetail> update(int id, QuestionFormValue value) async {
+    updateCalls++;
     lastValue = value;
     return BankQuestionDetail.fromJson(_detailJson());
   }
@@ -340,3 +518,19 @@ Map<String, dynamic> _detailJson() => {
   'dibuat_oleh': 'Administrator',
   'hak_akses': {'dapat_kelola': true, 'dapat_arsipkan': true},
 };
+
+Map<String, dynamic> _detailWithImagesJson() {
+  final json = _detailJson();
+  Map<String, dynamic> image(String name) => {
+    'gambar': {
+      'url': 'https://question.test/$name.png',
+      'alt': 'Diagram $name',
+    },
+  };
+  json['stimulus_media'] = image('stimulus');
+  json['media'] = image('utama');
+  ((json['jawaban'] as Map)['opsi'] as List).first['media'] = image(
+    'pilihan_A',
+  );
+  return json;
+}

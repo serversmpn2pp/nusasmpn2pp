@@ -5,7 +5,6 @@ namespace App\Services\Mobile;
 use App\Models\JawabanPesertaUjianCbt;
 use App\Models\Pengguna;
 use App\Models\PesertaUjianCbt;
-use App\Models\SoalCbt;
 use App\Models\SoalUjianCbt;
 use App\Services\Cbt\BatasWaktuPesertaUjianCbtService;
 use App\Services\Cbt\DaftarUjianSiswaService;
@@ -18,7 +17,6 @@ use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class UjianSayaMobileService
@@ -31,6 +29,7 @@ class UjianSayaMobileService
         private readonly JawabanBerkasUjianCbtService $jawabanBerkas,
         private readonly KelayakanPenyelesaianUjianCbtService $kelayakanPenyelesaian,
         private readonly BatasWaktuPesertaUjianCbtService $batasWaktu,
+        private readonly PenyajianSoalMobileService $penyajianSoal,
     ) {}
 
     public function daftar(Pengguna $pengguna): array
@@ -516,38 +515,12 @@ class UjianSayaMobileService
                 $soal = $relasi->soalCbt;
                 $tersimpan = $jawaban->get($relasi->id);
 
-                return [
-                    'id' => (int) $relasi->id,
-                    'nomor' => $index + 1,
-                    'jenis' => $soal?->jenis_soal ?? 'uraian',
-                    'label_jenis' => $soal?->labelJenis() ?? 'Soal',
-                    'stimulus' => $soal?->stimulus,
-                    'stimulus_media' => $this->mediaKonten($soal, 'stimulus'),
-                    'pertanyaan' => $soal?->pertanyaan ?? 'Soal tidak ditemukan.',
-                    'media' => $this->media($soal),
-                    'pilihan' => $soal && in_array($soal->jenis_soal, ['pilihan_ganda', 'pilihan_ganda_kompleks', 'menjodohkan'], true)
-                        ? $this->pengacakPenyajianCbt->pilihanJawaban($peserta->ujianCbt, $peserta, $relasi)
-                            ->map(fn ($teks, $kode) => [
-                                'kode' => (string) $kode,
-                                'teks' => (string) $teks,
-                                'media' => $this->mediaPilihan($soal, (string) $kode, (string) $teks),
-                            ])
-                            ->values()
-                            ->map(fn (array $pilihan, int $urutan) => [
-                                ...$pilihan,
-                                'label' => chr(65 + $urutan),
-                            ])
-                        : [],
-                    'pernyataan' => collect($soal?->opsi['pernyataan'] ?? [])->map(fn ($item, $index) => [
-                        'nomor' => (string) ($item['nomor'] ?? $index + 1),
-                        'teks' => (string) ($item['teks'] ?? '-'),
-                        'media' => $this->mediaKonten($soal, $item['media_key'] ?? null),
-                    ])->values(),
-                    'pasangan' => collect($soal?->opsi['pasangan'] ?? [])->map(fn ($item, $index) => [
-                        'nomor' => (string) ($item['nomor'] ?? $index + 1),
-                        'kiri' => (string) ($item['kiri'] ?? '-'),
-                        'media' => $this->mediaKonten($soal, $item['media_kiri_key'] ?? null),
-                    ])->values(),
+                return $this->penyajianSoal->konten(
+                    $soal,
+                    (int) $relasi->id,
+                    $index + 1,
+                    $soal ? $this->pengacakPenyajianCbt->pilihanJawaban($peserta->ujianCbt, $peserta, $relasi) : collect(),
+                ) + [
                     'jawaban' => $this->jawabanUntukApi($tersimpan?->jawaban),
                     'versi_jawaban' => $this->versiJawaban($peserta->id, $relasi->id, $tersimpan),
                     'berkas_jawaban' => $this->jawabanBerkas->metadata($tersimpan),
@@ -593,60 +566,6 @@ class UjianSayaMobileService
             'ujian' => $this->ringkasUjian($peserta),
             'kemajuan' => $this->ringkasKemajuan($peserta),
             'keamanan' => $this->keamananUjian->ringkas($peserta),
-        ];
-    }
-
-    private function media(?SoalCbt $soal): array
-    {
-        return $this->mediaBundle($soal?->media ?? []);
-    }
-
-    private function mediaKonten(?SoalCbt $soal, mixed $kunci): array
-    {
-        if (! is_string($kunci) || $kunci === '') {
-            return $this->mediaBundle([]);
-        }
-
-        return $this->mediaBundle(data_get($soal?->media, 'konten.'.$kunci, []));
-    }
-
-    private function mediaPilihan(?SoalCbt $soal, string $kode, string $teks): array
-    {
-        if (in_array($soal?->jenis_soal, ['pilihan_ganda', 'pilihan_ganda_kompleks'], true)) {
-            return $this->mediaKonten($soal, 'pilihan_'.mb_strtoupper($kode));
-        }
-
-        $normal = mb_strtolower(trim($teks));
-        $pasangan = collect($soal?->opsi['pasangan'] ?? [])->first(
-            fn ($item) => mb_strtolower(trim((string) ($item['kanan'] ?? ''))) === $normal,
-        );
-        if ($pasangan) {
-            return $this->mediaKonten($soal, $pasangan['media_kanan_key'] ?? null);
-        }
-
-        $pengecoh = collect($soal?->opsi['pengecoh_media'] ?? [])->first(
-            fn ($item) => mb_strtolower(trim((string) ($item['teks'] ?? ''))) === $normal,
-        );
-
-        return $this->mediaKonten($soal, $pengecoh['media_key'] ?? null);
-    }
-
-    private function mediaBundle(array $media): array
-    {
-        $path = data_get($media, 'gambar.path');
-        $keterangan = data_get($media, 'gambar.keterangan');
-        if (blank($keterangan) && filled(data_get($media, 'gambar.alt')) && data_get($media, 'gambar.alt') !== 'Gambar pendukung soal') {
-            $keterangan = data_get($media, 'gambar.alt');
-        }
-
-        return [
-            'gambar' => $path ? [
-                'url' => url(Storage::url($path)),
-                'alt' => data_get($media, 'gambar.alt'),
-                'keterangan' => $keterangan,
-            ] : null,
-            'tabel' => data_get($media, 'tabel'),
-            'rumus' => data_get($media, 'rumus'),
         ];
     }
 

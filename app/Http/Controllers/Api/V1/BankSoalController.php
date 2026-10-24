@@ -33,6 +33,11 @@ class BankSoalController extends Controller
         return $this->tanpaCache(['data' => $service->rincian($request->user(), $soalCbt)]);
     }
 
+    public function pratinjau(Request $request, SoalCbt $soalCbt, BankSoalMobileService $service): JsonResponse
+    {
+        return $this->tanpaCache(['data' => $service->pratinjau($request->user(), $soalCbt)]);
+    }
+
     public function store(Request $request, BankSoalMobileService $service): JsonResponse
     {
         $this->gabungkanPayload($request);

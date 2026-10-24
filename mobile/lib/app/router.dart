@@ -105,6 +105,7 @@ import 'package:nusa/features/private_worship_scan/presentation/private_worship_
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_detail_view.dart';
 import 'package:nusa/features/private_confirmation/presentation/private_confirmation_list_view.dart';
 import 'package:nusa/features/question_bank/presentation/question_bank_detail_view.dart';
+import 'package:nusa/features/question_bank/presentation/question_bank_preview_view.dart';
 import 'package:nusa/features/question_bank/presentation/question_bank_form_view.dart';
 import 'package:nusa/features/question_bank/presentation/question_bank_list_view.dart';
 import 'package:nusa/features/question_package/presentation/question_package_detail_view.dart';
@@ -227,6 +228,7 @@ abstract final class AppRoutes {
   static const questionBankCreate = '/bank-soal/tambah';
   static const questionBankDetail = '/bank-soal/:id';
   static const questionBankEdit = '/bank-soal/:id/ubah';
+  static const questionBankPreview = '/bank-soal/:id/pratinjau';
   static const questionPackages = '/paket-soal';
   static const questionPackageDetail = '/paket-soal/:id';
   static const classAssessments = '/asesmen-kelas';
@@ -758,6 +760,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.questionBankDetail,
         name: 'question-bank-detail',
         builder: (context, state) => QuestionBankDetailView(
+          questionId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.questionBankPreview,
+        name: 'question-bank-preview',
+        builder: (context, state) => QuestionBankPreviewView(
           questionId: int.parse(state.pathParameters['id']!),
         ),
       ),

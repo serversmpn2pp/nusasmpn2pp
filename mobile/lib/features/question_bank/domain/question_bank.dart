@@ -154,6 +154,7 @@ class BankQuestionDetail extends BankQuestion {
     this.stimulus,
     this.explanation,
     this.createdBy,
+    this.stimulusMedia = const QuestionMedia(),
   });
 
   factory BankQuestionDetail.fromJson(Map<String, dynamic> json) {
@@ -187,6 +188,7 @@ class BankQuestionDetail extends BankQuestion {
       explanation: json['pembahasan'] as String?,
       answer: QuestionAnswer.fromJson(_map(json['jawaban'])),
       media: QuestionMedia.fromJson(_map(json['media'])),
+      stimulusMedia: QuestionMedia.fromJson(_map(json['stimulus_media'])),
       createdBy: json['dibuat_oleh'] as String?,
       access: QuestionDetailAccess.fromJson(_map(json['hak_akses'])),
     );
@@ -198,6 +200,7 @@ class BankQuestionDetail extends BankQuestion {
   final String? explanation;
   final QuestionAnswer answer;
   final QuestionMedia media;
+  final QuestionMedia stimulusMedia;
   final String? createdBy;
   final QuestionDetailAccess access;
 }
@@ -234,17 +237,20 @@ class QuestionOption {
     required this.code,
     required this.text,
     required this.correct,
+    this.media = const QuestionMedia(),
   });
 
   factory QuestionOption.fromJson(Map<String, dynamic> json) => QuestionOption(
     code: json['kode'] as String? ?? '-',
     text: json['teks'] as String? ?? '-',
     correct: json['benar'] as bool? ?? false,
+    media: QuestionMedia.fromJson(_map(json['media'])),
   );
 
   final String code;
   final String text;
   final bool correct;
+  final QuestionMedia media;
 }
 
 class QuestionStatement {
@@ -252,6 +258,7 @@ class QuestionStatement {
     required this.number,
     required this.text,
     required this.answer,
+    this.media = const QuestionMedia(),
   });
 
   factory QuestionStatement.fromJson(Map<String, dynamic> json) =>
@@ -259,11 +266,13 @@ class QuestionStatement {
         number: _integer(json['nomor']),
         text: json['teks'] as String? ?? '-',
         answer: json['jawaban'] as bool? ?? false,
+        media: QuestionMedia.fromJson(_map(json['media'])),
       );
 
   final int number;
   final String text;
   final bool answer;
+  final QuestionMedia media;
 }
 
 class QuestionPair {
@@ -271,17 +280,23 @@ class QuestionPair {
     required this.number,
     required this.left,
     required this.right,
+    this.leftMedia = const QuestionMedia(),
+    this.rightMedia = const QuestionMedia(),
   });
 
   factory QuestionPair.fromJson(Map<String, dynamic> json) => QuestionPair(
     number: _integer(json['nomor']),
     left: json['kiri'] as String? ?? '-',
     right: json['kanan'] as String? ?? '-',
+    leftMedia: QuestionMedia.fromJson(_map(json['media_kiri'])),
+    rightMedia: QuestionMedia.fromJson(_map(json['media_kanan'])),
   );
 
   final int number;
   final String left;
   final String right;
+  final QuestionMedia leftMedia;
+  final QuestionMedia rightMedia;
 }
 
 class QuestionMedia {
@@ -296,6 +311,17 @@ class QuestionMedia {
   final QuestionImage? image;
   final QuestionTable? table;
   final QuestionFormula? formula;
+  Map<String, dynamic> toJson() => {
+    'gambar': image == null
+        ? null
+        : {'url': image!.url, 'alt': image!.alt, 'keterangan': image!.caption},
+    'tabel': table == null
+        ? null
+        : {'judul': table!.title, 'baris': table!.rows},
+    'rumus': formula == null
+        ? null
+        : {'latex': formula!.latex, 'keterangan': formula!.caption},
+  };
 }
 
 class QuestionImage {

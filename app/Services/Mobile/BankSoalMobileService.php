@@ -5,8 +5,12 @@ namespace App\Services\Mobile;
 use App\Models\GuruMataPelajaran;
 use App\Models\MataPelajaran;
 use App\Models\Pengguna;
+use App\Models\PesertaUjianCbt;
 use App\Models\SoalCbt;
+use App\Models\SoalUjianCbt;
 use App\Models\TahunPelajaran;
+use App\Models\UjianCbt;
+use App\Services\Cbt\PengacakPenyajianCbt;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -16,6 +20,32 @@ use Throwable;
 
 class BankSoalMobileService
 {
+    public function __construct(
+        private readonly PenyajianSoalMobileService $penyajianSoal,
+        private readonly PengacakPenyajianCbt $pengacak,
+    ) {}
+
+    public function pratinjau(Pengguna $pengguna, SoalCbt $soal): array
+    {
+        $this->pastikanBolehMengakses($pengguna, $soal);
+        // Synthetic context only. Never creates/starts a real exam or participant.
+        $ujian = (new UjianCbt)->forceFill(['id' => 0, 'acak_jawaban' => false]);
+        $peserta = (new PesertaUjianCbt)->forceFill(['id' => 0]);
+        $relasi = (new SoalUjianCbt)->forceFill(['id' => $soal->id])->setRelation('soalCbt', $soal);
+
+        return [
+            'mode' => 'pratinjau',
+            'kode' => $soal->kode,
+            'pesan' => 'Pratinjau tidak menyimpan jawaban. Urutan pilihan pada ujian dapat berbeda sesuai pengacakan.',
+            'soal' => $this->penyajianSoal->konten(
+                $soal,
+                (int) $soal->id,
+                1,
+                $this->pengacak->pilihanJawaban($ujian, $peserta, $relasi),
+            ) + ['jawaban' => [], 'ragu' => false],
+        ];
+    }
+
     public function daftar(Pengguna $pengguna, array $filter): array
     {
         $bisaLihatSemua = $this->bisaLihatSemua($pengguna);
@@ -99,6 +129,7 @@ class BankSoalMobileService
             'pembahasan' => $soal->pembahasan,
             'jawaban' => $this->ringkasJawaban($soal),
             'media' => $this->ringkasMedia($soal),
+            'stimulus_media' => $this->penyajianSoal->mediaKonten($soal, 'stimulus'),
             'dibuat_oleh' => $soal->dibuatOleh?->nama,
             'hak_akses' => [
                 'dapat_kelola' => $this->dapatKelola($pengguna),
@@ -214,6 +245,7 @@ class BankSoalMobileService
                     'kode' => (string) $kode,
                     'teks' => $teks,
                     'benar' => is_array($jawaban) ? in_array($kode, $jawaban, true) : $jawaban === $kode,
+                    'media' => $this->penyajianSoal->mediaPilihan($soal, (string) $kode, (string) $teks),
                 ])->values(),
                 'kunci_teks' => null,
                 'rubrik' => null,
@@ -223,6 +255,7 @@ class BankSoalMobileService
                     'nomor' => (int) data_get($item, 'nomor'),
                     'teks' => data_get($item, 'teks'),
                     'jawaban' => (bool) data_get($soal->kunci_jawaban, 'jawaban.'.data_get($item, 'nomor')),
+                    'media' => $this->penyajianSoal->mediaKonten($soal, data_get($item, 'media_key')),
                 ])->values(),
                 'kunci_teks' => null,
                 'rubrik' => null,
@@ -232,6 +265,8 @@ class BankSoalMobileService
                     'nomor' => (int) data_get($item, 'nomor'),
                     'kiri' => data_get($item, 'kiri'),
                     'kanan' => data_get($item, 'kanan'),
+                    'media_kiri' => $this->penyajianSoal->mediaKonten($soal, data_get($item, 'media_kiri_key')),
+                    'media_kanan' => $this->penyajianSoal->mediaKonten($soal, data_get($item, 'media_kanan_key')),
                 ])->values(),
                 'pengecoh_menjodohkan' => collect(data_get($soal->opsi, 'pengecoh', []))
                     ->map(fn ($item) => (string) $item)
@@ -248,21 +283,7 @@ class BankSoalMobileService
 
     private function ringkasMedia(SoalCbt $soal): array
     {
-        $path = data_get($soal->media, 'gambar.path');
-        $keterangan = data_get($soal->media, 'gambar.keterangan');
-        if (blank($keterangan) && filled(data_get($soal->media, 'gambar.alt')) && data_get($soal->media, 'gambar.alt') !== 'Gambar pendukung soal') {
-            $keterangan = data_get($soal->media, 'gambar.alt');
-        }
-
-        return [
-            'gambar' => $path ? [
-                'url' => url(Storage::url($path)),
-                'alt' => data_get($soal->media, 'gambar.alt'),
-                'keterangan' => $keterangan,
-            ] : null,
-            'tabel' => data_get($soal->media, 'tabel'),
-            'rumus' => data_get($soal->media, 'rumus'),
-        ];
+        return $this->penyajianSoal->media($soal);
     }
 
     private function rapikanData(array $data): array

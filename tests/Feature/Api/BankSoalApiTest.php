@@ -22,6 +22,9 @@ class BankSoalApiTest extends TestCase
     public function test_bank_soal_memerlukan_token_dan_izin(): void
     {
         $this->getJson(route('api.v1.bank-soal.index'))->assertUnauthorized();
+        $this->getJson(route('api.v1.bank-soal.pratinjau', 1))->assertUnauthorized();
+        [, , $mapel] = $this->fondasiAkademik();
+        $soal = SoalCbt::create($this->dataSoalModel($mapel, 'TANPA-IZIN'));
 
         $pengguna = Pengguna::create([
             'nama' => 'Pegawai Tanpa CBT',
@@ -35,6 +38,9 @@ class BankSoalApiTest extends TestCase
 
         $this->withToken($this->token($pengguna))
             ->getJson(route('api.v1.bank-soal.index'))
+            ->assertForbidden();
+        $this->withToken($this->token($pengguna))
+            ->getJson(route('api.v1.bank-soal.pratinjau', $soal))
             ->assertForbidden();
     }
 
@@ -150,6 +156,20 @@ class BankSoalApiTest extends TestCase
             if ($jenis === 'menjodohkan') {
                 $response->assertJsonPath('data.jawaban.pengecoh_menjodohkan.0', 'Seoul');
             }
+
+            $preview = $this->withToken($token)
+                ->getJson(route('api.v1.bank-soal.pratinjau', $response->json('data.id')))
+                ->assertOk()
+                ->assertJsonPath('data.mode', 'pratinjau')
+                ->assertJsonPath('data.soal.jenis', $jenis)
+                ->assertJsonPath('data.soal.jawaban', [])
+                ->assertJsonMissingPath('data.soal.kunci_jawaban')
+                ->assertJsonMissingPath('data.soal.rubrik')
+                ->assertJsonMissingPath('data.soal.pembahasan');
+            if ($jenis === 'menjodohkan') {
+                $this->assertEqualsCanonicalizing(['Jakarta', 'Tokyo', 'Seoul'], array_column($preview->json('data.soal.pilihan'), 'teks'));
+                $preview->assertJsonMissingPath('data.soal.pasangan.0.kanan');
+            }
         }
 
         $this->assertSame(6, SoalCbt::query()->count());
@@ -157,6 +177,76 @@ class BankSoalApiTest extends TestCase
         $soalMenjodohkan = SoalCbt::where('jenis_soal', 'menjodohkan')->firstOrFail();
         $this->assertSame('Tokyo', data_get($soalMenjodohkan->kunci_jawaban, 'jawaban.2'));
         $this->assertSame(['Seoul'], data_get($soalMenjodohkan->opsi, 'pengecoh'));
+    }
+
+    public function test_detail_dan_pratinjau_memuat_media_per_bagian_tanpa_memulai_ujian(): void
+    {
+        Storage::fake('public');
+        [, , $mapel] = $this->fondasiAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $token = $this->token($administrator);
+        foreach (['utama', 'stimulus', 'pilihan_A', 'pernyataan_1', 'kiri_1', 'kanan_1', 'pengecoh_1'] as $nama) {
+            $bundles[$nama] = ['gambar' => ['path' => 'soal-cbt/'.$nama.'.png', 'alt' => 'Diagram '.$nama]];
+            Storage::disk('public')->put('soal-cbt/'.$nama.'.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='));
+        }
+        $soal = SoalCbt::create([
+            ...$this->dataSoalModel($mapel, 'MEDIA-PRATINJAU'),
+            'stimulus' => 'Baca diagram.',
+            'pembahasan' => 'RAHASIA PEMBAHASAN',
+            'media' => [...$bundles['utama'], 'konten' => $bundles],
+        ]);
+        $sebelum = $soal->fresh()->getAttributes();
+        $url = fn (string $nama) => url(Storage::disk('public')->url('soal-cbt/'.$nama.'.png'));
+
+        foreach (['pilihan_ganda', 'pilihan_ganda_kompleks'] as $jenis) {
+            $soal->update(['jenis_soal' => $jenis]);
+            $this->withToken($token)->getJson(route('api.v1.bank-soal.show', $soal))
+                ->assertOk()
+                ->assertJsonPath('data.media.gambar.url', $url('utama'))
+                ->assertJsonPath('data.stimulus_media.gambar.url', $url('stimulus'))
+                ->assertJsonPath('data.jawaban.opsi.0.media.gambar.url', $url('pilihan_A'));
+            $this->withToken($token)->getJson(route('api.v1.bank-soal.pratinjau', $soal))
+                ->assertOk()
+                ->assertHeader('Cache-Control')
+                ->assertJsonPath('data.soal.media.gambar.url', $url('utama'))
+                ->assertJsonPath('data.soal.stimulus_media.gambar.url', $url('stimulus'))
+                ->assertJsonPath('data.soal.pilihan.0.media.gambar.url', $url('pilihan_A'))
+                ->assertJsonMissingPath('data.soal.pilihan.0.benar');
+        }
+        $soal->update(['jenis_soal' => 'benar_salah', 'opsi' => ['pernyataan' => [
+            ['teks' => 'Amati gambar.', 'media_key' => 'pernyataan_1'],
+        ]]]);
+        $this->withToken($token)->getJson(route('api.v1.bank-soal.pratinjau', $soal))
+            ->assertOk()->assertJsonPath('data.soal.pernyataan.0.nomor', '1')
+            ->assertJsonPath('data.soal.pernyataan.0.media.gambar.url', $url('pernyataan_1'));
+        $this->withToken($token)->getJson(route('api.v1.bank-soal.show', $soal))
+            ->assertOk()->assertJsonPath('data.jawaban.pernyataan.0.media.gambar.url', $url('pernyataan_1'));
+
+        $soal->update(['jenis_soal' => 'menjodohkan', 'opsi' => [
+            'pasangan' => [['kiri' => 'Bangun', 'kanan' => 'Persegi', 'media_kiri_key' => 'kiri_1', 'media_kanan_key' => 'kanan_1']],
+            'pengecoh' => ['Segitiga'],
+            'pengecoh_media' => [['teks' => 'Segitiga', 'media_key' => 'pengecoh_1']],
+        ]]);
+        $preview = $this->withToken($token)->getJson(route('api.v1.bank-soal.pratinjau', $soal))
+            ->assertOk()->assertJsonPath('data.soal.pasangan.0.nomor', '1')
+            ->assertJsonPath('data.soal.pasangan.0.media.gambar.url', $url('kiri_1'))
+            ->assertJsonMissingPath('data.soal.pasangan.0.kanan')
+            ->assertJsonMissingPath('data.soal.kunci_jawaban');
+        $byText = collect($preview->json('data.soal.pilihan'))->keyBy('teks');
+        $this->assertStringContainsString('no-store', $preview->headers->get('Cache-Control'));
+        $this->assertSame($url('kanan_1'), data_get($byText, 'Persegi.media.gambar.url'));
+        $this->assertSame($url('pengecoh_1'), data_get($byText, 'Segitiga.media.gambar.url'));
+        $this->withToken($token)->getJson(route('api.v1.bank-soal.show', $soal))
+            ->assertOk()->assertJsonPath('data.jawaban.pasangan.0.media_kiri.gambar.url', $url('kiri_1'))
+            ->assertJsonPath('data.jawaban.pasangan.0.media_kanan.gambar.url', $url('kanan_1'));
+
+        $this->assertSame($sebelum['kunci_jawaban'], $soal->fresh()->getAttributes()['kunci_jawaban']);
+        foreach (['ujian_cbt', 'peserta_ujian_cbt', 'jawaban_peserta_ujian_cbt', 'aktivitas_keamanan_ujian_cbt'] as $tabel) {
+            $this->assertDatabaseCount($tabel, 0);
+        }
+        $sebelumPratinjau = $soal->fresh()->getAttributes();
+        $this->withToken($token)->getJson(route('api.v1.bank-soal.pratinjau', $soal))->assertOk();
+        $this->assertSame($sebelumPratinjau, $soal->fresh()->getAttributes());
     }
 
     public function test_tingkat_kesulitan_wajib_diisi_pada_api_bank_soal(): void
@@ -208,6 +298,12 @@ class BankSoalApiTest extends TestCase
         $this->withToken($token)
             ->getJson(route('api.v1.bank-soal.show', $soalLain))
             ->assertForbidden();
+        $this->withToken($token)
+            ->getJson(route('api.v1.bank-soal.pratinjau', $soalLain))
+            ->assertForbidden();
+        $this->withToken($token)
+            ->getJson(route('api.v1.bank-soal.pratinjau', $soalSendiri))
+            ->assertOk();
 
         $payloadLain = $this->payload($mapelLain);
         $this->withToken($token)

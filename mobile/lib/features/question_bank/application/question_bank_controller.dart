@@ -5,6 +5,7 @@ import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/question_bank/data/question_bank_repository.dart';
 import 'package:nusa/features/question_bank/domain/question_bank.dart';
+import 'package:nusa/features/student_exam/domain/student_exam.dart';
 
 class QuestionBankController extends AsyncNotifier<QuestionBankPage> {
   String _query = '';
@@ -123,6 +124,16 @@ final questionBankDetailProvider = FutureProvider.autoDispose
     .family<BankQuestionDetail, int>((ref, id) async {
       try {
         return await ref.read(questionBankRepositoryProvider).detail(id);
+      } on UnauthorizedException {
+        await ref.read(authControllerProvider.notifier).logout();
+        rethrow;
+      }
+    });
+
+final questionBankPreviewProvider = FutureProvider.autoDispose
+    .family<StudentExamQuestion, int>((ref, id) async {
+      try {
+        return await ref.read(questionBankRepositoryProvider).preview(id);
       } on UnauthorizedException {
         await ref.read(authControllerProvider.notifier).logout();
         rethrow;

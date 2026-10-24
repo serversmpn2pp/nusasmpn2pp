@@ -5,6 +5,8 @@ import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/question_bank/application/question_bank_controller.dart';
 import 'package:nusa/features/question_bank/domain/question_bank.dart';
+import 'package:nusa/features/student_exam/domain/student_exam.dart';
+import 'package:nusa/features/student_exam/presentation/student_exam_question_view.dart';
 
 class QuestionBankDetailView extends ConsumerWidget {
   const QuestionBankDetailView({required this.questionId, super.key});
@@ -44,6 +46,14 @@ class QuestionBankDetailView extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
               children: [
                 _IdentityCard(question: question),
+                const SizedBox(height: 11),
+                FilledButton.tonalIcon(
+                  key: const Key('question-bank-preview'),
+                  onPressed: () =>
+                      context.push('/bank-soal/$questionId/pratinjau'),
+                  icon: const Icon(Icons.preview_outlined),
+                  label: const Text('Pratinjau Tampilan Siswa'),
+                ),
                 const SizedBox(height: 11),
                 _ContentCard(question: question),
                 const SizedBox(height: 11),
@@ -269,62 +279,13 @@ class _ContentCard extends StatelessWidget {
             const SizedBox(height: 5),
             Text(question.stimulus!, style: const TextStyle(height: 1.5)),
           ],
-          if (question.media.image case final image?) ...[
+          if (_hasMedia(question.stimulusMedia)) ...[
             const SizedBox(height: 13),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(13),
-              child: Image.network(
-                image.url,
-                width: double.infinity,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 120,
-                  color: NusaColors.surfaceBlue,
-                  alignment: Alignment.center,
-                  child: const Text('Gambar tidak dapat dimuat'),
-                ),
-              ),
-            ),
-            if (_hasText(image.caption)) ...[
-              const SizedBox(height: 5),
-              Text(
-                image.caption!,
-                style: const TextStyle(
-                  color: NusaColors.textSecondary,
-                  fontSize: 10,
-                ),
-              ),
-            ],
+            _BankMedia(media: question.stimulusMedia),
           ],
-          if (question.media.table case final table?) ...[
+          if (_hasMedia(question.media)) ...[
             const SizedBox(height: 13),
-            if (_hasText(table.title)) ...[
-              Text(
-                table.title!,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-            ],
-            _QuestionTableView(table: table),
-          ],
-          if (question.media.formula case final formula?) ...[
-            const SizedBox(height: 13),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: NusaColors.surfaceBlue,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: SelectableText(
-                formula.latex,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: NusaColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            _BankMedia(media: question.media),
           ],
           const SizedBox(height: 14),
           const _Label('Pertanyaan'),
@@ -382,6 +343,7 @@ class _AnswerCard extends StatelessWidget {
                 leading: item.code,
                 text: item.text,
                 correct: item.correct,
+                media: item.media,
               ),
             )
           else if (question.answer.statements.isNotEmpty)
@@ -390,6 +352,7 @@ class _AnswerCard extends StatelessWidget {
                 leading: '${item.number}',
                 text: item.text,
                 correct: item.answer,
+                media: item.media,
                 answerLabel: item.answer ? 'Benar' : 'Salah',
               ),
             )
@@ -423,11 +386,13 @@ class _AnswerRow extends StatelessWidget {
     required this.text,
     required this.correct,
     this.answerLabel,
+    this.media = const QuestionMedia(),
   });
   final String leading;
   final String text;
   final bool correct;
   final String? answerLabel;
+  final QuestionMedia media;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -454,7 +419,18 @@ class _AnswerRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(text, style: const TextStyle(fontSize: 12)),
+              if (_hasMedia(media)) ...[
+                const SizedBox(height: 8),
+                _BankMedia(media: media),
+              ],
+            ],
+          ),
+        ),
         if (answerLabel != null)
           Text(
             answerLabel!,
@@ -485,7 +461,15 @@ class _PairRow extends StatelessWidget {
     ),
     child: Row(
       children: [
-        Expanded(child: Text(pair.left, style: const TextStyle(fontSize: 12))),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(pair.left, style: const TextStyle(fontSize: 12)),
+              if (_hasMedia(pair.leftMedia)) _BankMedia(media: pair.leftMedia),
+            ],
+          ),
+        ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 8),
           child: Icon(
@@ -495,10 +479,20 @@ class _PairRow extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Text(
-            pair.right,
-            textAlign: TextAlign.end,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                pair.right,
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (_hasMedia(pair.rightMedia))
+                _BankMedia(media: pair.rightMedia),
+            ],
           ),
         ),
       ],
@@ -506,50 +500,19 @@ class _PairRow extends StatelessWidget {
   );
 }
 
-class _QuestionTableView extends StatelessWidget {
-  const _QuestionTableView({required this.table});
-  final QuestionTable table;
-
+class _BankMedia extends StatelessWidget {
+  const _BankMedia({required this.media});
+  final QuestionMedia media;
   @override
-  Widget build(BuildContext context) {
-    if (table.rows.isEmpty) return const SizedBox.shrink();
-    final columns = table.rows
-        .map((row) => row.length)
-        .fold<int>(0, (a, b) => a > b ? a : b);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Table(
-        defaultColumnWidth: const IntrinsicColumnWidth(),
-        border: TableBorder.all(color: NusaColors.outline),
-        children: [
-          for (var rowIndex = 0; rowIndex < table.rows.length; rowIndex++)
-            TableRow(
-              decoration: rowIndex == 0
-                  ? const BoxDecoration(color: NusaColors.surfaceBlue)
-                  : null,
-              children: [
-                for (var column = 0; column < columns; column++)
-                  Padding(
-                    padding: const EdgeInsets.all(9),
-                    child: Text(
-                      column < table.rows[rowIndex].length
-                          ? table.rows[rowIndex][column]
-                          : '',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: rowIndex == 0
-                            ? FontWeight.w800
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => StudentExamQuestionMedia(
+    media: StudentExamMedia.fromJson(media.toJson()),
+  );
 }
+
+bool _hasMedia(QuestionMedia media) =>
+    media.image?.url.isNotEmpty == true ||
+    media.table?.rows.isNotEmpty == true ||
+    media.formula?.latex.isNotEmpty == true;
 
 class _TextCard extends StatelessWidget {
   const _TextCard({
@@ -587,9 +550,11 @@ class _CardTitle extends StatelessWidget {
     children: [
       Icon(icon, size: 20, color: NusaColors.primary),
       const SizedBox(width: 8),
-      Text(
-        title,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+      Expanded(
+        child: Text(
+          title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+        ),
       ),
     ],
   );

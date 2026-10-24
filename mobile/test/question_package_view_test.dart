@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/question_package/data/question_package_remote_data_source.dart';
 import 'package:nusa/features/question_package/domain/question_package.dart';
@@ -84,6 +85,55 @@ void main() {
     expect(remote.lastPayload?.questions.single.weight, 2);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'soal paket dapat dibuka ke pratinjau siswa tanpa menyimpan paket',
+    (tester) async {
+      final remote = _FakeQuestionPackageRemoteDataSource();
+      final router = GoRouter(
+        initialLocation: '/paket-soal/11',
+        routes: [
+          GoRoute(
+            path: '/paket-soal/:id',
+            builder: (_, _) => const QuestionPackageDetailView(scheduleId: 11),
+          ),
+          GoRoute(
+            path: '/bank-soal/:id/pratinjau',
+            builder: (_, state) => Scaffold(
+              body: Text('Pratinjau siswa ${state.pathParameters['id']}'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            questionPackageRemoteDataSourceProvider.overrideWithValue(remote),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.dragUntilVisible(
+        find.text('Pratinjau'),
+        find.byType(ListView).first,
+        const Offset(0, -300),
+      );
+      await tester.tap(find.text('Pratinjau'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('question-package-student-preview-21')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Pratinjau siswa 21'), findsOneWidget);
+      expect(remote.saveCalls, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 class _FakeQuestionPackageRemoteDataSource
