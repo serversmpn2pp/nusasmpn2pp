@@ -141,8 +141,9 @@
             <p class="stat-value">{{ $ringkasan['siswa'] }}</p>
         </div>
         <div class="panel stat active">
-            <p class="stat-label">Hari efektif</p>
-            <p class="stat-value">{{ $ringkasan['hari_efektif'] }}</p>
+            <p class="stat-label">Hari wajib presensi</p>
+            <p class="stat-value">@if ($ringkasan['hari_efektif_min'] !== $ringkasan['hari_efektif']){{ $ringkasan['hari_efektif_min'] }}&ndash;@endif{{ $ringkasan['hari_efektif'] }}</p>
+            <p class="person-meta">Dari {{ $ringkasan['hari_kalender'] }} hari terjadwal</p>
         </div>
         <div class="panel stat">
             <p class="stat-label">Total hadir</p>
@@ -166,7 +167,7 @@
         </div>
         <div class="panel stat">
             <p class="stat-label">Rata-rata hadir</p>
-            <p class="stat-value">{{ $formatPersen($ringkasan['rata_persentase_hadir']) }}</p>
+            <p class="stat-value">{{ $ringkasan['total_hari_wajib'] > 0 ? $formatPersen($ringkasan['rata_persentase_hadir']) : '-' }}</p>
         </div>
     </div>
 
@@ -225,7 +226,9 @@
                                 <p class="person-meta">{{ $formatMenit($item['menit_pulang_cepat']) }}</p>
                             </td>
                             <td data-label="% Hadir">
-                                <span class="badge {{ $item['persentase_hadir'] >= 90 ? 'badge-active' : 'badge-warning' }}">{{ $formatPersen($item['persentase_hadir']) }}</span>
+                                <span class="badge {{ $item['hari_efektif'] === 0 ? 'badge-muted' : ($item['persentase_hadir'] >= 90 ? 'badge-active' : 'badge-warning') }}">{{ $item['hari_efektif'] > 0 ? $formatPersen($item['persentase_hadir']) : '-' }}</span>
+                                <p class="person-meta">{{ $item['hari_efektif'] }} hari wajib</p>
+                                @if ($item['pengecualian'] > 0)<p class="person-meta">{{ $item['pengecualian'] }} hari pengecualian</p>@endif
                             </td>
                         </tr>
                     @empty
@@ -249,9 +252,10 @@
                             <p class="person-meta">{{ $anggota->kelas?->nama ?: '-' }} - NISN {{ $anggota->siswa?->nisn ?: '-' }}</p>
                         </div>
 
-                        <span class="badge {{ $item['persentase_hadir'] >= 90 ? 'badge-active' : 'badge-warning' }}">{{ $formatPersen($item['persentase_hadir']) }}</span>
+                        <span class="badge {{ $item['hari_efektif'] === 0 ? 'badge-muted' : ($item['persentase_hadir'] >= 90 ? 'badge-active' : 'badge-warning') }}">{{ $item['hari_efektif'] > 0 ? $formatPersen($item['persentase_hadir']) : '-' }}</span>
                     </div>
 
+                    <p class="person-meta">{{ $item['hari_efektif'] }} hari wajib &middot; {{ $item['pengecualian'] }} hari pengecualian</p>
                     <dl class="quick-facts">
                         <div>
                             <dt>Hadir</dt>

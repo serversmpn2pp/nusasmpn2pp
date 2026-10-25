@@ -81,7 +81,7 @@
 
     <section class="presensi-identity" aria-label="Identitas siswa">
         <div><h2>{{ $anggota->siswa?->nama_lengkap ?: '-' }}</h2><p>{{ $anggota->kelas?->nama }} &middot; No. absen {{ $anggota->nomor_absen ?: '-' }} &middot; {{ $anggota->tahunPelajaran?->nama }}</p><p>NIS {{ $anggota->siswa?->nis ?: '-' }} &middot; NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div>
-        <div class="presensi-period"><strong>{{ $laporan['labelPeriode'] }}</strong><p>{{ $laporan['jumlahHariEfektif'] }} hari presensi aktif</p></div>
+        <div class="presensi-period"><strong>{{ $laporan['labelPeriode'] }}</strong><p>{{ $item['hari_efektif'] }} hari wajib &middot; {{ $item['pengecualian'] }} hari pengecualian</p><p>Kehadiran {{ $item['hari_efektif'] > 0 ? rtrim(rtrim(number_format($item['persentase_hadir'], 1, ',', '.'), '0'), ',').'%' : '-' }}</p></div>
     </section>
 
     <dl class="presensi-summary" aria-label="Ringkasan periode">

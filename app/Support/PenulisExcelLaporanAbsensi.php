@@ -9,7 +9,7 @@ class PenulisExcelLaporanAbsensi
 {
     public const MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-    private const JUMLAH_KOLOM = 15;
+    private const JUMLAH_KOLOM = 16;
 
     public function buat(array $laporan): string
     {
@@ -20,7 +20,7 @@ class PenulisExcelLaporanAbsensi
         }
 
         $lokasiBerkas = $direktori . DIRECTORY_SEPARATOR . 'laporan-presensi-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.xlsx';
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($lokasiBerkas, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new RuntimeException('Berkas export Excel tidak bisa dibuat.');
@@ -84,6 +84,9 @@ class PenulisExcelLaporanAbsensi
         $tahunPelajaran = $laporan['tahunPelajaran']?->nama ?? '-';
         $kelas = $laporan['kelasDipilih']?->nama ?? 'Semua kelas';
         $ringkasan = $laporan['ringkasan'];
+        $maksimumHari = (int) ($ringkasan['hari_efektif'] ?? $laporan['jumlahHariEfektif']);
+        $minimumHari = (int) ($ringkasan['hari_efektif_min'] ?? $maksimumHari);
+        $hariWajib = $minimumHari === $maksimumHari ? $maksimumHari : $minimumHari.' - '.$maksimumHari;
         $baris = [
             [$this->sel('LAPORAN PRESENSI', 1)],
             [$this->sel('SMP Negeri 2 Padang Panjang', 2)],
@@ -91,7 +94,7 @@ class PenulisExcelLaporanAbsensi
             [$this->sel('Tahun Pelajaran', 3), $this->sel($tahunPelajaran)],
             [$this->sel('Kelas', 3), $this->sel($kelas)],
             [$this->sel('Periode', 3), $this->sel($laporan['labelPeriode'])],
-            [$this->sel('Hari Efektif', 3), $this->sel((int) $laporan['jumlahHariEfektif'], 5)],
+            [$this->sel('Hari Wajib Presensi', 3), $this->sel($hariWajib, 5), $this->sel('Hari Terjadwal', 3), $this->sel((int) ($laporan['jumlahHariKalender'] ?? $laporan['jumlahHariEfektif']), 5)],
             [$this->sel('Ringkasan', 3), $this->sel($this->ringkasanTeks($ringkasan))],
             [],
             array_map(fn (string $judul) => $this->sel($judul, 4), $this->judulKolom()),
@@ -117,7 +120,8 @@ class PenulisExcelLaporanAbsensi
                 $this->sel((int) round((float) ($item['menit_terlambat'] ?? 0)), 5),
                 $this->sel((int) ($item['pulang_cepat'] ?? 0), 5),
                 $this->sel((int) round((float) ($item['menit_pulang_cepat'] ?? 0)), 5),
-                $this->sel((float) ($item['persentase_hadir'] ?? 0), 6),
+                $this->sel(($item['hari_efektif'] ?? 0) > 0 ? (float) ($item['persentase_hadir'] ?? 0) : '-', 6),
+                $this->sel((int) ($item['pengecualian'] ?? 0), 5),
             ];
         }
 
@@ -127,7 +131,7 @@ class PenulisExcelLaporanAbsensi
             $this->sel('', 4),
             $this->sel('', 4),
             $this->sel('', 4),
-            $this->sel((int) ($ringkasan['hari_efektif'] ?? 0), 5),
+            $this->sel($hariWajib, 5),
             $this->sel((int) ($ringkasan['hadir'] ?? 0), 5),
             $this->sel((int) ($ringkasan['izin'] ?? 0), 5),
             $this->sel((int) ($ringkasan['sakit'] ?? 0), 5),
@@ -136,7 +140,8 @@ class PenulisExcelLaporanAbsensi
             $this->sel((int) ($ringkasan['menit_terlambat'] ?? 0), 5),
             $this->sel((int) ($ringkasan['pulang_cepat'] ?? 0), 5),
             $this->sel((int) ($ringkasan['menit_pulang_cepat'] ?? 0), 5),
-            $this->sel((float) ($ringkasan['rata_persentase_hadir'] ?? 0), 6),
+            $this->sel(($ringkasan['total_hari_wajib'] ?? $maksimumHari) > 0 ? (float) ($ringkasan['rata_persentase_hadir'] ?? 0) : '-', 6),
+            $this->sel((int) ($ringkasan['pengecualian'] ?? 0), 5),
         ];
 
         return $baris;
@@ -150,7 +155,7 @@ class PenulisExcelLaporanAbsensi
             'NIS',
             'NISN',
             'Kelas',
-            'Hari Efektif',
+            'Hari Wajib Presensi',
             'Hadir',
             'Izin',
             'Sakit',
@@ -160,6 +165,7 @@ class PenulisExcelLaporanAbsensi
             'Pulang Cepat (kali)',
             'Menit Pulang Cepat',
             'Persentase Hadir',
+            'Hari Pengecualian',
         ];
     }
 
@@ -207,7 +213,7 @@ class PenulisExcelLaporanAbsensi
 
     private function kolomXml(): string
     {
-        $lebar = [7, 30, 16, 18, 12, 13, 10, 10, 10, 10, 15, 17, 18, 20, 17];
+        $lebar = [7, 30, 16, 18, 12, 23, 10, 10, 10, 10, 15, 17, 18, 20, 17, 20];
         $xml = '<cols>';
 
         foreach ($lebar as $index => $nilai) {

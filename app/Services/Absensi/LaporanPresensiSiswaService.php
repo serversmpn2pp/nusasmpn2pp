@@ -73,7 +73,8 @@ class LaporanPresensiSiswaService
             'labelPeriode' => $rentang['label'],
             'hariAktif' => $hariAktif,
             'tanggalEfektif' => $tanggalEfektif,
-            'jumlahHariEfektif' => count($tanggalEfektif),
+            'jumlahHariEfektif' => $ringkasan['hari_efektif'],
+            'jumlahHariKalender' => count($tanggalEfektif),
             'laporanAbsensi' => $laporanAbsensi,
             'ringkasan' => $ringkasan,
             'cakupanWaliKelas' => $cakupanWaliKelas,
@@ -93,7 +94,7 @@ class LaporanPresensiSiswaService
         $item = $laporan['laporanAbsensi']->first(fn ($item) => (int) $item['anggota_kelas']->id === (int) $anggotaKelas->id);
         abort_unless($item, 404, 'Siswa tidak ditemukan pada cakupan laporan ini.');
         $anggota = $item['anggota_kelas'];
-        $tanggalEfektif = $laporan['tanggalEfektif'];
+        $tanggalEfektif = $this->tanggalAnggota($laporan['tanggalEfektif'], $anggota);
         $absensi = AbsensiSiswa::where('siswa_id', $anggota->siswa_id)
             ->where('tahun_pelajaran_id', $laporan['tahunPelajaranId'])
             ->where('kelas_id', $anggota->kelas_id)
@@ -115,7 +116,7 @@ class LaporanPresensiSiswaService
                 'status' => $status,
                 'status_label' => match ($status) {
                     'hadir' => 'Hadir', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa',
-                    'pengecualian' => $pengecualian->label(), default => 'Belum dikonfirmasi',
+                    'pengecualian' => $pengecualian?->label() ?? 'Pengecualian presensi', default => 'Belum dikonfirmasi',
                 },
                 'inferensi' => $presensi === null, 'alfa_otomatis' => $presensi === null && $status === 'alfa',
                 'jam_masuk' => $presensi?->jam_masuk ? mb_substr($presensi->jam_masuk, 0, 5) : null,
@@ -226,25 +227,34 @@ class LaporanPresensiSiswaService
                 ->when($kelasId, fn ($query) => $query->where('kelas_id', $kelasId))
                 ->whereDate('tanggal', '>=', reset($tanggalEfektif))
                 ->whereDate('tanggal', '<=', end($tanggalEfektif))
-                ->get()
+                ->orderBy('id')->get()
                 ->filter(fn (AbsensiSiswa $item) => isset($tanggalEfektifLookup[$item->tanggal->toDateString()]))
                 ->groupBy('siswa_id');
         }
-        $jumlahHari = count($tanggalEfektif);
         $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
         $hariAktif = $aturanAlfa->hariAktif();
 
-        return $anggota->map(function (AnggotaKelas $item) use ($perSiswa, $jumlahHari, $tanggalEfektif, $aturanAlfa, $hariAktif) {
-            $absensi = $perSiswa->get($item->siswa_id, collect());
-            $hadir = $absensi->where('status_kehadiran', 'hadir')->count();
+        return $anggota->map(function (AnggotaKelas $item) use ($perSiswa, $tanggalEfektif, $aturanAlfa, $hariAktif) {
+            $tanggalAnggota = $this->tanggalAnggota($tanggalEfektif, $item);
+            $tanggalLookup = array_flip($tanggalAnggota);
+            $absensi = $perSiswa->get($item->siswa_id, collect())
+                ->filter(fn ($p) => (int) $p->kelas_id === (int) $item->kelas_id && isset($tanggalLookup[$p->tanggal->toDateString()]))
+                ->keyBy(fn ($p) => $p->tanggal->toDateString());
+            $status = array_fill_keys(['hadir', 'izin', 'sakit', 'alfa', 'pengecualian', 'belum_scan'], 0);
+            foreach ($tanggalAnggota as $tanggal) {
+                // An explicit record wins, as in the daily recap; an unrecorded exemption is not an obligation.
+                $kehadiran = $absensi->get($tanggal)?->status_kehadiran ?? $aturanAlfa->statusTanpaCatatan($tanggal, $hariAktif, $item);
+                $status[array_key_exists($kehadiran, $status) ? $kehadiran : 'belum_scan']++;
+            }
+            $jumlahHari = count($tanggalAnggota) - $status['pengecualian'];
+            $hadir = $status['hadir'];
             $terlambat = $absensi->where('menit_terlambat', '>', 0);
             $pulangCepat = $absensi->where('menit_pulang_cepat', '>', 0);
 
             return [
-                'anggota_kelas' => $item, 'hari_efektif' => $jumlahHari, 'hadir' => $hadir,
-                'izin' => $absensi->where('status_kehadiran', 'izin')->count(),
-                'sakit' => $absensi->where('status_kehadiran', 'sakit')->count(),
-                'alfa' => $absensi->where('status_kehadiran', 'alfa')->count() + $aturanAlfa->jumlah($absensi, $tanggalEfektif, $hariAktif, $item),
+                'anggota_kelas' => $item, 'hari_efektif' => $jumlahHari, 'hari_kalender' => count($tanggalAnggota),
+                'pengecualian' => $status['pengecualian'], 'belum_scan' => $status['belum_scan'], 'hadir' => $hadir,
+                'izin' => $status['izin'], 'sakit' => $status['sakit'], 'alfa' => $status['alfa'],
                 'terlambat' => $terlambat->count(), 'menit_terlambat' => (int) round((float) $terlambat->sum('menit_terlambat')),
                 'pulang_cepat' => $pulangCepat->count(), 'menit_pulang_cepat' => (int) round((float) $pulangCepat->sum('menit_pulang_cepat')),
                 'persentase_hadir' => $jumlahHari > 0 ? round(($hadir / $jumlahHari) * 100, 1) : 0,
@@ -254,13 +264,25 @@ class LaporanPresensiSiswaService
 
     private function hitungRingkasan($laporan, int $hari): array
     {
+        $wajib = $laporan->where('hari_efektif', '>', 0);
+
         return [
-            'siswa' => $laporan->count(), 'hari_efektif' => $hari, 'hadir' => $laporan->sum('hadir'),
+            'siswa' => $laporan->count(), 'hari_efektif' => (int) ($laporan->max('hari_efektif') ?? 0),
+            'hari_efektif_min' => (int) ($laporan->min('hari_efektif') ?? 0),
+            'hari_kalender' => $hari, 'total_hari_wajib' => (int) $laporan->sum('hari_efektif'),
+            'pengecualian' => (int) $laporan->sum('pengecualian'), 'belum_scan' => (int) $laporan->sum('belum_scan'),
+            'hadir' => $laporan->sum('hadir'),
             'izin' => $laporan->sum('izin'), 'sakit' => $laporan->sum('sakit'), 'alfa' => $laporan->sum('alfa'),
             'terlambat' => $laporan->sum('terlambat'), 'menit_terlambat' => (int) round((float) $laporan->sum('menit_terlambat')),
             'pulang_cepat' => $laporan->sum('pulang_cepat'), 'menit_pulang_cepat' => (int) round((float) $laporan->sum('menit_pulang_cepat')),
-            'rata_persentase_hadir' => $laporan->count() ? round($laporan->avg('persentase_hadir'), 1) : 0,
+            'rata_persentase_hadir' => $wajib->count() ? round($wajib->avg('persentase_hadir'), 1) : 0,
         ];
+    }
+
+    private function tanggalAnggota(array $tanggal, AnggotaKelas $anggota): array
+    {
+        return array_values(array_filter($tanggal, fn ($tgl) => (! $anggota->tanggal_masuk || $tgl >= $anggota->tanggal_masuk->toDateString())
+            && (! $anggota->tanggal_keluar || $tgl <= $anggota->tanggal_keluar->toDateString())));
     }
 
     private function semesterSaatIni(): string

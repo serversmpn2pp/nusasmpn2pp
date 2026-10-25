@@ -41,11 +41,17 @@ class StudentAttendanceReportSummary {
     required this.earlyLeave,
     required this.earlyLeaveMinutes,
     required this.averageAttendance,
+    this.minimumEffectiveDays,
+    this.calendarDays = 0,
+    this.excludedDays = 0,
   });
   factory StudentAttendanceReportSummary.fromJson(Map<String, dynamic> json) =>
       StudentAttendanceReportSummary(
         students: _int(json['siswa']),
         effectiveDays: _int(json['hari_efektif']),
+        minimumEffectiveDays: _nullableInt(json['hari_efektif_min']),
+        calendarDays: _int(json['hari_kalender'] ?? json['hari_efektif']),
+        excludedDays: _int(json['pengecualian']),
         present: _int(json['hadir']),
         permitted: _int(json['izin']),
         sick: _int(json['sakit']),
@@ -69,6 +75,8 @@ class StudentAttendanceReportSummary {
       earlyLeave,
       earlyLeaveMinutes;
   final double averageAttendance;
+  final int? minimumEffectiveDays;
+  final int calendarDays, excludedDays;
 }
 
 class StudentAttendanceReportItem {
@@ -91,6 +99,7 @@ class StudentAttendanceReportItem {
     this.studentNumber,
     this.nationalStudentNumber,
     this.photoUrl,
+    this.excludedDays = 0,
   });
   factory StudentAttendanceReportItem.fromJson(Map<String, dynamic> json) {
     final summary = _map(json['ringkasan']);
@@ -104,6 +113,7 @@ class StudentAttendanceReportItem {
       nationalStudentNumber: json['nisn'] as String?,
       photoUrl: json['foto_url'] as String?,
       effectiveDays: _int(summary['hari_efektif']),
+      excludedDays: _int(summary['pengecualian']),
       present: _int(summary['hadir']),
       permitted: _int(summary['izin']),
       sick: _int(summary['sakit']),
@@ -129,6 +139,7 @@ class StudentAttendanceReportItem {
       earlyLeave,
       earlyLeaveMinutes;
   final double attendancePercentage;
+  final int excludedDays;
 }
 
 class StudentAttendanceReportPage {

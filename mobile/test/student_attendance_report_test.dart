@@ -10,6 +10,82 @@ import 'package:nusa/features/student_attendance_report/domain/student_attendanc
 import 'package:nusa/features/student_attendance_report/presentation/student_attendance_report_view.dart';
 
 void main() {
+  test(
+    'PJJ memakai persentase server dan pembagi hari wajib yang telah dikoreksi',
+    () {
+      final item = StudentAttendanceReportItem.fromJson({
+        'anggota_kelas_id': 7,
+        'nama': 'Siswa PJJ',
+        'kelas': 'VIII.A',
+        'ringkasan': {
+          'hari_efektif': 17,
+          'hari_kalender': 22,
+          'pengecualian': 5,
+          'hadir': 17,
+          'persentase_hadir': 100,
+        },
+      });
+      expect(item.effectiveDays, 17);
+      expect(item.excludedDays, 5);
+      expect(item.attendancePercentage, 100);
+      final summary = StudentAttendanceReportSummary.fromJson({
+        'siswa': 29,
+        'hari_efektif': 17,
+        'hari_efektif_min': 17,
+        'hari_kalender': 22,
+        'pengecualian': 145,
+        'rata_persentase_hadir': 98.6,
+      });
+      expect(summary.calendarDays, 22);
+      expect(summary.minimumEffectiveDays, 17);
+      expect(summary.averageAttendance, 98.6);
+      final legacy = StudentAttendanceReportItem.fromJson({
+        'ringkasan': _summaryJson(),
+      });
+      expect(legacy.excludedDays, 0);
+      expect(legacy.attendancePercentage, 80);
+    },
+  );
+
+  testWidgets(
+    'PJJ dan rentang hari wajib tampil tanpa overflow pada layar sempit',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            studentAttendanceReportRemoteDataSourceProvider.overrideWithValue(
+              _FakeReportRemote(pjj: true),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const StudentAttendanceReportView(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Hari wajib'), findsOneWidget);
+      expect(find.text('17\u201322'), findsOneWidget);
+      expect(find.text('22 hari terjadwal'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('attendance-report-student-7')),
+        260,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('17 hari wajib \u00b7 5 hari pengecualian'),
+        findsOneWidget,
+      );
+      expect(find.text('100%'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test('mem-parsing laporan dan alfa inferensi', () {
     final detail = StudentAttendanceReportDetail.fromJson({
       'siswa': {
@@ -128,6 +204,8 @@ StudentAttendanceReportItem _item() => const StudentAttendanceReportItem(
 
 final class _FakeReportRemote
     implements StudentAttendanceReportRemoteDataSource {
+  _FakeReportRemote({this.pjj = false});
+  final bool pjj;
   int downloadCalls = 0;
   @override
   Future<StudentAttendanceReportPage> fetch(Map<String, dynamic> query) async =>
@@ -136,9 +214,11 @@ final class _FakeReportRemote
         periodLabel: '1–31 Agustus 2026',
         startDate: '2026-08-01',
         endDate: '2026-08-31',
-        summary: const StudentAttendanceReportSummary(
+        summary: StudentAttendanceReportSummary(
           students: 1,
-          effectiveDays: 5,
+          effectiveDays: pjj ? 22 : 5,
+          minimumEffectiveDays: pjj ? 17 : null,
+          calendarDays: pjj ? 22 : 5,
           present: 4,
           permitted: 0,
           sick: 0,
@@ -149,7 +229,22 @@ final class _FakeReportRemote
           earlyLeaveMinutes: 0,
           averageAttendance: 80,
         ),
-        items: [_item()],
+        items: [
+          pjj
+              ? StudentAttendanceReportItem.fromJson({
+                  'anggota_kelas_id': 7,
+                  'nama': 'Siswa NUSA',
+                  'inisial': 'SN',
+                  'kelas': 'VIII.A',
+                  'ringkasan': {
+                    'hari_efektif': 17,
+                    'hadir': 17,
+                    'pengecualian': 5,
+                    'persentase_hadir': 100,
+                  },
+                })
+              : _item(),
+        ],
         academicYears: const [
           ReportAcademicYear(id: 1, name: '2026/2027', active: true),
         ],

@@ -449,12 +449,19 @@ class _ReportHeader extends StatelessWidget {
           children: [
             _SummaryTile(label: 'Siswa', value: '${data.summary.students}'),
             _SummaryTile(
-              label: 'Hari efektif',
-              value: '${data.summary.effectiveDays}',
+              label: 'Hari wajib',
+              value:
+                  data.summary.minimumEffectiveDays != null &&
+                      data.summary.minimumEffectiveDays !=
+                          data.summary.effectiveDays
+                  ? '${data.summary.minimumEffectiveDays}\u2013${data.summary.effectiveDays}'
+                  : '${data.summary.effectiveDays}',
             ),
             _SummaryTile(
               label: 'Kehadiran',
-              value: _percent(data.summary.averageAttendance),
+              value: data.summary.effectiveDays > 0
+                  ? _percent(data.summary.averageAttendance)
+                  : '-',
             ),
             _SummaryTile(label: 'Hadir', value: '${data.summary.present}'),
             _SummaryTile(label: 'Izin', value: '${data.summary.permitted}'),
@@ -463,6 +470,16 @@ class _ReportHeader extends StatelessWidget {
             _SummaryTile(label: 'Terlambat', value: '${data.summary.late}'),
           ],
         ),
+        if (data.summary.calendarDays > 0) ...[
+          const SizedBox(height: 8),
+          Text(
+            '${data.summary.calendarDays} hari terjadwal',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: .8),
+              fontSize: 11,
+            ),
+          ),
+        ],
       ],
     ),
   );
@@ -585,6 +602,14 @@ class _StudentCard extends StatelessWidget {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${item.effectiveDays} hari wajib${item.excludedDays > 0 ? ' \u00b7 ${item.excludedDays} hari pengecualian' : ''}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: NusaColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -592,7 +617,9 @@ class _StudentCard extends StatelessWidget {
             Column(
               children: [
                 Text(
-                  _percent(item.attendancePercentage),
+                  item.effectiveDays > 0
+                      ? _percent(item.attendancePercentage)
+                      : '-',
                   style: const TextStyle(
                     color: NusaColors.primary,
                     fontWeight: FontWeight.w900,
@@ -641,87 +668,88 @@ class _DetailSheet extends StatelessWidget {
     initialChildSize: .86,
     minChildSize: .55,
     maxChildSize: .96,
-    builder: (context, controller) =>
-        FutureBuilder<StudentAttendanceReportDetail>(
-          future: future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return _ErrorState(
-                message: _errorMessage(snapshot.error!),
-                onRetry: () => Navigator.pop(context),
-              );
-            }
-            final data = snapshot.requireData;
-            return ListView(
-              controller: controller,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD0D8E2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+    builder: (context, controller) => FutureBuilder<StudentAttendanceReportDetail>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _ErrorState(
+            message: _errorMessage(snapshot.error!),
+            onRetry: () => Navigator.pop(context),
+          );
+        }
+        final data = snapshot.requireData;
+        return ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD0D8E2),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  data.student.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                  ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              data.student.name,
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+            ),
+            Text(
+              '${data.student.className} · ${data.periodLabel}',
+              style: const TextStyle(
+                color: NusaColors.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${data.student.effectiveDays} hari wajib \u00b7 ${data.student.excludedDays} hari pengecualian',
+              style: const TextStyle(
+                color: NusaColors.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: NusaColors.surfaceBlue,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _MiniSummary(label: 'Hadir', value: data.student.present),
+                  _MiniSummary(label: 'Izin', value: data.student.permitted),
+                  _MiniSummary(label: 'Sakit', value: data.student.sick),
+                  _MiniSummary(label: 'Alfa', value: data.student.absent),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Rincian Harian',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            ),
+            const SizedBox(height: 7),
+            if (data.days.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
+                  child: Text('Tidak ada hari efektif pada periode ini.'),
                 ),
-                Text(
-                  '${data.student.className} · ${data.periodLabel}',
-                  style: const TextStyle(
-                    color: NusaColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: NusaColors.surfaceBlue,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _MiniSummary(label: 'Hadir', value: data.student.present),
-                      _MiniSummary(
-                        label: 'Izin',
-                        value: data.student.permitted,
-                      ),
-                      _MiniSummary(label: 'Sakit', value: data.student.sick),
-                      _MiniSummary(label: 'Alfa', value: data.student.absent),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Rincian Harian',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                ),
-                const SizedBox(height: 7),
-                if (data.days.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(
-                      child: Text('Tidak ada hari efektif pada periode ini.'),
-                    ),
-                  ),
-                ...data.days.map((day) => _DayCard(day: day)),
-              ],
-            );
-          },
-        ),
+              ),
+            ...data.days.map((day) => _DayCard(day: day)),
+          ],
+        );
+      },
+    ),
   );
 }
 

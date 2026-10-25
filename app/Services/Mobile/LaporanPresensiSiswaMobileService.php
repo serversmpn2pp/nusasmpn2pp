@@ -36,6 +36,7 @@ class LaporanPresensiSiswaMobileService
                 'tanggal_mulai' => $laporan['tanggalMulai'],
                 'tanggal_selesai' => $laporan['tanggalSelesai'],
                 'jumlah_hari_efektif' => $laporan['jumlahHariEfektif'],
+                'jumlah_hari_kalender' => $laporan['jumlahHariKalender'],
             ],
             'ringkasan' => $laporan['ringkasan'],
             'items' => $items->map(fn (array $item) => $this->item($item))->values(),
@@ -73,7 +74,8 @@ class LaporanPresensiSiswaMobileService
             'periode' => [
                 'jenis' => $laporan['periode'], 'label' => $laporan['labelPeriode'],
                 'tanggal_mulai' => $laporan['tanggalMulai'], 'tanggal_selesai' => $laporan['tanggalSelesai'],
-                'jumlah_hari_efektif' => $laporan['jumlahHariEfektif'],
+                'jumlah_hari_efektif' => $item['hari_efektif'],
+                'jumlah_hari_kalender' => $item['hari_kalender'],
             ],
             'ringkasan' => $this->ringkasanItem($item),
             'rincian' => $rincian,
