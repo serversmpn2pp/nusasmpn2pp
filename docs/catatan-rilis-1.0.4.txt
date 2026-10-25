@@ -1,0 +1,8 @@
+<id>
+Penguatan keamanan ujian dan perlindungan layar.
+Penyimpanan draf jawaban yang lebih aman.
+Pratinjau tampilan siswa untuk guru, dengan gambar yang dapat diperbesar.
+Perbaikan tampilan gambar, tabel, rumus, dan penanganan koneksi pratinjau.
+Penyempurnaan perhitungan serta rincian persentase presensi siswa.
+Perbaikan tampilan dan stabilitas aplikasi.
+</id>

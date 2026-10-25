@@ -4,7 +4,89 @@ Upload key dibuat dan disimpan oleh pengelola sekolah pada komputer pengembang,
 bukan server Laravel. Kunci tersebut berbeda dari service-account Firebase.
 Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
-## AAB terbaru — 1.0.3+4, 23 Oktober 2026
+## AAB terbaru — 1.0.4+5, 25 Oktober 2026
+
+File untuk pembaruan **closed testing — Alpha**:
+[app-release-1.0.4-5.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.4-5.aab).
+Ukuran **95.911.238 byte** (sekitar 95,9 MB / 91,5 MiB). Salinan bernama versi
+ini identik dengan keluaran `mobile/build/app/outputs/bundle/release/app-release.aab`.
+Seluruh AAB versi lama tetap tersimpan di `mobile/build/releases/`.
+
+SHA-256:
+
+```text
+51eba4ded39e2c106ce2ae557a5b924a9279fb18d4e0bce067ba216805e233b2
+```
+
+Sumber: HEAD `3f1d612`, dengan kenaikan versi pada `mobile/pubspec.yaml`
+menjadi **1.0.4+5**. Package tetap `id.sch.smpn2padangpanjang.nusa` dan
+sertifikat upload cocok dengan AAB 1.0.3+4.
+
+### Isi pembaruan dan verifikasi
+
+- Penguatan pengawasan ujian, pemeriksaan proteksi layar, pengecualian pemilih
+  berkas berizin server, serta pemulihan draf jawaban terenkripsi yang mengikuti
+  status, batas waktu dan versi jawaban server.
+- Pratinjau Siswa native pada bank/detail/paket soal; komponen soal dipakai
+  bersama dengan pengerjaan siswa. Gambar per bagian, tabel dan rumus ikut
+  ditampilkan, disertai pembesar gambar dan penanganan kegagalan/timeout.
+- Penyempurnaan laporan presensi siswa: hari wajib per masa keanggotaan,
+  pengecualian PJJ, rincian persentase, serta tampilan ketika tidak ada hari wajib.
+- Build memakai Flutter 3.47.1 / Dart 3.13.1, dependensi terkunci
+  (`pub get --offline --enforce-lockfile`, lalu `--no-pub`), `APP_ENV=production`
+  dan API HTTPS sekolah. Tidak mengganti dependensi atau upload key.
+- Manifest final: versi **1.0.4**, version code **5**, min SDK **24**, target
+  SDK **36**, bukan debug dan `allowBackup=false`. Penanda API produksi,
+  pratinjau/pembesar, nol toleransi, draf, versi jawaban, presensi dan tautan
+  kebijakan ditemukan pada ketiga library AOT `libapp.so`.
+- `bundletool validate` CLI 1.18.3, `jar --validate`, integritas CRC/duplikasi
+  ZIP, dan verifikasi `jarsigner` lulus. Fingerprint sertifikat upload sama
+  dengan rilis sebelumnya.
+- Konfigurasi meminta `PAGE_ALIGNMENT_16K`. Pemeriksa Android Studio memeriksa
+  **14 ELF 64-bit: 0 masalah**. APK universal diagnostik dari AAB juga lulus
+  `zipalign -v -c -P 16 4`. APK diagnostik memakai debug key standar dan hanya
+  berada di folder validasi; file distribusi adalah AAB bertanda tangan upload key.
+- Pengujian sumber sebelum build: analyzer bersih dan **865 tes Flutter lulus**;
+  regresi gabungan backend **219 tes / 2.820 assertion lulus**. Temuan lama
+  alfa STS sudah ditelusuri sebagai harapan tes salinan rekap yang usang;
+  lihat [verifikasi alfa rapor STS](verifikasi-alfa-rapor-sts.md).
+
+Log pub/build/tes/analyzer tersedia di `mobile/build/*release-1.0.4-5.log`;
+manifest, konfigurasi, checksum, pemeriksaan sertifikat, penanda AOT dan bukti
+validasi native ada di `mobile/build/aab-validation-1.0.4-5/`.
+Peringatan toolchain Java/KGP dan font Cupertino masih ada tanpa menggagalkan
+build. Pemeriksaan lokal ini tidak mencakup runtime HP fisik/perangkat 16 KB
+atau APK split aktual yang kelak didistribusikan Google Play.
+
+### Catatan rilis dan pembaruan closed testing
+
+Salin isi [catatan-rilis-1.0.4.txt](D:/nusasmpn2pp/docs/catatan-rilis-1.0.4.txt)
+ke Release notes. Isinya 350 karakter di dalam tag `<id>`, sesuai batas 500
+karakter per bahasa pada [panduan rilis Google Play](https://support.google.com/googleplay/android-developer/answer/9859348?hl=en).
+
+1. Pilih aplikasi NUSA, lalu **Test and release → Testing → Closed testing**.
+2. Pada track **Alpha** yang sedang dipakai, pilih **Manage track → Create new release**.
+3. Unggah `app-release-1.0.4-5.aab`, beri nama rilis **1.0.4 (5)** dan isi catatan rilis.
+4. Pilih **Next**, periksa ringkasan dan selesaikan error yang ditampilkan.
+5. Simpan/kirim untuk review melalui **Publishing overview** sesuai tombol yang tersedia.
+   Setelah disetujui, publikasikan perubahan jika Managed publishing diaktifkan.
+6. Tester memperbarui NUSA melalui Play Store pada akun Google yang terdaftar.
+
+Gunakan track dan daftar tester yang sama; rilis terpublikasi sebelumnya tetap
+menjadi riwayat. Bila masih ada draft/perubahan rilis yang tertunda, selesaikan
+atau sunting rilis tertunda tersebut sebelum membuat rilis lain.
+Version code **5** harus belum pernah digunakan di Console. Riwayat Console
+tidak dibuka pada pekerjaan ini dan AAB belum diunggah/dipublikasikan.
+Syarat tester adalah keikutsertaan yang berkelanjutan; lihat
+[ketentuan pengujian akun personal](https://support.google.com/googleplay/android-developer/answer/14151465?hl=en).
+
+Pastikan backend produksi memuat API keamanan/draf/pratinjau dan presensi
+terbaru. Scanner tanpa sesi serta monitoring TV adalah perubahan backend
+tersendiri; pemasangannya mengikuti [panduan scanner](perangkat-scanner.md),
+[monitor siswa](monitoring-tv-siswa.md) dan [monitor ujian](monitoring-tv-ujian.md).
+Pekerjaan build ini tidak menerapkan kode, migrasi atau perubahan data ke server.
+
+## Riwayat AAB — 1.0.3+4, 23 Oktober 2026
 
 File untuk diunggah ke pembaruan **closed testing — Alpha**:
 [app-release-1.0.3-4.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.3-4.aab).
