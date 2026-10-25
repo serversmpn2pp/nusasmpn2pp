@@ -14,10 +14,12 @@ use App\Services\Absensi\ProsesScanAbsensi;
 use App\Services\Absensi\ProsesScanAbsensiPegawai;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\MenggunakanPerangkatScan;
 use Tests\TestCase;
 
 class ScanUlangAbsensiTest extends TestCase
 {
+    use MenggunakanPerangkatScan;
     use RefreshDatabase;
 
     public function test_scan_ulang_siswa_mengembalikan_absensi_dan_waktu_yang_sudah_tercatat(): void
@@ -113,6 +115,7 @@ class ScanUlangAbsensiTest extends TestCase
 
     public function test_halaman_scan_memiliki_status_visual_yang_tidak_menyebut_scan_ulang_sebagai_gagal(): void
     {
+        $this->aktifkanBrowserScan();
         Carbon::setTestNow('2026-08-06 06:30:00');
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
         PengaturanAbsensi::create([

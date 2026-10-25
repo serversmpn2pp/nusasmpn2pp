@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="scanner-csrf" content="{{ $scannerCsrf }}">
 
         <title>Scan Presensi Pegawai - NUSA</title>
 
@@ -924,11 +924,12 @@
             </div>
         </div>
 
+        @include('partials.scanner-device')
         <script>
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             const jadwalHariIni = @json($jadwalJson);
-            const serverAwal = new Date(@json(now()->toIso8601String())).getTime();
-            const clientAwal = Date.now();
+            let serverAwal = new Date(@json(now()->toIso8601String())).getTime();
+            let clientAwal = Date.now();
+            const tanggalJadwal = @json(now()->toDateString());
             const scanQueue = [];
             const riwayat = [];
             const statusSudahTercatat = new Set(['duplikat_cepat', 'sudah_scan_masuk', 'sudah_scan_pulang']);
@@ -964,6 +965,17 @@
             function waktuServer() {
                 return new Date(serverAwal + (Date.now() - clientAwal));
             }
+
+            NusaScanner.start((payload) => {
+                const jadwalBerubah = JSON.stringify(payload.jadwalJson) !== JSON.stringify(jadwalHariIni);
+                if ((payload.tanggal_server !== tanggalJadwal || jadwalBerubah) && !sedangMemproses && scanQueue.length === 0) {
+                    location.reload();
+                    return;
+                }
+                serverAwal = new Date(payload.waktu_server).getTime();
+                clientAwal = Date.now();
+                perbaruiJam();
+            });
 
             function duaDigit(nilai) {
                 return String(nilai).padStart(2, '0');
@@ -1047,6 +1059,7 @@
             }
 
             function tambahAntrean(nilaiScan) {
+                if (!NusaScanner.active) return;
                 batalkanResetHasil();
 
                 scanQueue.push({
@@ -1060,10 +1073,15 @@
 
             function perbaruiAntrean() {
                 elements.queueCount.textContent = String(scanQueue.length);
-                elements.statusText.textContent = sedangMemproses ? 'Memproses' : 'Siap';
+                elements.statusText.textContent = !NusaScanner.active ? 'Perangkat nonaktif' : (sedangMemproses ? 'Memproses' : 'Siap');
             }
 
             async function prosesAntrean() {
+                if (!NusaScanner.active) {
+                    scanQueue.length = 0;
+                    perbaruiAntrean();
+                    return;
+                }
                 if (sedangMemproses || scanQueue.length === 0) {
                     perbaruiAntrean();
                     return;
@@ -1077,17 +1095,7 @@
                 perbaruiAntrean();
 
                 try {
-                    const response = await fetch(@json(route('scan-absensi-pegawai.store')), {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                        },
-                        body: JSON.stringify({
-                            isi_scan: item.isi_scan,
-                        }),
-                    });
+                    const response = await NusaScanner.submit(@json(route('scan-absensi-pegawai.store')), { isi_scan: item.isi_scan });
 
                     const contentType = response.headers.get('content-type') || '';
                     const payload = contentType.includes('application/json')

@@ -76,6 +76,7 @@ use App\Http\Controllers\LegerStsController;
 use App\Http\Controllers\LokasiBarangController;
 use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\MediaResmiHumasController;
+use App\Http\Controllers\MonitoringSiswaController;
 use App\Http\Controllers\MonitoringSurveiController;
 use App\Http\Controllers\MonitoringUjianCbtController;
 use App\Http\Controllers\MutasiStokBarangController;
@@ -114,6 +115,8 @@ use App\Http\Controllers\PenugasanGuruBkTingkatController;
 use App\Http\Controllers\PenugasanGuruWaliController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PerangkatAjarSayaController;
+use App\Http\Controllers\PerangkatMonitoringController;
+use App\Http\Controllers\PerangkatScanController;
 use App\Http\Controllers\PergantianGuruMataPelajaranController;
 use App\Http\Controllers\PeringatanDiniSiswaController;
 use App\Http\Controllers\PermintaanPenghapusanController;
@@ -182,6 +185,8 @@ use App\Http\Controllers\UmpanBalikOrangTuaController;
 use App\Http\Controllers\UnitBarangController;
 use App\Http\Controllers\VerifikasiPelanggaranSiswaController;
 use App\Http\Controllers\WaktuTambahanPesertaUjianCbtController;
+use App\Http\Middleware\PastikanMonitorTv;
+use App\Http\Middleware\PastikanPerangkatScan;
 use App\Http\Middleware\SesiPengerjaanUjian;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -227,6 +232,22 @@ Route::middleware('guest')->group(function () {
 Route::get('presensi-pertemuan/{token}', [PresensiPertemuanHumasController::class, 'masuk'])
     ->where('token', '[A-Za-z0-9]{64}')->name('presensi-pertemuan.masuk');
 
+// Scanner credentials are independent of the web login and its session/CSRF token.
+Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
+    ->middleware(PastikanPerangkatScan::class)->group(function () {
+        foreach (['siswa' => ['scan-absensi', ScanAbsensiController::class], 'pegawai' => ['scan-absensi-pegawai', ScanAbsensiPegawaiController::class]] as $jenis => [$path, $controller]) {
+            Route::get($path, [$controller, 'index'])->defaults('jenis_scanner', $jenis)->name($path.'.index');
+            Route::post($path, [$controller, 'store'])->defaults('jenis_scanner', $jenis)->name($path.'.store');
+        }
+    });
+
+// Read-only TV credentials never grant scanner or account access.
+Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
+    ->middleware(PastikanMonitorTv::class)->group(function () {
+        Route::get('monitoring-siswa', [MonitoringSiswaController::class, 'index'])->name('monitoring-siswa.index');
+        Route::get('monitoring-siswa/data', [MonitoringSiswaController::class, 'data'])->name('monitoring-siswa.data');
+    });
+
 Route::middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default', SesiPengerjaanUjian::class])
     ->prefix('cbt')
     ->name('cbt.')
@@ -256,6 +277,16 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
     Route::put('ganti-kata-sandi', [AutentikasiController::class, 'updateKataSandi'])->name('kata-sandi.update');
 
     Route::middleware('kata_sandi_bukan_default')->group(function () {
+        Route::middleware(['admin', 'throttle:30,1,monitor-kelola:'])->group(function () {
+            Route::get('perangkat-monitoring', [PerangkatMonitoringController::class, 'index'])->name('perangkat-monitoring.index');
+            Route::post('perangkat-monitoring', [PerangkatMonitoringController::class, 'store'])->name('perangkat-monitoring.store');
+            Route::delete('perangkat-monitoring/{perangkat}', [PerangkatMonitoringController::class, 'cabut'])->whereNumber('perangkat')->name('perangkat-monitoring.cabut');
+        });
+        Route::middleware(['admin', 'throttle:30,1,scanner-kelola:'])->group(function () {
+            Route::get('perangkat-scan', [PerangkatScanController::class, 'index'])->name('perangkat-scan.index');
+            Route::post('perangkat-scan', [PerangkatScanController::class, 'store'])->name('perangkat-scan.store');
+            Route::delete('perangkat-scan/{perangkat}', [PerangkatScanController::class, 'cabut'])->whereNumber('perangkat')->name('perangkat-scan.cabut');
+        });
         require __DIR__.'/supervisi.php';
         Route::get('notifikasi', [NotifikasiPenggunaController::class, 'index'])->name('notifikasi.index');
         Route::get('notifikasi/ringkasan', [NotifikasiPenggunaController::class, 'ringkasan'])->name('notifikasi.ringkasan');
@@ -1262,12 +1293,6 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::put('piket-kehadiran-siswa/{anggotaKelas}', [PiketKehadiranSiswaController::class, 'update'])
             ->middleware('izin:piket_guru.catat_kehadiran')
             ->name('piket-kehadiran-siswa.update');
-        Route::middleware('izin:absensi.scan')->group(function () {
-            Route::get('scan-absensi', [ScanAbsensiController::class, 'index'])->name('scan-absensi.index');
-            Route::post('scan-absensi', [ScanAbsensiController::class, 'store'])->name('scan-absensi.store');
-            Route::get('scan-absensi-pegawai', [ScanAbsensiPegawaiController::class, 'index'])->name('scan-absensi-pegawai.index');
-            Route::post('scan-absensi-pegawai', [ScanAbsensiPegawaiController::class, 'store'])->name('scan-absensi-pegawai.store');
-        });
         Route::get('rekap-absensi-harian', [RekapAbsensiHarianController::class, 'index'])
             ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
             ->name('rekap-absensi-harian.index');

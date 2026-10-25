@@ -23,10 +23,12 @@ use DOMDocument;
 use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Tests\Concerns\MenggunakanPerangkatScan;
 use Tests\TestCase;
 
 class TampilanLintasRoleTest extends TestCase
 {
+    use MenggunakanPerangkatScan;
     use RefreshDatabase;
 
     public function test_semua_role_memakai_kerangka_yang_sama_dengan_menu_dan_data_berbeda(): void
@@ -74,8 +76,8 @@ class TampilanLintasRoleTest extends TestCase
         }
         foreach (['siswa', 'orang_tua'] as $role) {
             $this->actingAs($d[$role])->get(route('persuratan.index'))->assertForbidden();
-            $this->get(route('scan-absensi.index'))->assertForbidden();
-            $this->get(route('scan-absensi-pegawai.index'))->assertForbidden();
+            $this->get(route('scan-absensi.index'))->assertUnauthorized();
+            $this->get(route('scan-absensi-pegawai.index'))->assertUnauthorized();
         }
         $this->actingAs($d['orang_tua'])->get(route('presensi-anak.index', ['siswa_id' => $d['asing']->id]))->assertOk()->assertDontSee('SISWA RAHASIA KELAS LAIN');
         $this->writeManifest('manifest.json', $manifest);
@@ -83,6 +85,7 @@ class TampilanLintasRoleTest extends TestCase
 
     public function test_terminal_scan_memakai_tema_mandiri_dan_tetap_menjaga_kontrol_dan_privasi(): void
     {
+        $this->aktifkanBrowserScan();
         $d = $this->data();
         $admin = Pengguna::where('username', 'administrator')->firstOrFail();
         $this->actingAs($admin);

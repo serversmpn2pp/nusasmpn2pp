@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Services\Monitoring\AksesMonitorTv;
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Symfony\Component\HttpFoundation\Response;
+
+class PastikanMonitorTv
+{
+    public function __construct(private readonly AksesMonitorTv $akses) {}
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        $key = 'monitor-tv:'.hash('sha256', $request->ip() ?? 'unknown');
+        if (RateLimiter::tooManyAttempts($key, 240)) {
+            $response = response()->json(['pesan' => 'Terlalu banyak permintaan monitoring.'], 429)->header('Retry-After', 60);
+        } else {
+            RateLimiter::hit($key, 60);
+            $perangkat = $this->akses->perangkat($request);
+            if (! $perangkat) {
+                $response = $request->expectsJson()
+                    ? response()->json(['pesan' => 'Akses layar monitoring belum aktif atau telah dicabut.'], 401)
+                    : response()->view('monitoring-siswa.belum-aktif', [], 401);
+            } else {
+                if (! $perangkat->terakhir_digunakan_pada || $perangkat->terakhir_digunakan_pada->lt(now()->subMinute())) {
+                    $perangkat->update(['terakhir_digunakan_pada' => now()]);
+                }
+                $response = $next($request);
+                $response->headers->setCookie($this->akses->cookie($request, $this->akses->token($request)));
+            }
+        }
+        $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+        $response->headers->set('X-Frame-Options', 'DENY');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Referrer-Policy', 'same-origin');
+        $response->headers->set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+
+        return $response;
+    }
+}

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\PastikanPerangkatScan;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -54,7 +55,7 @@ class PermissionRouteTest extends TestCase
 
     public function test_route_absensi_dan_bk_memakai_permission_modul(): void
     {
-        $this->assertRouteMemakaiMiddleware('scan-absensi.index', 'izin:absensi.scan');
+        $this->assertRouteMemakaiMiddleware('scan-absensi.index', PastikanPerangkatScan::class);
         $this->assertRouteMemakaiMiddleware('rekap-absensi-harian.index', 'izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan');
         $this->assertRouteMemakaiMiddleware('rekap-absensi-harian.koreksi.edit', 'izin:absensi.koreksi,absensi.koreksi_hari_ini');
         $this->assertRouteMemakaiMiddleware('api.v1.rekap-presensi-siswa.index', 'izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan');

@@ -11,10 +11,12 @@ use App\Models\TahunPelajaran;
 use App\Services\Absensi\ProsesScanAbsensi;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\MenggunakanPerangkatScan;
 use Tests\TestCase;
 
 class JadwalPulangJumatSiswaTest extends TestCase
 {
+    use MenggunakanPerangkatScan;
     use RefreshDatabase;
 
     public function test_scan_pulang_jumat_mengikuti_jenis_kelamin_siswa(): void
@@ -57,6 +59,7 @@ class JadwalPulangJumatSiswaTest extends TestCase
 
     public function test_pengaturan_dan_monitor_scan_menampilkan_dua_jadwal_pulang_jumat(): void
     {
+        $this->aktifkanBrowserScan();
         Carbon::setTestNow('2026-09-04 12:00:00');
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
 

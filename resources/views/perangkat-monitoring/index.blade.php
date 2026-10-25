@@ -1,0 +1,44 @@
+@extends('layouts.app')
+@section('admin-module', 'kehadiran')
+@section('title', 'Monitoring TV Siswa - NUSA')
+@section('content')
+<div class="page-header">
+    <div><p class="eyebrow">Kehadiran / Monitoring</p><h1 class="page-title">Layar monitoring siswa</h1></div>
+    <div class="actions">
+        @if ($saatIni)<a class="button button-primary" href="{{ route('monitoring-siswa.index') }}" target="_blank" rel="noopener"><i data-lucide="monitor"></i> Buka layar TV</a>
+        <form method="POST" action="{{ route('logout') }}">@csrf<button class="button button-muted" type="submit"><i data-lucide="log-out"></i> Keluar akun admin</button></form>@endif
+    </div>
+</div>
+@if (session('berhasil'))<x-ui.alert type="success">{{ session('berhasil') }}</x-ui.alert>@endif
+@if ($errors->any())<x-ui.alert type="danger"><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></x-ui.alert>@endif
+<section class="panel panel-pad" style="margin-bottom:24px">
+    <h2 class="section-title">Aktivasi browser TV</h2>
+    <x-ui.alert :type="$saatIni ? 'success' : 'warning'" :title="$saatIni ? 'Browser ini aktif' : 'Browser belum aktif'">{{ $saatIni?->nama ?? 'Aktifkan di browser komputer yang terhubung ke TV ruang guru.' }}</x-ui.alert>
+    <p>Halaman baca-saja diperbarui setiap 5 detik dan tetap berjalan setelah akun admin keluar. Data ditujukan untuk ruang guru, bukan layar publik. Kredensial scanner tidak dapat digunakan untuk layar ini.</p>
+    <form method="POST" action="{{ route('perangkat-monitoring.store') }}">
+        @csrf
+        <div class="field"><label for="nama">Nama layar</label><input class="input" id="nama" name="nama" required maxlength="100" value="{{ old('nama', $saatIni?->nama) }}" placeholder="Contoh: TV ruang guru"></div>
+        <label style="display:flex;gap:10px;margin:18px 0"><input type="checkbox" name="konfirmasi" value="1" required> Layar berada di area terbatas untuk guru dan dikelola sekolah.</label>
+        <button class="button button-primary" type="submit"><i data-lucide="shield-check"></i> {{ $saatIni ? 'Perbarui aktivasi' : 'Aktifkan browser ini' }}</button>
+    </form>
+</section>
+<section class="panel">
+    <div class="panel-pad"><h2 class="section-title">Perangkat monitoring</h2></div>
+    <div class="table-wrap"><table class="employee-table"><thead><tr><th>Layar</th><th>Terakhir terhubung</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
+    @forelse ($daftar as $item)
+    <tr><td><strong>{{ $item->nama }}</strong>@if ($saatIni?->id === $item->id)<p><x-ui.status type="success">Browser ini</x-ui.status></p>@endif</td>
+        <td>{{ $item->terakhir_digunakan_pada?->format('d/m/Y H:i') ?? 'Belum digunakan' }}</td>
+        <td><x-ui.status :type="$item->dicabut_pada ? 'neutral' : 'success'">{{ $item->dicabut_pada ? 'Dicabut' : 'Aktif' }}</x-ui.status>@if ($item->dicabut_pada)<p>{{ $item->alasan_pencabutan }}</p>@endif</td>
+        <td>@if (!$item->dicabut_pada)<button class="button button-danger" type="button" data-ui-dialog-open="cabut-monitor-{{ $item->id }}"><i data-lucide="shield-off"></i> Cabut akses</button>@endif</td></tr>
+    @empty<tr><td colspan="4"><x-ui.empty-state title="Belum ada layar monitoring" /></td></tr>@endforelse
+    </tbody></table></div><div class="panel-pad">{{ $daftar->links() }}</div>
+</section>
+@foreach ($daftar->whereNull('dicabut_pada') as $item)
+<x-ui.dialog id="cabut-monitor-{{ $item->id }}" title="Cabut akses monitoring">
+    <p>{{ $item->nama }}</p><form method="POST" action="{{ route('perangkat-monitoring.cabut', $item) }}">@csrf @method('DELETE')
+        <div class="field"><label for="alasan-{{ $item->id }}">Alasan</label><textarea class="textarea" id="alasan-{{ $item->id }}" name="alasan" required minlength="5" maxlength="500"></textarea></div>
+        <div class="actions" style="margin-top:16px"><button type="button" class="button button-muted" data-ui-dialog-close>Batal</button><button class="button button-danger" type="submit">Cabut akses</button></div>
+    </form>
+</x-ui.dialog>
+@endforeach
+@endsection

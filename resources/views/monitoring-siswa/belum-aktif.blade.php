@@ -1,0 +1,3 @@
+<!DOCTYPE html>
+<html lang="id" translate="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Monitoring belum aktif - NUSA</title>@fonts<link rel="stylesheet" href="{{ asset('css/monitoring-tv.css') }}"></head>
+<body class="activation"><main><img src="{{ asset('images/logo-nusa.png') }}" alt="NUSA" width="64" height="64"><h1>Layar monitoring belum aktif</h1><p>Akses browser belum diaktifkan atau telah dicabut. Hubungi administrator sekolah.</p><a href="{{ route('perangkat-monitoring.index') }}">Aktivasi oleh administrator</a></main></body></html>

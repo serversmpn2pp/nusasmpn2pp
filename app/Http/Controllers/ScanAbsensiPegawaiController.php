@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 
 class ScanAbsensiPegawaiController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $hari = $this->hariDariTanggal(now()->isoWeekday());
         $jadwalHariIni = PengaturanAbsensiPegawai::query()
@@ -25,12 +25,20 @@ class ScanAbsensiPegawaiController extends Controller
             ->orderBy('nama_jadwal')
             ->get();
 
-        return view('scan-absensi-pegawai.index', [
+        $data = [
             'hariLabel' => PengaturanAbsensiPegawai::DAFTAR_HARI[$hari]['label'] ?? ucfirst($hari),
             'tanggalHariIni' => now()->locale('id')->translatedFormat('d F Y'),
             'jadwalHariIni' => $jadwalHariIni,
             'jadwalJson' => $jadwalHariIni->map(fn (PengaturanAbsensiPegawai $jadwal) => $this->jadwalUntukHalaman($jadwal))->values(),
-        ]);
+            'scannerCsrf' => $request->attributes->get('scanner_csrf'),
+        ];
+        if ($request->expectsJson()) {
+            unset($data['jadwalHariIni']);
+
+            return response()->json($data + ['waktu_server' => now()->toIso8601String(), 'tanggal_server' => now()->toDateString()]);
+        }
+
+        return view('scan-absensi-pegawai.index', $data);
     }
 
     public function store(Request $request, ProsesScanAbsensiPegawai $prosesScanAbsensiPegawai): JsonResponse
@@ -90,7 +98,7 @@ class ScanAbsensiPegawaiController extends Controller
             'jenis_pegawai' => $pegawai->jenis_pegawai,
             'jabatan' => $pegawai->jabatan_utama ?: $pegawai->jenis_pegawai,
             'foto_url' => $pegawai->foto && Storage::disk('public')->exists($pegawai->foto)
-                ? asset('storage/' . $pegawai->foto)
+                ? asset('storage/'.$pegawai->foto)
                 : null,
             'inisial' => $this->inisial($pegawai->nama_lengkap),
         ];

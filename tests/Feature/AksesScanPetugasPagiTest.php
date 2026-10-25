@@ -6,10 +6,12 @@ use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\MenggunakanPerangkatScan;
 use Tests\TestCase;
 
 class AksesScanPetugasPagiTest extends TestCase
 {
+    use MenggunakanPerangkatScan;
     use RefreshDatabase;
 
     public function test_satpam_dan_petugas_kebersihan_memiliki_izin_scan_absensi(): void
@@ -20,6 +22,7 @@ class AksesScanPetugasPagiTest extends TestCase
 
     public function test_satpam_dapat_membuka_scan_siswa_dan_pegawai(): void
     {
+        $this->aktifkanBrowserScan();
         $akun = $this->buatAkunPetugas('Satpam Penyiap Scanner', '199001012015011001', 'satpam');
 
         $this->actingAs($akun)
@@ -32,6 +35,7 @@ class AksesScanPetugasPagiTest extends TestCase
 
     public function test_petugas_kebersihan_dapat_membuka_scan_siswa_dan_pegawai(): void
     {
+        $this->aktifkanBrowserScan();
         $akun = $this->buatAkunPetugas('Petugas Kebersihan Penyiap Scanner', '199101012016011002', 'petugas_kebersihan');
 
         $this->actingAs($akun)

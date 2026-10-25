@@ -129,11 +129,11 @@ class AutentikasiTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_halaman_scan_absensi_dikunci_sebelum_login(): void
+    public function test_halaman_scan_absensi_dikunci_sebelum_browser_diaktifkan(): void
     {
         $response = $this->get('/scan-absensi');
 
-        $response->assertRedirect(route('login'));
+        $response->assertUnauthorized()->assertSee('Browser scanner belum aktif');
     }
 
     public function test_halaman_rekap_absensi_harian_dikunci_sebelum_login(): void

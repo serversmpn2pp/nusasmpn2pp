@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 
 class ScanAbsensiController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $hari = $this->hariDariTanggal(now()->isoWeekday());
         $pengaturanAbsensi = PengaturanAbsensi::query()
@@ -21,12 +21,20 @@ class ScanAbsensiController extends Controller
             ->where('aktif', true)
             ->first();
 
-        return view('scan-absensi.index', [
+        $data = [
             'hariLabel' => PengaturanAbsensi::DAFTAR_HARI[$hari]['label'] ?? ucfirst($hari),
             'tanggalHariIni' => now()->locale('id')->translatedFormat('d F Y'),
             'pengaturanAbsensi' => $pengaturanAbsensi,
             'jadwal' => $pengaturanAbsensi ? $this->jadwalUntukHalaman($pengaturanAbsensi) : null,
-        ]);
+            'scannerCsrf' => $request->attributes->get('scanner_csrf'),
+        ];
+        if ($request->expectsJson()) {
+            unset($data['pengaturanAbsensi']);
+
+            return response()->json($data + ['waktu_server' => now()->toIso8601String(), 'tanggal_server' => now()->toDateString()]);
+        }
+
+        return view('scan-absensi.index', $data);
     }
 
     public function store(Request $request, ProsesScanAbsensi $prosesScanAbsensi): JsonResponse
