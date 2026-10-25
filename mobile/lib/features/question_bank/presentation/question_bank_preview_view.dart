@@ -57,6 +57,7 @@ class _QuestionBankPreviewViewState
       body: SafeArea(
         top: false,
         child: state.when(
+          skipLoadingOnRefresh: false,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => Center(
             child: Padding(

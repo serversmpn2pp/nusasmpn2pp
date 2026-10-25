@@ -138,4 +138,4 @@ final questionBankPreviewProvider = FutureProvider.autoDispose
         await ref.read(authControllerProvider.notifier).logout();
         rethrow;
       }
-    });
+    }, retry: (_, _) => null);

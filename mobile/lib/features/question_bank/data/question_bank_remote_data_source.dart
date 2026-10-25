@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/network/api_exception_mapper.dart';
 import 'package:nusa/core/network/dio_provider.dart';
 import 'package:nusa/features/question_bank/domain/question_bank.dart';
@@ -73,14 +75,43 @@ final class DioQuestionBankRemoteDataSource
 
   @override
   Future<StudentExamQuestion> preview(int id) async {
+    final cancel = CancelToken();
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        'bank-soal/$id/pratinjau',
-      );
-      return StudentExamQuestion.fromJson(
-        _data(response)['soal'] as Map<String, dynamic>,
+      final response = await _dio
+          .get<Map<String, dynamic>>(
+            'bank-soal/$id/pratinjau',
+            cancelToken: cancel,
+          )
+          .timeout(const Duration(seconds: 30));
+      final data = _data(response)['soal'];
+      if (data is! Map<String, dynamic> ||
+          data['jenis'] is! String ||
+          data['pertanyaan'] is! String) {
+        throw const NetworkException(
+          'Data pratinjau belum lengkap. Hubungi admin untuk memastikan server NUSA sudah diperbarui.',
+        );
+      }
+      final question = StudentExamQuestion.fromJson(data);
+      if (question.id != id) {
+        throw const NetworkException(
+          'Data pratinjau tidak sesuai dengan soal yang dipilih. Silakan coba lagi.',
+        );
+      }
+      return question;
+    } on TimeoutException catch (exception) {
+      cancel.cancel('Batas waktu pratinjau tercapai.');
+      throw NetworkException(
+        'Pratinjau terlalu lama dimuat. Periksa koneksi, lalu tekan Coba Lagi.',
+        cause: exception,
       );
     } on DioException catch (exception) {
+      if (exception.response?.statusCode == 404) {
+        throw NetworkException(
+          'Pratinjau belum tersedia atau soal tidak ditemukan. Hubungi admin untuk memastikan server NUSA sudah diperbarui.',
+          statusCode: 404,
+          cause: exception,
+        );
+      }
       throw mapDioException(exception);
     }
   }

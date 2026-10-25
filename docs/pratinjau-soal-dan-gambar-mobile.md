@@ -57,6 +57,31 @@ pasang build mobile dari sumber terbaru. Tidak ada migrasi database atau
 perubahan izin Android. APK/AAB yang dibuat sebelum perubahan ini belum
 memuat tombol pratinjau maupun pembesar gambar.
 
+### Pratinjau terus loading setelah hanya Android diperbarui
+
+Android terbaru membutuhkan route pratinjau yang baru. Bila backend belum
+diperbarui, route tersebut dapat mengembalikan HTTP 404. Retry otomatis provider
+sebelumnya menahan status loading selama beberapa percobaan sehingga pesan
+kegagalan tidak segera terlihat.
+
+Pratinjau kini tidak mengulang otomatis. Respons gagal langsung menampilkan
+pesan dan tombol **Coba Lagi**. Permintaan dibatasi total 30 detik dan dibatalkan
+jika batas itu tercapai; respons terlambat tidak membuka soal. Respons yang
+tidak memuat soal yang diminta juga ditolak.
+
+Setelah berkas backend terbaru tersinkron di server, jalankan dari folder proyek:
+
+```sh
+php artisan optimize:clear
+php artisan route:list --path=api/v1/bank-soal
+```
+
+Pastikan daftar menampilkan `GET|HEAD api/v1/bank-soal/{soalCbt}/pratinjau`.
+Tidak diperlukan migrasi khusus untuk fitur pratinjau. Sesudah backend siap,
+tekan **Coba Lagi** atau buka kembali pratinjau. Perbaikan status loading ini
+memerlukan hot restart/build Android baru, tetapi API pratinjau tetap harus
+tersedia di backend.
+
 Jika gambar soal tertentu tetap gagal:
 
 1. Periksa gambar di detail dan pratinjau. HTTP 404 menunjukkan URL/berkas tidak
