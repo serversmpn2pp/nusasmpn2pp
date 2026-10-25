@@ -1,11 +1,13 @@
 @extends('layouts.app')
 @section('admin-module', 'kehadiran')
-@section('title', 'Monitoring TV Siswa - NUSA')
+@section('title', 'Pengaturan Monitoring TV - NUSA')
 @section('content')
 <div class="page-header">
-    <div><p class="eyebrow">Kehadiran / Monitoring</p><h1 class="page-title">Layar monitoring siswa</h1></div>
+    <div><p class="eyebrow">Monitoring ruang guru</p><h1 class="page-title">Pengaturan layar TV</h1></div>
     <div class="actions">
-        @if ($saatIni)<a class="button button-primary" href="{{ route('monitoring-siswa.index') }}" target="_blank" rel="noopener"><i data-lucide="monitor"></i> Buka layar TV</a>
+        @if ($saatIni)
+        @if ($saatIni->mengizinkan('siswa'))<a class="button button-primary" href="{{ route('monitoring-siswa.index') }}" target="_blank" rel="noopener"><i data-lucide="monitor"></i> Buka layar TV siswa</a>@endif
+        @if ($saatIni->mengizinkan('ujian'))<a class="button button-primary" href="{{ route('monitoring-ujian-tv.index') }}" target="_blank" rel="noopener"><i data-lucide="presentation"></i> Buka TV ujian</a>@endif
         <form method="POST" action="{{ route('logout') }}">@csrf<button class="button button-muted" type="submit"><i data-lucide="log-out"></i> Keluar akun admin</button></form>@endif
     </div>
 </div>
@@ -18,6 +20,10 @@
     <form method="POST" action="{{ route('perangkat-monitoring.store') }}">
         @csrf
         <div class="field"><label for="nama">Nama layar</label><input class="input" id="nama" name="nama" required maxlength="100" value="{{ old('nama', $saatIni?->nama) }}" placeholder="Contoh: TV ruang guru"></div>
+        <div class="form-grid" style="margin-top:16px">
+            <div class="field"><label for="cakupan">Akses layar</label><select class="select" id="cakupan" name="cakupan">@foreach (\App\Models\PerangkatMonitoring::CAKUPAN as $value => $label)<option value="{{ $value }}" @selected(old('cakupan', $saatIni?->cakupan ?? $cakupanAwal) === $value)>{{ $label }}</option>@endforeach</select></div>
+            <div class="field" id="kegiatan-field"><label for="kegiatan">Kegiatan ujian yang diizinkan</label><select class="select" id="kegiatan" name="kegiatan_ujian_cbt_id"><option value="">Pilih kegiatan ujian</option>@foreach ($kegiatan as $item)<option value="{{ $item->id }}" @selected((string) old('kegiatan_ujian_cbt_id', $saatIni?->kegiatan_ujian_cbt_id) === (string) $item->id)>{{ $item->nama }}</option>@endforeach</select></div>
+        </div>
         <label style="display:flex;gap:10px;margin:18px 0"><input type="checkbox" name="konfirmasi" value="1" required> Layar berada di area terbatas untuk guru dan dikelola sekolah.</label>
         <button class="button button-primary" type="submit"><i data-lucide="shield-check"></i> {{ $saatIni ? 'Perbarui aktivasi' : 'Aktifkan browser ini' }}</button>
     </form>
@@ -26,7 +32,7 @@
     <div class="panel-pad"><h2 class="section-title">Perangkat monitoring</h2></div>
     <div class="table-wrap"><table class="employee-table"><thead><tr><th>Layar</th><th>Terakhir terhubung</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
     @forelse ($daftar as $item)
-    <tr><td><strong>{{ $item->nama }}</strong>@if ($saatIni?->id === $item->id)<p><x-ui.status type="success">Browser ini</x-ui.status></p>@endif</td>
+    <tr><td><strong>{{ $item->nama }}</strong><p class="person-meta">{{ \App\Models\PerangkatMonitoring::CAKUPAN[$item->cakupan] ?? 'Aktivitas siswa' }}</p>@if ($item->kegiatanUjianCbt)<p class="person-meta">{{ $item->kegiatanUjianCbt->nama }}</p>@endif @if ($saatIni?->id === $item->id)<p><x-ui.status type="success">Browser ini</x-ui.status></p>@endif</td>
         <td>{{ $item->terakhir_digunakan_pada?->format('d/m/Y H:i') ?? 'Belum digunakan' }}</td>
         <td><x-ui.status :type="$item->dicabut_pada ? 'neutral' : 'success'">{{ $item->dicabut_pada ? 'Dicabut' : 'Aktif' }}</x-ui.status>@if ($item->dicabut_pada)<p>{{ $item->alasan_pencabutan }}</p>@endif</td>
         <td>@if (!$item->dicabut_pada)<button class="button button-danger" type="button" data-ui-dialog-open="cabut-monitor-{{ $item->id }}"><i data-lucide="shield-off"></i> Cabut akses</button>@endif</td></tr>
@@ -41,4 +47,7 @@
     </form>
 </x-ui.dialog>
 @endforeach
+<script>
+(() => { const scope=document.getElementById('cakupan'),field=document.getElementById('kegiatan-field'),select=document.getElementById('kegiatan');function update(){field.hidden=scope.value==='siswa';select.required=!field.hidden;select.disabled=field.hidden;}scope.addEventListener('change',update);update(); })();
+</script>
 @endsection

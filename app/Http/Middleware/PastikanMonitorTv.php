@@ -24,7 +24,12 @@ class PastikanMonitorTv
                 $response = $request->expectsJson()
                     ? response()->json(['pesan' => 'Akses layar monitoring belum aktif atau telah dicabut.'], 401)
                     : response()->view('monitoring-siswa.belum-aktif', [], 401);
+            } elseif (! $perangkat->mengizinkan($request->route('jenis_monitor') ?? 'siswa')) {
+                $response = $request->expectsJson()
+                    ? response()->json(['pesan' => 'Browser ini tidak diizinkan untuk layar monitoring tersebut.'], 403)
+                    : response()->view('monitoring-siswa.belum-aktif', [], 403);
             } else {
+                $request->attributes->set('monitor_tv', $perangkat);
                 if (! $perangkat->terakhir_digunakan_pada || $perangkat->terakhir_digunakan_pada->lt(now()->subMinute())) {
                     $perangkat->update(['terakhir_digunakan_pada' => now()]);
                 }

@@ -3,7 +3,7 @@
 ## Penggunaan
 
 1. Pada komputer yang terhubung ke TV, login sebagai administrator NUSA.
-2. Buka **Kehadiran > Monitoring TV Siswa** (`/perangkat-monitoring`).
+2. Buka **Kehadiran > Monitoring TV** (`/perangkat-monitoring`), dengan cakupan **Aktivitas siswa** atau **Aktivitas siswa dan ujian terpusat**.
 3. Isi nama layar, konfirmasi bahwa layar hanya untuk area guru, lalu aktifkan browser.
 4. Pilih **Buka layar TV**. Halaman `/monitoring-siswa` terbuka pada tab baru.
 5. Keluar dari akun admin pada tab pengaturan. Halaman TV tetap berjalan.

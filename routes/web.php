@@ -79,6 +79,7 @@ use App\Http\Controllers\MediaResmiHumasController;
 use App\Http\Controllers\MonitoringSiswaController;
 use App\Http\Controllers\MonitoringSurveiController;
 use App\Http\Controllers\MonitoringUjianCbtController;
+use App\Http\Controllers\MonitoringUjianTvController;
 use App\Http\Controllers\MutasiStokBarangController;
 use App\Http\Controllers\NilaiSayaController;
 use App\Http\Controllers\NotifikasiAbsensiSiswaController;
@@ -244,8 +245,10 @@ Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, Pr
 // Read-only TV credentials never grant scanner or account access.
 Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
     ->middleware(PastikanMonitorTv::class)->group(function () {
-        Route::get('monitoring-siswa', [MonitoringSiswaController::class, 'index'])->name('monitoring-siswa.index');
-        Route::get('monitoring-siswa/data', [MonitoringSiswaController::class, 'data'])->name('monitoring-siswa.data');
+        Route::get('monitoring-siswa', [MonitoringSiswaController::class, 'index'])->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.index');
+        Route::get('monitoring-siswa/data', [MonitoringSiswaController::class, 'data'])->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.data');
+        Route::get('monitoring-ujian-tv', [MonitoringUjianTvController::class, 'index'])->defaults('jenis_monitor', 'ujian')->name('monitoring-ujian-tv.index');
+        Route::get('monitoring-ujian-tv/data', [MonitoringUjianTvController::class, 'data'])->defaults('jenis_monitor', 'ujian')->name('monitoring-ujian-tv.data');
     });
 
 Route::middleware(['auth', 'identitas_sesi', 'kata_sandi_bukan_default', SesiPengerjaanUjian::class])
