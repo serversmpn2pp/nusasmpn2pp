@@ -87,8 +87,11 @@ terpasang; gunakan `PLAYWRIGHT_CHANNEL=msedge` bila Chromium uji belum tersedia.
 
 Hasil verifikasi: 81 tes inti (1.706 assertions), 29 pemeriksaan alur browser,
 132 pemeriksaan viewport siswa dan 157 viewport pegawai lolos, serta Pint dan
-whitespace bersih. Pada regresi lebih luas, 351 dari 352 tes lolos; satu tes
-di luar scanner masih gagal pada
+whitespace bersih. Pada regresi awal yang lebih luas, 351 dari 352 tes lolos; satu tes
+di luar scanner ketika itu gagal pada
 `PengecualianPresensiSiswaTest::test_rapor_menghitung_sumber_baru_tetapi_tidak_menimpa_koreksi_yang_disimpan`
-(ekspektasi alfa 4, hasil 0). Kegagalan tersebut juga terjadi saat dijalankan
-sendiri. Tes dan layanan rapor itu tidak diubah dalam pekerjaan scanner ini.
+(ekspektasi rekap tersimpan 4 setelah PJJ, hasil 0). Penelusuran berikutnya
+memastikan sumber awal sudah 4; harapan tes tentang salinan rekap sudah tidak
+sesuai dengan perilaku pembaruan sumber. Tes telah dipisahkan untuk salinan
+otomatis dan koreksi manual; lihat [verifikasi alfa rapor STS](verifikasi-alfa-rapor-sts.md).
+Layanan rapor produksi tidak diubah untuk temuan ini.

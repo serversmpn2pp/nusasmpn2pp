@@ -111,23 +111,51 @@ class PengecualianPresensiSiswaTest extends TestCase
 
     public function test_rapor_menghitung_sumber_baru_tetapi_tidak_menimpa_koreksi_yang_disimpan(): void
     {
-        $d = $this->fondasi();
-        $kegiatan = KegiatanUjianCbt::create(['jenis_ujian_cbt_id' => JenisUjianCbt::where('kode', 'STS')->value('id'),
-            'tahun_pelajaran_id' => $d['tahun']->id, 'kode' => 'STS-EXCEPTION', 'nama' => 'STS Pengecualian',
-            'semester' => 'ganjil', 'tanggal_mulai' => '2026-09-14', 'tanggal_selesai' => '2026-09-18', 'status' => 'selesai']);
-        $pengaturan = RaporStsKelas::create(['kegiatan_ujian_cbt_id' => $kegiatan->id, 'kelas_id' => $d['kelas']->id,
-            'tanggal_awal_presensi' => '2026-09-14', 'tanggal_akhir_presensi' => '2026-09-18', 'tanggal_rapor' => '2026-09-20', 'versi' => 1]);
-        $rapor = app(RaporStsService::class)->bangun($kegiatan, $d['kelas'], $pengaturan);
+        $d = $this->fondasiRapor();
+        $rapor = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas'], $d['pengaturan']);
         $sumber = $rapor['baris']->first()['sumber'];
-        $this->assertSame(4, $sumber['alfa']);
-        $pengaturan->kehadiran()->create(['anggota_kelas_id' => $d['anggota'][0]->id, 'sakit' => 0, 'izin' => 0, 'alfa' => 4,
-            'rekap_sumber' => $sumber, 'diperiksa_pada' => now(), 'diperiksa_oleh_pengguna_id' => $d['admin']->id]);
+        $this->assertSame(4, $sumber['alfa'], 'Empat hari sekolah tanpa catatan menjadi alfa sebelum pengecualian.');
+        // A manual correction must actually differ from its recorded source.
+        $koreksi = $d['pengaturan']->kehadiran()->create(['anggota_kelas_id' => $d['anggota'][0]->id, 'sakit' => 0, 'izin' => 0, 'alfa' => 3,
+            'rekap_sumber' => $sumber, 'catatan_koreksi' => 'Koreksi satu hari alfa berdasarkan bukti wali kelas.',
+            'diperiksa_pada' => now(), 'diperiksa_oleh_pengguna_id' => $d['admin']->id]);
+        $tersimpan = $koreksi->fresh()->getAttributes();
+        $presensi = AbsensiSiswa::orderBy('id')->get()->toArray();
         $this->terapkan($d);
-        $baris = app(RaporStsService::class)->bangun($kegiatan, $d['kelas'], $pengaturan)['baris']->first();
+        $baris = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas'], $d['pengaturan'])['baris']->first();
         $this->assertSame(0, $baris['sumber']['alfa']);
-        $this->assertSame(4, $baris['kehadiran']['alfa']);
+        $this->assertSame(3, $baris['kehadiran']['alfa'], 'Koreksi manual tetap tersedia untuk diperiksa ulang wali kelas.');
         $this->assertTrue($baris['sumber_berubah']);
         $this->assertFalse($baris['diperiksa']);
+        $this->assertFalse($baris['rekap_diperbarui']);
+        $this->assertFalse($baris['siap']);
+        $this->assertSame($tersimpan, $koreksi->fresh()->getAttributes());
+        $this->assertSame($presensi, AbsensiSiswa::orderBy('id')->get()->toArray());
+    }
+
+    public function test_rekap_rapor_tanpa_koreksi_manual_mengikuti_pengecualian_dan_wajib_diperiksa_ulang(): void
+    {
+        $d = $this->fondasiRapor();
+        $sumber = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas'], $d['pengaturan'])['baris']->first()['sumber'];
+        $this->assertSame(4, $sumber['alfa'], 'Hitungan sebelum PJJ harus tetap empat alfa.');
+        $rekap = $d['pengaturan']->kehadiran()->create(['anggota_kelas_id' => $d['anggota'][0]->id, 'sakit' => 0, 'izin' => 0, 'alfa' => 4,
+            'rekap_sumber' => $sumber, 'diperiksa_pada' => now(), 'diperiksa_oleh_pengguna_id' => $d['admin']->id]);
+        $sebelum = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas'], $d['pengaturan'])['baris']->first();
+        $this->assertTrue($sebelum['diperiksa']);
+        $this->assertFalse($sebelum['sumber_berubah']);
+        $tersimpan = $rekap->fresh()->getAttributes();
+        $presensi = AbsensiSiswa::orderBy('id')->get()->toArray();
+
+        $this->terapkan($d);
+        $baris = app(RaporStsService::class)->bangun($d['kegiatan'], $d['kelas'], $d['pengaturan'])['baris']->first();
+        $this->assertSame(0, $baris['sumber']['alfa']);
+        $this->assertSame(0, $baris['kehadiran']['alfa'], 'Salinan rekap yang belum dikoreksi harus mengikuti pengecualian PJJ.');
+        $this->assertTrue($baris['sumber_berubah']);
+        $this->assertTrue($baris['rekap_diperbarui']);
+        $this->assertFalse($baris['diperiksa']);
+        $this->assertFalse($baris['siap']);
+        $this->assertSame($tersimpan, $rekap->fresh()->getAttributes(), 'Membuka rapor tidak menulis ulang pemeriksaan tersimpan.');
+        $this->assertSame($presensi, AbsensiSiswa::orderBy('id')->get()->toArray());
     }
 
     public function test_orang_tua_melihat_pengecualian_kelas_anaknya_saja(): void
@@ -262,6 +290,18 @@ class PengecualianPresensiSiswaTest extends TestCase
         $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.index', $filter))->assertOk()
             ->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.anggota_kelas_id', $anggota->id)
             ->assertJsonPath('data.ringkasan.alfa', 1)->assertJsonPath('data.ringkasan.pengecualian', 0);
+    }
+
+    private function fondasiRapor(): array
+    {
+        $d = $this->fondasi();
+        $kegiatan = KegiatanUjianCbt::create(['jenis_ujian_cbt_id' => JenisUjianCbt::where('kode', 'STS')->value('id'),
+            'tahun_pelajaran_id' => $d['tahun']->id, 'kode' => 'STS-EXCEPTION', 'nama' => 'STS Pengecualian',
+            'semester' => 'ganjil', 'tanggal_mulai' => '2026-09-14', 'tanggal_selesai' => '2026-09-18', 'status' => 'selesai']);
+        $pengaturan = RaporStsKelas::create(['kegiatan_ujian_cbt_id' => $kegiatan->id, 'kelas_id' => $d['kelas']->id,
+            'tanggal_awal_presensi' => '2026-09-14', 'tanggal_akhir_presensi' => '2026-09-18', 'tanggal_rapor' => '2026-09-20', 'versi' => 1]);
+
+        return $d + compact('kegiatan', 'pengaturan');
     }
 
     private function preview(array $d, array $ubah = [])
