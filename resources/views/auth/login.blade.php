@@ -132,7 +132,7 @@
             </main>
 
             <footer class="page-footer">
-                <p class="tagline">Satu pintu. Terhubung untuk <span>bertumbuh.</span></p>
+                <p class="tagline">Satu Nusa, Terhubung untuk <span>Bertumbuh</span></p>
                 <p class="copyright">&copy; {{ date('Y') }} SMP Negeri 2 Padang Panjang</p>
             </footer>
         </div>

@@ -71,7 +71,7 @@
                 @endforelse
             </div><a class="text-button" href="{{ route('rekap-absensi-harian.index') }}">Semua aktivitas presensi<i data-lucide="arrow-up-right" aria-hidden="true"></i></a></section>
         </div>
-        <footer class="page-footer"><span>&copy; {{ $hariIni->year }} NUSA <span class="footer-dot">/</span> SMP Negeri 2 Padang Panjang</span><span>Satu pintu. Terhubung untuk <strong>bertumbuh.</strong></span></footer>
+        <footer class="page-footer"><span>&copy; {{ $hariIni->year }} NUSA <span class="footer-dot">/</span> SMP Negeri 2 Padang Panjang</span><span>Satu Nusa, Terhubung untuk <strong>Bertumbuh</strong></span></footer>
     </div>
     <dialog id="admin-chart-dialog" aria-labelledby="admin-chart-dialog-title"><div class="dialog-header"><div><p class="section-kicker" id="admin-chart-dialog-category">PRESENSI SISWA</p><h2 id="admin-chart-dialog-title">Data statistik kehadiran</h2></div><button class="icon-button" type="button" id="admin-chart-close" aria-label="Tutup rincian"><i data-lucide="x" aria-hidden="true"></i></button></div><div class="dialog-content" id="admin-chart-content"></div></dialog>
     <div class="sr-only" id="dashboard-status" role="status" aria-live="polite"></div>

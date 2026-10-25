@@ -19,7 +19,8 @@ class LoginTampilanTest extends TestCase
             ->assertSee('css/login.css?v=', false)
             ->assertSee('js/login.js?v=', false)
             ->assertSee('placeholder="NIP/NISN/ORT-NISN"', false)
-            ->assertSee('Satu pintu. Terhubung untuk')
+            ->assertSee('Satu Nusa, Terhubung untuk')
+            ->assertDontSee('Satu pintu.')
             ->assertSee('Hubungi operator sekolah.')
             ->assertDontSee('Siswa menggunakan NISN')
             ->assertDontSee('preview.js')
@@ -27,6 +28,7 @@ class LoginTampilanTest extends TestCase
             ->assertDontSee('login-sekolah.jpg');
 
         $xpath = $this->xpath($response);
+        $this->assertSame('Satu Nusa, Terhubung untuk Bertumbuh', $xpath->query('//p[@class="tagline"]')->item(0)?->textContent);
         $form = $xpath->query('//form[@data-login-form]')->item(0);
         $this->assertSame('POST', $form?->getAttribute('method'));
         $this->assertSame(route('login.store'), $form?->getAttribute('action'));
