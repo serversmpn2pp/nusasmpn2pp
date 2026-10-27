@@ -116,6 +116,10 @@
         if (!window.Chart) notice('Grafik belum dapat dimuat. Ringkasan data tetap tersedia.', true);
     }
     function renderSecondaryChart() {
+        const detail = $('secondary-detail');
+        detail.dataset.detail = metric === 'kelas' ? 'dipantau' : 'laporan';
+        detail.title = metric === 'kelas' ? 'Rincian presensi hari ini' : 'Rincian laporan hari ini';
+        detail.setAttribute('aria-label', detail.title);
         if (metric === 'kelas') {
             const size = innerHeight < 900 ? 4 : 6, pages = Math.max(1, Math.ceil(data.kelas.length / size));
             classPage %= pages;
@@ -174,19 +178,12 @@
         try {
             const response = await fetch(endpoint, {credentials: 'same-origin', cache: 'no-store', headers: {Accept: 'application/json'}, signal: controller.signal});
             if (response.status === 401 || response.status === 403) {
-                blocked = true; data = null;
-                // Remove previously visible identities when device authorization is revoked.
-                for (const id of ['feed', 'late-list', 'worship']) empty($(id), 'Akses monitoring dinonaktifkan.');
-                for (const key of ['hadir','izin','sakit','alfa','belum','terlambat','laporan']) set(`kpi-${key}`, '-');
-                for (const id of ['point-balance','point-students','point-added','point-reduced','population','year','tanggal','feed-count','late-total','worship-count']) set(id, '-');
-                attendanceChart?.destroy(); reportsChart?.destroy();
-                $('attendance-empty').hidden = true;
-                connection('Akses dicabut', 'offline');
-                notice('Akses layar monitoring tidak aktif. Hubungi administrator untuk aktivasi ulang, lalu muat ulang halaman.', true);
+                revoke();
                 return;
             }
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const next = await response.json();
+            if (blocked) return;
             if (!next.ringkasan || !next.diperbarui_pada) throw new Error('Data tidak valid');
             const age = Date.now() - Date.parse(next.diperbarui_pada);
             render(next);
@@ -194,10 +191,23 @@
             if (age > 20000) { connection('Data tertunda', 'waiting'); notice('Data server belum diperbarui. Menunggu sinkronisasi.', true); }
             else connection('Terhubung', '');
         } catch (_) {
+            if (blocked) return;
             connection(navigator.onLine ? 'Koneksi terputus' : 'Offline', 'offline');
             notice(data ? 'Pembaruan terhenti. Data terakhir tetap ditampilkan; mencoba kembali setiap 5 detik.' : 'Belum dapat memuat data. Memeriksa koneksi setiap 5 detik.', true);
         } finally { clearTimeout(timeout); busy = false; }
     }
+    function revoke() {
+        blocked = true; data = null;
+        window.NusaMonitorRincian?.revoke();
+        for (const id of ['feed', 'late-list', 'worship']) empty($(id), 'Akses monitoring dinonaktifkan.');
+        for (const key of ['hadir','izin','sakit','alfa','belum','terlambat','laporan']) set(`kpi-${key}`, '-');
+        for (const id of ['point-balance','point-students','point-added','point-reduced','population','year','tanggal','feed-count','late-total','worship-count','detail-hadir','detail-belum']) set(id, '-');
+        attendanceChart?.destroy(); reportsChart?.destroy();
+        $('attendance-empty').hidden = true;
+        connection('Akses dicabut', 'offline');
+        notice('Akses layar monitoring tidak aktif. Hubungi administrator untuk aktivasi ulang, lalu muat ulang halaman.', true);
+    }
+    window.addEventListener('monitor-access-revoked', revoke);
     document.querySelectorAll('[data-period]').forEach(button => button.addEventListener('click', () => {
         period = button.dataset.period;
         document.querySelectorAll('[data-period]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
@@ -223,9 +233,10 @@
     setInterval(() => {
         if (lastSuccess && Date.now() - lastSuccess > 20000 && !blocked) connection('Data belum diperbarui', 'offline');
         refresh();
+        if (!blocked) window.NusaMonitorRincian?.refresh();
     }, REFRESH_MS);
     setInterval(() => {
-        if (!data || blocked) return;
+        if (!data || blocked || window.NusaMonitorRincian?.isOpen()) return;
         feedPage++; latePage++; worshipPage++; classPage++;
         renderFeed(); renderLate(); renderWorship();
         if (metric === 'kelas') renderSecondaryChart();

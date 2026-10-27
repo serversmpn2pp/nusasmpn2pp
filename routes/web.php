@@ -247,6 +247,8 @@ Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, Pr
     ->middleware(PastikanMonitorTv::class)->group(function () {
         Route::get('monitoring-siswa', [MonitoringSiswaController::class, 'index'])->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.index');
         Route::get('monitoring-siswa/data', [MonitoringSiswaController::class, 'data'])->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.data');
+        Route::get('monitoring-siswa/rincian', [MonitoringSiswaController::class, 'rincian'])->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.rincian');
+        Route::get('monitoring-siswa/foto/{siswa}', [MonitoringSiswaController::class, 'foto'])->whereNumber('siswa')->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.foto');
         Route::get('monitoring-ujian-tv', [MonitoringUjianTvController::class, 'index'])->defaults('jenis_monitor', 'ujian')->name('monitoring-ujian-tv.index');
         Route::get('monitoring-ujian-tv/data', [MonitoringUjianTvController::class, 'data'])->defaults('jenis_monitor', 'ujian')->name('monitoring-ujian-tv.data');
     });
