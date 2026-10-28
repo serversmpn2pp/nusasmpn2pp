@@ -109,3 +109,57 @@ Pratinjau native penuh: `mobile/build/login-school-photo.png`. Potongan bagian
 atas: `mobile/build/login-school-header.png`. Pratinjau tidak meniru jam, kamera,
 atau ikon status Android, karena bagian tersebut digambar oleh perangkat.
 
+## Login native satu layar — 28 Oktober 2026
+
+Implementasi terbaru mengganti tinggi header berbasis lebar dengan
+`SliverFillRemaining` dan area foto fleksibel. Formulir serta footer menentukan
+ruang yang dibutuhkan terlebih dahulu; foto mengisi sisanya. Pada ukuran huruf
+normal, semua tindakan dan keterangan tampil tanpa perlu menggulir. Verifikasi
+mencakup layar 320 × 568, 360 × 640, 390 × 844, dan 412 × 915 dengan area aman
+status/navigasi masing-masing 24 dp. Tes memeriksa extent scroll nol, seluruh
+tombol berada dalam viewport, dan gerakan drag tidak memindahkan halaman.
+
+Logo login berukuran 64 dp, tulisan NUSA 34 sp, dan nama sekolah 15–16 sp.
+Parameter ukuran tulisan pada `NusaBrand` bersifat opsional; nilai bawaan dan
+pemetaan ikon beranda tetap sama. Teks merek dapat membungkus pada ruang sempit
+dengan huruf sangat besar, tanpa mengecilkan ukuran huruf perangkat.
+
+Blur dibuat dengan `ImageFiltered` native pada salinan foto yang sejajar dengan
+foto utama, memakai sigma 5 dan mask vertikal yang memudar dari area identitas
+ke gedung. Logo dan teks tidak berada di dalam filter. Area foto diberi clipping
+agar hasil blur tidak meluber melewati ujung gradasi. Tidak ada foto baru yang
+dibuat atau diubah pada pekerjaan ini.
+
+Saat keyboard muncul, header memakai logo 40 dp, tulisan NUSA 26 sp, dan nama
+sekolah 12 sp. Foto utama, subtitle, tagline, serta keterangan tim disembunyikan
+sementara. Kedua tautan publik tetap tersedia. Scroll diaktifkan secara alami
+bila ruang keyboard, landscape, pesan validasi, atau ukuran huruf besar membuat
+konten tidak muat. Controller, nilai isian, fokus, dan pilihan tampilkan kata
+sandi tetap dipertahankan. Pada layar sangat pendek, subtitle dekoratif dilepas
+dan tautan footer disusun berdampingan agar semua tindakan tetap terlihat.
+
+Tes perpindahan keyboard memeriksa kolom username, kata sandi, dan tombol Masuk
+berada di atas keyboard pada viewport utama, serta isi kolom tidak hilang setelah
+keyboard ditutup. Tes tautan penghapusan menunggu frame sesudah `ensureVisible`
+sebelum melakukan tap pada layout sliver.
+
+Pratinjau widget produksi terbaru:
+
+- `mobile/build/login-one-screen-native.png`
+- `mobile/build/login-keyboard-native.png` (area aplikasi di atas keyboard;
+  keyboard Android sendiri tidak digambar dalam widget test)
+
+Log pemeriksaan terkait: `mobile/build/test-login-native-final.log` dan
+`mobile/build/analyze-login-native-final.log`. AAB belum dibangun dan nomor versi
+tidak berubah pada pekerjaan ini.
+
+Hasil pemeriksaan: 76 tes gabungan lulus. Setelah polesan gradasi putih akhir,
+16 tes foto/login dijalankan ulang dan lulus (`mobile/build/test-login-adaptive.log`).
+
+Foto latar mode keyboard kemudian diperjelas dengan opacity maksimum 24% di
+bagian tengah. Mask gradasi membatasi area di belakang identitas menjadi sekitar
+4–5%, lalu menurunkannya menjadi sekitar 14% di bawah agar tautan tetap terbaca.
+Mode tanpa keyboard tetap memakai latar 4%. Susunan, ukuran, serta interaksi
+formulir tidak berubah. 16 tes terkait dijalankan ulang dan lulus; log tersedia
+di `mobile/build/test-login-keyboard-background.log`.
+

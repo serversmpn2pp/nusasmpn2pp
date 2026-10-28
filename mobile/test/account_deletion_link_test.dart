@@ -142,6 +142,7 @@ void main() {
     await tester.pumpAndSettle();
     final link = find.byKey(const Key('login-account-deletion'));
     await tester.ensureVisible(link);
+    await tester.pumpAndSettle();
     await tester.tap(link);
     await tester.pumpAndSettle();
     expect(opened.toString(), 'https://sekolah.example/penghapusan-akun');

@@ -24,12 +24,14 @@ class NusaBrand extends StatelessWidget {
     this.logoSize = 42,
     this.textColor = NusaColors.primary,
     this.compact = false,
+    this.fontSize,
     super.key,
   });
 
   final double logoSize;
   final Color textColor;
   final bool compact;
+  final double? fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -38,13 +40,15 @@ class NusaBrand extends StatelessWidget {
       children: [
         NusaLogo(size: logoSize),
         SizedBox(width: compact ? 7 : 10),
-        Text(
-          'NUSA',
-          style: TextStyle(
-            color: textColor,
-            fontSize: compact ? 22 : 30,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.4,
+        Flexible(
+          child: Text(
+            'NUSA',
+            style: TextStyle(
+              color: textColor,
+              fontSize: fontSize ?? (compact ? 22 : 30),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.4,
+            ),
           ),
         ),
       ],
