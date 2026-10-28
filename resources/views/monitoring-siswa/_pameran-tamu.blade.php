@@ -1,0 +1,16 @@
+<section id="panel-tamu" role="tabpanel" aria-labelledby="tab-tamu" class="pameran-panel" hidden>
+    <div class="pameran-guest-heading"><div><p class="eyebrow">BUKU TAMU ACARA & PAMERAN</p><h2 id="guest-event">{{ $acaraPameran?->nama ?? 'Acara tidak tersedia' }}</h2><p id="guest-period">Statistik seluruh periode acara &middot; tidak mengikuti tanggal aktivitas siswa</p></div><span class="tag teal-tag" id="guest-updated">Menunggu data</span></div>
+    <p class="notice" id="guest-notice" role="status" hidden></p>
+    <div class="pameran-metrics">
+        <div class="kpi blue"><div><i data-lucide="users" aria-hidden="true"></i><span>Pengunjung tercatat</span></div><strong id="guest-total">-</strong><small>Selama acara &middot; respons valid</small></div>
+        <div class="kpi teal"><div><i data-lucide="calendar-days" aria-hidden="true"></i><span>Pengunjung hari ini</span></div><strong id="guest-today">-</strong><small id="guest-today-date">Tanggal hari berjalan (WIB)</small></div>
+        <div class="kpi yellow"><div><i data-lucide="smile" aria-hidden="true"></i><span>Puas / sangat puas</span></div><strong id="guest-satisfied">-</strong><small id="guest-average">Penilaian stand</small></div>
+        <div class="kpi teal"><div><i data-lucide="monitor-smartphone" aria-hidden="true"></i><span>Kepuasan NUSA</span></div><strong id="guest-nusa">-</strong><small id="guest-nusa-count">Hanya pengunjung yang menilai</small></div>
+    </div>
+    <div class="pameran-guest-grid">
+        <section class="chart-section"><div class="section-heading"><h2>Kunjungan per hari</h2><div class="segments" aria-label="Jenis grafik kunjungan"><button type="button" data-guest-chart="bar" aria-pressed="true" title="Grafik batang" aria-label="Grafik batang"><i data-lucide="chart-no-axes-column" aria-hidden="true"></i></button><button type="button" data-guest-chart="line" aria-pressed="false" title="Grafik garis" aria-label="Grafik garis"><i data-lucide="chart-line" aria-hidden="true"></i></button></div></div><div class="chart-area"><canvas id="guest-daily-chart" role="img" aria-label="Grafik kunjungan per hari selama acara"></canvas></div><p class="caption">Jumlah respons valid, bukan hitungan scan atau verifikasi orang unik.</p></section>
+        <section class="chart-section"><div class="section-heading"><h2>Kepuasan pengunjung</h2><span class="tag teal-tag">Stand sekolah</span></div><div class="chart-area"><canvas id="guest-rating-chart" role="img" aria-label="Grafik distribusi penilaian kepuasan stand"></canvas></div><p class="caption">Netral tidak dihitung sebagai puas.</p></section>
+        <section class="lower-section worship-section"><div class="section-heading"><h2><i data-lucide="sparkles" aria-hidden="true"></i>Minat pengunjung</h2><span class="tag teal-tag" id="guest-interest-page">Hal. 1/1</span></div><div id="guest-interests" class="pameran-interest-list"><p class="empty">Menunggu data...</p></div><p class="caption">Satu pengunjung dapat memilih lebih dari satu minat.</p></section>
+        <section class="lower-section points-section"><div class="section-heading"><h2><i data-lucide="contact" aria-hidden="true"></i>Kategori pengunjung</h2></div><div id="guest-categories" class="pameran-categories"></div><p class="caption">Identitas dan komentar pengunjung tidak ditayangkan.</p></section>
+    </div>
+</section>

@@ -13,6 +13,18 @@ Mode **Semua ruang** menampilkan ringkasan ruang. Mode **Detail ruang** menampil
 
 Data diperbarui setiap **5 detik** tanpa reload. Daftar berganti halaman setiap 15 detik; dalam mode detail seluruh halaman peserta satu ruang ditampilkan sebelum pindah ruang. Memilih ruang manual menonaktifkan pergiliran ruang; checkbox **Bergilir** mengaktifkannya lagi. Halaman peserta tetap berganti untuk daftar panjang.
 
+## Modal Rincian
+
+- Kartu Peserta terdaftar, Mengerjakan, Selesai, Belum mulai, Tidak hadir, dan Perlu perhatian membuka modal dengan filter status yang sesuai. Belum mulai mencakup belum hadir serta hadir tetapi belum mulai; bukan peserta nonaktif atau terblokir.
+- Klik kartu ruang untuk melihat peserta ruang tersebut sebagai modal, tanpa mengubah mode layar utama. Mode Detail ruang dan pilihan pergilirannya tetap tersedia. Ikon rincian pada workspace mengikuti ruang yang sedang dipilih ketika mode detail aktif.
+- Ikon pada panel perhatian dan grafik membuka rincian peserta yang relevan. Klik nama peserta pada daftar perhatian atau tabel detail ruang untuk membuka rincian satu peserta. Reset filter menampilkan seluruh peserta dari jadwal/sesi yang sama.
+- Modal memuat nama, kelas, ruang, meja, sesi, status, presensi ujian, batas/sisa waktu, tambahan waktu, komunikasi terakhir, dan indikator pemeriksaan. Tidak menambahkan isi jawaban, progres jawaban, skor, nilai, atau token ke dalam modal. Presensi ujian tetap dibedakan dari status pengerjaan.
+- Pencarian nama, filter ruang, kelas, status, dan paginasi 20 baris dikerjakan pada snapshot yang sudah diterima. Tidak ada endpoint baru atau request tambahan setiap kali filter diganti. Pada HP, pencarian tetap terlihat dan tombol ikon filter membuka/menutup pilihan lainnya agar daftar tetap lapang.
+- Modal aktivitas menampilkan maksimal 20 aktivitas terbaru yang memang tersedia pada snapshot, bukan seluruh riwayat kejadian. Filter ruang dan kelas memakai metadata aktivitas yang telah dibatasi ke peserta jadwal/sesi terpilih. Tidak mengirim catatan atau metadata keamanan mentah.
+- Polling 5 detik tetap berjalan, termasuk perubahan status saat modal terbuka. Posisi gulir, filter, halaman, dan fokus tetap dipertahankan; halaman disesuaikan jika jumlah halaman menyusut. Hitung mundur mengikuti waktu server dan tetap berjalan per detik tanpa mengubah batas waktu ujian.
+- Rotasi otomatis ruang/daftar dijeda selama modal terbuka. Tutup dengan silang, Escape, atau klik di luar modal untuk kembali ke tampilan yang sama. Fokus tombol dipertahankan saat daftar diperbarui.
+- Pergantian jadwal/sesi, termasuk pergantian otomatis, menutup dan membersihkan modal agar data dari dua konteks tidak tercampur. Koneksi terputus mempertahankan data terakhir dengan peringatan. Pencabutan akses menutup modal, menghapus data/opsi filter, menonaktifkan tombol rincian, dan menghentikan polling.
+
 ## Akses dan Privasi
 
 - Perangkat lama tetap bercakupan `siswa`; tidak otomatis mendapat akses ujian. Akses ujian harus diberikan administrator secara eksplisit, terikat satu kegiatan.
@@ -55,10 +67,13 @@ php artisan optimize:clear
 
 Tidak memerlukan seeder, worker tambahan, npm build, atau APK baru. Migrasi hanya menambah `cakupan` dan `kegiatan_ujian_cbt_id` pada `perangkat_monitoring`, tanpa mengubah peserta/hasil/jadwal. Browser TV lama perlu diperbarui aktivasinya hanya bila akan diberi akses ujian.
 
+Khusus pembaruan modal, tidak ada migrasi, perubahan role, atau aktivasi ulang. Bila monitoring TV ujian sudah terpasang, cukup `php artisan optimize:clear` setelah pull dan muat ulang tab TV sekali untuk mengambil aset terbaru.
+
 ## Verifikasi
 
 - `tests/Feature/MonitoringTvUjianTest.php`: aktivasi, logout, cakupan, isolasi kegiatan/jadwal/sesi, presensi ujian, kerahasiaan payload, progres, tambahan waktu, pembacaan tanpa perubahan peserta, pencabutan, kosong dan query terbatas.
 - `tests/Browser/monitoring-ujian-tv.mjs`: enam viewport, grafik nonblank, mode ringkasan/detail, pergiliran peserta/ruang, pilihan manual, polling, filter, tanpa request tumpang tindih/POST, offline/pulih, aktivitas baru dan pembersihan data saat dicabut. Fixture siswa sintetis SQLite.
+- `tests/Browser/monitoring-ujian-tv-rincian.mjs`: enam viewport, seluruh kartu status, modal ruang/peserta/aktivitas, filter kelas/status/ruang tanpa penempatan, pencarian aman, paginasi, timer, fokus/posisi gulir, koneksi gagal/pulih, pergantian jadwal, kondisi kosong dan pencabutan akses. Tidak melakukan perubahan data ujian.
 
 ```powershell
 $env:NUSA_CAPTURE_EXAM_TV='1'
@@ -66,4 +81,5 @@ php -d memory_limit=512M vendor/phpunit/phpunit/phpunit tests/Feature/Monitoring
 $env:PLAYWRIGHT_MODULE='PATH/node_modules/playwright/index.mjs'
 $env:PLAYWRIGHT_CHANNEL='msedge'
 node tests/Browser/monitoring-ujian-tv.mjs
+node tests/Browser/monitoring-ujian-tv-rincian.mjs
 ```

@@ -3,6 +3,8 @@
     const $ = id => document.getElementById(id);
     const dialog = $('detail-dialog');
     const endpoint = document.body.dataset.detailEndpoint;
+    const pameran = document.body.dataset.pameran === 'true';
+    const dateLabel = text => pameran ? text.replace(/hari ini/gi,'tanggal terpilih') : text;
     const photoPrefix = new URL(endpoint, location.href).pathname.replace(/\/rincian$/, '/foto/');
     const fmt = value => Number(value || 0).toLocaleString('id-ID');
     let jenis = '', page = 1, lastPage = 1, controller = null, generation = 0, debounce;
@@ -123,6 +125,7 @@
             }
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
+            if (pameran && data.tanggal_data !== document.body.dataset.tanggal) return;
             if (!Array.isArray(data.items) || !data.pagination || data.jenis !== jenis) throw new Error('Data tidak valid');
             if (current === generation && dialog.open && !revoked) render(data);
         } catch (_) {
@@ -143,8 +146,8 @@
         $('detail-search').value = ''; $('detail-class').value = ''; $('detail-activity').value = ''; $('detail-worship').value = '';
         $('detail-activity-filter').hidden = jenis !== 'ibadah';
         $('detail-worship-filter').hidden = jenis !== 'ibadah';
-        $('detail-title').textContent = titles[jenis]; $('detail-subtitle').textContent = 'Hari ini';
-        $('detail-context').textContent = contexts[jenis] || 'Presensi hari ini. Alasan medis dan catatan pribadi tidak ditampilkan.';
+        $('detail-title').textContent = dateLabel(titles[jenis]); $('detail-subtitle').textContent = dateLabel('Hari ini');
+        $('detail-context').textContent = dateLabel(contexts[jenis] || 'Presensi hari ini. Alasan medis dan catatan pribadi tidak ditampilkan.');
         $('detail-rows').replaceChildren(); message('');
         document.body.classList.add('detail-open'); dialog.showModal();
         load(true);
@@ -177,6 +180,7 @@
     $('detail-next').addEventListener('click', () => { if (page < lastPage) { page++; load(true); } });
     window.NusaMonitorRincian = {
         refresh: () => load(), isOpen: () => dialog.open,
+        reset: () => { generation++; controller?.abort(); controller=null; dialog.close(); $('detail-rows').replaceChildren(); rowsKey=''; lastKey=''; },
         revoke: () => {
             revoked = true; generation++; controller?.abort(); controller = null; clearTimeout(debounce);
             dialog.close(); $('detail-rows').replaceChildren(); $('detail-count').textContent = '';

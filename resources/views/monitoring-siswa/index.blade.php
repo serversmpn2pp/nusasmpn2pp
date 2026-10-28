@@ -1,23 +1,31 @@
+@php $pameran = $pameran ?? false; @endphp
 <!DOCTYPE html>
 <html lang="id" translate="no">
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="google" content="notranslate">
-    <title>Monitoring Siswa - NUSA</title>
+    <title>{{ $pameran ? 'Monitoring Pameran' : 'Monitoring Siswa' }} - NUSA</title>
     <link rel="icon" href="{{ asset('images/logo-nusa.png') }}" type="image/png">
     @fonts
     <link rel="stylesheet" href="{{ asset('css/monitoring-tv.css') }}?v={{ filemtime(public_path('css/monitoring-tv.css')) }}">
+    @if($pameran)<link rel="stylesheet" href="{{ asset('css/monitoring-pameran.css') }}?v={{ filemtime(public_path('css/monitoring-pameran.css')) }}">@endif
     <script defer src="{{ asset('vendor/chartjs/chart.umd.min.js') }}"></script>
     <script defer src="{{ asset('vendor/lucide/lucide.min.js') }}"></script>
     <script defer src="{{ asset('js/monitoring-tv-rincian.js') }}?v={{ filemtime(public_path('js/monitoring-tv-rincian.js')) }}"></script>
     <script defer src="{{ asset('js/monitoring-tv.js') }}?v={{ filemtime(public_path('js/monitoring-tv.js')) }}"></script>
+    @if($pameran)<script defer src="{{ asset('js/monitoring-pameran.js') }}?v={{ filemtime(public_path('js/monitoring-pameran.js')) }}"></script>@endif
 </head>
-<body data-endpoint="{{ route('monitoring-siswa.data') }}" data-detail-endpoint="{{ route('monitoring-siswa.rincian') }}">
+<body data-endpoint="{{ route($pameran ? 'monitoring-pameran.data' : 'monitoring-siswa.data') }}" data-detail-endpoint="{{ route($pameran ? 'monitoring-pameran.rincian' : 'monitoring-siswa.rincian') }}" @if($pameran) data-pameran="true" data-tanggal="{{ $tanggalPameran }}" data-pameran-tanggal-endpoint="{{ route('monitoring-pameran.tanggal') }}" data-pameran-tamu-endpoint="{{ route('monitoring-pameran.pengunjung') }}" data-monitor-csrf="{{ $monitorCsrf }}" @endif>
 <main class="tv-screen">
     <header class="tv-header">
         <div class="brand"><img src="{{ asset('images/logo-nusa.png') }}" alt="Logo NUSA" width="52" height="52"><div><strong>NUSA<span>.</span></strong><p>SMP Negeri 2 Padang Panjang</p></div></div>
-        <div class="tv-heading"><h1>Monitoring aktivitas siswa</h1><p id="tanggal">Memuat data sekolah...</p></div>
+        <div class="tv-heading"><h1>{{ $pameran ? 'Monitoring pameran NUSA' : 'Monitoring aktivitas siswa' }}</h1><p id="{{ $pameran ? 'pameran-event' : 'tanggal' }}">{{ $pameran ? ($acaraPameran?->nama ?? 'Acara tidak tersedia') : 'Memuat data sekolah...' }}</p></div>
         <div class="tv-tools"><div><span id="connection" class="connection waiting" role="status">Menghubungkan</span><p id="updated">Pembaruan setiap 5 detik</p></div><button id="fullscreen" type="button" title="Layar penuh" aria-label="Layar penuh"><i data-lucide="maximize"></i></button></div>
     </header>
+    @if($pameran)
+    <div class="pameran-nav"><div role="tablist" aria-label="Monitor pameran"><button type="button" id="tab-siswa" role="tab" aria-selected="true" aria-controls="panel-siswa"><i data-lucide="school" aria-hidden="true"></i>Aktivitas siswa</button><button type="button" id="tab-tamu" role="tab" aria-selected="false" aria-controls="panel-tamu" tabindex="-1"><i data-lucide="users" aria-hidden="true"></i>Pengunjung stand</button></div><label><input type="checkbox" id="pameran-rotate">Rotasi 30 detik</label></div>
+    <section id="panel-siswa" role="tabpanel" aria-labelledby="tab-siswa" class="pameran-panel">
+    <form id="pameran-date-form" class="pameran-date"><div><strong>Data aktivitas</strong><p id="tanggal">Memuat tanggal terpilih...</p></div><label for="pameran-date">Tanggal<input id="pameran-date" type="date" min="{{ $batasTanggalPameran['min'] }}" max="{{ $batasTanggalPameran['max'] }}" value="{{ $tanggalPameran }}" required></label><button type="submit" id="pameran-date-save"><i data-lucide="calendar-check" aria-hidden="true"></i>Tampilkan</button><span id="pameran-date-status" role="status">{{ $layar->pameran_identitas ? 'Identitas diaktifkan oleh admin' : 'Identitas siswa disamarkan' }}</span><p id="pameran-date-error" class="pameran-date-error" role="alert" hidden></p></form>
+    @endif
     <div id="notice" class="notice" role="status" hidden></div>
     <section class="kpis" aria-label="Ringkasan presensi hari ini">
         @foreach ([['hadir','Hadir','user-check','teal'],['izin','Izin','clipboard-check','blue'],['sakit','Sakit','heart-pulse','rose'],['alfa','Alfa tercatat','user-x','rose'],['belum','Belum tercatat','scan-line','neutral'],['terlambat','Terlambat','clock-3','yellow'],['laporan','Laporan masuk','message-square-warning','blue']] as [$key,$label,$icon,$tone])
@@ -59,7 +67,8 @@
             <p class="caption">Bersumber dari transaksi resmi, bukan usulan poin laporan.</p>
         </section>
     </div>
-    <footer class="tv-footer"><span><b class="dot teal-dot"></b> Ruang guru &middot; <span id="year">NUSA</span></span><button type="button" id="population" data-detail="dipantau">- siswa dipantau</button><span>Data pribadi terbatas &middot; Pembaruan 5 detik</span></footer>
+    <footer class="tv-footer"><span><b class="dot teal-dot"></b> {{ $pameran ? 'Mode pameran' : 'Ruang guru' }} &middot; <span id="year">NUSA</span></span><button type="button" id="population" data-detail="dipantau">- siswa dipantau</button><span>Data pribadi terbatas &middot; Pembaruan 5 detik</span></footer>
+    @if($pameran)</section>@include('monitoring-siswa._pameran-tamu')@endif
 </main>
 <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title" aria-describedby="detail-subtitle">
     <header class="detail-header"><div><p class="eyebrow">MONITORING AKTIVITAS SISWA</p><h2 id="detail-title">Rincian siswa</h2><p id="detail-subtitle">Hari ini</p></div><button type="button" id="detail-close" class="detail-icon" title="Tutup rincian" aria-label="Tutup rincian" autofocus><i data-lucide="x"></i></button></header>

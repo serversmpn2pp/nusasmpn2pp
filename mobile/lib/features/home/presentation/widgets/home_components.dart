@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/home/domain/home_dashboard.dart';
-import 'package:nusa/shared/widgets/nusa_illustrations.dart';
 import 'package:nusa/shared/widgets/nusa_logo.dart';
+import 'package:nusa/shared/widgets/nusa_school_identity.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
@@ -51,6 +51,106 @@ class HomeHeader extends StatelessWidget {
   }
 }
 
+class HomeSchoolHero extends StatelessWidget {
+  const HomeSchoolHero({
+    required this.unreadCount,
+    required this.onNotifications,
+    required this.greeting,
+    required this.name,
+    required this.dayName,
+    required this.dateLabel,
+    super.key,
+  });
+
+  final int unreadCount;
+  final VoidCallback onNotifications;
+  final String greeting;
+  final String name;
+  final String dayName;
+  final String dateLabel;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final largeText = MediaQuery.textScalerOf(context).scale(16) > 21;
+      return Stack(
+        children: [
+          Positioned(
+            top: 0,
+            bottom: 0,
+            right: -constraints.maxWidth * .15,
+            width: constraints.maxWidth * .98,
+            child: const IgnorePointer(
+              child: NusaSchoolPhoto(alignment: Alignment(.3, .15)),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      NusaColors.background,
+                      NusaColors.background.withValues(alpha: .98),
+                      NusaColors.background.withValues(
+                        alpha: largeText ? .95 : .72,
+                      ),
+                      NusaColors.background.withValues(
+                        alpha: largeText ? .78 : .10,
+                      ),
+                      NusaColors.background.withValues(
+                        alpha: largeText ? .5 : 0,
+                      ),
+                    ],
+                    stops: const [0, .26, .48, .73, 1],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x00F8FAFD),
+                      Color(0x00F8FAFD),
+                      NusaColors.background,
+                    ],
+                    stops: [0, .78, 1],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                HomeHeader(
+                  unreadCount: unreadCount,
+                  onNotifications: onNotifications,
+                ),
+                const SizedBox(height: 32),
+                HomeGreeting(
+                  greeting: greeting,
+                  name: name,
+                  dayName: dayName,
+                  dateLabel: dateLabel,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 class HomeGreeting extends StatelessWidget {
   const HomeGreeting({
     required this.greeting,
@@ -71,50 +171,41 @@ class HomeGreeting extends StatelessWidget {
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 340;
 
-        return SizedBox(
-          height: narrow ? 148 : 124,
-          child: Row(
+        final largeText = MediaQuery.textScalerOf(context).scale(16) > 21;
+        return FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: largeText ? .94 : .62,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 6,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$greeting,',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: NusaColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: NusaColors.textPrimary,
-                            fontSize: narrow ? 20 : null,
-                            fontWeight: FontWeight.w800,
-                            height: 1.08,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$dayName, $dateLabel',
-                      maxLines: 2,
-                      style: const TextStyle(
-                        color: NusaColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+              Text(
+                '$greeting,',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: NusaColors.textPrimary,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(width: 4),
-              const Expanded(flex: 5, child: NusaSchoolIllustration()),
+              const SizedBox(height: 2),
+              Text(
+                name,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: NusaColors.textPrimary,
+                  fontSize: narrow ? 20 : 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1.08,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$dayName, $dateLabel',
+                style: const TextStyle(
+                  color: NusaColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const NusaTagline(textAlign: TextAlign.left, fontSize: 14),
             ],
           ),
         );
@@ -224,12 +315,54 @@ class NusaMenuAction {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.shortLabel,
   });
 
   final String label;
+  final String? shortLabel;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+}
+
+class QuickAccessGrid extends StatelessWidget {
+  const QuickAccessGrid({required this.actions, super.key});
+
+  final List<NusaMenuAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final minimumWidth = 64 * textScale;
+        // Keep four original icons in one row at normal text size. Larger
+        // accessibility text gets more room without shrinking its labels.
+        final columns = constraints.maxWidth >= minimumWidth * 4 + gap * 3
+            ? 4
+            : constraints.maxWidth >= minimumWidth * 2 + gap
+            ? 2
+            : 1;
+        final itemWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final action in actions)
+              SizedBox(
+                width: itemWidth,
+                child: QuickMenuCard(action: action),
+              ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class QuickMenuCard extends StatelessWidget {
@@ -239,45 +372,39 @@ class QuickMenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(15),
-      elevation: 0,
-      child: InkWell(
-        onTap: action.onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: Container(
-          height: 82,
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: NusaColors.outline),
-            boxShadow: [
-              BoxShadow(
-                color: NusaColors.primary.withValues(alpha: 0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(action.icon, color: action.color, size: 29),
-              const SizedBox(height: 6),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  action.label,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: NusaColors.textPrimary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+    return Tooltip(
+      message: action.label,
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: action.onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(action.icon, color: action.color, size: 32),
+                  const SizedBox(height: 8),
+                  Text(
+                    action.shortLabel ?? action.label,
+                    semanticsLabel: action.label,
+                    textAlign: TextAlign.center,
+                    softWrap: true,
+                    style: const TextStyle(
+                      color: NusaColors.textPrimary,
+                      fontSize: 14,
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

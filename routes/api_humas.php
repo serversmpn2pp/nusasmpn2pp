@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AcaraBukuTamuController;
 use App\Http\Controllers\Api\V1\Humas\AgendaController;
 use App\Http\Controllers\Api\V1\Humas\AgendaDokumenController;
 use App\Http\Controllers\Api\V1\Humas\BundelController;
@@ -24,6 +25,23 @@ Route::prefix('humas')->name('humas.')->middleware('throttle:120,1,humas-akses:'
     ->group(function () {
         require __DIR__.'/api_humas_tahap_dua.php';
         require __DIR__.'/api_humas_tahap_tiga.php';
+        Route::prefix('acara-buku-tamu')->name('acara-buku-tamu.')->where(['acara' => '[0-9]{1,18}', 'respon' => '[0-9]{1,18}'])
+            ->controller(AcaraBukuTamuController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/referensi', 'referensi')->name('referensi');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{acara}', 'show')->name('show');
+                Route::patch('/{acara}', 'update')->name('update');
+                Route::post('/{acara}', 'update')->name('upload-update');
+                Route::get('/{acara}/statistik', 'statistik')->name('statistik');
+                Route::get('/{acara}/poster', 'poster')->name('poster');
+                Route::get('/{acara}/pratinjau', 'pratinjau')->name('pratinjau');
+                Route::get('/{acara}/banner', 'banner')->name('banner');
+                Route::get('/{acara}/qr', 'qr')->name('qr');
+                Route::get('/{acara}/export', 'export')->name('export');
+                Route::get('/{acara}/cetak', 'cetak')->name('cetak');
+                Route::patch('/{acara}/respon/{respon}/status', 'statusRespon')->name('respon.status');
+            });
         Route::prefix('faq')->name('faq.')->where(['faq' => '[0-9]{1,18}'])->controller(FaqHumasController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/referensi', 'referensi')->name('referensi');

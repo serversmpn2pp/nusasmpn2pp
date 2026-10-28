@@ -29,7 +29,16 @@ class PastikanMonitorTv
                     ? response()->json(['pesan' => 'Browser ini tidak diizinkan untuk layar monitoring tersebut.'], 403)
                     : response()->view('monitoring-siswa.belum-aktif', [], 403);
             } else {
+                if (! $request->isMethodSafe()) {
+                    $origin = $request->header('Origin');
+                    $csrf = $request->header('X-Monitor-CSRF');
+                    if (($origin && $origin !== $request->getSchemeAndHttpHost()) || $request->header('Sec-Fetch-Site') === 'cross-site'
+                        || ! is_string($csrf) || ! hash_equals($this->akses->csrf($this->akses->token($request)), $csrf)) {
+                        return $this->privat(response()->json(['pesan' => 'Otorisasi layar berubah. Muat ulang halaman.'], 419));
+                    }
+                }
                 $request->attributes->set('monitor_tv', $perangkat);
+                $request->attributes->set('monitor_csrf', $this->akses->csrf($this->akses->token($request)));
                 if (! $perangkat->terakhir_digunakan_pada || $perangkat->terakhir_digunakan_pada->lt(now()->subMinute())) {
                     $perangkat->update(['terakhir_digunakan_pada' => now()]);
                 }
@@ -37,6 +46,12 @@ class PastikanMonitorTv
                 $response->headers->setCookie($this->akses->cookie($request, $this->akses->token($request)));
             }
         }
+
+        return $this->privat($response);
+    }
+
+    private function privat(Response $response): Response
+    {
         $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-Content-Type-Options', 'nosniff');

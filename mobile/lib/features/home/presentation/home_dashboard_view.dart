@@ -60,121 +60,126 @@ class HomeDashboardView extends StatelessWidget {
             child: ListView(
               key: const PageStorageKey<String>('home-dashboard-scroll'),
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
+              padding: const EdgeInsets.only(bottom: 28),
               children: [
-                HomeHeader(
+                HomeSchoolHero(
                   unreadCount: data.notifications.unreadCount,
                   onNotifications: onOpenNotifications,
-                ),
-                HomeGreeting(
                   greeting: data.greeting,
                   name: pengguna.nama,
                   dayName: data.dayName,
                   dateLabel: data.dateLabel,
                 ),
-                AttendanceCard(
-                  attendance: data.attendance?.today,
-                  onTap: myAttendance?.isAvailable == true
-                      ? () => onOpenMenuEntry(myAttendance!)
-                      : onOpenActivity,
-                ),
-                if (data.worship case final worship?) ...[
-                  const SizedBox(height: 10),
-                  _WorshipOverviewCard(
-                    summary: worship,
-                    onTap: () => context.push(worship.mobileDestination),
+                ...<Widget>[
+                  AttendanceCard(
+                    attendance: data.attendance?.today,
+                    onTap: myAttendance?.isAvailable == true
+                        ? () => onOpenMenuEntry(myAttendance!)
+                        : onOpenActivity,
                   ),
-                ],
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: NusaSectionTitle(title: 'Akses Cepat'),
+                  if (data.worship case final worship?) ...[
+                    const SizedBox(height: 10),
+                    _WorshipOverviewCard(
+                      summary: worship,
+                      onTap: () => context.push(worship.mobileDestination),
                     ),
-                    if (catalog?.quickAccess.canCustomize == true)
-                      TextButton.icon(
-                        key: const Key('quick-access-configure'),
-                        onPressed: () => onConfigureQuickAccess(catalog!),
-                        icon: const Icon(Icons.tune_rounded, size: 17),
-                        label: const Text('Atur'),
-                      ),
                   ],
-                ),
-                const SizedBox(height: 10),
-                if (menu.isLoading)
-                  const _MenuLoadingPlaceholder()
-                else if (quickActions.isEmpty)
-                  _MenuEmptyState(onOpenNusa: onOpenNusa)
-                else
-                  _QuickActionGrid(actions: quickActions),
-                const SizedBox(height: 18),
-                const NusaSectionTitle(title: 'Semua Menu'),
-                const SizedBox(height: 10),
-                if (menu.isLoading)
-                  const _MenuLoadingPlaceholder()
-                else if (menu.hasError)
-                  _MenuErrorCard(onRetry: onRefresh)
-                else if (allActions.isEmpty)
-                  _MenuEmptyState(onOpenNusa: onOpenNusa)
-                else
-                  _AllMenuGrid(actions: allActions),
-                const SizedBox(height: 18),
-                _TodaySchedulePanel(section: data.todaySchedule),
-                if (data.attendance case final attendance?) ...[
-                  const SizedBox(height: 20),
-                  NusaSectionTitle(title: 'Ringkasan ${data.monthLabel}'),
-                  const SizedBox(height: 10),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 1.08,
+                  const SizedBox(height: 18),
+                  Row(
                     children: [
-                      AttendanceMetricCard(
-                        label: 'Hadir',
-                        value: attendance.month.present,
-                        icon: Icons.check_circle_outline_rounded,
+                      const Expanded(
+                        child: NusaSectionTitle(title: 'Akses Cepat'),
                       ),
-                      AttendanceMetricCard(
-                        label: 'Sakit',
-                        value: attendance.month.sick,
-                        icon: Icons.healing_outlined,
-                      ),
-                      AttendanceMetricCard(
-                        label: 'Izin',
-                        value: attendance.month.permitted,
-                        icon: Icons.description_outlined,
-                      ),
+                      if (catalog?.quickAccess.canCustomize == true)
+                        TextButton.icon(
+                          key: const Key('quick-access-configure'),
+                          onPressed: () => onConfigureQuickAccess(catalog!),
+                          icon: const Icon(Icons.tune_rounded, size: 17),
+                          label: const Text('Atur'),
+                        ),
                     ],
                   ),
-                ],
-                if (data.duty != null ||
-                    data.guardianship?.hasAssignments == true) ...[
-                  const SizedBox(height: 20),
-                  const NusaSectionTitle(title: 'Informasi Anda'),
                   const SizedBox(height: 10),
-                  if (data.duty case final duty?)
-                    _CompactInfoCard(
-                      icon: Icons.shield_outlined,
-                      title: 'Piket ${duty.dayLabel}',
-                      detail:
-                          duty.notes ?? 'Anda terjadwal sebagai guru piket.',
+                  if (menu.isLoading)
+                    const _MenuLoadingPlaceholder()
+                  else if (quickActions.isEmpty)
+                    _MenuEmptyState(onOpenNusa: onOpenNusa)
+                  else
+                    QuickAccessGrid(actions: quickActions),
+                  const SizedBox(height: 18),
+                  const NusaSectionTitle(title: 'Semua Menu'),
+                  const SizedBox(height: 10),
+                  if (menu.isLoading)
+                    const _MenuLoadingPlaceholder()
+                  else if (menu.hasError)
+                    _MenuErrorCard(onRetry: onRefresh)
+                  else if (allActions.isEmpty)
+                    _MenuEmptyState(onOpenNusa: onOpenNusa)
+                  else
+                    _AllMenuGrid(actions: allActions),
+                  const SizedBox(height: 18),
+                  _TodaySchedulePanel(section: data.todaySchedule),
+                  if (data.attendance case final attendance?) ...[
+                    const SizedBox(height: 20),
+                    NusaSectionTitle(title: 'Ringkasan ${data.monthLabel}'),
+                    const SizedBox(height: 10),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 1.08,
+                      children: [
+                        AttendanceMetricCard(
+                          label: 'Hadir',
+                          value: attendance.month.present,
+                          icon: Icons.check_circle_outline_rounded,
+                        ),
+                        AttendanceMetricCard(
+                          label: 'Sakit',
+                          value: attendance.month.sick,
+                          icon: Icons.healing_outlined,
+                        ),
+                        AttendanceMetricCard(
+                          label: 'Izin',
+                          value: attendance.month.permitted,
+                          icon: Icons.description_outlined,
+                        ),
+                      ],
                     ),
-                  if (data.duty != null &&
-                      data.guardianship?.hasAssignments == true)
-                    const SizedBox(height: 8),
-                  if (data.guardianship case final guardianship?
-                      when guardianship.hasAssignments)
-                    _CompactInfoCard(
-                      icon: Icons.groups_outlined,
-                      title: 'Perwalian',
-                      detail: guardianship.classCount > 0
-                          ? '${guardianship.classCount} kelas · ${guardianship.classStudentCount} siswa'
-                          : '${guardianship.menteeCount} siswa guru wali',
-                    ),
-                ],
+                  ],
+                  if (data.duty != null ||
+                      data.guardianship?.hasAssignments == true) ...[
+                    const SizedBox(height: 20),
+                    const NusaSectionTitle(title: 'Informasi Anda'),
+                    const SizedBox(height: 10),
+                    if (data.duty case final duty?)
+                      _CompactInfoCard(
+                        icon: Icons.shield_outlined,
+                        title: 'Piket ${duty.dayLabel}',
+                        detail:
+                            duty.notes ?? 'Anda terjadwal sebagai guru piket.',
+                      ),
+                    if (data.duty != null &&
+                        data.guardianship?.hasAssignments == true)
+                      const SizedBox(height: 8),
+                    if (data.guardianship case final guardianship?
+                        when guardianship.hasAssignments)
+                      _CompactInfoCard(
+                        icon: Icons.groups_outlined,
+                        title: 'Perwalian',
+                        detail: guardianship.classCount > 0
+                            ? '${guardianship.classCount} kelas · ${guardianship.classStudentCount} siswa'
+                            : '${guardianship.menteeCount} siswa guru wali',
+                      ),
+                  ],
+                ].map(
+                  (child) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: child,
+                  ),
+                ),
               ],
             ),
           ),
@@ -195,6 +200,15 @@ class HomeDashboardView extends StatelessWidget {
             final group = catalog.groupForEntry(item.code);
             return NusaMenuAction(
               label: item.label,
+              shortLabel: switch (item.code) {
+                'jadwal-mengajar-saya' => 'Jadwal',
+                'siswa-wali-saya' => 'Siswa Wali',
+                'laporan-siswa-wali' => 'Laporan Wali',
+                'input-nilai' => 'Input Nilai',
+                'rekap-presensi-siswa' => 'Presensi Siswa',
+                'pemeriksaan-pengesahan' => 'Periksa & Sahkan',
+                _ => null,
+              },
               icon: nusaMenuEntryIcon(item),
               color: group == null
                   ? NusaColors.primary
@@ -729,24 +743,6 @@ class _TodayScheduleEmpty extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _QuickActionGrid extends StatelessWidget {
-  const _QuickActionGrid({required this.actions});
-
-  final List<NusaMenuAction> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var index = 0; index < actions.length; index++) ...[
-          Expanded(child: QuickMenuCard(action: actions[index])),
-          if (index < actions.length - 1) const SizedBox(width: 8),
-        ],
-      ],
     );
   }
 }

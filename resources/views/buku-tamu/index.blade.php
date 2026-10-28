@@ -7,7 +7,7 @@
     <div class="page-header"><div><p class="eyebrow">Humas</p><h1 class="page-title">Buku Tamu Digital</h1></div>@if ($bolehCatat)<a class="button button-primary" href="{{ route('buku-tamu.create') }}">Catat kedatangan</a>@endif</div>
     @include('buku-tamu._messages')
     @if ($bolehRekap)
-        <nav class="tamu-tabs" aria-label="Tampilan buku tamu"><a href="{{ route('buku-tamu.index') }}" @if (!$rekap) aria-current="page" @endif>Operasional hari ini</a><a href="{{ route('buku-tamu.index', ['tab' => 'rekap']) }}" @if ($rekap) aria-current="page" @endif>Rekap kunjungan</a></nav>
+        <nav class="tamu-tabs" aria-label="Tampilan buku tamu"><a href="{{ route('buku-tamu.index') }}" @if (!$rekap) aria-current="page" @endif>Operasional hari ini</a><a href="{{ route('buku-tamu.index', ['tab' => 'rekap']) }}" @if ($rekap) aria-current="page" @endif>Rekap kunjungan</a><a href="{{ route('acara-buku-tamu.index') }}">Acara & Pameran</a></nav>
     @endif
     <div class="tamu-metrics">
         <div class="tamu-metric"><span>Total kunjungan</span><strong>{{ $ringkasan['total'] }}</strong></div>

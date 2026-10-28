@@ -2,12 +2,15 @@
     'use strict';
     const REFRESH_MS = 5000;
     const endpoint = document.body.dataset.endpoint;
+    const pameran = document.body.dataset.pameran === 'true';
+    const labelTanggal = value => pameran && typeof value === 'string' ? value.replace(/hari ini/gi, 'tanggal terpilih').replace('Minggu ini', 'Minggu data').replace('Bulan ini', 'Bulan data') : value;
     const $ = id => document.getElementById(id);
     const fmt = value => Number(value || 0).toLocaleString('id-ID');
-    const set = (id, value) => { $(id).textContent = value; };
+    const set = (id, value) => { $(id).textContent = labelTanggal(value); };
     let data = null, period = 'day', busy = false, blocked = false, lastSuccess = 0;
     let attendanceChart, reportsChart, feedPage = 0, latePage = 0, worshipPage = 0, classPage = 0, metric = 'laporan';
     let knownReports = new Set(), newReports = new Set(), signature = '';
+    let generation = 0, activeController = null;
     window.lucide?.createIcons();
     if (window.Chart) {
         Chart.defaults.font.family = '"Instrument Sans", "Segoe UI", Arial, sans-serif';
@@ -30,7 +33,7 @@
         if (className) el.className = className;
         return el;
     }
-    function empty(container, message) { container.replaceChildren(node('p', message, 'empty')); }
+    function empty(container, message) { container.replaceChildren(node('p', labelTanggal(message), 'empty')); }
     function paginate(container, items, preferred, page, renderItem) {
         let size = Math.min(preferred, items.length), pages;
         do {
@@ -151,11 +154,19 @@
         if (changedDate) { latePage = 0; worshipPage = 0; }
         knownReports = incoming;
         for (const key of ['hadir', 'izin', 'sakit', 'alfa', 'belum', 'terlambat', 'laporan']) set(`kpi-${key}`, fmt(data.ringkasan[key]));
-        set('detail-hadir', `dari ${fmt(data.ringkasan.dipantau)} siswa aktif`);
+        set('detail-hadir', `dari ${fmt(data.ringkasan.dipantau)} siswa ${pameran ? 'dipantau' : 'aktif'}`);
         set('detail-terlambat', 'Termasuk dalam hadir');
         set('detail-laporan', 'Masuk hari ini');
         set('detail-belum', `${fmt(data.ringkasan.pengecualian)} tanpa kewajiban scan`);
         set('tanggal', data.tanggal);
+        if (pameran) {
+            document.body.dataset.tanggal = data.tanggal_data;
+            for (const key of ['izin', 'sakit', 'alfa']) set('detail-' + key, 'Tanggal terpilih');
+            const date = $('pameran-date');
+            date.min = data.batas_tanggal.min; date.max = data.batas_tanggal.max;
+            if (document.activeElement !== date && !date.dataset.dirty) date.value = data.tanggal_data;
+            set('pameran-date-status', data.identitas_ditampilkan ? 'Identitas diaktifkan oleh admin' : 'Identitas siswa disamarkan');
+        }
         set('year', data.tahun);
         set('population', `${fmt(data.ringkasan.dipantau)} siswa dipantau`);
         set('feed-count', `${fmt(data.ringkasan.laporan)} laporan`);
@@ -165,25 +176,28 @@
         set('point-students', `${fmt(data.poin.siswa)} siswa`);
         set('point-added', `+${fmt(data.poin.ditambahkan)}`);
         set('point-reduced', `−${fmt(data.poin.dikurangi)}`);
-        set('updated', `Data ${new Date(data.diperbarui_pada).toLocaleTimeString('id-ID', {timeZone: data.zona_waktu, hour12: false})} · 5 detik`);
+        set('updated', pameran ? `Diperbarui ${new Date(data.diperbarui_pada).toLocaleString('id-ID', {timeZone:data.zona_waktu,hour12:false})}` : `Data ${new Date(data.diperbarui_pada).toLocaleTimeString('id-ID', {timeZone: data.zona_waktu, hour12: false})} · 5 detik`);
         notice(data.pesan);
         renderFeed(); renderLate(); renderWorship();
         const nextSignature = JSON.stringify([data.grafik_presensi, data.grafik_laporan, data.kelas, period, metric]);
         if (signature !== nextSignature) { renderCharts(); signature = nextSignature; }
     }
     async function refresh() {
-        if (busy || blocked) return;
+        if (busy || blocked || (pameran && window.NusaPameran?.tab() === 'tamu')) return;
         busy = true;
+        const current = ++generation;
         const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 4500);
+        activeController = controller;
         try {
             const response = await fetch(endpoint, {credentials: 'same-origin', cache: 'no-store', headers: {Accept: 'application/json'}, signal: controller.signal});
+            if (current !== generation) return;
             if (response.status === 401 || response.status === 403) {
                 revoke();
                 return;
             }
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const next = await response.json();
-            if (blocked) return;
+            if (blocked || current !== generation) return;
             if (!next.ringkasan || !next.diperbarui_pada) throw new Error('Data tidak valid');
             const age = Date.now() - Date.parse(next.diperbarui_pada);
             render(next);
@@ -191,12 +205,13 @@
             if (age > 20000) { connection('Data tertunda', 'waiting'); notice('Data server belum diperbarui. Menunggu sinkronisasi.', true); }
             else connection('Terhubung', '');
         } catch (_) {
-            if (blocked) return;
+            if (blocked || current !== generation) return;
             connection(navigator.onLine ? 'Koneksi terputus' : 'Offline', 'offline');
             notice(data ? 'Pembaruan terhenti. Data terakhir tetap ditampilkan; mencoba kembali setiap 5 detik.' : 'Belum dapat memuat data. Memeriksa koneksi setiap 5 detik.', true);
-        } finally { clearTimeout(timeout); busy = false; }
+        } finally { clearTimeout(timeout); if(current === generation){busy = false; activeController = null;} }
     }
     function revoke() {
+        if (blocked) return;
         blocked = true; data = null;
         window.NusaMonitorRincian?.revoke();
         for (const id of ['feed', 'late-list', 'worship']) empty($(id), 'Akses monitoring dinonaktifkan.');
@@ -206,6 +221,7 @@
         $('attendance-empty').hidden = true;
         connection('Akses dicabut', 'offline');
         notice('Akses layar monitoring tidak aktif. Hubungi administrator untuk aktivasi ulang, lalu muat ulang halaman.', true);
+        window.dispatchEvent(new Event('monitor-access-revoked'));
     }
     window.addEventListener('monitor-access-revoked', revoke);
     document.querySelectorAll('[data-period]').forEach(button => button.addEventListener('click', () => {
@@ -236,10 +252,35 @@
         if (!blocked) window.NusaMonitorRincian?.refresh();
     }, REFRESH_MS);
     setInterval(() => {
-        if (!data || blocked || window.NusaMonitorRincian?.isOpen()) return;
+        if (!data || blocked || window.NusaMonitorRincian?.isOpen() || (pameran && window.NusaPameran?.tab() === 'tamu')) return;
         feedPage++; latePage++; worshipPage++; classPage++;
         renderFeed(); renderLate(); renderWorship();
         if (metric === 'kelas') renderSecondaryChart();
     }, 15000);
+    if(pameran){
+        document.querySelector('[data-period="day"]').textContent = 'Tanggal data';
+        document.querySelector('[data-detail="alfa"]>div>span').textContent = 'Alfa';
+        document.querySelector('.worship-section h2').lastChild.textContent = ' Ibadah siswa';
+        document.querySelector('.points-section .heading-actions>.tag').textContent = 'S.d. tanggal data';
+        document.querySelector('[data-detail="poin_tambah"]').firstChild.textContent = 'Penambahan tanggal data ';
+        document.querySelector('[data-detail="poin_kurang"]').firstChild.textContent = 'Koreksi / pengurangan ';
+        document.querySelectorAll('[title],[aria-label]').forEach(el=>{
+            for(const attr of ['title','aria-label'])if(el.hasAttribute(attr))el.setAttribute(attr,labelTanggal(el.getAttribute(attr)));
+        });
+    }
+    window.NusaMonitoringTv = {
+        refresh,
+        pause: () => { generation++; activeController?.abort(); activeController=null; busy=false; },
+        clear: () => {
+            generation++; activeController?.abort(); activeController=null; busy=false;
+            data=null;signature='';knownReports=new Set();newReports=new Set();lastSuccess=0;
+            window.NusaMonitorRincian?.reset();
+            for(const id of ['feed','late-list','worship'])empty($(id),'Memuat tanggal terpilih...');
+            for(const key of ['hadir','izin','sakit','alfa','belum','terlambat','laporan'])set('kpi-'+key,'-');
+            for(const id of ['point-balance','point-students','point-added','point-reduced','population','feed-count','late-total','worship-count'])set(id,'-');
+            attendanceChart?.destroy(); reportsChart?.destroy(); attendanceChart=null; reportsChart=null;
+            set('tanggal','Memuat tanggal terpilih...');
+        },
+    };
     refresh();
 })();

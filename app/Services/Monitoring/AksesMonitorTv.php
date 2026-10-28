@@ -24,6 +24,11 @@ class AksesMonitorTv
         return $token ? PerangkatMonitoring::where('token_hash', hash('sha256', $token))->whereNull('dicabut_pada')->first() : null;
     }
 
+    public function csrf(string $token): string
+    {
+        return hash_hmac('sha256', 'monitor-tv-settings:'.$token, (string) config('app.key'));
+    }
+
     public function cookie(Request $request, string $token): Cookie
     {
         return new Cookie(self::COOKIE, $token, now()->addDays(400), '/', null,

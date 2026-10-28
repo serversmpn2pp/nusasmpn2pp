@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AcaraBukuTamuController;
 use App\Http\Controllers\AgendaHumasController;
 use App\Http\Controllers\AkademikAnakController;
 use App\Http\Controllers\AksesUjianCbtController;
@@ -65,6 +66,7 @@ use App\Http\Controllers\KoreksiKegiatanIbadahController;
 use App\Http\Controllers\KoreksiManualUjianCbtController;
 use App\Http\Controllers\KoreksiOtomatisUjianCbtController;
 use App\Http\Controllers\KoreksiPoinPresensiController;
+use App\Http\Controllers\KunjungiAcaraController;
 use App\Http\Controllers\LabelBarcodeInventarisController;
 use App\Http\Controllers\LampiranPerilakuStsController;
 use App\Http\Controllers\LaporanAbsensiController;
@@ -77,6 +79,7 @@ use App\Http\Controllers\LokasiBarangController;
 use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\MediaResmiHumasController;
 use App\Http\Controllers\MonitoringSiswaController;
+use App\Http\Controllers\MonitoringPameranController;
 use App\Http\Controllers\MonitoringSurveiController;
 use App\Http\Controllers\MonitoringUjianCbtController;
 use App\Http\Controllers\MonitoringUjianTvController;
@@ -233,6 +236,14 @@ Route::middleware('guest')->group(function () {
 Route::get('presensi-pertemuan/{token}', [PresensiPertemuanHumasController::class, 'masuk'])
     ->where('token', '[A-Za-z0-9]{64}')->name('presensi-pertemuan.masuk');
 
+Route::prefix('kunjungi/{kode}')->where(['kode' => '[a-z0-9]{24}'])->name('kunjungi-acara.')
+    ->middleware('throttle:180,1,acara-publik:')->controller(KunjungiAcaraController::class)->group(function () {
+        Route::get('/', 'show')->name('show');
+        Route::post('/', 'store')->middleware('throttle:90,1,acara-kiriman:')->name('store');
+        Route::get('/selesai', 'selesai')->name('selesai');
+        Route::get('/banner', 'banner')->name('banner');
+    });
+
 // Scanner credentials are independent of the web login and its session/CSRF token.
 Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
     ->middleware(PastikanPerangkatScan::class)->group(function () {
@@ -245,6 +256,12 @@ Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, Pr
 // Read-only TV credentials never grant scanner or account access.
 Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
     ->middleware(PastikanMonitorTv::class)->group(function () {
+        Route::get('monitoring-pameran', [MonitoringPameranController::class, 'index'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.index');
+        Route::get('monitoring-pameran/data', [MonitoringPameranController::class, 'data'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.data');
+        Route::get('monitoring-pameran/pengunjung', [MonitoringPameranController::class, 'pengunjung'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.pengunjung');
+        Route::put('monitoring-pameran/tanggal', [MonitoringPameranController::class, 'tanggal'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.tanggal');
+        Route::get('monitoring-pameran/rincian', [MonitoringPameranController::class, 'rincian'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.rincian');
+        Route::get('monitoring-pameran/foto/{siswa}', [MonitoringPameranController::class, 'foto'])->whereNumber('siswa')->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.foto');
         Route::get('monitoring-siswa', [MonitoringSiswaController::class, 'index'])->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.index');
         Route::get('monitoring-siswa/data', [MonitoringSiswaController::class, 'data'])->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.data');
         Route::get('monitoring-siswa/rincian', [MonitoringSiswaController::class, 'rincian'])->defaults('jenis_monitor', 'siswa')->name('monitoring-siswa.rincian');
@@ -1029,6 +1046,23 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('/{tamu}/lampiran/{lampiran}/unduh', 'unduh')->name('lampiran.unduh');
             Route::get('/{tamu}/lampiran/{lampiran}/pratinjau', 'pratinjau')->name('lampiran.pratinjau');
             Route::delete('/{tamu}/lampiran/{lampiran}', 'hapusLampiran')->name('lampiran.destroy');
+        });
+
+        Route::prefix('acara-buku-tamu')->name('acara-buku-tamu.')->controller(AcaraBukuTamuController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/tambah', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{acara}/edit', 'edit')->whereNumber('acara')->name('edit');
+            Route::put('/{acara}', 'update')->whereNumber('acara')->name('update');
+            Route::get('/{acara}', 'show')->whereNumber('acara')->name('show');
+            Route::get('/{acara}/poster', 'poster')->whereNumber('acara')->name('poster');
+            Route::get('/{acara}/pratinjau', 'pratinjau')->whereNumber('acara')->name('pratinjau');
+            Route::get('/{acara}/banner', 'banner')->whereNumber('acara')->name('banner');
+            Route::get('/{acara}/qr', 'qr')->whereNumber('acara')->name('qr');
+            Route::get('/{acara}/export', 'export')->whereNumber('acara')->name('export');
+            Route::get('/{acara}/cetak', 'cetak')->whereNumber('acara')->name('cetak');
+            Route::get('/{acara}/statistik', 'statistik')->whereNumber('acara')->name('statistik');
+            Route::patch('/{acara}/respon/{respon}/status', 'statusRespon')->whereNumber(['acara', 'respon'])->name('respon.status');
         });
 
         Route::middleware('izin:agenda_humas.kelola')->group(function () {

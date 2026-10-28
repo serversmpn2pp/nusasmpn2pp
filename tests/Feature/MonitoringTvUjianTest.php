@@ -116,6 +116,10 @@ class MonitoringTvUjianTest extends TestCase
             $r->assertDontSee($secret);
         }
         $this->assertSame('Aktivitas keluar aplikasi', $r->json('aktivitas.0.label'));
+        $this->assertSame($d['peserta'][2]->id, $r->json('aktivitas.0.peserta_id'));
+        $this->assertSame($d['peserta'][2]->ruang_ujian_cbt_id, $r->json('aktivitas.0.ruang_id'));
+        $this->assertSame('VIII.A Bilingual', $r->json('aktivitas.0.kelas'));
+        $this->assertSame('Sesi pagi', $r->json('aktivitas.0.sesi'));
     }
 
     public function test_waktu_tambahan_dihormati_dan_monitor_tidak_menutup_ujian_kedaluwarsa(): void
@@ -174,6 +178,8 @@ class MonitoringTvUjianTest extends TestCase
         $this->assertLessThanOrEqual(22, count(DB::getQueryLog()));
         DB::disableQueryLog();
         $html = $this->get(route('monitoring-ujian-tv.index'))->assertOk()->assertSee('monitoring-ujian-tv.js')->assertDontSee('app-sidebar')->assertDontSee('csrf-token');
+        $html->assertSee('id="exam-detail-dialog"', false)->assertSee('monitoring-ujian-tv-rincian.js')
+            ->assertSee('id="exam-detail-room-filter"', false)->assertSee('id="exam-detail-status"', false);
         $this->assertStringContainsString('const REFRESH_MS = 5000', File::get(public_path('js/monitoring-ujian-tv.js')));
         if (getenv('NUSA_CAPTURE_EXAM_TV')) {
             $folder = storage_path('framework/testing/exam-tv');
@@ -209,6 +215,25 @@ class MonitoringTvUjianTest extends TestCase
         $this->getJson(route('monitoring-siswa.data'))->assertOk();
         $this->getJson(route('monitoring-ujian-tv.data'))->assertOk();
         $this->actingAs($this->admin())->get(route('pusat-cbt.index'))->assertOk()->assertSee('Monitoring TV ujian');
+    }
+
+    public function test_aktivitas_modal_tetap_terbatas_pada_peserta_jadwal_dan_sesi_diizinkan(): void
+    {
+        $d = $this->fondasi();
+        $lain = $this->fondasi();
+        $d['peserta'][2]->update(['ruang_ujian_cbt_id' => null]);
+        foreach ([[$d['peserta'][2], 'keluar_aplikasi'], [$lain['peserta'][2], 'keluar_aplikasi'], [$d['peserta'][3], 'jenis_rahasia']] as [$peserta, $jenis]) {
+            AktivitasKeamananUjianCbt::create(['peserta_ujian_cbt_id' => $peserta->id, 'jenis' => $jenis, 'mulai_pada' => now(), 'catatan' => 'CATATAN PRIVAT']);
+        }
+        $this->perangkat($d);
+        $r = $this->getJson(route('monitoring-ujian-tv.data'))->assertOk()->assertDontSee('CATATAN PRIVAT')->assertDontSee('jenis_rahasia');
+        $event = collect($r->json('aktivitas'))->firstWhere('label', 'Aktivitas keluar aplikasi');
+        $this->assertSame($d['peserta'][2]->id, $event['peserta_id']);
+        $this->assertSame(0, $event['ruang_id']);
+        $this->assertSame('Belum ditempatkan', $event['ruang']);
+        $this->assertFalse(collect($r->json('aktivitas'))->contains('peserta_id', $lain['peserta'][2]->id));
+        $this->assertLessThanOrEqual(20, count($r->json('aktivitas')));
+        $this->assertDatabaseCount('transaksi_poin_siswa', 0);
     }
 
     private function admin(): Pengguna

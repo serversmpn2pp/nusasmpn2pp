@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcaraBukuTamu;
 use App\Models\KegiatanUjianCbt;
 use App\Models\PerangkatMonitoring;
 use App\Services\Monitoring\AksesMonitorTv;
+use App\Services\Monitoring\MonitoringPameranService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -28,7 +30,9 @@ class PerangkatMonitoringController extends Controller
             'saatIni' => $this->akses->perangkat($request),
             'daftar' => PerangkatMonitoring::with('kegiatanUjianCbt:id,nama')->latest('id')->paginate(20),
             'kegiatan' => KegiatanUjianCbt::where('status', '!=', 'nonaktif')->latest('tanggal_mulai')->get(['id', 'nama']),
-            'cakupanAwal' => $request->query('jenis') === 'ujian' ? 'ujian' : 'siswa',
+            'acaraPameran' => AcaraBukuTamu::where('status', '!=', 'draf')->orderByDesc('mulai_pada')->get(['id', 'nama']),
+            'batasTanggalPameran' => app(MonitoringPameranService::class)->batasTanggal(),
+            'cakupanAwal' => in_array($request->query('jenis'), ['ujian', 'pameran'], true) ? $request->query('jenis') : 'siswa',
         ])->header('Cache-Control', 'private, no-store, max-age=0');
     }
 
@@ -40,13 +44,18 @@ class PerangkatMonitoringController extends Controller
             'cakupan' => ['required', Rule::in(array_keys(PerangkatMonitoring::CAKUPAN))],
             'kegiatan_ujian_cbt_id' => ['nullable', 'required_if:cakupan,ujian,keduanya', 'integer',
                 Rule::exists('kegiatan_ujian_cbt', 'id')->where(fn ($q) => $q->where('status', '!=', 'nonaktif'))],
+            'acara_buku_tamu_id' => ['exclude_unless:cakupan,pameran', 'required', 'integer', Rule::exists('acara_buku_tamu', 'id')->where(fn ($q) => $q->where('status', '!=', 'draf'))],
+            'pameran_tanggal' => ['exclude_unless:cakupan,pameran', 'required', ...app(MonitoringPameranService::class)->aturanTanggal()],
+            'pameran_identitas' => ['exclude_unless:cakupan,pameran', 'sometimes', 'boolean'],
         ]);
         $token = Str::random(80);
         DB::transaction(function () use ($request, $data, $token) {
             $this->akses->perangkat($request)?->update(['dicabut_pada' => now(), 'dicabut_oleh' => $request->user()->id,
                 'alasan_pencabutan' => 'Digantikan aktivasi baru pada browser yang sama.']);
             PerangkatMonitoring::create(['nama' => $data['nama'], 'token_hash' => hash('sha256', $token), 'diaktifkan_oleh' => $request->user()->id,
-                'cakupan' => $data['cakupan'], 'kegiatan_ujian_cbt_id' => $data['cakupan'] === 'siswa' ? null : $data['kegiatan_ujian_cbt_id']]);
+                'cakupan' => $data['cakupan'], 'kegiatan_ujian_cbt_id' => in_array($data['cakupan'], ['ujian', 'keduanya'], true) ? $data['kegiatan_ujian_cbt_id'] : null,
+                'acara_buku_tamu_id' => $data['acara_buku_tamu_id'] ?? null, 'pameran_tanggal' => $data['pameran_tanggal'] ?? null,
+                'pameran_identitas' => $data['pameran_identitas'] ?? false]);
         });
 
         return redirect()->route('perangkat-monitoring.index')->with('berhasil', 'Layar monitoring berhasil diaktifkan.')

@@ -1,5 +1,7 @@
 # Monitoring TV Aktivitas Siswa
 
+Untuk layar pameran dengan dua tab (aktivitas siswa bertanggal dan statistik pengunjung), gunakan cakupan **Mode pameran**; lihat [Monitoring Pameran](monitoring-pameran.md). Monitoring ruang guru di halaman ini tetap mengikuti hari berjalan dan tidak menyediakan pemilih tanggal.
+
 ## Penggunaan
 
 1. Pada komputer yang terhubung ke TV, login sebagai administrator NUSA.

@@ -44,6 +44,9 @@ class NavigasiHumasService
         if (app(AksesBukuTamuService::class)->bolehMembuka($akun)) {
             $items[] = $this->item('buku-tamu', 'Buku Tamu Digital', 'buku-tamu.index', null, 'book-user');
         }
+        if ($akun->memilikiIzin(['buku_tamu.lihat', 'buku_tamu.kelola'])) {
+            $items[] = $this->item('acara-buku-tamu', 'Acara & Pameran', 'acara-buku-tamu.index', ['buku_tamu.lihat', 'buku_tamu.kelola'], 'ticket');
+        }
 
         return $items;
     }
@@ -122,7 +125,7 @@ class NavigasiHumasService
             }
         }
 
-        return in_array($kode, ['agenda-humas', 'faq-humas'], true) ? 'Agenda & Layanan Pendukung' : null;
+        return in_array($kode, ['agenda-humas', 'faq-humas', 'acara-buku-tamu'], true) ? 'Agenda & Layanan Pendukung' : null;
     }
 
     private function bolehMembuka(Pengguna $akun): bool

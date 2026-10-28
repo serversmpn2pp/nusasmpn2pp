@@ -11,20 +11,30 @@ use App\Models\TransaksiPoinSiswa;
 use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\GrafikPresensiAdminService;
 use App\Services\Ibadah\RekapHarianKegiatanIbadah;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
 class MonitoringSiswaService
 {
-    public function bangun(bool $denganRincian = false): array
+    public function bangun(bool $denganRincian = false, ?CarbonInterface $tanggalData = null): array
     {
-        $waktu = now();
+        $sekarang = now();
+        $historis = $tanggalData && ! $tanggalData->isSameDay($sekarang);
+        $waktu = $historis ? Carbon::instance($tanggalData)->copy()->endOfDay() : $sekarang->copy();
         $tanggal = $waktu->toDateString();
         $tahun = TahunPelajaran::where('aktif', true)->orderByDesc('tanggal_mulai')->first();
         $aturan = app(AturanAlfaOtomatisSiswaService::class);
-        $query = AnggotaKelas::with(['siswa:id,nama_lengkap,foto', 'kelas:id,nama', 'tahunPelajaran'])
+        $query = AnggotaKelas::with(['siswa:id,nama_lengkap,foto,jenis_kelamin', 'kelas:id,nama', 'tahunPelajaran'])
             ->where('tahun_pelajaran_id', $tahun?->id ?? 0)->where('status_keanggotaan', 'aktif')
             ->whereHas('siswa', fn ($q) => $q->where('aktif', true))
             ->whereHas('kelas', fn ($q) => $q->where('aktif', true));
+        if ($historis) {
+            $query = AnggotaKelas::with(['siswa:id,nama_lengkap,foto,jenis_kelamin', 'kelas:id,nama', 'tahunPelajaran'])
+                ->where('tahun_pelajaran_id', $tahun?->id ?? 0)
+                ->where(fn ($q) => $q->where('status_keanggotaan', 'aktif')->orWhereNotNull('tanggal_keluar'))
+                ->where(fn ($q) => $q->whereHas('siswa', fn ($s) => $s->where('aktif', true))->orWhereNotNull('tanggal_keluar'))
+                ->whereHas('kelas');
+        }
         $aturan->batasiKeanggotaan($query, $tanggal);
         $anggota = $query->orderByDesc('tanggal_masuk')->orderByDesc('id')->get()->unique('siswa_id');
         $ids = $anggota->pluck('siswa_id');
@@ -53,7 +63,7 @@ class MonitoringSiswaService
             $kelas[$k]['total']++;
             $kelas[$k]['hadir'] += (int) ($key === 'hadir');
             if ($denganRincian) {
-                $rincian->push([...$this->identitas($a), 'id' => 'presensi-'.$a->siswa_id, 'kategori' => $key,
+                $rincian->push([...$this->identitas($a), ...($tanggalData ? ['_siswa' => $a->siswa_id] : []), 'id' => 'presensi-'.$a->siswa_id, 'kategori' => $key,
                     'waktu' => $p?->jam_masuk ? substr($p->jam_masuk, 0, 8) : null,
                     'status' => match ($key) {
                         'hadir' => 'Hadir', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alfa' => 'Alfa',
@@ -65,7 +75,8 @@ class MonitoringSiswaService
             if ($key === 'hadir' && ($p->menit_terlambat > 0 || $p->status_masuk === 'terlambat')) {
                 $ringkasan['terlambat']++;
                 $kelas[$k]['terlambat']++;
-                $terlambat->push(['nama' => $a->siswa->nama_lengkap, 'kelas' => $a->kelas->nama, 'menit' => $p->menit_terlambat]);
+                $terlambat->push(['nama' => $a->siswa->nama_lengkap, 'kelas' => $a->kelas->nama, 'menit' => $p->menit_terlambat,
+                    ...($tanggalData ? ['_siswa' => $a->siswa_id] : [])]);
             }
         }
 
@@ -78,7 +89,7 @@ class MonitoringSiswaService
             ->get(['id', 'siswa_id', 'kelas_id', 'jenis_laporan', 'status_verifikasi', 'created_at']);
         $hariIni = $laporan->filter(fn ($l) => $l->created_at->isSameDay($waktu));
         $bySiswa = $anggota->keyBy('siswa_id');
-        $laporanRinci = $hariIni->map(function ($l) use ($bySiswa, $denganRincian) {
+        $laporanRinci = $hariIni->map(function ($l) use ($bySiswa, $denganRincian, $tanggalData) {
             $a = $bySiswa->get($l->siswa_id);
             $privat = $l->jenis_laporan === 'pembinaan';
             $status = match ($l->status_verifikasi) {
@@ -87,6 +98,7 @@ class MonitoringSiswaService
             };
 
             return [...($denganRincian && ! $privat ? $this->identitas($a) : []),
+                ...($tanggalData && ! $privat ? ['_siswa' => $l->siswa_id] : []),
                 'id' => 'laporan-'.$l->id, 'waktu' => $l->created_at->format('H:i:s'),
                 'nama' => $privat ? 'Pembinaan siswa' : $a->siswa->nama_lengkap,
                 'kelas' => $privat ? 'Identitas dibatasi' : $a->kelas->nama,
@@ -113,7 +125,7 @@ class MonitoringSiswaService
             ->where('tahun_pelajaran_id', $tahun?->id ?? 0)->where('hari', $kodeHari)->where('aktif', true)
             ->whereHas('kegiatanIbadah', fn ($q) => $q->where('aktif', true))->orderBy('jam_pelaksanaan')->get()->unique('kegiatan_ibadah_id');
         foreach ($jadwal as $j) {
-            $rekap = app(RekapHarianKegiatanIbadah::class)->hitung($tahun, $daftarKelas, $j->kegiatan_ibadah_id, $waktu);
+            $rekap = app(RekapHarianKegiatanIbadah::class)->hitung($tahun, $daftarKelas, $j->kegiatan_ibadah_id, $waktu, $tanggalData ? $anggota : null);
             // Keep individual medical/exemption information out of the TV payload.
             $status = $rekap['status_per_siswa']->only($ids->all());
             $sudah = $status->where('status', RekapHarianKegiatanIbadah::STATUS_SUDAH)->count();
@@ -128,6 +140,7 @@ class MonitoringSiswaService
                         continue;
                     }
                     $ibadahRinci->push([...$this->identitas($bySiswa->get($siswaId)),
+                        ...($tanggalData ? ['_siswa' => $siswaId] : []),
                         'id' => 'ibadah-'.$j->kegiatan_ibadah_id.'-'.$siswaId,
                         'kegiatan_id' => $j->kegiatan_ibadah_id, 'kegiatan' => $j->kegiatanIbadah->nama,
                         'status_ibadah' => $s['status'], 'status' => $s['status'] === RekapHarianKegiatanIbadah::STATUS_SUDAH ? 'Sudah tercatat' : 'Belum tercatat',
@@ -137,6 +150,12 @@ class MonitoringSiswaService
         }
 
         $grafik = app(GrafikPresensiAdminService::class)->bangun($waktu, $tahun);
+        if ($tanggalData) {
+            $grafik['day']['title'] = 'Kehadiran tanggal terpilih';
+            if ($grafik['day']['empty'] === 'Belum ada jam kedatangan tercatat hari ini.') {
+                $grafik['day']['empty'] = 'Belum ada jam kedatangan tercatat pada tanggal ini.';
+            }
+        }
         $grafikLaporan = [];
         foreach (['week' => $waktu->copy()->startOfWeek(CarbonInterface::MONDAY), 'month' => $waktu->copy()->startOfMonth()] as $periode => $mulai) {
             // A week crossing a month boundary must include the preceding month's submissions.
@@ -155,7 +174,7 @@ class MonitoringSiswaService
         }
 
         $hasil = [
-            'diperbarui_pada' => $waktu->toIso8601String(), 'zona_waktu' => config('app.timezone'),
+            'diperbarui_pada' => $sekarang->toIso8601String(), 'zona_waktu' => config('app.timezone'),
             'tanggal' => $waktu->locale('id')->translatedFormat('l, j F Y'), 'tahun' => $tahun?->nama ?? 'Belum ada tahun pelajaran aktif',
             'pesan' => ! $tahun ? 'Tahun pelajaran aktif belum tersedia.' : (! $terjadwal ? 'Hari ini tidak ada jadwal presensi siswa.' : null),
             'ringkasan' => [...$ringkasan, 'laporan' => $hariIni->count()],
@@ -165,16 +184,26 @@ class MonitoringSiswaService
             'terlambat' => $terlambat->sortByDesc('menit')->values()->all(),
             'total_menit_terlambat' => (int) $terlambat->sum('menit'), 'ibadah' => $ibadah, 'poin' => $poin,
         ];
+        if ($tanggalData) {
+            $hasil['tanggal_data'] = $tanggal;
+            $hasil['historis'] = (bool) $historis;
+            $hasil['batas_data_pada'] = $waktu->toIso8601String();
+            if ($hasil['pesan']) {
+                $hasil['pesan'] = str_replace('Hari ini', 'Tanggal terpilih', $hasil['pesan']);
+            }
+        }
         if ($denganRincian) {
             $hasil['rincian'] = [
                 'presensi' => $rincian->sortBy(fn ($r) => $r['kelas'].' '.$r['nama'], SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
                 'laporan' => $laporanRinci->all(),
                 'poin' => $saldo->filter(fn ($r) => $r->saldo > 0)->map(fn ($r) => [
                     ...$this->identitas($bySiswa->get($r->siswa_id)), 'id' => 'saldo-'.$r->siswa_id,
+                    ...($tanggalData ? ['_siswa' => $r->siswa_id] : []),
                     'status' => 'Saldo poin resmi', 'poin' => (int) $r->saldo, 'waktu' => null,
                 ])->sortBy('nama', SORT_NATURAL | SORT_FLAG_CASE)->values()->all(),
                 'transaksi' => $poinHariIni->map(fn ($r) => [
                     ...$this->identitas($bySiswa->get($r->siswa_id)), 'id' => 'transaksi-'.$r->id,
+                    ...($tanggalData ? ['_siswa' => $r->siswa_id] : []),
                     'status' => $r->poin > 0 ? 'Penambahan poin' : 'Koreksi / pengurangan',
                     'poin' => $r->poin, 'waktu' => $r->tercatat_pada->format('H:i:s'),
                 ])->values()->all(),
@@ -227,7 +256,8 @@ class MonitoringSiswaService
         $halamanTerakhir = max(1, (int) ceil($total / 20));
         $halaman = min((int) ($filter['page'] ?? 1), $halamanTerakhir);
 
-        return ['judul' => $judul[$jenis], 'jenis' => $jenis, 'tanggal' => $snapshot['tanggal'],
+        return ['judul' => isset($snapshot['tanggal_data']) ? str_replace('hari ini', 'tanggal terpilih', $judul[$jenis]) : $judul[$jenis], 'jenis' => $jenis, 'tanggal' => $snapshot['tanggal'],
+            ...(isset($snapshot['tanggal_data']) ? ['tanggal_data' => $snapshot['tanggal_data']] : []),
             'diperbarui_pada' => $snapshot['diperbarui_pada'], 'zona_waktu' => $snapshot['zona_waktu'],
             'kelas' => $sumber['kelas'], 'kegiatan' => $jenis === 'ibadah' ? $sumber['kegiatan'] : [],
             'items' => $items->slice(($halaman - 1) * 20, 20)->values()->all(),

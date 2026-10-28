@@ -138,7 +138,9 @@ class MonitoringUjianTvService
             ->get(['id', 'peserta_ujian_cbt_id', 'jenis', 'mulai_pada'])->map(function ($e) use ($peta, $namaRuang, $jenis) {
                 $p = $peta->get($e->peserta_ujian_cbt_id);
 
-                return ['id' => 'event-'.$e->id, 'waktu' => $e->mulai_pada->toIso8601String(), 'nama' => $p['nama'], 'ruang' => $namaRuang->get($p['ruang_id'], '-'), 'label' => $jenis[$e->jenis]];
+                return ['id' => 'event-'.$e->id, 'waktu' => $e->mulai_pada->toIso8601String(), 'nama' => $p['nama'],
+                    'peserta_id' => $p['id'], 'ruang_id' => $p['ruang_id'], 'kelas' => $p['kelas'], 'sesi' => $p['sesi'],
+                    'ruang' => $namaRuang->get($p['ruang_id'], '-'), 'label' => $jenis[$e->jenis]];
             });
         foreach ($peserta as $p) {
             foreach (['waktu_mulai' => 'Mulai mengerjakan', 'waktu_selesai' => 'Selesai mengerjakan'] as $field => $label) {
@@ -146,7 +148,9 @@ class MonitoringUjianTvService
                     continue;
                 }
                 $row = $peta->get($p->id);
-                $events->push(['id' => $field.'-'.$p->id, 'waktu' => $p->$field->toIso8601String(), 'nama' => $row['nama'], 'ruang' => $namaRuang->get($row['ruang_id'], '-'), 'label' => $label]);
+                $events->push(['id' => $field.'-'.$p->id, 'waktu' => $p->$field->toIso8601String(), 'nama' => $row['nama'],
+                    'peserta_id' => $row['id'], 'ruang_id' => $row['ruang_id'], 'kelas' => $row['kelas'], 'sesi' => $row['sesi'],
+                    'ruang' => $namaRuang->get($row['ruang_id'], '-'), 'label' => $label]);
             }
         }
 

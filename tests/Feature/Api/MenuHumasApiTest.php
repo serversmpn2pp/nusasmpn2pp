@@ -25,7 +25,10 @@ class MenuHumasApiTest extends TestCase
             ->assertJsonMissing(['kode' => 'pertemuan-saya']);
         $groups = collect($response->json('data.kelompok'))->where('kode', 'humas');
         $this->assertCount(1, $groups);
-        $this->assertCount(18, $groups->first()['items']);
+        $this->assertCount(19, $groups->first()['items']);
+        $acara = collect($groups->first()['items'])->firstWhere('kode', 'acara-buku-tamu');
+        $this->assertSame('/api/v1/humas/acara-buku-tamu', $acara['api']);
+        $this->assertSame('segera_hadir', $acara['status']);
         $codes = collect($response->json('data.kelompok'))->pluck('items')->flatten(1)->pluck('kode');
         $this->assertCount($codes->count(), $codes->unique());
     }
@@ -42,7 +45,7 @@ class MenuHumasApiTest extends TestCase
             ->assertJsonFragment(['kode' => 'pengaduan-saya', 'rute' => '/humas/pengaduan-saya'])
             ->assertJsonFragment(['kode' => 'umpan-balik-saya', 'rute' => '/humas/umpan-balik-saya'])
             ->assertJsonMissing(['kode' => 'dashboard-humas'])
-            ->assertJsonMissing(['kode' => 'pengaduan-humas']);
+            ->assertJsonMissing(['kode' => 'pengaduan-humas'])->assertJsonMissing(['kode' => 'acara-buku-tamu']);
     }
 
     public function test_role_parent_tanpa_identitas_tidak_mendapat_menu_parent(): void
@@ -64,7 +67,7 @@ class MenuHumasApiTest extends TestCase
         $user->daftarPeran()->attach(Peran::where('kode', 'wakil_pimpinan_humas')->firstOrFail());
         $this->withToken($user->createToken('test', ['mobile'])->plainTextToken)
             ->getJson(route('api.v1.menu'))->assertOk()->assertJsonFragment(['kode' => 'faq-humas'])
-            ->assertJsonMissing(['kode' => 'agenda-humas'])->assertJsonMissing(['kode' => 'kinerja-humas']);
+            ->assertJsonMissing(['kode' => 'agenda-humas'])->assertJsonMissing(['kode' => 'kinerja-humas'])->assertJsonMissing(['kode' => 'acara-buku-tamu']);
     }
 
     private function user(string $username): Pengguna

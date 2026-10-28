@@ -559,7 +559,18 @@ void main() {
     await tester.pumpAndSettle();
 
     final card = find.byKey(const Key('home-worship-summary'));
-    await tester.ensureVisible(card);
+    await tester.scrollUntilVisible(
+      card,
+      100,
+      scrollable: find
+          .descendant(
+            of: find.byKey(
+              const PageStorageKey<String>('home-dashboard-scroll'),
+            ),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
 
     expect(card, findsOneWidget);

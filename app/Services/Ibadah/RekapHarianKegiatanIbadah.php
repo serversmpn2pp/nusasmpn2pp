@@ -28,6 +28,7 @@ class RekapHarianKegiatanIbadah
         Collection $daftarKelas,
         int $kegiatanIbadahId,
         CarbonInterface $tanggal,
+        ?Collection $anggotaTerpilih = null,
     ): array {
         $kelasIds = $daftarKelas->pluck('id')->map(fn ($id) => (int) $id)->values();
 
@@ -41,7 +42,7 @@ class RekapHarianKegiatanIbadah
         $khususLakiLaki = KegiatanIbadah::query()
             ->whereKey($kegiatanIbadahId)
             ->value('kode') === KegiatanIbadah::KODE_SHOLAT_JUMAT;
-        $anggotaKelas = AnggotaKelas::query()
+        $anggotaKelas = $anggotaTerpilih ?? AnggotaKelas::query()
             ->select(['id', 'tahun_pelajaran_id', 'kelas_id', 'siswa_id'])
             ->with('siswa:id,jenis_kelamin')
             ->where('tahun_pelajaran_id', $tahunPelajaran->id)
@@ -50,6 +51,7 @@ class RekapHarianKegiatanIbadah
             ->whereHas('siswa', fn ($query) => $query->where('aktif', true))
             ->get();
         $siswaIds = $anggotaKelas->pluck('siswa_id')->unique()->values();
+        $pasangan = $anggotaTerpilih?->keyBy(fn ($a) => $a->siswa_id.'|'.$a->kelas_id);
         $tanggalString = $tanggal->toDateString();
 
         $absensiPerSiswa = AbsensiSiswa::query()
@@ -58,7 +60,8 @@ class RekapHarianKegiatanIbadah
             ->whereIn('kelas_id', $kelasIds)
             ->whereIn('siswa_id', $siswaIds)
             ->latest('id')
-            ->get(['id', 'siswa_id', 'status_kehadiran'])
+            ->get(['id', 'siswa_id', 'kelas_id', 'status_kehadiran'])
+            ->filter(fn ($r) => $pasangan === null || $pasangan->has($r->siswa_id.'|'.$r->kelas_id))
             ->unique('siswa_id')
             ->keyBy('siswa_id');
         $presensiPerSiswa = PresensiKegiatanIbadah::query()
@@ -67,14 +70,16 @@ class RekapHarianKegiatanIbadah
             ->whereDate('tanggal', $tanggalString)
             ->whereIn('kelas_id', $kelasIds)
             ->whereIn('siswa_id', $siswaIds)
-            ->pluck('id', 'siswa_id');
+            ->get(['id', 'siswa_id', 'kelas_id'])
+            ->filter(fn ($r) => $pasangan === null || $pasangan->has($r->siswa_id.'|'.$r->kelas_id))->pluck('id', 'siswa_id');
         $berhalanganPerSiswa = PresensiBerhalanganIbadah::query()
             ->where('tahun_pelajaran_id', $tahunPelajaran->id)
             ->where('kegiatan_ibadah_id', $kegiatanIbadahId)
             ->whereDate('tanggal', $tanggalString)
             ->whereIn('kelas_id', $kelasIds)
             ->whereIn('siswa_id', $siswaIds)
-            ->pluck('id', 'siswa_id');
+            ->get(['id', 'siswa_id', 'kelas_id'])
+            ->filter(fn ($r) => $pasangan === null || $pasangan->has($r->siswa_id.'|'.$r->kelas_id))->pluck('id', 'siswa_id');
 
         $statusPerSiswa = $anggotaKelas->mapWithKeys(function (AnggotaKelas $anggota) use ($absensiPerSiswa, $presensiPerSiswa, $berhalanganPerSiswa, $khususLakiLaki) {
             $absensi = $absensiPerSiswa->get($anggota->siswa_id);
