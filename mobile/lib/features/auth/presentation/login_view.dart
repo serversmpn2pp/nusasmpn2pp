@@ -436,6 +436,8 @@ class _LoginFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (keyboardVisible) return const SizedBox.shrink();
+
     const privacy = NusaPrivacyPolicyLink(key: Key('login-privacy-policy'));
     const deletion = NusaAccountDeletionLink(
       key: Key('login-account-deletion'),
@@ -446,10 +448,8 @@ class _LoginFooter extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (!keyboardVisible) ...[
-            NusaTagline(fontSize: compact ? 14 : 16),
-            const SizedBox(height: 4),
-          ],
+          NusaTagline(fontSize: compact ? 14 : 16),
+          const SizedBox(height: 4),
           TextButtonTheme(
             data: TextButtonThemeData(
               style: TextButton.styleFrom(
@@ -466,18 +466,16 @@ class _LoginFooter extends StatelessWidget {
                   )
                 : const Column(children: [privacy, deletion]),
           ),
-          if (!keyboardVisible) ...[
-            const SizedBox(height: 4),
-            const Text(
-              'Tim Teknisi SMP Negeri 2 Padang Panjang',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: NusaColors.textSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
+          const SizedBox(height: 4),
+          const Text(
+            'Tim Teknisi SMP Negeri 2 Padang Panjang',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: NusaColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
-          ],
+          ),
         ],
       ),
     );

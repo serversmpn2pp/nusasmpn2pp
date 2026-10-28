@@ -175,6 +175,8 @@ void main() {
       tester.view.padding = const FakeViewPadding(top: 24);
       await tester.pumpAndSettle();
       expect(find.byType(NusaTagline), findsNothing);
+      expect(find.byKey(const Key('login-privacy-policy')), findsNothing);
+      expect(find.byKey(const Key('login-account-deletion')), findsNothing);
       expect(
         find.text('Tim Teknisi SMP Negeri 2 Padang Panjang'),
         findsNothing,
@@ -217,6 +219,8 @@ void main() {
       tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
       await tester.pumpAndSettle();
       expect(find.byType(NusaTagline), findsOneWidget);
+      expect(find.byKey(const Key('login-privacy-policy')), findsOneWidget);
+      expect(find.byKey(const Key('login-account-deletion')), findsOneWidget);
       expect(
         find.text('Tim Teknisi SMP Negeri 2 Padang Panjang'),
         findsOneWidget,
@@ -267,8 +271,14 @@ void main() {
           findsNWidgets(keyboard > 0 ? 1 : 3),
         );
         expect(find.byType(NusaSchoolIllustration), findsNothing);
-        expect(find.byKey(const Key('login-privacy-policy')), findsOneWidget);
-        expect(find.byKey(const Key('login-account-deletion')), findsOneWidget);
+        expect(
+          find.byKey(const Key('login-privacy-policy')),
+          keyboard > 0 ? findsNothing : findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('login-account-deletion')),
+          keyboard > 0 ? findsNothing : findsOneWidget,
+        );
         final username = find.byKey(const Key('login-username'));
         final password = find.byKey(const Key('login-password'));
         await tester.ensureVisible(username);

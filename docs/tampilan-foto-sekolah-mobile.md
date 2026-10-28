@@ -132,7 +132,8 @@ dibuat atau diubah pada pekerjaan ini.
 
 Saat keyboard muncul, header memakai logo 40 dp, tulisan NUSA 26 sp, dan nama
 sekolah 12 sp. Foto utama, subtitle, tagline, serta keterangan tim disembunyikan
-sementara. Kedua tautan publik tetap tersedia. Scroll diaktifkan secara alami
+sementara. Kedua tautan publik juga disembunyikan selama keyboard terbuka dan
+ditampilkan kembali setelah keyboard ditutup. Scroll diaktifkan secara alami
 bila ruang keyboard, landscape, pesan validasi, atau ukuran huruf besar membuat
 konten tidak muat. Controller, nilai isian, fokus, dan pilihan tampilkan kata
 sandi tetap dipertahankan. Pada layar sangat pendek, subtitle dekoratif dilepas
@@ -158,8 +159,12 @@ Hasil pemeriksaan: 76 tes gabungan lulus. Setelah polesan gradasi putih akhir,
 
 Foto latar mode keyboard kemudian diperjelas dengan opacity maksimum 24% di
 bagian tengah. Mask gradasi membatasi area di belakang identitas menjadi sekitar
-4–5%, lalu menurunkannya menjadi sekitar 14% di bawah agar tautan tetap terbaca.
+4–5%, lalu menurunkannya menjadi sekitar 14% di bawah agar teks bantuan tetap terbaca.
 Mode tanpa keyboard tetap memakai latar 4%. Susunan, ukuran, serta interaksi
 formulir tidak berubah. 16 tes terkait dijalankan ulang dan lulus; log tersedia
 di `mobile/build/test-login-keyboard-background.log`.
+
+Setelah footer mode keyboard disembunyikan, 25 tes login dan tautan penghapusan
+lulus (`mobile/build/test-login-keyboard-footer.log`), termasuk memastikan kedua
+tautan hilang saat keyboard muncul dan kembali setelah keyboard ditutup.
 
