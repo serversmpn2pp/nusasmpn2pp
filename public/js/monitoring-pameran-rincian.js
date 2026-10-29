@@ -9,6 +9,47 @@
     let jenis = '', page = 1, lastPage = 1, request = null, generation = 0, revoked = false, debounce, rowKey = '', filterKey = '';
     function message(text) { $('message').textContent = text; $('message').hidden = !text; }
     function element(tag, text) { const el = document.createElement(tag); el.textContent = text; return el; }
+    function columns() {
+        const penilaian = ['puas','kepuasan','nusa'].includes(jenis);
+        const labels = [['nama','Pengunjung'],['kategori','Kategori']];
+        if (penilaian) labels.push(['nilai',jenis === 'nusa' ? 'Nilai NUSA' : 'Nilai stand'],['predikat','Predikat'],['kunjungan','Waktu (WIB)']);
+        else if (jenis === 'minat') labels.push(['minat','Pilihan minat'],['kunjungan','Waktu (WIB)']);
+        else labels.push(['tanggal','Tanggal'],['waktu','Waktu (WIB)']);
+        $('table').dataset.kind = penilaian ? 'penilaian' : jenis === 'minat' ? 'minat' : 'pengunjung';
+        $('columns').replaceChildren(...labels.map(([key,label]) => {
+            const th = element('th',label); th.scope = 'col'; th.dataset.column = key; return th;
+        }));
+    }
+    function row(item, zone) {
+        const tr = document.createElement('tr');
+        const cell = (label,text) => { const td = element('td',text); td.dataset.label = label; tr.append(td); return td; };
+        cell('Pengunjung',item.nama).className = 'guest-person-name';
+        cell('Kategori',item.label_kategori);
+        const time = new Date(item.waktu);
+        const date = time.toLocaleDateString('id-ID',{timeZone:zone,day:'numeric',month:'short',year:'numeric'});
+        const clock = time.toLocaleTimeString('en-GB',{timeZone:zone,hourCycle:'h23'});
+        const penilaian = ['puas','kepuasan','nusa'].includes(jenis);
+        if (penilaian) {
+            const nilai = jenis === 'nusa' ? item.nilai_nusa : item.kepuasan;
+            const predikat = jenis === 'nusa' ? item.label_nusa : item.label_kepuasan;
+            const score = cell(jenis === 'nusa' ? 'Nilai NUSA' : 'Nilai stand','');
+            score.className = 'guest-rating-number'; score.append(element('strong',nilai == null ? '-' : `${nilai} / 5`));
+            const badge = element('span',predikat || 'Belum menilai'); badge.className = 'tag guest-rating-label'; badge.dataset.score = nilai ?? '';
+            cell('Predikat','').append(badge);
+        } else if (jenis === 'minat') {
+            const tags = element('div',''); tags.className = 'guest-interest-tags';
+            for (const label of item.label_minat || []) tags.append(element('span',label));
+            const minat = cell('Pilihan minat',''); minat.className = 'guest-interest-cell'; minat.append(tags);
+        }
+        if (penilaian || jenis === 'minat') {
+            const waktu = cell('Waktu (WIB)',''); waktu.className = 'guest-visit-time';
+            const jam = element('time',clock); jam.dateTime = item.waktu;
+            waktu.append(element('span',date),jam);
+        } else {
+            cell('Tanggal',date); cell('Waktu (WIB)',clock).className = 'guest-visit-time';
+        }
+        return tr;
+    }
     function render(data) {
         $('title').textContent = data.judul;
         $('subtitle').textContent = data.acara;
@@ -18,23 +59,12 @@
         $('count').textContent = `${first}-${first ? first + data.items.length - 1 : 0} dari ${total.toLocaleString('id-ID')} pengunjung`;
         $('page').textContent = `${page} / ${lastPage}`;
         $('prev').disabled = page <= 1; $('next').disabled = page >= lastPage;
-        $('updated').textContent = new Date(data.diperbarui_pada).toLocaleTimeString('id-ID', {timeZone:data.zona_waktu,hour12:false}) + ' · 3 detik';
+        $('updated').textContent = new Date(data.diperbarui_pada).toLocaleTimeString('en-GB', {timeZone:data.zona_waktu,hourCycle:'h23'}) + ' · 3 detik';
         $('empty').hidden = data.items.length !== 0;
         const key = JSON.stringify(data.items);
         if (key !== rowKey) {
             const top = $('scroll').scrollTop;
-            $('rows').replaceChildren(...data.items.map(item => {
-                const row = document.createElement('tr'), name = element('td', item.nama);
-                name.className = 'guest-person-name';
-                const category = element('td', item.label_kategori);
-                category.dataset.label = 'Kategori';
-                const time = new Date(item.waktu);
-                const date = element('td', time.toLocaleDateString('id-ID', {timeZone:data.zona_waktu,day:'numeric',month:'short',year:'numeric'}));
-                date.dataset.label = 'Tanggal';
-                const clock = element('td', time.toLocaleTimeString('id-ID', {timeZone:data.zona_waktu,hour12:false}));
-                clock.dataset.label = 'Waktu (WIB)';
-                row.append(name, category, date, clock); return row;
-            }));
+            $('rows').replaceChildren(...data.items.map(item => row(item,data.zona_waktu)));
             $('scroll').scrollTop = top; rowKey = key;
         }
         message(Date.now() - Date.parse(data.diperbarui_pada) > 20000 ? 'Data server tertunda. Waktu pembaruan terakhir tertera di atas.' : '');
@@ -81,6 +111,7 @@
         if (revoked || !titles[type] || window.NusaPameran?.tab() !== 'tamu') return;
         reset(); window.NusaMonitorRincian?.reset();
         jenis = type; page = 1; lastPage = 1;
+        columns();
         fields.forEach(id => { $(id).value = ''; });
         $('date').value = preset.tanggal || ''; $('score').value = preset.nilai || ''; $('interest').value = preset.minat || '';
         for (const [id,active] of [['date','harian'],['score','kepuasan'],['interest','minat']]) $(id + '-filter').hidden = jenis !== active;

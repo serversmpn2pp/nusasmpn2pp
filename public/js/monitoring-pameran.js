@@ -59,8 +59,8 @@
             const initials=String(item.nama).trim().split(/\s+/).slice(0,2).map(word=>word[0]).join('').toUpperCase();
             const avatar=element('span',initials,'pameran-visitor-avatar');avatar.setAttribute('aria-hidden','true');
             const person=element('div');person.append(element('strong',item.nama),element('span',item.label_kategori));
-            const time=element('time',new Date(item.waktu).toLocaleTimeString('id-ID',{timeZone:zone,hour12:false}));
-            time.dateTime=item.waktu;time.title=new Date(item.waktu).toLocaleString('id-ID',{timeZone:zone});
+            const time=element('time',new Date(item.waktu).toLocaleTimeString('en-GB',{timeZone:zone,hourCycle:'h23'}));
+            time.dateTime=item.waktu;time.title=new Date(item.waktu).toLocaleDateString('id-ID',{timeZone:zone})+' '+time.textContent;
             row.append(avatar,person,time);return row;
         };
         do{
@@ -97,7 +97,8 @@
         set('guest-nusa',s.persen_puas_nusa===null?'-':s.persen_puas_nusa.toLocaleString('id-ID')+'%');
         set('guest-nusa-count',fmt(s.penilai_nusa)+' pengunjung menilai NUSA');
         set('guest-recent-count',fmt(s.total)+' kunjungan');
-        set('updated','Diperbarui '+new Date(next.diperbarui_pada).toLocaleString('id-ID',{timeZone:zone,hour12:false}));
+        const updated=new Date(next.diperbarui_pada);
+        set('updated','Diperbarui '+updated.toLocaleDateString('id-ID',{timeZone:zone})+', '+updated.toLocaleTimeString('en-GB',{timeZone:zone,hourCycle:'h23'}));
         notice(s.total===0?'Belum ada pengunjung tercatat untuk acara ini.':null);
         window.NusaGuestRincian?.options(next);
         if(JSON.stringify(previous?.terbaru)!==JSON.stringify(incoming))recent();

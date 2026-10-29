@@ -178,8 +178,31 @@ class MonitoringPameranService
         $perPage = 20;
         $lastPage = max(1, (int) ceil($total / $perPage));
         $page = min((int) ($filter['page'] ?? 1), $lastPage);
+        $kolom = ['id', 'nama', 'kategori', 'created_at'];
+        if (in_array($jenis, ['puas', 'kepuasan'], true)) {
+            $kolom[] = 'kepuasan';
+        } elseif ($jenis === 'nusa') {
+            $kolom[] = 'nilai_nusa';
+        } elseif ($jenis === 'minat') {
+            $kolom[] = 'minat';
+        }
+        $labelMinat = $acara->labelMinat();
         $items = $query->orderByDesc('created_at')->orderByDesc('id')->skip(($page - 1) * $perPage)->take($perPage)
-            ->get(['id', 'nama', 'kategori', 'created_at'])->map(fn ($row) => $this->pengunjungPublik($row))->all();
+            ->get($kolom)->map(function ($row) use ($jenis, $labelMinat) {
+                $item = $this->pengunjungPublik($row);
+                if (in_array($jenis, ['puas', 'kepuasan'], true)) {
+                    $item['kepuasan'] = $row->kepuasan;
+                    $item['label_kepuasan'] = ResponAcaraBukuTamu::KEPUASAN[$row->kepuasan];
+                } elseif ($jenis === 'nusa') {
+                    $item['nilai_nusa'] = $row->nilai_nusa;
+                    $item['label_nusa'] = ResponAcaraBukuTamu::KEPUASAN[$row->nilai_nusa];
+                } elseif ($jenis === 'minat') {
+                    $item['minat'] = $row->minat;
+                    $item['label_minat'] = array_map(fn ($kode) => $labelMinat[$kode] ?? $kode, $row->minat);
+                }
+
+                return $item;
+            })->all();
 
         return ['jenis' => $jenis, 'judul' => $judul, 'konteks' => $konteks, 'acara' => $acara->nama,
             'items' => $items, 'kategori' => ResponAcaraBukuTamu::KATEGORI,

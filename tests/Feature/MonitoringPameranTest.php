@@ -195,6 +195,44 @@ class MonitoringPameranTest extends TestCase
         $this->getJson(route('monitoring-pameran.pengunjung.rincian', ['jenis' => 'total']))->assertForbidden();
     }
 
+    public function test_modal_penilaian_dan_minat_memuat_rincian_sesuai_fitur_tanpa_membuka_saran(): void
+    {
+        $this->fondasi();
+        [$layar] = $this->layar();
+        $pilihan = AcaraBukuTamu::pilihanMinatDefault();
+        foreach ($pilihan as &$p) {
+            if ($p['kode'] === 'nusa') {
+                $p['nama'] = 'Demonstrasi NUSA';
+                $p['aktif'] = false;
+            }
+        }
+        unset($p);
+        $pilihan[] = ['kode' => 'robotika', 'nama' => 'Karya robotika siswa', 'ikon' => 'flask-conical', 'aktif' => true];
+        $layar->acaraBukuTamu->update(['pilihan_minat' => $pilihan]);
+        $data = ['kunci_kiriman' => Str::uuid(), 'sidik_kiriman' => str_repeat('a', 64), 'nama' => 'Tamu Penilaian',
+            'kategori' => 'instansi', 'minat' => ['nusa', 'robotika'], 'kepuasan' => 2, 'nilai_nusa' => 5,
+            'saran' => 'SARAN INTERNAL', 'instansi' => 'INSTANSI INTERNAL', 'status' => 'valid'];
+        $layar->acaraBukuTamu->respon()->create($data);
+        $layar->acaraBukuTamu->respon()->create(array_replace($data, ['kunci_kiriman' => Str::uuid(), 'nama' => 'Belum mencoba', 'nilai_nusa' => null, 'kepuasan' => 4]));
+        $url = route('monitoring-pameran.pengunjung.rincian');
+        $this->getJson($url.'?jenis=kepuasan&q=Tamu')->assertOk()
+            ->assertJsonPath('items.0.kepuasan', 2)->assertJsonPath('items.0.label_kepuasan', 'Kurang puas')
+            ->assertJsonMissingPath('items.0.nilai_nusa')->assertJsonMissingPath('items.0.minat')->assertDontSee('SARAN INTERNAL')->assertDontSee('INSTANSI INTERNAL');
+        $this->getJson($url.'?jenis=puas')->assertJsonPath('pagination.total', 1)
+            ->assertJsonPath('items.0.kepuasan', 4)->assertJsonPath('items.0.label_kepuasan', 'Puas');
+        $this->getJson($url.'?jenis=nusa')->assertJsonPath('pagination.total', 1)
+            ->assertJsonPath('items.0.nilai_nusa', 5)->assertJsonPath('items.0.label_nusa', 'Sangat puas')
+            ->assertJsonMissingPath('items.0.kepuasan')->assertJsonMissingPath('items.0.minat');
+        $this->getJson($url.'?jenis=minat&minat=nusa')->assertOk()->assertJsonPath('pagination.total', 2)
+            ->assertJsonPath('items.0.minat', ['nusa', 'robotika'])
+            ->assertJsonPath('items.0.label_minat', ['Demonstrasi NUSA', 'Karya robotika siswa'])
+            ->assertJsonMissingPath('items.0.kepuasan')->assertJsonMissingPath('items.0.nilai_nusa')->assertDontSee('SARAN INTERNAL');
+        $this->getJson($url.'?jenis=total')->assertJsonMissingPath('items.0.kepuasan')
+            ->assertJsonMissingPath('items.0.nilai_nusa')->assertJsonMissingPath('items.0.minat');
+        $this->getJson(route('monitoring-pameran.pengunjung'))->assertJsonMissingPath('terbaru.0.kepuasan')
+            ->assertJsonMissingPath('terbaru.0.nilai_nusa')->assertJsonMissingPath('terbaru.0.minat');
+    }
+
     public function test_aktivasi_admin_pameran_validasi_acara_tanggal_dan_bisa_logout(): void
     {
         $this->fondasi();

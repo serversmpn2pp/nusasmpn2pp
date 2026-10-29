@@ -176,7 +176,9 @@
         set('point-students', `${fmt(data.poin.siswa)} siswa`);
         set('point-added', `+${fmt(data.poin.ditambahkan)}`);
         set('point-reduced', `−${fmt(data.poin.dikurangi)}`);
-        set('updated', pameran ? `Diperbarui ${new Date(data.diperbarui_pada).toLocaleString('id-ID', {timeZone:data.zona_waktu,hour12:false})}` : `Data ${new Date(data.diperbarui_pada).toLocaleTimeString('id-ID', {timeZone: data.zona_waktu, hour12: false})} · 5 detik`);
+        const updated = new Date(data.diperbarui_pada);
+        const updatedTime = updated.toLocaleTimeString('en-GB', {timeZone:data.zona_waktu,hourCycle:'h23'});
+        set('updated', pameran ? `Diperbarui ${updated.toLocaleDateString('id-ID', {timeZone:data.zona_waktu})}, ${updatedTime}` : `Data ${updatedTime} · 5 detik`);
         notice(data.pesan);
         renderFeed(); renderLate(); renderWorship();
         const nextSignature = JSON.stringify([data.grafik_presensi, data.grafik_laporan, data.kelas, period, metric]);

@@ -82,7 +82,7 @@
         $('detail-page').textContent = `${page} / ${lastPage}`;
         $('detail-prev').disabled = page <= 1;
         $('detail-next').disabled = page >= lastPage;
-        $('detail-updated').textContent = `Data ${new Date(data.diperbarui_pada).toLocaleTimeString('id-ID', {timeZone:data.zona_waktu,hour12:false})} \u00b7 ${refreshSeconds} detik`;
+        $('detail-updated').textContent = `Data ${new Date(data.diperbarui_pada).toLocaleTimeString('en-GB', {timeZone:data.zona_waktu,hourCycle:'h23'})} \u00b7 ${refreshSeconds} detik`;
         $('detail-empty').hidden = data.items.length !== 0;
         const signature = JSON.stringify(data.items);
         if (rowsKey !== signature) {

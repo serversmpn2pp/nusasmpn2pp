@@ -57,6 +57,8 @@ try{
         assert.ok((await page.locator('#tanggal').textContent()).includes('30 Oktober'));
         assert.ok(!(await page.locator('body').textContent()).includes('Nama Rahasia'));
         assert.ok((await page.locator('#updated').textContent()).includes('31/10/2026'));
+        assert.match(await page.locator('#updated').textContent(),/\b\d{2}:\d{2}:\d{2}\b/);
+        assert.doesNotMatch(await page.locator('#updated').textContent(),/\b\d{2}\.\d{2}\.\d{2}\b/);
         const geometry=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight}));
         assert.ok(geometry.sw<=width+1,`Student horizontal overflow ${width}`);
         if(width>=1280)assert.ok(geometry.sh<=height+1,`Student vertical overflow ${width}: ${geometry.sh}`);
@@ -64,6 +66,7 @@ try{
         await page.locator('[data-detail="hadir"]').first().click();
         await page.waitForFunction(()=>document.getElementById('detail-rows').children.length===2);
         assert.ok((await page.locator('#detail-subtitle').textContent()).includes('30 Oktober'));
+        assert.match(await page.locator('#detail-updated').textContent(),/\b\d{2}:\d{2}:\d{2}\b/);
         await page.keyboard.press('Escape');
         const before=calls;await advance(3000);await page.waitForFunction(()=>document.getElementById('connection').textContent==='Terhubung');assert.ok(calls>before);
         await page.locator('#pameran-date').fill('2026-10-29');await page.locator('#pameran-date-save').click();
@@ -77,6 +80,9 @@ try{
         assert.equal(await page.locator('#guest-today').textContent(),'4');
         assert.equal(await page.locator('.pameran-guest-heading').count(),0);
         assert.ok((await page.locator('#guest-recent').textContent()).includes('Pengunjung sintetis'));
+        assert.ok(await page.locator('#guest-recent time').evaluateAll(items=>items.every(item=>/^\d{2}:\d{2}:\d{2}$/.test(item.textContent))));
+        assert.match(await page.locator('#guest-recent time').first().getAttribute('title'),/\b\d{2}:\d{2}:\d{2}\b/);
+        assert.match(await page.locator('#updated').textContent(),/\b\d{2}:\d{2}:\d{2}\b/);
         for(const id of ['guest-daily-chart','guest-rating-chart'])assert.ok(await page.locator('#'+id).evaluate(c=>{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i])n++;return n>100;}),`Blank guest chart ${id}`);
         await page.locator('[data-guest-chart="line"]').click();assert.equal(await page.locator('#guest-daily-chart').evaluate(c=>Chart.getChart(c).config.type),'line');
         const overlap=await page.evaluate(()=>['guest-interests','guest-recent'].flatMap(id=>{const box=document.getElementById(id).getBoundingClientRect();return [...document.getElementById(id).children].filter(e=>e.getBoundingClientRect().bottom>box.bottom+1).map(e=>id+': '+e.textContent);}));
@@ -89,7 +95,23 @@ try{
             await page.waitForFunction(()=>document.getElementById('guest-detail-count').textContent.includes('pengunjung'));
             assert.ok(await page.locator('#guest-dialog').isVisible());
             assert.ok((await page.locator('#guest-detail-updated').textContent()).includes('3 detik'));
+            assert.match(await page.locator('#guest-detail-updated').textContent(),/^\d{2}:\d{2}:\d{2}/);
             assert.equal(new URLSearchParams(lastGuestQuery).get('jenis'),type);
+            const first=guestDetails[type].items[0];
+            if(['puas','kepuasan','nusa'].includes(type)){
+                assert.deepEqual(await page.locator('#guest-detail-columns th').allTextContents(),['Pengunjung','Kategori',type==='nusa'?'Nilai NUSA':'Nilai stand','Predikat','Waktu (WIB)']);
+                assert.equal(await page.locator('#guest-detail-rows tr').first().locator('td').nth(2).textContent(),`${type==='nusa'?first.nilai_nusa:first.kepuasan} / 5`);
+                assert.equal(await page.locator('#guest-detail-rows tr').first().locator('td').nth(3).textContent(),type==='nusa'?first.label_nusa:first.label_kepuasan);
+                assert.ok(await page.locator('.guest-visit-time time').evaluateAll(items=>items.every(item=>/^\d{2}:\d{2}:\d{2}$/.test(item.textContent))));
+            }else if(type==='minat'){
+                assert.deepEqual(await page.locator('#guest-detail-columns th').allTextContents(),['Pengunjung','Kategori','Pilihan minat','Waktu (WIB)']);
+                assert.deepEqual(await page.locator('#guest-detail-rows tr').first().locator('.guest-interest-tags>span').allTextContents(),first.label_minat);
+            }else{
+                assert.deepEqual(await page.locator('#guest-detail-columns th').allTextContents(),['Pengunjung','Kategori','Tanggal','Waktu (WIB)']);
+                assert.equal(await page.locator('#guest-detail-rows .guest-rating-label').count(),0);
+            }
+            assert.ok(await page.locator('#guest-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1),`Modal horizontal overflow ${type} at ${width}`);
+            if(['kepuasan','nusa','minat'].includes(type))await page.screenshot({path:path.join(out,`modal-${type}-${width}.png`)});
             await page.keyboard.press('Escape');
         }
         for(const [canvas,index,filter,expected] of [['guest-daily-chart',1,'tanggal','2026-10-30'],['guest-rating-chart',0,'nilai','5']]){
