@@ -73,79 +73,105 @@ class HomeSchoolHero extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final largeText = MediaQuery.textScalerOf(context).scale(16) > 21;
-      return Stack(
-        children: [
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: -constraints.maxWidth * .15,
-            width: constraints.maxWidth * .98,
-            child: const IgnorePointer(
-              child: NusaSchoolPhoto(alignment: Alignment(.3, .15)),
+      final tablet = constraints.maxWidth >= 600;
+      final window = MediaQuery.sizeOf(context);
+      final compact = tablet && window.width > window.height;
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: tablet ? (compact ? 240 : 320) : 0,
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: tablet ? 0 : -constraints.maxWidth * .15,
+              width: constraints.maxWidth * (tablet ? .66 : .98),
+              child: const IgnorePointer(
+                child: NusaSchoolPhoto(alignment: Alignment(.3, .15)),
+              ),
             ),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      NusaColors.background,
-                      NusaColors.background.withValues(alpha: .98),
-                      NusaColors.background.withValues(
-                        alpha: largeText ? .95 : .72,
-                      ),
-                      NusaColors.background.withValues(
-                        alpha: largeText ? .78 : .10,
-                      ),
-                      NusaColors.background.withValues(
-                        alpha: largeText ? .5 : 0,
-                      ),
-                    ],
-                    stops: const [0, .26, .48, .73, 1],
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        NusaColors.background,
+                        NusaColors.background.withValues(alpha: .98),
+                        NusaColors.background.withValues(
+                          alpha: largeText ? .95 : .72,
+                        ),
+                        NusaColors.background.withValues(
+                          alpha: largeText ? .78 : .10,
+                        ),
+                        NusaColors.background.withValues(
+                          alpha: largeText ? .5 : 0,
+                        ),
+                      ],
+                      stops: [
+                        0,
+                        tablet ? .36 : .26,
+                        tablet ? .52 : .48,
+                        .73,
+                        1,
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          const Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x00F8FAFD),
-                      Color(0x00F8FAFD),
-                      NusaColors.background,
-                    ],
-                    stops: [0, .78, 1],
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x00F8FAFD),
+                        Color(0x00F8FAFD),
+                        NusaColors.background,
+                      ],
+                      stops: [0, .78, 1],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                HomeHeader(
-                  unreadCount: unreadCount,
-                  onNotifications: onNotifications,
-                ),
-                const SizedBox(height: 32),
-                HomeGreeting(
-                  greeting: greeting,
-                  name: name,
-                  dayName: dayName,
-                  dateLabel: dateLabel,
-                ),
-              ],
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                tablet ? 32 : 18,
+                10,
+                tablet ? 32 : 18,
+                16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  HomeHeader(
+                    unreadCount: unreadCount,
+                    onNotifications: onNotifications,
+                  ),
+                  SizedBox(
+                    height: compact
+                        ? 16
+                        : tablet
+                        ? 40
+                        : 32,
+                  ),
+                  HomeGreeting(
+                    greeting: greeting,
+                    name: name,
+                    dayName: dayName,
+                    dateLabel: dateLabel,
+                    compact: compact,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     },
   );
@@ -157,6 +183,7 @@ class HomeGreeting extends StatelessWidget {
     required this.name,
     required this.dayName,
     required this.dateLabel,
+    this.compact = false,
     super.key,
   });
 
@@ -164,17 +191,23 @@ class HomeGreeting extends StatelessWidget {
   final String name;
   final String dayName;
   final String dateLabel;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 340;
+        final tablet = constraints.maxWidth >= 520;
 
         final largeText = MediaQuery.textScalerOf(context).scale(16) > 21;
         return FractionallySizedBox(
           alignment: Alignment.centerLeft,
-          widthFactor: largeText ? .94 : .62,
+          widthFactor: largeText
+              ? .94
+              : tablet
+              ? .56
+              : .62,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,6 +216,7 @@ class HomeGreeting extends StatelessWidget {
                 '$greeting,',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: NusaColors.textPrimary,
+                  fontSize: tablet ? (compact ? 16 : 20) : null,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -191,7 +225,13 @@ class HomeGreeting extends StatelessWidget {
                 name,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: NusaColors.textPrimary,
-                  fontSize: narrow ? 20 : 24,
+                  fontSize: tablet
+                      ? compact
+                            ? 26
+                            : 30
+                      : narrow
+                      ? 20
+                      : 24,
                   fontWeight: FontWeight.w800,
                   height: 1.08,
                 ),
@@ -199,13 +239,16 @@ class HomeGreeting extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 '$dayName, $dateLabel',
-                style: const TextStyle(
+                style: TextStyle(
                   color: NusaColors.textSecondary,
-                  fontSize: 12,
+                  fontSize: tablet && !compact ? 14 : 12,
                 ),
               ),
               const SizedBox(height: 12),
-              const NusaTagline(textAlign: TextAlign.left, fontSize: 14),
+              NusaTagline(
+                textAlign: TextAlign.left,
+                fontSize: tablet && !compact ? 17 : 14,
+              ),
             ],
           ),
         );
@@ -413,9 +456,10 @@ class QuickMenuCard extends StatelessWidget {
 }
 
 class MenuGridItem extends StatelessWidget {
-  const MenuGridItem({required this.action, super.key});
+  const MenuGridItem({required this.action, this.roomy = false, super.key});
 
   final NusaMenuAction action;
+  final bool roomy;
 
   @override
   Widget build(BuildContext context) {
@@ -444,18 +488,29 @@ class MenuGridItem extends StatelessWidget {
               children: [
                 Icon(action.icon, color: action.color, size: 27),
                 const SizedBox(height: 6),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
+                if (roomy)
+                  Text(
                     action.label,
-                    maxLines: 1,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: NusaColors.textPrimary,
-                      fontSize: 10.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
+                  )
+                else
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      action.label,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: NusaColors.textPrimary,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),

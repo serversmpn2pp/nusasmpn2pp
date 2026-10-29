@@ -4,7 +4,91 @@ Upload key dibuat dan disimpan oleh pengelola sekolah pada komputer pengembang,
 bukan server Laravel. Kunci tersebut berbeda dari service-account Firebase.
 Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
-## AAB terbaru — 1.0.4+5, 25 Oktober 2026
+## AAB terbaru — 1.0.5+6, 28 Oktober 2026
+
+**Catatan kode sesudah build:** penyesuaian login dan beranda tablet small/medium
+telah ditambahkan setelah AAB ini dibuat. AAB 1.0.5+6 tetap identik dengan berkas
+yang diunggah dan belum memuat perbaikan tablet. Lihat
+[rincian tablet](tampilan-foto-sekolah-mobile.md#penyesuaian-tablet-small-dan-medium--28-oktober-2026).
+Build berikutnya perlu versionCode di atas 6; AAB berikutnya belum dibangun.
+
+File untuk pembaruan **closed testing — Alpha**:
+[app-release-1.0.5-6.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.5-6.aab).
+Ukuran **97.200.254 byte** (97,2 MB / 92,7 MiB). Salinan versi ini identik
+dengan keluaran `mobile/build/app/outputs/bundle/release/app-release.aab`.
+AAB 1.0.4+5 dan versi sebelumnya tetap tersimpan sebagai riwayat.
+
+SHA-256:
+
+```text
+7e8232432b0f32a49db17d4b58a15ba359b7ce1157de60fc076e472a6759224a
+```
+
+Checksum juga tersedia di
+`mobile/build/releases/app-release-1.0.5-6.aab.sha256`.
+Sumber: HEAD `613edb7`, ditambah kenaikan `mobile/pubspec.yaml` menjadi
+**1.0.5+6**. Package tetap `id.sch.smpn2padangpanjang.nusa`; sertifikat upload
+telah dibandingkan dan cocok dengan AAB 1.0.4+5.
+
+### Perubahan sejak AAB 1.0.4+5
+
+- Login dan beranda memakai foto sekolah serta identitas NUSA yang lebih jelas.
+- Login menyesuaikan tinggi foto dengan ruang layar agar seluruh pilihan muat
+  tanpa scroll pada ukuran huruf normal. Keyboard memakai header ringkas,
+  latar sekolah yang lebih terlihat, dan footer tersembunyi sementara. Isian
+  dan pilihan tampilkan kata sandi tetap dipertahankan.
+- Akses Cepat menjadi satu baris pada ukuran normal, dengan ikon asli dan label
+  yang lebih mudah dibaca. Nama penuh tetap tersedia melalui tooltip/pembaca
+  layar; susunan mengikuti ruang serta ukuran huruf perangkat.
+- Ini pembaruan antarmuka mobile. Fitur keamanan ujian, pratinjau soal, dan
+  perhitungan presensi yang sudah dirilis dalam 1.0.4+5 tetap tercakup.
+  Perubahan backend monitoring TV di riwayat Git tidak dikemas sebagai fitur
+  Android baru dan tidak diterapkan ke server oleh pekerjaan build ini.
+
+### Pemeriksaan AAB 1.0.5+6
+
+- Flutter **3.47.1 / Dart 3.13.1**; seluruh **893 tes Flutter lulus**, dan
+  analyzer tidak menemukan masalah.
+- Dependensi disiapkan dengan `pub get --offline --enforce-lockfile`, tanpa
+  perubahan lockfile atau upgrade pustaka. Build memakai `APP_ENV=production`
+  dan API `https://nusa.smpn2padangpanjang.sch.id/api/v1/`.
+- Manifest final: versi **1.0.5**, version code **6**, min SDK **24**, target SDK
+  **36**, bukan debug, backup nonaktif, dan cleartext HTTP nonaktif.
+- `bundletool validate`, `jar --validate`, CRC/duplikasi ZIP, serta verifikasi
+  `jarsigner` lulus. Fingerprint sertifikat upload sama dengan rilis sebelumnya.
+- Kedua foto aktif di dalam AAB cocok byte demi byte dengan aset sumber.
+  Foto referensi lama yang tidak didaftarkan tidak ikut dikemas. Penanda API
+  produksi, antarmuka baru, dan fitur utama sebelumnya terdeteksi pada tiga
+  library AOT `libapp.so`.
+- Konfigurasi bundle memakai `PAGE_ALIGNMENT_16K`. Pemeriksa Android Studio
+  memeriksa **14 ELF 64-bit: 0 masalah**; 7 library 32-bit dilewati oleh pemeriksa
+  tersebut. APK universal diagnostik juga lulus `zipalign -v -c -P 16 4`.
+  APK diagnostik memakai debug key standar untuk pemeriksaan lokal saja;
+  file distribusi adalah AAB di folder `build/releases/`.
+
+Log pub, tes, analyzer dan build ada di `mobile/build/*release-1.0.5-6.log`.
+Bukti manifest, sertifikat, penanda AOT, aset, dan native alignment ada di
+`mobile/build/aab-validation-1.0.5-6/`. Peringatan Java/KGP dan pencarian font
+Cupertino dari toolchain tetap muncul tanpa menggagalkan build. Pemeriksaan
+lokal tidak mencakup pemasangan AAB melalui Play atau runtime HP fisik 16 KB.
+
+### Catatan rilis 1.0.5 dan pengunggahan
+
+Salin isi [catatan-rilis-1.0.5.txt](D:/nusasmpn2pp/docs/catatan-rilis-1.0.5.txt)
+ke Release notes. Isinya **313 karakter** di dalam tag `<id>`.
+
+Pada track **Closed testing → Alpha**, buat rilis baru dan unggah
+`app-release-1.0.5-6.aab`; nama rilis dapat memakai **1.0.5 (6)**. Isi catatan
+rilis, periksa ringkasan, lalu kirim untuk review melalui Publishing overview.
+Jika Managed publishing aktif, publikasikan sesudah disetujui. Pertahankan
+track dan daftar tester yang sedang digunakan. Sesuaikan screenshot login serta
+beranda dengan tampilan versi baru ketika perubahan ini dipublikasikan.
+
+Version code **6** harus belum pernah digunakan di Console. Riwayat Console
+tidak dibuka pada pekerjaan ini; AAB belum diunggah atau dipublikasikan.
+Pekerjaan ini tidak mengubah konfigurasi server, migrasi, atau data sekolah.
+
+## Riwayat AAB — 1.0.4+5, 25 Oktober 2026
 
 File untuk pembaruan **closed testing — Alpha**:
 [app-release-1.0.4-5.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.4-5.aab).

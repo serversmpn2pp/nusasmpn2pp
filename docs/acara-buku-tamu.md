@@ -50,6 +50,8 @@ Validasi ukuran, format dan resolusi dijalankan di browser untuk memberi pesan c
 
 Pengunjung memindai QR dengan kamera HP dan membuka formulir lewat browser, tanpa akun NUSA/Google dan tanpa APK. Isian: nama/panggilan, kategori, instansi opsional, minat (boleh beberapa), kepuasan stand (tepat satu nilai 1-5), penilaian NUSA opsional, saran opsional, dan persetujuan penggunaan data untuk pendataan/evaluasi acara. Tidak meminta NIK, NISN, WhatsApp, lokasi GPS, foto pengunjung, atau identitas perangkat.
 
+Kategori: Pelajar, Pendidik / tenaga kependidikan, Orang tua / wali, **Instansi**, dan Masyarakat umum. Penambahan Instansi berlaku juga untuk referensi API, rekap, grafik, Excel, serta cetak tanpa mengubah kategori respons lama. Nama, kategori, dan waktu kunjungan ditayangkan pada perangkat Monitoring TV Pameran terdaftar, tanpa pilihan opt-in nama terpisah; formulir menginformasikannya. Saran dan data lainnya tetap hanya untuk petugas. Halaman publik buku tamu tidak menyediakan daftar pengunjung.
+
 `Belum mencoba / tidak menilai NUSA` disimpan sebagai null dan tidak termasuk pembagi kepuasan NUSA. Setelah berhasil, halaman terima kasih tidak menampilkan ulang identitas/saran. Tombol Pengunjung berikutnya membuat formulir baru, sehingga satu tablet dapat dipakai bergantian. Kegagalan validasi mempertahankan isian pada sesi pengguna yang sama; data tidak disimpan di localStorage.
 
 Koneksi internet tetap diperlukan. Tidak ada antrean offline atau sinkronisasi latar belakang yang dapat menggandakan pengiriman. Jika koneksi bermasalah, petugas bisa membantu melalui tablet stand dengan jaringan yang tersedia.

@@ -259,6 +259,7 @@ Route::withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, Pr
         Route::get('monitoring-pameran', [MonitoringPameranController::class, 'index'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.index');
         Route::get('monitoring-pameran/data', [MonitoringPameranController::class, 'data'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.data');
         Route::get('monitoring-pameran/pengunjung', [MonitoringPameranController::class, 'pengunjung'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.pengunjung');
+        Route::get('monitoring-pameran/pengunjung/rincian', [MonitoringPameranController::class, 'rincianPengunjung'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.pengunjung.rincian');
         Route::put('monitoring-pameran/tanggal', [MonitoringPameranController::class, 'tanggal'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.tanggal');
         Route::get('monitoring-pameran/rincian', [MonitoringPameranController::class, 'rincian'])->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.rincian');
         Route::get('monitoring-pameran/foto/{siswa}', [MonitoringPameranController::class, 'foto'])->whereNumber('siswa')->defaults('jenis_monitor', 'pameran')->name('monitoring-pameran.foto');

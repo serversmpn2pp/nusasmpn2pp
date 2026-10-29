@@ -1,0 +1,15 @@
+<dialog id="guest-dialog" class="detail-dialog guest-dialog" aria-labelledby="guest-detail-title" aria-describedby="guest-detail-subtitle">
+    <header class="detail-header"><div><p class="eyebrow">BUKU TAMU PAMERAN</p><h2 id="guest-detail-title">Rincian pengunjung</h2><p id="guest-detail-subtitle">{{ $acaraPameran?->nama }}</p></div><button type="button" id="guest-detail-close" class="detail-icon" title="Tutup rincian pengunjung" aria-label="Tutup rincian pengunjung" autofocus><i data-lucide="x" aria-hidden="true"></i></button></header>
+    <div class="detail-filters">
+        <label class="detail-search">Cari nama<input type="search" id="guest-detail-search" placeholder="Nama pengunjung" maxlength="100" autocomplete="off"></label>
+        <label>Kategori<select id="guest-detail-category"><option value="">Semua kategori</option>@foreach(\App\Models\ResponAcaraBukuTamu::KATEGORI as $kode => $nama)<option value="{{ $kode }}">{{ $nama }}</option>@endforeach</select></label>
+        <label id="guest-detail-date-filter" hidden>Tanggal<input type="date" id="guest-detail-date"></label>
+        <label id="guest-detail-score-filter" hidden>Penilaian stand<select id="guest-detail-score"><option value="">Semua penilaian</option>@foreach(\App\Models\ResponAcaraBukuTamu::KEPUASAN as $nilai => $label)<option value="{{ $nilai }}">{{ $label }}</option>@endforeach</select></label>
+        <label id="guest-detail-interest-filter" hidden>Minat<select id="guest-detail-interest"><option value="">Semua minat</option></select></label>
+        <button type="button" id="guest-detail-reset" class="detail-icon" title="Reset filter pengunjung" aria-label="Reset filter pengunjung"><i data-lucide="rotate-ccw" aria-hidden="true"></i></button>
+    </div>
+    <div class="detail-summary"><strong id="guest-detail-count" role="status">Memuat rincian...</strong><span id="guest-detail-updated"></span></div>
+    <p id="guest-detail-message" class="detail-message" role="status" hidden></p>
+    <div id="guest-detail-scroll" class="detail-scroll" aria-busy="false"><table class="detail-table"><thead><tr><th>Pengunjung</th><th>Kategori</th><th>Tanggal</th><th>Waktu (WIB)</th></tr></thead><tbody id="guest-detail-rows"></tbody></table><p id="guest-detail-empty" class="empty" hidden>Belum ada pengunjung yang sesuai.</p></div>
+    <footer class="detail-footer"><p id="guest-detail-context">Respons valid selama acara</p><nav aria-label="Halaman rincian pengunjung"><button type="button" id="guest-detail-prev" class="detail-icon" title="Pengunjung sebelumnya" aria-label="Pengunjung sebelumnya"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span id="guest-detail-page">1 / 1</span><button type="button" id="guest-detail-next" class="detail-icon" title="Pengunjung berikutnya" aria-label="Pengunjung berikutnya"><i data-lucide="chevron-right" aria-hidden="true"></i></button></nav></footer>
+</dialog>

@@ -4,6 +4,7 @@
     const dialog = $('detail-dialog');
     const endpoint = document.body.dataset.detailEndpoint;
     const pameran = document.body.dataset.pameran === 'true';
+    const refreshSeconds = pameran ? 3 : 5;
     const dateLabel = text => pameran ? text.replace(/hari ini/gi,'tanggal terpilih') : text;
     const photoPrefix = new URL(endpoint, location.href).pathname.replace(/\/rincian$/, '/foto/');
     const fmt = value => Number(value || 0).toLocaleString('id-ID');
@@ -81,7 +82,7 @@
         $('detail-page').textContent = `${page} / ${lastPage}`;
         $('detail-prev').disabled = page <= 1;
         $('detail-next').disabled = page >= lastPage;
-        $('detail-updated').textContent = `Data ${new Date(data.diperbarui_pada).toLocaleTimeString('id-ID', {timeZone:data.zona_waktu,hour12:false})} \u00b7 5 detik`;
+        $('detail-updated').textContent = `Data ${new Date(data.diperbarui_pada).toLocaleTimeString('id-ID', {timeZone:data.zona_waktu,hour12:false})} \u00b7 ${refreshSeconds} detik`;
         $('detail-empty').hidden = data.items.length !== 0;
         const signature = JSON.stringify(data.items);
         if (rowsKey !== signature) {
@@ -130,7 +131,7 @@
             if (current === generation && dialog.open && !revoked) render(data);
         } catch (_) {
             if (current !== generation || !dialog.open || revoked) return;
-            message('Rincian belum dapat diperbarui. Data terakhir, bila ada, tetap ditampilkan. Mencoba kembali setiap 5 detik.');
+            message(`Rincian belum dapat diperbarui. Data terakhir, bila ada, tetap ditampilkan. Mencoba kembali setiap ${refreshSeconds} detik.`);
             if (!$('detail-rows').children.length) $('detail-count').textContent = 'Rincian belum tersedia';
         } finally {
             clearTimeout(timeout);

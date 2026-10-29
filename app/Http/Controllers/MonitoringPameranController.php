@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PerangkatMonitoring;
+use App\Models\ResponAcaraBukuTamu;
 use App\Models\Siswa;
 use App\Services\Monitoring\MonitoringPameranService;
 use App\Services\Monitoring\MonitoringSiswaService;
@@ -29,6 +30,21 @@ class MonitoringPameranController extends Controller
     public function pengunjung(Request $request, MonitoringPameranService $service)
     {
         return response()->json($service->pengunjung($request->attributes->get('monitor_tv')));
+    }
+
+    public function rincianPengunjung(Request $request, MonitoringPameranService $service)
+    {
+        $filter = $request->validate([
+            'jenis' => ['required', Rule::in(['total', 'hari_ini', 'puas', 'nusa', 'harian', 'kepuasan', 'minat', 'terbaru'])],
+            'q' => ['nullable', 'string', 'max:100'],
+            'kategori' => ['nullable', Rule::in(array_keys(ResponAcaraBukuTamu::KATEGORI))],
+            'tanggal' => ['nullable', 'date_format:Y-m-d'],
+            'nilai' => ['nullable', 'integer', 'between:1,5'],
+            'minat' => ['nullable', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/'],
+            'page' => ['nullable', 'integer', 'min:1', 'max:100000'],
+        ]);
+
+        return response()->json($service->rincianPengunjung($request->attributes->get('monitor_tv'), $filter));
     }
 
     public function tanggal(Request $request, MonitoringPameranService $service)

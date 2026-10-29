@@ -217,101 +217,178 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('contoh beranda memakai ikon asli dan tujuan menu tetap sama', (
-    tester,
-  ) async {
-    _size(tester, 390, height: 844);
-    final capture = GlobalKey();
-    final opened = <String>[];
-    await tester.pumpWidget(
-      RepaintBoundary(
-        key: capture,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          home: Scaffold(
-            body: HomeDashboardView(
-              pengguna: const Pengguna(
-                id: 1,
-                nama: 'Pengguna Kesiswaan',
-                username: 'pengguna.uji',
-                jenisAkun: 'pegawai',
-                administrator: false,
-                wajibGantiKataSandi: false,
-                peran: ['wakil_kesiswaan'],
-                izin: [],
-              ),
-              dashboard: AsyncData(
-                HomeDashboard.fromJson({
-                  'dihasilkan_pada': '2026-10-27T07:11:00+07:00',
-                  'salam': 'Selamat pagi',
-                  'tanggal': {
-                    'hari': 'Selasa',
-                    'label': '27 Oktober 2026',
-                    'bulan': 'Oktober 2026',
-                  },
-                  'presensi': {
-                    'hari_ini': {
-                      'tercatat': true,
-                      'label_status': 'Hadir',
-                      'jam_masuk': '06:20',
-                    },
-                    'bulan_ini': {},
-                  },
-                }),
-              ),
-              menu: AsyncData(_catalog()),
-              onRefresh: () async {},
-              onOpenActivity: () {},
-              onOpenNusa: () {},
-              onOpenNotifications: () {},
-              onOpenMenuGroup: (_) {},
-              onOpenMenuEntry: (entry) => opened.add(entry.code),
-              onConfigureQuickAccess: (_) {},
-              onUnavailable: (_) {},
+  for (final (label, size, scale) in [
+    ('phone', const Size(390, 844), 1.0),
+    ('small-portrait', const Size(600, 960), 1.0),
+    ('medium-portrait', const Size(800, 1280), 1.0),
+    ('small-landscape', const Size(960, 600), 1.0),
+    ('medium-landscape', const Size(1280, 800), 1.0),
+    ('small-large-text', const Size(600, 960), 2.0),
+    ('medium-large-text', const Size(800, 1280), 2.0),
+  ]) {
+    testWidgets('beranda $label memakai ikon asli dan tujuan menu tetap sama', (
+      tester,
+    ) async {
+      _size(tester, size.width, height: size.height);
+      final capture = GlobalKey();
+      final opened = <String>[];
+      var notifications = 0;
+      var configured = 0;
+      final groups = <String>[];
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: capture,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
             ),
-            bottomNavigationBar: NusaBottomNavigation(
-              selectedIndex: 0,
-              onSelected: (_) {},
+            home: Scaffold(
+              body: HomeDashboardView(
+                pengguna: const Pengguna(
+                  id: 1,
+                  nama: 'Pengguna Kesiswaan',
+                  username: 'pengguna.uji',
+                  jenisAkun: 'pegawai',
+                  administrator: false,
+                  wajibGantiKataSandi: false,
+                  peran: ['wakil_kesiswaan'],
+                  izin: [],
+                ),
+                dashboard: AsyncData(
+                  HomeDashboard.fromJson({
+                    'dihasilkan_pada': '2026-10-27T07:11:00+07:00',
+                    'salam': 'Selamat pagi',
+                    'tanggal': {
+                      'hari': 'Selasa',
+                      'label': '27 Oktober 2026',
+                      'bulan': 'Oktober 2026',
+                    },
+                    'presensi': {
+                      'hari_ini': {
+                        'tercatat': true,
+                        'label_status': 'Hadir',
+                        'jam_masuk': '06:20',
+                      },
+                      'bulan_ini': {},
+                    },
+                  }),
+                ),
+                menu: AsyncData(_catalog()),
+                onRefresh: () async {},
+                onOpenActivity: () {},
+                onOpenNusa: () {},
+                onOpenNotifications: () => notifications++,
+                onOpenMenuGroup: (group) => groups.add(group.code),
+                onOpenMenuEntry: (entry) => opened.add(entry.code),
+                onConfigureQuickAccess: (_) => configured++,
+                onUnavailable: (_) {},
+              ),
+              bottomNavigationBar: NusaBottomNavigation(
+                selectedIndex: 0,
+                onSelected: (_) {},
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.runAsync(() async {
-      final context = tester.element(find.byType(HomeDashboardView));
-      await Future.wait([
-        precacheImage(const AssetImage('assets/images/logo-nusa.png'), context),
-        precacheImage(const AssetImage(NusaSchoolPhoto.assetPath), context),
-      ]);
-    });
-    await tester.pumpAndSettle();
-    final shortcuts = find.byType(QuickMenuCard);
-    expect(shortcuts, findsNWidgets(4));
-    for (var index = 0; index < _codes.length; index++) {
-      final icon = tester.widget<Icon>(
-        find.descendant(of: shortcuts.at(index), matching: find.byType(Icon)),
       );
-      expect(icon.icon, _icons[index]);
-      expect(icon.color, _colors[index]);
-      expect(icon.size, 32);
-      final text = tester.widget<Text>(find.text(_shortLabels[index]));
-      expect(text.semanticsLabel, _labels[index]);
-      await tester.tap(shortcuts.at(index));
+      await tester.runAsync(() async {
+        final context = tester.element(find.byType(HomeDashboardView));
+        await Future.wait([
+          precacheImage(
+            const AssetImage('assets/images/logo-nusa.png'),
+            context,
+          ),
+          precacheImage(const AssetImage(NusaSchoolPhoto.assetPath), context),
+        ]);
+      });
       await tester.pumpAndSettle();
-    }
-    expect(opened, _codes);
-    expect(tester.takeException(), isNull);
-    await tester.runAsync(() async {
-      final boundary =
-          capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-      final image = await boundary.toImage(pixelRatio: 2);
-      final data = await image.toByteData(format: ui.ImageByteFormat.png);
-      await File('build/home-quick-access-icon-row.png')
-          .writeAsBytes(data!.buffer.asUint8List());
-      image.dispose();
+      final scrollable = find
+          .descendant(
+            of: find.byKey(
+              const PageStorageKey<String>('home-dashboard-scroll'),
+            ),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final hero = tester.getRect(find.byType(HomeSchoolHero));
+      if (size.width >= 600) {
+        expect(
+          hero.height,
+          greaterThanOrEqualTo(size.width > size.height ? 240 : 320),
+        );
+        expect(hero.width, lessThanOrEqualTo(1120));
+      }
+      await tester.tap(find.byTooltip('Notifikasi'));
+      expect(notifications, 1);
+      await tester.scrollUntilVisible(
+        find.byType(QuickAccessGrid),
+        180,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
+      final shortcuts = find.byType(QuickMenuCard);
+      expect(shortcuts, findsNWidgets(4));
+      for (var index = 0; index < _codes.length; index++) {
+        final icon = tester.widget<Icon>(
+          find.descendant(of: shortcuts.at(index), matching: find.byType(Icon)),
+        );
+        expect(icon.icon, _icons[index]);
+        expect(icon.color, _colors[index]);
+        expect(icon.size, 32);
+        final text = tester.widget<Text>(find.text(_shortLabels[index]));
+        expect(text.semanticsLabel, _labels[index]);
+        await tester.ensureVisible(shortcuts.at(index));
+        await tester.pumpAndSettle();
+        await tester.tap(shortcuts.at(index));
+        await tester.pumpAndSettle();
+      }
+      expect(opened, _codes);
+      final configure = find.byKey(const Key('quick-access-configure'));
+      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(configure, 160, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      await tester.tap(configure);
+      expect(configured, 1);
+      await tester.scrollUntilVisible(
+        find.byType(MenuGridItem).first,
+        160,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
+      final firstMenu = find.byType(MenuGridItem).first;
+      if (size.width >= 600) {
+        expect(tester.getSize(firstMenu).height, lessThanOrEqualTo(225));
+        expect(tester.widget<MenuGridItem>(firstMenu).roomy, isTrue);
+        expect(
+          find.descendant(of: firstMenu, matching: find.byType(FittedBox)),
+          findsNothing,
+        );
+      }
+      await tester.tap(firstMenu);
+      expect(groups, ['data-sekolah']);
+      expect(tester.takeException(), isNull);
+      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        final boundary =
+            capture.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
+        final image = await boundary.toImage(pixelRatio: 2);
+        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        await File(
+          label == 'phone'
+              ? 'build/home-quick-access-icon-row.png'
+              : 'build/home-tablet-$label.png',
+        ).writeAsBytes(data!.buffer.asUint8List());
+        image.dispose();
+      });
     });
-  });
+  }
 }
 
 MenuCatalog _catalog() => MenuCatalog.fromJson({

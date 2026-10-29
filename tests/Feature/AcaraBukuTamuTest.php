@@ -61,6 +61,18 @@ class AcaraBukuTamuTest extends TestCase
         $this->assertDatabaseCount('respon_acara_buku_tamu', 2);
     }
 
+    public function test_kategori_instansi_tersedia_di_form_referensi_statistik_dan_rekap(): void
+    {
+        $a = $this->acara();
+        $this->get($a->urlPublik())->assertSee('value="instansi"', false)->assertSee('Nama, kategori, dan waktu kunjungan tampil')
+            ->assertDontSee('Identitas dan komentar tidak ditampilkan kepada publik');
+        $this->postJson($a->urlPublik(), array_replace($this->kiriman($a), ['kategori' => 'instansi']))->assertCreated();
+        $statistik = app(AcaraBukuTamuService::class)->statistik($a, ['dari' => $a->mulai_pada->toDateString(), 'sampai' => $a->selesai_pada->toDateString()]);
+        $this->assertSame(1, $statistik['kategori']['instansi']);
+        $this->assertSame('Instansi', $statistik['label_kategori']['instansi']);
+        $this->assertDatabaseHas('respon_acara_buku_tamu', ['acara_buku_tamu_id' => $a->id, 'kategori' => 'instansi']);
+    }
+
     public function test_tanda_tangan_tidak_dapat_diganti_dipakai_lintas_acara_atau_kedaluwarsa(): void
     {
         $a = $this->acara();
@@ -194,7 +206,8 @@ class AcaraBukuTamuTest extends TestCase
     {
         $u = $this->akun('wakil_pimpinan_humas');
         Sanctum::actingAs($u, ['mobile']);
-        $this->getJson('/api/v1/humas/acara-buku-tamu/referensi')->assertOk()->assertJsonPath('data.hak_akses.dapat_kelola', true);
+        $this->getJson('/api/v1/humas/acara-buku-tamu/referensi')->assertOk()->assertJsonPath('data.hak_akses.dapat_kelola', true)
+            ->assertJsonPath('data.kategori.instansi', 'Instansi');
         $r = $this->postJson('/api/v1/humas/acara-buku-tamu', $this->dataAcara())->assertCreated();
         $id = $r->json('data.acara.id');
         $this->getJson('/api/v1/humas/acara-buku-tamu')->assertOk()->assertJsonPath('data.pagination.total', 1);

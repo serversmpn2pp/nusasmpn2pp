@@ -208,8 +208,9 @@ class MonitoringTvSiswaTest extends TestCase
         $this->assertLessThanOrEqual(20, count(DB::getQueryLog()));
         DB::disableQueryLog();
         $this->perangkat();
-        $this->get(route('monitoring-siswa.index'))->assertOk()->assertSee('monitoring-tv.js')->assertSee('vendor/chartjs/chart.umd.min.js')->assertDontSee('app-sidebar')->assertDontSee('csrf-token');
-        $this->assertStringContainsString('const REFRESH_MS = 5000', File::get(public_path('js/monitoring-tv.js')));
+        $this->get(route('monitoring-siswa.index'))->assertOk()->assertSee('monitoring-tv.js')->assertSee('vendor/chartjs/chart.umd.min.js')
+            ->assertSee('Pembaruan setiap 5 detik')->assertDontSee('monitoring-pameran-rincian.js')->assertDontSee('app-sidebar')->assertDontSee('csrf-token');
+        $this->assertStringContainsString("const REFRESH_MS = document.body.dataset.pameran === 'true' ? 3000 : 5000", File::get(public_path('js/monitoring-tv.js')));
         $this->assertStringNotContainsString('location.reload', File::get(public_path('js/monitoring-tv.js')));
     }
 

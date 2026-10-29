@@ -118,22 +118,81 @@ class MonitoringPameranTest extends TestCase
         $this->getJson(route('monitoring-pameran.rincian', ['jenis' => 'laporan', 'q' => $a[1]->siswa->nama_lengkap]))->assertJsonPath('pagination.total', 0);
     }
 
-    public function test_statistik_pengunjung_terikat_acara_bukan_tanggal_aktivitas_dan_tanpa_pii(): void
+    public function test_statistik_dan_pengunjung_terbaru_terikat_acara_nama_tampil_tanpa_saran(): void
     {
         $this->fondasi();
         [$layar] = $this->layar();
         $acara = $layar->acaraBukuTamu;
         foreach ([['2026-10-30 09:00', 'valid'], ['2026-10-31 09:00', 'valid'], ['2026-10-31 09:01', 'dibatalkan']] as [$waktu,$status]) {
-            $acara->respon()->create(['kunci_kiriman' => Str::uuid(), 'sidik_kiriman' => str_repeat('a', 64), 'nama' => 'TAMU RAHASIA', 'kategori' => 'umum', 'minat' => ['nusa'], 'kepuasan' => 4, 'nilai_nusa' => null, 'saran' => 'SARAN RAHASIA', 'status' => $status, 'created_at' => $waktu]);
+            $acara->respon()->create(['kunci_kiriman' => Str::uuid(), 'sidik_kiriman' => str_repeat('a', 64), 'nama' => 'TAMU PAMERAN', 'kategori' => 'instansi', 'instansi' => 'INSTANSI INTERNAL', 'minat' => ['nusa'], 'kepuasan' => 4, 'nilai_nusa' => null, 'saran' => 'SARAN RAHASIA', 'status' => $status, 'created_at' => $waktu]);
         }
         $r = $this->getJson(route('monitoring-pameran.pengunjung'))->assertOk()->assertJsonPath('statistik.total', 2)->assertJsonPath('pengunjung_hari_ini', 1)
             ->assertJsonPath('statistik.persen_puas', 100)->assertJsonPath('statistik.penilai_nusa', 0)->assertJsonPath('statistik.persen_puas_nusa', null)
-            ->assertDontSee('TAMU RAHASIA')->assertDontSee('SARAN RAHASIA')->assertJsonMissingPath('items');
+            ->assertJsonPath('terbaru.0.nama', 'TAMU PAMERAN')->assertJsonPath('terbaru.0.label_kategori', 'Instansi')
+            ->assertJsonPath('statistik.kategori.instansi', 2)->assertJsonPath('statistik.label_kategori.instansi', 'Instansi')
+            ->assertDontSee('SARAN RAHASIA')->assertDontSee('INSTANSI INTERNAL')->assertDontSee('sidik_kiriman')->assertDontSee('kunci_kiriman')->assertJsonMissingPath('items');
+        $this->assertCount(2, $r->json('terbaru'));
+        $this->assertSame(['id', 'nama', 'kategori', 'label_kategori', 'waktu'], array_keys($r->json('terbaru.0')));
         $this->assertSame('2026-10-29', $r->json('acara.mulai'));
         $this->assertSame('2026-10-30', $layar->fresh()->pameran_tanggal->toDateString());
         $acara->update(['status' => 'draf']);
         $this->getJson(route('monitoring-pameran.pengunjung'))->assertStatus(410);
         $this->getJson(route('monitoring-pameran.data'))->assertOk();
+    }
+
+    public function test_modal_pengunjung_memfilter_membatasi_data_dan_menangani_halaman_kosong(): void
+    {
+        $this->fondasi();
+        [$layar] = $this->layar();
+        foreach (range(1, 25) as $i) {
+            $layar->acaraBukuTamu->respon()->create(['kunci_kiriman' => Str::uuid(), 'sidik_kiriman' => str_repeat('a', 64),
+                'nama' => 'Tamu '.str_pad($i, 2, '0', STR_PAD_LEFT), 'kategori' => $i % 2 ? 'instansi' : 'umum',
+                'minat' => [$i % 2 ? 'nusa' : 'literasi'], 'kepuasan' => $i % 2 ? 5 : 1,
+                'nilai_nusa' => $i % 3 ? null : 4, 'saran' => 'SARAN INTERNAL', 'instansi' => 'INSTANSI INTERNAL',
+                'status' => 'valid', 'created_at' => now()->startOfDay()->setTime(9, 0, $i)]);
+        }
+        $url = route('monitoring-pameran.pengunjung.rincian');
+        $this->getJson($url.'?jenis=total')->assertOk()->assertJsonPath('pagination.total', 25)->assertJsonCount(20, 'items')
+            ->assertJsonPath('items.0.nama', 'Tamu 25')->assertDontSee('SARAN INTERNAL')->assertDontSee('INSTANSI INTERNAL');
+        $this->getJson($url.'?jenis=total&page=2')->assertJsonCount(5, 'items')->assertJsonPath('pagination.page', 2)->assertJsonPath('items.0.nama', 'Tamu 05');
+        $this->getJson($url.'?jenis=total&page=999')->assertJsonPath('pagination.page', 2);
+        foreach ([['jenis' => 'hari_ini', 'total' => 25], ['jenis' => 'puas', 'total' => 13], ['jenis' => 'nusa', 'total' => 8],
+            ['jenis' => 'harian', 'tanggal' => '2026-10-30', 'total' => 0], ['jenis' => 'kepuasan', 'nilai' => 1, 'total' => 12],
+            ['jenis' => 'minat', 'minat' => 'literasi', 'total' => 12], ['jenis' => 'total', 'kategori' => 'instansi', 'total' => 13],
+            ['jenis' => 'terbaru', 'q' => 'Tamu 25', 'total' => 1]] as $filter) {
+            $total = $filter['total']; unset($filter['total']);
+            $this->getJson($url.'?'.http_build_query($filter))->assertOk()->assertJsonPath('pagination.total', $total);
+        }
+        $this->getJson(route('monitoring-pameran.pengunjung'))->assertJsonCount(10, 'terbaru')->assertJsonPath('terbaru.0.nama', 'Tamu 25');
+        foreach ([['jenis' => 'salah'], ['jenis' => 'total', 'page' => 0], ['jenis' => 'kepuasan', 'nilai' => 6],
+            ['jenis' => 'harian', 'tanggal' => '31/10/2026'], ['jenis' => 'minat', 'minat' => ['nusa']], ['jenis' => 'total', 'kategori' => 'admin']] as $filter) {
+            $this->getJson($url.'?'.http_build_query($filter))->assertUnprocessable();
+        }
+        $layar->acaraBukuTamu->update(['status' => 'draf']);
+        $this->getJson($url.'?jenis=total')->assertStatus(410);
+        $layar->update(['dicabut_pada' => now()]);
+        $this->getJson($url.'?jenis=total')->assertUnauthorized();
+    }
+
+    public function test_pengunjung_dibatalkan_dan_acara_lain_tidak_muncul_dan_cache_tiga_detik(): void
+    {
+        $this->fondasi();
+        [$layar] = $this->layar();
+        $data = ['kunci_kiriman' => Str::uuid(), 'sidik_kiriman' => str_repeat('a', 64), 'nama' => 'Tamu pertama',
+            'kategori' => 'instansi', 'minat' => ['nusa'], 'kepuasan' => 5, 'status' => 'valid'];
+        $pertama = $layar->acaraBukuTamu->respon()->create($data);
+        $lain = $this->acara();
+        $lain->respon()->create(array_replace($data, ['nama' => 'ACARA LAIN']));
+        $this->getJson(route('monitoring-pameran.pengunjung'))->assertJsonPath('statistik.total', 1);
+        $pertama->update(['status' => 'dibatalkan']);
+        $layar->acaraBukuTamu->respon()->create(array_replace($data, ['kunci_kiriman' => Str::uuid(), 'nama' => 'Tamu baru']));
+        $this->travel(3)->seconds();
+        $this->getJson(route('monitoring-pameran.pengunjung'))->assertJsonPath('statistik.total', 1)
+            ->assertJsonPath('terbaru.0.nama', 'Tamu baru')->assertDontSee('Tamu pertama')->assertDontSee('ACARA LAIN');
+        $this->getJson(route('monitoring-pameran.pengunjung.rincian', ['jenis' => 'total', 'acara_buku_tamu_id' => $lain->id]))
+            ->assertJsonPath('pagination.total', 1)->assertJsonPath('items.0.nama', 'Tamu baru')->assertDontSee('ACARA LAIN');
+        $this->layar(['cakupan' => 'siswa']);
+        $this->getJson(route('monitoring-pameran.pengunjung.rincian', ['jenis' => 'total']))->assertForbidden();
     }
 
     public function test_aktivasi_admin_pameran_validasi_acara_tanggal_dan_bisa_logout(): void
@@ -248,7 +307,7 @@ class MonitoringPameranTest extends TestCase
         $path = storage_path('framework/testing/monitor-pameran');
         File::ensureDirectoryExists($path);
         foreach (range(1, 12) as $i) {
-            $layar->acaraBukuTamu->respon()->create(['kunci_kiriman' => Str::uuid(), 'sidik_kiriman' => str_repeat('a', 64), 'nama' => 'Pengunjung sintetis', 'kategori' => ['umum', 'pelajar', 'pendidik', 'orang_tua'][$i % 4], 'minat' => $i % 2 ? ['nusa'] : ['literasi', 'karya_siswa'], 'kepuasan' => ($i % 5) + 1, 'nilai_nusa' => $i % 3 ? 4 : null, 'status' => 'valid', 'created_at' => '2026-10-'.(29 + $i % 3).' 09:00:00']);
+            $layar->acaraBukuTamu->respon()->create(['kunci_kiriman' => Str::uuid(), 'sidik_kiriman' => str_repeat('a', 64), 'nama' => 'Pengunjung sintetis '.$i, 'kategori' => ['umum', 'pelajar', 'pendidik', 'orang_tua', 'instansi'][$i % 5], 'minat' => $i % 2 ? ['nusa'] : ['literasi', 'karya_siswa'], 'kepuasan' => ($i % 5) + 1, 'nilai_nusa' => $i % 3 ? 4 : null, 'status' => 'valid', 'created_at' => '2026-10-'.(29 + $i % 3).' 09:00:00']);
         }
         File::put($path.'/index.html', $this->get(route('monitoring-pameran.index'))->assertOk()->getContent());
         $service = app(MonitoringPameranService::class);
@@ -259,6 +318,14 @@ class MonitoringPameranTest extends TestCase
         }
         File::put($path.'/rincian.json', json_encode($details));
         File::put($path.'/tamu.json', json_encode($service->pengunjung($layar)));
+        $tamuDetails = [];
+        foreach (['total', 'hari_ini', 'puas', 'nusa', 'harian', 'kepuasan', 'minat', 'terbaru'] as $jenis) {
+            $tamuDetails[$jenis] = $service->rincianPengunjung($layar, compact('jenis'));
+        }
+        foreach ([['jenis' => 'harian', 'tanggal' => '2026-10-30'], ['jenis' => 'kepuasan', 'nilai' => 5], ['jenis' => 'minat', 'minat' => 'nusa']] as $filter) {
+            $tamuDetails[implode('-', $filter)] = $service->rincianPengunjung($layar, $filter);
+        }
+        File::put($path.'/tamu-rincian.json', json_encode($tamuDetails));
         $lain = clone $layar;
         $lain->pameran_tanggal = '2026-10-29';
         File::put($path.'/data-29.json', json_encode($service->aktivitas($lain)));

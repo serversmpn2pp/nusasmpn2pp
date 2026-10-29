@@ -1,6 +1,6 @@
 (() => {
     'use strict';
-    const REFRESH_MS = 5000;
+    const REFRESH_MS = document.body.dataset.pameran === 'true' ? 3000 : 5000;
     const endpoint = document.body.dataset.endpoint;
     const pameran = document.body.dataset.pameran === 'true';
     const labelTanggal = value => pameran && typeof value === 'string' ? value.replace(/hari ini/gi, 'tanggal terpilih').replace('Minggu ini', 'Minggu data').replace('Bulan ini', 'Bulan data') : value;
@@ -207,7 +207,7 @@
         } catch (_) {
             if (blocked || current !== generation) return;
             connection(navigator.onLine ? 'Koneksi terputus' : 'Offline', 'offline');
-            notice(data ? 'Pembaruan terhenti. Data terakhir tetap ditampilkan; mencoba kembali setiap 5 detik.' : 'Belum dapat memuat data. Memeriksa koneksi setiap 5 detik.', true);
+            notice(data ? `Pembaruan terhenti. Data terakhir tetap ditampilkan; mencoba kembali setiap ${REFRESH_MS / 1000} detik.` : `Belum dapat memuat data. Memeriksa koneksi setiap ${REFRESH_MS / 1000} detik.`, true);
         } finally { clearTimeout(timeout); if(current === generation){busy = false; activeController = null;} }
     }
     function revoke() {

@@ -168,3 +168,60 @@ Setelah footer mode keyboard disembunyikan, 25 tes login dan tautan penghapusan
 lulus (`mobile/build/test-login-keyboard-footer.log`), termasuk memastikan kedua
 tautan hilang saat keyboard muncul dan kembali setelah keyboard ditutup.
 
+## Penyesuaian tablet small dan medium — 28 Oktober 2026
+
+Login kini membedakan komposisi berdasarkan ruang jendela. Pada lebar minimal
+600 dp dan tinggi jendela minimal 600 dp, foto tidak lagi mengikuti batas lebar
+formulir. Portrait menampilkan foto selebar jendela dengan tinggi 280–460 dp,
+sedangkan formulir dibatasi 520 dp. Foto landscape dan foto portrait yang sudah
+dibundel tetap dipakai; tidak ada gambar atau dependensi baru.
+
+Jendela landscape dengan lebar minimal 900 dp memakai dua panel: foto dan
+identitas sekolah di kiri, formulir di kanan. Penentuan orientasi memakai ukuran
+jendela sebelum pengurangan keyboard, sehingga membuka keyboard tidak mengubah
+komposisi secara mendadak. Jika ruang tidak cukup, konten formulir dapat digulir.
+Tablet memakai sliver yang mengukur tinggi konten sebenarnya agar pesan validasi
+dan huruf besar tidak meluber. HP tetap memakai komposisi satu layar sebelumnya.
+
+Saat keyboard terbuka, kedua tautan publik tetap tersembunyi. Controller isian,
+validasi, autofill, aksi login, dan pilihan tampilan kata sandi tetap sama.
+Blur hanya diterapkan pada foto; logo dan nama sekolah tetap tajam. Area foto
+diberi clipping agar hasil blur tidak meluber melewati batas gambar.
+
+Beranda dibatasi maksimal 1120 dp dengan margin isi 32 dp pada tablet. Foto dan
+sapaan disesuaikan dengan lebarnya, serta header lebih ringkas pada landscape.
+Kartu Semua Menu menyesuaikan jumlah kolom (3 pada small portrait, 4 pada medium
+portrait, hingga 6 pada layar lebar dengan ukuran huruf normal). Label tablet
+berukuran 14 sp dan dapat membungkus. Tinggi kartu ringkasan presensi dibatasi
+secara proporsional terhadap ukuran huruf. Akses Cepat tetap memakai satu baris
+empat ikon asli pada ukuran normal, dengan tujuan, warna, dan ukuran ikon tetap.
+Navigasi bawah bertambah tinggi saat huruf diperbesar agar label NUSA tidak
+meluber; bentuk ikon dan perilaku navigasi tidak diubah.
+
+Verifikasi widget mencakup ukuran 600 × 960, 800 × 1280, 960 × 600, dan
+1280 × 800 dp, keyboard 280–420 dp, huruf 200%, perpindahan orientasi,
+isian yang tetap tersimpan, pesan gagal masuk, kedua tautan publik, serta
+tujuan Akses Cepat, pengaturan pintasan, kategori menu, dan notifikasi.
+Tes regresi HP dan app shell juga dijalankan: **90 tes lulus**, dan Flutter
+analyzer tidak menemukan masalah. Log akhir:
+
+- `mobile/build/test-tablet-layout-final.log`
+- `mobile/build/analyze-tablet-layout.log`
+
+Pratinjau berasal dari render widget produksi dengan data contoh, bukan hasil
+tangkapan perangkat fisik. Jam/status dan keyboard Android tidak digambar:
+
+- `mobile/build/login-tablet-small-portrait.png`
+- `mobile/build/login-tablet-medium-portrait.png`
+- `mobile/build/login-tablet-small-landscape.png`
+- `mobile/build/login-tablet-medium-landscape.png`
+- `mobile/build/home-tablet-small-portrait.png`
+- `mobile/build/home-tablet-medium-portrait.png`
+- `mobile/build/home-tablet-small-landscape.png`
+- `mobile/build/home-tablet-medium-landscape.png`
+
+Perubahan tablet ini dibuat **setelah AAB 1.0.5+6 dibangun**. AAB yang sudah
+diunggah tetap identik dan belum memuat penyesuaian ini. AAB baru belum dibangun,
+nomor versi belum dinaikkan lagi, dan tidak ada perubahan API/migrasi. Build
+rilis berikutnya harus memakai versionCode di atas 6 karena 6 sudah diunggah.
+

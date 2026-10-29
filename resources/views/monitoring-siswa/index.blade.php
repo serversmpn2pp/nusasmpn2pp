@@ -12,14 +12,15 @@
     <script defer src="{{ asset('vendor/lucide/lucide.min.js') }}"></script>
     <script defer src="{{ asset('js/monitoring-tv-rincian.js') }}?v={{ filemtime(public_path('js/monitoring-tv-rincian.js')) }}"></script>
     <script defer src="{{ asset('js/monitoring-tv.js') }}?v={{ filemtime(public_path('js/monitoring-tv.js')) }}"></script>
+    @if($pameran)<script defer src="{{ asset('js/monitoring-pameran-rincian.js') }}?v={{ filemtime(public_path('js/monitoring-pameran-rincian.js')) }}"></script>@endif
     @if($pameran)<script defer src="{{ asset('js/monitoring-pameran.js') }}?v={{ filemtime(public_path('js/monitoring-pameran.js')) }}"></script>@endif
 </head>
-<body data-endpoint="{{ route($pameran ? 'monitoring-pameran.data' : 'monitoring-siswa.data') }}" data-detail-endpoint="{{ route($pameran ? 'monitoring-pameran.rincian' : 'monitoring-siswa.rincian') }}" @if($pameran) data-pameran="true" data-tanggal="{{ $tanggalPameran }}" data-pameran-tanggal-endpoint="{{ route('monitoring-pameran.tanggal') }}" data-pameran-tamu-endpoint="{{ route('monitoring-pameran.pengunjung') }}" data-monitor-csrf="{{ $monitorCsrf }}" @endif>
+<body data-endpoint="{{ route($pameran ? 'monitoring-pameran.data' : 'monitoring-siswa.data') }}" data-detail-endpoint="{{ route($pameran ? 'monitoring-pameran.rincian' : 'monitoring-siswa.rincian') }}" @if($pameran) data-pameran="true" data-tanggal="{{ $tanggalPameran }}" data-pameran-tanggal-endpoint="{{ route('monitoring-pameran.tanggal') }}" data-pameran-tamu-endpoint="{{ route('monitoring-pameran.pengunjung') }}" data-pameran-rincian-endpoint="{{ route('monitoring-pameran.pengunjung.rincian') }}" data-monitor-csrf="{{ $monitorCsrf }}" @endif>
 <main class="tv-screen">
     <header class="tv-header">
         <div class="brand"><img src="{{ asset('images/logo-nusa.png') }}" alt="Logo NUSA" width="52" height="52"><div><strong>NUSA<span>.</span></strong><p>SMP Negeri 2 Padang Panjang</p></div></div>
-        <div class="tv-heading"><h1>{{ $pameran ? 'Monitoring pameran NUSA' : 'Monitoring aktivitas siswa' }}</h1><p id="{{ $pameran ? 'pameran-event' : 'tanggal' }}">{{ $pameran ? ($acaraPameran?->nama ?? 'Acara tidak tersedia') : 'Memuat data sekolah...' }}</p></div>
-        <div class="tv-tools"><div><span id="connection" class="connection waiting" role="status">Menghubungkan</span><p id="updated">Pembaruan setiap 5 detik</p></div><button id="fullscreen" type="button" title="Layar penuh" aria-label="Layar penuh"><i data-lucide="maximize"></i></button></div>
+        <div class="tv-heading"><h1>{{ $pameran ? 'Monitoring TV' : 'Monitoring aktivitas siswa' }}</h1><p id="{{ $pameran ? 'pameran-event' : 'tanggal' }}">{{ $pameran ? ($acaraPameran?->nama ?? 'Acara tidak tersedia') : 'Memuat data sekolah...' }}</p></div>
+        <div class="tv-tools"><div><span id="connection" class="connection waiting" role="status">Menghubungkan</span><p id="updated">Pembaruan setiap {{ $pameran ? 3 : 5 }} detik</p></div><button id="fullscreen" type="button" title="Layar penuh" aria-label="Layar penuh"><i data-lucide="maximize"></i></button></div>
     </header>
     @if($pameran)
     <div class="pameran-nav"><div role="tablist" aria-label="Monitor pameran"><button type="button" id="tab-siswa" role="tab" aria-selected="true" aria-controls="panel-siswa"><i data-lucide="school" aria-hidden="true"></i>Aktivitas siswa</button><button type="button" id="tab-tamu" role="tab" aria-selected="false" aria-controls="panel-tamu" tabindex="-1"><i data-lucide="users" aria-hidden="true"></i>Pengunjung stand</button></div><label><input type="checkbox" id="pameran-rotate">Rotasi 30 detik</label></div>
@@ -67,7 +68,7 @@
             <p class="caption">Bersumber dari transaksi resmi, bukan usulan poin laporan.</p>
         </section>
     </div>
-    <footer class="tv-footer"><span><b class="dot teal-dot"></b> {{ $pameran ? 'Mode pameran' : 'Ruang guru' }} &middot; <span id="year">NUSA</span></span><button type="button" id="population" data-detail="dipantau">- siswa dipantau</button><span>Data pribadi terbatas &middot; Pembaruan 5 detik</span></footer>
+    <footer class="tv-footer"><span><b class="dot teal-dot"></b> {{ $pameran ? 'Mode pameran' : 'Ruang guru' }} &middot; <span id="year">NUSA</span></span><button type="button" id="population" data-detail="dipantau">- siswa dipantau</button><span>Data pribadi terbatas &middot; Pembaruan {{ $pameran ? 3 : 5 }} detik</span></footer>
     @if($pameran)</section>@include('monitoring-siswa._pameran-tamu')@endif
 </main>
 <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title" aria-describedby="detail-subtitle">
@@ -87,5 +88,6 @@
     </div>
     <footer class="detail-footer"><p id="detail-context">Data hari ini</p><nav aria-label="Halaman rincian"><button type="button" id="detail-prev" class="detail-icon" title="Halaman sebelumnya" aria-label="Halaman sebelumnya"><i data-lucide="chevron-left"></i></button><span id="detail-page">1 / 1</span><button type="button" id="detail-next" class="detail-icon" title="Halaman berikutnya" aria-label="Halaman berikutnya"><i data-lucide="chevron-right"></i></button></nav></footer>
 </dialog>
+@if($pameran) @include('monitoring-siswa._pameran-rincian') @endif
 </body>
 </html>

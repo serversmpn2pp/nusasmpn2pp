@@ -43,7 +43,13 @@ class NusaBottomNavigation extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 76,
+          height:
+              76 +
+              (MediaQuery.textScalerOf(context).scale(10) - 10).clamp(
+                    0.0,
+                    double.infinity,
+                  ) *
+                  1.5,
           child: Row(
             children: List.generate(items.length, (index) {
               final (icon, selectedIcon, label) = items[index];

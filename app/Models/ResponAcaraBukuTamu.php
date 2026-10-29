@@ -9,7 +9,7 @@ class ResponAcaraBukuTamu extends Model
 {
     protected $table = 'respon_acara_buku_tamu';
 
-    public const KATEGORI = ['pelajar' => 'Pelajar', 'pendidik' => 'Pendidik / tenaga kependidikan', 'orang_tua' => 'Orang tua / wali', 'umum' => 'Masyarakat umum'];
+    public const KATEGORI = ['pelajar' => 'Pelajar', 'pendidik' => 'Pendidik / tenaga kependidikan', 'orang_tua' => 'Orang tua / wali', 'instansi' => 'Instansi', 'umum' => 'Masyarakat umum'];
 
     public const MINAT = ['karya_siswa' => 'Karya siswa', 'literasi' => 'Literasi', 'numerasi' => 'Numerasi', 'nusa' => 'NUSA', 'lainnya' => 'Lainnya'];
 

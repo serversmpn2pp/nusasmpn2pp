@@ -17,7 +17,7 @@
 <section class="panel panel-pad" style="margin-bottom:24px">
     <h2 class="section-title">Aktivasi browser TV</h2>
     <x-ui.alert :type="$saatIni ? 'success' : 'warning'" :title="$saatIni ? 'Browser ini aktif' : 'Browser belum aktif'">{{ $saatIni?->nama ?? 'Aktifkan di browser komputer yang terhubung ke TV ruang guru.' }}</x-ui.alert>
-    <p>Monitoring diperbarui setiap 5 detik dan tetap berjalan setelah akun admin keluar. Pilih Mode pameran untuk layar publik; monitoring siswa/ujian biasa ditujukan untuk ruang guru. Kredensial scanner tidak dapat digunakan untuk layar ini.</p>
+    <p>Mode pameran diperbarui setiap 3 detik; monitoring siswa/ujian ruang guru setiap 5 detik. Layar tetap berjalan setelah akun admin keluar. Kredensial scanner tidak dapat digunakan untuk layar ini.</p>
     <form method="POST" action="{{ route('perangkat-monitoring.store') }}">
         @csrf
         <div class="field"><label for="nama">Nama layar</label><input class="input" id="nama" name="nama" required maxlength="100" value="{{ old('nama', $saatIni?->nama) }}" placeholder="Contoh: TV ruang guru"></div>
@@ -29,7 +29,7 @@
             <div class="form-grid"><div class="field"><label for="acara_buku_tamu_id">Acara buku tamu</label><select class="select" id="acara_buku_tamu_id" name="acara_buku_tamu_id"><option value="">Pilih acara</option>@foreach($acaraPameran as $acara)<option value="{{ $acara->id }}" @selected((string)old('acara_buku_tamu_id', $saatIni?->acara_buku_tamu_id) === (string)$acara->id)>{{ $acara->nama }}</option>@endforeach</select></div>
             <div class="field"><label for="pameran_tanggal">Tanggal aktivitas awal</label><input class="input" id="pameran_tanggal" name="pameran_tanggal" type="date" min="{{ $batasTanggalPameran['min'] }}" max="{{ $batasTanggalPameran['max'] }}" value="{{ old('pameran_tanggal', $saatIni?->pameran_tanggal?->toDateString() ?? $batasTanggalPameran['max']) }}"></div></div>
             <label style="display:flex;gap:10px;margin-top:16px"><input type="checkbox" name="pameran_identitas" value="1" @checked(old('pameran_identitas', $saatIni?->pameran_identitas))>Tampilkan nama dan foto siswa; sekolah sudah memastikan izin penayangannya.</label>
-            <p class="person-meta">Bawaan: identitas disamarkan. Konseling, kronologi, kontak, dan catatan pribadi tetap tidak ditampilkan. Statistik pengunjung tidak memuat identitas atau komentar tamu.</p>
+            <p class="person-meta">Bawaan: identitas siswa disamarkan. Konseling, kronologi, kontak, dan catatan pribadi tetap tidak ditampilkan. Nama, kategori, dan waktu kunjungan tamu tampil di layar pameran; saran serta catatan internal tidak ditampilkan.</p>
         </div>
         <label style="display:flex;gap:10px;margin:18px 0"><input type="checkbox" name="konfirmasi" value="1" required><span id="confirmation-label">Layar berada di area terbatas untuk guru dan dikelola sekolah.</span></label>
         <button class="button button-primary" type="submit"><i data-lucide="shield-check"></i> {{ $saatIni ? 'Perbarui aktivasi' : 'Aktifkan browser ini' }}</button>

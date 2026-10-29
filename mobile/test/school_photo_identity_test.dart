@@ -337,6 +337,162 @@ void main() {
     },
   );
 
+  for (final (label, size) in [
+    ('small-portrait', const Size(600, 960)),
+    ('medium-portrait', const Size(800, 1280)),
+    ('small-landscape', const Size(960, 600)),
+    ('medium-landscape', const Size(1280, 800)),
+  ]) {
+    testWidgets('login tablet $label memanfaatkan lebar dan tetap muat', (
+      tester,
+    ) async {
+      _screen(tester, size);
+      final capture = GlobalKey();
+      await _login(tester, _PhotoAuth(), capture: capture);
+      final landscape = size.width > size.height;
+      final hero = find.byKey(
+        Key('login-tablet-${landscape ? 'landscape' : 'portrait'}-hero'),
+      );
+      expect(hero, findsOneWidget);
+      final photo = tester.getRect(hero);
+      final username = tester.getRect(find.byKey(const Key('login-username')));
+      if (landscape) {
+        expect(photo.right, lessThan(username.left));
+        expect(username.width, greaterThanOrEqualTo(380));
+      } else {
+        expect(photo.width, size.width);
+        expect(photo.height, lessThanOrEqualTo(460));
+        expect(username.width, 520);
+      }
+      final scroll = tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byKey(const Key('login-scroll')),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      expect(scroll.maxScrollExtent, closeTo(0, .1));
+      for (final key in [
+        'login-username',
+        'login-password',
+        'login-submit',
+        'login-privacy-policy',
+        'login-account-deletion',
+      ]) {
+        final rect = tester.getRect(find.byKey(Key(key)));
+        expect(rect.top, greaterThanOrEqualTo(24));
+        expect(rect.bottom, lessThanOrEqualTo(size.height - 24));
+      }
+      expect(tester.takeException(), isNull);
+      await _capture(tester, capture, 'build/login-tablet-$label.png');
+    });
+  }
+
+  for (final (size, scale, keyboard) in [
+    (const Size(600, 960), 1.0, 360.0),
+    (const Size(800, 1280), 1.0, 420.0),
+    (const Size(960, 600), 1.0, 280.0),
+    (const Size(1280, 800), 1.0, 320.0),
+    (const Size(600, 960), 2.0, 0.0),
+    (const Size(800, 1280), 2.0, 0.0),
+    (const Size(960, 600), 2.0, 0.0),
+    (const Size(1280, 800), 2.0, 0.0),
+    (const Size(600, 960), 2.0, 360.0),
+    (const Size(960, 600), 2.0, 280.0),
+  ]) {
+    testWidgets(
+      'login tablet $size skala $scale keyboard $keyboard tetap bisa masuk',
+      (tester) async {
+        _screen(tester, size, keyboard: keyboard);
+        final auth = _PhotoAuth();
+        await _login(tester, auth, scale: scale);
+        for (final (key, value) in [
+          ('login-username', 'akun.contoh'),
+          ('login-password', 'Contoh#123'),
+        ]) {
+          final field = find.byKey(Key(key));
+          await tester.ensureVisible(field);
+          await tester.pumpAndSettle();
+          await tester.enterText(field, value);
+        }
+        for (final key in ['login-privacy-policy', 'login-account-deletion']) {
+          expect(
+            find.byKey(Key(key)),
+            keyboard > 0 ? findsNothing : findsOneWidget,
+          );
+        }
+        final submit = find.byKey(const Key('login-submit'));
+        await tester.ensureVisible(submit);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(submit).bottom,
+          lessThanOrEqualTo(size.height - keyboard),
+        );
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(auth.calls, 1);
+        expect(auth.username, 'akun.contoh');
+        expect(find.text('Akun contoh tidak ditemukan.'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'isian dan tombol mata bertahan saat tablet diputar lalu keyboard ditutup',
+    (tester) async {
+      _screen(tester, const Size(600, 960));
+      await _login(tester, _PhotoAuth());
+      final username = find.byKey(const Key('login-username'));
+      final password = find.byKey(const Key('login-password'));
+      await tester.enterText(username, 'akun.contoh');
+      await tester.enterText(password, 'Contoh#123');
+      await tester.tap(find.byTooltip('Tampilkan kata sandi'));
+      tester.view.physicalSize = const Size(960, 600);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+      tester.view.padding = const FakeViewPadding(top: 24);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('login-tablet-landscape-hero')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('login-privacy-policy')), findsNothing);
+      expect(
+        tester.widget<TextFormField>(username).controller!.text,
+        'akun.contoh',
+      );
+      expect(
+        tester
+            .widget<EditableText>(
+              find.descendant(
+                of: password,
+                matching: find.byType(EditableText),
+              ),
+            )
+            .obscureText,
+        isFalse,
+      );
+      tester.view.physicalSize = const Size(800, 1280);
+      tester.view.viewInsets = FakeViewPadding.zero;
+      tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('login-tablet-portrait-hero')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('login-privacy-policy')), findsOneWidget);
+      expect(find.byKey(const Key('login-account-deletion')), findsOneWidget);
+      expect(
+        tester.widget<TextFormField>(password).controller!.text,
+        'Contoh#123',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('render login dengan foto sekolah dan formulir produksi', (
     tester,
   ) async {

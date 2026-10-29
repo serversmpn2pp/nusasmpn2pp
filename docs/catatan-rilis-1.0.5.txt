@@ -1,0 +1,7 @@
+<id>
+Pembaruan tampilan login dan beranda dengan foto sekolah.
+Penyesuaian login saat keyboard terbuka agar formulir tetap mudah dijangkau.
+Logo dan nama sekolah tampil lebih jelas.
+Akses Cepat lebih ringkas dengan ikon asli dan label yang mudah dibaca.
+Peningkatan keterbacaan pada layar kecil dan ukuran huruf besar.
+</id>

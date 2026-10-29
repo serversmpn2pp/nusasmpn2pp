@@ -202,7 +202,7 @@ class AcaraBukuTamuService
     {
         $s = ['total' => 0, 'puas' => 0, 'persen_puas' => null, 'rata_rata' => null, 'penilai_nusa' => 0, 'persen_puas_nusa' => null,
             'kepuasan' => array_fill_keys(array_keys(ResponAcaraBukuTamu::KEPUASAN), 0),
-            'kategori' => array_fill_keys(array_keys(ResponAcaraBukuTamu::KATEGORI), 0),
+            'kategori' => array_fill_keys(array_keys(ResponAcaraBukuTamu::KATEGORI), 0), 'label_kategori' => ResponAcaraBukuTamu::KATEGORI,
             'minat' => array_fill_keys(array_keys($a->labelMinat()), 0), 'label_minat' => $a->labelMinat(), 'harian' => [], 'jam' => array_fill(0, 24, 0)];
         for ($d = Carbon::parse($f['dari']); $d->toDateString() <= $f['sampai']; $d->addDay()) {
             $s['harian'][$d->toDateString()] = 0;
