@@ -221,7 +221,9 @@ tangkapan perangkat fisik. Jam/status dan keyboard Android tidak digambar:
 - `mobile/build/home-tablet-medium-landscape.png`
 
 Perubahan tablet ini dibuat **setelah AAB 1.0.5+6 dibangun**. AAB yang sudah
-diunggah tetap identik dan belum memuat penyesuaian ini. AAB baru belum dibangun,
-nomor versi belum dinaikkan lagi, dan tidak ada perubahan API/migrasi. Build
-rilis berikutnya harus memakai versionCode di atas 6 karena 6 sudah diunggah.
+diunggah tetap identik dan belum memuat penyesuaian ini. Pada **31 Oktober 2026**,
+perbaikan tablet telah dikemas ke **AAB 1.0.6+7**, dengan 914 tes Flutter lulus,
+analyzer bersih, sertifikat upload yang sama, serta validasi bundle dan native
+16 KB lulus. Lihat [dokumentasi rilis](rilis-android-play-store.md). Tidak ada
+perubahan API/migrasi; pengunggahan dan publikasi dilakukan melalui Play Console.
 

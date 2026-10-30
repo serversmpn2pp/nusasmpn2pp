@@ -1,0 +1,7 @@
+<id>
+Penyempurnaan tampilan untuk tablet kecil dan sedang.
+Login menyesuaikan posisi layar tegak dan mendatar.
+Penyesuaian formulir saat keyboard terbuka.
+Beranda dan kolom menu lebih proporsional di layar besar.
+Peningkatan keterbacaan dan navigasi saat ukuran huruf diperbesar.
+</id>

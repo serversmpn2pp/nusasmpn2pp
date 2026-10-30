@@ -4,13 +4,92 @@ Upload key dibuat dan disimpan oleh pengelola sekolah pada komputer pengembang,
 bukan server Laravel. Kunci tersebut berbeda dari service-account Firebase.
 Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
-## AAB terbaru — 1.0.5+6, 28 Oktober 2026
+## AAB terbaru — 1.0.6+7, 31 Oktober 2026
 
-**Catatan kode sesudah build:** penyesuaian login dan beranda tablet small/medium
-telah ditambahkan setelah AAB ini dibuat. AAB 1.0.5+6 tetap identik dengan berkas
-yang diunggah dan belum memuat perbaikan tablet. Lihat
-[rincian tablet](tampilan-foto-sekolah-mobile.md#penyesuaian-tablet-small-dan-medium--28-oktober-2026).
-Build berikutnya perlu versionCode di atas 6; AAB berikutnya belum dibangun.
+File distribusi:
+[app-release-1.0.6-7.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.6-7.aab).
+Ukuran **97.225.765 byte** (97,2 MB / sekitar 92,7 MiB). Salinan bernama versi
+identik dengan `mobile/build/app/outputs/bundle/release/app-release.aab`.
+Semua AAB versi sebelumnya tetap tersimpan dan AAB 1.0.5+6 tidak berubah.
+
+SHA-256:
+
+```text
+08f4277786d6bc623ec9f95da184691af456c99a51976f0688e092b706a76516
+```
+
+Checksum: `mobile/build/releases/app-release-1.0.6-7.aab.sha256`.
+Sumber build: HEAD `b7a7a79`, ditambah kenaikan versi menjadi **1.0.6+7**
+dan dokumentasi rilis. Package tetap `id.sch.smpn2padangpanjang.nusa`.
+
+### Perubahan sejak AAB 1.0.5+6
+
+- Login tablet small/medium memisahkan lebar foto dari lebar formulir.
+  Portrait menampilkan foto selebar layar dengan tinggi terbatas, sedangkan
+  landscape memakai panel foto dan formulir berdampingan pada ruang yang cukup.
+- Formulir menyesuaikan ruang keyboard, pesan validasi, dan huruf besar.
+  Isian serta pilihan tampilkan kata sandi tetap dipertahankan saat rotasi.
+- Beranda tablet membatasi lebar isi, mengatur tinggi header landscape,
+  jumlah kolom menu dan ukuran kartu presensi sesuai ruang yang tersedia.
+- Label tablet lebih mudah dibaca dan navigasi bawah menyesuaikan ukuran
+  huruf perangkat. Ikon asli, hak akses, dan tujuan menu tetap dipakai.
+
+Ini pembaruan tampilan native, tanpa perubahan dependensi maupun API.
+Perubahan backend monitoring/pameran di riwayat Git tidak diterapkan ke server
+oleh pekerjaan build ini. Rincian desain dan ukuran pengujian ada di
+[dokumentasi foto/tablet](tampilan-foto-sekolah-mobile.md#penyesuaian-tablet-small-dan-medium--28-oktober-2026).
+
+### Pemeriksaan AAB 1.0.6+7
+
+- Flutter **3.47.1 / Dart 3.13.1**; **914 tes Flutter lulus** dan analyzer
+  tidak menemukan masalah. Tes mencakup tablet small/medium pada portrait,
+  landscape, keyboard terbuka, huruf 200%, serta regresi HP dan fitur sebelumnya.
+- Dependensi dipersiapkan dengan `pub get --offline --enforce-lockfile`;
+  `pubspec.lock` tetap identik. Build memakai `APP_ENV=production` dan API
+  `https://nusa.smpn2padangpanjang.sch.id/api/v1/`.
+- Manifest: versi **1.0.6**, versionCode **7**, min SDK **24**, target SDK
+  **36**, debug/backup/cleartext HTTP nonaktif.
+- `bundletool validate`, validasi JAR, CRC/duplikasi ZIP, dan `jarsigner`
+  lulus. Sertifikat upload cocok dengan AAB 1.0.5+6 serta fingerprint tercatat:
+  `CA:E5:19:98:35:1F:48:D5:38:2C:F1:3C:74:CA:B6:67:CF:FB:C8:32:9B:D8:9F:47:70:0C:8C:B4:7B:27:34:05`.
+- Penanda login tablet portrait/landscape, API produksi, dan fitur sebelumnya
+  terdeteksi dalam ketiga `libapp.so`. Foto dan logo dalam AAB cocok byte demi
+  byte dengan aset sumber; foto referensi lama tidak ikut dikemas.
+- Bundle memakai `PAGE_ALIGNMENT_16K`; pemeriksa Android Studio memeriksa
+  **14 library ELF 64-bit: 0 masalah** dan melewati 7 library 32-bit.
+- APK universal diagnostik lulus `zipalign -v -c -P 16 4`. Manifestnya juga
+  menunjukkan 1.0.6/7 dan ketiga library AOT identik dengan AAB baru. APK ini
+  ditandatangani debug key standar untuk pemeriksaan lokal, bukan untuk diunggah.
+
+Log utama ada di `mobile/build/*release-1.0.6-7.log`. Bukti manifest,
+sertifikat, konten, ELF, dan APK ada di `mobile/build/aab-validation-1.0.6-7/`.
+Pembuatan APK diagnostik sempat terhalang izin folder sementara sandbox;
+pengulangan dengan folder sementara di workspace berhasil. Peringatan toolchain
+Java, KGP, XML SDK dan font Cupertino tidak menggagalkan build. Peringatan
+sertifikat self-signed/timestamp dan pembacaan streaming JAR konsisten dengan
+rilis sebelumnya; verifikasi JAR berbasis berkas lulus. Pemeriksaan lokal tidak
+mencakup pemasangan melalui Play atau runtime perangkat fisik 16 KB.
+
+### Catatan rilis dan pengunggahan 1.0.6
+
+Salin isi [catatan-rilis-1.0.6.txt](D:/nusasmpn2pp/docs/catatan-rilis-1.0.6.txt)
+ke Release notes. Isinya **274 karakter** di dalam tag `<id>`.
+Nama rilis: **1.0.6 (7)**.
+
+Pada halaman **Open testing → Create new release**, gunakan **Upload** untuk
+berkas AAB baru ini. Bila ingin merilis untuk penggunaan umum dan akses produksi
+sudah disetujui, pilih **Production → Create new release**. Isi catatan rilis,
+periksa ringkasan, dan lanjutkan alur review/publikasi di Publishing overview.
+Panduan Google: [menyiapkan rilis](https://support.google.com/googleplay/android-developer/answer/9859348?hl=en).
+
+AAB belum diunggah atau dipublikasikan oleh pekerjaan ini. VersionCode 7 dipilih
+sebagai kelanjutan 6 yang sudah digunakan; riwayat unggahan Console tidak dibaca
+langsung. Tidak ada deploy, migrasi, maupun perubahan data sekolah.
+
+## Riwayat AAB — 1.0.5+6, 28 Oktober 2026
+
+AAB ini belum memuat penyesuaian tablet. Perbaikan tersebut sudah dikemas pada
+AAB 1.0.6+7 di atas.
 
 File untuk pembaruan **closed testing — Alpha**:
 [app-release-1.0.5-6.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.5-6.aab).
