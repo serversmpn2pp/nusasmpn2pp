@@ -19,10 +19,41 @@ class KoreksiPresensiSiswaService
 {
     public function __construct(private readonly ProsesPoinKeterlambatanService $prosesPoinKeterlambatan) {}
 
+    public function memilikiKewenanganKoreksi(Pengguna $pengguna): bool
+    {
+        $pengguna->loadMissing('daftarPeran.izin');
+        if (! $pengguna->aktif || $pengguna->akunSiswa() || $pengguna->akunOrangTua()
+            || (! $pengguna->administrator() && ! $pengguna->akunPegawai())) {
+            return false;
+        }
+
+        return $this->koreksiPenuhDiizinkan($pengguna)
+            || ($pengguna->memilikiPeran('guru_pl') && $pengguna->memilikiIzin('absensi.koreksi_hari_ini'));
+    }
+
+    private function koreksiPenuhDiizinkan(Pengguna $pengguna): bool
+    {
+        return $pengguna->memilikiIzin('absensi.koreksi') && (
+            $this->koreksiSeluruhKelas($pengguna)
+            || ($pengguna->memilikiPeran('wali_kelas') && $this->kelasWaliIds($pengguna) !== [])
+        );
+    }
+
+    private function koreksiSeluruhKelas(Pengguna $pengguna): bool
+    {
+        return $pengguna->administrator() || $pengguna->memilikiPeran('wakil_pimpinan_kesiswaan');
+    }
+
+    private function kelasWaliIds(Pengguna $pengguna): array
+    {
+        $pengguna->loadMissing('pegawai.kelasSebagaiWali');
+
+        return $pengguna->pegawai?->kelasSebagaiWali->modelKeys() ?? [];
+    }
+
     public function koreksiHariIniTerbatas(Pengguna $pengguna): bool
     {
-        return $pengguna->memilikiIzin('absensi.koreksi_hari_ini')
-            && ! $pengguna->memilikiIzin('absensi.koreksi');
+        return $this->memilikiKewenanganKoreksi($pengguna) && ! $this->koreksiPenuhDiizinkan($pengguna);
     }
 
     public function ambilAbsensi(string $tanggal, AnggotaKelas $anggotaKelas): ?AbsensiSiswa
@@ -39,25 +70,31 @@ class KoreksiPresensiSiswaService
         AnggotaKelas $anggotaKelas,
         string $tanggal,
         ?AbsensiSiswa $absensi = null,
+        bool $absensiSudahDimuat = false,
     ): array {
         $tanggal = Carbon::parse($tanggal)->toDateString();
         $terbatas = $this->koreksiHariIniTerbatas($pengguna);
 
-        if (! $pengguna->memilikiIzin(['absensi.koreksi', 'absensi.koreksi_hari_ini'])) {
+        if (! $this->memilikiKewenanganKoreksi($pengguna)) {
             return ['dapat' => false, 'alasan' => 'Akun ini tidak memiliki kewenangan koreksi presensi siswa.', 'terbatas_hari_ini' => false];
         }
 
-        if (! $pengguna->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id)) {
-            return ['dapat' => false, 'alasan' => 'Data siswa berada di luar cakupan kelas yang dapat Anda akses.', 'terbatas_hari_ini' => $terbatas];
+        if (! $terbatas && ! $this->koreksiSeluruhKelas($pengguna)
+            && ! in_array((int) $anggotaKelas->kelas_id, $this->kelasWaliIds($pengguna), true)) {
+            return ['dapat' => false, 'alasan' => 'Koreksi presensi hanya diizinkan untuk kelas yang Anda wali.', 'terbatas_hari_ini' => false];
         }
 
         if ($terbatas && $tanggal !== now()->toDateString()) {
             return ['dapat' => false, 'alasan' => 'Guru PL hanya dapat mengoreksi presensi siswa pada hari berjalan.', 'terbatas_hari_ini' => true];
         }
 
-        $absensi ??= $this->ambilAbsensi($tanggal, $anggotaKelas);
-        if ($terbatas && $absensi?->sumber === 'scan') {
-            return ['dapat' => false, 'alasan' => 'Catatan hasil scan hanya dapat dikoreksi oleh petugas dengan kewenangan penuh.', 'terbatas_hari_ini' => true];
+        if ($terbatas) {
+            if (! $absensiSudahDimuat) {
+                $absensi ??= $this->ambilAbsensi($tanggal, $anggotaKelas);
+            }
+            if ($absensi?->sumber === 'scan') {
+                return ['dapat' => false, 'alasan' => 'Catatan hasil scan hanya dapat dikoreksi oleh petugas dengan kewenangan penuh.', 'terbatas_hari_ini' => true];
+            }
         }
 
         return ['dapat' => true, 'alasan' => null, 'terbatas_hari_ini' => $terbatas];
@@ -117,6 +154,8 @@ class KoreksiPresensiSiswaService
                     'tanggal' => $tanggal,
                     'siswa_id' => $anggotaKelas->siswa_id,
                 ]);
+            $akses = $this->evaluasiAkses($pengguna, $anggotaKelas, $tanggal, $absensi, true);
+            abort_unless($akses['dapat'], 403, $akses['alasan']);
             $statusSebelum = $absensi->exists ? $absensi->status_kehadiran : null;
             $catatan = filled($data['catatan'] ?? null) ? trim($data['catatan']) : null;
 

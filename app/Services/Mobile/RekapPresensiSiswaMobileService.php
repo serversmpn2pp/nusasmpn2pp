@@ -96,7 +96,7 @@ class RekapPresensiSiswaMobileService
                 'ada_halaman_berikutnya' => $paginator->hasMorePages(),
             ],
             'hak_akses' => [
-                'dapat_koreksi' => $pengguna->memilikiIzin(['absensi.koreksi', 'absensi.koreksi_hari_ini']),
+                'dapat_koreksi' => $this->koreksi->memilikiKewenanganKoreksi($pengguna),
                 'koreksi_hari_ini_terbatas' => $this->koreksi->koreksiHariIniTerbatas($pengguna),
                 'cakupan_wali_kelas' => $cakupanWali,
                 'dapat_pesan_whatsapp' => $cakupanWali || filled($kelasId),
@@ -355,7 +355,7 @@ class RekapPresensiSiswaMobileService
     {
         $siswa = $anggota->siswa;
         $foto = $siswa && filled($siswa->foto) && Storage::disk('public')->exists($siswa->foto);
-        $akses = $this->koreksi->evaluasiAkses($pengguna, $anggota, $tanggal, $absensi);
+        $akses = $this->koreksi->evaluasiAkses($pengguna, $anggota, $tanggal, $absensi, true);
         $alfaOtomatis = ! $absensi && $this->aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggota);
         $pengecualian = $this->aturanAlfa->pengecualianPada($tanggal, $anggota);
         $status = $absensi?->status_kehadiran ?? $this->aturanAlfa->statusTanpaCatatan($tanggal, $hariAktif, $anggota);

@@ -7,6 +7,7 @@ use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
+use App\Models\Pengguna;
 use App\Models\TahunPelajaran;
 use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\KoreksiPresensiSiswaService;
@@ -73,7 +74,7 @@ class RekapAbsensiHarianController extends Controller
 
         $kelasId = $this->ambilKelasId($data['kelas_id'] ?? null, $daftarKelas, $cakupanWaliKelas);
         $rekapAbsensi = $tahunPelajaranId
-            ? $this->ambilRekapAbsensi($tanggal, $tahunPelajaranId, $kelasId, $cari, $cakupanWaliKelas ? $kelasWaliIds : null)
+            ? $this->ambilRekapAbsensi($pengguna, $tanggal, $tahunPelajaranId, $kelasId, $cari, $cakupanWaliKelas ? $kelasWaliIds : null)
             : collect();
         $rekapAbsensi = $this->saringStatus($rekapAbsensi, $status);
         $ringkasan = $this->hitungRingkasan($rekapAbsensi);
@@ -98,6 +99,7 @@ class RekapAbsensiHarianController extends Controller
             'rangkumanWhatsapp' => $rangkumanWhatsapp,
             'bolehSalinRangkumanWhatsapp' => $bolehSalinRangkumanWhatsapp,
             'koreksiHariIniTerbatas' => $koreksiHariIniTerbatas,
+            'bolehKoreksi' => $this->koreksiPresensi->memilikiKewenanganKoreksi($pengguna),
         ]);
     }
 
@@ -110,10 +112,9 @@ class RekapAbsensiHarianController extends Controller
         $tanggal = Carbon::parse($data['tanggal'] ?? now())->toDateString();
         $this->pastikanTanggalKoreksiDiizinkan($request, $tanggal);
         $anggotaKelas->load(['tahunPelajaran', 'kelas', 'siswa']);
-        $this->pastikanBolehAksesAnggotaKelas($request, $anggotaKelas);
-
-        $absensi = $this->ambilAbsensi($tanggal, $anggotaKelas);
-        $this->pastikanCatatanScanTidakDiubah($request, $absensi);
+        $absensi = $this->koreksiPresensi->ambilAbsensi($tanggal, $anggotaKelas);
+        $akses = $this->koreksiPresensi->evaluasiAkses($request->user(), $anggotaKelas, $tanggal, $absensi);
+        abort_unless($akses['dapat'], 403, $akses['alasan']);
         $pengaturanAbsensi = $this->ambilPengaturanAbsensi($tanggal);
         $koreksiHariIniTerbatas = $this->koreksiHariIniTerbatas($request);
 
@@ -196,6 +197,7 @@ class RekapAbsensiHarianController extends Controller
     }
 
     private function ambilRekapAbsensi(
+        Pengguna $pengguna,
         string $tanggal,
         int $tahunPelajaranId,
         ?int $kelasId,
@@ -246,7 +248,7 @@ class RekapAbsensiHarianController extends Controller
         $aturanAlfa = app(AturanAlfaOtomatisSiswaService::class);
         $hariAktif = $aturanAlfa->hariAktif();
 
-        return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($absensiPerAnggota, $absensiPerSiswa, $laporanPerAbsensi, $poinPresensi, $tanggal, $aturanAlfa, $hariAktif) {
+        return $anggotaKelas->map(function (AnggotaKelas $anggota) use ($pengguna, $absensiPerAnggota, $absensiPerSiswa, $laporanPerAbsensi, $poinPresensi, $tanggal, $aturanAlfa, $hariAktif) {
             $absen = $absensiPerAnggota->get($anggota->id) ?? $absensiPerSiswa->get($anggota->siswa_id);
             $alfaOtomatis = ! $absen && $aturanAlfa->menjadiAlfa($tanggal, $hariAktif, $anggota);
             $pengecualian = $aturanAlfa->pengecualianPada($tanggal, $anggota);
@@ -262,48 +264,19 @@ class RekapAbsensiHarianController extends Controller
                 'terlambat' => (int) ($absen?->menit_terlambat ?? 0),
                 'pulang_cepat' => (int) ($absen?->menit_pulang_cepat ?? 0),
                 'belum_pulang' => $statusKehadiran === 'hadir' && $absen?->jam_masuk && ! $absen?->jam_pulang,
+                'akses_koreksi' => $this->koreksiPresensi->evaluasiAkses($pengguna, $anggota, $tanggal, $absen, true),
             ];
         });
     }
 
-    private function ambilAbsensi(string $tanggal, AnggotaKelas $anggotaKelas): ?AbsensiSiswa
-    {
-        return AbsensiSiswa::query()
-            ->whereDate('tanggal', $tanggal)
-            ->where('siswa_id', $anggotaKelas->siswa_id)
-            ->first();
-    }
-
-    private function pastikanBolehAksesAnggotaKelas(Request $request, AnggotaKelas $anggotaKelas): void
-    {
-        abort_unless(
-            $request->user()?->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id) ?? false,
-            403,
-        );
-    }
-
     private function koreksiHariIniTerbatas(Request $request): bool
     {
-        return ($request->user()?->memilikiIzin('absensi.koreksi_hari_ini') ?? false)
-            && ! ($request->user()?->memilikiIzin('absensi.koreksi') ?? false);
+        return $this->koreksiPresensi->koreksiHariIniTerbatas($request->user());
     }
 
     private function pastikanTanggalKoreksiDiizinkan(Request $request, string $tanggal): void
     {
-        abort_if(
-            $this->koreksiHariIniTerbatas($request) && $tanggal !== now()->toDateString(),
-            403,
-            'Guru PL hanya dapat mengoreksi presensi siswa pada hari berjalan.',
-        );
-    }
-
-    private function pastikanCatatanScanTidakDiubah(Request $request, ?AbsensiSiswa $absensi): void
-    {
-        abort_if(
-            $this->koreksiHariIniTerbatas($request) && $absensi?->sumber === 'scan',
-            403,
-            'Catatan hasil scan hanya dapat dikoreksi oleh petugas dengan kewenangan penuh.',
-        );
+        $this->koreksiPresensi->pastikanTanggalDiizinkan($request->user(), $tanggal);
     }
 
     private function ambilPengaturanAbsensi(string $tanggal): ?PengaturanAbsensi

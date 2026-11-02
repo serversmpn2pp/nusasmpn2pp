@@ -60,7 +60,6 @@
             };
         };
         $bolehLihatLaporanPoin = auth()->user()?->memilikiIzin(['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat']) ?? false;
-        $bolehKoreksi = auth()->user()?->memilikiIzin(['absensi.koreksi', 'absensi.koreksi_hari_ini']) ?? false;
     @endphp
 
     <style>
@@ -457,10 +456,10 @@
                                 @if ($bolehKoreksi)
                                     <td data-label="Aksi">
                                         <div class="actions" style="justify-content: flex-end;">
-                                            @if (! ($koreksiHariIniTerbatas ?? false) || $absensi?->sumber !== 'scan')
+                                            @if ($item['akses_koreksi']['dapat'])
                                                 <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
                                             @else
-                                                <span class="badge badge-muted">Hasil scan</span>
+                                                <span class="badge badge-muted" title="{{ $item['akses_koreksi']['alasan'] }}">{{ ($koreksiHariIniTerbatas ?? false) && $absensi?->sumber === 'scan' ? 'Hasil scan' : 'Tidak berwenang' }}</span>
                                             @endif
                                         </div>
                                     </td>
@@ -539,10 +538,10 @@
 
                         @if ($bolehKoreksi)
                             <div class="actions" style="margin-top: 14px;">
-                                @if (! ($koreksiHariIniTerbatas ?? false) || $absensi?->sumber !== 'scan')
+                                @if ($item['akses_koreksi']['dapat'])
                                     <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
                                 @else
-                                    <span class="badge badge-muted">Hasil scan</span>
+                                    <span class="badge badge-muted" title="{{ $item['akses_koreksi']['alasan'] }}">{{ ($koreksiHariIniTerbatas ?? false) && $absensi?->sumber === 'scan' ? 'Hasil scan' : 'Tidak berwenang' }}</span>
                                 @endif
                             </div>
                         @endif
