@@ -111,7 +111,10 @@ class GrafikPresensiAdminService
             ->where('hari', array_keys(PengaturanAbsensi::DAFTAR_HARI)[$hari->isoWeekday() - 1])->first();
         $awal = min($menit($catatan->min('jam')), $jadwal?->jam_scan_masuk_mulai ? $menit($jadwal->jam_scan_masuk_mulai) : 1440);
         $akhir = $hari->hour * 60 + $hari->minute;
-        $batas = range((int) floor($awal / 30) * 30, $akhir, 30);
+        $batas = [];
+        for ($m = (int) floor($awal / 30) * 30; $m <= $akhir; $m += 30) {
+            $batas[] = $m;
+        }
         if (end($batas) !== $akhir) {
             $batas[] = $akhir;
         }

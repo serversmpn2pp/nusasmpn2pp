@@ -22,6 +22,7 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class DashboardAdminTest extends TestCase
@@ -184,6 +185,63 @@ class DashboardAdminTest extends TestCase
         $g = app(StatistikDashboardAdminService::class)->bangun(now(), $tahun)['pegawai'];
         $this->assertSame(1, $g['periods']['day']['summary']['untimed']);
         $this->assertSame(1, end($g['periods']['day']['points'])['present']);
+    }
+
+    public function test_beranda_dapat_dibuka_setelah_scan_pegawai_pertama_pagi_hari(): void
+    {
+        $this->fondasiPegawai();
+        Carbon::setTestNow('2026-10-16 06:40:01');
+
+        $response = $this->actingAs($this->admin())->get(route('beranda'))
+            ->assertOk()->assertViewIs('beranda.admin');
+        $points = $response->viewData('grafikTambahan')['pegawai']['periods']['day']['points'];
+
+        $this->assertSame([
+            ['date' => '06.30', 'present' => 0, 'late' => 0],
+            ['date' => '06.40', 'present' => 1, 'late' => 0],
+        ], $points);
+        $this->assertSame(3, AbsensiPegawai::count(), 'Dashboard tidak mengubah data presensi.');
+    }
+
+    #[DataProvider('rentangKedatanganPagi')]
+    public function test_grafik_kedatangan_pagi_mendukung_rentang_pendek(string $waktu, array $jamMasuk, array $harapan): void
+    {
+        [$tahun, $anggota] = $this->fondasi();
+        Carbon::setTestNow('2026-10-16 '.$waktu);
+        foreach ($jamMasuk as $i => $jam) {
+            $this->catat($anggota[$i], '2026-10-16', 'hadir', ['jam_masuk' => $jam]);
+            $pegawai = Pegawai::create(['nama_lengkap' => 'Pegawai Pagi '.$i, 'aktif' => true]);
+            AbsensiPegawai::create(['pegawai_id' => $pegawai->id, 'tanggal' => '2026-10-16',
+                'status_kehadiran' => 'hadir', 'jam_masuk' => $jam, 'sumber' => 'manual']);
+        }
+
+        $siswa = app(GrafikPresensiAdminService::class)->bangun(now(), $tahun)['day']['points'];
+        $pegawai = app(StatistikDashboardAdminService::class)->bangun(now(), $tahun)['pegawai']['periods']['day']['points'];
+
+        foreach ([$siswa, $pegawai] as $points) {
+            $this->assertCount(count($harapan), $points);
+            $this->assertSame($harapan, array_column($points, 'present', 'date'));
+            $this->assertSame(array_fill(0, count($points), 0), array_column($points, 'late'));
+            if ($points !== []) {
+                $this->assertSame(now()->format('H.i'), end($points)['date']);
+                $this->assertSame(count($jamMasuk), end($points)['present']);
+            }
+        }
+        $this->assertSame(count($jamMasuk), AbsensiSiswa::count());
+        $this->assertSame(count($jamMasuk), AbsensiPegawai::count());
+    }
+
+    public static function rentangKedatanganPagi(): array
+    {
+        return [
+            'belum ada scan' => ['05:29:00', [], []],
+            'scan sebelum jadwal' => ['05:29:30', ['05:29:30'], ['05.00' => 0, '05.29' => 1]],
+            'tepat batas awal' => ['05:30:00', ['05:30:00'], ['05.30' => 1]],
+            'sepuluh menit pertama' => ['05:40:00', ['05:40:00'], ['05.30' => 0, '05.40' => 1]],
+            'dua puluh sembilan menit' => ['05:59:59', ['05:40:00', '05:50:00'], ['05.30' => 0, '05.59' => 2]],
+            'tepat tiga puluh menit' => ['06:00:00', ['05:40:00', '05:50:00'], ['05.30' => 0, '06.00' => 2]],
+            'melewati tiga puluh menit' => ['06:01:00', ['05:40:00', '06:00:00'], ['05.30' => 0, '06.00' => 2, '06.01' => 2]],
+        ];
     }
 
     public function test_grafik_pegawai_mendukung_jadwal_per_jenis_dan_per_pegawai(): void

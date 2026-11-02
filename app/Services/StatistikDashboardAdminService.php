@@ -173,7 +173,10 @@ class StatistikDashboardAdminService
         }
         $menit = fn ($jam) => (int) substr($jam, 0, 2) * 60 + (int) substr($jam, 3, 2);
         $akhir = $hari->hour * 60 + $hari->minute;
-        $batas = range((int) floor($menit($catatan->min('jam')) / 30) * 30, $akhir, 30);
+        $batas = [];
+        for ($m = (int) floor($menit($catatan->min('jam')) / 30) * 30; $m <= $akhir; $m += 30) {
+            $batas[] = $m;
+        }
         if (end($batas) !== $akhir) {
             $batas[] = $akhir;
         }
