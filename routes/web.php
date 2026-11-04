@@ -26,6 +26,7 @@ use App\Http\Controllers\DashboardHumasController;
 use App\Http\Controllers\DashboardSaranaPrasaranaController;
 use App\Http\Controllers\DokumenHumasController;
 use App\Http\Controllers\DokumenPoinSiswaController;
+use App\Http\Controllers\EvaluasiIbadahMingguanController;
 use App\Http\Controllers\ExportHasilUjianCbtController;
 use App\Http\Controllers\FaqHumasController;
 use App\Http\Controllers\FinalisasiHasilUjianTerpusatController;
@@ -311,6 +312,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::delete('perangkat-scan/{perangkat}', [PerangkatScanController::class, 'cabut'])->whereNumber('perangkat')->name('perangkat-scan.cabut');
         });
         require __DIR__.'/supervisi.php';
+        require __DIR__.'/tahfidz.php';
         Route::get('notifikasi', [NotifikasiPenggunaController::class, 'index'])->name('notifikasi.index');
         Route::get('notifikasi/ringkasan', [NotifikasiPenggunaController::class, 'ringkasan'])->name('notifikasi.ringkasan');
         Route::patch('notifikasi/baca-semua', [NotifikasiPenggunaController::class, 'tandaiSemuaDibaca'])->name('notifikasi.baca-semua');
@@ -1311,6 +1313,10 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('rekap-kegiatan-ibadah', [RekapKegiatanIbadahController::class, 'index'])
             ->middleware('izin:ibadah.rekap')
             ->name('rekap-kegiatan-ibadah.index');
+        Route::get('rekap-kegiatan-ibadah/mingguan', EvaluasiIbadahMingguanController::class)
+            ->middleware('izin:ibadah.rekap')->name('rekap-kegiatan-ibadah.mingguan');
+        Route::get('rekap-kegiatan-ibadah/mingguan/cetak', EvaluasiIbadahMingguanController::class)
+            ->middleware('izin:ibadah.rekap')->name('rekap-kegiatan-ibadah.mingguan.cetak');
         Route::get('rekap-kegiatan-ibadah-bulanan', [RingkasanKegiatanIbadahBulananController::class, 'index'])
             ->middleware('izin:ibadah.rekap')
             ->name('rekap-kegiatan-ibadah.bulanan');

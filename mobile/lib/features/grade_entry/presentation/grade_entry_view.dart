@@ -30,6 +30,7 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
   String? _autoSaveError;
   DateTime? _lastAutoSavedAt;
   String? _lastSaveMessage;
+  GradePublication? _savedPublication;
 
   @override
   void dispose() {
@@ -180,10 +181,11 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
           GradeEntrySummaryCard(summary: page.summary),
           const SizedBox(height: 10),
           GradePublicationCard(
-            publication: page.publication,
-            enabled: !_mutating,
+            publication: page.selectedComponent == null
+                ? page.publication
+                : _savedPublication ?? page.publication,
+            enabled: page.canInput && !_mutating && !_autoSaving,
             dirty: _dirty,
-            canPublishOverride: _draftComplete(page),
             onPublish: () => _changePublication(page, publish: true),
             onUnpublish: () => _changePublication(page, publish: false),
           ),
@@ -256,6 +258,7 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
   void _synchronizeDraft(GradeEntryPage page) {
     if (_loadedComponentId == page.filter.componentId) return;
     _loadedComponentId = page.filter.componentId;
+    _savedPublication = null;
     _scores
       ..clear()
       ..addEntries(
@@ -352,7 +355,8 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
             content: Text(
               publish
                   ? 'Nilai semester ${page.filter.semester} akan dapat dilihat '
-                        'oleh siswa dan notifikasi akan dikirim.'
+                        'oleh siswa. Nilai kosong tampil sebagai "-". '
+                        'Notifikasi hanya dikirim untuk siswa yang memiliki nilai.'
                   : 'Nilai tidak lagi dapat dilihat siswa sampai dipublikasikan kembali.',
             ),
             actions: [
@@ -482,6 +486,7 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
       _lastSaveMessage = message;
       if (mounted) {
         setState(() {
+          _savedPublication = _publicationAfterSave(page, form);
           if (revision == _draftRevision) _dirty = false;
           _lastAutoSavedAt = DateTime.now();
           _autoSaveError = null;
@@ -539,17 +544,28 @@ class _GradeEntryViewState extends ConsumerState<GradeEntryView> {
     );
   }
 
-  bool _draftComplete(GradeEntryPage page) =>
-      page.students.isNotEmpty &&
-      page.students.every((student) {
-        if (page.usesPredicate) {
-          return (_predicates[student.studentId] ?? '').trim().isNotEmpty;
-        }
-        final value = double.tryParse(
-          (_scores[student.studentId] ?? '').trim().replaceAll(',', '.'),
-        );
-        return value != null && value >= 0 && value <= 100;
-      });
+  GradePublication _publicationAfterSave(
+    GradeEntryPage page,
+    GradeEntryFormValue form,
+  ) {
+    final publication = page.publication;
+    final filled = page.usesPredicate
+        ? form.predicates.values.whereType<String>().length
+        : form.scores.values.whereType<double>().length;
+    // Autosave replaces only the selected component; other components still count.
+    final total = (publication.valueCount - page.summary.filledCount + filled)
+        .clamp(0, publication.targetCount)
+        .toInt();
+    return GradePublication(
+      status: 'draf',
+      published: false,
+      componentCount: publication.componentCount,
+      valueCount: total,
+      targetCount: publication.targetCount,
+      canPublish: total > 0,
+      canUnpublish: false,
+    );
+  }
 
   Future<void> _runMutation(Future<String> Function() operation) async {
     setState(() => _mutating = true);

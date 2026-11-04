@@ -139,6 +139,8 @@ class RekapKegiatanIbadahController extends Controller
                 ->first()
             : null;
 
+        $cakupanMingguan = $akses->cakupanKelasEvaluasiMingguan($request->user(), $tahunPelajaran);
+
         return view('rekap-kegiatan-ibadah.index', [
             'tanggal' => $tanggalString,
             'tanggalLabel' => $tanggal->locale('id')->translatedFormat('l, d F Y'),
@@ -159,6 +161,8 @@ class RekapKegiatanIbadahController extends Controller
             'jadwal' => $jadwal,
             'dapatScanSekarang' => $tanggal->isToday() && $akses->dapatMemindai($request->user(), $tahunPelajaran, now()),
             'dapatKoreksi' => $akses->dapatMengoreksi($request->user(), $tahunPelajaran, $tanggal),
+            'dapatEvaluasiMingguan' => $cakupanMingguan !== [],
+            'kelasEvaluasiMingguanId' => $cakupanMingguan === null || in_array($kelasId, $cakupanMingguan, true) ? $kelasId : null,
         ]);
     }
 

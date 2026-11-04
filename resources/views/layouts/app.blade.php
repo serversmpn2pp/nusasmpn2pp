@@ -1955,7 +1955,7 @@
                         ['label' => 'Scan Berhalangan', 'route' => 'scan-berhalangan-ibadah.index', 'active' => ['scan-berhalangan-ibadah.*'], 'initial' => 'SB', 'izin' => null, 'blank' => true, 'scan_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Konfirmasi Privat', 'route' => 'konfirmasi-berhalangan-ibadah.index', 'active' => ['konfirmasi-berhalangan-ibadah.*'], 'initial' => 'KP', 'izin' => null, 'konfirmasi_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Rekap Berhalangan', 'route' => 'rekap-berhalangan-ibadah.index', 'active' => ['rekap-berhalangan-ibadah.*'], 'initial' => 'RB', 'izin' => null, 'konfirmasi_berhalangan_only' => true, 'subgroup' => 'Ibadah Siswa'],
-                        ['label' => 'Rekap Ibadah Siswa', 'route' => 'rekap-kegiatan-ibadah.index', 'active' => ['rekap-kegiatan-ibadah.index', 'rekap-kegiatan-ibadah.koreksi.*'], 'initial' => 'RI', 'izin' => 'ibadah.rekap', 'subgroup' => 'Ibadah Siswa'],
+                        ['label' => 'Rekap Ibadah Siswa', 'route' => 'rekap-kegiatan-ibadah.index', 'active' => ['rekap-kegiatan-ibadah.index', 'rekap-kegiatan-ibadah.koreksi.*', 'rekap-kegiatan-ibadah.mingguan*'], 'initial' => 'RI', 'izin' => 'ibadah.rekap', 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Ringkasan Ibadah Bulanan', 'route' => 'rekap-kegiatan-ibadah.bulanan', 'active' => ['rekap-kegiatan-ibadah.bulanan'], 'initial' => 'BI', 'izin' => 'ibadah.rekap', 'subgroup' => 'Ibadah Siswa'],
                         ['label' => 'Pengaturan Presensi Siswa', 'route' => 'pengaturan-absensi.index', 'active' => ['pengaturan-absensi.*'], 'initial' => 'PA', 'izin' => 'absensi.pengaturan_kelola', 'subgroup' => 'Presensi Siswa'],
                         ['label' => 'Scan Presensi Siswa', 'route' => 'scan-absensi.index', 'active' => ['scan-absensi.*'], 'initial' => 'SS', 'izin' => 'absensi.scan', 'blank' => true, 'subgroup' => 'Presensi Siswa'],
@@ -2093,7 +2093,7 @@
                         ['label' => 'Scan Berhalangan', 'route' => 'scan-berhalangan-ibadah.index', 'active' => ['scan-berhalangan-ibadah.*'], 'initial' => 'SB', 'izin' => null, 'blank' => true, 'scan_berhalangan_only' => true],
                         ['label' => 'Konfirmasi Privat', 'route' => 'konfirmasi-berhalangan-ibadah.index', 'active' => ['konfirmasi-berhalangan-ibadah.*'], 'initial' => 'KP', 'izin' => null, 'konfirmasi_berhalangan_only' => true],
                         ['label' => 'Rekap Berhalangan', 'route' => 'rekap-berhalangan-ibadah.index', 'active' => ['rekap-berhalangan-ibadah.*'], 'initial' => 'RB', 'izin' => null, 'konfirmasi_berhalangan_only' => true],
-                        ['label' => 'Rekap Ibadah Siswa', 'route' => 'rekap-kegiatan-ibadah.index', 'active' => ['rekap-kegiatan-ibadah.index', 'rekap-kegiatan-ibadah.koreksi.*'], 'initial' => 'RI', 'izin' => 'ibadah.rekap', 'rekap_ibadah_only' => true],
+                        ['label' => 'Rekap Ibadah Siswa', 'route' => 'rekap-kegiatan-ibadah.index', 'active' => ['rekap-kegiatan-ibadah.index', 'rekap-kegiatan-ibadah.koreksi.*', 'rekap-kegiatan-ibadah.mingguan*'], 'initial' => 'RI', 'izin' => 'ibadah.rekap', 'rekap_ibadah_only' => true],
                         ['label' => 'Ringkasan Ibadah Bulanan', 'route' => 'rekap-kegiatan-ibadah.bulanan', 'active' => ['rekap-kegiatan-ibadah.bulanan'], 'initial' => 'BI', 'izin' => 'ibadah.rekap', 'ringkasan_ibadah_only' => true],
                     ],
                 ],
@@ -2204,6 +2204,7 @@
                         ['label' => 'Aspirasi & Pengaduan Saya', 'route' => 'pengaduan-saya.index', 'active' => ['pengaduan-saya.*'], 'initial' => 'AD', 'izin' => null],
                         ['label' => 'Akademik Anak', 'route' => 'akademik-anak.index', 'active' => ['akademik-anak.*'], 'initial' => 'AA', 'izin' => null],
                         ['label' => 'Rapor STS Anak Saya', 'route' => 'rapor-sts-saya.index', 'active' => ['rapor-sts-saya.*'], 'initial' => 'RA', 'izin' => null],
+                        ['label' => 'Tahfidz', 'route' => 'tahfidz-anak.index', 'active' => ['tahfidz-anak.*'], 'initial' => 'TH', 'icon' => 'book-open', 'izin' => null],
                         ['label' => 'Pembinaan & Poin', 'route' => 'pembinaan-poin-anak.index', 'active' => ['pembinaan-poin-anak.*'], 'initial' => 'PP', 'izin' => null],
                     ],
                 ],
@@ -2233,6 +2234,23 @@
                     $semuaSidebarSections[$akademik]['items'] = array_merge($semuaSidebarSections[$akademik]['items'], $menuSupervisi);
                 } else {
                     $semuaSidebarSections[] = ['id' => 'supervisi', 'title' => 'Supervisi Akademik', 'items' => $menuSupervisi];
+                }
+            }
+
+            if ($penggunaAktif && ! $pakaiSidebarSiswa && ! $pakaiSidebarOrangTua
+                && app(\App\Services\Tahfidz\AksesTahfidz::class)->lihat($penggunaAktif)) {
+                $menuTahfidz = [
+                    ['label' => 'Tahfidz', 'route' => 'tahfidz.index',
+                        'active' => ['tahfidz.index', 'tahfidz.show', 'tahfidz.create', 'tahfidz.edit', 'tahfidz.surah', 'tahfidz.anggota.*', 'tahfidz.pertemuan.*', 'tahfidz.rekap.*', 'tahfidz.wisuda.*'],
+                        'initial' => 'TH', 'icon' => 'book-open', 'izin' => null, 'subgroup' => 'Penilaian'],
+                    ['label' => 'Rapor Tahfidz', 'route' => 'tahfidz.rapor.index', 'active' => ['tahfidz.rapor.*'],
+                        'initial' => 'RT', 'icon' => 'file-text', 'izin' => null, 'subgroup' => 'Penilaian'],
+                ];
+                $bagianAkademik = array_search('akademik', array_column($semuaSidebarSections, 'id'), true);
+                if ($bagianAkademik !== false) {
+                    $semuaSidebarSections[$bagianAkademik]['items'] = [...$semuaSidebarSections[$bagianAkademik]['items'], ...$menuTahfidz];
+                } else {
+                    $semuaSidebarSections[] = ['id' => 'akademik', 'title' => 'Akademik', 'items' => $menuTahfidz];
                 }
             }
 

@@ -373,6 +373,11 @@ class PublikasiNilaiSiswaTest extends TestCase
                 $data['guru_mapel']->id,
             ))
             ->delete();
+        NilaiSiswa::create([
+            'komponen_nilai_id' => $data['komponen']['formatif']->id,
+            'siswa_id' => $data['siswa']->id,
+            'catatan' => 'Belum mengumpulkan tugas',
+        ]);
 
         $this->actingAs($data['akun_guru'])
             ->from(route('input-nilai.index', [
@@ -391,6 +396,42 @@ class PublikasiNilaiSiswaTest extends TestCase
             'semester' => 'ganjil',
             'dipublikasikan' => true,
         ]);
+        $this->assertDatabaseCount('notifikasi_pengguna', 0);
+    }
+
+    public function test_publikasi_parsial_menampilkan_nilai_kosong_dan_hanya_memberi_notifikasi_kepada_yang_bernilai(): void
+    {
+        $data = $this->dataDasar();
+        $wali = $this->buatAkunOrangTua($data['siswa']);
+        $waliTanpaNilai = $this->buatAkunOrangTua($data['siswa_lain']);
+        NilaiSiswa::whereIn('komponen_nilai_id', $data['komponen']->pluck('id'))->delete();
+        $komponen = $data['komponen']['formatif'];
+        $this->actingAs($data['akun_guru'])->post(route('input-nilai.store'), [
+            'komponen_nilai_id' => $komponen->id,
+            'nilai' => [$data['siswa']->id => '0'],
+            'catatan' => [$data['siswa_lain']->id => 'Belum mengumpulkan tugas'],
+        ])->assertSessionHasNoErrors();
+
+        $this->get(route('input-nilai.index', ['komponen_nilai_id' => $data['komponen']['sumatif']->id]))
+            ->assertOk()->assertViewHas('jumlahNilaiPublikasi', 1)->assertViewHas('targetNilaiPublikasi', 8)
+            ->assertSeeText('Nilai siap dipublikasikan.');
+        $this->patch(route('publikasi-nilai.publikasikan', [$data['guru_mapel'], 'ganjil']), [
+            'komponen_nilai_id' => $data['komponen']['sumatif']->id,
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('notifikasi_pengguna', 2);
+        foreach ([$data['akun_siswa'], $wali] as $akun) {
+            $this->assertDatabaseHas('notifikasi_pengguna', ['pengguna_id' => $akun->id]);
+        }
+        foreach ([$data['akun_siswa_lain'], $waliTanpaNilai] as $akun) {
+            $this->assertDatabaseMissing('notifikasi_pengguna', ['pengguna_id' => $akun->id]);
+        }
+
+        $this->buatSurvei($data['guru_mapel'], $data['siswa']);
+        $siswa = $this->actingAs($data['akun_siswa'])->get(route('nilai-saya.index', ['semester' => 'ganjil']))->assertOk();
+        $this->assertMatchesRegularExpression('/Sumatif 1<\/strong>\s*<\/div>\s*<span class="my-grade-value">\s*-\s*<\/span>/', $siswa->getContent());
+        $siswa->assertSeeText('0,00')->assertSeeText('Nilai akhir belum tersedia');
+        $this->actingAs($wali)->get(route('akademik-anak.index', ['tab' => 'nilai', 'semester' => 'ganjil']))
+            ->assertOk()->assertSeeInOrder(['<strong>Sumatif 1</strong>', '<b>-</b>'], false);
     }
 
     public function test_guru_mendapat_notifikasi_satu_kali_saat_survei_mencapai_lima_responden(): void

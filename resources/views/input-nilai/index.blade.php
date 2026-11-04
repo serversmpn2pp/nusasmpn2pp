@@ -358,8 +358,10 @@
                         </p>
                         @if ($sudahDipublikasikan)
                             <p>Dirilis {{ $publikasiNilai->dipublikasikan_pada?->locale('id')->translatedFormat('d F Y, H:i') }}.</p>
-                        @else
-                            <p>Nilai belum dapat dilihat siswa. Simpan perubahan terlebih dahulu sebelum mempublikasikan.</p>
+                        @elseif ($jumlahNilaiPublikasi === 0)
+                            <p>Isi dan simpan minimal satu nilai untuk memublikasikan mapel ini.</p>
+                        @elseif ($jumlahNilaiPublikasi < $targetNilaiPublikasi)
+                            <p>Nilai siap dipublikasikan. Entri yang belum terisi akan tampil sebagai &quot;-&quot;.</p>
                         @endif
                     </div>
                     @if ($sudahDipublikasikan)

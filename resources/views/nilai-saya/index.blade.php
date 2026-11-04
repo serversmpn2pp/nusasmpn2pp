@@ -69,7 +69,7 @@
             'B' => 'B - Baik',
             'C' => 'C - Cukup',
             'K' => 'K - Kurang',
-            default => 'Belum dinilai',
+            default => '-',
         };
         $labelKategori = [
             'formatif' => 'Formatif',

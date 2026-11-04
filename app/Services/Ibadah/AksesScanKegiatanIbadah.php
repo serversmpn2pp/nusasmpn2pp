@@ -157,6 +157,25 @@ class AksesScanKegiatanIbadah
             ->exists();
     }
 
+    /** @return array<int, int>|null Null untuk akses seluruh kelas, array kosong untuk tanpa akses. */
+    public function cakupanKelasEvaluasiMingguan(Pengguna $pengguna, ?TahunPelajaran $tahunPelajaran): ?array
+    {
+        if (! $pengguna->aktif || ! $pengguna->memilikiIzin('ibadah.rekap') || $pengguna->akunSiswa() || $pengguna->akunOrangTua()) {
+            return [];
+        }
+
+        if ($pengguna->administrator() || $pengguna->memilikiPeran('wakil_pimpinan_kesiswaan')) {
+            return null;
+        }
+
+        if (! $pengguna->pegawai_id || ! $tahunPelajaran) {
+            return [];
+        }
+
+        return $this->guruPendidikanAgamaIslam($pengguna, $tahunPelajaran)
+            ? null : $this->kelasWaliAktif($pengguna, $tahunPelajaran);
+    }
+
     /**
      * Null berarti pengguna dapat melihat seluruh kelas. Array hanya berisi kelas
      * yang boleh dibuka oleh wali kelas pada tahun pelajaran tersebut.

@@ -53,6 +53,57 @@ void main() {
     expect(find.text('Sudah dipublikasikan'), findsOneWidget);
   });
 
+  for (final hasOtherGrade in [false, true]) {
+    testWidgets(
+      'publikasi setelah autosave nilai kosong atau nol ($hasOtherGrade)',
+      (tester) async {
+        final remote = _FakeGradeEntryRemoteDataSource(
+          otherComponentValueCount: hasOtherGrade ? 1 : 0,
+        )..savedScore = null;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              gradeEntryRemoteDataSourceProvider.overrideWithValue(remote),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light,
+              home: const GradeEntryView(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final publish = find.byKey(const Key('publish-grades'));
+        final score = find.byKey(const Key('grade-score-101'));
+        Future<void> checkPublish(bool enabled) async {
+          await tester.scrollUntilVisible(
+            publish,
+            -300,
+            scrollable: find.byType(Scrollable).last,
+          );
+          expect(
+            tester.widget<FilledButton>(publish).onPressed != null,
+            enabled,
+          );
+        }
+
+        await checkPublish(hasOtherGrade);
+        for (final value in ['0', '']) {
+          await tester.scrollUntilVisible(
+            score,
+            300,
+            scrollable: find.byType(Scrollable).last,
+          );
+          await tester.enterText(score, value);
+          await tester.pump(const Duration(milliseconds: 901));
+          await tester.pumpAndSettle();
+          expect(remote.savedScore, value.isEmpty ? null : 0);
+          await checkPublish(value.isNotEmpty || hasOtherGrade);
+        }
+        expect(remote.saveCalls, 2);
+      },
+    );
+  }
+
   testWidgets('input nilai predikat menampilkan pilihan yang sesuai', (
     tester,
   ) async {
@@ -192,9 +243,13 @@ void main() {
 
 final class _FakeGradeEntryRemoteDataSource
     implements GradeEntryRemoteDataSource {
-  _FakeGradeEntryRemoteDataSource({this.predicateMode = false});
+  _FakeGradeEntryRemoteDataSource({
+    this.predicateMode = false,
+    this.otherComponentValueCount = 0,
+  });
 
   final bool predicateMode;
+  final int otherComponentValueCount;
   double? savedScore = 80;
   String? savedPredicate;
   String? savedNotes;
@@ -235,8 +290,8 @@ final class _FakeGradeEntryRemoteDataSource
           employeeNip: '198808242026081001',
         ),
       ],
-      components: const [
-        GradeEntryComponent(
+      components: [
+        const GradeEntryComponent(
           id: 601,
           assignmentId: 91,
           semester: 'ganjil',
@@ -245,6 +300,16 @@ final class _FakeGradeEntryRemoteDataSource
           name: 'Kuis Aljabar Mobile',
           order: 1,
         ),
+        if (otherComponentValueCount > 0)
+          const GradeEntryComponent(
+            id: 602,
+            assignmentId: 91,
+            semester: 'ganjil',
+            type: 'sumatif',
+            typeLabel: 'Sumatif',
+            name: 'Sumatif Mobile',
+            order: 2,
+          ),
       ],
       selectedComponent: const GradeEntryComponent(
         id: 601,
@@ -267,11 +332,17 @@ final class _FakeGradeEntryRemoteDataSource
           predicate: predicateMode ? savedPredicate : null,
           notes: savedNotes,
         ),
+        const GradeEntryStudent(
+          membershipId: 302,
+          attendanceNumber: 2,
+          studentId: 102,
+          name: 'Bima Nilai Mobile',
+        ),
       ],
       summary: GradeEntrySummary(
-        studentCount: 1,
+        studentCount: 2,
         filledCount: hasValue ? 1 : 0,
-        emptyCount: hasValue ? 0 : 1,
+        emptyCount: hasValue ? 1 : 2,
         average: predicateMode ? null : savedScore,
       ),
       publication: GradePublication(
@@ -279,10 +350,10 @@ final class _FakeGradeEntryRemoteDataSource
         published: published,
         publishedAt: published ? '2026-08-27T08:00:00+07:00' : null,
         publishedAtLabel: published ? '27-08-2026 08:00 WIB' : null,
-        componentCount: 1,
-        valueCount: hasValue ? 1 : 0,
-        targetCount: 1,
-        canPublish: hasValue,
+        componentCount: otherComponentValueCount > 0 ? 2 : 1,
+        valueCount: (hasValue ? 1 : 0) + otherComponentValueCount,
+        targetCount: otherComponentValueCount > 0 ? 4 : 2,
+        canPublish: hasValue || otherComponentValueCount > 0,
         canUnpublish: published,
       ),
       filter: GradeEntryFilter(

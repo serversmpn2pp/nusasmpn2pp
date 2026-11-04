@@ -134,6 +134,41 @@ class InputNilaiApiTest extends TestCase
         $this->assertFalse($publikasi->fresh()->dipublikasikan);
     }
 
+    public function test_publikasi_memerlukan_satu_nilai_anggota_aktif_pada_semester_yang_sama(): void
+    {
+        $data = $this->dataAkademik();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->withToken($this->token($administrator));
+        $lain = $this->buatSiswa('Siswa di Luar Kelas', '20260073', '0011223373');
+        $genap = $this->buatKomponen($data['penugasan'], 'genap', 'formatif', 'Kuis Genap');
+        $nonaktif = $this->buatKomponen($data['penugasan'], 'ganjil', 'sumatif', 'Kuis Diarsipkan');
+        $nonaktif->update(['aktif' => false]);
+        foreach ([[$data['komponen'], $lain], [$genap, $data['siswa_1']], [$nonaktif, $data['siswa_1']]] as [$komponen, $siswa]) {
+            NilaiSiswa::create(['komponen_nilai_id' => $komponen->id, 'siswa_id' => $siswa->id, 'nilai' => 90]);
+        }
+        $sumatif = $this->buatKomponen($data['penugasan'], 'ganjil', 'sumatif', 'Sumatif Ganjil');
+        $publikasi = route('api.v1.input-nilai.publikasikan', [$data['penugasan'], 'ganjil']);
+        $index = route('api.v1.input-nilai.index', [
+            'guru_mata_pelajaran_id' => $data['penugasan']->id,
+            'semester' => 'ganjil',
+            'komponen_nilai_id' => $data['komponen']->id,
+        ]);
+        $this->getJson($index)->assertOk()->assertJsonPath('data.publikasi.dapat_dipublikasikan', false);
+        $this->patchJson($publikasi)->assertUnprocessable()->assertJsonValidationErrors('publikasi');
+
+        $this->postJson(route('api.v1.input-nilai.store'), [
+            'komponen_nilai_id' => $sumatif->id,
+            'nilai' => [$data['siswa_1']->id => 0],
+        ])->assertOk();
+        $this->getJson($index)->assertOk()
+            ->assertJsonPath('data.ringkasan.jumlah_terisi', 0)
+            ->assertJsonPath('data.siswa.0.nilai', null)
+            ->assertJsonPath('data.publikasi.jumlah_nilai', 1)
+            ->assertJsonPath('data.publikasi.target_nilai', 4)
+            ->assertJsonPath('data.publikasi.dapat_dipublikasikan', true);
+        $this->patchJson($publikasi)->assertOk()->assertJsonPath('data.dipublikasikan', true);
+    }
+
     public function test_predikat_divalidasi_dan_guru_hanya_dapat_mengakses_penugasan_sendiri(): void
     {
         $data = $this->dataAkademik();

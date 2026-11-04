@@ -2,25 +2,54 @@
 
 namespace App\Services\Nilai;
 
+use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
-use App\Models\KomponenNilai;
 use App\Models\NilaiSiswa;
 use App\Models\PublikasiNilaiSiswa;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PublikasiNilaiService
 {
     public function __construct(private NotifikasiPenggunaService $notifikasi) {}
 
+    public function komponenAktif(GuruMataPelajaran $penugasan, string $semester): HasMany
+    {
+        return $penugasan->komponenNilai()->where('semester', $semester)->where('aktif', true);
+    }
+
+    public function nilaiTerisi(GuruMataPelajaran $penugasan, string $semester): Builder
+    {
+        return NilaiSiswa::query()
+            ->whereIn('komponen_nilai_id', $this->komponenAktif($penugasan, $semester)->select('id')->getQuery())
+            ->whereIn('siswa_id', AnggotaKelas::query()->select('siswa_id')
+                ->where('kelas_id', $penugasan->kelas_id)
+                ->where('tahun_pelajaran_id', $penugasan->tahun_pelajaran_id)
+                ->where('status_keanggotaan', 'aktif'))
+            ->where(fn (Builder $query) => $query->whereNotNull('nilai')->orWhereNotNull('predikat'));
+    }
+
     public function publikasikan(
-        int $guruMataPelajaranId,
+        GuruMataPelajaran $penugasan,
         string $semester,
         ?int $penggunaId,
     ): PublikasiNilaiSiswa {
-        return DB::transaction(function () use ($guruMataPelajaranId, $semester, $penggunaId) {
+        return DB::transaction(function () use ($penugasan, $semester, $penggunaId) {
+            if (! $this->komponenAktif($penugasan, $semester)->exists()) {
+                throw ValidationException::withMessages(['publikasi' => 'Belum ada komponen nilai aktif untuk semester ini.']);
+            }
+
+            $siswaIds = $this->nilaiTerisi($penugasan, $semester)->distinct()->pluck('siswa_id');
+            if ($siswaIds->isEmpty()) {
+                throw ValidationException::withMessages(['publikasi' => 'Isi dan simpan minimal satu nilai siswa sebelum mempublikasikan.']);
+            }
+
             $publikasi = PublikasiNilaiSiswa::query()->firstOrNew([
-                'guru_mata_pelajaran_id' => $guruMataPelajaranId,
+                'guru_mata_pelajaran_id' => $penugasan->id,
                 'semester' => $semester,
             ]);
             $baruDipublikasikan = ! $publikasi->exists || ! $publikasi->dipublikasikan;
@@ -34,7 +63,7 @@ class PublikasiNilaiService
             ])->save();
 
             if ($baruDipublikasikan) {
-                $this->kirimNotifikasiNilaiDipublikasikan($publikasi);
+                $this->kirimNotifikasiNilaiDipublikasikan($publikasi, $penugasan, $siswaIds);
             }
 
             return $publikasi;
@@ -77,28 +106,13 @@ class PublikasiNilaiService
             ]);
     }
 
-    private function kirimNotifikasiNilaiDipublikasikan(PublikasiNilaiSiswa $publikasi): void
+    private function kirimNotifikasiNilaiDipublikasikan(
+        PublikasiNilaiSiswa $publikasi,
+        GuruMataPelajaran $penugasan,
+        Collection $siswaIds,
+    ): void
     {
-        $penugasan = GuruMataPelajaran::query()
-            ->with(['mataPelajaran:id,nama', 'kelas:id,nama'])
-            ->find($publikasi->guru_mata_pelajaran_id);
-
-        if (! $penugasan) {
-            return;
-        }
-
-        $komponenIds = KomponenNilai::query()
-            ->where('guru_mata_pelajaran_id', $penugasan->id)
-            ->where('semester', $publikasi->semester)
-            ->where('aktif', true)
-            ->pluck('id');
-        $siswaIds = NilaiSiswa::query()
-            ->whereIn('komponen_nilai_id', $komponenIds)
-            ->where(function ($query) {
-                $query->whereNotNull('nilai')->orWhereNotNull('predikat');
-            })
-            ->distinct()
-            ->pluck('siswa_id');
+        $penugasan->loadMissing(['mataPelajaran:id,nama', 'kelas:id,nama']);
         $namaMataPelajaran = $penugasan->mataPelajaran?->nama ?? 'mata pelajaran';
         $namaKelas = $penugasan->kelas?->nama ?? 'kelas Anda';
         $labelSemester = ucfirst($publikasi->semester);

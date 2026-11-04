@@ -679,8 +679,8 @@ class _GradeComponentRow extends StatelessWidget {
       const SizedBox(width: 8),
       Text(
         usesPredicate
-            ? component.predicateLabel ?? 'Belum dinilai'
-            : formatGrade(component.score),
+            ? component.predicateLabel ?? '-'
+            : (component.score == null ? '-' : formatGrade(component.score)),
         textAlign: TextAlign.right,
         style: const TextStyle(
           color: NusaColors.primary,

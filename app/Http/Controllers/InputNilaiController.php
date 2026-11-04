@@ -9,6 +9,7 @@ use App\Models\NilaiSiswa;
 use App\Models\PublikasiNilaiSiswa;
 use App\Models\TahunPelajaran;
 use App\Services\Nilai\InputNilaiService;
+use App\Services\Nilai\PublikasiNilaiService;
 use App\Services\Nilai\StsManualService;
 use App\Support\FilterInputNilai;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class InputNilaiController extends Controller
 {
     public function __construct(private InputNilaiService $inputNilai) {}
 
-    public function index(Request $request)
+    public function index(Request $request, PublikasiNilaiService $layananPublikasi)
     {
         $request->validate(['komponen_nilai_id' => ['nullable', 'integer', 'min:1']]);
         $komponenNilaiId = old('komponen_nilai_id', $request->input('komponen_nilai_id'));
@@ -74,25 +75,14 @@ class InputNilaiController extends Controller
                     ->keyBy('siswa_id');
             }
 
-            $guruMataPelajaranId = $komponenDipilih->guru_mata_pelajaran_id;
+            $penugasanDipilih = $komponenDipilih->guruMataPelajaran;
             $semester = $komponenDipilih->semester;
             $publikasiNilai = PublikasiNilaiSiswa::query()
-                ->where('guru_mata_pelajaran_id', $guruMataPelajaranId)
+                ->where('guru_mata_pelajaran_id', $penugasanDipilih->id)
                 ->where('semester', $semester)
                 ->first();
-            $komponenSemesterIds = KomponenNilai::query()
-                ->where('guru_mata_pelajaran_id', $guruMataPelajaranId)
-                ->where('semester', $semester)
-                ->where('aktif', true)
-                ->pluck('id');
-            $jumlahKomponenPublikasi = $komponenSemesterIds->count();
-            $jumlahNilaiPublikasi = NilaiSiswa::query()
-                ->whereIn('komponen_nilai_id', $komponenSemesterIds)
-                ->whereIn('siswa_id', $anggotaKelas->pluck('siswa_id'))
-                ->where(function ($query) {
-                    $query->whereNotNull('nilai')->orWhereNotNull('predikat');
-                })
-                ->count();
+            $jumlahKomponenPublikasi = $layananPublikasi->komponenAktif($penugasanDipilih, $semester)->count();
+            $jumlahNilaiPublikasi = $layananPublikasi->nilaiTerisi($penugasanDipilih, $semester)->count();
             $targetNilaiPublikasi = $jumlahKomponenPublikasi * $anggotaKelas->count();
         }
 

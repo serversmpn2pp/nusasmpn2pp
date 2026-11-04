@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KegiatanIbadah extends Model
 {
+    public const KODE_SHOLAT_DUHUR = 'sholat_duhur';
+
     public const KODE_SHOLAT_JUMAT = 'sholat_jumat';
 
     protected $table = 'kegiatan_ibadah';

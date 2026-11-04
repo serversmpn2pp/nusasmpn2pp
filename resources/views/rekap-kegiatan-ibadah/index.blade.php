@@ -28,6 +28,9 @@
             <p class="page-subtitle">Pantau siswa yang sudah salat, belum salat, berhalangan, tidak wajib, atau tidak hadir berdasarkan kelas.</p>
         </div>
         <div class="actions">
+            @if ($dapatEvaluasiMingguan)
+                <a href="{{ route('rekap-kegiatan-ibadah.mingguan', ['tanggal' => $tanggal, 'kelas_id' => $kelasEvaluasiMingguanId]) }}" class="button button-muted"><i data-lucide="calendar-range" aria-hidden="true"></i> Evaluasi mingguan</a>
+            @endif
             <a href="{{ route('rekap-kegiatan-ibadah.bulanan') }}" class="button button-muted">Ringkasan bulanan</a>
             @if($dapatScanSekarang)
                 <a href="{{ route('scan-kegiatan-ibadah.index') }}" target="_blank" rel="noopener" class="button button-primary">Buka scanner</a>

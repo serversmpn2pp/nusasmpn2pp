@@ -43,6 +43,13 @@ void main() {
     expect(find.text('80'), findsWidgets);
 
     await tester.scrollUntilVisible(
+      find.text('Sumatif Belum Terisi'),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('-'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
       find.byKey(const Key('my-grade-subject-92')),
       300,
       scrollable: find.byType(Scrollable).last,
@@ -181,6 +188,12 @@ final class _FakeMyGradesRemoteDataSource implements MyGradesRemoteDataSource {
               dateLabel: '20 Agustus 2026',
               score: 80,
               notes: 'Pertahankan hasil belajar.',
+            ),
+            MyGradeComponent(
+              id: 602,
+              name: 'Sumatif Belum Terisi',
+              type: 'sumatif',
+              typeLabel: 'Sumatif',
             ),
           ],
         ),

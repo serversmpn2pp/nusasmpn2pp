@@ -12,6 +12,7 @@ use App\Models\KegiatanIbadah;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\Pegawai;
+use App\Models\PengecualianPresensiSiswa;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\PeriodeBerhalanganIbadah;
@@ -22,6 +23,8 @@ use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class RekapKegiatanIbadahTest extends TestCase
@@ -323,7 +326,9 @@ class RekapKegiatanIbadahTest extends TestCase
 
         $this->actingAs($guruPai['akun'])
             ->get(route('rekap-kegiatan-ibadah.index', ['tanggal' => '2026-08-13']))
-            ->assertOk();
+            ->assertOk()->assertSeeText('Evaluasi mingguan');
+        $this->get(route('rekap-kegiatan-ibadah.mingguan'))->assertOk();
+        $this->get(route('rekap-kegiatan-ibadah.mingguan.cetak'))->assertOk();
         $this->get(route('rekap-kegiatan-ibadah.bulanan', ['bulan' => '2026-08']))
             ->assertOk();
         $this->get(route('rekap-kegiatan-ibadah.koreksi.edit', [
@@ -352,7 +357,8 @@ class RekapKegiatanIbadahTest extends TestCase
 
         $this->actingAs($guruPiket['akun'])
             ->get(route('rekap-kegiatan-ibadah.index', ['tanggal' => '2026-08-13']))
-            ->assertOk();
+            ->assertOk()->assertDontSeeText('Evaluasi mingguan');
+        $this->get(route('rekap-kegiatan-ibadah.mingguan.cetak'))->assertForbidden();
         $this->get(route('rekap-kegiatan-ibadah.bulanan', ['bulan' => '2026-08']))
             ->assertOk();
         $this->get(route('rekap-kegiatan-ibadah.koreksi.edit', [
@@ -420,6 +426,78 @@ class RekapKegiatanIbadahTest extends TestCase
             'tanggal' => '2026-08-13',
             'kegiatan_ibadah_id' => $data['kegiatan']->id,
         ]))->assertForbidden();
+
+        $this->get(route('rekap-kegiatan-ibadah.mingguan.cetak', ['kelas_id' => $data['kelas_b']->id]))->assertForbidden();
+        $this->get(route('rekap-kegiatan-ibadah.mingguan', ['tanggal' => '2026-08-13']))->assertOk()
+            ->assertViewHas('daftarKelas', fn ($kelas) => $kelas->pluck('id')->all() === [$data['kelas_a']->id]);
+    }
+
+    public function test_evaluasi_mingguan_mencetak_siswa_hadir_yang_belum_tercatat_pada_sesi_selesai(): void
+    {
+        Carbon::setTestNow('2026-08-14 13:00:59');
+        $data = $this->dataDasar();
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->buatPresensi($data, $data['anggota_a1'], $admin)->update(['sumber' => 'manual']);
+        $periode = PeriodeBerhalanganIbadah::create([
+            'tahun_pelajaran_id' => $data['tahun']->id, 'siswa_id' => $data['anggota_a2']->siswa_id,
+            'kelas_id' => $data['kelas_a']->id, 'anggota_kelas_id' => $data['anggota_a2']->id,
+            'tanggal_mulai' => '2026-08-13', 'status' => 'aktif', 'batas_hari_konfirmasi' => 7,
+            'catatan_privat' => 'Catatan yang tidak boleh dicetak.',
+        ]);
+        $periode->presensiHarian()->create([
+            'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id, 'kegiatan_ibadah_id' => $data['kegiatan']->id,
+            'tahun_pelajaran_id' => $data['tahun']->id, 'kelas_id' => $data['kelas_a']->id,
+            'anggota_kelas_id' => $data['anggota_a2']->id, 'siswa_id' => $data['anggota_a2']->siswa_id,
+            'tanggal' => '2026-08-13', 'waktu_scan' => '12:05:00', 'sumber' => 'kamera',
+        ]);
+        foreach (['senin' => 1, 'selasa' => 2, 'rabu' => 3, 'jumat' => 5] as $hari => $urutan) {
+            $data['jadwal']->replicate()->fill(['hari' => $hari, 'urutan_hari' => $urutan])->save();
+        }
+        foreach ([['2026-08-11', null], ['2026-08-12', $data['kelas_a']->id]] as [$tgl, $kelas]) {
+            PengecualianPresensiSiswa::create(['tahun_pelajaran_id' => $data['tahun']->id, 'kelas_id' => $kelas,
+                'tanggal_mulai' => $tgl, 'tanggal_selesai' => $tgl, 'jenis' => 'pjj', 'alasan' => 'PJJ', 'aktif' => true,
+                'kunci_pratinjau' => (string) Str::uuid(), 'dampak_pratinjau' => []]);
+        }
+        foreach ([
+            ['2026-08-10', 'anggota_a1', []],
+            ['2026-08-10', 'anggota_a2', ['status_kehadiran' => 'sakit']],
+            ['2026-08-10', 'anggota_b1', ['jam_pulang' => '11:55:00']],
+            ['2026-08-11', 'anggota_a1', []],
+            ['2026-08-12', 'anggota_a1', []],
+            ['2026-08-12', 'anggota_b1', []],
+            ['2026-08-14', 'anggota_a2', []],
+            ['2026-08-15', 'anggota_a2', []],
+        ] as [$tgl, $kode, $tambahan]) {
+            $anggota = $data[$kode];
+            AbsensiSiswa::where('siswa_id', $anggota->siswa_id)->whereDate('tanggal', '2026-08-13')->sole()
+                ->replicate()->fill(['tanggal' => $tgl, ...$tambahan])->save();
+        }
+
+        $filter = ['tanggal' => '2026-08-14'];
+        $hasil = $this->actingAs($admin)->get(route('rekap-kegiatan-ibadah.mingguan', $filter))->assertOk()
+            ->assertViewHas('jumlahHari', 3)->assertViewHas('jumlahSiswa', 2)->assertViewHas('jumlahKejadian', 3)
+            ->assertSeeText($data['kegiatan']->nama)->assertSeeText('Tanggal tanpa catatan ibadah')
+            ->assertDontSeeText('Siswa Belum Presensi')->assertDontSeeText('Catatan yang tidak boleh dicetak.');
+        $this->assertSame([['2026-08-10'], ['2026-08-12', '2026-08-13']], $hasil->viewData('baris')->map(
+            fn ($item) => $item['tanggal']->map->toDateString()->all(),
+        )->all());
+        $cetak = $this->get(route('rekap-kegiatan-ibadah.mingguan.cetak', $filter))->assertOk()
+            ->assertSeeText('Hasil konfirmasi')->assertSeeText('Belum tercatat bukan bukti siswa tidak salat')
+            ->assertDontSeeText('Siswa Belum Presensi')->assertDontSeeText('Catatan yang tidak boleh dicetak.');
+        $this->assertStringContainsString('no-store', $cetak->headers->get('Cache-Control'));
+        if (getenv('NUSA_CAPTURE_IBADAH_MINGGUAN')) {
+            $dir = storage_path('framework/testing/ibadah-mingguan');
+            File::ensureDirectoryExists($dir);
+            File::put($dir.'/index.html', $hasil->getContent());
+            File::put($dir.'/cetak.html', $cetak->getContent());
+        }
+        $this->get(route('rekap-kegiatan-ibadah.mingguan.cetak', [...$filter, 'kelas_id' => $data['kelas_a']->id]))->assertOk()
+            ->assertViewHas('jumlahHari', 2)->assertViewHas('jumlahKejadian', 1)->assertDontSeeText('Siswa Kelas B');
+
+        Carbon::setTestNow('2026-08-14 13:01:00');
+        $this->get(route('rekap-kegiatan-ibadah.mingguan', $filter))->assertOk()
+            ->assertViewHas('jumlahHari', 4)->assertViewHas('jumlahKejadian', 4)->assertSeeText('Siswa Belum Presensi');
+        $this->getJson(route('rekap-kegiatan-ibadah.mingguan', ['tanggal' => '2026-08-17']))->assertUnprocessable();
     }
 
     public function test_input_koreksi_dan_pembatalan_presensi_manual_menyimpan_riwayat(): void

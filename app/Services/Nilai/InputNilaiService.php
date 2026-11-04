@@ -195,33 +195,8 @@ class InputNilaiService
             ]);
         }
 
-        $komponenIds = KomponenNilai::query()
-            ->where('guru_mata_pelajaran_id', $guruMataPelajaran->id)
-            ->where('semester', $semester)
-            ->where('aktif', true)
-            ->pluck('id');
-
-        if ($komponenIds->isEmpty()) {
-            throw ValidationException::withMessages([
-                'publikasi' => 'Belum ada komponen nilai aktif untuk semester ini.',
-            ]);
-        }
-
-        $memilikiNilai = NilaiSiswa::query()
-            ->whereIn('komponen_nilai_id', $komponenIds)
-            ->where(function (Builder $query) {
-                $query->whereNotNull('nilai')->orWhereNotNull('predikat');
-            })
-            ->exists();
-
-        if (! $memilikiNilai) {
-            throw ValidationException::withMessages([
-                'publikasi' => 'Belum ada nilai siswa yang dapat dipublikasikan.',
-            ]);
-        }
-
         return $this->publikasiNilai->publikasikan(
-            (int) $guruMataPelajaran->id,
+            $guruMataPelajaran,
             $semester,
             $pengguna->id,
         );

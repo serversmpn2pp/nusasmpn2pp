@@ -10,13 +10,16 @@ use App\Models\Pengguna;
 use App\Models\PublikasiNilaiSiswa;
 use App\Models\TahunPelajaran;
 use App\Services\Nilai\InputNilaiService;
+use App\Services\Nilai\PublikasiNilaiService;
 use App\Services\Nilai\StsManualService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class InputNilaiMobileService
 {
-    public function __construct(private readonly InputNilaiService $inputNilai) {}
+    public function __construct(
+        private readonly InputNilaiService $inputNilai,
+        private readonly PublikasiNilaiService $publikasiNilai,
+    ) {}
 
     public function tampilkan(Pengguna $pengguna, array $filter): array
     {
@@ -173,18 +176,8 @@ class InputNilaiMobileService
             return $this->publikasiKosong();
         }
 
-        $komponenIds = KomponenNilai::query()
-            ->where('guru_mata_pelajaran_id', $penugasan->id)
-            ->where('semester', $semester)
-            ->where('aktif', true)
-            ->pluck('id');
-        $jumlahNilai = NilaiSiswa::query()
-            ->whereIn('komponen_nilai_id', $komponenIds)
-            ->whereIn('siswa_id', $anggotaKelas->pluck('siswa_id'))
-            ->where(function (Builder $query) {
-                $query->whereNotNull('nilai')->orWhereNotNull('predikat');
-            })
-            ->count();
+        $jumlahKomponen = $this->publikasiNilai->komponenAktif($penugasan, $semester)->count();
+        $jumlahNilai = $this->publikasiNilai->nilaiTerisi($penugasan, $semester)->count();
         $publikasi = PublikasiNilaiSiswa::query()
             ->where('guru_mata_pelajaran_id', $penugasan->id)
             ->where('semester', $semester)
@@ -198,10 +191,10 @@ class InputNilaiMobileService
             'dipublikasikan_pada_label' => $publikasi?->dipublikasikan_pada
                 ? $publikasi->dipublikasikan_pada->format('d-m-Y H:i').' WIB'
                 : null,
-            'jumlah_komponen' => $komponenIds->count(),
+            'jumlah_komponen' => $jumlahKomponen,
             'jumlah_nilai' => $jumlahNilai,
-            'target_nilai' => $komponenIds->count() * $anggotaKelas->count(),
-            'dapat_dipublikasikan' => $penugasan->aktif && $komponenIds->isNotEmpty() && $jumlahNilai > 0,
+            'target_nilai' => $jumlahKomponen * $anggotaKelas->count(),
+            'dapat_dipublikasikan' => $penugasan->aktif && $jumlahNilai > 0,
             'dapat_dijadikan_draf' => $dipublikasikan,
         ];
     }
