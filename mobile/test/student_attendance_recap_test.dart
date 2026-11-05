@@ -119,6 +119,10 @@ void main() {
       find.byKey(const Key('attendance-correction-status')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('attendance-correction-manual-reason')),
+      findsNothing,
+    );
     await tester.tap(find.byKey(const Key('attendance-correction-status')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sakit').last);

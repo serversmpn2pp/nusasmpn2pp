@@ -445,7 +445,7 @@
                                                     <div class="child-attendance-note">Lebih cepat {{ $absensi->menit_pulang_cepat }} menit</div>
                                                 @endif
                                             </td>
-                                            <td class="child-attendance-note">{{ $absensi?->catatan ?: ($item['status'] === 'pengecualian' ? $item['pengecualian']->alasan : '-') }}</td>
+                                            <td class="child-attendance-note">{{ $absensi?->catatanKehadiran() ?: ($item['status'] === 'pengecualian' ? $item['pengecualian']->alasan : '-') }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -469,8 +469,8 @@
                                         <div class="child-attendance-fact"><span>Keterlambatan</span><strong>{{ ($absensi?->menit_terlambat ?? 0) > 0 ? $absensi->menit_terlambat.' menit' : '-' }}</strong></div>
                                         <div class="child-attendance-fact"><span>Pulang cepat</span><strong>{{ ($absensi?->menit_pulang_cepat ?? 0) > 0 ? $absensi->menit_pulang_cepat.' menit' : '-' }}</strong></div>
                                     </div>
-                                    @if ($absensi?->catatan)
-                                        <p class="child-attendance-note">{{ $absensi->catatan }}</p>
+                                    @if ($absensi?->catatanKehadiran())
+                                        <p class="child-attendance-note">{{ $absensi->catatanKehadiran() }}</p>
                                     @elseif ($item['status'] === 'pengecualian')
                                         <p class="child-attendance-note">{{ $item['pengecualian']->alasan }}</p>
                                     @endif

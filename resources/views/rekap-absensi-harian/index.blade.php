@@ -452,7 +452,7 @@
                                         <p class="person-meta" style="margin-top: 5px;">{{ $absensi->poin_keterlambatan_terhitung }} poin</p>
                                     @endif
                                 </td>
-                                <td data-label="Catatan">{{ $absensi?->catatan ?: '-' }}</td>
+                                <td data-label="Catatan">{{ $absensi?->catatanKehadiran() ?: '-' }}</td>
                                 @if ($bolehKoreksi)
                                     <td data-label="Aksi">
                                         <div class="actions" style="justify-content: flex-end;">
@@ -532,8 +532,8 @@
                             </div>
                         @endif
 
-                        @if ($absensi?->catatan)
-                            <p class="help-text" style="margin-top: 12px;">{{ $absensi->catatan }}</p>
+                        @if ($absensi?->catatanKehadiran())
+                            <p class="help-text" style="margin-top: 12px;">{{ $absensi->catatanKehadiran() }}</p>
                         @endif
 
                         @if ($bolehKoreksi)

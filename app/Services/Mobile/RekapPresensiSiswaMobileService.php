@@ -15,6 +15,7 @@ use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\KoreksiPresensiSiswaService;
 use App\Services\Absensi\RangkumanWhatsappPresensiSiswaService;
 use App\Services\Pembinaan\AksesLaporanPembinaanService;
+use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -111,6 +112,7 @@ class RekapPresensiSiswaMobileService
         abort_unless($pengguna->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id), 403);
         $anggotaKelas->load(['tahunPelajaran:id,nama,aktif,tanggal_mulai,tanggal_selesai', 'kelas:id,nama,tingkat', 'siswa:id,nama_lengkap,nis,nisn,jenis_kelamin,foto']);
         $absensi = $this->koreksi->ambilAbsensi($tanggal, $anggotaKelas);
+        $absensi?->loadExists(['logScanAbsensi as scan_masuk_tercatat' => fn ($query) => $query->where('jenis_scan', 'masuk')->where('berhasil', true)]);
         $akses = $this->koreksi->evaluasiAkses($pengguna, $anggotaKelas, $tanggal, $absensi);
         $hari = array_keys(PengaturanAbsensi::DAFTAR_HARI)[Carbon::parse($tanggal)->isoWeekday() - 1];
         $pengaturan = PengaturanAbsensi::query()->where('hari', $hari)->where('aktif', true)->first();
@@ -146,6 +148,7 @@ class RekapPresensiSiswaMobileService
                 'dibuat_pada' => $item->created_at?->toIso8601String(),
             ])->values(),
             'hak_akses' => $akses,
+            'aturan_hadir_manual' => app(PengaturanPoinKeterlambatanService::class)->aturanHadirManual($anggotaKelas->tahun_pelajaran_id),
         ];
     }
 
@@ -389,6 +392,9 @@ class RekapPresensiSiswaMobileService
                 'status_pulang' => $absensi?->status_pulang,
                 'menit_pulang_cepat' => (int) ($absensi?->menit_pulang_cepat ?? 0),
                 'catatan' => $absensi?->catatan,
+                'alasan_hadir_manual' => $absensi?->alasan_hadir_manual,
+                'ada_scan_masuk' => (bool) ($absensi?->scan_masuk_tercatat || ($absensi?->sumber === 'scan' && ! $absensi->memilikiSanksiManual())),
+                'keterangan_sanksi_manual' => $absensi?->keteranganSanksiManual(),
                 'belum_pulang' => $status === 'hadir' && $absensi?->jam_masuk && ! $absensi?->jam_pulang,
             ],
             'koreksi' => $akses,

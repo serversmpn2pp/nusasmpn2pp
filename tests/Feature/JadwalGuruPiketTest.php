@@ -105,7 +105,7 @@ class JadwalGuruPiketTest extends TestCase
         ]);
     }
 
-    public function test_guru_piket_dapat_mencatat_hadir_tanpa_mengarang_jam_masuk(): void
+    public function test_guru_piket_mencatat_jam_input_dan_scan_ulang_tidak_menghapus_sanksi_manual(): void
     {
         Carbon::setTestNow('2026-08-13 08:00:00');
         $data = $this->dataDasar();
@@ -129,8 +129,9 @@ class JadwalGuruPiketTest extends TestCase
         $this->assertDatabaseHas('absensi_siswa', [
             'siswa_id' => $data['siswa']->id,
             'status_kehadiran' => 'hadir',
-            'status_masuk' => 'manual',
-            'jam_masuk' => null,
+            'status_masuk' => 'terlambat',
+            'jam_masuk' => '08:00:00',
+            'sanksi_manual_menit' => 5,
             'sumber' => 'guru_piket',
         ]);
 
@@ -151,14 +152,14 @@ class JadwalGuruPiketTest extends TestCase
             'masuk',
         );
 
-        $this->assertTrue($hasilScan['berhasil']);
-        $this->assertSame('berhasil_masuk', $hasilScan['status']);
+        $this->assertFalse($hasilScan['berhasil']);
+        $this->assertSame('sudah_scan_masuk', $hasilScan['status']);
         $this->assertDatabaseHas('absensi_siswa', [
             'siswa_id' => $data['siswa']->id,
             'status_kehadiran' => 'hadir',
-            'status_masuk' => 'tepat_waktu',
-            'jam_masuk' => '06:30:00',
-            'sumber' => 'scan',
+            'status_masuk' => 'terlambat',
+            'jam_masuk' => '08:00:00',
+            'sumber' => 'guru_piket',
         ]);
     }
 

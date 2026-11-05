@@ -1,3 +1,5 @@
+import 'package:nusa/shared/domain/manual_attendance.dart';
+
 class DutyAcademicYear {
   const DutyAcademicYear({
     required this.id,
@@ -216,6 +218,8 @@ class MyDutyStudent {
     this.photoUrl,
     this.notes,
     this.checkInTime,
+    this.manualReason,
+    this.manualSanctionNote,
   });
   factory MyDutyStudent.fromJson(Map<String, dynamic> json) {
     final student = _map(json['siswa']) ?? const {};
@@ -234,6 +238,8 @@ class MyDutyStudent {
       photoUrl: student['foto_url'] as String?,
       notes: attendance['catatan'] as String?,
       checkInTime: attendance['jam_masuk'] as String?,
+      manualReason: attendance['alasan_hadir_manual'] as String?,
+      manualSanctionNote: attendance['keterangan_sanksi_manual'] as String?,
     );
   }
   final int classMemberId;
@@ -248,6 +254,8 @@ class MyDutyStudent {
   final String? photoUrl;
   final String? notes;
   final String? checkInTime;
+  final String? manualReason;
+  final String? manualSanctionNote;
 }
 
 class MyDutyDashboard {
@@ -266,6 +274,7 @@ class MyDutyDashboard {
     required this.page,
     required this.hasMore,
     this.classId,
+    this.manualRule = const ManualAttendanceRule(),
   });
   factory MyDutyDashboard.fromJson(Map<String, dynamic> json) {
     final filter = _map(json['filter']) ?? const {};
@@ -287,6 +296,7 @@ class MyDutyDashboard {
       query: filter['cari'] as String? ?? '',
       page: _integer(pagination['halaman']),
       hasMore: pagination['ada_halaman_berikutnya'] as bool? ?? false,
+      manualRule: ManualAttendanceRule.fromJson(json['aturan_hadir_manual']),
     );
   }
   final String dateLabel;
@@ -303,6 +313,7 @@ class MyDutyDashboard {
   final String query;
   final int page;
   final bool hasMore;
+  final ManualAttendanceRule manualRule;
 }
 
 List<T> _list<T>(Object? value, T Function(Map<String, dynamic>) factory) =>

@@ -104,11 +104,17 @@ class TeacherDutyRemoteDataSource {
     required int classMemberId,
     required String status,
     required String notes,
+    String? manualReason,
   }) async {
     try {
       await _dio.patch<Map<String, dynamic>>(
         'piket-saya/kehadiran/$classMemberId',
-        data: {'status_kehadiran': status, 'catatan': notes.trim()},
+        data: {
+          'status_kehadiran': status,
+          'catatan': notes.trim(),
+          if (status == 'hadir' && manualReason != null)
+            'alasan_hadir_manual': manualReason,
+        },
       );
     } on DioException catch (exception) {
       throw mapDioException(exception);

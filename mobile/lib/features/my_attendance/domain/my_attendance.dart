@@ -152,6 +152,7 @@ class MyAttendanceToday {
     this.status,
     this.checkIn,
     this.checkOut,
+    this.manualSanctionNote,
   });
 
   factory MyAttendanceToday.fromJson(Map<String, dynamic> json) =>
@@ -161,6 +162,7 @@ class MyAttendanceToday {
         statusLabel: json['label_status'] as String? ?? 'Belum tercatat',
         checkIn: json['jam_masuk'] as String?,
         checkOut: json['jam_pulang'] as String?,
+        manualSanctionNote: json['keterangan_sanksi_manual'] as String?,
         lateMinutes: _integer(json['menit_terlambat']),
         earlyLeaveMinutes: _integer(json['menit_pulang_cepat']),
       );
@@ -170,6 +172,7 @@ class MyAttendanceToday {
   final String statusLabel;
   final String? checkIn;
   final String? checkOut;
+  final String? manualSanctionNote;
   final int lateMinutes;
   final int earlyLeaveMinutes;
 }

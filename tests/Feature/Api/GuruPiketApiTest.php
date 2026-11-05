@@ -132,8 +132,10 @@ class GuruPiketApiTest extends TestCase
         $this->assertDatabaseHas('absensi_siswa', [
             'siswa_id' => $data['siswa']->id,
             'status_kehadiran' => 'hadir',
-            'status_masuk' => 'manual',
-            'jam_masuk' => null,
+            'status_masuk' => 'terlambat',
+            'jam_masuk' => '08:05:00',
+            'sanksi_manual_menit' => 5,
+            'menit_terlambat' => 5,
             'sumber' => 'guru_piket',
         ]);
         $this->assertDatabaseHas('riwayat_perubahan_absensi_siswa', [

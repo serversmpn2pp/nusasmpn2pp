@@ -11,6 +11,37 @@ class NotifikasiAbsensiSiswaService
 {
     public function __construct(private readonly NotifikasiPenggunaService $notifikasi) {}
 
+    public function jadwalkanHadirManual(AbsensiSiswa $absensi): void
+    {
+        if (! $absensi->memilikiSanksiManual()) {
+            return;
+        }
+        $absensi->loadMissing(['siswa', 'kelas']);
+        if (! $absensi->siswa) {
+            return;
+        }
+        $detail = $absensi->siswa->nama_lengkap.' ('.($absensi->kelas?->nama ?: '-').') tercatat hadir melalui input manual pada '
+            .$absensi->tanggal->format('d/m/Y').' pukul '.substr((string) $absensi->jam_masuk, 0, 5).' WIB. '
+            .$absensi->keteranganSanksiManual();
+        $parameter = ['siswa_id' => $absensi->siswa_id, 'bulan' => $absensi->tanggal->format('Y-m')];
+        $versi = substr(hash('sha256', $detail), 0, 20);
+        foreach ([
+            'siswa' => $this->notifikasi->penggunaUntukSiswa($absensi->siswa_id)->filter(fn (Pengguna $akun) => $akun->akunSiswa()),
+            'orang-tua' => $this->notifikasi->penggunaOrangTuaUntukSiswa($absensi->siswa_id)->filter(fn (Pengguna $akun) => $akun->akunOrangTua()),
+        ] as $jenis => $penerima) {
+            foreach ($penerima as $akun) {
+                $orangTua = $jenis === 'orang-tua';
+                $this->notifikasi->kirim($akun, 'peringatan',
+                    $orangTua ? 'Kehadiran anak dicatat manual' : 'Kehadiran dicatat manual',
+                    ($orangTua ? 'Anak Anda, ' : '').$detail,
+                    route($orangTua ? 'presensi-anak.index' : 'notifikasi.index', $parameter),
+                    "presensi-manual-{$jenis}:{$absensi->id}:{$versi}",
+                    $parameter + ['absensi_siswa_id' => $absensi->id, 'alasan_hadir_manual' => $absensi->alasan_hadir_manual,
+                        'menit_terlambat' => $absensi->menit_terlambat, 'poin_keterlambatan' => $absensi->poin_keterlambatan_terhitung]);
+            }
+        }
+    }
+
     public function jadwalkanScanMasuk(AbsensiSiswa $absensi, LogScanAbsensi $logScan): ?NotifikasiAbsensiSiswa
     {
         $absensi->loadMissing(['siswa', 'kelas']);

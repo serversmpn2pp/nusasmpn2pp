@@ -173,10 +173,16 @@ class TeacherDutyActions {
     required int classMemberId,
     required String status,
     required String notes,
+    String? manualReason,
   }) => _guard(() async {
     await _ref
         .read(teacherDutyRepositoryProvider)
-        .record(classMemberId: classMemberId, status: status, notes: notes);
+        .record(
+          classMemberId: classMemberId,
+          status: status,
+          notes: notes,
+          manualReason: manualReason,
+        );
     _ref.invalidate(myDutyControllerProvider);
   });
   Future<void> _guard(Future<void> Function() operation) async {

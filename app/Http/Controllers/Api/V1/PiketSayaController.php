@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Services\Mobile\PiketSayaMobileService;
 use App\Services\Piket\CatatKehadiranSiswaPiketService;
@@ -33,12 +34,14 @@ class PiketSayaController extends Controller
         $data = $request->validate([
             'status_kehadiran' => ['required', Rule::in(['hadir', 'sakit', 'izin'])],
             'catatan' => ['required', 'string', 'min:3', 'max:500'],
+            'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
         ]);
         $absensi = $service->catat(
             $request->user(),
             $anggotaKelas,
             $data['status_kehadiran'],
             $data['catatan'],
+            $data['alasan_hadir_manual'] ?? null,
         );
 
         return response()->json([

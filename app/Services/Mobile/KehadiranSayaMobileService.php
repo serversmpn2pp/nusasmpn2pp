@@ -222,6 +222,7 @@ class KehadiranSayaMobileService
             'jam_pulang' => $this->formatJam($absensi?->jam_pulang),
             'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),
             'menit_pulang_cepat' => (int) ($absensi?->menit_pulang_cepat ?? 0),
+            'keterangan_sanksi_manual' => $absensi?->keteranganSanksiManual(),
         ];
     }
 
@@ -261,7 +262,11 @@ class KehadiranSayaMobileService
             'menit_pulang_cepat' => (int) ($absensi->menit_pulang_cepat ?? 0),
             'sumber' => $absensi->sumber,
             'sumber_label' => $this->labelSumber($absensi->sumber),
-            'catatan' => $absensi->catatan,
+            // Read-only history also explains the sanction in older mobile builds.
+            'catatan' => $absensi->catatanKehadiran(),
+            'alasan_hadir_manual' => $absensi->alasan_hadir_manual,
+            'sanksi_manual_menit' => (int) $absensi->sanksi_manual_menit,
+            'poin_keterlambatan' => (int) $absensi->poin_keterlambatan_terhitung,
         ];
     }
 

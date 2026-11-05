@@ -8,6 +8,7 @@ use App\Models\JadwalPiketGuru;
 use App\Models\Kelas;
 use App\Models\Pengguna;
 use App\Models\Siswa;
+use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use App\Services\Piket\GuruPiketHariIniService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
@@ -64,6 +65,7 @@ class PiketSayaMobileService
                 'id' => (int) $item->id, 'nama' => $item->nama, 'tingkat' => (int) $item->tingkat,
             ])->values(),
             'filter' => ['kelas_id' => $kelasId, 'status' => $status, 'cari' => $cari],
+            'aturan_hadir_manual' => app(PengaturanPoinKeterlambatanService::class)->aturanHadirManual($tahun->id),
         ];
     }
 
@@ -147,8 +149,12 @@ class PiketSayaMobileService
                 },
                 'sumber' => $absensi?->sumber,
                 'catatan' => $absensi?->catatan,
+                'alasan_hadir_manual' => $absensi?->alasan_hadir_manual,
+                'keterangan_sanksi_manual' => $absensi?->keteranganSanksiManual(),
+                'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),
+                'poin_keterlambatan' => (int) ($absensi?->poin_keterlambatan_terhitung ?? 0),
                 'jam_masuk' => $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 5) : null,
-                'dapat_dicatat' => ! $absensi || ($absensi->sumber === 'guru_piket' && ! $absensi->jam_masuk),
+                'dapat_dicatat' => ! $absensi || $absensi->sumber === 'guru_piket',
             ],
         ];
     }

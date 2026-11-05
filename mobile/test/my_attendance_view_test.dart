@@ -59,6 +59,7 @@ void main() {
       expect(find.text('Alya Kehadiran'), findsWidgets);
       expect(find.byKey(const Key('my-attendance-today')), findsOneWidget);
       expect(find.text('Hadir'), findsWidgets);
+      expect(find.textContaining('Kartu pelajar hilang'), findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.byKey(const Key('my-attendance-summary')),
@@ -168,6 +169,7 @@ final class _FakeMyAttendanceRemoteDataSource
         checkOut: '14:05',
         lateMinutes: 0,
         earlyLeaveMinutes: 0,
+        manualSanctionNote: 'Kartu pelajar hilang. Sanksi minimal 5 menit; 15 poin keterlambatan. Segera hubungi admin untuk mengganti kartu pelajar.',
       ),
       summary: const MyAttendanceSummary(
         total: 3,

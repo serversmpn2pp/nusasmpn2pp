@@ -72,6 +72,19 @@ void main() {
 
     expect(find.text('Catat Kehadiran'), findsOneWidget);
     expect(find.text('Hadir'), findsWidgets);
+    expect(
+      find.textContaining('5 menit keterlambatan dan 15 poin'),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(find.byKey(const Key('duty-manual-reason')));
+    await tester.tap(find.byKey(const Key('duty-manual-reason')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Diinput manual oleh petugas tanpa scan kartu'),
+      findsNothing,
+    );
+    await tester.tap(find.text('Kartu pelajar hilang').last);
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, 'Keterangan'),
       'Lupa membawa kartu, dikonfirmasi hadir oleh guru piket.',
@@ -82,6 +95,7 @@ void main() {
 
     expect(remote.recordCalls, 1);
     expect(remote.lastAttendanceStatus, 'hadir');
+    expect(remote.lastManualReason, 'kartu_hilang');
     expect(find.text('Hadir'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
@@ -114,6 +128,7 @@ final class _FakeTeacherDutyRemoteDataSource
   );
   int recordCalls = 0;
   String lastAttendanceStatus = 'belum_scan';
+  String? lastManualReason;
 
   @override
   Future<DutyScheduleCatalog> fetchSchedules({
@@ -211,9 +226,11 @@ final class _FakeTeacherDutyRemoteDataSource
     required int classMemberId,
     required String status,
     required String notes,
+    String? manualReason,
   }) async {
     recordCalls++;
     lastAttendanceStatus = status;
+    lastManualReason = manualReason;
   }
 
   @override

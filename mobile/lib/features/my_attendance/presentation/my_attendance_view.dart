@@ -401,6 +401,14 @@ class _TodayCard extends StatelessWidget {
                     fontSize: 10.5,
                   ),
                 ),
+                if (today.manualSanctionNote?.isNotEmpty == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      today.manualSanctionNote!,
+                      style: const TextStyle(fontSize: 11, height: 1.45),
+                    ),
+                  ),
               ],
             ),
           ),

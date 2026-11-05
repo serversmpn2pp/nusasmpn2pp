@@ -8,6 +8,7 @@ use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
 use App\Models\Pengguna;
 use App\Models\RiwayatPerubahanAbsensiSiswa;
+use App\Services\Notifikasi\NotifikasiAbsensiSiswaService;
 use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use App\Services\Pembinaan\PoinPresensiOtomatisService;
 use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
@@ -127,7 +128,8 @@ class KoreksiPresensiSiswaService
             throw ValidationException::withMessages(['catatan' => 'Alasan koreksi presensi berpoin wajib diisi.']);
         }
 
-        $absensi = DB::transaction(function () use ($pengguna, $anggotaKelas, $data, $tanggal, $ketat) {
+        $absensi = DB::transaction(function () use ($pengguna, $anggotaKelas, $data, $tanggal, $ketat, $adaPoin) {
+            AnggotaKelas::whereKey($anggotaKelas->id)->lockForUpdate()->firstOrFail();
             $pengaturan = $this->ambilPengaturan($tanggal);
             $status = $data['status_kehadiran'];
             $jamMasuk = $status === 'hadir' ? ($data['jam_masuk'] ?? null) : null;
@@ -158,6 +160,14 @@ class KoreksiPresensiSiswaService
             abort_unless($akses['dapat'], 403, $akses['alasan']);
             $statusSebelum = $absensi->exists ? $absensi->status_kehadiran : null;
             $catatan = filled($data['catatan'] ?? null) ? trim($data['catatan']) : null;
+            $adaScanMasuk = $absensi->sumber === 'scan' || ($absensi->exists && $absensi->logScanAbsensi()
+                ->where('jenis_scan', 'masuk')->where('berhasil', true)->exists());
+            $manualTanpaScan = $status === 'hadir' && (! $adaScanMasuk || $absensi->memilikiSanksiManual());
+            if ($manualTanpaScan) {
+                $menitTerlambat = max(AbsensiSiswa::SANKSI_MANUAL_MENIT, $pengaturan
+                    ? app(HitungKeterlambatanSiswaService::class)->menit($jamMasuk, $pengaturan->jam_masuk, true) : 0);
+                $statusMasuk = 'terlambat';
+            }
 
             $absensi->fill([
                 'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
@@ -172,7 +182,17 @@ class KoreksiPresensiSiswaService
                 'status_kehadiran' => $status,
                 'sumber' => 'manual',
                 'catatan' => $catatan,
+                'alasan_hadir_manual' => $manualTanpaScan
+                    ? AbsensiSiswa::normalisasiAlasanHadirManual($data['alasan_hadir_manual'] ?? $absensi->alasan_hadir_manual) : null,
+                'sanksi_manual_menit' => $manualTanpaScan ? AbsensiSiswa::SANKSI_MANUAL_MENIT : 0,
             ])->save();
+
+            if ($ketat || $adaPoin || $absensi->memilikiSanksiManual()) {
+                app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($absensi->refresh(), $pengguna->id);
+            } else {
+                $this->prosesPoinKeterlambatan->sinkronkanAbsensi($absensi->refresh(), $pengguna->id);
+            }
+            $absensi->refresh();
 
             RiwayatPerubahanAbsensiSiswa::create([
                 'absensi_siswa_id' => $absensi->id,
@@ -181,18 +201,16 @@ class KoreksiPresensiSiswaService
                 'status_sebelum' => $statusSebelum,
                 'status_sesudah' => $status,
                 'sumber' => 'koreksi_manual',
-                'catatan' => $catatan,
+                'catatan' => $absensi->catatanKehadiran(),
                 'dibuat_oleh_pengguna_id' => $pengguna->id,
             ]);
 
-            return $absensi->refresh();
-        });
+            if ($absensi->memilikiSanksiManual()) {
+                app(NotifikasiAbsensiSiswaService::class)->jadwalkanHadirManual($absensi);
+            }
 
-        if ($ketat || $adaPoin) {
-            app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($absensi, $pengguna->id);
-        } else {
-            $this->prosesPoinKeterlambatan->sinkronkanAbsensi($absensi, $pengguna->id);
-        }
+            return $absensi;
+        });
 
         return $absensi->refresh();
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Services\Absensi\KoreksiPresensiSiswaService;
 use App\Services\Mobile\RekapPresensiSiswaMobileService;
@@ -60,6 +61,7 @@ class RekapPresensiSiswaController extends Controller
             'jam_masuk' => ['nullable', 'date_format:H:i,H:i:s'],
             'jam_pulang' => ['nullable', 'date_format:H:i,H:i:s'],
             'catatan' => ['required', 'string', 'min:3', 'max:2000'],
+            'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
         ]);
         $absensi = $service->koreksi($request->user(), $anggotaKelas, $data);
 

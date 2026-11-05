@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_attendance_recap/domain/student_attendance_recap.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
+import 'package:nusa/shared/domain/manual_attendance.dart';
 
 class StudentAttendanceDetailSheet extends StatelessWidget {
   const StudentAttendanceDetailSheet({required this.future, super.key});
@@ -201,7 +202,17 @@ class _AttendanceDetailCard extends StatelessWidget {
             last: item.notes == null,
           ),
           if (item.notes != null)
-            _DetailRow(label: 'Catatan', value: item.notes!, last: true),
+            _DetailRow(
+              label: 'Catatan',
+              value: item.notes!,
+              last: item.manualSanctionNote == null,
+            ),
+          if (item.manualSanctionNote != null)
+            _DetailRow(
+              label: 'Hadir manual',
+              value: item.manualSanctionNote!,
+              last: true,
+            ),
         ],
       ),
     );
@@ -355,6 +366,7 @@ class StudentAttendanceCorrectionSheet extends StatefulWidget {
 class _StudentAttendanceCorrectionSheetState
     extends State<StudentAttendanceCorrectionSheet> {
   String? _status;
+  late String _manualReason;
   late final TextEditingController _checkIn;
   late final TextEditingController _checkOut;
   late final TextEditingController _notes;
@@ -362,6 +374,7 @@ class _StudentAttendanceCorrectionSheetState
   void initState() {
     super.initState();
     final current = widget.detail.record;
+    _manualReason = ManualAttendanceRule.normalizeReason(current.manualReason);
     _status = const {'hadir', 'izin', 'sakit', 'alfa'}.contains(current.status)
         ? current.status
         : null;
@@ -382,6 +395,10 @@ class _StudentAttendanceCorrectionSheetState
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final present = _status == 'hadir';
+    final manual =
+        present &&
+        (!widget.detail.record.hasScannerEntry ||
+            widget.detail.record.manualReason != null);
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 16, 20, bottom + 20),
       child: SingleChildScrollView(
@@ -450,6 +467,31 @@ class _StudentAttendanceCorrectionSheetState
                 style: TextStyle(fontSize: 10, color: NusaColors.textSecondary),
               ),
             ],
+            if (manual) ...[
+              const SizedBox(height: 12),
+              NusaDropdownField<String>(
+                fieldKey: const Key('attendance-correction-manual-reason'),
+                value: _manualReason,
+                options: ManualAttendanceRule.reasons.entries
+                    .map(
+                      (entry) => NusaDropdownOption(
+                        value: entry.key,
+                        label: entry.value,
+                      ),
+                    )
+                    .toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Alasan hadir tanpa scan kartu',
+                ),
+                onChanged: (value) =>
+                    setState(() => _manualReason = value ?? _manualReason),
+              ),
+              const SizedBox(height: 8),
+              _InfoBox(
+                icon: Icons.info_outline,
+                text: widget.detail.manualRule.explanation,
+              ),
+            ],
             const SizedBox(height: 12),
             TextField(
               key: const Key('attendance-correction-notes'),
@@ -503,6 +545,12 @@ class _StudentAttendanceCorrectionSheetState
         checkInTime: _checkIn.text.isEmpty ? null : _checkIn.text,
         checkOutTime: _checkOut.text.isEmpty ? null : _checkOut.text,
         notes: _notes.text.trim(),
+        manualReason:
+            _status == 'hadir' &&
+                (!widget.detail.record.hasScannerEntry ||
+                    widget.detail.record.manualReason != null)
+            ? _manualReason
+            : null,
       ),
     );
   }

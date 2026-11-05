@@ -2,6 +2,7 @@
 
 namespace App\Services\Pembinaan;
 
+use App\Models\AbsensiSiswa;
 use App\Models\PengaturanPoinKeterlambatan;
 use App\Models\RentangPoinKeterlambatan;
 use Illuminate\Support\Collection;
@@ -9,6 +10,15 @@ use Illuminate\Validation\ValidationException;
 
 class PengaturanPoinKeterlambatanService
 {
+    public function aturanHadirManual(int $tahunPelajaranId): array
+    {
+        return [
+            'menit_minimal' => AbsensiSiswa::SANKSI_MANUAL_MENIT,
+            'poin' => (int) (PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $tahunPelajaranId)->value('poin_terlambat') ?? 15),
+            'alasan' => collect(AbsensiSiswa::ALASAN_HADIR_MANUAL)->map(fn ($label, $kode) => ['kode' => $kode, 'label' => $label])->values()->all(),
+        ];
+    }
+
     public function langsungPada(int $tahunPelajaranId, string $tanggal): bool
     {
         return PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $tahunPelajaranId)

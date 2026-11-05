@@ -119,6 +119,8 @@ final class DioStudentAttendanceRecapRemoteDataSource
           'jam_masuk': value.status == 'hadir' ? value.checkInTime : null,
           'jam_pulang': value.status == 'hadir' ? value.checkOutTime : null,
           'catatan': value.notes.trim(),
+          if (value.status == 'hadir' && value.manualReason != null)
+            'alasan_hadir_manual': value.manualReason,
         },
       );
     } on DioException catch (exception) {

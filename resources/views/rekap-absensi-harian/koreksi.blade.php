@@ -14,6 +14,9 @@
             ->join('');
         $statusSaatIni = old('status_kehadiran', $absensi?->status_kehadiran ?? 'alfa');
         $jadwalPulang = $pengaturanAbsensi?->jadwalPulangUntuk($anggotaKelas->siswa?->jenis_kelamin);
+        $tanpaScan = ! $absensi || $absensi->memilikiSanksiManual()
+            || ($absensi->sumber !== 'scan' && ! $absensi->logScanAbsensi()->where('jenis_scan', 'masuk')->where('berhasil', true)->exists());
+        $aturanHadirManual = app(\App\Services\Pembinaan\PengaturanPoinKeterlambatanService::class)->aturanHadirManual($anggotaKelas->tahun_pelajaran_id);
     @endphp
 
     <div class="page-header">
@@ -84,7 +87,7 @@
                 </div>
             @else
                 <div class="alert alert-danger" style="margin: 20px 0 0;">
-                    Jadwal presensi tanggal ini belum aktif. Jam tetap bisa disimpan, tetapi status terlambat/pulang cepat tidak dihitung.
+                    Jadwal presensi tanggal ini belum aktif. Poin presensi tidak diterapkan pada hari tanpa jadwal aktif.
                 </div>
             @endif
         </aside>
@@ -129,6 +132,17 @@
                         @enderror
                     </div>
 
+                    @if ($tanpaScan)
+                        <div class="field span-2" id="alasan-hadir-manual">
+                            <label for="alasan_hadir_manual">Alasan hadir tanpa scan kartu</label>
+                            <select id="alasan_hadir_manual" name="alasan_hadir_manual" class="select">
+                                @foreach (\App\Models\AbsensiSiswa::ALASAN_HADIR_MANUAL as $kode => $label)
+                                    <option value="{{ $kode }}" @selected(\App\Models\AbsensiSiswa::normalisasiAlasanHadirManual(old('alasan_hadir_manual', $absensi?->alasan_hadir_manual)) === $kode)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <p class="help-text">Hadir manual tanpa scan dikenai minimal {{ $aturanHadirManual['menit_minimal'] }} menit keterlambatan dan {{ $aturanHadirManual['poin'] }} poin sesuai aturan sekolah. Keterlambatan lebih besar tetap dihitung. Poin tidak diterapkan pada hari dengan pengecualian presensi. Orang tua mendapat keterangan alasan dan saran menghubungi admin untuk mendapatkan atau mengganti kartu pelajar.</p>
+                        </div>
+                    @endif
                     <div class="field span-2">
                         <label for="catatan">Catatan{{ ($koreksiHariIniTerbatas ?? false) ? ' *' : '' }}</label>
                         <textarea id="catatan" name="catatan" class="textarea @error('catatan') is-invalid @enderror" placeholder="Contoh: Izin dokter, lupa membawa kartu, atau koreksi guru piket." @required($koreksiHariIniTerbatas ?? false)>{{ old('catatan', $absensi?->catatan) }}</textarea>
@@ -159,6 +173,8 @@
             const hadir = statusInput.value === 'hadir';
             jamMasukInput.disabled = ! hadir;
             jamPulangInput.disabled = ! hadir;
+            const alasan = document.getElementById('alasan-hadir-manual');
+            if (alasan) { alasan.hidden = ! hadir; alasan.querySelector('select').disabled = ! hadir; }
 
             if (! hadir) {
                 jamMasukInput.value = '';

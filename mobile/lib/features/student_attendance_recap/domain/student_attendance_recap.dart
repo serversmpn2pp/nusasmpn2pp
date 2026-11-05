@@ -1,3 +1,5 @@
+import '../../../shared/domain/manual_attendance.dart';
+
 class AttendanceAcademicYear {
   const AttendanceAcademicYear({
     required this.id,
@@ -106,6 +108,9 @@ class StudentAttendanceRecord {
     this.checkInStatus,
     this.checkOutStatus,
     this.notes,
+    this.manualReason,
+    this.manualSanctionNote,
+    this.hasScannerEntry = false,
   });
   factory StudentAttendanceRecord.fromJson(Map<String, dynamic> json) {
     final student = _map(json['siswa']) ?? const {};
@@ -131,6 +136,11 @@ class StudentAttendanceRecord {
       earlyLeaveMinutes: _integer(attendance['menit_pulang_cepat']),
       notCheckedOut: attendance['belum_pulang'] as bool? ?? false,
       notes: attendance['catatan'] as String?,
+      manualReason: attendance['alasan_hadir_manual'] as String?,
+      manualSanctionNote: attendance['keterangan_sanksi_manual'] as String?,
+      hasScannerEntry:
+          attendance['ada_scan_masuk'] as bool? ??
+          attendance['sumber'] == 'scan',
       correction: AttendanceCorrectionAccess.fromJson(
         _map(json['koreksi']) ?? const {},
       ),
@@ -155,6 +165,9 @@ class StudentAttendanceRecord {
   final int earlyLeaveMinutes;
   final bool notCheckedOut;
   final String? notes;
+  final String? manualReason;
+  final String? manualSanctionNote;
+  final bool hasScannerEntry;
   final AttendanceCorrectionAccess correction;
 }
 
@@ -288,6 +301,7 @@ class StudentAttendanceDetail {
     required this.correction,
     this.officialCheckIn,
     this.officialCheckOut,
+    this.manualRule = const ManualAttendanceRule(),
   });
   factory StudentAttendanceDetail.fromJson(Map<String, dynamic> json) {
     final schedule = _map(json['jadwal_presensi']) ?? const {};
@@ -298,6 +312,7 @@ class StudentAttendanceDetail {
       scheduleAvailable: schedule['tersedia'] as bool? ?? false,
       officialCheckIn: schedule['jam_masuk'] as String?,
       officialCheckOut: schedule['jam_pulang'] as String?,
+      manualRule: ManualAttendanceRule.fromJson(json['aturan_hadir_manual']),
       history: _list(json['riwayat'], AttendanceHistoryEntry.fromJson),
       correction: AttendanceCorrectionAccess.fromJson(
         _map(json['hak_akses']) ?? const {},
@@ -310,6 +325,7 @@ class StudentAttendanceDetail {
   final bool scheduleAvailable;
   final String? officialCheckIn;
   final String? officialCheckOut;
+  final ManualAttendanceRule manualRule;
   final List<AttendanceHistoryEntry> history;
   final AttendanceCorrectionAccess correction;
 }
@@ -320,11 +336,13 @@ class AttendanceCorrectionValue {
     required this.notes,
     this.checkInTime,
     this.checkOutTime,
+    this.manualReason,
   });
   final String status;
   final String? checkInTime;
   final String? checkOutTime;
   final String notes;
+  final String? manualReason;
 }
 
 List<T> _list<T>(Object? value, T Function(Map<String, dynamic>) factory) =>

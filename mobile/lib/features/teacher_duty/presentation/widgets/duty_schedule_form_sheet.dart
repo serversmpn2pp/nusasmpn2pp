@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nusa/shared/domain/manual_attendance.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/teacher_duty/application/teacher_duty_controller.dart';
@@ -252,8 +253,13 @@ class _DutyScheduleFormSheetState extends ConsumerState<DutyScheduleFormSheet> {
 }
 
 class DutyAttendanceFormSheet extends StatefulWidget {
-  const DutyAttendanceFormSheet({required this.student, super.key});
+  const DutyAttendanceFormSheet({
+    required this.student,
+    this.rule = const ManualAttendanceRule(),
+    super.key,
+  });
   final MyDutyStudent student;
+  final ManualAttendanceRule rule;
   @override
   State<DutyAttendanceFormSheet> createState() =>
       _DutyAttendanceFormSheetState();
@@ -261,6 +267,7 @@ class DutyAttendanceFormSheet extends StatefulWidget {
 
 class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
   late String _status;
+  late String _reason;
   late final TextEditingController _notes;
   @override
   void initState() {
@@ -269,6 +276,7 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
         ? widget.student.status
         : 'hadir';
     _notes = TextEditingController(text: widget.student.notes);
+    _reason = ManualAttendanceRule.normalizeReason(widget.student.manualReason);
   }
 
   @override
@@ -321,6 +329,25 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
                   setState(() => _status = value.first),
             ),
             const SizedBox(height: 14),
+            if (_status == 'hadir') ...[
+              NusaDropdownField<String>(
+                fieldKey: const Key('duty-manual-reason'),
+                value: _reason,
+                options: ManualAttendanceRule.reasons.entries
+                    .map(
+                      (item) => NusaDropdownOption(
+                        value: item.key,
+                        label: item.value,
+                      ),
+                    )
+                    .toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Alasan tanpa scan kartu',
+                ),
+                onChanged: (value) => setState(() => _reason = value!),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextField(
               controller: _notes,
               minLines: 3,
@@ -337,9 +364,7 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              _status == 'hadir'
-                  ? 'Kehadiran manual tidak menetapkan jam masuk. Keterangan dan perubahan tetap disimpan dalam riwayat.'
-                  : 'Keterangan wajib diisi dan akan disimpan dalam riwayat perubahan presensi.',
+              _status == 'hadir' ? widget.rule.explanation : 'Keterangan wajib diisi dan akan disimpan dalam riwayat perubahan presensi.',
               style: const TextStyle(
                 fontSize: 11,
                 color: NusaColors.textSecondary,
@@ -360,6 +385,10 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
       );
       return;
     }
-    Navigator.pop(context, (_status, _notes.text.trim()));
+    Navigator.pop(context, (
+      _status,
+      _notes.text.trim(),
+      _status == 'hadir' ? _reason : null,
+    ));
   }
 }

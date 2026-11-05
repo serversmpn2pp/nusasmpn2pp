@@ -2,6 +2,7 @@
 
 namespace App\Services\Notifikasi;
 
+use App\Models\AbsensiSiswa;
 use App\Models\NotifikasiPengguna;
 use Illuminate\Support\Str;
 
@@ -20,6 +21,21 @@ class IsiPushNotifikasiService
         foreach (['sanksi', 'pembinaan', 'pelanggaran', 'peringatan-dini', 'progress-kasus', 'pengurangan-poin', 'pendampingan', 'laporan-siswa', 'laporan-saya', 'pemeriksaan-pengesahan'] as $kategori) {
             if (str_contains($path, $kategori) || str_contains($kunci, $kategori)) {
                 return $this->pesan('Pembaruan Kesiswaan & BK', 'Ada pembaruan pembinaan siswa. Buka NUSA untuk melihat detail.');
+            }
+        }
+
+        if (preg_match('/^presensi-manual-(siswa|orang-tua):[1-9][0-9]*:[0-9a-f]{20}$/', $kunci, $manual)
+            && in_array($path, $manual[1] === 'orang-tua' ? ['/presensi-anak', '/kehadiran-anak-saya'] : ['/notifikasi', '/kehadiran-saya'], true)) {
+            $data = $notifikasi->data_tambahan ?? [];
+            $kodeAlasan = $data['alasan_hadir_manual'] ?? '';
+            $alasan = AbsensiSiswa::ALASAN_HADIR_MANUAL[$kodeAlasan]
+                ?? ($kodeAlasan === 'input_manual_petugas' ? 'Kehadiran dicatat manual tanpa scan kartu' : null);
+            $poin = $data['poin_keterlambatan'] ?? null;
+            $menit = $data['menit_terlambat'] ?? null;
+            if ($alasan && is_int($poin) && $poin >= 0 && is_int($menit) && $menit >= 5) {
+                return $this->pesan('Kehadiran dicatat manual',
+                    ($manual[1] === 'orang-tua' ? 'Anak Anda' : 'Anda').' hadir tanpa scan: '.$alasan
+                    .'. Terlambat tercatat '.$menit.' menit; '.$poin.' poin keterlambatan. Segera hubungi admin untuk mendapatkan atau mengganti kartu pelajar.');
             }
         }
 

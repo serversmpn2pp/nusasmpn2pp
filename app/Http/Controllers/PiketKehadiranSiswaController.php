@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
+use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use App\Services\Piket\CatatKehadiranSiswaPiketService;
 use App\Services\Piket\GuruPiketHariIniService;
 use Illuminate\Http\Request;
@@ -89,6 +90,7 @@ class PiketKehadiranSiswaController extends Controller
             'cari' => $cari,
             'anggotaKelas' => $anggotaKelas,
             'absensiPerSiswa' => $absensiPerSiswa,
+            'aturanHadirManual' => app(PengaturanPoinKeterlambatanService::class)->aturanHadirManual($tahunPelajaranAktif->id),
             'ringkasan' => [
                 'total' => $jumlahSiswa,
                 'hadir' => (clone $absensiCakupan)->where('status_kehadiran', 'hadir')->count(),
@@ -107,8 +109,9 @@ class PiketKehadiranSiswaController extends Controller
         $data = $request->validate([
             'status_kehadiran' => ['required', Rule::in(['hadir', 'sakit', 'izin'])],
             'catatan' => ['required', 'string', 'min:3', 'max:500'],
+            'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
         ]);
-        $service->catat($request->user(), $anggotaKelas, $data['status_kehadiran'], $data['catatan']);
+        $service->catat($request->user(), $anggotaKelas, $data['status_kehadiran'], $data['catatan'], $data['alasan_hadir_manual'] ?? null);
 
         return back()->with('berhasil', 'Kehadiran siswa berhasil dicatat oleh guru piket.');
     }

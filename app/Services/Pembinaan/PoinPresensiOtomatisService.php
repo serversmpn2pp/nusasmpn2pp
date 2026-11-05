@@ -43,13 +43,17 @@ class PoinPresensiOtomatisService
             $kunci = $anggota->tahun_pelajaran_id.':'.$anggota->siswa_id.':'.$tanggal;
             $laporan = LaporanPembinaanSiswa::where('kunci_presensi_otomatis', $kunci)->lockForUpdate()->first();
             $pengaturan = PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $anggota->tahun_pelajaran_id)->first();
-            $dapatMenambah = $pengaturan?->aktif && $pengaturan->otomatis_langsung && $pengaturan->berlaku_mulai
-                && $tanggal >= $pengaturan->berlaku_mulai->toDateString() && $tanggal <= now()->toDateString();
+            $absensi = AbsensiSiswa::where('siswa_id', $anggota->siswa_id)->whereDate('tanggal', $tanggal)->lockForUpdate()->first();
+            // This sanction applies only to newly flagged manual attendance,
+            // independently of the regular scan automation's activation date.
+            $manual = $absensi?->memilikiSanksiManual() ?? false;
+            $dapatMenambah = $tanggal <= now()->toDateString() && ($manual
+                || ($pengaturan?->aktif && $pengaturan->otomatis_langsung && $pengaturan->berlaku_mulai
+                    && $tanggal >= $pengaturan->berlaku_mulai->toDateString()));
             if (! $laporan && ! $dapatMenambah) {
                 return ['hasil' => 'diabaikan', 'laporan_id' => null];
             }
 
-            $absensi = AbsensiSiswa::where('siswa_id', $anggota->siswa_id)->whereDate('tanggal', $tanggal)->lockForUpdate()->first();
             $aturan = new AturanAlfaOtomatisSiswaService;
             $hariAktif = $aturan->hariAktif();
             $hari = array_keys(PengaturanAbsensi::DAFTAR_HARI)[Carbon::parse($tanggal)->isoWeekday() - 1];
@@ -63,6 +67,9 @@ class PoinPresensiOtomatisService
             $jenis = null;
             $menit = $absensi?->status_kehadiran === 'hadir' && $absensi->jam_masuk && $jadwal
                 ? app(HitungKeterlambatanSiswaService::class)->menit($absensi->jam_masuk, $jadwal->jam_masuk, true) : 0;
+            if ($manual) {
+                $menit = max($menit, (int) $absensi->sanksi_manual_menit);
+            }
             if ($cakupanValid && $jadwal && ! $pengecualian) {
                 if ($absensi?->status_kehadiran === 'hadir' && $absensi->jam_masuk) {
                     $jenis = $menit > 0 ? 'terlambat' : null;
@@ -71,7 +78,8 @@ class PoinPresensiOtomatisService
                     $jenis = 'alfa';
                 }
             }
-            $target = $jenis ? (int) ($jenis === 'alfa' ? $pengaturan?->poin_alfa : $pengaturan?->poin_terlambat) : 0;
+            $target = $jenis ? (int) ($jenis === 'alfa' ? $pengaturan?->poin_alfa
+                : ($manual ? ($pengaturan?->poin_terlambat ?? 15) : $pengaturan?->poin_terlambat)) : 0;
             if ($laporan?->poin_dikecualikan_pada) {
                 $target = 0;
             } elseif (! $dapatMenambah && $target > 0) {
@@ -119,7 +127,10 @@ class PoinPresensiOtomatisService
                     'tingkat' => $butir->tingkat, 'menit_terlambat_tercatat' => $menit,
                     'diproses_otomatis_pada' => now(),
                     'kronologi' => $jenis === 'alfa' ? 'Hari sekolah berakhir tanpa kehadiran atau keterangan yang sah.'
-                        : 'Scan masuk pukul '.$absensi->jam_masuk.' melewati batas '.$jadwal->jam_masuk.'. Keterlambatan dihitung sejak detik pertama.',
+                        : ($manual ? 'Hadir dicatat manual tanpa scan kartu. '
+                            .(AbsensiSiswa::ALASAN_HADIR_MANUAL[$absensi->alasan_hadir_manual] ?? 'Input manual petugas')
+                            .'. Sanksi minimal '.$absensi->sanksi_manual_menit.' menit; tercatat '.$menit.' menit dan '.$target.' poin. '.$absensi->catatan
+                            : 'Scan masuk pukul '.$absensi->jam_masuk.' melewati batas '.$jadwal->jam_masuk.'. Keterlambatan dihitung sejak detik pertama.'),
                 ]);
                 $laporan->butirPelanggaranLaporan()->updateOrCreate(
                     ['laporan_pembinaan_siswa_id' => $laporan->id],
@@ -131,7 +142,7 @@ class PoinPresensiOtomatisService
             $alasan = $target > 0 ? ucfirst($jenis).' otomatis: '.$target.' poin, tanpa persetujuan Wakil Kesiswaan.'
                 : ($pengecualian ? 'Poin dibatalkan karena pengecualian presensi: '.$pengecualian->alasan : 'Poin dibatalkan setelah koreksi presensi atau penerimaan alasan.');
             $berubah = $this->poin->tetapkanPoinPresensi($laporan, $target, $penggunaId, $alasan);
-            if ($absensi && $dapatMenambah) {
+            if ($absensi && ($dapatMenambah || $laporan)) {
                 $nilai = ['status_poin_keterlambatan' => $target > 0 ? 'poin_otomatis' : 'poin_dibatalkan',
                     'poin_keterlambatan_terhitung' => $target, 'poin_keterlambatan_diproses_pada' => now()];
                 if ($absensi->status_kehadiran === 'hadir' && $jadwal) {
@@ -238,11 +249,12 @@ class PoinPresensiOtomatisService
 
     private function kirimNotifikasi(LaporanPembinaanSiswa $laporan): void
     {
+        $keteranganManual = $laporan->absensiSiswa?->keteranganSanksiManual();
         $penerima = $this->notifikasi->penggunaUntukSiswa($laporan->siswa_id)
             ->merge($this->notifikasi->penggunaOrangTuaUntukSiswa($laporan->siswa_id))->unique('id');
         $this->notifikasi->kirimKeBanyak($penerima, $laporan->total_poin > 0 ? 'peringatan' : 'informasi',
             $laporan->total_poin > 0 ? 'Poin presensi tercatat otomatis' : 'Poin presensi dikoreksi',
-            $laporan->total_poin > 0 ? ucfirst($laporan->jenis_presensi_otomatis).' pada '.$laporan->tanggal_kejadian->format('d/m/Y').': '.$laporan->total_poin.' poin.'
+            $laporan->total_poin > 0 ? ucfirst($laporan->jenis_presensi_otomatis).' pada '.$laporan->tanggal_kejadian->format('d/m/Y').': '.$laporan->total_poin.' poin.'.($keteranganManual ? ' '.$keteranganManual : '')
                 : 'Poin kejadian presensi tanggal '.$laporan->tanggal_kejadian->format('d/m/Y').' telah dibatalkan.',
             null, 'poin-presensi:'.$laporan->id.':'.$laporan->transaksiPoinSiswa()->count(),
             ['laporan_pembinaan_siswa_id' => $laporan->id]);

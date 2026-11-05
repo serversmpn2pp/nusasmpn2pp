@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nusa/shared/domain/manual_attendance.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
@@ -206,11 +207,16 @@ class _MyTeacherDutyViewState extends ConsumerState<MyTeacherDutyView> {
       );
       return;
     }
-    final result = await showModalBottomSheet<(String, String)>(
+    final result = await showModalBottomSheet<(String, String, String?)>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => DutyAttendanceFormSheet(student: student),
+      builder: (_) => DutyAttendanceFormSheet(
+        student: student,
+        rule:
+            ref.read(myDutyControllerProvider).value?.manualRule ??
+            const ManualAttendanceRule(),
+      ),
     );
     if (result == null || !mounted) return;
     setState(() => _mutating = true);
@@ -221,6 +227,7 @@ class _MyTeacherDutyViewState extends ConsumerState<MyTeacherDutyView> {
             classMemberId: student.classMemberId,
             status: result.$1,
             notes: result.$2,
+            manualReason: result.$3,
           );
       await ref.read(myDutyControllerProvider.future);
       if (mounted) {
@@ -486,6 +493,14 @@ class _StudentCard extends StatelessWidget {
                           style: const TextStyle(fontSize: 10),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    if (student.manualSanctionNote?.isNotEmpty == true)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          student.manualSanctionNote!,
+                          style: const TextStyle(fontSize: 10, height: 1.4),
                         ),
                       ),
                   ],

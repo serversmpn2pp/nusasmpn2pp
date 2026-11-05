@@ -79,7 +79,8 @@ class ProsesPoinKeterlambatanService
     ): array {
         $absensiId = $absensi instanceof AbsensiSiswa ? $absensi->id : $absensi;
         $catatan = $absensi instanceof AbsensiSiswa ? $absensi : AbsensiSiswa::findOrFail($absensiId);
-        if (PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $catatan->tahun_pelajaran_id)->where('otomatis_langsung', true)->exists()
+        if ($catatan->memilikiSanksiManual()
+            || PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $catatan->tahun_pelajaran_id)->where('otomatis_langsung', true)->exists()
             || LaporanPembinaanSiswa::where('absensi_siswa_id', $absensiId)->whereNotNull('kunci_presensi_otomatis')->exists()) {
             return app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($catatan, $penggunaId);
         }

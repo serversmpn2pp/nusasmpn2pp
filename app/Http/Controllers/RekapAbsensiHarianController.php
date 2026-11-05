@@ -136,6 +136,7 @@ class RekapAbsensiHarianController extends Controller
             'jam_masuk' => ['nullable', 'date_format:H:i,H:i:s'],
             'jam_pulang' => ['nullable', 'date_format:H:i,H:i:s'],
             'catatan' => [$koreksiHariIniTerbatas ? 'required' : 'nullable', 'string', 'max:2000'],
+            'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
         ], [
             'catatan.required' => 'Catatan koreksi wajib diisi oleh Guru PL.',
         ]);

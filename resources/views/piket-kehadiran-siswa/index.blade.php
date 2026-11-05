@@ -47,17 +47,17 @@
                     $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
                     $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
                     $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
-                    $bolehDicatat = ! $absensi || ($absensi->sumber === 'guru_piket' && ! $absensi->jam_masuk);
+                    $bolehDicatat = ! $absensi || $absensi->sumber === 'guru_piket';
                 @endphp
                 <tr>
                     <td>{{ $anggotaKelas->firstItem() + $loop->index }}</td>
                     <td><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></td>
                     <td>{{ $anggota->kelas?->nama }}</td>
                     <td><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></td>
-                    <td>{{ $absensi?->catatan ?: '-' }}</td>
+                    <td>{{ $absensi?->catatanKehadiran() ?: '-' }}</td>
                     <td>
                         @if ($bolehDicatat)
-                            <details class="attendance-form"><summary>{{ $absensi ? 'Ubah catatan' : 'Catat hadir/sakit/izin' }}</summary><form action="{{ route('piket-kehadiran-siswa.update', $anggota) }}" method="POST" class="attendance-form-fields">@csrf @method('PUT')<select name="status_kehadiran" class="select" required><option value="hadir" @selected($statusHariIni === 'hadir' || $statusHariIni === 'belum_scan')>Hadir</option><option value="sakit" @selected($statusHariIni === 'sakit')>Sakit</option><option value="izin" @selected($statusHariIni === 'izin')>Izin</option></select><textarea name="catatan" class="textarea" required placeholder="Contoh: lupa membawa kartu dan dikonfirmasi hadir">{{ $absensi?->catatan }}</textarea><button class="button button-primary button-sm" type="submit">Simpan</button></form></details>
+                            @include('piket-kehadiran-siswa._form-kehadiran')
                         @else
                             <span class="person-meta">Tidak dapat diubah dari piket</span>
                         @endif
@@ -76,9 +76,9 @@
                 $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
                 $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
                 $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
-                $bolehDicatat = ! $absensi || ($absensi->sumber === 'guru_piket' && ! $absensi->jam_masuk);
+                $bolehDicatat = ! $absensi || $absensi->sumber === 'guru_piket';
             @endphp
-            <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $anggota->kelas?->nama }} &middot; NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></div>@if($absensi?->catatan)<p class="help-text" style="margin-top:10px;">{{ $absensi->catatan }}</p>@endif @if($bolehDicatat)<details class="attendance-form" style="margin-top:12px;"><summary>{{ $absensi ? 'Ubah catatan' : 'Catat hadir/sakit/izin' }}</summary><form action="{{ route('piket-kehadiran-siswa.update', $anggota) }}" method="POST" class="attendance-form-fields">@csrf @method('PUT')<select name="status_kehadiran" class="select" required><option value="hadir" @selected($statusHariIni === 'hadir' || $statusHariIni === 'belum_scan')>Hadir</option><option value="sakit" @selected($statusHariIni === 'sakit')>Sakit</option><option value="izin" @selected($statusHariIni === 'izin')>Izin</option></select><textarea name="catatan" class="textarea" required placeholder="Contoh: lupa membawa kartu dan dikonfirmasi hadir">{{ $absensi?->catatan }}</textarea><button class="button button-primary" type="submit">Simpan</button></form></details>@endif</article>
+            <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $anggota->kelas?->nama }} &middot; NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></div>@if($absensi?->catatanKehadiran())<p class="help-text" style="margin-top:10px;">{{ $absensi->catatanKehadiran() }}</p>@endif @if($bolehDicatat) @include('piket-kehadiran-siswa._form-kehadiran') @endif</article>
         @empty
             <div class="panel empty-state">Tidak ada siswa sesuai filter.</div>
         @endforelse
@@ -88,5 +88,13 @@
         <nav class="pagination-simple"><div>Halaman {{ $anggotaKelas->currentPage() }} dari {{ $anggotaKelas->lastPage() }}</div><div class="actions">@if($anggotaKelas->onFirstPage())<span class="button button-muted" aria-disabled="true">Sebelumnya</span>@else<a href="{{ $anggotaKelas->previousPageUrl() }}" class="button button-muted">Sebelumnya</a>@endif @if($anggotaKelas->hasMorePages())<a href="{{ $anggotaKelas->nextPageUrl() }}" class="button button-muted">Berikutnya</a>@else<span class="button button-muted" aria-disabled="true">Berikutnya</span>@endif</div></nav>
     @endif
 
-    <script>document.querySelectorAll('[data-auto-submit]').forEach(element => element.addEventListener('change', () => element.form.submit()));</script>
+    <script>
+        document.querySelectorAll('[data-auto-submit]').forEach(element => element.addEventListener('change', () => element.form.submit()));
+        document.querySelectorAll('[data-hadir-manual]').forEach(form => {
+            const status = form.querySelector('[name="status_kehadiran"]');
+            const alasan = form.querySelector('[data-alasan-manual]');
+            const sync = () => { alasan.hidden = status.value !== 'hadir'; alasan.querySelector('select').disabled = alasan.hidden; };
+            status.addEventListener('change', sync); sync();
+        });
+    </script>
 @endsection

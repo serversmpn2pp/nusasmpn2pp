@@ -38,10 +38,12 @@ class TeacherDutyRepository {
     required int classMemberId,
     required String status,
     required String notes,
+    String? manualReason,
   }) => _remote.recordAttendance(
     classMemberId: classMemberId,
     status: status,
     notes: notes,
+    manualReason: manualReason,
   );
 }
 
