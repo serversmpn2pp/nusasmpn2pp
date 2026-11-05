@@ -22,6 +22,10 @@ class PertemuanTahfidzController extends Controller
         ], ['tanggal.before_or_equal' => 'Pertemuan tidak dapat dibuka untuk tanggal mendatang.']);
         $pertemuan = $this->layanan->buka($request->user(), $kelompok, $data['tanggal']);
 
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['id' => $pertemuan->id]])->header('Cache-Control', 'private, no-store');
+        }
+
         return redirect()->route('tahfidz.pertemuan.show', [$kelompok, $pertemuan]);
     }
 
@@ -44,6 +48,10 @@ class PertemuanTahfidzController extends Controller
         $kelompok = $this->kelompok($request, $kelompok);
         $this->layanan->selesaikan($request->user(), $kelompok, $pertemuan);
 
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['tersimpan' => true]])->header('Cache-Control', 'private, no-store');
+        }
+
         return redirect()->route('tahfidz.pertemuan.show', [$kelompok, $pertemuan])->with('berhasil', 'Pertemuan selesai. Rangkuman dikirim ke akun orang tua yang terhubung.');
     }
 
@@ -62,6 +70,10 @@ class PertemuanTahfidzController extends Controller
             'token_setoran' => ['required', 'uuid'],
         ], ['nilai.regex' => 'Masukkan nilai 0-100 dengan maksimal dua angka desimal.']);
         $setoran = $this->layanan->simpan($request->user(), $kelompok, $pertemuan, $data);
+
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['id' => $setoran->id]])->header('Cache-Control', 'private, no-store');
+        }
 
         return redirect()->route('tahfidz.pertemuan.show', [$kelompok, $pertemuan])
             ->with('berhasil', 'Setoran berhasil disimpan.')->with('tahfidz_anggota', $setoran->anggota_tahfidz_id);

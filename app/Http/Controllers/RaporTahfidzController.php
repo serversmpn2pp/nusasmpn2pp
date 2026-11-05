@@ -98,6 +98,10 @@ class RaporTahfidzController extends Controller
         $data['surah'] = $data['mode'] === 'tetap' ? array_map('intval', $data['surah']) : [];
         TargetRaporTahfidz::updateOrCreate(['tahun_pelajaran_id' => $tahun->id, 'tingkat' => $data['tingkat']], $data);
 
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['tersimpan' => true]])->header('Cache-Control', 'private, no-store');
+        }
+
         return redirect()->route('tahfidz.rapor.pengaturan', ['tahun' => $tahun->id, 'tingkat' => $data['tingkat']])
             ->with('berhasil', 'Target rapor Tahfidz disimpan.');
     }
@@ -138,6 +142,10 @@ class RaporTahfidzController extends Controller
             }
         }
         $this->publikasi->rapor($request->user(), $kelompok, $anggota, $dokumen);
+
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['tersimpan' => true]])->header('Cache-Control', 'private, no-store');
+        }
 
         return redirect()->route('tahfidz.rapor.cetak', [$kelompok, $anggota])
             ->with('berhasil', $bagikan ? 'Rapor dibagikan ke akun orang tua.' : 'Publikasi rapor ditarik.');

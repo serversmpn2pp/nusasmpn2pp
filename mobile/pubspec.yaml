@@ -75,6 +75,12 @@ flutter:
     - assets/images/logo-padang-panjang.png
     - assets/images/logo-smpn2pp.png
     - assets/fonts/
+    - assets/quran/
+
+  fonts:
+    - family: AmiriQuran
+      fonts:
+        - asset: assets/fonts/AmiriQuran-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

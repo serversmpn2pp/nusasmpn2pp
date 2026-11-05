@@ -12,6 +12,7 @@ use App\Services\Ibadah\AksesScanKegiatanIbadah;
 use App\Services\Pembinaan\AksesRekapPoinSiswaService;
 use App\Services\Pembinaan\AksesSanksiPoinService;
 use App\Services\Supervisi\AksesSupervisi;
+use App\Services\Tahfidz\AksesTahfidz;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -211,6 +212,12 @@ class MenuMobileService
 
     private function bolehDilihat(array $item, Pengguna $pengguna, array $menuSupervisi = []): bool
     {
+        if (($item['tahfidz_only'] ?? false) && ! app(AksesTahfidz::class)->lihat($pengguna)) {
+            return false;
+        }
+        if (($item['tahfidz_kelola_only'] ?? false) && ! app(AksesTahfidz::class)->kelola($pengguna)) {
+            return false;
+        }
         if (($item['supervisi_only'] ?? false) && ! in_array($item['kode'], $menuSupervisi, true)) {
             return false;
         }

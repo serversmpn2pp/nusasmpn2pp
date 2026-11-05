@@ -132,6 +132,7 @@ import 'package:nusa/features/sts_behavior/presentation/sts_behavior_view.dart';
 import 'package:nusa/features/sts_reports/presentation/sts_reports_view.dart';
 import 'package:nusa/features/sts_publication/presentation/sts_publication_view.dart';
 import 'package:nusa/features/sts_publication/presentation/published_sts_view.dart';
+import 'package:nusa/features/tahfidz/presentation/tahfidz_views.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_detail_view.dart';
 import 'package:nusa/features/student_sanction/presentation/student_sanction_list_view.dart';
 import 'package:nusa/features/student_attendance_settings/presentation/student_attendance_settings_view.dart';
@@ -1331,6 +1332,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.stsReport,
         name: 'sts-report',
         builder: (context, state) => const RaporStsView(),
+      ),
+      GoRoute(
+        path: '/tahfidz',
+        builder: (_, state) =>
+            TahfidzView(reports: state.uri.queryParameters['tab'] == 'rapor'),
+      ),
+      GoRoute(
+        path: '/tahfidz/target-rapor',
+        builder: (_, _) => const TahfidzTargetView(),
+      ),
+      GoRoute(
+        path: '/tahfidz/wisuda',
+        builder: (_, _) => const TahfidzWisudaView(),
+      ),
+      GoRoute(
+        path: '/tahfidz-anak',
+        builder: (_, state) => TahfidzAnakView(
+          studentId: int.tryParse(state.uri.queryParameters['siswa'] ?? ''),
+        ),
       ),
       GoRoute(
         path: AppRoutes.stsPublication,

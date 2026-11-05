@@ -45,6 +45,10 @@ class WisudaTahfidzController extends Controller
             }
         });
 
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['tersimpan' => true]])->header('Cache-Control', 'private, no-store');
+        }
+
         return redirect()->route('tahfidz.wisuda.index')->with('berhasil', 'Acara wisuda disimpan.');
     }
 
@@ -65,6 +69,10 @@ class WisudaTahfidzController extends Controller
                 'nama_pembimbing' => $pengguna->pegawai->nama_lengkap, 'diverifikasi_pada' => now(),
             ]);
         });
+
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['tersimpan' => true]])->header('Cache-Control', 'private, no-store');
+        }
 
         return redirect()->route('tahfidz.rekap.siswa', [$kelompok, $anggota])->with('berhasil', 'Kelulusan Tahfidz sudah diverifikasi.');
     }
@@ -90,6 +98,10 @@ class WisudaTahfidzController extends Controller
                 'nama_penerima' => $lulus->siswa->nama_lengkap, 'penerbit_id' => $request->user()->id, 'diterbitkan_pada' => now()]);
         });
 
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['tersimpan' => true]])->header('Cache-Control', 'private, no-store');
+        }
+
         return redirect()->route('tahfidz.wisuda.index')->with('berhasil', 'Sertifikat Tahfidz sudah diterbitkan.');
     }
 
@@ -105,6 +117,10 @@ class WisudaTahfidzController extends Controller
         abort_unless($this->akses->kelola($request->user()), 403);
         $data = $request->validate(['bagikan' => ['required', 'boolean']]);
         $publikasi->sertifikat($request->user(), $kelulusan, (bool) $data['bagikan']);
+
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['tersimpan' => true]])->header('Cache-Control', 'private, no-store');
+        }
 
         return redirect()->route('tahfidz.wisuda.index')->with('berhasil',
             $data['bagikan'] ? 'Sertifikat dibagikan ke akun orang tua.' : 'Publikasi sertifikat ditarik.');

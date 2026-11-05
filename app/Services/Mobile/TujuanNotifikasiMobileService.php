@@ -21,6 +21,12 @@ class TujuanNotifikasiMobileService
             $path = '/kehadiran-saya';
         }
 
+        if ($path === '/tahfidz-anak') {
+            $id = $this->query($notifikasi->tautan, 'siswa');
+
+            return '/tahfidz-anak'.($id && preg_match('/^[1-9][0-9]*$/', $id) ? '?siswa='.$id : '');
+        }
+
         if (in_array($path, ['/kehadiran-saya', '/kehadiran-anak-saya'], true)) {
             $parameter = [];
             $siswa = $this->query($notifikasi->tautan, 'siswa_id');

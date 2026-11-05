@@ -85,6 +85,10 @@ class TahfidzController extends Controller
         $baru = $kelompok === null;
         $kelompok = $this->layanan->simpan($data, $kelompok);
 
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['id' => $kelompok->id, 'versi' => $kelompok->versi]], $baru ? 201 : 200)->header('Cache-Control', 'private, no-store');
+        }
+
         return redirect()->route($baru && $kelompok->aktif ? 'tahfidz.anggota.edit' : 'tahfidz.show', $kelompok)
             ->with('berhasil', $baru ? 'Kelompok berhasil dibuat.' : 'Kelompok berhasil diperbarui.');
     }
@@ -109,6 +113,10 @@ class TahfidzController extends Controller
             'siswa_ids.*' => ['required', 'integer', 'min:1', 'distinct'],
         ], ['daftar_lengkap.required' => 'Daftar pilihan tidak diterima lengkap. Muat ulang sebelum menyimpan.']);
         $this->layanan->simpanAnggota($kelompok, array_map('intval', $data['siswa_ids'] ?? []), (int) $data['versi']);
+
+        if ($request->is('api/*')) {
+            return response()->json(['data' => ['tersimpan' => true]])->header('Cache-Control', 'private, no-store');
+        }
 
         return redirect()->route('tahfidz.show', $kelompok)->with('berhasil', 'Daftar anggota berhasil disimpan.');
     }
