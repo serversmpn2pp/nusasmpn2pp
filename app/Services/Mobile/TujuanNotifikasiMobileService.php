@@ -21,6 +21,13 @@ class TujuanNotifikasiMobileService
             $path = '/kehadiran-saya';
         }
 
+        // Tautan web siswa tetap membuka kotak notifikasi, sedangkan mobile
+        // mempunyai halaman progres sendiri tanpa pilihan identitas siswa.
+        if ($path === '/tahfidz-saya' || ($path === '/notifikasi'
+            && preg_match('/^tahfidz-(?:pertemuan|rapor|sertifikat):[1-9][0-9]*:[1-9][0-9]*$/', (string) $notifikasi->kunci_unik))) {
+            return '/tahfidz-saya';
+        }
+
         if ($path === '/tahfidz-anak') {
             $id = $this->query($notifikasi->tautan, 'siswa');
 

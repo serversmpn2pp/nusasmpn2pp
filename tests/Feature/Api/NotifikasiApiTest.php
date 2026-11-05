@@ -100,6 +100,14 @@ class NotifikasiApiTest extends TestCase
         $service = app(TujuanNotifikasiMobileService::class);
 
         $kasus = [
+            ['/notifikasi', 'tahfidz-pertemuan:1:12', '/tahfidz-saya'],
+            ['/notifikasi?siswa=99&tujuan=/role-hak-akses', 'tahfidz-rapor:1:2', '/tahfidz-saya'],
+            ['/notifikasi', 'tahfidz-sertifikat:1:2', '/tahfidz-saya'],
+            ['/notifikasi', 'tahfidz-tidak-dikenal:1:2', null],
+            ['/notifikasi', 'tahfidz-pertemuan:1:0', null],
+            ['/tahfidz-saya?siswa=99', null, '/tahfidz-saya'],
+            ['/tahfidz-anak?siswa=12&tujuan=/role-hak-akses', 'tahfidz-pertemuan:1:12', '/tahfidz-anak?siswa=12'],
+            ['/tahfidz-anak?siswa[]=12', null, '/tahfidz-anak'],
             ['/presensi-anak?siswa_id=12&bulan=2026-10&catatan=privat', 'presensi-masuk-orang-tua:1', '/kehadiran-anak-saya?siswa_id=12&bulan=2026-10'],
             ['/notifikasi?siswa_id=13&bulan=2026-09', 'presensi-masuk-siswa:1', '/kehadiran-saya?siswa_id=13&bulan=2026-09'],
             ['/kehadiran-anak-saya?siswa_id[]=12&bulan=2026-99', null, '/kehadiran-anak-saya'],

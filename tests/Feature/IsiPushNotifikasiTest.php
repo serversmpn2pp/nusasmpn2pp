@@ -46,7 +46,7 @@ class IsiPushNotifikasiTest extends TestCase
     public function test_catatan_bebas_modul_lain_tidak_disalin_ke_layar_kunci(): void
     {
         foreach (['/tugas-pengawas-ujian/1', '/perangkat-ajar-saya/2', '/pengajuan-barang-saya/3',
-            '/agenda-humas/4', '/pengaduan-saya/5', '/umpan-balik-saya/6'] as $tautan) {
+            '/agenda-humas/4', '/pengaduan-saya/5', '/umpan-balik-saya/6', '/tahfidz-saya', '/tahfidz-anak?siswa=12'] as $tautan) {
             $hasil = app(IsiPushNotifikasiService::class)->untuk(new NotifikasiPengguna([
                 'tautan' => $tautan, 'judul' => 'Identitas rahasia', 'pesan' => 'Alasan medis rahasia',
             ]));

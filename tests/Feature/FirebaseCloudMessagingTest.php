@@ -66,6 +66,42 @@ class FirebaseCloudMessagingTest extends TestCase
         });
     }
 
+    public function test_push_tahfidz_memiliki_pesan_dan_tujuan_untuk_siswa_serta_orang_tua(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['fcm.googleapis.com/*' => Http::response(['name' => 'projects/nusa/messages/tahfidz'])]);
+        [$notifikasi, $perangkat] = $this->buatData('/notifikasi');
+        foreach ([
+            ['/notifikasi', 'pertemuan', 'Perkembangan Tahfidz', 'Setoran Tahfidz Anda'],
+            ['/tahfidz-anak?siswa=12', 'pertemuan', 'Perkembangan Tahfidz', 'Setoran Tahfidz anak Anda'],
+            ['/notifikasi', 'rapor', 'Rapor Tahfidz dibagikan', 'kepada orang tua/wali'],
+            ['/tahfidz-anak?siswa=12', 'rapor', 'Rapor Tahfidz tersedia', 'rapor Tahfidz anak Anda'],
+            ['/notifikasi', 'sertifikat', 'Sertifikat Tahfidz dibagikan', 'kepada orang tua/wali'],
+            ['/tahfidz-anak?siswa=12', 'sertifikat', 'Sertifikat Tahfidz tersedia', 'sertifikat Tahfidz anak Anda'],
+        ] as [$tautan, $jenis, $judul, $isi]) {
+            $notifikasi->update(['tautan' => $tautan, 'kunci_unik' => 'tahfidz-'.$jenis.':1:12',
+                'judul' => 'Identitas rahasia siswa', 'pesan' => 'Nilai 88,50 dan catatan privat pembimbing']);
+            $this->jalankanJob($notifikasi);
+            $tujuan = $tautan === '/notifikasi' ? '/tahfidz-saya' : $tautan;
+            Http::assertSent(function (Request $request) use ($notifikasi, $perangkat, $judul, $isi, $tujuan): bool {
+                $pesan = $request['message'];
+
+                return $pesan['token'] === $perangkat->token
+                    && $pesan['notification']['title'] === $judul
+                    && str_contains($pesan['notification']['body'], $isi)
+                    && ! str_contains(json_encode($pesan), 'rahasia')
+                    && ! str_contains(json_encode($pesan), '88,50')
+                    && ! str_contains(json_encode($pesan), 'privat')
+                    && $pesan['data']['notifikasi_id'] === (string) $notifikasi->id
+                    && $pesan['data']['tujuan'] === $tujuan
+                    && $pesan['android']['notification']['channel_id'] === 'nusa_notifications'
+                    && $pesan['android']['notification']['sound'] === 'default'
+                    && $pesan['android']['priority'] === 'high';
+            });
+        }
+        Http::assertSentCount(6);
+    }
+
     public function test_pencabutan_akun_langsung_menonaktifkan_perangkat_tanpa_mengubah_identitas(): void
     {
         Http::fake();

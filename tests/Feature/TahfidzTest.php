@@ -492,7 +492,7 @@ class TahfidzTest extends TestCase
 
         $this->actingAs($guru)->post($selesai)->assertSessionHasNoErrors();
         $this->post($selesai)->assertSessionHasNoErrors();
-        $this->get(route('tahfidz.pertemuan.show', [$kelompok, $sesi]))->assertOk()->assertDontSeeText('Catat setoran')->assertSeeText('Dibagikan ke orang tua pada');
+        $this->get(route('tahfidz.pertemuan.show', [$kelompok, $sesi]))->assertOk()->assertDontSeeText('Catat setoran')->assertSeeText('Dibagikan ke siswa dan orang tua pada');
         $this->post($urlSimpan, [...$payload, 'token_setoran' => (string) Str::uuid()])->assertSessionHasErrors('pertemuan');
         $this->assertDatabaseCount('setoran_tahfidz', 4);
         $ringkasan = NotifikasiPengguna::where('kunci_unik', 'like', 'tahfidz-pertemuan:%')->get();

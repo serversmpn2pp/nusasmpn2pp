@@ -80,6 +80,28 @@ void main() {
     expect(runtime.destinations, isNot(contains('/role-hak-akses')));
   });
 
+  for (final destination in ['/tahfidz-saya', '/tahfidz-anak?siswa=12']) {
+    test(
+      'push Tahfidz membuka $destination setelah verifikasi pemilik',
+      () async {
+        remote.destination = destination;
+        await login(1);
+        runtime.foreground.add(push('10'));
+        await flushPush();
+        expect(runtime.shown, 1);
+        expect(remote.read, isEmpty);
+        await runtime.action!();
+        expect(remote.read, [10]);
+        expect(runtime.destinations, [destination]);
+        coordinator.loggedOut();
+        await login(2);
+        runtime.opened.add(push('10'));
+        await flushPush();
+        expect(runtime.destinations, [destination]);
+      },
+    );
+  }
+
   test('pesan akun lain ditolak pada foreground dan ketukan', () async {
     await login(2);
     runtime.foreground.add(push('10'));

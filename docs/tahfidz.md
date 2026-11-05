@@ -45,11 +45,11 @@ Rekap memakai akses kelompok yang sama seperti pertemuan. Anggota yang sudah kel
 
 ## Akun orang tua dan notifikasi
 
-- Pembimbing memilih **Selesaikan pertemuan** setelah memeriksa setoran. Pertemuan yang selesai tidak menerima setoran baru. NUSA mengirim satu rangkuman per anak yang menyetor kepada setiap akun orang tua aktif yang terhubung, tanpa menggandakan notifikasi jika tombol diproses ulang. Setoran lama tidak otomatis dibagikan saat migrasi.
+- Pembimbing memilih **Selesaikan pertemuan** setelah memeriksa setoran. Pertemuan yang selesai tidak menerima setoran baru. NUSA mengirim satu rangkuman per siswa yang menyetor kepada akun siswa aktif dan setiap akun orang tua/wali aktif yang terhubung, tanpa menggandakan notifikasi jika tombol diproses ulang. Setoran lama tidak otomatis dibagikan saat migrasi.
 - Orang tua membuka **Informasi Anak > Tahfidz**, dan dapat memilih anak apabila lebih dari satu terhubung. Progres dan riwayat hanya memuat setoran dari pertemuan yang sudah selesai. Nilai dan tanggal ditampilkan tanpa catatan internal.
 - Dari pratinjau rapor, administrator atau koordinator memilih **Bagikan rapor ke orang tua**. Versi yang dibagikan merupakan salinan pratinjau dan tidak berubah saat nilai atau pengaturan target berubah. Untuk memperbarui versi, periksa pratinjau lalu pilih **Bagikan ulang rapor**.
 - Di **Wisuda**, sertifikat yang sudah diterbitkan masih bersifat internal sampai koordinator memilih **Bagikan ke orang tua**. Rapor dan sertifikat dapat ditarik secara terpisah; tautan dokumen orang tua tidak dapat dibuka lagi setelah ditarik.
-- Rangkuman dan publikasi memakai notifikasi NUSA. Jika push Firebase aktif, antrean NUSA yang sudah ada menangani pengiriman dengan pesan ringkas tanpa nama dan nilai pada layar kunci. Tautan perkembangan membuka halaman web orang tua, bukan halaman native baru.
+- Rangkuman dan publikasi memakai notifikasi NUSA dan push Firebase setelah transaksi berhasil. Siswa mendapat kabar rapor/sertifikat telah dibagikan kepada orang tua, tanpa mengubah izin dokumen. Pesan layar kunci tidak memuat nama, nilai, atau catatan internal. Tautan mobile membuka Tahfidz Saya untuk siswa dan Tahfidz Anak Saya untuk wali; tautan web siswa tetap ke kotak notifikasi. Konfigurasi dan verifikasi perangkat dijelaskan di `docs/tahfidz-mobile.md`.
 
 ## Pemasangan
 

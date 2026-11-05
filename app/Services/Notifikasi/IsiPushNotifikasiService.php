@@ -63,8 +63,27 @@ class IsiPushNotifikasiService
             return $this->pesan($notifikasi->judul, $notifikasi->pesan);
         }
 
+        if (in_array($path, ['/notifikasi', '/tahfidz-saya', '/tahfidz-anak'], true)
+            && preg_match('/^tahfidz-(pertemuan|rapor|sertifikat):[1-9][0-9]*:[1-9][0-9]*$/', $kunci, $tahfidz)) {
+            $siswa = $path !== '/tahfidz-anak';
+            [$judul, $pesan] = match ($tahfidz[1]) {
+                'pertemuan' => ['Perkembangan Tahfidz', $siswa
+                    ? 'Setoran Tahfidz Anda telah dikonfirmasi pembimbing. Buka NUSA untuk melihat perkembangan.'
+                    : 'Setoran Tahfidz anak Anda telah dikonfirmasi pembimbing. Buka NUSA untuk melihat perkembangan.'],
+                'rapor' => [$siswa ? 'Rapor Tahfidz dibagikan' : 'Rapor Tahfidz tersedia', $siswa
+                    ? 'Rapor Tahfidz Anda telah dibagikan kepada orang tua/wali. Buka NUSA untuk melihat perkembangan.'
+                    : 'Sekolah telah membagikan rapor Tahfidz anak Anda. Buka NUSA untuk melihat rapor.'],
+                'sertifikat' => [$siswa ? 'Sertifikat Tahfidz dibagikan' : 'Sertifikat Tahfidz tersedia', $siswa
+                    ? 'Sertifikat Tahfidz Anda telah dibagikan kepada orang tua/wali. Buka NUSA untuk melihat perkembangan.'
+                    : 'Sekolah telah membagikan sertifikat Tahfidz anak Anda. Buka NUSA untuk melihat sertifikat.'],
+            };
+
+            return $this->pesan($judul, $pesan);
+        }
+
         // Modul dengan catatan bebas mendapat ringkasan, bukan salinan catatannya.
         foreach ([
+            '/tahfidz-saya' => ['Pembaruan Tahfidz', 'Ada pembaruan Tahfidz Anda. Buka NUSA untuk melihat detail.'],
             '/tahfidz-anak' => ['Pembaruan Tahfidz', 'Ada pembaruan Tahfidz anak Anda. Buka NUSA untuk melihat detail.'],
             '/persuratan' => ['Pembaruan persuratan sekolah', 'Ada surat atau keputusan yang perlu Anda periksa di NUSA.'],
             '/surat-saya' => ['Pembaruan surat tugas Anda', 'Ada penugasan atau pembatalan surat tugas Anda. Periksa di NUSA.'],

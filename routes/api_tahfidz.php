@@ -34,5 +34,6 @@ Route::prefix('tahfidz')->name('tahfidz.')->group(function () {
     });
 });
 Route::get('/tahfidz-anak', [TahfidzMobileController::class, 'anak'])->name('tahfidz-anak.index');
+Route::get('/tahfidz-saya', [TahfidzMobileController::class, 'saya'])->name('tahfidz-saya.index');
 Route::get('/tahfidz-anak/rapor/{id}', [TahfidzMobileController::class, 'raporAnak'])->whereNumber('id')->name('tahfidz-anak.rapor');
 Route::get('/tahfidz-anak/sertifikat/{id}', [TahfidzMobileController::class, 'sertifikatAnak'])->whereNumber('id')->name('tahfidz-anak.sertifikat');

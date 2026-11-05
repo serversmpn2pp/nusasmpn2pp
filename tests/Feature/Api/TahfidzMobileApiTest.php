@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Jobs\KirimPushNotification;
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\KelompokTahfidz;
@@ -16,10 +17,13 @@ use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Services\Mobile\TujuanNotifikasiMobileService;
 use App\Services\Tahfidz\KelompokTahfidzService;
+use App\Services\Tahfidz\SetoranTahfidzService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class TahfidzMobileApiTest extends TestCase
@@ -71,6 +75,7 @@ class TahfidzMobileApiTest extends TestCase
 
     public function test_setoran_retry_tidak_ganda_dan_orang_tua_hanya_melihat_pertemuan_selesai(): void
     {
+        config(['services.firebase.push_enabled' => true]);
         $d = $this->data();
         $p = $this->meeting($d);
         $payload = $this->deposit($d, 114);
@@ -82,14 +87,82 @@ class TahfidzMobileApiTest extends TestCase
         $this->getJson('/api/v1/tahfidz/'.$d['group']->id.'/anggota/'.$d['anggota']->id)->assertOk()->assertJsonPath('data.riwayat.0.tanggal', '2026-11-05');
         $this->getJson($p)->assertOk()->assertJsonPath('data.items.0.nilai', '88,5')->assertJsonPath('data.catat', true);
         $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak')->assertOk()->assertJsonPath('data.sudah', 0);
+        $this->assertDatabaseCount('notifikasi_pengguna', 0);
+        Queue::assertNothingPushed();
         $this->login($d['guru'])->postJson($p.'/selesaikan')->assertOk();
         $this->postJson($p.'/selesaikan')->assertOk();
         $this->postJson($p.'/setoran', $this->deposit($d, 113))->assertUnprocessable();
         $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak')->assertOk()->assertJsonPath('data.sudah', 1)
             ->assertJsonPath('data.riwayat.0.nilai', '88,5')->assertDontSee('Catatan rahasia pembimbing');
-        $this->assertSame(1, NotifikasiPengguna::where('kunci_unik', 'like', 'tahfidz-pertemuan:%')->count());
-        $n = NotifikasiPengguna::where('kunci_unik', 'like', 'tahfidz-pertemuan:%')->sole();
+        $this->assertPemberitahuan($d, 'tahfidz-pertemuan:', 'Perkembangan Tahfidz');
+        Queue::assertPushed(KirimPushNotification::class, 2);
+        $n = NotifikasiPengguna::where('kunci_unik', 'like', 'tahfidz-pertemuan:%')->where('pengguna_id', $d['parent']->id)->sole();
         $this->assertSame('/tahfidz-anak?siswa='.$d['siswa']->id, app(TujuanNotifikasiMobileService::class)->untuk($n));
+        $s = NotifikasiPengguna::where('kunci_unik', $n->kunci_unik)->where('pengguna_id', $d['akunSiswa']->id)->sole();
+        $this->login($d['akunSiswa'])->getJson('/api/v1/beranda')->assertOk()
+            ->assertJsonPath('data.notifikasi.jumlah_belum_dibaca', 1)
+            ->assertJsonPath('data.notifikasi.terbaru.0.tautan_mobile', '/tahfidz-saya');
+        $this->getJson(route('api.v1.notifikasi.tujuan', $s))->assertOk()->assertJsonPath('data.tautan_mobile', '/tahfidz-saya');
+        $this->getJson(route('api.v1.notifikasi.tujuan', $n))->assertForbidden();
+        $this->login($d['parent'])->getJson('/api/v1/beranda')->assertOk()
+            ->assertJsonPath('data.notifikasi.terbaru.0.tautan_mobile', '/tahfidz-anak?siswa='.$d['siswa']->id);
+        $this->getJson(route('api.v1.notifikasi.tujuan', $s))->assertForbidden();
+    }
+
+    #[DataProvider('statusPenerimaSiswa')]
+    public function test_notifikasi_hanya_untuk_identitas_siswa_dan_wali_aktif_yang_terkait(array $status, bool $menerima): void
+    {
+        config(['services.firebase.push_enabled' => true]);
+        $d = $this->data();
+        $d['akunSiswa']->update($status);
+        foreach ([
+            ['siswa_id' => $d['siswaLain']->id],
+            ['siswa_id' => null],
+        ] as $i => $atribut) {
+            Pengguna::create([...$d['akunSiswa']->only(['kata_sandi', 'peran', 'aktif']), 'akun_sistem' => false,
+                'nama' => 'Bukan penerima', 'username' => 'bukan-penerima-'.$i, ...$atribut]);
+        }
+        $nonaktif = $this->parentUser('wali-nonaktif', $d['siswa']);
+        $nonaktif->update(['aktif' => false]);
+        $p = $this->meeting($d);
+        $this->postJson($p.'/setoran', $this->deposit($d, 114))->assertOk();
+        $this->postJson($p.'/selesaikan')->assertOk();
+        $this->assertEqualsCanonicalizing(
+            $menerima ? [$d['parent']->id, $d['akunSiswa']->id] : [$d['parent']->id],
+            NotifikasiPengguna::pluck('pengguna_id')->all(),
+        );
+        Queue::assertPushed(KirimPushNotification::class, $menerima ? 2 : 1);
+    }
+
+    public static function statusPenerimaSiswa(): array
+    {
+        return [
+            'siswa aktif' => [['aktif' => true, 'akun_sistem' => false], true],
+            'siswa nonaktif' => [['aktif' => false, 'akun_sistem' => false], false],
+            'akun sistem' => [['aktif' => true, 'akun_sistem' => true], false],
+        ];
+    }
+
+    public function test_push_tidak_keluar_jika_penyelesaian_pertemuan_dibatalkan_transaksi(): void
+    {
+        config(['services.firebase.push_enabled' => true]);
+        $d = $this->data();
+        $p = $this->meeting($d);
+        $this->postJson($p.'/setoran', $this->deposit($d, 114))->assertOk();
+        $pertemuan = $d['group']->pertemuan()->sole();
+        DB::beginTransaction();
+        try {
+            app(SetoranTahfidzService::class)->selesaikan($d['guru'], $d['group'], $pertemuan->id);
+            $this->assertDatabaseCount('notifikasi_pengguna', 2);
+            Queue::assertNothingPushed();
+        } finally {
+            DB::rollBack();
+        }
+        $this->assertDatabaseCount('notifikasi_pengguna', 0);
+        $this->assertNull($pertemuan->fresh()->selesai_pada);
+        Queue::assertNothingPushed();
+        $this->postJson($p.'/selesaikan')->assertOk();
+        Queue::assertPushed(KirimPushNotification::class, 2);
     }
 
     public function test_parent_tidak_dapat_membaca_anak_lain_atau_pertemuan_staf(): void
@@ -103,6 +176,7 @@ class TahfidzMobileApiTest extends TestCase
 
     public function test_rapor_native_menjaga_sidik_publikasi_dan_penarikan_akses(): void
     {
+        config(['services.firebase.push_enabled' => true]);
         $d = $this->data();
         $p = $this->meeting($d);
         $this->postJson($p.'/setoran', $this->deposit($d, 114))->assertOk();
@@ -113,17 +187,25 @@ class TahfidzMobileApiTest extends TestCase
         $this->getJson('/api/v1/tahfidz/'.$d['group']->id.'/rapor')->assertOk()->assertJsonCount(1, 'data.rapor')->assertJsonPath('data.rapor.0.rata', '88,50');
         $this->assertDatabaseCount('publikasi_rapor_tahfidz', 0);
         $this->postJson($path.'/rapor/publikasi', ['bagikan' => true, 'sidik' => str_repeat('0', 64)])->assertUnprocessable();
+        $this->assertDatabaseCount('notifikasi_pengguna', 0);
+        Queue::assertNothingPushed();
         $this->postJson($path.'/rapor/publikasi', ['bagikan' => true, 'sidik' => $detail['sidik']])->assertOk();
+        $this->postJson($path.'/rapor/publikasi', ['bagikan' => true, 'sidik' => $detail['sidik']])->assertOk();
+        $this->assertPemberitahuan($d, 'tahfidz-rapor:', 'Rapor Tahfidz dibagikan');
+        Queue::assertPushed(KirimPushNotification::class, 2);
         $r = PublikasiRaporTahfidz::sole();
+        $this->login($d['akunSiswa'])->getJson('/api/v1/tahfidz-anak/rapor/'.$r->id)->assertForbidden();
         $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak/rapor/'.$r->id)->assertOk()->assertJsonPath('data.rapor.nama', $d['siswa']->nama_lengkap);
         $this->login($d['parentLain'])->getJson('/api/v1/tahfidz-anak/rapor/'.$r->id)->assertNotFound();
         $this->login($d['guru'])->postJson($path.'/rapor/publikasi', ['bagikan' => false])->assertForbidden();
         $this->login($d['koordinator'])->postJson($path.'/rapor/publikasi', ['bagikan' => false])->assertOk();
         $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak/rapor/'.$r->id)->assertNotFound();
+        Queue::assertPushed(KirimPushNotification::class, 2);
     }
 
     public function test_wisuda_dan_sertifikat_hanya_terbit_setelah_37_surah_dan_dibagikan_secara_eksplisit(): void
     {
+        config(['services.firebase.push_enabled' => true]);
         $d = $this->data();
         $p = $this->meeting($d);
         $student = '/api/v1/tahfidz/'.$d['group']->id.'/anggota/'.$d['anggota']->id;
@@ -137,12 +219,73 @@ class TahfidzMobileApiTest extends TestCase
         $event = $this->getJson('/api/v1/tahfidz/wisuda')->assertOk()->json('data.acara.0.id');
         $cert = '/api/v1/tahfidz/wisuda/kelulusan/'.$l->id;
         $this->postJson($cert.'/terbitkan', ['wisuda_tahfidz_id' => $event])->assertOk();
+        $this->assertDatabaseCount('notifikasi_pengguna', 0);
+        Queue::assertNothingPushed();
         $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak/sertifikat/'.$l->id)->assertNotFound();
         $this->login($d['koordinator'])->postJson($cert.'/publikasi', ['bagikan' => true])->assertOk();
+        $this->postJson($cert.'/publikasi', ['bagikan' => true])->assertOk();
+        $this->assertPemberitahuan($d, 'tahfidz-sertifikat:', 'Sertifikat Tahfidz dibagikan');
+        Queue::assertPushed(KirimPushNotification::class, 2);
+        $this->login($d['akunSiswa'])->getJson('/api/v1/tahfidz-anak/sertifikat/'.$l->id)->assertForbidden();
         $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak/sertifikat/'.$l->id)->assertOk()->assertJsonPath('data.sertifikat.nama', $d['siswa']->nama_lengkap);
         $this->login($d['parentLain'])->getJson('/api/v1/tahfidz-anak/sertifikat/'.$l->id)->assertNotFound();
         $this->login($d['koordinator'])->postJson($cert.'/publikasi', ['bagikan' => false])->assertOk();
         $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak/sertifikat/'.$l->id)->assertNotFound();
+        Queue::assertPushed(KirimPushNotification::class, 2);
+    }
+
+    public function test_tahfidz_saya_hanya_menampilkan_setoran_sendiri_yang_sudah_diselesaikan(): void
+    {
+        $d = $this->data();
+        $p = $this->meeting($d);
+        $this->postJson($p.'/setoran', $this->deposit($d, 114))->assertOk();
+        $this->login($d['akunSiswa'])->getJson('/api/v1/tahfidz-saya')->assertOk()
+            ->assertJsonPath('data.siswa.id', $d['siswa']->id)->assertJsonPath('data.sudah', 0)->assertJsonCount(0, 'data.riwayat');
+        $this->postJson($p.'/setoran', $this->deposit($d, 113))->assertForbidden();
+        $this->login($d['guru'])->postJson($p.'/selesaikan')->assertOk();
+        $response = $this->login($d['akunSiswa'])->getJson('/api/v1/tahfidz-saya')->assertOk()
+            ->assertJsonPath('data.siswa.nama', 'Anak Sendiri')->assertJsonPath('data.sudah', 1)
+            ->assertJsonPath('data.target', 37)->assertJsonPath('data.riwayat.0.nilai', '88,5')
+            ->assertDontSee('Catatan rahasia pembimbing')->assertHeader('Cache-Control', 'max-age=0, no-store, private');
+        $this->assertArrayNotHasKey('rapor', $response->json('data'));
+        $this->assertArrayNotHasKey('sertifikat', $response->json('data'));
+        foreach (['siswa', 'siswa_id', 'anggota_tahfidz_id'] as $field) {
+            $this->getJson('/api/v1/tahfidz-saya?'.$field.'='.$d['siswaLain']->id)
+                ->assertUnprocessable()->assertJsonValidationErrors($field);
+        }
+        $other = Pengguna::create(['nama' => 'Siswa lain', 'username' => 'siswa-lain-uji', 'kata_sandi' => 'UjiTahfidz2026',
+            'peran' => 'siswa', 'siswa_id' => $d['siswaLain']->id, 'aktif' => true]);
+        $this->login($other)->getJson('/api/v1/tahfidz-saya')->assertOk()
+            ->assertJsonPath('data.siswa.id', $d['siswaLain']->id)->assertJsonPath('data.sudah', 0)
+            ->assertJsonCount(0, 'data.riwayat')->assertDontSee('Anak Sendiri');
+    }
+
+    public function test_menu_tahfidz_saya_hanya_untuk_identitas_siswa(): void
+    {
+        $this->getJson('/api/v1/tahfidz-saya')->assertUnauthorized();
+        $d = $this->data();
+        $this->login($d['akunSiswa'])->getJson('/api/v1/menu')->assertOk()
+            ->assertJsonFragment(['kode' => 'tahfidz-saya', 'status' => 'tersedia', 'rute' => '/tahfidz-saya'])
+            ->assertJsonMissing(['kode' => 'tahfidz-anak'])->assertJsonMissing(['kode' => 'tahfidz']);
+        foreach ([$d['guru'], $d['parent'], $d['koordinator']] as $user) {
+            $this->login($user)->getJson('/api/v1/tahfidz-saya')->assertForbidden();
+            $this->getJson('/api/v1/menu')->assertOk()->assertJsonMissing(['kode' => 'tahfidz-saya']);
+        }
+        $d['guru']->update(['peran' => 'siswa']);
+        $this->login($d['guru'])->getJson('/api/v1/tahfidz-saya')->assertForbidden();
+    }
+
+    private function assertPemberitahuan(array $d, string $awalan, string $judulSiswa): void
+    {
+        $notifikasi = NotifikasiPengguna::where('kunci_unik', 'like', $awalan.'%')->get();
+        $this->assertEqualsCanonicalizing([$d['akunSiswa']->id, $d['parent']->id], $notifikasi->pluck('pengguna_id')->all());
+        $siswa = $notifikasi->firstWhere('pengguna_id', $d['akunSiswa']->id);
+        $this->assertSame($judulSiswa, $siswa->judul);
+        $this->assertSame('/tahfidz-saya', app(TujuanNotifikasiMobileService::class)->untuk($siswa));
+        foreach ($notifikasi as $n) {
+            $this->assertStringNotContainsString('Catatan rahasia pembimbing', $n->pesan);
+            Queue::assertPushed(KirimPushNotification::class, fn ($job) => $job->notifikasiId === $n->id);
+        }
     }
 
     private function login(Pengguna $user): self
@@ -186,6 +329,7 @@ class TahfidzMobileApiTest extends TestCase
         $parent = $this->parentUser('wali-sendiri', $siswa);
         $parentLain = $this->parentUser('wali-lain', $siswaLain);
         $akunSiswa = Pengguna::create(['nama' => 'Siswa', 'username' => 'siswa-uji', 'kata_sandi' => 'UjiTahfidz2026', 'peran' => 'siswa', 'siswa_id' => $siswa->id, 'aktif' => true]);
+        $akunSiswa->daftarPeran()->attach(Peran::where('kode', 'siswa')->sole());
 
         return compact('tahun', 'siswa', 'siswaLain', 'guru', 'guruLain', 'koordinator', 'group', 'lain', 'anggota', 'parent', 'parentLain', 'akunSiswa');
     }

@@ -1,6 +1,6 @@
 # Tahfidz native mobile
 
-Menu berada di **Akademik → Penilaian** untuk pegawai yang berwenang. Orang tua mendapat **Akademik → Pemantauan Anak → Tahfidz Anak Saya**. Menu dapat dipilih sebagai Akses Cepat sesuai kewenangan akun pegawai.
+Menu berada di **Akademik → Penilaian** untuk pegawai yang berwenang. Siswa mendapat **Akademik → Penilaian → Tahfidz Saya**, sedangkan orang tua mendapat **Akademik → Pemantauan Anak → Tahfidz Anak Saya**. Menu dapat dipilih sebagai Akses Cepat sesuai kewenangan akun pegawai.
 
 ## Alur
 
@@ -14,7 +14,7 @@ Menu berada di **Akademik → Penilaian** untuk pegawai yang berwenang. Orang tu
 - Daftar Surah memuat teks Arab berharakat untuk seluruh 37 surah Juz 30 (564 ayat). Pembaca tersedia tanpa permintaan jaringan, dengan nomor ayat, lompat ke ayat, dan pengaturan ukuran huruf. Surah terpilih juga bisa dibuka dari formulir setoran tanpa membuang isian formulir.
 - Orang tua hanya melihat anak yang terhubung dengan akunnya. Dokumen hanya tersedia setelah dipublikasikan dan diperiksa ulang lewat API saat dibuka. Pergantian anak mengabaikan respons lama yang terlambat. Catatan internal pembimbing tidak dikirim dalam perkembangan orang tua.
 
-Hak siswa mengikuti modul web: tidak ada menu atau akses Tahfidz siswa baru. Hak koordinator tidak memberi hak mencatat/verifikasi sebagai pembimbing kelompok lain. API memeriksa identitas dan penugasan pada setiap permintaan, termasuk jika URL dipanggil langsung.
+Siswa dapat membaca progres dan riwayat setoran dirinya yang pertemuannya sudah diselesaikan, serta membuka pembaca surah Arab. Identitas siswa selalu berasal dari akun login; pengiriman ID siswa/anggota pengganti ditolak. Tampilan siswa tidak memiliki pilihan anak, form input nilai, catatan internal pembimbing, atau akses dokumen yang dipublikasikan khusus orang tua. Hak koordinator tidak memberi hak mencatat/verifikasi sebagai pembimbing kelompok lain. API memeriksa identitas dan penugasan pada setiap permintaan, termasuk jika URL dipanggil langsung.
 
 ## API
 
@@ -31,8 +31,20 @@ Seluruh endpoint berada dalam `/api/v1`, memerlukan bearer token dengan kemampua
 - `GET|POST /tahfidz/target-rapor`, `GET|POST /tahfidz/wisuda`, `PUT /tahfidz/wisuda/{wisuda}`.
 - `POST /tahfidz/wisuda/kelulusan/{kelulusan}/terbitkan|publikasi`.
 - `GET /tahfidz-anak?siswa={id}`, `GET /tahfidz-anak/rapor/{id}`, `GET /tahfidz-anak/sertifikat/{id}`.
+- `GET /tahfidz-saya?riwayat={halaman}` — progres dan riwayat milik siswa yang login; tanpa parameter pemilihan identitas.
 
 Operasi tulis menggunakan validasi dan layanan web yang sama. Respons API berupa JSON dan diberi `Cache-Control: private, no-store`. Publikasi rapor memerlukan sidik SHA-256 hasil pratinjau server sehingga dokumen yang sudah berubah harus diperiksa lagi. Push Tahfidz diarahkan ke layar native dengan anak yang sesuai.
+
+## Notifikasi siswa dan orang tua/wali
+
+- **Pertemuan selesai:** satu ringkasan per siswa yang menyetor, ke akun siswa aktif dan seluruh akun orang tua/wali aktif yang terhubung. Menyimpan setoran saja belum mengirim notifikasi.
+- **Rapor dipublikasikan / sertifikat dibagikan:** orang tua mendapat kabar dokumen tersedia; siswa mendapat kabar dokumen telah dibagikan kepada orang tua/wali. Dokumen tetap mengikuti izin publikasi yang sudah ada; pemberitahuan tidak memberi siswa akses ke endpoint dokumen orang tua.
+- Notifikasi tersimpan dalam kotak notifikasi NUSA. Jika `FIREBASE_PUSH_ENABLED=true`, proyek/kredensial Firebase dan queue worker server sudah dikonfigurasi, notifikasi baru mengantrekan push **setelah transaksi berhasil**. Tidak ada pengiriman ketika transaksi dibatalkan. Tidak memerlukan migrasi baru.
+- Push memakai judul dan pesan khusus peristiwa tanpa nama, nilai, atau catatan internal pada layar kunci. Saat aplikasi terbuka, alur foreground NUSA menampilkan pemberitahuan dengan tombol **Buka**; saat di latar belakang, FCM menggunakan channel Android `nusa_notifications`.
+- Ketukan siswa membuka **Tahfidz Saya**; ketukan orang tua membuka **Tahfidz Anak Saya** dengan anak yang benar. API memeriksa kembali pemilik notifikasi sebelum menampilkan detail dan menandai baca. Tautan web siswa membuka kotak notifikasi, sehingga tidak mengarah ke halaman web yang belum tersedia.
+- Pemrosesan ulang pertemuan/publikasi yang sama tidak menggandakan inbox atau push. Membagikan versi rapor baru atau membagikan ulang setelah ditarik merupakan publikasi baru. Pertemuan lama yang sudah selesai tidak dikirim ulang otomatis.
+
+Verifikasi pada perangkat setelah deploy: login pada akun siswa dan wali yang terhubung, izinkan notifikasi Android, catat setoran pada pertemuan uji lalu selesaikan pertemuannya. Periksa inbox dan push kedua akun serta halaman tujuan. Ulangi tindakan penyelesaian dan pastikan tidak ada notifikasi tambahan. Pengujian otomatis memakai antrean/HTTP Firebase tiruan, bukan mengirim pesan ke pengguna sungguhan.
 
 ## Pemasangan
 

@@ -169,6 +169,30 @@ class TahfidzMobileController extends Controller
             'sertifikat' => $siswa ? KelulusanTahfidz::where('siswa_id', $siswa->id)->whereNotNull('diterbitkan_pada')->whereNotNull('dibagikan_pada')->get()->map->only(['id', 'nomor_sertifikat']) : []]);
     }
 
+    public function saya(Request $request, CapaianTahfidzService $capaian)
+    {
+        $akun = $request->user();
+        abort_unless($akun->aktif && $akun->akunSiswa(), 403);
+        $request->validate([
+            'riwayat' => ['nullable', 'integer', 'min:1'],
+            'siswa' => ['prohibited'],
+            'siswa_id' => ['prohibited'],
+            'anggota_tahfidz_id' => ['prohibited'],
+        ]);
+        // The authenticated identity is the only source of the student ID.
+        $siswa = $akun->siswa()->firstOrFail();
+        $data = $capaian->perkembanganAnak($siswa->id);
+
+        return $this->json([
+            'siswa' => ['id' => $siswa->id, 'nama' => $siswa->nama_lengkap],
+            'sudah' => $data['sudah'], 'target' => $data['target'],
+            'baris' => $this->progress($data['baris']),
+            'riwayat' => $data['riwayat']->map(fn ($s) => ['id' => $s->id,
+                'surah' => $s->surah->nama, 'nilai' => $s->labelNilai(), 'tanggal' => $s->tanggal_setoran]),
+            'paginasi' => $this->pages($data['riwayat']),
+        ]);
+    }
+
     public function raporAnak(Request $request, int $id)
     {
         $ids = $this->parent($request)->siswa()->pluck('siswa.id');

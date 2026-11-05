@@ -289,7 +289,7 @@ class TfMeetingView extends StatelessWidget {
       return [
         TfHero(
           tfDate(p['tanggal']),
-          '${tfText(tfMap(data['kelompok'])['nama'])}\n${p['selesai'] == true ? 'Selesai · rangkuman tersedia bagi orang tua' : 'Pertemuan masih terbuka'}',
+          '${tfText(tfMap(data['kelompok'])['nama'])}\n${p['selesai'] == true ? 'Selesai · rangkuman tersedia bagi siswa dan orang tua' : 'Pertemuan masih terbuka'}',
         ),
         if (data['catat'] == true)
           Wrap(
@@ -342,7 +342,7 @@ class TfMeetingView extends StatelessWidget {
                       );
                   await reload();
                 },
-                confirm: 'Setoran baru tidak dapat ditambahkan setelah selesai. Rangkuman pertemuan akan dikirim ke akun orang tua yang terhubung.',
+                confirm: 'Setoran baru tidak dapat ditambahkan setelah selesai. Rangkuman pertemuan akan dikirim ke akun siswa dan orang tua/wali yang terhubung.',
               ),
             ],
           ),
@@ -751,14 +751,30 @@ Future<void> _eventForm(
   if (saved != null) await reload();
 }
 
-class TahfidzAnakView extends StatefulWidget {
+class TahfidzAnakView extends StatelessWidget {
   const TahfidzAnakView({this.studentId, super.key});
   final int? studentId;
   @override
-  State<TahfidzAnakView> createState() => _TahfidzAnakViewState();
+  Widget build(BuildContext context) =>
+      _TahfidzProgressView(studentId: studentId);
 }
 
-class _TahfidzAnakViewState extends State<TahfidzAnakView> {
+class TahfidzSayaView extends StatelessWidget {
+  const TahfidzSayaView({super.key});
+  @override
+  Widget build(BuildContext context) =>
+      const _TahfidzProgressView(studentMode: true);
+}
+
+class _TahfidzProgressView extends StatefulWidget {
+  const _TahfidzProgressView({this.studentId, this.studentMode = false});
+  final int? studentId;
+  final bool studentMode;
+  @override
+  State<_TahfidzProgressView> createState() => _TahfidzProgressViewState();
+}
+
+class _TahfidzProgressViewState extends State<_TahfidzProgressView> {
   int? _student;
   String _tab = 'perkembangan';
   @override
@@ -768,44 +784,66 @@ class _TahfidzAnakViewState extends State<TahfidzAnakView> {
   }
 
   @override
-  void didUpdateWidget(TahfidzAnakView oldWidget) {
+  void didUpdateWidget(_TahfidzProgressView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.studentId != widget.studentId) _student = widget.studentId;
+    if (oldWidget.studentMode != widget.studentMode) {
+      _student = widget.studentId;
+      _tab = 'perkembangan';
+    }
   }
 
   @override
   Widget build(BuildContext context) => TfPage(
-    title: 'Tahfidz Anak Saya',
-    path: 'tahfidz-anak',
+    title: widget.studentMode ? 'Tahfidz Saya' : 'Tahfidz Anak Saya',
+    path: widget.studentMode ? 'tahfidz-saya' : 'tahfidz-anak',
     pageKey: 'riwayat',
-    query: {'siswa': ?_student},
+    query: {if (!widget.studentMode) 'siswa': ?_student},
     content: (context, ref, data, reload) => [
       TfHero(
-        'Perkembangan Tahfidz',
-        '${data['sudah']} / ${data['target']} surah telah disetor',
+        widget.studentMode ? 'Progres Hafalan Saya' : 'Perkembangan Tahfidz',
+        '${widget.studentMode ? '${tfText(tfMap(data['siswa'])['nama'])}\n' : ''}${data['sudah']} / ${data['target']} surah telah disetor',
         progress:
             tfInt(data['sudah']) /
             (tfInt(data['target']) == 0 ? 37 : tfInt(data['target'])),
       ),
-      NusaDropdownField<int>(
-        fieldKey: const Key('tahfidz-child'),
-        value: _student ?? tfInt(data['siswa_id']),
-        options: [
-          for (final s in tfItems(data['anak']))
-            NusaDropdownOption(value: tfInt(s['id']), label: tfText(s['nama'])),
-        ],
-        decoration: const InputDecoration(labelText: 'Anak'),
-        onChanged: (v) => setState(() => _student = v),
-      ),
-      if (tfItems(data['anak']).isEmpty)
+      if (!widget.studentMode)
+        NusaDropdownField<int>(
+          fieldKey: const Key('tahfidz-child'),
+          value: _student ?? tfInt(data['siswa_id']),
+          options: [
+            for (final s in tfItems(data['anak']))
+              NusaDropdownOption(
+                value: tfInt(s['id']),
+                label: tfText(s['nama']),
+              ),
+          ],
+          decoration: const InputDecoration(labelText: 'Anak'),
+          onChanged: (v) => setState(() => _student = v),
+        ),
+      if (!widget.studentMode && tfItems(data['anak']).isEmpty)
         const TfNotice('Belum ada anak yang terhubung dengan akun ini.'),
-      const TfNotice(
-        'Perkembangan ditampilkan setelah pembimbing menyelesaikan pertemuan. Rapor dan sertifikat tampil setelah dipublikasikan sekolah.',
+      TfNotice(
+        widget.studentMode
+            ? 'Progres dan nilai setoran tampil setelah pembimbing menyelesaikan pertemuan.'
+            : 'Perkembangan ditampilkan setelah pembimbing menyelesaikan pertemuan. Rapor dan sertifikat tampil setelah dipublikasikan sekolah.',
       ),
+      if (widget.studentMode)
+        TfAction(
+          'Daftar Surah',
+          () => tfOpen(context, const TahfidzSurahView()),
+          icon: Icons.menu_book_outlined,
+          prominent: true,
+          subtitle: 'Baca ayat Arab untuk mengulang hafalan.',
+        ),
       Wrap(
         spacing: 8,
         children: [
-          for (final name in ['perkembangan', 'riwayat', 'dokumen'])
+          for (final name in [
+            'perkembangan',
+            'riwayat',
+            if (!widget.studentMode) 'dokumen',
+          ])
             ChoiceChip(
               label: Text(
                 {
@@ -829,7 +867,7 @@ class _TahfidzAnakViewState extends State<TahfidzAnakView> {
             '${tfDate(s['tanggal'])} · Nilai ${s['nilai']}',
           ),
       ],
-      if (_tab == 'dokumen') ...[
+      if (!widget.studentMode && _tab == 'dokumen') ...[
         if (tfItems(data['rapor']).isEmpty &&
             tfItems(data['sertifikat']).isEmpty)
           const TfNotice('Belum ada dokumen yang dipublikasikan.'),

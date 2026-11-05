@@ -1353,6 +1353,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/tahfidz-saya',
+        builder: (_, _) => const TahfidzSayaView(),
+      ),
+      GoRoute(
         path: AppRoutes.stsPublication,
         name: 'sts-publication',
         builder: (_, state) => const StsPublicationView(),

@@ -130,6 +130,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'Tahfidz Saya menampilkan progres dan riwayat sendiri tanpa pilihan anak atau dokumen orang tua',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final remote = _FakeTahfidz();
+      await _pump(tester, remote, const TahfidzSayaView());
+      expect(remote.reads, ['tahfidz-saya']);
+      expect(remote.lastStudentQuery, {'riwayat': 1});
+      expect(find.text('Tahfidz Saya'), findsOneWidget);
+      expect(find.text('Progres Hafalan Saya'), findsOneWidget);
+      expect(find.textContaining('Alya'), findsOneWidget);
+      expect(find.textContaining('1 / 37'), findsOneWidget);
+      expect(find.byKey(const Key('tahfidz-child')), findsNothing);
+      expect(find.text('Dokumen'), findsNothing);
+      expect(find.text('Bagikan Rapor ke Orang Tua'), findsNothing);
+      await tester.ensureVisible(find.text('Riwayat'));
+      await tester.tap(find.text('Riwayat'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.textContaining('Nilai 88,5'));
+      expect(find.textContaining('Nilai 88,5'), findsOneWidget);
+      expect(find.text('Catat Setoran'), findsNothing);
+      expect(remote.writes, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test(
     'dokumen rapor dan sertifikat dapat dibuat sebagai PDF native',
     () async {
@@ -218,9 +245,34 @@ class _FakeTahfidz extends TahfidzRepository {
   final writes = <TfData>[];
   bool failFirstDeposit = false;
   Completer<TfData>? pendingChild;
+  TfData? lastStudentQuery;
   @override
   Future<TfData> get(String path, [TfData? query]) async {
     reads.add(path);
+    if (path == 'tahfidz-saya') {
+      lastStudentQuery = query;
+      return {
+        'siswa': {'id': 101, 'nama': 'Alya'},
+        'sudah': 1,
+        'target': 37,
+        'baris': [
+          {
+            'nomor': 114,
+            'nama': 'An-Nas',
+            'nilai': '88,5',
+            'tanggal': '2026-11-05',
+          },
+        ],
+        'riwayat': [
+          {
+            'id': 1,
+            'surah': 'An-Nas',
+            'nilai': '88,5',
+            'tanggal': '2026-11-05',
+          },
+        ],
+      };
+    }
     if (path == 'tahfidz') {
       return {
         'kelola': false,

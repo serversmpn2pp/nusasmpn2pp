@@ -37,7 +37,8 @@ class PublikasiTahfidzService
                 'dipublikasikan_pada' => now(), 'dipublikasikan_oleh' => $pengguna->id])->save();
             $this->notifikasi->dokumen($anggota->siswa_id, 'Rapor Tahfidz tersedia',
                 'Rapor Tahfidz '.$salinan['nama'].' telah dibagikan oleh sekolah.',
-                'tahfidz-rapor:'.$publikasi->id.':'.$publikasi->versi);
+                'tahfidz-rapor:'.$publikasi->id.':'.$publikasi->versi,
+                'Rapor Tahfidz dibagikan', 'Rapor Tahfidz Anda telah dibagikan oleh sekolah kepada orang tua/wali. Buka Tahfidz Saya untuk melihat perkembangan setoran.');
         });
     }
 
@@ -61,7 +62,8 @@ class PublikasiTahfidzService
             $lulus->update(['dibagikan_pada' => now(), 'dibagikan_oleh' => $pengguna->id, 'versi_publikasi' => $lulus->versi_publikasi + 1]);
             $this->notifikasi->dokumen($lulus->siswa_id, 'Sertifikat Tahfidz tersedia',
                 'Sertifikat kelulusan Tahfidz '.$lulus->nama_penerima.' telah dibagikan oleh sekolah.',
-                'tahfidz-sertifikat:'.$lulus->id.':'.$lulus->versi_publikasi);
+                'tahfidz-sertifikat:'.$lulus->id.':'.$lulus->versi_publikasi,
+                'Sertifikat Tahfidz dibagikan', 'Sertifikat kelulusan Tahfidz Anda telah dibagikan oleh sekolah kepada orang tua/wali. Buka Tahfidz Saya untuk melihat perkembangan setoran.');
         });
     }
 }

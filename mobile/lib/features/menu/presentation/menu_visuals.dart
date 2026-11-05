@@ -47,7 +47,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'skema-bobot-nilai' => Icons.balance_rounded,
     'komponen-nilai' => Icons.fact_check_rounded,
     'input-nilai' => Icons.edit_note_rounded,
-    'tahfidz' || 'tahfidz-anak' => Icons.menu_book_rounded,
+    'tahfidz' || 'tahfidz-anak' || 'tahfidz-saya' => Icons.menu_book_rounded,
     'rapor-tahfidz' => Icons.description_rounded,
     'target-rapor-tahfidz' => Icons.flag_rounded,
     'wisuda-tahfidz' => Icons.workspace_premium_rounded,
