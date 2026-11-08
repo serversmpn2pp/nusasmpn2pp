@@ -617,8 +617,8 @@ class SoalCbtController extends Controller
 
         return [
             'opsi' => null,
-            'kunci_jawaban' => $kunci ? ['jawaban' => $kunci] : null,
-            'rubrik' => $rubrik ? ['catatan' => $rubrik] : null,
+            'kunci_jawaban' => filled($kunci) ? ['jawaban' => $kunci] : null,
+            'rubrik' => filled($rubrik) ? ['catatan' => $rubrik] : null,
         ];
     }
 
@@ -626,7 +626,7 @@ class SoalCbtController extends Controller
     {
         $opsi = collect($data['opsi'] ?? [])
             ->mapWithKeys(fn ($value, $key) => [mb_strtoupper((string) $key) => $this->teksAtauNull($value)])
-            ->filter()
+            ->filter(fn ($value) => filled($value))
             ->all();
 
         if (count($opsi) < 2) {

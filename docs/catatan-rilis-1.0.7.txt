@@ -1,0 +1,8 @@
+<id>
+Modul Tahfidz: kelompok, pertemuan, setoran, rapor, dan wisuda.
+Progres Tahfidz untuk siswa serta orang tua/wali.
+Bacaan Arab 37 surah Juz 30 secara offline.
+Notifikasi dan push Tahfidz untuk siswa serta orang tua/wali.
+Presensi manual tanpa kartu: pilihan alasan, minimal 5 menit terlambat, dan poin sesuai aturan sekolah.
+Perbaikan rekap publikasi nilai dan akses koreksi presensi.
+</id>

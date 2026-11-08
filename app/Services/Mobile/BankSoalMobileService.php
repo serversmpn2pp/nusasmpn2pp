@@ -343,7 +343,7 @@ class BankSoalMobileService
     {
         $opsi = collect($data['opsi'] ?? [])->mapWithKeys(fn ($teks, $kode) => [
             mb_strtoupper(trim((string) $kode)) => $this->teksAtauNull($teks),
-        ])->filter()->all();
+        ])->filter(fn ($teks) => filled($teks))->all();
         if (count($opsi) < 2) {
             throw ValidationException::withMessages(['opsi' => 'Isi minimal dua opsi jawaban.']);
         }
@@ -399,7 +399,7 @@ class BankSoalMobileService
         $jawabanBenar = $items->pluck('kanan')->map($normalisasi);
         $pengecoh = collect($data['pengecoh_menjodohkan'] ?? [])
             ->map(fn ($value) => $this->teksAtauNull($value))
-            ->filter()
+            ->filter(fn ($value) => filled($value))
             ->unique($normalisasi)
             ->values();
 
@@ -429,8 +429,8 @@ class BankSoalMobileService
 
         return [
             'opsi' => null,
-            'kunci_jawaban' => $kunci ? ['jawaban' => $kunci] : null,
-            'rubrik' => $rubrik ? ['catatan' => $rubrik] : null,
+            'kunci_jawaban' => filled($kunci) ? ['jawaban' => $kunci] : null,
+            'rubrik' => filled($rubrik) ? ['catatan' => $rubrik] : null,
         ];
     }
 

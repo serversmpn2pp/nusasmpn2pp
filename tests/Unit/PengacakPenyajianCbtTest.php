@@ -59,6 +59,20 @@ class PengacakPenyajianCbtTest extends TestCase
         $this->assertSame('Jawaban benar', $pilihanPertama->get('B'));
     }
 
+    public function test_pilihan_nol_tetap_disajikan_baik_dengan_maupun_tanpa_pengacakan(): void
+    {
+        $layanan = new PengacakPenyajianCbt;
+        foreach (['pilihan_ganda', 'pilihan_ganda_kompleks'] as $jenis) {
+            foreach ([true, false] as $acak) {
+                $relasi = $this->relasiSoal(1);
+                $relasi->soalCbt->fill(['jenis_soal' => $jenis, 'opsi' => ['pilihan' => ['A' => '0', 'B' => '1', 'C' => '']]]);
+                $pilihan = $layanan->pilihanJawaban($this->ujian(false, $acak), $this->peserta(21), $relasi);
+                $this->assertSame('0', $pilihan->get('A'));
+                $this->assertEqualsCanonicalizing(['A', 'B'], $pilihan->keys()->all());
+            }
+        }
+    }
+
     private function ujian(bool $acakSoal, bool $acakJawaban): UjianCbt
     {
         $ujian = new UjianCbt([

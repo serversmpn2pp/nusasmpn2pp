@@ -180,7 +180,7 @@ class KoreksiOtomatisCbtService
         $jawabanPeserta = $this->normalisasiTeksJawaban($this->nilaiPertama($jawaban));
         $kunci = collect($this->daftarKunciTeks($soal))
             ->map(fn ($item) => $this->normalisasiTeksJawaban($item))
-            ->filter()
+            ->filter(fn ($item) => $item !== '')
             ->unique()
             ->values()
             ->all();
@@ -240,14 +240,14 @@ class KoreksiOtomatisCbtService
             return collect($kunci)
                 ->flatten()
                 ->map(fn ($item) => trim((string) $item))
-                ->filter()
+                ->filter(fn ($item) => $item !== '')
                 ->values()
                 ->all();
         }
 
         return collect(preg_split('/\s*\|\s*/', (string) $kunci) ?: [])
             ->map(fn ($item) => trim($item))
-            ->filter()
+            ->filter(fn ($item) => $item !== '')
             ->values()
             ->all();
     }
@@ -288,9 +288,9 @@ class KoreksiOtomatisCbtService
     public function normalisasiTeksJawaban(mixed $jawaban): string
     {
         $jawaban = mb_strtolower(trim((string) $jawaban));
-        $jawaban = preg_replace('/[^\pL\pN]+/u', ' ', $jawaban) ?: '';
+        $jawaban = preg_replace('/[^\pL\pN]+/u', ' ', $jawaban) ?? '';
 
-        return trim(preg_replace('/\s+/', ' ', $jawaban) ?: '');
+        return trim(preg_replace('/\s+/', ' ', $jawaban) ?? '');
     }
 
     private function normalisasiAngka(mixed $jawaban): ?float

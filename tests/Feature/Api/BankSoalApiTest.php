@@ -117,6 +117,49 @@ class BankSoalApiTest extends TestCase
         $this->assertDatabaseHas('soal_cbt', ['id' => $soalId, 'status' => 'arsip', 'aktif' => false]);
     }
 
+    public function test_api_mempertahankan_opsi_nol_di_penyimpanan_pembaruan_dan_pratinjau(): void
+    {
+        [, , $mapel] = $this->fondasiAkademik();
+        $this->withToken($this->token(Pengguna::where('username', 'administrator')->firstOrFail()));
+        foreach (['pilihan_ganda', 'pilihan_ganda_kompleks'] as $jenis) {
+            $data = $this->payload($mapel, ['jenis_soal' => $jenis, 'opsi' => ['a' => ' 0 ', 'B' => '1', 'C' => '  '],
+                'kunci_pg' => 'B', 'kunci_pgk' => ['A', 'B']]);
+            $hasil = $this->postJson(route('api.v1.bank-soal.store'), ['payload' => json_encode($data)])
+                ->assertCreated()->assertJsonCount(2, 'data.jawaban.opsi')
+                ->assertJsonPath('data.jawaban.opsi.0.kode', 'A')->assertJsonPath('data.jawaban.opsi.0.teks', '0');
+            $soal = SoalCbt::findOrFail($hasil->json('data.id'));
+            $this->assertSame(['A' => '0', 'B' => '1'], $soal->opsi['pilihan']);
+            $this->postJson(route('api.v1.bank-soal.update', $soal), ['payload' => json_encode([...$data, 'kunci_pg' => 'A', 'kunci_pgk' => ['A']])])
+                ->assertOk()->assertJsonPath('data.jawaban.opsi.0.teks', '0')->assertJsonPath('data.jawaban.opsi.0.benar', true);
+            $this->getJson(route('api.v1.bank-soal.pratinjau', $soal))->assertOk()->assertJsonCount(2, 'data.soal.pilihan')
+                ->assertJsonPath('data.soal.pilihan.0.kode', 'A')->assertJsonPath('data.soal.pilihan.0.teks', '0')
+                ->assertJsonMissingPath('data.soal.pilihan.0.benar')->assertJsonMissingPath('data.soal.kunci_jawaban');
+        }
+        $this->postJson(route('api.v1.bank-soal.store'), ['payload' => json_encode($this->payload($mapel, [
+            'opsi' => ['A' => '0', 'B' => '  '], 'kunci_pg' => 'A',
+        ]))])->assertUnprocessable()->assertJsonValidationErrors('opsi');
+    }
+
+    public function test_api_mempertahankan_kunci_dan_pengecoh_nol(): void
+    {
+        [, , $mapel] = $this->fondasiAkademik();
+        $this->withToken($this->token(Pengguna::where('username', 'administrator')->firstOrFail()));
+        foreach (['isian_singkat', 'numerik'] as $jenis) {
+            $hasil = $this->postJson(route('api.v1.bank-soal.store'), ['payload' => json_encode($this->payload($mapel, [
+                'jenis_soal' => $jenis, 'kunci_teks' => ' 0 ', 'rubrik_teks' => '0',
+            ]))])->assertCreated();
+            $soal = SoalCbt::findOrFail($hasil->json('data.id'));
+            $this->assertSame(['jawaban' => '0'], $soal->kunci_jawaban);
+            $this->assertSame(['catatan' => '0'], $soal->rubrik);
+        }
+        $hasil = $this->postJson(route('api.v1.bank-soal.store'), ['payload' => json_encode($this->payload($mapel, [
+            'jenis_soal' => 'menjodohkan', 'pasangan' => [['kiri' => 'Jumlah', 'kanan' => '1']],
+            'pengecoh_menjodohkan' => ['0', ' ', '0'],
+        ]))])->assertCreated()->assertJsonPath('data.jawaban.pengecoh_menjodohkan', ['0']);
+        $preview = $this->getJson(route('api.v1.bank-soal.pratinjau', $hasil->json('data.id')))->assertOk();
+        $this->assertEqualsCanonicalizing(['0', '1'], array_column($preview->json('data.soal.pilihan'), 'teks'));
+    }
+
     public function test_semua_bentuk_jawaban_dinormalisasi_oleh_server(): void
     {
         [, , $mapel] = $this->fondasiAkademik();

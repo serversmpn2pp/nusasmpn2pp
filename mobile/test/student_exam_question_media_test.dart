@@ -67,6 +67,45 @@ StudentExamQuestion _question(String type) => StudentExamQuestion.fromJson({
 });
 
 void main() {
+  testWidgets('opsi angka nol dari API tetap terlihat dan dapat dipilih', (
+    tester,
+  ) async {
+    Map<String, String>? jawaban;
+    final soal = StudentExamQuestion.fromJson({
+      'id': 7,
+      'nomor': 1,
+      'jenis': 'pilihan_ganda',
+      'pertanyaan': 'Berapakah hasilnya?',
+      'pilihan': [
+        {'kode': 'A', 'teks': '0'},
+        {'kode': 'B', 'teks': '1'},
+      ],
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: StudentExamQuestionView(
+            question: soal,
+            statusIndicator: const Text('Tersimpan'),
+            controllerFor: (_, _) =>
+                throw StateError('Pilihan ganda tidak memakai controller'),
+            onAnswerChanged: (value) => jawaban = value,
+            onDoubtChanged: (_) {},
+            uploadingFile: false,
+            onUploadFile: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('0'), findsOneWidget);
+    await tester.tap(find.text('0'));
+    await tester.pumpAndSettle();
+    expect(jawaban, {'0': 'A'});
+    expect(tester.takeException(), isNull);
+  });
+
   late QuestionImageHttp http;
   void imageTestWidgets(String description, WidgetTesterCallback test) {
     testWidgets(description, (tester) async {

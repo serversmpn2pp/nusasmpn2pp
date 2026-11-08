@@ -74,6 +74,48 @@ class UjianSayaApiTest extends TestCase
             ->getJson(route('api.v1.bank-soal.pratinjau', $soal))->assertForbidden();
     }
 
+    #[DataProvider('kasusJawabanNol')]
+    public function test_nol_disajikan_dan_dapat_dikoreksi_pada_ujian_native(string $jenis, mixed $kunci, array $jawaban, bool $benar): void
+    {
+        Carbon::setTestNow('2026-09-05 08:00:00');
+        $data = $this->fondasi(hanyaObjektif: true);
+        $soal = $data['soal_pg']->soalCbt;
+        $soal->update(['jenis_soal' => $jenis, 'pertanyaan' => 'Berapakah hasilnya?',
+            'opsi' => ['pilihan' => ['A' => '0', 'B' => '1', 'C' => '2']],
+            'kunci_jawaban' => ['jawaban' => $kunci]]);
+        $this->withToken($this->token($data['pengguna']));
+        $mulai = $this->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'token' => 'MULAI1', 'perangkat' => 'Android Uji Nol',
+        ])->assertOk()->assertJsonMissingPath('data.soal.0.kunci_jawaban');
+        if (in_array($jenis, ['pilihan_ganda', 'pilihan_ganda_kompleks'], true)) {
+            $mulai->assertJsonCount(3, 'data.soal.0.pilihan')
+                ->assertJsonPath('data.soal.0.pilihan.0.kode', 'A')->assertJsonPath('data.soal.0.pilihan.0.teks', '0');
+        }
+        $this->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
+            'soal_ujian_cbt_id' => $data['soal_pg']->id, 'jawaban' => $jawaban, 'ragu' => false, 'perangkat' => 'Android Uji Nol',
+        ])->assertOk()->assertJsonPath('data.terjawab', $jawaban !== []);
+        Carbon::setTestNow('2026-09-05 08:15:00');
+        $this->postJson(route('api.v1.ujian-saya.selesai', $data['peserta']), ['perangkat' => 'Android Uji Nol'])->assertOk();
+        $hasil = $data['peserta']->jawabanPesertaUjianCbt()->sole();
+        $this->assertSame($benar, $hasil->benar);
+        $this->assertSame($benar ? 1.0 : 0.0, (float) $hasil->skor);
+    }
+
+    public static function kasusJawabanNol(): array
+    {
+        return [
+            'pg_nol_kunci' => ['pilihan_ganda', 'A', ['A'], true],
+            'pg_nol_pengecoh' => ['pilihan_ganda', 'B', ['A'], false],
+            'pgk_nol_kunci' => ['pilihan_ganda_kompleks', ['A', 'B'], ['A', 'B'], true],
+            'isian_nol' => ['isian_singkat', '0', ['0'], true],
+            'isian_nol_alternatif' => ['isian_singkat', '0 | nol', ['0'], true],
+            'isian_nol_array' => ['isian_singkat', ['0', 'nol'], ['0'], true],
+            'numerik_nol' => ['numerik', '0', ['0'], true],
+            'numerik_nol_koma' => ['numerik', '0', ['0,00'], true],
+            'isian_kosong_bukan_nol' => ['isian_singkat', '0', [], false],
+        ];
+    }
+
     public function test_siswa_mengerjakan_ujian_native_dengan_autosave_dan_pembatasan_perangkat(): void
     {
         Carbon::setTestNow('2026-09-05 08:00:00');

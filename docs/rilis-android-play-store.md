@@ -4,7 +4,100 @@ Upload key dibuat dan disimpan oleh pengelola sekolah pada komputer pengembang,
 bukan server Laravel. Kunci tersebut berbeda dari service-account Firebase.
 Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
-## AAB terbaru — 1.0.6+7, 31 Oktober 2026
+## AAB terbaru — 1.0.7+8, 5 November 2026
+
+File distribusi:
+[app-release-1.0.7-8.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.7-8.aab).
+Ukuran **97.581.641 byte** (97,6 MB / sekitar 93,1 MiB). Salinan bernama versi
+identik dengan `mobile/build/app/outputs/bundle/release/app-release.aab`.
+AAB 1.0.6+7 dan versi sebelumnya tetap tersimpan tanpa perubahan.
+
+SHA-256:
+
+```text
+497d2a1977f302ffb67bc11f2cf61cff3db4b2449ff627f7c2e737035a09eef6
+```
+
+Checksum: `mobile/build/releases/app-release-1.0.7-8.aab.sha256`.
+Sumber build: HEAD `713906f`, ditambah kenaikan versi menjadi **1.0.7+8**
+dan dokumentasi rilis. Package tetap `id.sch.smpn2padangpanjang.nusa`.
+
+### Perubahan sejak AAB 1.0.6+7
+
+- Modul **Tahfidz** native untuk pembimbing dan koordinator: kelompok, anggota,
+  pertemuan, pencatatan setoran/nilai, riwayat, rapor, target rapor, dan wisuda.
+  Tombol Buka Pertemuan dan Daftar Surah diperjelas. Cetak rapor khusus web;
+  sertifikat tetap dapat dibuka/disimpan sebagai PDF pada mobile.
+- **Tahfidz Saya** untuk siswa dan **Tahfidz Anak Saya** untuk orang tua/wali:
+  progres, nilai terakhir, dan riwayat dari pertemuan yang sudah diselesaikan.
+  Identitas dan penugasan diperiksa API; catatan internal pembimbing tetap privat.
+  Rapor/sertifikat orang tua tersedia setelah sekolah memublikasikannya.
+- Pembaca offline **37 surah Juz 30, 564 ayat**, teks Arab Tanzil Uthmani 1.1
+  dan font Amiri Quran. Mendukung ukuran huruf, lompat ke ayat, serta sumber
+  dan lisensi. Membuka bacaan dari formulir setoran mempertahankan isian.
+- Notifikasi NUSA dan push **siswa serta orang tua/wali** untuk pertemuan selesai,
+  rapor dipublikasikan, dan sertifikat dibagikan. Ketukan membuka progres milik
+  siswa/anak yang tepat. Siswa mendapat kabar dokumen telah dibagikan kepada wali;
+  pemberitahuan tidak memperluas akses dokumen khusus orang tua. Retry tidak
+  menggandakan notifikasi, dan push menunggu transaksi berhasil disimpan.
+- Presensi **Hadir manual tanpa scan kartu** pada piket/koreksi dilengkapi alasan
+  tidak membawa kartu atau kartu hilang. Keterlambatan minimal **5 menit**;
+  keterlambatan sebenarnya yang lebih besar tetap dipakai. Poin mengikuti
+  pengaturan sekolah (bawaan 15), dengan pengecualian presensi tetap dihormati.
+  Siswa dan wali mendapat keterangan alasan/poin serta saran menghubungi admin.
+- Perbaikan penghitung publikasi nilai pada mobile, termasuk setelah autosave.
+  Pembaruan backend pendamping juga memperketat akses koreksi presensi sesuai
+  peran/kelas, memperbaiki grafik kehadiran untuk rentang pendek, serta akses
+  pemantauan ibadah mingguan.
+- Penyesuaian login/beranda tablet, akses cepat, dan proteksi ujian dari versi
+  sebelumnya tetap tercakup.
+
+### Pemeriksaan AAB 1.0.7+8
+
+- **934 tes Flutter lulus**; `flutter analyze --no-pub` bersih. Pub memakai
+  `--offline --enforce-lockfile`; `pubspec.lock` tidak berubah.
+- Build release memakai `APP_ENV=production` dan API
+  `https://nusa.smpn2padangpanjang.sch.id/api/v1/`.
+- Manifest: **1.0.7 / versionCode 8**, min SDK **24**, target SDK **36**;
+  debug, backup, dan cleartext HTTP nonaktif. Inisialisasi Firebase serta
+  izin notifikasi Android terdapat dalam manifest.
+- `bundletool validate`, `jar --validate`, CRC/duplikasi ZIP, dan verifikasi
+  `jarsigner` lulus. Sertifikat upload cocok dengan AAB 1.0.6+7 dan fingerprint
+  `CA:E5:19:98:35:1F:48:D5:38:2C:F1:3C:74:CA:B6:67:CF:FB:C8:32:9B:D8:9F:47:70:0C:8C:B4:7B:27:34:05`.
+- Penanda API produksi, Tahfidz, alasan presensi manual, antarmuka tablet,
+  dan fitur utama sebelumnya terdeteksi dalam ketiga `libapp.so`.
+  Aset foto/logo, teks Arab, font, serta lisensi cocok dengan sumber.
+- Bundle memakai `PAGE_ALIGNMENT_16K`. Pemeriksa Android Studio memeriksa
+  **14 ELF 64-bit: 0 masalah**, dengan 7 library 32-bit dilewati. APK universal
+  diagnostik lulus `zipalign -v -c -P 16 4`; APK diagnostik memakai debug key
+  standar dan bukan berkas untuk diunggah.
+
+Log berada di `mobile/build/*release-1.0.7-8.log`; bukti manifest, sertifikat,
+konten, ELF, dan alignment berada di `mobile/build/aab-validation-1.0.7-8/`.
+Peringatan toolchain Java/KGP dan font Cupertino konsisten dengan rilis
+sebelumnya dan tidak menggagalkan build. Pemeriksaan lokal tidak mencakup
+pemasangan melalui Play, runtime perangkat fisik 16 KB, atau push ke HP produksi.
+
+### Catatan rilis dan backend 1.0.7
+
+Salin isi [catatan-rilis-1.0.7.txt](D:/nusasmpn2pp/docs/catatan-rilis-1.0.7.txt)
+ke Release notes. Isinya **383 karakter** di dalam tag `<id>`.
+Nama rilis: **1.0.7 (8)**. Gunakan berkas AAB bernama versi di atas untuk
+pembaruan pada track Play Console yang sedang digunakan.
+
+Deploy backend/API terbaru sebelum menguji fitur baru pada AAB. Jika migrasi
+Tahfidz belum terpasang, jalankan migrasi standar aplikasi. Setelah deploy,
+bersihkan cache (`php artisan optimize:clear`) dan mulai ulang worker
+(`php artisan queue:restart`). Push memerlukan konfigurasi Firebase server,
+`FIREBASE_PUSH_ENABLED=true`, worker aktif, dan izin notifikasi pada HP.
+Panduan modul: [tahfidz-mobile.md](D:/nusasmpn2pp/docs/tahfidz-mobile.md).
+
+Pekerjaan build ini tidak melakukan deploy, migrasi, perubahan data sekolah,
+pengiriman notifikasi nyata, atau pengunggahan/publikasi ke Play Console.
+VersionCode 8 melanjutkan AAB lokal terakhir (7); riwayat Console tidak dibaca
+langsung pada pekerjaan ini.
+
+## Riwayat AAB — 1.0.6+7, 31 Oktober 2026
 
 File distribusi:
 [app-release-1.0.6-7.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.6-7.aab).

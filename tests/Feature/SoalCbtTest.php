@@ -12,6 +12,7 @@ use App\Models\Peran;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use PDO;
 use Tests\TestCase;
@@ -129,6 +130,50 @@ class SoalCbtTest extends TestCase
 
         $this->assertSame('arsip', $soalCbt->fresh()->status);
         $this->assertFalse($soalCbt->fresh()->aktif);
+    }
+
+    public function test_opsi_nol_tidak_dihapus_saat_menyimpan_dan_memperbarui_soal(): void
+    {
+        [$tahun, $mapel] = $this->buatDataAkademik();
+        $this->actingAs(Pengguna::where('username', 'administrator')->firstOrFail());
+        $opsi = ['a' => ' 0 ', 'B' => '1', 'C' => 'Tidak berubah', 'D' => 'Bergantung pada input kedua', 'E' => '   '];
+        foreach (['pilihan_ganda', 'pilihan_ganda_kompleks'] as $jenis) {
+            $data = [...$this->dataSoal($tahun, $mapel, 'NOL-'.$jenis),
+                'jenis_soal' => $jenis, 'pertanyaan' => 'Sebuah gerbang NOT menerima input bernilai 0. Berapakah output yang dihasilkan?',
+                'opsi' => $opsi, 'kunci_pg' => 'B', 'kunci_pgk' => ['A', 'B']];
+            $this->post(route('soal-cbt.store'), $data)->assertSessionHasNoErrors()->assertRedirect();
+            $soal = SoalCbt::where('kode', mb_strtoupper('NOL-'.$jenis))->sole();
+            $this->assertSame(['A' => '0', 'B' => '1', 'C' => 'Tidak berubah', 'D' => 'Bergantung pada input kedua'], $soal->opsi['pilihan']);
+            $this->assertSame($jenis === 'pilihan_ganda' ? 'B' : ['A', 'B'], $soal->kunci_jawaban['jawaban']);
+            $this->put(route('soal-cbt.update', $soal), [...$data, 'kunci_pg' => 'A', 'kunci_pgk' => ['A']])
+                ->assertSessionHasNoErrors()->assertRedirect();
+            $this->assertSame('0', $soal->fresh()->opsi['pilihan']['A']);
+            $this->assertSame($jenis === 'pilihan_ganda' ? 'A' : ['A'], $soal->fresh()->kunci_jawaban['jawaban']);
+            $this->get(route('soal-cbt.edit', $soal))->assertOk()->assertSee('>0</textarea>', false);
+        }
+        $daftar = $this->get(route('soal-cbt.index'))->assertOk()->assertSee('<textarea name="opsi[A]">0</textarea>', false);
+        if (getenv('CBT_ZERO_FIXTURE')) {
+            $dir = storage_path('framework/testing/cbt-zero');
+            File::ensureDirectoryExists($dir);
+            File::put($dir.'/bank.html', $daftar->getContent());
+            File::put($dir.'/form.html', $this->get(route('soal-cbt.create'))->assertOk()->getContent());
+        }
+        $this->post(route('soal-cbt.store'), [...$data, 'kode' => 'NOL-BELUM-CUKUP', 'opsi' => ['A' => '0', 'B' => ' ']])
+            ->assertSessionHasErrors('opsi');
+    }
+
+    public function test_kunci_teks_dan_numerik_nol_tetap_tersimpan(): void
+    {
+        [$tahun, $mapel] = $this->buatDataAkademik();
+        $this->actingAs(Pengguna::where('username', 'administrator')->firstOrFail());
+        foreach (['isian_singkat', 'numerik'] as $jenis) {
+            $this->post(route('soal-cbt.store'), [...$this->dataSoal($tahun, $mapel, 'NOL-'.$jenis),
+                'jenis_soal' => $jenis, 'kunci_teks' => ' 0 ', 'rubrik_teks' => '0',
+            ])->assertSessionHasNoErrors();
+            $soal = SoalCbt::where('kode', mb_strtoupper('NOL-'.$jenis))->sole();
+            $this->assertSame(['jawaban' => '0'], $soal->kunci_jawaban);
+            $this->assertSame(['catatan' => '0'], $soal->rubrik);
+        }
     }
 
     public function test_gambar_tabel_dan_rumus_dapat_disimpan_dan_ditampilkan(): void

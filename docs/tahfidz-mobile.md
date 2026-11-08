@@ -50,7 +50,7 @@ Verifikasi pada perangkat setelah deploy: login pada akun siswa dan wali yang te
 
 Deploy backend/API dan bersihkan cache (`php artisan optimize:clear`) sebelum memakai build mobile baru. Jalankan migrasi standar jika modul Tahfidz web belum dipasang pada server. Jika memakai queue worker untuk push, jalankan `php artisan queue:restart` setelah deploy. Tidak ada dependensi atau migrasi tambahan khusus integrasi mobile ini.
 
-Build Android/AAB baru diperlukan untuk menampilkan layar native ini pada aplikasi yang telah terpasang. Versi aplikasi dan berkas AAB belum dinaikkan/dibangun oleh perubahan modul ini.
+Fitur ini sudah dikemas pada **AAB 1.0.7+8 (5 November 2026)**. Pengguna perlu memperbarui aplikasi agar mendapat layar native Tahfidz. Berkas AAB, catatan perubahan, dan hasil validasi ada di [panduan rilis Android](D:/nusasmpn2pp/docs/rilis-android-play-store.md).
 
 ## Teks Arab dan font
 
