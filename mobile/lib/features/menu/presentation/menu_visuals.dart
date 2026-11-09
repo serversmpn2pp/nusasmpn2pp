@@ -113,6 +113,7 @@ IconData nusaMenuEntryIcon(MenuEntry item) {
     'laporan-siswa-wali' => Icons.assignment_ind_rounded,
     'laporkan-kejadian' => Icons.campaign_rounded,
     'jenis-pelanggaran-poin' => Icons.rule_rounded,
+    'aturan-pelanggaran-poin' => Icons.rule_rounded,
     'aturan-sanksi-poin' => Icons.policy_rounded,
     'poin-keterlambatan' => Icons.timer_rounded,
     'peringatan-dini-poin' => Icons.notification_important_rounded,

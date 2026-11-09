@@ -9,6 +9,7 @@ use App\Models\PengaturanAbsensi;
 use App\Models\Pengguna;
 use App\Models\RiwayatPerubahanAbsensiSiswa;
 use App\Services\Notifikasi\NotifikasiAbsensiSiswaService;
+use App\Services\Pembinaan\AturanPresensiManualService;
 use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use App\Services\Pembinaan\PoinPresensiOtomatisService;
 use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
@@ -185,7 +186,11 @@ class KoreksiPresensiSiswaService
                 'alasan_hadir_manual' => $manualTanpaScan
                     ? AbsensiSiswa::normalisasiAlasanHadirManual($data['alasan_hadir_manual'] ?? $absensi->alasan_hadir_manual) : null,
                 'sanksi_manual_menit' => $manualTanpaScan ? AbsensiSiswa::SANKSI_MANUAL_MENIT : 0,
-            ])->save();
+            ]);
+            if ($manualTanpaScan) {
+                app(AturanPresensiManualService::class)->bekukan($absensi);
+            }
+            $absensi->save();
 
             if ($ketat || $adaPoin || $absensi->memilikiSanksiManual()) {
                 app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($absensi->refresh(), $pengguna->id);

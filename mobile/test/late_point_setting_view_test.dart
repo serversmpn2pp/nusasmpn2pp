@@ -5,8 +5,66 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/late_point_setting/data/late_point_setting_remote_data_source.dart';
 import 'package:nusa/features/late_point_setting/domain/late_point_setting.dart';
 import 'package:nusa/features/late_point_setting/presentation/late_point_setting_view.dart';
+import 'package:nusa/features/late_point_setting/presentation/widgets/late_point_setting_form_sheet.dart';
 
 void main() {
+  testWidgets(
+    'admin memilih pelanggaran presensi manual dan menyimpan referensi aturan',
+    (tester) async {
+      final data = _pageJson();
+      final item = (data['items'] as List).single as Map<String, dynamic>;
+      item['pelanggaran_hadir_manual'] = {
+        'id': 71,
+        'nama': 'Kartu pelajar tidak dibawa',
+        'poin': 15,
+      };
+      item['pilihan_pelanggaran_hadir_manual'] = [
+        {
+          'id': 71,
+          'kode': 'K001',
+          'nama': 'Kartu pelajar tidak dibawa',
+          'poin': 15,
+        },
+        {'id': 72, 'kode': 'K002', 'nama': 'Tanpa scan kartu', 'poin': 10},
+      ];
+      final setting = LatePointSettingPage.fromJson(data).items.single;
+      LatePointSettingFormValue? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: FilledButton(
+                onPressed: () async {
+                  saved = await showModalBottomSheet<LatePointSettingFormValue>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => LatePointSettingFormSheet(setting: setting),
+                  );
+                },
+                child: const Text('Atur'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Atur'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('manual-attendance-violation')),
+      );
+      await tester.tap(find.byKey(const Key('manual-attendance-violation')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('K002 · Tanpa scan kartu — 10 poin').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('save-late-point-setting')));
+      await tester.pumpAndSettle();
+      expect(saved?.manualViolationId, 72);
+      expect(saved?.ranges.last.points, 15);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test(
     'domain membaca tahun, nilai bawaan, ringkasan, dan rentang terbuka',
     () {

@@ -140,7 +140,7 @@
                                     <option value="{{ $kode }}" @selected(\App\Models\AbsensiSiswa::normalisasiAlasanHadirManual(old('alasan_hadir_manual', $absensi?->alasan_hadir_manual)) === $kode)>{{ $label }}</option>
                                 @endforeach
                             </select>
-                            <p class="help-text">Hadir manual tanpa scan dikenai minimal {{ $aturanHadirManual['menit_minimal'] }} menit keterlambatan dan {{ $aturanHadirManual['poin'] }} poin sesuai aturan sekolah. Keterlambatan lebih besar tetap dihitung. Poin tidak diterapkan pada hari dengan pengecualian presensi. Orang tua mendapat keterangan alasan dan saran menghubungi admin untuk mendapatkan atau mengganti kartu pelajar.</p>
+                            <p class="help-text">Hadir manual tanpa scan dikenai minimal {{ $aturanHadirManual['menit_minimal'] }} menit keterlambatan dan {{ $aturanHadirManual['poin'] }} poin untuk pelanggaran “{{ $aturanHadirManual['pelanggaran']['nama'] }}”. Keterlambatan lebih besar tetap dihitung. Poin tidak diterapkan pada hari dengan pengecualian presensi. Orang tua mendapat keterangan alasan dan saran menghubungi admin untuk mendapatkan atau mengganti kartu pelajar.</p>
                         </div>
                     @endif
                     <div class="field span-2">

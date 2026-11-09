@@ -9,6 +9,7 @@ use App\Models\Pengguna;
 use App\Models\RiwayatPerubahanAbsensiSiswa;
 use App\Services\Absensi\HitungKeterlambatanSiswaService;
 use App\Services\Notifikasi\NotifikasiAbsensiSiswaService;
+use App\Services\Pembinaan\AturanPresensiManualService;
 use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -76,7 +77,11 @@ class CatatKehadiranSiswaPiketService
                 'status_kehadiran' => $status,
                 'sumber' => 'guru_piket',
                 'catatan' => trim($catatan),
-            ])->save();
+            ]);
+            if ($status === 'hadir') {
+                app(AturanPresensiManualService::class)->bekukan($absensi);
+            }
+            $absensi->save();
 
             app(ProsesPoinKeterlambatanService::class)->sinkronkanAbsensi($absensi->refresh(), $pengguna->id);
             $absensi->refresh();

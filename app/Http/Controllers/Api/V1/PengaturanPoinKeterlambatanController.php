@@ -31,6 +31,7 @@ class PengaturanPoinKeterlambatanController extends Controller
             'otomatis_langsung' => ['sometimes', 'boolean'],
             'poin_terlambat' => ['sometimes', 'integer', 'min:1', 'max:500'],
             'poin_alfa' => ['sometimes', 'integer', 'min:1', 'max:500'],
+            'pelanggaran_hadir_manual_id' => ['sometimes', 'required', 'integer'],
             'rentang' => ['required', 'array', 'min:1', 'max:20'],
             'rentang.*.menit_mulai' => ['required', 'integer', 'min:1', 'max:1440'],
             'rentang.*.menit_selesai' => ['nullable', 'integer', 'min:1', 'max:1440'],

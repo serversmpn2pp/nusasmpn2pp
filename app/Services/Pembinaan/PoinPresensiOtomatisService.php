@@ -47,6 +47,10 @@ class PoinPresensiOtomatisService
             // This sanction applies only to newly flagged manual attendance,
             // independently of the regular scan automation's activation date.
             $manual = $absensi?->memilikiSanksiManual() ?? false;
+            $aturanManual = $manual ? app(AturanPresensiManualService::class)->bekukan($absensi) : null;
+            if ($manual && $absensi->isDirty('aturan_poin_hadir_manual')) {
+                $absensi->save();
+            }
             $dapatMenambah = $tanggal <= now()->toDateString() && ($manual
                 || ($pengaturan?->aktif && $pengaturan->otomatis_langsung && $pengaturan->berlaku_mulai
                     && $tanggal >= $pengaturan->berlaku_mulai->toDateString()));
@@ -79,7 +83,7 @@ class PoinPresensiOtomatisService
                 }
             }
             $target = $jenis ? (int) ($jenis === 'alfa' ? $pengaturan?->poin_alfa
-                : ($manual ? ($pengaturan?->poin_terlambat ?? 15) : $pengaturan?->poin_terlambat)) : 0;
+                : ($manual ? $aturanManual['poin'] : $pengaturan?->poin_terlambat)) : 0;
             if ($laporan?->poin_dikecualikan_pada) {
                 $target = 0;
             } elseif (! $dapatMenambah && $target > 0) {
@@ -119,7 +123,7 @@ class PoinPresensiOtomatisService
                 ]);
             }
             if ($jenis && ! $laporan->poin_dikecualikan_pada) {
-                $butir = $this->jenisPelanggaran($jenis);
+                $butir = $manual ? (object) $aturanManual : $this->jenisPelanggaran($jenis);
                 $laporan->update([
                     'kunci_presensi_otomatis' => $kunci, 'jenis_presensi_otomatis' => $jenis,
                     'absensi_siswa_id' => $absensi?->id, 'waktu_kejadian' => $absensi?->jam_masuk,
@@ -135,7 +139,7 @@ class PoinPresensiOtomatisService
                 $laporan->butirPelanggaranLaporan()->updateOrCreate(
                     ['laporan_pembinaan_siswa_id' => $laporan->id],
                     ['jenis_pelanggaran_siswa_id' => $butir->id, 'kode_pelanggaran' => $butir->kode,
-                        'nama_pelanggaran' => $jenis === 'alfa' ? 'Tidak hadir tanpa keterangan (alfa)' : 'Terlambat datang ke sekolah',
+                        'nama_pelanggaran' => $manual ? $butir->nama : ($jenis === 'alfa' ? 'Tidak hadir tanpa keterangan (alfa)' : 'Terlambat datang ke sekolah'),
                         'tingkat' => $butir->tingkat, 'poin' => $target, 'catatan' => 'Aturan poin presensi langsung.'],
                 );
             }

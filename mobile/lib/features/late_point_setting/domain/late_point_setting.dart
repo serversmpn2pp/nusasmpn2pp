@@ -33,19 +33,33 @@ class LatePointSetting {
     required this.ranges,
     this.updatedBy,
     this.updatedAt,
+    this.manualViolationId,
+    this.manualViolationName,
+    this.manualViolationPoints = 15,
+    this.manualChoices = const [],
   });
 
-  factory LatePointSetting.fromJson(Map<String, dynamic> json) =>
-      LatePointSetting(
-        academicYear: LatePointAcademicYear.fromJson(
-          _map(json['tahun_pelajaran']),
-        ),
-        saved: json['tersimpan'] as bool? ?? false,
-        automaticActive: json['otomatis_aktif'] as bool? ?? false,
-        ranges: _list(json['rentang'], LatePointRange.fromJson),
-        updatedBy: json['diperbarui_oleh'] as String?,
-        updatedAt: DateTime.tryParse(json['diperbarui_pada'] as String? ?? ''),
-      );
+  factory LatePointSetting.fromJson(
+    Map<String, dynamic> json,
+  ) => LatePointSetting(
+    academicYear: LatePointAcademicYear.fromJson(_map(json['tahun_pelajaran'])),
+    saved: json['tersimpan'] as bool? ?? false,
+    automaticActive: json['otomatis_aktif'] as bool? ?? false,
+    ranges: _list(json['rentang'], LatePointRange.fromJson),
+    updatedBy: json['diperbarui_oleh'] as String?,
+    updatedAt: DateTime.tryParse(json['diperbarui_pada'] as String? ?? ''),
+    manualViolationId: _nullableInteger(
+      _map(json['pelanggaran_hadir_manual'])['id'],
+    ),
+    manualViolationName:
+        _map(json['pelanggaran_hadir_manual'])['nama'] as String?,
+    manualViolationPoints:
+        (_map(json['pelanggaran_hadir_manual'])['poin'] as num?)?.toInt() ?? 15,
+    manualChoices: _list(
+      json['pilihan_pelanggaran_hadir_manual'],
+      ManualViolationChoice.fromJson,
+    ),
+  );
 
   final LatePointAcademicYear academicYear;
   final bool saved;
@@ -53,6 +67,30 @@ class LatePointSetting {
   final List<LatePointRange> ranges;
   final String? updatedBy;
   final DateTime? updatedAt;
+  final int? manualViolationId;
+  final String? manualViolationName;
+  final int manualViolationPoints;
+  final List<ManualViolationChoice> manualChoices;
+}
+
+class ManualViolationChoice {
+  const ManualViolationChoice({
+    required this.id,
+    required this.name,
+    required this.code,
+    required this.points,
+  });
+  factory ManualViolationChoice.fromJson(Map<String, dynamic> json) =>
+      ManualViolationChoice(
+        id: _integer(json['id']),
+        name: json['nama'] as String? ?? '',
+        code: json['kode'] as String? ?? '',
+        points: _integer(json['poin']),
+      );
+  final int id;
+  final String name;
+  final String code;
+  final int points;
 }
 
 class LatePointAcademicYear {
@@ -139,10 +177,15 @@ class LatePointSettingAccess {
 }
 
 class LatePointSettingFormValue {
-  const LatePointSettingFormValue({required this.active, required this.ranges});
+  const LatePointSettingFormValue({
+    required this.active,
+    required this.ranges,
+    this.manualViolationId,
+  });
 
   final bool active;
   final List<LatePointRangeFormValue> ranges;
+  final int? manualViolationId;
 }
 
 class LatePointRangeFormValue {

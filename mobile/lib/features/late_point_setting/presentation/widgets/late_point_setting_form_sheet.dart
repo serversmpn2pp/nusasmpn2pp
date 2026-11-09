@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nusa/core/theme/app_theme.dart';
+import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 import 'package:nusa/features/late_point_setting/domain/late_point_setting.dart';
 
 class LatePointSettingFormSheet extends StatefulWidget {
@@ -17,11 +18,13 @@ class _LatePointSettingFormSheetState extends State<LatePointSettingFormSheet> {
   late final List<_EditableLateRange> _ranges;
   late bool _active;
   String? _error;
+  int? _manualId;
 
   @override
   void initState() {
     super.initState();
     _active = widget.setting.automaticActive;
+    _manualId = widget.setting.manualViolationId;
     _ranges = widget.setting.ranges
         .map(_EditableLateRange.fromDomain)
         .toList(growable: true);
@@ -112,6 +115,47 @@ class _LatePointSettingFormSheetState extends State<LatePointSettingFormSheet> {
                   onChanged: (value) => setState(() => _active = value),
                 ),
                 const SizedBox(height: 12),
+                const Text(
+                  'Presensi manual tanpa kartu',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 10),
+                if (widget.setting.manualChoices.isNotEmpty)
+                  NusaDropdownField<int>(
+                    fieldKey: const Key('manual-attendance-violation'),
+                    value: _manualId,
+                    decoration: const InputDecoration(
+                      labelText: 'Jenis pelanggaran dan poin',
+                    ),
+                    options: [
+                      for (final item in widget.setting.manualChoices)
+                        NusaDropdownOption(
+                          value: item.id,
+                          label:
+                              '${item.code} · ${item.name} — ${item.points} poin',
+                        ),
+                    ],
+                    onChanged: (value) => setState(() => _manualId = value),
+                  )
+                else
+                  const Text(
+                    'Perbarui backend untuk memilih pelanggaran presensi manual.',
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.setting.manualChoices
+                          .where((item) => item.id == _manualId)
+                          .map((item) => '${item.name}: ${item.points} poin')
+                          .firstOrNull ??
+                      widget.setting.manualViolationName ??
+                      'Aturan bawaan: 15 poin',
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Diterapkan sekali, terpisah dari keterlambatan scan biasa. Poin mengikuti master saat presensi dicatat; riwayat lama tetap tersimpan. Minimal 5 menit atau keterlambatan sebenarnya yang lebih besar tetap tercatat.',
+                  style: TextStyle(fontSize: 11.5, height: 1.4),
+                ),
+                const Divider(height: 28),
                 Container(
                   padding: const EdgeInsets.all(11),
                   decoration: BoxDecoration(
@@ -216,6 +260,11 @@ class _LatePointSettingFormSheetState extends State<LatePointSettingFormSheet> {
   }
 
   void _submit() {
+    if (widget.setting.manualChoices.isNotEmpty &&
+        !widget.setting.manualChoices.any((item) => item.id == _manualId)) {
+      _setError('Pilih pelanggaran aktif untuk presensi manual.');
+      return;
+    }
     final values = <LatePointRangeFormValue>[];
     for (var index = 0; index < _ranges.length; index++) {
       final item = _ranges[index];
@@ -283,7 +332,11 @@ class _LatePointSettingFormSheetState extends State<LatePointSettingFormSheet> {
 
     Navigator.pop(
       context,
-      LatePointSettingFormValue(active: _active, ranges: values),
+      LatePointSettingFormValue(
+        active: _active,
+        ranges: values,
+        manualViolationId: _manualId,
+      ),
     );
   }
 

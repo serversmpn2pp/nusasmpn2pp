@@ -37,6 +37,7 @@ class NotifikasiAbsensiSiswaService
                     route($orangTua ? 'presensi-anak.index' : 'notifikasi.index', $parameter),
                     "presensi-manual-{$jenis}:{$absensi->id}:{$versi}",
                     $parameter + ['absensi_siswa_id' => $absensi->id, 'alasan_hadir_manual' => $absensi->alasan_hadir_manual,
+                        'pelanggaran_hadir_manual' => $absensi->aturan_poin_hadir_manual['nama'] ?? null,
                         'menit_terlambat' => $absensi->menit_terlambat, 'poin_keterlambatan' => $absensi->poin_keterlambatan_terhitung]);
             }
         }

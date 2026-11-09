@@ -8,28 +8,41 @@ Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
 File distribusi:
 [app-release-1.0.8-9.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.8-9.aab).
-Ukuran **97.861.216 byte** (97,9 MB / sekitar 93,3 MiB). Salinan bernama versi
+Ukuran **97.886.545 byte** (97,9 MB / sekitar 93,4 MiB). Salinan bernama versi
 identik dengan `mobile/build/app/outputs/bundle/release/app-release.aab`.
 Nama dan versionCode 9 dipertahankan atas permintaan pengguna karena AAB
 sebelumnya belum disentuh/diunggah. AAB 1.0.8+9 pertama dicadangkan di
 `mobile/build/releases/backups/1.0.8-9-before-rebuild-20261109/` dengan checksum
 `5ae81c096714f836efdda7980790a46fadb817bf51f46fd02bb5fe28f3a1b99b`.
+Salinan sebelum fitur aturan manual/katalog siswa disimpan di
+`mobile/build/releases/backups/1.0.8-9-before-manual-rule-20261109/` dengan checksum
+`d8d0160c48c3653bb2455657a014805764e44510f2077ceaf90ed92f6de6754c`.
 Checksum AAB 1.0.7+8 tidak berubah.
 
 SHA-256:
 
 ```text
-d8d0160c48c3653bb2455657a014805764e44510f2077ceaf90ed92f6de6754c
+7acdf5541c500342e83fd96e6aafcfb17e9a1b928f699d1f685b7ae1e6a5626f
 ```
 
 Checksum: `mobile/build/releases/app-release-1.0.8-9.aab.sha256`.
-Sumber build: HEAD `eb8556f` beserta perubahan working tree untuk mode asesmen,
-alasan pembukaan, perataan soal, dan pemberitahuan pembaruan. Bukti hash 757
-berkas sumber tersimpan di `aab-validation-1.0.8-9-rebuild/source-files.json`.
+Sumber build: HEAD `be61885` beserta perubahan working tree aturan poin presensi
+manual dan katalog pelanggaran siswa. Bukti hash 758 berkas sumber tersimpan di
+`aab-validation-1.0.8-9-manual-rule/source-files.json`.
 Package tetap `id.sch.smpn2padangpanjang.nusa`.
 
 ### Perubahan sejak AAB 1.0.7+8
 
+- Pengaturan poin presensi manual tanpa kartu di web dan Android dapat memilih
+  jenis pelanggaran aktif. Poin mengikuti master untuk pencatatan baru, terpisah
+  dari poin terlambat scan biasa. Minimal 5 menit atau keterlambatan sebenarnya
+  yang lebih besar tetap berlaku, dengan satu pengenaan poin per kejadian.
+- Riwayat menyimpan salinan nama/kode/poin aturan saat presensi dicatat; perubahan
+  master atau pilihan berikutnya tidak menghitung ulang riwayat lama. Keterangan
+  presensi dan notifikasi siswa/wali mencantumkan nama aturan dan poin aktual.
+- Menu siswa **Aturan Pelanggaran & Poin** menampilkan katalog aktif dari server,
+  dengan pencarian, filter kategori, dan pagination. Akses hanya baca dan tidak
+  membuka pengaturan atau data siswa lain.
 - Soal asesmen dan ujian terpusat tetap disembunyikan setelah kehilangan fokus
   sampai proteksi Android dan sinkronisasi keamanan selesai. Respons server
   lambat/offline menampilkan layar verifikasi; keberhasilan pemeriksaan native
@@ -56,8 +69,9 @@ Package tetap `id.sch.smpn2padangpanjang.nusa`.
 
 ### Pemeriksaan AAB 1.0.8+9
 
-- **948 tes Flutter lulus**; analyzer bersih. Backend pendamping terakhir
-  diverifikasi oleh **76 tes / 1.296 assertion**. Dependensi memakai
+- **950 tes Flutter lulus**; analyzer bersih. Fitur presensi, poin, notifikasi,
+  kategori, dan hak akses diverifikasi oleh **98 tes backend / 2.099 assertion**.
+  Regresi keamanan ujian sebelumnya: 76 tes / 1.296 assertion. Dependensi memakai
   `pub get --offline --enforce-lockfile`; `pubspec.lock` tidak berubah.
 - Build produksi memakai `APP_ENV=production` dan API
   `https://nusa.smpn2padangpanjang.sch.id/api/v1/`.
@@ -67,7 +81,8 @@ Package tetap `id.sch.smpn2padangpanjang.nusa`.
   lulus. Sertifikat upload cocok dengan AAB 1.0.7+8 dan fingerprint
   `CA:E5:19:98:35:1F:48:D5:38:2C:F1:3C:74:CA:B6:67:CF:FB:C8:32:9B:D8:9F:47:70:0C:8C:B4:7B:27:34:05`.
 - Penanda layar verifikasi, retry status ujian, pilihan mode asesmen, konfirmasi
-  tahan, alasan pembukaan, dan pemberitahuan pembaruan ada dalam ketiga `libapp.so`.
+  tahan, alasan pembukaan, pemberitahuan pembaruan, katalog siswa, serta pemilih
+  aturan presensi manual ada dalam ketiga `libapp.so`.
   Channel update native dan integrasi Play juga ditemukan dalam DEX, bersama API produksi
   dan penanda fitur sebelumnya. Foto/logo, teks Arab, font, serta lisensi cocok
   byte demi byte dengan aset sumber. Firebase dan izin notifikasi tetap dikemas.
@@ -76,8 +91,10 @@ Package tetap `id.sch.smpn2padangpanjang.nusa`.
   diagnostik lulus `zipalign -v -c -P 16 4`. APK diagnostik memakai debug key
   standar untuk pemeriksaan lokal; berkas distribusi adalah AAB bernama versi.
 
-Log tersedia di `mobile/build/*release-1.0.8-9-rebuild.log`; bukti manifest,
-sertifikat, konten, ELF, dan alignment ada di `mobile/build/aab-validation-1.0.8-9-rebuild/`.
+Log tersedia di `mobile/build/*release-1.0.8-9-manual-rule.log`, analyzer dan
+backend di `mobile/build/security-audit-2026-11-09/manual-rule-*.log`; bukti
+manifest, sertifikat, konten, ELF, dan alignment ada di
+`mobile/build/aab-validation-1.0.8-9-manual-rule/`.
 Pemeriksaan pertama menemukan timer pemeriksaan update yang belum bersih pada
 tes beranda; timeout dipindahkan ke native dan seluruh 948 tes kemudian lulus.
 Peringatan toolchain Java/KGP, XML SDK, dan font Cupertino tidak menggagalkan
@@ -88,7 +105,7 @@ produksi, maupun runtime HP fisik/16 KB.
 
 Nama rilis: **1.0.8 (9)**. Salin
 [catatan-rilis-1.0.8.txt](D:/nusasmpn2pp/docs/catatan-rilis-1.0.8.txt) ke
-Release notes: **446 karakter** di dalam tag `<id>`. Catatan juga mencakup fitur
+Release notes: **461 karakter** di dalam tag `<id>`. Catatan juga mencakup fitur
 1.0.7 karena pengguna melaporkan versi tersebut masih ditinjau dan akan diganti.
 
 Sebelum publikasi, perbarui backend dan jalankan dari root Laravel:
@@ -98,7 +115,10 @@ php artisan migrate --force
 php artisan optimize:clear
 ```
 
-Pembaruan mode tidak menambah migrasi atau mengubah massal asesmen lama.
+**Fitur aturan presensi manual menambah migrasi**
+`2026_11_09_000002_aturan_poin_presensi_manual.php`; jalankan sebelum menggunakan
+AAB baru. Panduan: [aturan presensi manual dan katalog siswa](D:/nusasmpn2pp/docs/aturan-poin-presensi-manual-2026-11-09.md).
+Pembaruan mode asesmen tidak menambah migrasi atau mengubah massal asesmen lama.
 Migrasi pengetatan historis yang masih tertunda tetap memiliki efeknya sendiri;
 periksa mode asesmen lama setelah pembaruan jika migrasi tersebut baru dijalankan.
 Panduan: [mode monitoring asesmen](D:/nusasmpn2pp/docs/mode-monitoring-asesmen-2026-11-09.md)

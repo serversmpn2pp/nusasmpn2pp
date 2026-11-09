@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AkunOrangTuaController;
 use App\Http\Controllers\Api\V1\AkunPegawaiController;
 use App\Http\Controllers\Api\V1\AkunSiswaController;
 use App\Http\Controllers\Api\V1\AsesmenKelasController;
+use App\Http\Controllers\Api\V1\AturanPelanggaranPoinController;
 use App\Http\Controllers\Api\V1\AturanSanksiPoinController;
 use App\Http\Controllers\Api\V1\AutentikasiController;
 use App\Http\Controllers\Api\V1\BankSoalController;
@@ -682,6 +683,9 @@ Route::prefix('v1')
             ->name('progress-kasus-siswa.index');
         Route::get('/progress-kasus-saya/{laporanPembinaanSiswa}', [ProgressKasusSiswaController::class, 'show'])
             ->name('progress-kasus-siswa.show');
+
+        Route::get('/aturan-pelanggaran-poin', [AturanPelanggaranPoinController::class, 'index'])
+            ->name('aturan-pelanggaran-poin.index');
 
         Route::get('/pembinaan-poin-anak', [PembinaanPoinAnakController::class, 'index'])
             ->name('pembinaan-poin-anak.index');

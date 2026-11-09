@@ -3,13 +3,16 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Izin;
+use App\Models\JenisPelanggaranSiswa;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanPoinKeterlambatan;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\Pembinaan\AturanPresensiManualService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class PengaturanPoinKeterlambatanApiTest extends TestCase
@@ -224,6 +227,46 @@ class PengaturanPoinKeterlambatanApiTest extends TestCase
         $pengguna->daftarPeran()->attach($peran);
 
         return $pengguna;
+    }
+
+    public function test_memilih_aturan_manual_aktif_terpisah_dari_poin_terlambat_biasa(): void
+    {
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $tahun = $this->buatTahun('2026/2027', true);
+        $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_ATUR', 'nama' => 'Tidak membawa kartu pelajar', 'tingkat' => 'ringan', 'poin' => 10, 'aktif' => true]);
+        $payload = ['aktif' => false, 'poin_terlambat' => 35, 'otomatis_langsung' => false, 'pelanggaran_hadir_manual_id' => $jenis->id,
+            'rentang' => [['menit_mulai' => 1, 'menit_selesai' => null, 'poin' => 15]]];
+        $url = route('api.v1.pengaturan-poin-keterlambatan.update', $tahun);
+        $this->withToken($this->token($admin))->putJson($url, $payload)->assertOk();
+        $this->assertDatabaseHas('pengaturan_poin_keterlambatan', ['tahun_pelajaran_id' => $tahun->id, 'poin_terlambat' => 35, 'pelanggaran_hadir_manual_id' => $jenis->id]);
+        $this->getJson(route('api.v1.pengaturan-poin-keterlambatan.index'))->assertOk()
+            ->assertJsonPath('data.items.0.pelanggaran_hadir_manual.poin', 10);
+        $this->putJson($url, [...$payload, 'pelanggaran_hadir_manual_id' => 999999])->assertUnprocessable()->assertJsonValidationErrors('pelanggaran_hadir_manual_id');
+        $nonaktif = JenisPelanggaranSiswa::create(['kode' => 'KARTU_NONAKTIF', 'nama' => 'Aturan lama', 'tingkat' => 'ringan', 'poin' => 25, 'aktif' => false]);
+        $this->putJson($url, [...$payload, 'pelanggaran_hadir_manual_id' => $nonaktif->id])->assertUnprocessable()->assertJsonValidationErrors('pelanggaran_hadir_manual_id');
+        $this->actingAs($admin, 'web')->get(route('pengaturan-poin-keterlambatan.edit', $tahun))->assertOk()->assertSeeText('Presensi manual tanpa kartu')->assertSee('pelanggaran_hadir_manual_id');
+    }
+
+    public function test_aturan_manual_tahun_aktif_harus_diganti_sebelum_dinonaktifkan(): void
+    {
+        $this->buatTahun('2026/2027', true);
+        $aturan = app(AturanPresensiManualService::class)->aturan(TahunPelajaran::firstOrFail()->id);
+        $jenis = JenisPelanggaranSiswa::findOrFail($aturan['id']);
+        try {
+            $jenis->update(['aktif' => false]);
+            $this->fail('Aturan bawaan masih digunakan pada tahun aktif.');
+        } catch (ValidationException $error) {
+            $this->assertArrayHasKey('aktif', $error->errors());
+        }
+        $kategori = $jenis->fresh()->kategoriPembinaanSiswa;
+        try {
+            $kategori->update(['aktif' => false]);
+            $this->fail('Kategori aturan yang digunakan harus tetap aktif.');
+        } catch (ValidationException $error) {
+            $this->assertArrayHasKey('aktif', $error->errors());
+        }
+        $this->assertTrue($jenis->fresh()->aktif);
+        $this->assertTrue($kategori->fresh()->aktif);
     }
 
     private function token(Pengguna $pengguna): string

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PengaturanPoinKeterlambatan;
 use App\Models\TahunPelajaran;
+use App\Services\Pembinaan\AturanPresensiManualService;
 use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,10 @@ class PengaturanPoinKeterlambatanController extends Controller
     {
         $pengaturan = $this->pengaturanService->nilaiUntukTahun($tahunPelajaran->id);
 
-        return view('pengaturan-poin-keterlambatan.edit', compact('tahunPelajaran', 'pengaturan'));
+        $aturanManual = app(AturanPresensiManualService::class)->aturan($tahunPelajaran->id);
+        $pilihanPelanggaranManual = app(AturanPresensiManualService::class)->pilihan();
+
+        return view('pengaturan-poin-keterlambatan.edit', compact('tahunPelajaran', 'pengaturan', 'aturanManual', 'pilihanPelanggaranManual'));
     }
 
     public function update(Request $request, TahunPelajaran $tahunPelajaran)
@@ -41,6 +45,7 @@ class PengaturanPoinKeterlambatanController extends Controller
             'otomatis_langsung' => ['sometimes', 'boolean'],
             'poin_terlambat' => ['sometimes', 'integer', 'min:1', 'max:500'],
             'poin_alfa' => ['sometimes', 'integer', 'min:1', 'max:500'],
+            'pelanggaran_hadir_manual_id' => ['sometimes', 'required', 'integer'],
             'rentang' => ['required', 'array', 'min:1', 'max:20'],
             'rentang.*.menit_mulai' => ['required', 'integer', 'min:1', 'max:1440'],
             'rentang.*.menit_selesai' => ['nullable', 'integer', 'min:1', 'max:1440'],
@@ -69,6 +74,7 @@ class PengaturanPoinKeterlambatanController extends Controller
             );
 
             $this->pengaturanService->simpanModeLangsung($pengaturan, $data);
+            app(AturanPresensiManualService::class)->simpan($pengaturan, $data);
 
             $pengaturan->rentangPoinKeterlambatan()->delete();
             $pengaturan->rentangPoinKeterlambatan()->createMany(

@@ -133,6 +133,7 @@ return [
         'ikon' => 'counseling',
         'items' => [
             ['kode' => 'progress-kasus-saya', 'label' => 'Progress Kasus Saya', 'inisial' => 'PK', 'subkelompok' => 'Pemantauan Saya', 'izin' => null, 'siswa_only' => true, 'status' => 'tersedia', 'rute' => '/progress-kasus-saya'],
+            ['kode' => 'aturan-pelanggaran-poin', 'label' => 'Aturan Pelanggaran & Poin', 'inisial' => 'AP', 'subkelompok' => 'Informasi Siswa', 'izin' => null, 'siswa_only' => true, 'status' => 'tersedia', 'rute' => '/aturan-pelanggaran-poin', 'api' => '/api/v1/aturan-pelanggaran-poin'],
             ['kode' => 'pembinaan-poin-anak', 'label' => 'Pembinaan & Poin Anak Saya', 'inisial' => 'PP', 'subkelompok' => 'Pemantauan Anak', 'izin' => null, 'parent_only' => true, 'status' => 'tersedia', 'rute' => '/pembinaan-poin-anak'],
             ['kode' => 'laporkan-kejadian', 'label' => 'Laporkan Kejadian', 'inisial' => 'LK', 'subkelompok' => 'Operasional', 'izin' => 'poin_siswa.lapor', 'pegawai_only' => true, 'administrator_allowed' => true, 'status' => 'tersedia', 'rute' => '/laporkan-kejadian'],
             ['kode' => 'laporan-saya', 'label' => 'Laporan Saya', 'inisial' => 'LM', 'subkelompok' => 'Pemantauan Saya', 'izin' => 'poin_siswa.lapor', 'pegawai_only' => true, 'status' => 'tersedia', 'rute' => '/laporan-saya'],

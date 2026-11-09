@@ -6,6 +6,7 @@ use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalPiketGuru;
+use App\Models\JenisPelanggaranSiswa;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\NotifikasiPengguna;
@@ -71,7 +72,8 @@ class PresensiManualTanpaKartuTest extends TestCase
     public function test_keterlambatan_sebenarnya_yang_lebih_besar_tetap_dihitung_dan_poin_mengikuti_pengaturan(): void
     {
         $d = $this->data();
-        $d['pengaturan']->update(['poin_terlambat' => 20]);
+        $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_UJI', 'nama' => 'Kartu pelajar hilang', 'tingkat' => 'ringan', 'poin' => 20, 'aktif' => true]);
+        $d['pengaturan']->update(['poin_terlambat' => 80, 'pelanggaran_hadir_manual_id' => $jenis->id]);
         Carbon::setTestNow('2026-11-05 07:18:01');
         $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Kartu hilang.', 'kartu_hilang');
         $this->assertSame('07:18:01', $a->jam_masuk);
@@ -189,14 +191,77 @@ class PresensiManualTanpaKartuTest extends TestCase
     public function test_poin_nol_dihormati_dan_tanpa_pengaturan_memakai_nilai_bawaan_lima_belas(): void
     {
         $d = $this->data();
-        $d['pengaturan']->update(['poin_terlambat' => 0]);
+        $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_NOL', 'nama' => 'Pengecualian poin kartu', 'tingkat' => 'ringan', 'poin' => 0, 'aktif' => true]);
+        $d['pengaturan']->update(['pelanggaran_hadir_manual_id' => $jenis->id]);
         $service = app(CatatKehadiranSiswaPiketService::class);
         $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
         $this->assertSame(0, $a->poin_keterlambatan_terhitung);
         $this->assertDatabaseCount('transaksi_poin_siswa', 0);
         $d['pengaturan']->delete();
         $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
+        $this->assertSame(0, $a->poin_keterlambatan_terhitung);
+        Carbon::setTestNow('2026-11-12 06:55:00');
+        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
         $this->assertSame(15, $a->poin_keterlambatan_terhitung);
+    }
+
+    public function test_aturan_dan_poin_manual_dibekukan_saat_kehadiran_dicatat(): void
+    {
+        $d = $this->data();
+        $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_DINAMIS', 'nama' => 'Tidak membawa kartu', 'tingkat' => 'ringan', 'poin' => 10, 'aktif' => true]);
+        $d['pengaturan']->update(['pelanggaran_hadir_manual_id' => $jenis->id, 'poin_terlambat' => 35]);
+        $service = app(CatatKehadiranSiswaPiketService::class);
+        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'tidak_membawa_kartu');
+        $this->assertSame(10, $a->poin_keterlambatan_terhitung);
+        $this->assertSame('Tidak membawa kartu', $a->aturan_poin_hadir_manual['nama']);
+        $jenis->update(['poin' => 25, 'nama' => 'Kartu belum dipindai']);
+        app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($a);
+        $this->assertSame(10, $a->fresh()->poin_keterlambatan_terhitung);
+        $this->assertStringContainsString('Tidak membawa kartu', $a->fresh()->keteranganSanksiManual());
+        $this->assertDatabaseCount('transaksi_poin_siswa', 1);
+        Carbon::setTestNow('2026-11-12 06:55:00');
+        $baru = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dicatat petugas.', 'kartu_hilang');
+        $this->assertSame(25, $baru->poin_keterlambatan_terhitung);
+        $this->assertSame('Kartu belum dipindai', $baru->aturan_poin_hadir_manual['nama']);
+        $this->assertSame(35, $d['pengaturan']->fresh()->poin_terlambat);
+        $this->assertSame(2, TransaksiPoinSiswa::count());
+        $pesan = NotifikasiPengguna::where('kunci_unik', 'like', 'presensi-manual-%')->latest('id')->firstOrFail();
+        $this->assertStringContainsString('Kartu belum dipindai', $pesan->pesan);
+        $this->assertStringContainsString('Kartu belum dipindai', app(IsiPushNotifikasiService::class)->untuk($pesan)['body']);
+    }
+
+    public function test_migrasi_membekukan_riwayat_manual_lama_tanpa_mengubah_transaksi(): void
+    {
+        $d = $this->data();
+        $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_LAMA', 'nama' => 'Aturan kartu lama', 'tingkat' => 'ringan', 'poin' => 20, 'aktif' => true]);
+        $d['pengaturan']->update(['pelanggaran_hadir_manual_id' => $jenis->id, 'poin_terlambat' => 20]);
+        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'kartu_hilang');
+        $transaksi = TransaksiPoinSiswa::all()->toJson();
+        $migration = require base_path('database/migrations/2026_11_09_000002_aturan_poin_presensi_manual.php');
+        $migration->down();
+        $migration->up();
+        $a->refresh();
+        $this->assertSame(20, $a->aturan_poin_hadir_manual['poin']);
+        $this->assertSame('Aturan kartu lama', $a->aturan_poin_hadir_manual['nama']);
+        $this->assertNull($a->aturan_poin_hadir_manual['kategori_pembinaan_siswa_id']);
+        $this->assertSame($transaksi, TransaksiPoinSiswa::all()->toJson());
+        app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($a);
+        $this->assertSame(20, $a->fresh()->poin_keterlambatan_terhitung);
+    }
+
+    public function test_migrasi_mempertahankan_poin_nol_yang_sudah_diproses(): void
+    {
+        $d = $this->data();
+        $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_LAMA_NOL', 'nama' => 'Kartu tanpa poin', 'tingkat' => 'ringan', 'poin' => 0, 'aktif' => true]);
+        $d['pengaturan']->update(['pelanggaran_hadir_manual_id' => $jenis->id, 'poin_terlambat' => 15]);
+        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
+        $migration = require base_path('database/migrations/2026_11_09_000002_aturan_poin_presensi_manual.php');
+        $migration->down();
+        $migration->up();
+        $this->assertSame(0, $a->fresh()->aturan_poin_hadir_manual['poin']);
+        app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($a);
+        $this->assertSame(0, $a->fresh()->poin_keterlambatan_terhitung);
+        $this->assertDatabaseCount('transaksi_poin_siswa', 0);
     }
 
     public function test_api_menolak_alasan_tidak_valid_dan_akun_siswa_atau_orang_tua_tidak_bisa_mencatat(): void

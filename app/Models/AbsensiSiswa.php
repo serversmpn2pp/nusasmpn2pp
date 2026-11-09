@@ -37,6 +37,7 @@ class AbsensiSiswa extends Model
         'catatan',
         'alasan_hadir_manual',
         'sanksi_manual_menit',
+        'aturan_poin_hadir_manual',
     ];
 
     protected $casts = [
@@ -46,6 +47,7 @@ class AbsensiSiswa extends Model
         'poin_keterlambatan_diproses_pada' => 'datetime',
         'menit_pulang_cepat' => 'integer',
         'sanksi_manual_menit' => 'integer',
+        'aturan_poin_hadir_manual' => 'array',
     ];
 
     public function memilikiSanksiManual(): bool
@@ -66,12 +68,14 @@ class AbsensiSiswa extends Model
         $alasan = self::ALASAN_HADIR_MANUAL[$this->alasan_hadir_manual] ?? 'Kehadiran dicatat manual tanpa scan kartu';
         $poin = (int) $this->poin_keterlambatan_terhitung;
         $keteranganPoin = $poin > 0
-            ? "Siswa mendapat {$poin} poin keterlambatan karena hadir dicatat manual tanpa scan kartu."
+            ? "Siswa mendapat {$poin} poin pelanggaran karena hadir dicatat manual tanpa scan kartu."
             : ($this->poin_keterlambatan_diproses_pada
                 ? 'Poin keterlambatan tidak diterapkan atau telah dibatalkan sesuai ketentuan presensi.'
                 : 'Poin keterlambatan mengikuti pengaturan presensi sekolah.');
 
-        return $alasan.'. Sanksi keterlambatan minimal '.(int) $this->sanksi_manual_menit
+        $jenis = $this->aturan_poin_hadir_manual['nama'] ?? null;
+
+        return $alasan.'. '.($jenis ? 'Pelanggaran: '.$jenis.'. ' : '').'Sanksi keterlambatan minimal '.(int) $this->sanksi_manual_menit
             .' menit; keterlambatan tercatat '.(int) $this->menit_terlambat.' menit. '.$keteranganPoin
             .' Segera hubungi admin sekolah untuk mendapatkan atau mengganti kartu pelajar.';
     }

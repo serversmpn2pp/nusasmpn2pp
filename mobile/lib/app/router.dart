@@ -97,6 +97,7 @@ import 'package:nusa/features/parent_child_academics/domain/parent_child_academi
 import 'package:nusa/features/parent_child_academics/presentation/parent_child_academics_view.dart';
 import 'package:nusa/features/parent_child_guidance/domain/parent_child_guidance.dart';
 import 'package:nusa/features/parent_child_guidance/presentation/parent_child_guidance_view.dart';
+import 'package:nusa/features/student_violation_catalog/student_violation_catalog_view.dart';
 import 'package:nusa/features/parent_child_exams/presentation/parent_child_exams_view.dart';
 import 'package:nusa/features/personal_worship/presentation/personal_worship_view.dart';
 import 'package:nusa/features/point_sanction_rule/presentation/point_sanction_rule_view.dart';
@@ -1592,6 +1593,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.studentViolationTypes,
         name: 'student-violation-types',
         builder: (context, state) => const StudentViolationTypeView(),
+      ),
+      GoRoute(
+        path: '/aturan-pelanggaran-poin',
+        name: 'student-violation-catalog',
+        builder: (context, state) => const StudentViolationCatalogView(),
       ),
       GoRoute(
         path: AppRoutes.pointSanctionRules,

@@ -78,6 +78,21 @@
             </div>
         </section>
 
+        <section class="panel panel-pad feature-section" style="margin-top: 18px;">
+            <h2 class="panel-title">Presensi manual tanpa kartu</h2>
+            <p class="help-text">Pilih pelanggaran yang diterapkan sekali saat siswa dicatat Hadir tanpa scan kartu. Aturan ini terpisah dari poin keterlambatan scan biasa.</p>
+            <div class="field" style="margin-top: 12px;">
+                <label for="pelanggaran_hadir_manual_id">Jenis pelanggaran dan poin</label>
+                <select class="select" id="pelanggaran_hadir_manual_id" name="pelanggaran_hadir_manual_id" required>
+                    <option value="">Pilih pelanggaran aktif</option>
+                    @foreach ($pilihanPelanggaranManual as $pilihan)
+                        <option value="{{ $pilihan->id }}" @selected((int) old('pelanggaran_hadir_manual_id', $aturanManual['id']) === $pilihan->id)>{{ $pilihan->kode }} · {{ $pilihan->nama }} — {{ $pilihan->poin }} poin</option>
+                    @endforeach
+                </select>
+            </div>
+            <p class="help-text">Poin mengikuti master saat presensi baru dicatat. Riwayat lama menyimpan salinan aturan dan poinnya. Minimal 5 menit atau keterlambatan sebenarnya yang lebih besar tetap tercatat; pengecualian presensi tetap berlaku.</p>
+        </section>
+
         <section class="panel panel-pad feature-section" id="legacy-late-settings" style="margin-top: 18px;">
             <h2 class="panel-title">Rentang menit dan poin</h2>
             <p class="help-text">Gunakan 0 poin sebagai toleransi. Rentang terakhir tidak memiliki batas akhir.</p>

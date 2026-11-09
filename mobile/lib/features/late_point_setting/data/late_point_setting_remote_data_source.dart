@@ -53,6 +53,8 @@ final class DioLatePointSettingRemoteDataSource
         'pengaturan-poin-keterlambatan/$academicYearId',
         data: {
           'aktif': value.active,
+          if (value.manualViolationId != null)
+            'pelanggaran_hadir_manual_id': value.manualViolationId,
           'rentang': [
             for (final range in value.ranges)
               {

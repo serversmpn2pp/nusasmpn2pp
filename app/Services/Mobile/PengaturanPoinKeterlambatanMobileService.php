@@ -5,6 +5,7 @@ namespace App\Services\Mobile;
 use App\Models\PengaturanPoinKeterlambatan;
 use App\Models\RentangPoinKeterlambatan;
 use App\Models\TahunPelajaran;
+use App\Services\Pembinaan\AturanPresensiManualService;
 use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +84,7 @@ class PengaturanPoinKeterlambatanMobileService
             );
 
             app(PengaturanPoinKeterlambatanService::class)->simpanModeLangsung($pengaturan, $data);
+            app(AturanPresensiManualService::class)->simpan($pengaturan, $data);
 
             $pengaturan->rentangPoinKeterlambatan()->delete();
             $pengaturan->rentangPoinKeterlambatan()->createMany(
@@ -95,6 +97,8 @@ class PengaturanPoinKeterlambatanMobileService
 
     public function ringkasTahun(TahunPelajaran $tahun): array
     {
+        $manual = app(AturanPresensiManualService::class);
+        $aturanManual = $manual->aturan($tahun->id);
         $pengaturan = $tahun->pengaturanPoinKeterlambatan;
         $rentang = $pengaturan?->rentangPoinKeterlambatan ?? $this->rentangBawaan();
 
@@ -112,6 +116,8 @@ class PengaturanPoinKeterlambatanMobileService
             'berlaku_mulai' => $pengaturan?->berlaku_mulai?->toDateString(),
             'poin_terlambat' => (int) ($pengaturan?->poin_terlambat ?? 15),
             'poin_alfa' => (int) ($pengaturan?->poin_alfa ?? 25),
+            'pelanggaran_hadir_manual' => $aturanManual,
+            'pilihan_pelanggaran_hadir_manual' => $manual->pilihan()->values(),
             'rentang' => $rentang
                 ->map(fn ($item) => [
                     'id' => $item->exists ? (int) $item->id : null,

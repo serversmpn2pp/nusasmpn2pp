@@ -17,6 +17,7 @@ class PengaturanPoinKeterlambatan extends Model
         'berlaku_mulai',
         'poin_terlambat',
         'poin_alfa',
+        'pelanggaran_hadir_manual_id',
         'alfa_diproses_sampai',
         'diperbarui_oleh_pengguna_id',
     ];

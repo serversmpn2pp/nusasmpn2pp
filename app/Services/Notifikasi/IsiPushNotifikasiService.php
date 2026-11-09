@@ -33,9 +33,12 @@ class IsiPushNotifikasiService
             $poin = $data['poin_keterlambatan'] ?? null;
             $menit = $data['menit_terlambat'] ?? null;
             if ($alasan && is_int($poin) && $poin >= 0 && is_int($menit) && $menit >= 5) {
+                $jenis = $data['pelanggaran_hadir_manual'] ?? null;
+                $jenis = is_string($jenis) ? mb_substr(preg_replace('/[\r\n]+/', ' ', $jenis), 0, 100) : null;
+
                 return $this->pesan('Kehadiran dicatat manual',
                     ($manual[1] === 'orang-tua' ? 'Anak Anda' : 'Anda').' hadir tanpa scan: '.$alasan
-                    .'. Terlambat tercatat '.$menit.' menit; '.$poin.' poin keterlambatan. Segera hubungi admin untuk mendapatkan atau mengganti kartu pelajar.');
+                    .'. Terlambat tercatat '.$menit.' menit; '.$poin.' poin'.($jenis ? ' untuk '.$jenis : ' keterlambatan').'. Segera hubungi admin untuk mendapatkan atau mengganti kartu pelajar.');
             }
         }
 

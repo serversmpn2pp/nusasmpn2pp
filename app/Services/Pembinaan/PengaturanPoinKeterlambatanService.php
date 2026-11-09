@@ -12,9 +12,12 @@ class PengaturanPoinKeterlambatanService
 {
     public function aturanHadirManual(int $tahunPelajaranId): array
     {
+        $jenis = app(AturanPresensiManualService::class)->aturan($tahunPelajaranId);
+
         return [
             'menit_minimal' => AbsensiSiswa::SANKSI_MANUAL_MENIT,
-            'poin' => (int) (PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $tahunPelajaranId)->value('poin_terlambat') ?? 15),
+            'poin' => (int) $jenis['poin'],
+            'pelanggaran' => $jenis,
             'alasan' => collect(AbsensiSiswa::ALASAN_HADIR_MANUAL)->map(fn ($label, $kode) => ['kode' => $kode, 'label' => $label])->values()->all(),
         ];
     }
