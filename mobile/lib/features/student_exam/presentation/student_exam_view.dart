@@ -471,9 +471,11 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
       if (session.security.trackAppSwitch &&
           session.security.graceSeconds == 0) ...[
         const SizedBox(height: 12),
-        const _Notice(
-          message: 'Nol toleransi: setiap kehilangan fokus yang terdeteksi dihitung satu kejadian, termasuk gangguan telepon yang mengalihkan layar atau layar mati. Siapkan perangkat sebelum mulai.',
-          warning: true,
+        _Notice(
+          message: session.security.action == 'tahan'
+              ? 'Nol toleransi: setiap kehilangan fokus yang terdeteksi dihitung satu kejadian, termasuk gangguan telepon yang mengalihkan layar atau layar mati. Siapkan perangkat sebelum mulai.'
+              : 'Catat saja: kejadian keluar aplikasi tetap dicatat untuk guru. Jumlah kejadian tidak menahan pengerjaan. Waktu asesmen tetap berjalan.',
+          warning: session.security.action == 'tahan',
         ),
       ],
       if (session.requiresToken) ...[
@@ -2199,7 +2201,7 @@ class _SafeModeBanner extends StatelessWidget {
                         : 'Mode Aman menahan ujian · ${security.incidentCount} kejadian · ${security.totalAwaySeconds} detik di luar NUSA'
                   : strict
                   ? 'Mode Aman aktif${security.graceSeconds == 0 ? ' · Nol toleransi' : ''} · Peringatan ${security.incidentCount}/${security.incidentLimit}'
-                  : 'Mode Aman aktif · Aktivitas keluar aplikasi dicatat',
+                  : 'Catat saja · ${security.incidentCount} kejadian keluar aplikasi dicatat',
               style: TextStyle(
                 color: color,
                 fontSize: 10.5,

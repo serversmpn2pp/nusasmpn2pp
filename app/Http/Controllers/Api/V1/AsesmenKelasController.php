@@ -101,6 +101,7 @@ class AsesmenKelasController extends Controller
             'toleransi_pindah_aplikasi_detik' => ['sometimes', 'integer', 'min:1', 'max:60'],
             'batas_pindah_aplikasi' => ['sometimes', 'integer', 'min:1', 'max:20'],
             'tindakan_pindah_aplikasi' => ['sometimes', Rule::in(['catat', 'tahan'])],
+            'konfirmasi_mode_tahan' => ['sometimes', 'boolean'],
             'tampilkan_hasil' => ['required', 'boolean'],
             'petunjuk' => ['nullable', 'string', 'max:3000'],
             'kelas_peserta' => ['required', 'array', 'min:1'],

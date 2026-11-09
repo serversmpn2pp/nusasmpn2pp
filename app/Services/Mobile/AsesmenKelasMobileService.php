@@ -9,6 +9,7 @@ use App\Models\Pengguna;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use App\Services\Cbt\KebijakanKeamananAsesmen;
 use App\Services\Cbt\SiapkanKomponenNilaiAsesmen;
 use App\Services\Cbt\SinkronkanPesertaAsesmenKelas;
 use Illuminate\Database\Eloquent\Builder;
@@ -106,6 +107,7 @@ class AsesmenKelasMobileService
             'hak_akses' => [
                 'dapat_kelola' => true,
                 'dapat_nonaktifkan' => $asesmen->status !== 'nonaktif',
+                'dapat_ubah_mode_aman' => app(KebijakanKeamananAsesmen::class)->dapatDiubah($asesmen),
             ],
         ];
     }
@@ -304,7 +306,7 @@ class AsesmenKelasMobileService
             'durasi_menit' => $data['durasi_menit'], 'jumlah_soal' => $data['jumlah_soal'], 'kkm' => $kelompok['kkm'],
             'token' => null, 'acak_soal' => $data['acak_soal'], 'acak_jawaban' => $data['acak_jawaban'],
             'batasi_satu_perangkat' => $data['batasi_satu_perangkat'],
-            ...UjianCbt::KEAMANAN_ASESMEN_KETAT,
+            ...app(KebijakanKeamananAsesmen::class)->pengaturan($data, $asesmen),
             'wajib_fullscreen' => $data['wajib_fullscreen'] ?? $asesmen?->wajib_fullscreen ?? false,
             'blokir_tangkapan_layar' => $data['blokir_tangkapan_layar'] ?? $asesmen?->blokir_tangkapan_layar ?? true,
             'toleransi_pindah_aplikasi_detik' => $data['toleransi_pindah_aplikasi_detik'] ?? $asesmen?->toleransi_pindah_aplikasi_detik ?? 3,

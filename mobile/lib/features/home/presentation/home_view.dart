@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
+import 'package:nusa/features/app_update/presentation/app_update_notice.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/home/application/home_controller.dart';
 import 'package:nusa/features/home/presentation/home_dashboard_view.dart';
@@ -151,71 +152,73 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
     return Scaffold(
       backgroundColor: NusaColors.background,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          HomeDashboardView(
-            pengguna: pengguna,
-            dashboard: dashboard,
-            menu: menu,
-            onRefresh: _refreshHome,
-            onOpenActivity: () => setState(() => _selectedIndex = 1),
-            onOpenNusa: () => setState(() => _selectedIndex = 2),
-            onOpenNotifications: () => setState(() => _selectedIndex = 3),
-            onOpenMenuGroup: _openMenuGroup,
-            onOpenMenuEntry: _openMenuEntry,
-            onConfigureQuickAccess: _configureQuickAccess,
-            onUnavailable: _showUnavailable,
-          ),
-          NusaPageFrame(
-            title: 'Aktivitas',
-            action: IconButton(
-              onPressed: dashboard.isLoading ? null : _refreshDashboard,
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Perbarui',
-            ),
-            child: ActivityPage(
+      body: AppUpdateNotice(
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: [
+            HomeDashboardView(
+              pengguna: pengguna,
               dashboard: dashboard,
-              onRefresh: _refreshDashboard,
+              menu: menu,
+              onRefresh: _refreshHome,
+              onOpenActivity: () => setState(() => _selectedIndex = 1),
+              onOpenNusa: () => setState(() => _selectedIndex = 2),
+              onOpenNotifications: () => setState(() => _selectedIndex = 3),
+              onOpenMenuGroup: _openMenuGroup,
+              onOpenMenuEntry: _openMenuEntry,
+              onConfigureQuickAccess: _configureQuickAccess,
+              onUnavailable: _showUnavailable,
             ),
-          ),
-          NusaPageFrame(
-            title: 'Menu NUSA',
-            action: IconButton(
-              onPressed: menu.isLoading ? null : _refreshMenu,
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Perbarui',
+            NusaPageFrame(
+              title: 'Aktivitas',
+              action: IconButton(
+                onPressed: dashboard.isLoading ? null : _refreshDashboard,
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: 'Perbarui',
+              ),
+              child: ActivityPage(
+                dashboard: dashboard,
+                onRefresh: _refreshDashboard,
+              ),
             ),
-            child: MenuView(
-              catalog: menu,
-              onRefresh: _refreshMenu,
-              onOpenGroup: _openMenuGroup,
-              onOpen: _openMenuEntry,
+            NusaPageFrame(
+              title: 'Menu NUSA',
+              action: IconButton(
+                onPressed: menu.isLoading ? null : _refreshMenu,
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: 'Perbarui',
+              ),
+              child: MenuView(
+                catalog: menu,
+                onRefresh: _refreshMenu,
+                onOpenGroup: _openMenuGroup,
+                onOpen: _openMenuEntry,
+              ),
             ),
-          ),
-          NusaPageFrame(
-            title: 'Notifikasi',
-            action: IconButton(
-              onPressed: dashboard.isLoading ? null : _refreshDashboard,
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Perbarui',
+            NusaPageFrame(
+              title: 'Notifikasi',
+              action: IconButton(
+                onPressed: dashboard.isLoading ? null : _refreshDashboard,
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: 'Perbarui',
+              ),
+              child: NotificationsPage(
+                dashboard: dashboard,
+                onRefresh: _refreshDashboard,
+              ),
             ),
-            child: NotificationsPage(
-              dashboard: dashboard,
-              onRefresh: _refreshDashboard,
+            NusaPageFrame(
+              title: 'Profil',
+              child: ProfilePage(
+                user: pengguna,
+                onRefreshRelatedData: _refreshDashboard,
+                onChangePassword: () => context.push('/ganti-kata-sandi'),
+                onLogout: _confirmLogout,
+                isLoggingOut: auth?.isSubmitting ?? false,
+              ),
             ),
-          ),
-          NusaPageFrame(
-            title: 'Profil',
-            child: ProfilePage(
-              user: pengguna,
-              onRefreshRelatedData: _refreshDashboard,
-              onChangePassword: () => context.push('/ganti-kata-sandi'),
-              onLogout: _confirmLogout,
-              isLoggingOut: auth?.isSubmitting ?? false,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: NusaBottomNavigation(
         selectedIndex: _selectedIndex,

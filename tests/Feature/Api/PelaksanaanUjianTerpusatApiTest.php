@@ -91,7 +91,9 @@ class PelaksanaanUjianTerpusatApiTest extends TestCase
         ]);
 
         $this->withToken($token)
-            ->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']))
+            ->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']), [
+                'alasan_pembukaan' => 'Panitia memeriksa kondisi siswa dan mengizinkan melanjutkan.',
+            ])
             ->assertOk()
             ->assertJsonPath('data.status', 'sedang_mengerjakan');
     }

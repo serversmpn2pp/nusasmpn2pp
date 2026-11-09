@@ -65,7 +65,7 @@ class AsesmenKelasApiTest extends TestCase
             ->assertJsonPath('data.wajib_fullscreen', true)
             ->assertJsonPath('data.blokir_tangkapan_layar', true)
             ->assertJsonPath('data.batas_pindah_aplikasi', 3)
-            ->assertJsonPath('data.tindakan_pindah_aplikasi', 'tahan')
+            ->assertJsonPath('data.tindakan_pindah_aplikasi', 'catat')
             ->assertJsonPath('data.kelas_tujuan.0.nama', 'VIII.A')
             ->assertJsonPath('data.kelas_tujuan.0.komponen_nilai', 'Sumatif Bab Persamaan');
 
@@ -99,7 +99,36 @@ class AsesmenKelasApiTest extends TestCase
         $this->assertNotNull($response->json('data.id'));
     }
 
-    public function test_klien_lama_tidak_dapat_menonaktifkan_penahanan_asesmen(): void
+    public function test_api_monitoring_native_dapat_membuka_tahanan_oleh_guru_pembuat(): void
+    {
+        Carbon::setTestNow('2026-09-10 08:25:00');
+        $data = $this->fondasi();
+        $kelompok = implode('-', [$data['pegawai']->id, $data['mapel']->id, 8]);
+        $this->withToken($this->token($data['guru']))->postJson(route('api.v1.asesmen-kelas.store'),
+            [...$this->payload($kelompok, $data['kelas']->id), 'status' => 'berlangsung'])->assertCreated();
+        $asesmen = UjianCbt::where('nama', 'Sumatif Bab Persamaan')->sole();
+        $peserta = $asesmen->pesertaUjianCbt()->orderBy('id')->firstOrFail();
+        $peserta->forceFill(['status' => 'terblokir', 'waktu_mulai' => '2026-09-10 08:10:00',
+            'jumlah_pindah_aplikasi' => 3, 'ditahan_mode_aman_pada' => now()])->save();
+        $url = route('api.v1.keamanan-ujian.buka', $peserta);
+        $alasan = ['alasan_pembukaan' => 'Guru memeriksa perangkat siswa sebelum melanjutkan.'];
+        $autre = $this->buatGuru('Guru Pembuka Lain', '198801012026099001');
+        $this->app['auth']->forgetGuards();
+        $this->withToken($this->token($autre['pengguna']))->postJson($url, $alasan)->assertForbidden();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($this->token($data['guru']))->getJson(route('api.v1.asesmen-kelas.monitoring', $asesmen))
+            ->assertOk()->assertJsonPath('data.items.0.status', 'terblokir');
+        $this->postJson($url)->assertUnprocessable()->assertJsonValidationErrors('alasan_pembukaan');
+        $this->assertSame('terblokir', $peserta->fresh()->status);
+        $this->postJson($url, $alasan)->assertOk()->assertJsonPath('data.status', 'sedang_mengerjakan')
+            ->assertJsonPath('data.keamanan.ditahan', false)->assertJsonPath('data.keamanan.jumlah_kejadian', 3);
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', [
+            'peserta_ujian_cbt_id' => $peserta->id, 'jenis' => 'buka_mode_aman',
+            'oleh_pengguna_id' => $data['guru']->id, 'catatan' => $alasan['alasan_pembukaan'],
+        ]);
+    }
+
+    public function test_mode_catat_default_dan_tahan_memerlukan_konfirmasi_sebelum_peserta_mulai(): void
     {
         $data = $this->fondasi();
         $kelompok = implode('-', [$data['pegawai']->id, $data['mapel']->id, 8]);
@@ -107,10 +136,27 @@ class AsesmenKelasApiTest extends TestCase
             'deteksi_pindah_tab' => false, 'tindakan_pindah_aplikasi' => 'catat', 'batas_pindah_aplikasi' => 20];
         $id = $this->withToken($this->token($data['guru']))->postJson(route('api.v1.asesmen-kelas.store'), $payload)
             ->assertCreated()->assertJsonPath('data.deteksi_pindah_tab', true)
-            ->assertJsonPath('data.batas_pindah_aplikasi', 3)->assertJsonPath('data.tindakan_pindah_aplikasi', 'tahan')->json('data.id');
+            ->assertJsonPath('data.batas_pindah_aplikasi', 3)->assertJsonPath('data.tindakan_pindah_aplikasi', 'catat')->json('data.id');
         $this->patchJson(route('api.v1.asesmen-kelas.update', $id), $payload)->assertOk()
             ->assertJsonPath('data.deteksi_pindah_tab', true)->assertJsonPath('data.batas_pindah_aplikasi', 3)
-            ->assertJsonPath('data.tindakan_pindah_aplikasi', 'tahan');
+            ->assertJsonPath('data.tindakan_pindah_aplikasi', 'catat');
+        $url = route('api.v1.asesmen-kelas.update', $id);
+        $tahan = [...$payload, 'tindakan_pindah_aplikasi' => 'tahan', 'batas_pindah_aplikasi' => 2];
+        $this->patchJson($url, $tahan)->assertUnprocessable()->assertJsonValidationErrors('konfirmasi_mode_tahan');
+        $this->patchJson($url, [...$tahan, 'konfirmasi_mode_tahan' => true])->assertOk()
+            ->assertJsonPath('data.tindakan_pindah_aplikasi', 'tahan')->assertJsonPath('data.batas_pindah_aplikasi', 2);
+        $lama = $payload;
+        unset($lama['tindakan_pindah_aplikasi'], $lama['batas_pindah_aplikasi']);
+        $this->patchJson($url, $lama)->assertOk()->assertJsonPath('data.tindakan_pindah_aplikasi', 'tahan')
+            ->assertJsonPath('data.batas_pindah_aplikasi', 2);
+        $asesmen = UjianCbt::findOrFail($id);
+        $asesmen->pesertaUjianCbt()->firstOrFail()->update(['status' => 'sedang_mengerjakan', 'waktu_mulai' => now()]);
+        $this->patchJson($url, $payload)->assertUnprocessable()->assertJsonValidationErrors('tindakan_pindah_aplikasi');
+        $this->getJson(route('api.v1.asesmen-kelas.show', $id))->assertOk()
+            ->assertJsonPath('data.hak_akses.dapat_ubah_mode_aman', false)->assertJsonPath('data.tindakan_pindah_aplikasi', 'tahan');
+        $this->getJson(route('api.v1.asesmen-kelas.monitoring', $id))->assertOk()
+            ->assertJsonPath('data.asesmen.tindakan_pindah_aplikasi', 'tahan')
+            ->assertJsonPath('data.asesmen.batas_pindah_aplikasi', 2);
     }
 
     public function test_guru_tidak_dapat_memakai_kelas_atau_mengelola_asesmen_guru_lain(): void
@@ -368,7 +414,6 @@ class AsesmenKelasApiTest extends TestCase
             'acak_soal' => true, 'acak_jawaban' => true, 'batasi_satu_perangkat' => false,
             'deteksi_pindah_tab' => true, 'wajib_fullscreen' => true,
             'blokir_tangkapan_layar' => true, 'toleransi_pindah_aplikasi_detik' => 3,
-            'batas_pindah_aplikasi' => 3, 'tindakan_pindah_aplikasi' => 'tahan',
             'tampilkan_hasil' => false, 'petunjuk' => 'Kerjakan dengan teliti.',
             'kelas_peserta' => [['kelas_id' => $kelasId, 'komponen_nilai_id' => 'baru']],
         ];

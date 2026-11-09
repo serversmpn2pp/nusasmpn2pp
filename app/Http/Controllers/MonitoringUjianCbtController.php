@@ -6,6 +6,7 @@ use App\Models\PesertaUjianCbt;
 use App\Models\SesiUjianCbt;
 use App\Models\UjianCbt;
 use App\Services\Cbt\BatasWaktuPesertaUjianCbtService;
+use App\Services\Cbt\KeamananUjianService;
 use App\Services\Cbt\SelesaikanPengerjaanKedaluwarsaCbtService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -17,6 +18,7 @@ class MonitoringUjianCbtController extends Controller
         UjianCbt $ujianCbt,
         SelesaikanPengerjaanKedaluwarsaCbtService $penyelesaianKedaluwarsa,
         BatasWaktuPesertaUjianCbtService $batasWaktu,
+        KeamananUjianService $keamanan,
     ) {
         $data = $request->validate([
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
@@ -112,7 +114,14 @@ class MonitoringUjianCbtController extends Controller
                 $item->anggotaKelas?->siswa?->nama_lengkap ?? '',
             ))
             ->values()
-            ->each(function (PesertaUjianCbt $peserta) use ($batasWaktu, $bolehBeriWaktuTambahan) {
+            ->each(function (PesertaUjianCbt $peserta) use ($batasWaktu, $bolehBeriWaktuTambahan, $keamanan, $request, $ujianCbt) {
+                $peserta->setRelation('ujianCbt', $ujianCbt);
+                $bolehKelolaKeamanan = in_array($peserta->status, ['sedang_mengerjakan', 'terblokir'], true)
+                    && $keamanan->dapatMembuka($request->user(), $peserta);
+                $peserta->setAttribute('dapat_dibuka_mode_aman', $peserta->status === 'terblokir'
+                    && $bolehKelolaKeamanan);
+                $peserta->setAttribute('dapat_reset_perangkat', $bolehKelolaKeamanan
+                    && $peserta->ruangUjianCbt?->status !== 'selesai');
                 $batas = $batasWaktu->batasAkses($peserta);
                 $peserta->setAttribute('batas_waktu_monitor', $batas);
                 $peserta->setAttribute('waktu_tambahan_aktif', $batasWaktu->waktuTambahanAktif($peserta));
@@ -141,6 +150,18 @@ class MonitoringUjianCbtController extends Controller
             'jumlahDitutupOtomatis' => $jumlahDitutupOtomatis,
             'bolehBeriWaktuTambahan' => $bolehBeriWaktuTambahan,
         ]);
+    }
+
+    public function bukaModeAman(Request $request, UjianCbt $ujianCbt, PesertaUjianCbt $pesertaUjianCbt, KeamananUjianService $keamanan)
+    {
+        abort_unless((int) $pesertaUjianCbt->ujian_cbt_id === (int) $ujianCbt->id, 404);
+        $data = $request->validate([
+            'alasan_pembukaan' => ['required', 'string', 'min:10', 'max:500'],
+        ]);
+        $keamanan->bukaTahanan($request->user(), $pesertaUjianCbt, $data['alasan_pembukaan']);
+
+        return to_route('ujian-cbt.monitoring.index', $ujianCbt)
+            ->with('berhasil', 'Ujian peserta sudah dibuka. Minta siswa menekan Periksa Status Ujian di NUSA untuk melanjutkan. Jawaban dan waktu ujian tetap dipertahankan.');
     }
 
     private function ringkasanMonitoring(UjianCbt $ujianCbt): array

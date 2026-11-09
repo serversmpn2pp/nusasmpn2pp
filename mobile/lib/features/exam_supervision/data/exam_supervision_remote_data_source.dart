@@ -24,7 +24,7 @@ abstract interface class ExamSupervisionRemoteDataSource {
     required int roomId,
     required int participantId,
   });
-  Future<void> unlockSafeMode(int participantId);
+  Future<void> unlockSafeMode(int participantId, {required String reason});
   Future<ExamSupervisionDetail> uploadEvidence({
     required int roomId,
     required String type,
@@ -100,10 +100,14 @@ final class DioExamSupervisionRemoteDataSource
   );
 
   @override
-  Future<void> unlockSafeMode(int participantId) async {
+  Future<void> unlockSafeMode(
+    int participantId, {
+    required String reason,
+  }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
         'keamanan-ujian/peserta/$participantId/buka',
+        data: {'alasan_pembukaan': reason.trim()},
       );
     } on DioException catch (exception) {
       throw mapDioException(exception);

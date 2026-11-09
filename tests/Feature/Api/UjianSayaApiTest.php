@@ -691,7 +691,9 @@ class UjianSayaApiTest extends TestCase
         $admin->daftarPeran()->attach(Peran::where('kode', 'administrator')->firstOrFail());
 
         Sanctum::actingAs($admin, ['mobile']);
-        $this->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']))
+        $this->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']), [
+            'alasan_pembukaan' => 'Pengawas memeriksa perangkat dan mengizinkan melanjutkan.',
+        ])
             ->assertOk()
             ->assertJsonPath('data.status', 'sedang_mengerjakan')
             ->assertJsonPath('data.keamanan.ditahan', false);
@@ -699,7 +701,7 @@ class UjianSayaApiTest extends TestCase
             'peserta_ujian_cbt_id' => $data['peserta']->id,
             'jenis' => 'buka_mode_aman',
             'oleh_pengguna_id' => $admin->id,
-            'catatan' => null,
+            'catatan' => 'Pengawas memeriksa perangkat dan mengizinkan melanjutkan.',
         ]);
 
         app('auth')->forgetGuards();
@@ -995,10 +997,17 @@ class UjianSayaApiTest extends TestCase
         $this->kirimKeamanan($data, 'keluar_pengerjaan', ['kejadian_id' => $id])->assertOk()
             ->assertJsonPath('data.mode', 'ditahan')->assertJsonPath('data.keamanan.alasan_tahanan', 'keluar_pengerjaan')
             ->assertJsonPath('data.keamanan.jumlah_kejadian', 0);
-        $this->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']))->assertForbidden();
+        $alasan = ['alasan_pembukaan' => 'Pengawas memeriksa keadaan siswa sebelum melanjutkan.'];
+        $this->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']), $alasan)->assertForbidden();
         $admin = $this->petugasKeamanan();
         Sanctum::actingAs($admin, ['mobile']);
-        $this->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']))->assertOk()
+        foreach ([[], ['alasan_pembukaan' => 'singkat'], ['alasan_pembukaan' => str_repeat(' ', 20)],
+            ['alasan_pembukaan' => str_repeat('a', 501)], ['alasan_pembukaan' => ['bukan teks']]] as $tidakSah) {
+            $this->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']), $tidakSah)
+                ->assertUnprocessable()->assertJsonValidationErrors('alasan_pembukaan');
+            $this->assertSame('terblokir', $data['peserta']->fresh()->status);
+        }
+        $this->postJson(route('api.v1.keamanan-ujian.buka', $data['peserta']), $alasan)->assertOk()
             ->assertJsonPath('data.keamanan.alasan_tahanan', null);
         Carbon::setTestNow(now()->addSeconds(15));
         app('auth')->forgetGuards();
@@ -1007,7 +1016,8 @@ class UjianSayaApiTest extends TestCase
             ->assertJsonPath('data.mode', 'pengerjaan');
         $this->assertSame($mulai, $data['peserta']->fresh()->waktu_mulai->toISOString());
         $this->assertSame(['A'], $data['peserta']->jawabanPesertaUjianCbt()->firstOrFail()->jawaban);
-        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', ['jenis' => 'buka_mode_aman', 'oleh_pengguna_id' => $admin->id]);
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', ['jenis' => 'buka_mode_aman', 'oleh_pengguna_id' => $admin->id,
+            'catatan' => $alasan['alasan_pembukaan']]);
         $this->assertSame(1785, app(BatasWaktuPesertaUjianCbtService::class)->sisaDetik($data['peserta']->fresh()));
     }
 
@@ -1061,6 +1071,30 @@ class UjianSayaApiTest extends TestCase
         $this->assertSame('sedang_mengerjakan', $data['peserta']->fresh()->status);
     }
 
+    public function test_tryout_catat_tetap_dapat_dikerjakan_setelah_enam_kejadian_dan_pemulihan_sesi(): void
+    {
+        $data = $this->fondasiKeamananKetat();
+        $data['peserta']->ujianCbt->update(['alur' => 'kelas', 'tindakan_pindah_aplikasi' => 'catat']);
+        $mulai = $data['peserta']->fresh()->waktu_mulai;
+        for ($i = 1; $i <= 6; $i++) {
+            $this->kirimKeamanan($data, 'keluar')->assertOk()->assertJsonPath('data.mode', 'pengerjaan')
+                ->assertJsonPath('data.keamanan.jumlah_kejadian', $i);
+            $this->kirimKeamanan($data, 'kembali')->assertOk()->assertJsonPath('data.keamanan.ditahan', false);
+        }
+        Carbon::setTestNow(now()->addSeconds(130));
+        $this->kirimKeamanan($data, 'pemulihan', ['tertunda' => true])->assertOk()->assertJsonPath('data.mode', 'pengerjaan');
+        $this->withToken($data['token'])->postJson(route('api.v1.ujian-saya.mulai', $data['peserta']), [
+            'perangkat' => 'NUSA Android Aman',
+        ])->assertOk()->assertJsonPath('data.mode', 'pengerjaan')->assertJsonPath('data.keamanan.tindakan', 'catat')
+            ->assertJsonCount(1, 'data.soal');
+        $this->putJson(route('api.v1.ujian-saya.jawaban.update', $data['peserta']), [
+            'soal_ujian_cbt_id' => $data['soal_pg']->id, 'jawaban' => ['A'], 'ragu' => false,
+            'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        $this->assertEquals($mulai, $data['peserta']->fresh()->waktu_mulai);
+        $this->assertSame(6, $data['peserta']->fresh()->jumlah_pindah_aplikasi);
+    }
+
     public function test_jeda_heartbeat_tanpa_ikatan_satu_perangkat_tetap_dapat_ditinjau(): void
     {
         $data = $this->fondasiKeamananKetat(batasiPerangkat: false);
@@ -1077,7 +1111,7 @@ class UjianSayaApiTest extends TestCase
         $this->kirimKeamanan($data, 'pemulihan', ['pemicu' => 'proteksi-layar-gagal'])->assertOk()
             ->assertJsonPath('data.mode', 'ditahan')->assertJsonPath('data.kejadian_dihitung', false)
             ->assertJsonPath('data.keamanan.jumlah_kejadian', 0)->assertJsonPath('data.keamanan.alasan_tahanan', 'peninjauan_sesi');
-        app(KeamananUjianService::class)->bukaTahanan($this->petugasKeamanan(), $data['peserta']->fresh());
+        app(KeamananUjianService::class)->bukaTahanan($this->petugasKeamanan(), $data['peserta']->fresh(), 'Kondisi siswa dan perangkat telah diperiksa petugas.');
         $this->kirimKeamanan($data, 'pemulihan', ['pemicu' => 'pemilih-berkas'])->assertOk()
             ->assertJsonPath('data.mode', 'ditahan')->assertJsonPath('data.keamanan.jumlah_kejadian', 0);
     }
@@ -1135,7 +1169,7 @@ class UjianSayaApiTest extends TestCase
         }
         $this->mulaiIzinBerkas($data)->assertOk()->assertJsonPath('data.diterima', false)
             ->assertJsonPath('data.mode', 'ditahan')->assertJsonPath('data.keamanan.jumlah_kejadian', 0);
-        app(KeamananUjianService::class)->bukaTahanan($this->petugasKeamanan(), $data['peserta']->fresh());
+        app(KeamananUjianService::class)->bukaTahanan($this->petugasKeamanan(), $data['peserta']->fresh(), 'Kondisi siswa dan perangkat telah diperiksa petugas.');
         $this->mulaiIzinBerkas($data)->assertOk()->assertJsonPath('data.diterima', true);
         $this->assertSame($mulai, $data['peserta']->fresh()->waktu_mulai->toISOString());
     }
@@ -1193,7 +1227,7 @@ class UjianSayaApiTest extends TestCase
             'pesertaUjianCbt' => $data['peserta'], 'perangkat' => 'NUSA Android Aman',
         ]))->assertOk()->assertJsonPath('data.mode', 'ditahan')->assertJsonMissingPath('data.soal');
         $admin = $this->petugasKeamanan();
-        app(KeamananUjianService::class)->bukaTahanan($admin, $data['peserta']->fresh());
+        app(KeamananUjianService::class)->bukaTahanan($admin, $data['peserta']->fresh(), 'Kondisi siswa dan perangkat telah diperiksa petugas.');
         $izin = $this->mulaiIzinBerkas($data)->assertOk()->json('data.izin.id');
         app(KeamananUjianService::class)->resetPerangkat($admin, $data['peserta']->fresh(), 'Pergantian perangkat disetujui');
         $aktivitas = $data['peserta']->aktivitasKeamananUjianCbt()->where('metadata->izin_id', $izin)->firstOrFail();
@@ -1273,7 +1307,7 @@ class UjianSayaApiTest extends TestCase
         $url = route('api.v1.ujian-saya.jawaban.update', $data['peserta']);
         $this->putJson($url, $payload)->assertUnprocessable();
         $this->assertDatabaseCount('jawaban_peserta_ujian_cbt', 0);
-        app(KeamananUjianService::class)->bukaTahanan($this->petugasKeamanan(), $data['peserta']->fresh());
+        app(KeamananUjianService::class)->bukaTahanan($this->petugasKeamanan(), $data['peserta']->fresh(), 'Kondisi siswa dan perangkat telah diperiksa petugas.');
         $payload['versi_jawaban'] = $this->putJson($url, $payload)->assertOk()->json('data.versi_jawaban');
         Carbon::setTestNow(now()->addMinutes(31));
         $payload['jawaban'] = ['B'];

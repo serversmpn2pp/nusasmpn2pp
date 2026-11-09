@@ -8,6 +8,7 @@ use App\Models\PesertaUjianCbt;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -315,10 +316,15 @@ class KeamananUjianService
         return ['peserta_id' => (int) $peserta->id, 'pesan' => 'Ikatan sesi telah direset. Siswa dapat membuka ujian pada perangkat yang disetujui.'];
     }
 
-    public function bukaTahanan(Pengguna $pengguna, PesertaUjianCbt $peserta, ?string $alasan = null): array
+    public function bukaTahanan(Pengguna $pengguna, PesertaUjianCbt $peserta, string $alasan): array
     {
         $peserta->loadMissing(['ujianCbt', 'ruangUjianCbt']);
         abort_unless($this->dapatMembuka($pengguna, $peserta), 403);
+
+        $alasan = trim($alasan);
+        Validator::make(['alasan_pembukaan' => $alasan], [
+            'alasan_pembukaan' => ['required', 'string', 'min:10', 'max:500'],
+        ])->validate();
 
         if ($peserta->status !== 'terblokir') {
             throw ValidationException::withMessages([
@@ -361,7 +367,7 @@ class KeamananUjianService
                 'mulai_pada' => $dibukaPada,
                 'selesai_pada' => $dibukaPada,
                 'oleh_pengguna_id' => $pengguna->id,
-                'catatan' => $alasan === null ? null : trim($alasan),
+                'catatan' => $alasan,
                 'metadata' => ['nama_petugas' => $pengguna->nama],
             ]);
         });
@@ -725,7 +731,7 @@ class KeamananUjianService
             return null;
         }
 
-        if ($polaKeluarSingkat) {
+        if ($polaKeluarSingkat && $keamanan['tindakan'] === 'tahan') {
             $jumlah = $polaKeluarSingkat['jumlah_aktivitas'];
             $durasi = $polaKeluarSingkat['durasi_total_detik'];
 

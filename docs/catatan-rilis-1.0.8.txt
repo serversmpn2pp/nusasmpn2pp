@@ -1,0 +1,8 @@
+<id>
+Asesmen kini default Catat saja, dengan pilihan Tahan setelah batas dan konfirmasi guru.
+Pembukaan ujian yang ditahan wajib disertai alasan.
+Perbaikan proteksi ujian, sinkronisasi keamanan, dan perataan soal.
+Pemberitahuan versi baru saat pembaruan tersedia di Google Play.
+Modul Tahfidz, progres siswa/wali, bacaan Arab Juz 30 offline, dan notifikasi.
+Presensi manual tanpa kartu disertai alasan, keterlambatan, serta poin sesuai aturan sekolah.
+</id>

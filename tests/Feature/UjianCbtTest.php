@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\GuruMataPelajaran;
+use App\Models\Izin;
 use App\Models\JadwalUjianCbt;
 use App\Models\JawabanPesertaUjianCbt;
 use App\Models\JenisUjianCbt;
@@ -2238,7 +2239,10 @@ class UjianCbtTest extends TestCase
                 ->assertSee('Terlambat')
                 ->assertSee('1 / 2')
                 ->assertSee('1 ragu')
-                ->assertSee('Sisa sekitar');
+                ->assertSee('Sisa sekitar')
+                ->assertSee('data-reset-participant="'.$peserta[2]->id.'"', false)
+                ->assertDontSee('data-reset-participant="'.$peserta[0]->id.'"', false)
+                ->assertDontSee('data-reset-participant="'.$peserta[1]->id.'"', false);
 
             $this->actingAs($administrator)
                 ->get(route('ujian-cbt.monitoring.index', [
@@ -2267,6 +2271,27 @@ class UjianCbtTest extends TestCase
                 ->assertOk()
                 ->assertSee($peserta[2]->anggotaKelas->siswa->nama_lengkap)
                 ->assertDontSee($peserta[0]->anggotaKelas->siswa->nama_lengkap);
+
+            $peranPemantau = Peran::create(['kode' => 'pemantau-reset-uji', 'nama' => 'Pemantau ujian', 'aktif' => true]);
+            $peranPemantau->izin()->attach(Izin::where('kode', 'cbt.terpusat_lihat')->firstOrFail());
+            $pemantau = Pengguna::create([
+                'nama' => 'Pemantau tanpa izin reset', 'username' => 'pemantau-reset-uji',
+                'kata_sandi' => 'rahasia123', 'peran' => 'pegawai', 'aktif' => true,
+                'akun_sistem' => false, 'wajib_ganti_kata_sandi' => false,
+            ]);
+            $pemantau->daftarPeran()->attach($peranPemantau);
+            $this->actingAs($pemantau)->get(route('ujian-cbt.monitoring.index', $ujianCbt))
+                ->assertOk()->assertDontSee('data-reset-participant=', false);
+            $this->post(route('keamanan-ujian.reset-perangkat', $peserta[2]), [
+                'alasan' => 'Mencoba mengganti perangkat siswa.',
+            ])->assertForbidden();
+
+            $ruangDua->update(['status' => 'selesai']);
+            $this->actingAs($administrator)->get(route('ujian-cbt.monitoring.index', $ujianCbt))
+                ->assertOk()->assertDontSee('data-reset-participant=', false);
+            $this->post(route('keamanan-ujian.reset-perangkat', $peserta[2]), [
+                'alasan' => 'Perangkat rusak setelah ruang selesai.',
+            ])->assertUnprocessable();
         } finally {
             Carbon::setTestNow();
         }

@@ -70,10 +70,13 @@ void main() {
     );
     await tester.tap(unlock);
     await tester.pumpAndSettle();
+    const reason = 'Panitia memeriksa perangkat dan kondisi siswa.';
+    await tester.enterText(find.byKey(const Key('exam-unlock-reason')), reason);
     await tester.tap(find.widgetWithText(FilledButton, 'Buka Ujian'));
     await tester.pumpAndSettle();
 
     expect(remote.unlockCalls, 1);
+    expect(remote.lastReason, reason);
     await tester.tap(find.byKey(const Key('central-exam-auto-refresh')));
     await tester.pump(const Duration(seconds: 16));
     await tester.pumpAndSettle();
@@ -197,7 +200,11 @@ class _FakeCentralExamExecutionRemoteDataSource
   }) async => 'Pengawas berhasil diperbarui.';
 
   @override
-  Future<void> unlockSafeMode(int participantId) async {
+  Future<void> unlockSafeMode(
+    int participantId, {
+    required String reason,
+  }) async {
+    lastReason = reason;
     unlockCalls++;
   }
 

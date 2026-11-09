@@ -79,8 +79,8 @@ use App\Http\Controllers\LegerStsController;
 use App\Http\Controllers\LokasiBarangController;
 use App\Http\Controllers\MataPelajaranController;
 use App\Http\Controllers\MediaResmiHumasController;
-use App\Http\Controllers\MonitoringSiswaController;
 use App\Http\Controllers\MonitoringPameranController;
+use App\Http\Controllers\MonitoringSiswaController;
 use App\Http\Controllers\MonitoringSurveiController;
 use App\Http\Controllers\MonitoringUjianCbtController;
 use App\Http\Controllers\MonitoringUjianTvController;
@@ -668,6 +668,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         });
         Route::middleware(['izin:cbt.asesmen_kelola,cbt.soal_kelola,cbt.panitia,cbt.terpusat_lihat,cbt.kelola', 'akses_ujian_cbt'])->group(function () {
             Route::get('ujian-cbt/{ujianCbt}/monitoring', [MonitoringUjianCbtController::class, 'index'])->name('ujian-cbt.monitoring.index');
+            Route::post('ujian-cbt/{ujianCbt}/monitoring/peserta/{pesertaUjianCbt}/buka-mode-aman', [MonitoringUjianCbtController::class, 'bukaModeAman'])
+                ->whereNumber('pesertaUjianCbt')->middleware(['akun_pegawai', 'throttle:30,1'])
+                ->name('ujian-cbt.monitoring.buka-mode-aman');
             Route::get('ujian-cbt/{ujianCbt}/hasil', [RekapHasilUjianCbtController::class, 'index'])->name('ujian-cbt.hasil.index');
             Route::get('ujian-cbt/{ujianCbt}/hasil/analisis-soal', [AnalisisSoalCbtController::class, 'index'])->name('ujian-cbt.hasil.analisis-soal');
             Route::get('ujian-cbt/{ujianCbt}/hasil/analisis-soal/{soalUjianCbt}', [AnalisisSoalCbtController::class, 'show'])->name('ujian-cbt.hasil.rincian-soal');

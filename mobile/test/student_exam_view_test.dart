@@ -72,8 +72,13 @@ Future<void> _openSecurityExam(
 }
 
 class _SecurityRemote extends _FakeStudentExamRemoteDataSource {
-  _SecurityRemote({super.upload, this.lockOnLeave = true});
+  _SecurityRemote({
+    super.upload,
+    this.lockOnLeave = true,
+    this.action = 'tahan',
+  });
   final bool lockOnLeave;
+  final String action;
   bool serverLocked = false;
   bool answerOffline = false;
   bool offline = false;
@@ -116,7 +121,11 @@ class _SecurityRemote extends _FakeStudentExamRemoteDataSource {
     ..._securityJson(),
     'aktif': true,
     'catat_pindah_aplikasi': true,
-    'tindakan': 'tahan',
+    'tindakan': action,
+    if (action == 'catat') ...{
+      'nol_toleransi_mobile': true,
+      'jumlah_kejadian': events.where((e) => e.$1 == 'keluar').length,
+    },
     'ditahan': serverLocked,
     'alasan_tahanan': serverLocked ? 'keluar_pengerjaan' : null,
     'pesan_tahanan': serverLocked
@@ -338,6 +347,34 @@ class _ThresholdSecurityRemote extends _SecurityRemote {
 }
 
 void main() {
+  testWidgets(
+    'asesmen Catat saja tetap menampilkan soal setelah enam kali keluar aplikasi',
+    (tester) async {
+      final remote = _SecurityRemote(action: 'catat', lockOnLeave: false);
+      await _openSecurityExam(tester, remote, _JournalMemoryStorage());
+      for (var i = 0; i < 6; i++) {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        await tester.pumpAndSettle();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('student-exam-question-pages')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('student-exam-locked')), findsNothing);
+      }
+      expect(remote.events.where((e) => e.$1 == 'keluar'), hasLength(6));
+      expect(find.textContaining('Catat saja · 6 kejadian'), findsOneWidget);
+      expect(remote.serverLocked, isFalse);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   for (final flow in ['kelas', 'terpusat']) {
     testWidgets(
       'soal $flow tersembunyi sampai respons penahanan ketiga diterima dan pengawas membuka',

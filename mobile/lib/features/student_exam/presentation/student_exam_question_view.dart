@@ -209,6 +209,7 @@ class StudentExamQuestionView extends StatelessWidget {
   Widget _choiceOptions({required bool multiple}) {
     final selected = question.answer.values.toSet();
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: question.options
           .map((option) {
             final checked = selected.contains(option.code);
@@ -306,6 +307,7 @@ class StudentExamQuestionView extends StatelessWidget {
   }
 
   Widget _trueFalse() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: question.statements
         .map((statement) {
           final current = question.answer[statement.number];

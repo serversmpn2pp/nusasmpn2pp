@@ -113,11 +113,12 @@ class CentralExamExecutionActions {
         ),
   );
 
-  Future<void> unlockSafeMode(int participantId) => _guard(
-    () => ref
-        .read(centralExamExecutionRepositoryProvider)
-        .unlockSafeMode(participantId),
-  );
+  Future<void> unlockSafeMode(int participantId, {required String reason}) =>
+      _guard(
+        () => ref
+            .read(centralExamExecutionRepositoryProvider)
+            .unlockSafeMode(participantId, reason: reason),
+      );
 
   Future<String> reopenForRetake({
     required int eventId,

@@ -23,9 +23,13 @@ class KeamananUjianController extends Controller
         PesertaUjianCbt $pesertaUjianCbt,
         KeamananUjianService $service,
     ): JsonResponse {
+        $data = $request->validate([
+            'alasan_pembukaan' => ['required', 'string', 'min:10', 'max:500'],
+        ]);
+
         return response()->json([
             'pesan' => 'Ujian peserta sudah dibuka dan dapat dilanjutkan.',
-            'data' => $service->bukaTahanan($request->user(), $pesertaUjianCbt),
+            'data' => $service->bukaTahanan($request->user(), $pesertaUjianCbt, $data['alasan_pembukaan']),
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 }

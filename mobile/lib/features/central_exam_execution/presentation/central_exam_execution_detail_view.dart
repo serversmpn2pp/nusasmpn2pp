@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nusa/shared/widgets/exam_unlock_dialog.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
@@ -262,31 +263,16 @@ class _CentralExamExecutionDetailViewState
   }
 
   Future<void> _unlock(int participantId, String participantName) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Buka Mode Aman?'),
-        content: Text(
-          '$participantName dapat melanjutkan ujian. Riwayat keluar aplikasi tetap tersimpan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Buka Ujian'),
-          ),
-        ],
-      ),
+    final reason = await showExamUnlockDialog(
+      context,
+      participantName: participantName,
     );
-    if (confirmed != true || !mounted) return;
+    if (reason == null || !mounted) return;
     setState(() => _unlocking.add(participantId));
     try {
       await ref
           .read(centralExamExecutionActionsProvider)
-          .unlockSafeMode(participantId);
+          .unlockSafeMode(participantId, reason: reason);
       if (!mounted) return;
       _snack('Ujian $participantName sudah dibuka.');
       await _refresh();

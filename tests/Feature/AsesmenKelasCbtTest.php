@@ -15,11 +15,172 @@ use App\Models\Siswa;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use Illuminate\Support\Carbon;
 use PDO;
 use Tests\TestCase;
 
 class AsesmenKelasCbtTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
+    public function test_monitoring_web_dapat_membuka_tahanan_asesmen_tanpa_ruang_dengan_izin_guru_pembuat(): void
+    {
+        Carbon::setTestNow('2026-08-24 08:10:00');
+        [$tahun, $mapel, $kelas, $kelasLain, $guru, $guruLain, $akun] = $this->buatDataDasar();
+        $this->buatSiswa($tahun, $kelas, 1);
+        $kelompok = implode('-', [$guru->id, $mapel->id, 7]);
+        $this->actingAs($akun)->post(route('asesmen-kelas-cbt.store'), $this->dataAsesmen($kelompok, $kelas->id))->assertRedirect();
+        $asesmen = UjianCbt::where('nama', 'Sumatif Bab Bilangan')->sole();
+        $peserta = $asesmen->pesertaUjianCbt()->sole();
+        $peserta->forceFill(['status' => 'terblokir', 'waktu_mulai' => '2026-08-24 08:01:00',
+            'ditahan_mode_aman_pada' => now(), 'jumlah_pindah_aplikasi' => 3])->save();
+        $soal = SoalCbt::create(['tahun_pelajaran_id' => $tahun->id, 'mata_pelajaran_id' => $mapel->id,
+            'tingkat' => 7, 'kode' => 'BUKA-UJI-1', 'jenis_soal' => 'pilihan_ganda', 'tingkat_kesulitan' => 'mudah',
+            'kategori' => 'umum', 'pertanyaan' => 'Soal pengujian', 'opsi' => [['kode' => 'A', 'teks' => 'Satu']],
+            'kunci_jawaban' => ['A'], 'skor_maksimal' => 1, 'status' => 'siap', 'aktif' => true]);
+        $relasi = $asesmen->soalUjianCbt()->create(['soal_cbt_id' => $soal->id, 'nomor_urut' => 1, 'bobot' => 1]);
+        $jawaban = $peserta->jawabanPesertaUjianCbt()->create(['soal_ujian_cbt_id' => $relasi->id,
+            'soal_cbt_id' => $soal->id, 'jawaban' => ['jawaban' => 'A'], 'ragu' => false]);
+        $dataJawaban = $jawaban->fresh()->getAttributes();
+        $mulai = $peserta->waktu_mulai;
+        $url = route('ujian-cbt.monitoring.buka-mode-aman', [$asesmen, $peserta]);
+        $halaman = $this->get(route('ujian-cbt.monitoring.index', $asesmen))->assertOk()->assertSeeText('Buka Ujian');
+        $this->assertSame(2, substr_count($halaman->getContent(), 'data-unlock-participant="'.$peserta->id.'"'));
+        $halaman->assertSee('name="alasan_pembukaan"', false)->assertSee('minlength="10"', false);
+        foreach (['', 'singkat', str_repeat(' ', 20), str_repeat('a', 501)] as $tidakSah) {
+            $this->post($url, ['alasan_pembukaan' => $tidakSah])->assertSessionHasErrors('alasan_pembukaan');
+            $this->assertSame('terblokir', $peserta->fresh()->status);
+        }
+        $this->post($url)->assertSessionHasErrors('alasan_pembukaan');
+        $alasan = ['alasan_pembukaan' => 'Perangkat siswa diperiksa dan boleh melanjutkan.'];
+        $asing = $asesmen->replicate();
+        $asing->kode = 'BUKA-UJI-ASING';
+        $asing->save();
+        $pesertaAsing = $peserta->replicate();
+        $pesertaAsing->ujian_cbt_id = $asing->id;
+        $pesertaAsing->nomor_peserta = 'BUKA-UJI-ASING-1';
+        $pesertaAsing->save();
+        $this->post(route('ujian-cbt.monitoring.buka-mode-aman', [$asesmen, $pesertaAsing]))->assertNotFound();
+        $this->actingAs($this->buatAkunGuru($guruLain, 'guru-bukan-pemilik'))->post($url, $alasan)->assertForbidden();
+        $this->assertSame('terblokir', $peserta->fresh()->status);
+        $this->actingAs($akun)->post($url, $alasan)->assertRedirect(route('ujian-cbt.monitoring.index', $asesmen));
+        $this->assertSame('sedang_mengerjakan', $peserta->fresh()->status);
+        $this->assertSame(3, $peserta->fresh()->jumlah_pindah_aplikasi);
+        $this->assertEquals($mulai, $peserta->fresh()->waktu_mulai);
+        $this->assertSame($dataJawaban, $jawaban->fresh()->getAttributes());
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', ['peserta_ujian_cbt_id' => $peserta->id,
+            'jenis' => 'buka_mode_aman', 'oleh_pengguna_id' => $akun->id, 'catatan' => $alasan['alasan_pembukaan']]);
+        $this->get(route('ujian-cbt.monitoring.index', $asesmen))->assertOk()->assertDontSeeText('Buka Ujian');
+        $this->post($url, $alasan)->assertSessionHasErrors('peserta');
+    }
+
+    public function test_monitoring_web_mereset_perangkat_asesmen_tanpa_membuka_tahanan_atau_menghapus_jawaban(): void
+    {
+        Carbon::setTestNow('2026-08-24 08:10:00');
+        [$tahun, $mapel, $kelas, , $guru, $guruLain, $akun] = $this->buatDataDasar();
+        $this->buatSiswa($tahun, $kelas, 1);
+        $kelompok = implode('-', [$guru->id, $mapel->id, 7]);
+        $this->actingAs($akun)->post(route('asesmen-kelas-cbt.store'), $this->dataAsesmen($kelompok, $kelas->id))->assertRedirect();
+        $asesmen = UjianCbt::where('nama', 'Sumatif Bab Bilangan')->sole();
+        $peserta = $asesmen->pesertaUjianCbt()->sole();
+        $peserta->forceFill([
+            'status' => 'terblokir', 'waktu_mulai' => '2026-08-24 08:01:00',
+            'ditahan_mode_aman_pada' => now(), 'jumlah_pindah_aplikasi' => 3,
+            'durasi_di_luar_aplikasi_detik' => 18, 'perangkat_terakhir' => 'HP siswa lama',
+            'sesi_ujian_hash' => str_repeat('a', 64), 'sesi_ujian_saluran' => 'mobile',
+            'sesi_ujian_mulai_pada' => '2026-08-24 08:01:00', 'heartbeat_terakhir_pada' => now(),
+            'ip_terakhir' => '127.0.0.1', 'user_agent_terakhir' => 'NUSA Android',
+        ])->save();
+        $soal = SoalCbt::create([
+            'tahun_pelajaran_id' => $tahun->id, 'mata_pelajaran_id' => $mapel->id,
+            'tingkat' => 7, 'kode' => 'RESET-WEB-1', 'jenis_soal' => 'pilihan_ganda',
+            'tingkat_kesulitan' => 'mudah', 'kategori' => 'umum', 'pertanyaan' => 'Soal pengujian reset',
+            'opsi' => [['kode' => 'A', 'teks' => 'Satu']], 'kunci_jawaban' => ['A'],
+            'skor_maksimal' => 1, 'status' => 'siap', 'aktif' => true,
+        ]);
+        $relasi = $asesmen->soalUjianCbt()->create(['soal_cbt_id' => $soal->id, 'nomor_urut' => 1, 'bobot' => 1]);
+        $jawaban = $peserta->jawabanPesertaUjianCbt()->create([
+            'soal_ujian_cbt_id' => $relasi->id, 'soal_cbt_id' => $soal->id,
+            'jawaban' => ['jawaban' => 'A'], 'ragu' => true,
+        ]);
+        $dataJawaban = $jawaban->fresh()->getAttributes();
+        $aktivitas = $peserta->aktivitasKeamananUjianCbt()->create([
+            'jenis' => 'keluar_aplikasi', 'mulai_pada' => now()->subSeconds(6), 'selesai_pada' => now(),
+            'durasi_detik' => 6, 'dihitung' => true,
+        ]);
+        $dataAktivitas = $aktivitas->fresh()->getAttributes();
+        $tetap = $peserta->only(['status', 'waktu_mulai', 'waktu_selesai', 'menit_tersisa',
+            'ditahan_mode_aman_pada', 'jumlah_pindah_aplikasi', 'durasi_di_luar_aplikasi_detik']);
+        $monitor = route('ujian-cbt.monitoring.index', [$asesmen, 'auto_refresh' => 1, 'kelas_id' => $kelas->id]);
+        $url = route('keamanan-ujian.reset-perangkat', $peserta);
+        $halaman = $this->get($monitor)->assertOk()->assertSeeText('Reset perangkat')->assertSeeText('Buka Ujian');
+        $this->assertSame(2, substr_count($halaman->getContent(), 'data-reset-participant="'.$peserta->id.'"'));
+
+        foreach (['', 'singkat', str_repeat('a', 501)] as $alasanTidakSah) {
+            $this->from($monitor)->post($url, ['alasan' => $alasanTidakSah])->assertSessionHasErrors('alasan');
+        }
+        $this->assertSame(str_repeat('a', 64), $peserta->fresh()->sesi_ujian_hash);
+        $this->actingAs($this->buatAkunGuru($guruLain, 'guru-reset-terlarang'))
+            ->post($url, ['alasan' => 'Perangkat pengganti untuk siswa.'])->assertForbidden();
+        $this->assertSame(0, $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'reset_perangkat')->count());
+
+        $alasan = 'HP siswa rusak, diganti HP pinjaman sekolah.';
+        $this->actingAs($akun)->from($monitor)->post($url, ['alasan' => $alasan])
+            ->assertRedirect($monitor)->assertSessionHas('berhasil');
+        $peserta->refresh();
+        foreach (['perangkat_terakhir', 'sesi_ujian_hash', 'sesi_ujian_saluran', 'sesi_ujian_mulai_pada',
+            'heartbeat_terakhir_pada', 'ip_terakhir', 'user_agent_terakhir'] as $kolom) {
+            $this->assertNull($peserta->{$kolom}, $kolom);
+        }
+        $this->assertEquals($tetap, $peserta->only(array_keys($tetap)));
+        $this->assertSame($dataJawaban, $jawaban->fresh()->getAttributes());
+        $this->assertSame($dataAktivitas, $aktivitas->fresh()->getAttributes());
+        $this->assertDatabaseHas('aktivitas_keamanan_ujian_cbt', [
+            'peserta_ujian_cbt_id' => $peserta->id, 'jenis' => 'reset_perangkat',
+            'oleh_pengguna_id' => $akun->id, 'catatan' => $alasan,
+        ]);
+        $this->get($monitor)->assertOk()->assertSeeText('Buka Ujian');
+
+        $peserta->update(['status' => 'sedang_mengerjakan']);
+        $this->get($monitor)->assertOk()->assertSeeText('Reset perangkat')->assertDontSeeText('Buka Ujian');
+        $peserta->update(['status' => 'selesai', 'waktu_selesai' => now()]);
+        $this->get($monitor)->assertOk()->assertDontSee('data-reset-participant=', false);
+        $this->post($url, ['alasan' => $alasan])->assertUnprocessable();
+        $this->assertSame(1, $peserta->aktivitasKeamananUjianCbt()->where('jenis', 'reset_perangkat')->count());
+    }
+
+    public function test_mode_asesmen_web_memerlukan_pilihan_sadar_dan_dikunci_setelah_pengerjaan_dimulai(): void
+    {
+        Carbon::setTestNow('2026-08-24 08:10:00');
+        [$tahun, $mapel, $kelas, , $guru, , $akun] = $this->buatDataDasar();
+        $this->buatSiswa($tahun, $kelas, 1);
+        $data = $this->dataAsesmen(implode('-', [$guru->id, $mapel->id, 7]), $kelas->id);
+        $this->actingAs($akun)->post(route('asesmen-kelas-cbt.store'), $data)->assertRedirect();
+        $asesmen = UjianCbt::where('nama', $data['nama'])->sole();
+        $url = route('asesmen-kelas-cbt.update', $asesmen);
+        $this->assertSame('catat', $asesmen->tindakan_pindah_aplikasi);
+        $tahan = [...$data, 'tindakan_pindah_aplikasi' => 'tahan', 'batas_pindah_aplikasi' => 2];
+        $this->put($url, $tahan)->assertSessionHasErrors('konfirmasi_mode_tahan');
+        $this->put($url, [...$tahan, 'konfirmasi_mode_tahan' => 1])->assertSessionHasNoErrors();
+        $this->assertSame('tahan', $asesmen->fresh()->tindakan_pindah_aplikasi);
+        $this->assertSame(2, $asesmen->fresh()->batas_pindah_aplikasi);
+        $this->get(route('ujian-cbt.monitoring.index', $asesmen))->assertOk()->assertSeeText('Tahan setelah 2 kejadian');
+        $this->put($url, $data)->assertSessionHasNoErrors();
+        $this->assertSame('tahan', $asesmen->fresh()->tindakan_pindah_aplikasi);
+        $asesmen->pesertaUjianCbt()->sole()->update(['status' => 'terblokir', 'waktu_mulai' => now()]);
+        $this->put($url, [...$data, 'tindakan_pindah_aplikasi' => 'catat'])
+            ->assertSessionHasErrors('tindakan_pindah_aplikasi');
+        $this->put($url, [...$tahan, 'batas_pindah_aplikasi' => 5])
+            ->assertSessionHasErrors('tindakan_pindah_aplikasi');
+        $this->assertSame('tahan', $asesmen->fresh()->tindakan_pindah_aplikasi);
+        $this->assertSame(2, $asesmen->fresh()->batas_pindah_aplikasi);
+        $this->get(route('asesmen-kelas-cbt.edit', $asesmen))->assertOk()->assertSeeText('Mode dikunci');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -41,7 +202,8 @@ class AsesmenKelasCbtTest extends TestCase
             ->assertOk()
             ->assertSee('Matematika - Kelas 7')
             ->assertSee('VII.A')
-            ->assertSeeText('Mode Aman: tahan pada kejadian ketiga')
+            ->assertSeeText('Catat saja')
+            ->assertSeeText('Tahan setelah batas')
             ->assertDontSee('VII.B');
 
         $kelompok = implode('-', [$guru->id, $mapel->id, 7]);
@@ -53,7 +215,7 @@ class AsesmenKelasCbtTest extends TestCase
 
         $this->assertSame('kelas', $asesmen->alur);
         $this->assertTrue($asesmen->deteksi_pindah_tab);
-        $this->assertSame('tahan', $asesmen->tindakan_pindah_aplikasi);
+        $this->assertSame('catat', $asesmen->tindakan_pindah_aplikasi);
         $this->assertSame(3, $asesmen->batas_pindah_aplikasi);
         $this->assertSame($akunGuru->id, $asesmen->dibuat_oleh_pengguna_id);
         $this->assertNull($asesmen->token);

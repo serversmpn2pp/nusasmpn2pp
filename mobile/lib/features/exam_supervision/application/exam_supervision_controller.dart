@@ -71,11 +71,12 @@ class ExamSupervisionActions {
         .resetDevice(roomId: roomId, participantId: participantId),
   );
 
-  Future<void> unlockSafeMode(int participantId) => _guard(
-    () => ref
-        .read(examSupervisionRepositoryProvider)
-        .unlockSafeMode(participantId),
-  );
+  Future<void> unlockSafeMode(int participantId, {required String reason}) =>
+      _guard(
+        () => ref
+            .read(examSupervisionRepositoryProvider)
+            .unlockSafeMode(participantId, reason: reason),
+      );
 
   Future<ExamSupervisionDetail> uploadEvidence({
     required int roomId,

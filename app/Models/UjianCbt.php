@@ -23,10 +23,10 @@ class UjianCbt extends Model
         'tahan' => 'Tahan setelah melewati batas',
     ];
 
-    public const KEAMANAN_ASESMEN_KETAT = [
+    public const KEAMANAN_ASESMEN_DEFAULT = [
         'deteksi_pindah_tab' => true,
         'batas_pindah_aplikasi' => 3,
-        'tindakan_pindah_aplikasi' => 'tahan',
+        'tindakan_pindah_aplikasi' => 'catat',
     ];
 
     protected $fillable = [

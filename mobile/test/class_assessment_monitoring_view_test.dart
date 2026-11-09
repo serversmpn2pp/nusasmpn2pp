@@ -12,6 +12,62 @@ import 'package:nusa/features/class_assessment/presentation/class_assessment_res
 
 void main() {
   testWidgets(
+    'native menolak alasan kosong lalu mengirim alasan pembukaan peserta ditahan',
+    (tester) async {
+      final remote = _FakeMonitoringRemoteDataSource(held: true);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            classAssessmentMonitoringRemoteDataSourceProvider.overrideWithValue(
+              remote,
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const ClassAssessmentMonitoringView(assessmentId: 9),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final tombol = find.byKey(const Key('assessment-monitoring-unlock-41'));
+      await tester.scrollUntilVisible(
+        tombol,
+        250,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.ensureVisible(tombol);
+      await tester.pumpAndSettle();
+      await tester.tap(tombol);
+      await tester.pumpAndSettle();
+      expect(remote.unlockCalls, 0);
+      expect(find.text('Buka ujian siswa?'), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, 'Buka Ujian'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(remote.unlockCalls, 0);
+      expect(find.text('Alasan pembukaan wajib diisi.'), findsOneWidget);
+      const reason =
+          'Perangkat diperiksa guru dan siswa diizinkan melanjutkan.';
+      await tester.enterText(
+        find.byKey(const Key('exam-unlock-reason')),
+        '  $reason  ',
+      );
+      await tester.tap(find.byKey(const Key('exam-unlock-submit')));
+      await tester.pumpAndSettle();
+      expect(remote.unlockCalls, 1);
+      expect(remote.lastReason, reason);
+      expect(remote.resetCalls, 0);
+      expect(tombol, findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
     'reset perangkat memerlukan konfirmasi dan memakai tindakan reset, bukan buka tahanan',
     (tester) async {
       final remote = _FakeMonitoringRemoteDataSource(canReset: true);
@@ -229,19 +285,24 @@ void main() {
 
 class _FakeMonitoringRemoteDataSource
     implements ClassAssessmentMonitoringRemoteDataSource {
-  _FakeMonitoringRemoteDataSource({this.canReset = false});
+  _FakeMonitoringRemoteDataSource({this.canReset = false, this.held = false});
   final bool canReset;
+  bool held;
   int resetCalls = 0;
   int unlockCalls = 0;
+  String? lastReason;
   @override
   Future<void> unlockParticipant(
     int participantId, {
+    required String reason,
     bool resetDevice = false,
   }) async {
+    lastReason = reason;
     if (resetDevice) {
       resetCalls++;
     } else {
       unlockCalls++;
+      held = false;
     }
   }
 
@@ -253,6 +314,12 @@ class _FakeMonitoringRemoteDataSource
   }) async {
     final json = _monitoringJson();
     (json['items'] as List).first['dapat_reset_perangkat'] = canReset;
+    if (held) {
+      final item = (json['items'] as List).first as Map<String, dynamic>;
+      item['status'] = 'terblokir';
+      item['label_status'] = 'Terblokir';
+      item['jumlah_pindah_aplikasi'] = 3;
+    }
     return AssessmentMonitoringData.fromJson(json);
   }
 

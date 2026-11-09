@@ -7,6 +7,59 @@ import 'package:nusa/features/exam_supervision/domain/exam_supervision.dart';
 import 'package:nusa/features/exam_supervision/presentation/exam_supervision_detail_view.dart';
 
 void main() {
+  testWidgets('pengawas wajib mengisi alasan sebelum membuka Mode Aman', (
+    tester,
+  ) async {
+    final remote = _FakeExamSupervisionRemoteDataSource();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          examSupervisionRemoteDataSourceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ExamSupervisionDetailView(roomId: 11),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('supervision-auto-refresh')));
+    final participant = find.byKey(const Key('supervision-participant-31'));
+    await tester.scrollUntilVisible(
+      participant,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final menu = find.descendant(
+      of: participant,
+      matching: find.byType(PopupMenuButton<String>),
+    );
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Buka Mode Aman'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('exam-unlock-submit')));
+    await tester.pumpAndSettle();
+    expect(remote.unlockCalls, 0);
+    expect(find.text('Alasan pembukaan wajib diisi.'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('exam-unlock-reason')),
+      'singkat',
+    );
+    await tester.tap(find.byKey(const Key('exam-unlock-submit')));
+    await tester.pumpAndSettle();
+    expect(remote.unlockCalls, 0);
+    expect(find.text('Alasan minimal 10 karakter.'), findsOneWidget);
+    const reason = 'Pengawas memeriksa HP siswa dan mengizinkan melanjutkan.';
+    await tester.enterText(find.byKey(const Key('exam-unlock-reason')), reason);
+    await tester.tap(find.byKey(const Key('exam-unlock-submit')));
+    await tester.pumpAndSettle();
+    expect(remote.unlockCalls, 1);
+    expect(remote.lastReason, reason);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   test('domain tugas pengawas membaca operasional ruang dan Mode Aman', () {
     final detail = ExamSupervisionDetail.fromJson(_response());
 
@@ -77,6 +130,8 @@ void main() {
 class _FakeExamSupervisionRemoteDataSource
     implements ExamSupervisionRemoteDataSource {
   int statusChanges = 0;
+  int unlockCalls = 0;
+  String? lastReason;
 
   @override
   Future<ExamSupervisionDetail> fetchDetail(int roomId) async =>
@@ -115,7 +170,13 @@ class _FakeExamSupervisionRemoteDataSource
   }) async => ExamSupervisionDetail.fromJson(_response());
 
   @override
-  Future<void> unlockSafeMode(int participantId) async {}
+  Future<void> unlockSafeMode(
+    int participantId, {
+    required String reason,
+  }) async {
+    unlockCalls++;
+    lastReason = reason;
+  }
 
   @override
   Future<ExamSupervisionDetail> uploadEvidence({

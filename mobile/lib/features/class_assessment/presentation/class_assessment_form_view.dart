@@ -23,6 +23,7 @@ class _ClassAssessmentFormViewState
   final _duration = TextEditingController(text: '40');
   final _questionCount = TextEditingController(text: '20');
   final _instructions = TextEditingController();
+  final _appSwitchLimit = TextEditingController(text: '3');
   final Map<int, String> _selectedComponents = {};
   String? _teachingGroup;
   String _semester = 'ganjil';
@@ -36,6 +37,9 @@ class _ClassAssessmentFormViewState
   bool _secureScreen = true;
   int _webGraceSeconds = 3;
   bool _showResult = false;
+  String _appSwitchAction = 'catat';
+  bool _confirmHoldMode = false;
+  bool _canChangeSecurity = true;
   bool _initialized = false;
   bool _saving = false;
 
@@ -55,6 +59,7 @@ class _ClassAssessmentFormViewState
     _duration.dispose();
     _questionCount.dispose();
     _instructions.dispose();
+    _appSwitchLimit.dispose();
     super.dispose();
   }
 
@@ -348,17 +353,75 @@ class _ClassAssessmentFormViewState
                   value: _singleDevice,
                   onChanged: (value) => setState(() => _singleDevice = value),
                 ),
-                const ListTile(
+                NusaDropdownField<String>(
+                  fieldKey: const Key('class-assessment-security-mode'),
+                  value: _appSwitchAction,
+                  enabled: _canChangeSecurity,
+                  decoration: const InputDecoration(
+                    labelText: 'Mode monitoring asesmen',
+                    prefixIcon: Icon(Icons.shield_outlined),
+                  ),
+                  options: const [
+                    NusaDropdownOption(value: 'catat', label: 'Catat saja'),
+                    NusaDropdownOption(
+                      value: 'tahan',
+                      label: 'Tahan setelah batas',
+                    ),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _appSwitchAction = value ?? 'catat';
+                    _confirmHoldMode = false;
+                  }),
+                ),
+                ListTile(
                   contentPadding: EdgeInsets.symmetric(vertical: 8),
                   leading: Icon(
                     Icons.shield_outlined,
                     color: NusaColors.primary,
                   ),
-                  title: Text('Mode Aman: tahan pada kejadian ketiga'),
+                  title: Text(
+                    _appSwitchAction == 'tahan'
+                        ? 'Tahan setelah batas'
+                        : 'Catat saja',
+                  ),
                   subtitle: Text(
-                    'Pencatatan selalu aktif. Pada Android, setiap kehilangan fokus yang terdeteksi dihitung sekali tanpa toleransi durasi. Sesi ditahan setelah tiga kejadian dan hanya dapat dibuka guru/pengawas. Waktu ujian tetap berjalan.',
+                    !_canChangeSecurity
+                        ? 'Mode dikunci karena sudah ada siswa mulai mengerjakan.'
+                        : _appSwitchAction == 'tahan'
+                        ? 'Siswa ditahan setelah batas tercapai dan perlu dibuka guru dengan alasan. Cocok untuk asesmen yang diawasi di kelas.'
+                        : 'Kejadian keluar aplikasi dicatat tanpa menahan siswa karena jumlah kejadian. Cocok untuk tryout mandiri di rumah.',
                   ),
                 ),
+                if (_appSwitchAction == 'tahan') ...[
+                  TextFormField(
+                    key: const Key('class-assessment-incident-limit'),
+                    controller: _appSwitchLimit,
+                    enabled: _canChangeSecurity,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Batas kejadian (1–20)',
+                    ),
+                    validator: (value) {
+                      final limit = int.tryParse(value ?? '');
+                      return limit == null || limit < 1 || limit > 20
+                          ? 'Isi batas 1–20 kejadian.'
+                          : null;
+                    },
+                  ),
+                  CheckboxListTile(
+                    key: const Key('class-assessment-confirm-hold'),
+                    contentPadding: EdgeInsets.zero,
+                    value: _confirmHoldMode,
+                    onChanged: _canChangeSecurity
+                        ? (value) =>
+                              setState(() => _confirmHoldMode = value ?? false)
+                        : null,
+                    title: const Text(
+                      'Saya memahami siswa akan ditahan setelah batas tercapai dan perlu dibuka guru dengan alasan.',
+                    ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ],
                 _Toggle(
                   title: 'Blokir tangkapan layar',
                   subtitle: 'Mencegah screenshot dan rekaman layar di Android.',
@@ -424,6 +487,10 @@ class _ClassAssessmentFormViewState
         _requireFullscreen = detail.requireFullscreen;
         _secureScreen = detail.secureScreen;
         _webGraceSeconds = detail.appSwitchGraceSeconds;
+        _appSwitchAction = detail.appSwitchAction;
+        _appSwitchLimit.text = '${detail.appSwitchLimit}';
+        _confirmHoldMode = detail.appSwitchAction == 'tahan';
+        _canChangeSecurity = detail.access.canChangeSecurity;
         _showResult = detail.showResult;
         for (final target in detail.classes) {
           _selectedComponents[target.classId] =
@@ -468,6 +535,10 @@ class _ClassAssessmentFormViewState
 
   Future<void> _save(ClassAssessmentReferences references) async {
     if (_formKey.currentState?.validate() != true) return;
+    if (_appSwitchAction == 'tahan' && !_confirmHoldMode) {
+      _snack('Konfirmasikan bahwa siswa akan ditahan setelah batas kejadian.');
+      return;
+    }
     if (_selectedGroup(references) == null) {
       _snack('Pilih mata pelajaran dan tingkat.');
       return;
@@ -498,8 +569,9 @@ class _ClassAssessmentFormViewState
         requireFullscreen: _requireFullscreen,
         secureScreen: _secureScreen,
         appSwitchGraceSeconds: _webGraceSeconds,
-        appSwitchLimit: 3,
-        appSwitchAction: 'tahan',
+        appSwitchLimit: int.tryParse(_appSwitchLimit.text) ?? 3,
+        appSwitchAction: _appSwitchAction,
+        confirmHoldMode: _confirmHoldMode,
         showResult: _showResult,
         instructions: _optional(_instructions.text),
         classes: [

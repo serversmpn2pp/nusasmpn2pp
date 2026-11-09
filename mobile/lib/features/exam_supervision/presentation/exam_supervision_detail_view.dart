@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nusa/shared/widgets/exam_unlock_dialog.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/exam_supervision/application/exam_supervision_controller.dart';
@@ -272,17 +273,15 @@ class _ExamSupervisionDetailViewState
     ExamSupervisionDetail data,
     SupervisionParticipant participant,
   ) async {
-    final confirmed = await _confirm(
-      title: 'Buka Mode Aman?',
-      message:
-          '${participant.name} dapat melanjutkan ujian setelah pemeriksaan Anda. Penahanan dapat berasal dari gangguan sesi, bukan selalu pelanggaran. Jawaban dan riwayat tetap tersimpan.',
-      action: 'Buka Ujian',
+    final reason = await showExamUnlockDialog(
+      context,
+      participantName: participant.name,
     );
-    if (!confirmed) return;
+    if (reason == null || !mounted) return;
     await _run(() async {
       await ref
           .read(examSupervisionActionsProvider)
-          .unlockSafeMode(participant.id);
+          .unlockSafeMode(participant.id, reason: reason);
       return data;
     }, 'Ujian ${participant.name} sudah dibuka.');
   }

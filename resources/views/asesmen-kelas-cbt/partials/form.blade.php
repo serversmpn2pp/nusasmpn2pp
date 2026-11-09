@@ -223,9 +223,37 @@
                 </label>
             @endforeach
         </div>
+        @php
+            $modeKeamananDapatDiubah = $modeKeamananDapatDiubah ?? true;
+            $modeKeamanan = $modeKeamananDapatDiubah ? $nilai('tindakan_pindah_aplikasi', 'catat') : $ujianCbt->tindakan_pindah_aplikasi;
+        @endphp
         <div class="alert" style="margin-top: 18px;" data-assessment-security-policy>
-            <strong>Mode Aman: tahan pada kejadian ketiga</strong>
-            <p style="margin: 5px 0 0;">Pencatatan keluar aplikasi selalu aktif. Pada Android, setiap kehilangan fokus yang terdeteksi dihitung satu kejadian tanpa toleransi durasi. Setelah tiga kejadian, siswa perlu meminta guru/pengawas membuka sesi. Waktu ujian tetap berjalan dan jawaban tersimpan tetap ada.</p>
+            <label class="field">
+                <span>Mode monitoring asesmen</span>
+                <select class="select" name="tindakan_pindah_aplikasi" data-assessment-security-mode @disabled(! $modeKeamananDapatDiubah)>
+                    <option value="catat" @selected($modeKeamanan === 'catat')>Catat saja</option>
+                    <option value="tahan" @selected($modeKeamanan === 'tahan')>Tahan setelah batas</option>
+                </select>
+            </label>
+            @if (! $modeKeamananDapatDiubah)
+                <input type="hidden" name="tindakan_pindah_aplikasi" value="{{ $ujianCbt->tindakan_pindah_aplikasi }}">
+                <input type="hidden" name="batas_pindah_aplikasi" value="{{ $ujianCbt->batas_pindah_aplikasi }}">
+                <p class="help-text">Mode dikunci karena sudah ada siswa mulai mengerjakan.</p>
+            @endif
+            <p class="help-text" data-assessment-security-help></p>
+            <div data-assessment-hold-options @if ($modeKeamanan !== 'tahan') hidden @endif>
+                <label class="field">
+                    <span>Batas kejadian keluar aplikasi</span>
+                    <input class="input" type="number" name="batas_pindah_aplikasi" min="1" max="20"
+                        value="{{ $modeKeamananDapatDiubah ? $nilai('batas_pindah_aplikasi', 3) : $ujianCbt->batas_pindah_aplikasi }}" data-assessment-security-limit @disabled(! $modeKeamananDapatDiubah)>
+                </label>
+                <label class="assessment-toggle">
+                    <span>Saya memahami siswa akan ditahan setelah batas tercapai dan perlu dibuka guru dengan alasan.</span>
+                    <input type="checkbox" name="konfirmasi_mode_tahan" value="1" data-assessment-confirm-hold
+                        @checked(old('konfirmasi_mode_tahan', $ujianCbt?->tindakan_pindah_aplikasi === 'tahan')) @disabled(! $modeKeamananDapatDiubah)>
+                </label>
+            </div>
+            <p class="help-text">Setiap kehilangan fokus yang terdeteksi di Android tetap dicatat. Pilih mode sebelum ada siswa mulai mengerjakan. Waktu dan penyimpanan jawaban tetap berlaku.</p>
         </div>
         <div class="alert" style="margin-top: 18px;">
             <strong>Tanpa ruang dan sesi</strong>
@@ -243,6 +271,27 @@
         const form = group.closest('form');
         const submitButton = form?.querySelector('[data-submit-assessment]');
         let submitting = false;
+
+        const modeKeamanan = form.querySelector('[data-assessment-security-mode]');
+        const opsiTahan = form.querySelector('[data-assessment-hold-options]');
+        const batasKeamanan = form.querySelector('[data-assessment-security-limit]');
+        const konfirmasiTahan = form.querySelector('[data-assessment-confirm-hold]');
+        const perbaruiModeKeamanan = () => {
+            const tahan = modeKeamanan.value === 'tahan';
+            opsiTahan.hidden = !tahan;
+            batasKeamanan.disabled = modeKeamanan.disabled || !tahan;
+            batasKeamanan.required = tahan && !modeKeamanan.disabled;
+            konfirmasiTahan.disabled = modeKeamanan.disabled || !tahan;
+            konfirmasiTahan.required = tahan && !modeKeamanan.disabled;
+            form.querySelector('[data-assessment-security-help]').textContent = tahan
+                ? 'Siswa ditahan setelah batas kejadian tercapai. Cocok untuk asesmen yang diawasi di kelas.'
+                : 'Kejadian dicatat tanpa menahan siswa karena batas kejadian. Cocok untuk tryout mandiri di rumah.';
+        };
+        modeKeamanan.addEventListener('change', () => {
+            konfirmasiTahan.checked = false;
+            perbaruiModeKeamanan();
+        });
+        perbaruiModeKeamanan();
 
         form?.addEventListener('submit', (event) => {
             if (submitting) {

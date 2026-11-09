@@ -4,7 +4,112 @@ Upload key dibuat dan disimpan oleh pengelola sekolah pada komputer pengembang,
 bukan server Laravel. Kunci tersebut berbeda dari service-account Firebase.
 Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
-## AAB terbaru — 1.0.7+8, 5 November 2026
+## AAB terbaru — 1.0.8+9 dibangun ulang, 9 November 2026
+
+File distribusi:
+[app-release-1.0.8-9.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.8-9.aab).
+Ukuran **97.861.216 byte** (97,9 MB / sekitar 93,3 MiB). Salinan bernama versi
+identik dengan `mobile/build/app/outputs/bundle/release/app-release.aab`.
+Nama dan versionCode 9 dipertahankan atas permintaan pengguna karena AAB
+sebelumnya belum disentuh/diunggah. AAB 1.0.8+9 pertama dicadangkan di
+`mobile/build/releases/backups/1.0.8-9-before-rebuild-20261109/` dengan checksum
+`5ae81c096714f836efdda7980790a46fadb817bf51f46fd02bb5fe28f3a1b99b`.
+Checksum AAB 1.0.7+8 tidak berubah.
+
+SHA-256:
+
+```text
+d8d0160c48c3653bb2455657a014805764e44510f2077ceaf90ed92f6de6754c
+```
+
+Checksum: `mobile/build/releases/app-release-1.0.8-9.aab.sha256`.
+Sumber build: HEAD `eb8556f` beserta perubahan working tree untuk mode asesmen,
+alasan pembukaan, perataan soal, dan pemberitahuan pembaruan. Bukti hash 757
+berkas sumber tersimpan di `aab-validation-1.0.8-9-rebuild/source-files.json`.
+Package tetap `id.sch.smpn2padangpanjang.nusa`.
+
+### Perubahan sejak AAB 1.0.7+8
+
+- Soal asesmen dan ujian terpusat tetap disembunyikan setelah kehilangan fokus
+  sampai proteksi Android dan sinkronisasi keamanan selesai. Respons server
+  lambat/offline menampilkan layar verifikasi; keberhasilan pemeriksaan native
+  saja tidak membuka soal. Respons siklus lama tidak membuka siklus fokus baru.
+- Status ditahan tetap membutuhkan pembukaan pengawas. Jawaban, draft, riwayat,
+  dan batas waktu server dipertahankan. Pemilih berkas dengan izin sah,
+  pratinjau/media soal, serta navigasi ujian ikut diperiksa melalui regresi.
+- Asesmen baru default **Catat saja**. Mode **Tahan setelah batas** memerlukan
+  pilihan dan konfirmasi guru, dengan batas awal 3 (dapat diatur 1–20).
+  Mode tampil di monitoring dan dikunci setelah peserta mulai. Pengaturan
+  asesmen lama dipertahankan; ujian terpusat tetap memakai pengamanan sebelumnya.
+- Pembukaan tahanan di web/API dan ketiga jalur Android wajib menyertakan alasan
+  10–500 karakter. Backend mencatat alasan, petugas, dan waktunya. Monitoring
+  web juga dilengkapi Reset perangkat sebagai tindakan terpisah.
+- Kotak soal Benar–Salah sama lebar dan sejajar dari kiri; perataan pilihan ganda
+  dan pratinjau guru ikut konsisten.
+- Pemberitahuan pembaruan tampil di beranda jika Play mengonfirmasi versionCode
+  lebih tinggi tersedia, dengan **Perbarui** dan **Nanti**. Tidak mengganggu ujian.
+  Fitur mulai bekerja setelah versi ini terpasang, untuk rilis berikutnya.
+- Perbaikan backend pendamping mempertahankan jawaban/pilihan bernilai **0**;
+  regresi tampilan soal native turut disertakan.
+- Modul Tahfidz, pembaca Arab Juz 30 offline, notifikasi siswa/wali, presensi
+  manual tanpa kartu, dan fitur sebelumnya tetap tercakup.
+
+### Pemeriksaan AAB 1.0.8+9
+
+- **948 tes Flutter lulus**; analyzer bersih. Backend pendamping terakhir
+  diverifikasi oleh **76 tes / 1.296 assertion**. Dependensi memakai
+  `pub get --offline --enforce-lockfile`; `pubspec.lock` tidak berubah.
+- Build produksi memakai `APP_ENV=production` dan API
+  `https://nusa.smpn2padangpanjang.sch.id/api/v1/`.
+- Manifest: **1.0.8 / versionCode 9**, min SDK **24**, target SDK **36**;
+  debug, backup, dan cleartext HTTP nonaktif.
+- `bundletool validate`, `jar --validate`, `jarsigner`, dan CRC/duplikasi ZIP
+  lulus. Sertifikat upload cocok dengan AAB 1.0.7+8 dan fingerprint
+  `CA:E5:19:98:35:1F:48:D5:38:2C:F1:3C:74:CA:B6:67:CF:FB:C8:32:9B:D8:9F:47:70:0C:8C:B4:7B:27:34:05`.
+- Penanda layar verifikasi, retry status ujian, pilihan mode asesmen, konfirmasi
+  tahan, alasan pembukaan, dan pemberitahuan pembaruan ada dalam ketiga `libapp.so`.
+  Channel update native dan integrasi Play juga ditemukan dalam DEX, bersama API produksi
+  dan penanda fitur sebelumnya. Foto/logo, teks Arab, font, serta lisensi cocok
+  byte demi byte dengan aset sumber. Firebase dan izin notifikasi tetap dikemas.
+- Bundle memakai `PAGE_ALIGNMENT_16K`; pemeriksa Android Studio memeriksa
+  **14 ELF 64-bit: 0 masalah** dan melewati 7 library 32-bit. APK universal
+  diagnostik lulus `zipalign -v -c -P 16 4`. APK diagnostik memakai debug key
+  standar untuk pemeriksaan lokal; berkas distribusi adalah AAB bernama versi.
+
+Log tersedia di `mobile/build/*release-1.0.8-9-rebuild.log`; bukti manifest,
+sertifikat, konten, ELF, dan alignment ada di `mobile/build/aab-validation-1.0.8-9-rebuild/`.
+Pemeriksaan pertama menemukan timer pemeriksaan update yang belum bersih pada
+tes beranda; timeout dipindahkan ke native dan seluruh 948 tes kemudian lulus.
+Peringatan toolchain Java/KGP, XML SDK, dan font Cupertino tidak menggagalkan
+build. Pemeriksaan ini tidak mencakup instalasi melalui Play, pengiriman push
+produksi, maupun runtime HP fisik/16 KB.
+
+### Catatan rilis dan penerapan 1.0.8
+
+Nama rilis: **1.0.8 (9)**. Salin
+[catatan-rilis-1.0.8.txt](D:/nusasmpn2pp/docs/catatan-rilis-1.0.8.txt) ke
+Release notes: **446 karakter** di dalam tag `<id>`. Catatan juga mencakup fitur
+1.0.7 karena pengguna melaporkan versi tersebut masih ditinjau dan akan diganti.
+
+Sebelum publikasi, perbarui backend dan jalankan dari root Laravel:
+
+```bash
+php artisan migrate --force
+php artisan optimize:clear
+```
+
+Pembaruan mode tidak menambah migrasi atau mengubah massal asesmen lama.
+Migrasi pengetatan historis yang masih tertunda tetap memiliki efeknya sendiri;
+periksa mode asesmen lama setelah pembaruan jika migrasi tersebut baru dijalankan.
+Panduan: [mode monitoring asesmen](D:/nusasmpn2pp/docs/mode-monitoring-asesmen-2026-11-09.md)
+dan [pemberitahuan pembaruan](D:/nusasmpn2pp/docs/pemberitahuan-pembaruan-android.md).
+
+Build ini belum diunggah/dipublikasikan ke Play, tidak menjalankan migrasi
+produksi, dan tidak mengubah data sekolah. VersionCode 9 dipakai ulang hanya
+untuk mengganti artefak lokal yang belum diunggah, sesuai keterangan pengguna;
+riwayat Play Console tidak dibaca langsung pada pekerjaan ini.
+
+## Riwayat AAB — 1.0.7+8, 5 November 2026
 
 File distribusi:
 [app-release-1.0.7-8.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.7-8.aab).

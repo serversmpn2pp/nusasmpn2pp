@@ -190,6 +190,8 @@ class MonitoringHasilAsesmenKelasMobileService
             'tanggal_mulai' => $asesmen->tanggal_mulai?->toISOString(),
             'tanggal_selesai' => $asesmen->tanggal_selesai?->toISOString(),
             'durasi_menit' => (int) $asesmen->durasi_menit,
+            'tindakan_pindah_aplikasi' => $asesmen->tindakan_pindah_aplikasi,
+            'batas_pindah_aplikasi' => (int) $asesmen->batas_pindah_aplikasi,
             'kkm' => $asesmen->kkm === null ? null : (int) $asesmen->kkm,
             'jumlah_soal_paket' => $jumlahSoalPaket,
             'jumlah_soal_tampil' => $jumlahSoalTampil,

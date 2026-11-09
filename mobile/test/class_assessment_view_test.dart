@@ -103,8 +103,85 @@ void main() {
     expect(remote.lastPayload?.classes.single.componentId, 'baru');
     expect(remote.lastPayload?.detectTabChange, isTrue);
     expect(remote.lastPayload?.appSwitchLimit, 3);
-    expect(remote.lastPayload?.appSwitchAction, 'tahan');
+    expect(remote.lastPayload?.appSwitchAction, 'catat');
+    expect(remote.lastPayload?.confirmHoldMode, isFalse);
+    expect(remote.lastPayload?.toJson()['tindakan_pindah_aplikasi'], 'catat');
     expect(find.text('Asesmen tersimpan'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mode tahan perlu dipilih dan dikonfirmasi sebelum disimpan', (
+    tester,
+  ) async {
+    final remote = _FakeClassAssessmentRemoteDataSource();
+    final router = GoRouter(
+      initialLocation: '/form',
+      routes: [
+        GoRoute(
+          path: '/form',
+            builder: (_, _) => const ClassAssessmentFormView(),
+        ),
+        GoRoute(
+          path: '/asesmen-kelas/:id',
+            builder: (_, _) => const Scaffold(body: Text('Asesmen tersimpan')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          classAssessmentRemoteDataSourceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('class-assessment-name')),
+      'Tryout diawasi',
+    );
+    tester
+        .widget<CheckboxListTile>(
+          find.byKey(const Key('class-assessment-class-3')),
+        )
+        .onChanged
+        ?.call(true);
+    final mode = find.byKey(const Key('class-assessment-security-mode'));
+    await tester.scrollUntilVisible(
+      mode,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+      await tester.ensureVisible(mode);
+      await tester.pumpAndSettle();
+      await tester.tap(mode);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tahan setelah batas').last);
+    await tester.pumpAndSettle();
+    tester
+        .widget<FilledButton>(find.byKey(const Key('class-assessment-save')))
+        .onPressed
+        ?.call();
+    await tester.pumpAndSettle();
+    expect(remote.createCalls, 0);
+    expect(find.textContaining('Konfirmasikan bahwa siswa'), findsOneWidget);
+    tester
+        .widget<CheckboxListTile>(
+          find.byKey(const Key('class-assessment-confirm-hold')),
+        )
+        .onChanged
+        ?.call(true);
+    await tester.pumpAndSettle();
+    tester
+        .widget<FilledButton>(find.byKey(const Key('class-assessment-save')))
+        .onPressed
+        ?.call();
+    await tester.pumpAndSettle();
+    expect(remote.createCalls, 1);
+    expect(remote.lastPayload?.appSwitchAction, 'tahan');
+    expect(remote.lastPayload?.confirmHoldMode, isTrue);
+    expect(remote.lastPayload?.toJson()['konfirmasi_mode_tahan'], isTrue);
     expect(tester.takeException(), isNull);
   });
 

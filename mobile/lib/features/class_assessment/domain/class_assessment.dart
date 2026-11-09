@@ -321,14 +321,17 @@ class ClassAssessmentAccess {
   const ClassAssessmentAccess({
     required this.canManage,
     required this.canDeactivate,
+    this.canChangeSecurity = true,
   });
   factory ClassAssessmentAccess.fromJson(Map<String, dynamic> json) =>
       ClassAssessmentAccess(
         canManage: json['dapat_kelola'] as bool? ?? false,
         canDeactivate: json['dapat_nonaktifkan'] as bool? ?? false,
+        canChangeSecurity: json['dapat_ubah_mode_aman'] as bool? ?? true,
       );
   final bool canManage;
   final bool canDeactivate;
+  final bool canChangeSecurity;
 }
 
 class ClassAssessmentFilter {
@@ -381,6 +384,7 @@ class ClassAssessmentPayload {
     required this.showResult,
     required this.classes,
     this.instructions,
+    this.confirmHoldMode = false,
   });
   final String teachingGroup;
   final String name;
@@ -401,6 +405,7 @@ class ClassAssessmentPayload {
   final String appSwitchAction;
   final bool showResult;
   final String? instructions;
+  final bool confirmHoldMode;
   final List<AssessmentClassPayload> classes;
 
   Map<String, dynamic> toJson() => {
@@ -421,6 +426,7 @@ class ClassAssessmentPayload {
     'toleransi_pindah_aplikasi_detik': appSwitchGraceSeconds,
     'batas_pindah_aplikasi': appSwitchLimit,
     'tindakan_pindah_aplikasi': appSwitchAction,
+    'konfirmasi_mode_tahan': confirmHoldMode,
     'tampilkan_hasil': showResult,
     'petunjuk': instructions,
     'kelas_peserta': classes.map((item) => item.toJson()).toList(),

@@ -7,6 +7,7 @@ use App\Models\JenisUjianCbt;
 use App\Models\PengaturanMataPelajaran;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use App\Services\Cbt\KebijakanKeamananAsesmen;
 use App\Services\Cbt\SiapkanKomponenNilaiAsesmen;
 use App\Services\Cbt\SinkronkanPesertaAsesmenKelas;
 use Illuminate\Http\Request;
@@ -140,6 +141,7 @@ class AsesmenKelasCbtController extends Controller
 
         return compact('tahunPelajaran', 'kelompokPengajaran', 'ujianCbt') + [
             'daftarStatus' => collect(UjianCbt::DAFTAR_STATUS)->only(['draft', 'terjadwal', 'berlangsung', 'selesai']),
+            'modeKeamananDapatDiubah' => app(KebijakanKeamananAsesmen::class)->dapatDiubah($ujianCbt),
         ];
     }
 
@@ -160,6 +162,9 @@ class AsesmenKelasCbtController extends Controller
             'acak_jawaban' => ['nullable', 'boolean'],
             'batasi_satu_perangkat' => ['nullable', 'boolean'],
             'deteksi_pindah_tab' => ['nullable', 'boolean'],
+            'tindakan_pindah_aplikasi' => ['sometimes', Rule::in(['catat', 'tahan'])],
+            'batas_pindah_aplikasi' => ['sometimes', 'integer', 'min:1', 'max:20'],
+            'konfirmasi_mode_tahan' => ['sometimes', 'boolean'],
             'tampilkan_hasil' => ['nullable', 'boolean'],
             'petunjuk' => ['nullable', 'string', 'max:3000'],
             'kelas_peserta' => ['required', 'array'],
@@ -282,7 +287,7 @@ class AsesmenKelasCbtController extends Controller
             'acak_soal' => $data['acak_soal'],
             'acak_jawaban' => $data['acak_jawaban'],
             'batasi_satu_perangkat' => $data['batasi_satu_perangkat'],
-            ...UjianCbt::KEAMANAN_ASESMEN_KETAT,
+            ...app(KebijakanKeamananAsesmen::class)->pengaturan($data, $ujianCbt),
             'wajib_fullscreen' => false,
             'tampilkan_hasil' => $data['tampilkan_hasil'],
             'status' => $data['status'],

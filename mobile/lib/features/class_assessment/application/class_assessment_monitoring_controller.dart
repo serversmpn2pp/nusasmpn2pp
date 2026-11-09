@@ -55,12 +55,17 @@ class ClassAssessmentMonitoringActions {
 
   Future<void> unlockParticipant(
     int participantId, {
+    required String reason,
     bool resetDevice = false,
   }) async {
     try {
       await ref
           .read(classAssessmentMonitoringRepositoryProvider)
-          .unlockParticipant(participantId, resetDevice: resetDevice);
+          .unlockParticipant(
+            participantId,
+            reason: reason,
+            resetDevice: resetDevice,
+          );
     } on UnauthorizedException {
       await ref.read(authControllerProvider.notifier).logout();
       rethrow;

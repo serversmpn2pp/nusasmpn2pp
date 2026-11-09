@@ -156,6 +156,26 @@
             line-height: 1.45;
         }
 
+        .monitor-device-reset {
+            min-width: 200px;
+            max-width: 340px;
+        }
+
+        .monitor-device-reset-form {
+            display: grid;
+            gap: 10px;
+            margin-top: 8px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .monitor-device-reset-form .input {
+            width: 100%;
+            resize: vertical;
+        }
+
         @media (max-width: 1200px) {
             .monitor-filter-grid,
             .monitor-ready-grid {
@@ -276,7 +296,7 @@
             <div class="alert" style="margin-bottom: 16px;">{{ session('berhasil') }}</div>
         @endif
         @if ($errors->any())
-            <div class="alert alert-danger" style="margin-bottom: 16px;"><strong>Waktu tambahan belum dapat diberikan.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+            <div class="alert alert-danger" style="margin-bottom: 16px;"><strong>Tindakan monitoring belum dapat diproses.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
         @if ($jumlahDitutupOtomatis > 0)
             <div class="alert" style="margin-bottom: 16px;">{{ $jumlahDitutupOtomatis }} pengerjaan yang waktunya habis telah ditutup dan dikoreksi otomatis.</div>
@@ -290,6 +310,11 @@
                 </p>
                 <div class="actions" style="margin-top: 12px;">
                     <span class="badge {{ $badgeStatusPaket }}">{{ $ujianCbt->labelStatus() }}</span>
+                    @if ($ujianCbt->asesmenKelas())
+                        <span class="badge {{ $ujianCbt->tindakan_pindah_aplikasi === 'tahan' ? 'badge-warning' : 'badge-active' }}" data-assessment-monitoring-mode>
+                            {{ $ujianCbt->tindakan_pindah_aplikasi === 'tahan' ? 'Tahan setelah '.$ujianCbt->batas_pindah_aplikasi.' kejadian' : 'Catat saja' }}
+                        </span>
+                    @endif
                     <span class="badge {{ $ujianCbt->acak_soal ? 'badge-active' : 'badge-muted' }}">Acak soal: {{ $ujianCbt->acak_soal ? 'Ya' : 'Tidak' }}</span>
                     <span class="badge {{ $ujianCbt->acak_jawaban ? 'badge-active' : 'badge-muted' }}">Acak jawaban: {{ $ujianCbt->acak_jawaban ? 'Ya' : 'Tidak' }}</span>
                 </div>
@@ -462,6 +487,7 @@
                             </td>
                             <td>
                                 <span class="badge {{ $monitor['badge_pelaksanaan'] }}">{{ $monitor['label_pelaksanaan'] }}</span>
+                                @include('ujian-cbt.monitoring._mode-aman')
                                 @if ($peserta->jumlah_jawaban_ragu > 0)
                                     <div style="margin-top: 7px;"><span class="badge badge-warning">{{ $peserta->jumlah_jawaban_ragu }} ragu</span></div>
                                 @endif
@@ -542,6 +568,7 @@
                         </div>
                         <span class="badge {{ $monitor['badge_pelaksanaan'] }}">{{ $monitor['label_pelaksanaan'] }}</span>
                     </div>
+                    @include('ujian-cbt.monitoring._mode-aman')
                     <dl class="quick-facts">
                         <div><dt>Ruang</dt><dd>{{ $peserta->ruangUjianCbt?->nama ?: 'Belum diatur' }}</dd></div>
                         <div><dt>Kode meja</dt><dd>{{ $peserta->kode_meja ?: ($peserta->nomor_meja ? 'M'.str_pad((string) $peserta->nomor_meja, 3, '0', STR_PAD_LEFT) : '-') }}</dd></div>
@@ -593,11 +620,11 @@
 
                 urlPembaruan.searchParams.set('auto_refresh', '0');
 
-                const perbaruiMonitoring = async () => {
-                    const sedangMengisiTindakan = document.activeElement?.closest?.('.monitor-extra-form')
-                        || document.querySelector('.monitor-extra-time[open]');
+                const sedangMengisiTindakan = () => document.activeElement?.closest?.('.monitor-extra-form, .monitor-device-reset-form')
+                    || document.querySelector('.monitor-extra-time[open], [data-monitor-action][open]');
 
-                    if (sedangMemperbarui || document.hidden || sedangMengisiTindakan) {
+                const perbaruiMonitoring = async () => {
+                    if (sedangMemperbarui || document.hidden || sedangMengisiTindakan()) {
                         return;
                     }
 
@@ -620,6 +647,13 @@
                         }
 
                         const halamanBaru = new DOMParser().parseFromString(await response.text(), 'text/html');
+
+                        if (sedangMengisiTindakan()) {
+                            if (statusPembaruan) {
+                                statusPembaruan.textContent = 'Pembaruan otomatis dijeda selama mengisi tindakan.';
+                            }
+                            return;
+                        }
 
                         ['monitoringRingkasan', 'monitoringPeserta', 'monitoringTerakhir'].forEach((id) => {
                             const bagianSekarang = document.getElementById(id);

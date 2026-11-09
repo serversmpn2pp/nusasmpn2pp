@@ -44,8 +44,8 @@ class ExamSupervisionRepository {
     required int participantId,
   }) => _remote.resetDevice(roomId: roomId, participantId: participantId);
 
-  Future<void> unlockSafeMode(int participantId) =>
-      _remote.unlockSafeMode(participantId);
+  Future<void> unlockSafeMode(int participantId, {required String reason}) =>
+      _remote.unlockSafeMode(participantId, reason: reason);
 
   Future<ExamSupervisionDetail> uploadEvidence({
     required int roomId,

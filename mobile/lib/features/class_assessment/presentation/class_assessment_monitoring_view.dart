@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nusa/shared/widgets/exam_unlock_dialog.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
@@ -104,6 +105,23 @@ class _ClassAssessmentMonitoringViewState
                 AssessmentOperationHero(
                   assessment: data.assessment,
                   eyebrow: 'MONITORING LANGSUNG',
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  key: const Key('assessment-monitoring-security-mode'),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  leading: Icon(
+                    data.assessment.appSwitchAction == 'tahan'
+                        ? Icons.lock_outline_rounded
+                        : Icons.visibility_outlined,
+                    color: NusaColors.primary,
+                  ),
+                  title: Text(data.assessment.securityModeLabel),
+                  subtitle: Text(
+                    data.assessment.appSwitchAction == 'tahan'
+                        ? 'Siswa ditahan setelah batas kejadian tercapai.'
+                        : 'Kejadian dicatat tanpa menahan siswa karena batas kejadian.',
+                  ),
                 ),
                 const SizedBox(height: 11),
                 _LiveStatus(data: data, autoRefresh: _autoRefresh),
@@ -215,35 +233,41 @@ class _ClassAssessmentMonitoringViewState
     AssessmentMonitoringParticipant item, {
     bool resetDevice = false,
   }) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          resetDevice ? 'Reset perangkat siswa?' : 'Buka ujian siswa?',
-        ),
-        content: Text(
-          resetDevice
-              ? 'Pastikan ${item.student.name} menutup sesi lama. Perangkat berikutnya yang membuka ujian akan diikat. Jawaban dan catatan tetap disimpan.'
-              : '${item.student.name} dapat melanjutkan ujian. Catatan keluar aplikasi tetap disimpan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+    final String? reason;
+    if (resetDevice) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reset perangkat siswa?'),
+          content: Text(
+            'Pastikan ${item.student.name} menutup sesi lama. Perangkat berikutnya yang membuka ujian akan diikat. Jawaban dan catatan tetap disimpan.',
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(resetDevice ? 'Reset Perangkat' : 'Buka Ujian'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Reset Perangkat'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      reason = 'Penggantian perangkat disetujui guru pengelola asesmen.';
+    } else {
+      reason = await showExamUnlockDialog(
+        context,
+        participantName: item.student.name,
+      );
+      if (reason == null || !mounted) return;
+    }
     setState(() => _unlocking.add(item.id));
     try {
       await ref
           .read(classAssessmentMonitoringActionsProvider)
-          .unlockParticipant(item.id, resetDevice: resetDevice);
+          .unlockParticipant(item.id, reason: reason, resetDevice: resetDevice);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

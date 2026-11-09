@@ -17,7 +17,11 @@ abstract interface class ClassAssessmentMonitoringRemoteDataSource {
     required String status,
   });
 
-  Future<void> unlockParticipant(int participantId, {bool resetDevice = false});
+  Future<void> unlockParticipant(
+    int participantId, {
+    required String reason,
+    bool resetDevice = false,
+  });
 }
 
 final class DioClassAssessmentMonitoringRemoteDataSource
@@ -63,17 +67,13 @@ final class DioClassAssessmentMonitoringRemoteDataSource
   @override
   Future<void> unlockParticipant(
     int participantId, {
+    required String reason,
     bool resetDevice = false,
   }) async {
     try {
       await _dio.post<Map<String, dynamic>>(
         'keamanan-ujian/peserta/$participantId/${resetDevice ? 'reset-perangkat' : 'buka'}',
-        data: resetDevice
-            ? {
-                'alasan':
-                    'Penggantian perangkat disetujui guru pengelola asesmen.',
-              }
-            : null,
+        data: {resetDevice ? 'alasan' : 'alasan_pembukaan': reason.trim()},
       );
     } on DioException catch (exception) {
       throw mapDioException(exception);

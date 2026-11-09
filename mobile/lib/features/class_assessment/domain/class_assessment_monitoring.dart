@@ -102,6 +102,8 @@ class AssessmentOperationHeader {
     this.startsAt,
     this.endsAt,
     this.minimumScore,
+    this.appSwitchAction = 'catat',
+    this.appSwitchLimit = 3,
   });
 
   factory AssessmentOperationHeader.fromJson(Map<String, dynamic> json) =>
@@ -118,6 +120,8 @@ class AssessmentOperationHeader {
         startsAt: _date(json['tanggal_mulai']),
         endsAt: _date(json['tanggal_selesai']),
         durationMinutes: _integer(json['durasi_menit']),
+        appSwitchAction: json['tindakan_pindah_aplikasi'] as String? ?? 'catat',
+        appSwitchLimit: _integer(json['batas_pindah_aplikasi'], 3),
         minimumScore: _nullableInteger(json['kkm']),
         packageQuestionCount: _integer(json['jumlah_soal_paket']),
         displayQuestionCount: _integer(json['jumlah_soal_tampil']),
@@ -136,6 +140,12 @@ class AssessmentOperationHeader {
   final DateTime? startsAt;
   final DateTime? endsAt;
   final int durationMinutes;
+  final String appSwitchAction;
+  final int appSwitchLimit;
+
+  String get securityModeLabel => appSwitchAction == 'tahan'
+      ? 'Tahan setelah $appSwitchLimit kejadian'
+      : 'Catat saja';
   final int? minimumScore;
   final int packageQuestionCount;
   final int displayQuestionCount;
