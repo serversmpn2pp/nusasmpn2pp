@@ -119,6 +119,11 @@ class ExamSecurityJournal {
     await storage.write(key, jsonEncode(state));
   });
 
+  Future<bool> hasPending(int id) => _serial(() async {
+    final state = await _read(await _key(id));
+    return (state['events'] as List).isNotEmpty;
+  });
+
   Future<StudentExamSecurityUpdate?> flush(int id, ExamEventSender send) {
     final active = _flights[id];
     if (active != null) return active;

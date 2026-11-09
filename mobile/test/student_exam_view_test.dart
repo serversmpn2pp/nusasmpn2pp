@@ -291,7 +291,154 @@ class _FakeExamPlatform extends ExamSecurityPlatform {
   );
 }
 
+class _ThresholdSecurityRemote extends _SecurityRemote {
+  _ThresholdSecurityRemote(this.flow);
+  final String flow;
+  @override
+  Future<StudentExamSession> start({
+    required int participantId,
+    required String? token,
+    required String device,
+  }) async {
+    await super.start(
+      participantId: participantId,
+      token: token,
+      device: device,
+    );
+    return fakeSession({
+      ..._runningJson(),
+      'ujian': {..._examJson(), 'alur': flow},
+      'keamanan': security,
+    });
+  }
+
+  int departures = 0;
+  Completer<void>? responseGate;
+  @override
+  Future<StudentExamSecurityUpdate> securityEvent({
+    required int participantId,
+    required String event,
+    required String device,
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    if (event == 'keluar') {
+      departures++;
+      if (departures >= 3) serverLocked = true;
+    }
+    if ((event == 'keluar' || event == 'kembali') && responseGate != null) {
+      await responseGate!.future;
+    }
+    return super.securityEvent(
+      participantId: participantId,
+      event: event,
+      device: device,
+      metadata: metadata,
+    );
+  }
+}
+
 void main() {
+  for (final flow in ['kelas', 'terpusat']) {
+    testWidgets(
+      'soal $flow tersembunyi sampai respons penahanan ketiga diterima dan pengawas membuka',
+      (tester) async {
+        final remote = _ThresholdSecurityRemote(flow);
+        await _openSecurityExam(tester, remote, _JournalMemoryStorage());
+        for (var i = 0; i < 2; i++) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.inactive,
+          );
+          await tester.pumpAndSettle();
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const Key('student-exam-question-pages')),
+            findsOneWidget,
+          );
+        }
+        final gate = Completer<void>();
+        remote.responseGate = gate;
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(remote.departures, 3);
+        expect(remote.serverLocked, isTrue);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(
+          find.byKey(const Key('student-exam-question-pages')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('student-exam-security-verification-gate')),
+          findsOneWidget,
+        );
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('Ujian sementara ditahan'), findsOneWidget);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('student-exam-question-pages')),
+          findsNothing,
+        );
+        remote.serverLocked = false;
+        await tester.ensureVisible(
+          find.byKey(const Key('student-exam-check-lock')),
+        );
+        await tester.tap(find.byKey(const Key('student-exam-check-lock')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('student-exam-question-pages')),
+          findsOneWidget,
+        );
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+  testWidgets(
+    'rekonsiliasi offline menutup soal sampai retry keamanan berhasil',
+    (tester) async {
+      final remote = _SecurityRemote();
+      await _openSecurityExam(tester, remote, _JournalMemoryStorage());
+      remote.offline = true;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pumpAndSettle();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('student-exam-question-pages')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('student-exam-retry-security')),
+        findsOneWidget,
+      );
+      remote.offline = false;
+      await tester.tap(find.byKey(const Key('student-exam-retry-security')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('student-exam-question-pages')),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   setUp(
     () => FlutterSecureStorage.setMockInitialValues({
       'nusa.auth_token': 'test-draft-token',
@@ -320,6 +467,11 @@ void main() {
           AppLifecycleState.resumed,
         );
       }
+      await tester.pump();
+      expect(
+        find.byKey(const Key('student-exam-question-pages')),
+        findsNothing,
+      );
       waiting.complete();
       await tester.pumpAndSettle();
       final events = remote.events
@@ -831,7 +983,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Simpan & Keluar'));
       await tester.pumpAndSettle();
-      expect(find.text('Organ pernapasan manusia adalah ....'), findsOneWidget);
+      expect(find.text('Organ pernapasan manusia adalah ....'), findsNothing);
+      expect(
+        find.byKey(const Key('student-exam-security-verification-gate')),
+        findsOneWidget,
+      );
       expect(guard.active, isTrue);
       final first = remote.events.lastWhere((e) => e.$1 == 'keluar_pengerjaan');
       remote.offline = false;

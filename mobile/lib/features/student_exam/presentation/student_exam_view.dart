@@ -54,6 +54,8 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   String _pickerOutcome = 'dibatalkan';
   Future<bool>? _pickerClosing;
   bool _securitySyncPending = false;
+  bool _securityNeedsVerification = false;
+  int _focusGeneration = 0;
   bool _syncingServerCompletion = false;
   DateTime? _localDeadline;
   int _remainingSeconds = 0;
@@ -260,6 +262,14 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
       return _protectionGate(session);
     }
     if (session.isRunning &&
+        session.security.trackAppSwitch &&
+        (_securityNeedsVerification ||
+            _securitySyncPending ||
+            _awayReported ||
+            _resuming)) {
+      return _securityVerificationGate();
+    }
+    if (session.isRunning &&
         (_draftLoading || _draftError != null || _draftConflicts.isNotEmpty)) {
       return _draftGate();
     }
@@ -268,6 +278,37 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     if (session.isCompleted) return _completed(session);
     return _confirmation(session);
   }
+
+  Widget _securityVerificationGate() => ListView(
+    key: const Key('student-exam-security-verification-gate'),
+    padding: const EdgeInsets.all(24),
+    children: [
+      const Icon(Icons.shield_outlined, size: 56, color: NusaColors.primary),
+      const SizedBox(height: 16),
+      Text(
+        _securitySyncPending
+            ? 'Status ujian belum terkonfirmasi'
+            : 'Memeriksa status ujian',
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+      ),
+      const SizedBox(height: 12),
+      const Text(
+        'Memeriksa izin melanjutkan ujian. Soal tetap disembunyikan sampai pemeriksaan selesai. Waktu ujian tetap berjalan dan jawaban yang tersimpan tetap ada. Jika koneksi bermasalah, periksa jaringan lalu coba lagi.',
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 18),
+      if (_securitySyncPending)
+        FilledButton.icon(
+          key: const Key('student-exam-retry-security'),
+          onPressed: _resuming ? null : _resumeWithProtection,
+          icon: const Icon(Icons.sync),
+          label: const Text('Periksa Status Ujian'),
+        )
+      else
+        const Center(child: CircularProgressIndicator()),
+    ],
+  );
 
   Widget _draftGate() => ListView(
     key: const Key('student-exam-draft-gate'),
@@ -401,7 +442,9 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
       else
         FilledButton.icon(
           key: const Key('student-exam-retry-protection'),
-          onPressed: () => _applyPlatformSecurity(session),
+          onPressed: () => session.isRunning
+              ? _resumeWithProtection()
+              : _applyPlatformSecurity(session),
           icon: const Icon(Icons.refresh),
           label: const Text('Periksa Lagi'),
         ),
@@ -712,6 +755,8 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
       _saveStatuses.clear();
       _revisions.clear();
       _screenReady = !session.security.enabled;
+      _securityNeedsVerification =
+          session.isRunning && session.security.trackAppSwitch;
       _screenFailureReported = false;
       _screenError = null;
       _draftLoading = session.isRunning;
@@ -968,7 +1013,12 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
         _awayReported) {
       return;
     }
-    _awayReported = true;
+    setState(() {
+      _awayReported = true;
+      _securityNeedsVerification = true;
+      _focusGeneration++;
+      _screenGeneration++;
+    });
     for (final timer in _saveTimers.values) {
       timer.cancel();
     }
@@ -994,7 +1044,11 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     } catch (_) {
       // Evidence remains in the encrypted journal until acknowledged.
     } finally {
-      _resumesInFlight--;
+      if (mounted) {
+        setState(() => _resumesInFlight--);
+      } else {
+        _resumesInFlight--;
+      }
     }
   }
 
@@ -1012,23 +1066,35 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   Future<void> _flushSecurity() async {
     final journal = _journal;
     if (journal == null) return;
+    final generation = _focusGeneration;
     final actions = ref.read(studentExamActionsProvider);
     try {
       await _journalReady;
-      final update = await journal.flush(
-        widget.participantId,
-        (event, metadata) => actions.securityEvent(
+      StudentExamSecurityUpdate? update;
+      do {
+        update = await journal.flush(
           widget.participantId,
-          event,
-          metadata: metadata,
-        ),
-      );
+          (event, metadata) => actions.securityEvent(
+            widget.participantId,
+            event,
+            metadata: metadata,
+          ),
+        );
+        if (mounted && update != null) _applySecurityUpdate(update);
+      } while (await journal.hasPending(widget.participantId));
       if (!mounted) return;
-      if (_securitySyncPending) setState(() => _securitySyncPending = false);
-      if (update != null) _applySecurityUpdate(update);
+      if (generation == _focusGeneration && _appForeground && !_awayReported) {
+        setState(() {
+          _securitySyncPending = false;
+          _securityNeedsVerification = false;
+        });
+      }
     } catch (_) {
       if (mounted && !_securitySyncPending) {
-        setState(() => _securitySyncPending = true);
+        setState(() {
+          _securitySyncPending = true;
+          _securityNeedsVerification = true;
+        });
       }
       rethrow;
     }
@@ -1180,13 +1246,24 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   }
 
   Future<void> _resumeWithProtection() async {
+    final generation = _focusGeneration;
     final reconciliation = _handleResume();
     final session = _session;
     if (session != null && session.isRunning) {
       await _applyPlatformSecurity(session);
     }
     await reconciliation;
-    if (mounted && _session?.isRunning == true) await _flushAnswers();
+    if (!mounted || generation != _focusGeneration || !_appForeground) return;
+    try {
+      await _flushSecurity();
+      if (mounted &&
+          generation == _focusGeneration &&
+          _session?.isRunning == true) {
+        await _flushAnswers();
+      }
+    } catch (_) {
+      // Keep the server-verification gate closed until a successful retry.
+    }
   }
 
   void _protectionFailed() {
@@ -1267,10 +1344,24 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
   }
 
   void _changeAnswer(StudentExamQuestion question, Map<String, String> answer) {
+    if (_securityNeedsVerification ||
+        _securitySyncPending ||
+        _awayReported ||
+        _resuming ||
+        !_appForeground) {
+      return;
+    }
     _replaceQuestion(question.copyWith(answer: answer));
   }
 
   void _changeDoubt(StudentExamQuestion question, bool value) {
+    if (_securityNeedsVerification ||
+        _securitySyncPending ||
+        _awayReported ||
+        _resuming ||
+        !_appForeground) {
+      return;
+    }
     final latest = _questionById(question.id) ?? question;
     _replaceQuestion(latest.copyWith(doubtful: value));
   }
@@ -1606,6 +1697,8 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
     if (!_appForeground ||
         _awayReported ||
         _resuming ||
+        _securityNeedsVerification ||
+        _securitySyncPending ||
         _draftLoading ||
         _draftError != null ||
         _draftConflicts.isNotEmpty ||
@@ -1627,6 +1720,8 @@ class _StudentExamViewState extends ConsumerState<StudentExamView>
           !_appForeground ||
           _awayReported ||
           _resuming ||
+          _securityNeedsVerification ||
+          _securitySyncPending ||
           _pickerRequestId != null ||
           _draftLoading ||
           _draftError != null ||

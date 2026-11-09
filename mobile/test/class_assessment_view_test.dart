@@ -101,6 +101,9 @@ void main() {
     expect(remote.createCalls, 1);
     expect(remote.lastPayload?.classes.single.classId, 3);
     expect(remote.lastPayload?.classes.single.componentId, 'baru');
+    expect(remote.lastPayload?.detectTabChange, isTrue);
+    expect(remote.lastPayload?.appSwitchLimit, 3);
+    expect(remote.lastPayload?.appSwitchAction, 'tahan');
     expect(find.text('Asesmen tersimpan'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

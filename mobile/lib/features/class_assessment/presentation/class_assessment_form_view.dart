@@ -22,8 +22,6 @@ class _ClassAssessmentFormViewState
   final _name = TextEditingController();
   final _duration = TextEditingController(text: '40');
   final _questionCount = TextEditingController(text: '20');
-  final _appSwitchGrace = TextEditingController(text: '3');
-  final _appSwitchLimit = TextEditingController(text: '3');
   final _instructions = TextEditingController();
   final Map<int, String> _selectedComponents = {};
   String? _teachingGroup;
@@ -34,10 +32,9 @@ class _ClassAssessmentFormViewState
   bool _shuffleQuestions = true;
   bool _shuffleAnswers = true;
   bool _singleDevice = false;
-  bool _detectTabChange = false;
   bool _requireFullscreen = false;
   bool _secureScreen = true;
-  String _appSwitchAction = 'catat';
+  int _webGraceSeconds = 3;
   bool _showResult = false;
   bool _initialized = false;
   bool _saving = false;
@@ -57,8 +54,6 @@ class _ClassAssessmentFormViewState
     _name.dispose();
     _duration.dispose();
     _questionCount.dispose();
-    _appSwitchGrace.dispose();
-    _appSwitchLimit.dispose();
     _instructions.dispose();
     super.dispose();
   }
@@ -353,12 +348,16 @@ class _ClassAssessmentFormViewState
                   value: _singleDevice,
                   onChanged: (value) => setState(() => _singleDevice = value),
                 ),
-                _Toggle(
-                  title: 'Catat pindah aplikasi',
-                  subtitle: 'Aktivitas keluar dari NUSA dicatat untuk guru.',
-                  value: _detectTabChange,
-                  onChanged: (value) =>
-                      setState(() => _detectTabChange = value),
+                const ListTile(
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                  leading: Icon(
+                    Icons.shield_outlined,
+                    color: NusaColors.primary,
+                  ),
+                  title: Text('Mode Aman: tahan pada kejadian ketiga'),
+                  subtitle: Text(
+                    'Pencatatan selalu aktif. Pada Android, setiap kehilangan fokus yang terdeteksi dihitung sekali tanpa toleransi durasi. Sesi ditahan setelah tiga kejadian dan hanya dapat dibuka guru/pengawas. Waktu ujian tetap berjalan.',
+                  ),
                 ),
                 _Toggle(
                   title: 'Blokir tangkapan layar',
@@ -373,72 +372,6 @@ class _ClassAssessmentFormViewState
                   onChanged: (value) =>
                       setState(() => _requireFullscreen = value),
                 ),
-                if (_detectTabChange) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            key: const Key('class-assessment-switch-grace'),
-                            controller: _appSwitchGrace,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Toleransi (detik)',
-                            ),
-                            validator: (value) {
-                              final number = int.tryParse(value ?? '');
-                              return number == null || number < 1 || number > 60
-                                  ? '1–60'
-                                  : null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextFormField(
-                            key: const Key('class-assessment-switch-limit'),
-                            controller: _appSwitchLimit,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Batas kejadian',
-                            ),
-                            validator: (value) {
-                              final number = int.tryParse(value ?? '');
-                              return number == null || number < 1 || number > 20
-                                  ? '1–20'
-                                  : null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  NusaDropdownField<String>(
-                    fieldKey: const Key('class-assessment-switch-action'),
-                    value: _appSwitchAction,
-                    decoration: const InputDecoration(
-                      labelText: 'Tindakan setelah batas tercapai',
-                      prefixIcon: Icon(Icons.gpp_maybe_outlined),
-                    ),
-                    options: const [
-                      NusaDropdownOption(
-                        value: 'catat',
-                        label: 'Tetap lanjut, hanya dicatat',
-                      ),
-                      NusaDropdownOption(
-                        value: 'tahan',
-                        label: 'Tahan ujian, perlu dibuka guru',
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _appSwitchAction = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 4),
-                ],
                 _Toggle(
                   title: 'Tampilkan hasil',
                   subtitle: 'Nilai terlihat setelah asesmen selesai.',
@@ -488,12 +421,9 @@ class _ClassAssessmentFormViewState
         _shuffleQuestions = detail.shuffleQuestions;
         _shuffleAnswers = detail.shuffleAnswers;
         _singleDevice = detail.singleDevice;
-        _detectTabChange = detail.detectTabChange;
         _requireFullscreen = detail.requireFullscreen;
         _secureScreen = detail.secureScreen;
-        _appSwitchGrace.text = '${detail.appSwitchGraceSeconds}';
-        _appSwitchLimit.text = '${detail.appSwitchLimit}';
-        _appSwitchAction = detail.appSwitchAction;
+        _webGraceSeconds = detail.appSwitchGraceSeconds;
         _showResult = detail.showResult;
         for (final target in detail.classes) {
           _selectedComponents[target.classId] =
@@ -564,12 +494,12 @@ class _ClassAssessmentFormViewState
         shuffleQuestions: _shuffleQuestions,
         shuffleAnswers: _shuffleAnswers,
         singleDevice: _singleDevice,
-        detectTabChange: _detectTabChange,
+        detectTabChange: true,
         requireFullscreen: _requireFullscreen,
         secureScreen: _secureScreen,
-        appSwitchGraceSeconds: int.parse(_appSwitchGrace.text),
-        appSwitchLimit: int.parse(_appSwitchLimit.text),
-        appSwitchAction: _appSwitchAction,
+        appSwitchGraceSeconds: _webGraceSeconds,
+        appSwitchLimit: 3,
+        appSwitchAction: 'tahan',
         showResult: _showResult,
         instructions: _optional(_instructions.text),
         classes: [

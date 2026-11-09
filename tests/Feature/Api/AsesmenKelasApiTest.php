@@ -99,6 +99,20 @@ class AsesmenKelasApiTest extends TestCase
         $this->assertNotNull($response->json('data.id'));
     }
 
+    public function test_klien_lama_tidak_dapat_menonaktifkan_penahanan_asesmen(): void
+    {
+        $data = $this->fondasi();
+        $kelompok = implode('-', [$data['pegawai']->id, $data['mapel']->id, 8]);
+        $payload = [...$this->payload($kelompok, $data['kelas']->id),
+            'deteksi_pindah_tab' => false, 'tindakan_pindah_aplikasi' => 'catat', 'batas_pindah_aplikasi' => 20];
+        $id = $this->withToken($this->token($data['guru']))->postJson(route('api.v1.asesmen-kelas.store'), $payload)
+            ->assertCreated()->assertJsonPath('data.deteksi_pindah_tab', true)
+            ->assertJsonPath('data.batas_pindah_aplikasi', 3)->assertJsonPath('data.tindakan_pindah_aplikasi', 'tahan')->json('data.id');
+        $this->patchJson(route('api.v1.asesmen-kelas.update', $id), $payload)->assertOk()
+            ->assertJsonPath('data.deteksi_pindah_tab', true)->assertJsonPath('data.batas_pindah_aplikasi', 3)
+            ->assertJsonPath('data.tindakan_pindah_aplikasi', 'tahan');
+    }
+
     public function test_guru_tidak_dapat_memakai_kelas_atau_mengelola_asesmen_guru_lain(): void
     {
         $data = $this->fondasi();

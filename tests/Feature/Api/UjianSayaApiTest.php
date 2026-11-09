@@ -20,6 +20,7 @@ use Illuminate\Encryption\Encrypter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -1292,6 +1293,55 @@ class UjianSayaApiTest extends TestCase
         return $this->withToken($data['token'])->postJson(route('api.v1.ujian-saya.izin-berkas.selesai', $data['peserta']), [
             'izin_id' => $id, 'hasil' => $hasil, 'perangkat' => 'NUSA Android Aman',
         ]);
+    }
+
+    public function test_migrasi_asesmen_lama_menahan_batas_tercapai_tanpa_menghapus_jawaban_atau_keputusan_pengawas(): void
+    {
+        $data = $this->fondasiKeamananKetat();
+        $peserta = $data['peserta'];
+        $ujian = $peserta->ujianCbt;
+        $ujian->update(['alur' => 'kelas', 'tindakan_pindah_aplikasi' => 'catat', 'batas_pindah_aplikasi' => 20]);
+        $this->withToken($data['token'])->putJson(route('api.v1.ujian-saya.jawaban.update', $peserta), [
+            'soal_ujian_cbt_id' => $data['soal_pg']->id, 'jawaban' => ['A'], 'ragu' => false,
+            'perangkat' => 'NUSA Android Aman',
+        ])->assertOk();
+        for ($i = 0; $i < 6; $i++) {
+            $this->kirimKeamanan($data, 'keluar')->assertOk();
+            $this->kirimKeamanan($data, 'kembali')->assertOk();
+        }
+        $dibuka = $data['peserta_lain'];
+        $dibuka->forceFill(['status' => 'sedang_mengerjakan', 'jumlah_pindah_aplikasi' => 3,
+            'dibuka_mode_aman_pada' => now()])->save();
+        $dibuka->aktivitasKeamananUjianCbt()->create(['jenis' => 'buka_mode_aman',
+            'mulai_pada' => now(), 'selesai_pada' => now(), 'dihitung' => false]);
+        $selesai = $ujian->replicate();
+        $selesai->fill(['kode' => 'AUDIT-MIG-SELESAI', 'status' => 'selesai', 'deteksi_pindah_tab' => false])->save();
+        $terpusat = $ujian->replicate();
+        $terpusat->fill(['kode' => 'AUDIT-MIG-TERPUSAT', 'alur' => 'terpusat', 'deteksi_pindah_tab' => false])->save();
+        $jawaban = DB::table('jawaban_peserta_ujian_cbt')->get()->toJson();
+        $waktu = $peserta->fresh()->only(['waktu_mulai', 'menit_tersisa', 'sesi_ujian_mulai_pada', 'heartbeat_terakhir_pada']);
+        $jumlahAktivitas = $peserta->aktivitasKeamananUjianCbt()->count();
+
+        $migrasi = require base_path('database/migrations/2026_11_09_000001_perketat_penahanan_asesmen_kelas.php');
+        $migrasi->up();
+        $migrasi->up(); // Re-running must not duplicate holds or erase a supervisor decision.
+
+        $this->assertSame('tahan', $ujian->fresh()->tindakan_pindah_aplikasi);
+        $this->assertTrue($ujian->fresh()->deteksi_pindah_tab);
+        $this->assertSame(3, $ujian->fresh()->batas_pindah_aplikasi);
+        $this->assertSame('terblokir', $peserta->fresh()->status);
+        $this->assertSame(6, $peserta->fresh()->jumlah_pindah_aplikasi);
+        $this->assertEquals($waktu, $peserta->fresh()->only(array_keys($waktu)));
+        $this->assertSame($jawaban, DB::table('jawaban_peserta_ujian_cbt')->get()->toJson());
+        $this->assertSame($jumlahAktivitas + 1, $peserta->aktivitasKeamananUjianCbt()->count());
+        $this->assertSame('batas_kejadian', app(KeamananUjianService::class)->ringkas($peserta->fresh())['alasan_tahanan']);
+        $this->assertSame('sedang_mengerjakan', $dibuka->fresh()->status);
+        foreach ([$selesai, $terpusat] as $dikecualikan) {
+            $this->assertFalse($dikecualikan->fresh()->deteksi_pindah_tab);
+            $this->assertSame('catat', $dikecualikan->fresh()->tindakan_pindah_aplikasi);
+            $this->assertSame(20, $dikecualikan->fresh()->batas_pindah_aplikasi);
+        }
+        $this->kirimKeamanan($data, 'heartbeat')->assertOk()->assertJsonPath('data.mode', 'ditahan');
     }
 
     private function fondasiKeamananKetat(bool $batasiPerangkat = true): array

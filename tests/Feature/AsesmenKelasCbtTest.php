@@ -41,6 +41,7 @@ class AsesmenKelasCbtTest extends TestCase
             ->assertOk()
             ->assertSee('Matematika - Kelas 7')
             ->assertSee('VII.A')
+            ->assertSeeText('Mode Aman: tahan pada kejadian ketiga')
             ->assertDontSee('VII.B');
 
         $kelompok = implode('-', [$guru->id, $mapel->id, 7]);
@@ -51,6 +52,9 @@ class AsesmenKelasCbtTest extends TestCase
         $asesmen = UjianCbt::query()->where('nama', 'Sumatif Bab Bilangan')->firstOrFail();
 
         $this->assertSame('kelas', $asesmen->alur);
+        $this->assertTrue($asesmen->deteksi_pindah_tab);
+        $this->assertSame('tahan', $asesmen->tindakan_pindah_aplikasi);
+        $this->assertSame(3, $asesmen->batas_pindah_aplikasi);
         $this->assertSame($akunGuru->id, $asesmen->dibuat_oleh_pengguna_id);
         $this->assertNull($asesmen->token);
         $this->assertDatabaseHas('kelas_ujian_cbt', [

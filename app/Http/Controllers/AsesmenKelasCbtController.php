@@ -282,7 +282,7 @@ class AsesmenKelasCbtController extends Controller
             'acak_soal' => $data['acak_soal'],
             'acak_jawaban' => $data['acak_jawaban'],
             'batasi_satu_perangkat' => $data['batasi_satu_perangkat'],
-            'deteksi_pindah_tab' => $data['deteksi_pindah_tab'],
+            ...UjianCbt::KEAMANAN_ASESMEN_KETAT,
             'wajib_fullscreen' => false,
             'tampilkan_hasil' => $data['tampilkan_hasil'],
             'status' => $data['status'],

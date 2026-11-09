@@ -214,7 +214,6 @@
                 'acak_soal' => ['Acak soal', 'Urutan berbeda untuk setiap siswa', true],
                 'acak_jawaban' => ['Acak pilihan jawaban', 'Berlaku untuk pilihan ganda', true],
                 'batasi_satu_perangkat' => ['Satu perangkat', 'Cegah akun aktif di dua perangkat', false],
-                'deteksi_pindah_tab' => ['Catat keluar halaman', 'Kejadian tersimpan sebagai indikasi untuk diperiksa, bukan bukti otomatis kecurangan.', false],
                 'tampilkan_hasil' => ['Tampilkan hasil', 'Nilai terlihat setelah asesmen selesai', false],
             ] as $field => [$label, $helper, $default])
                 <label class="assessment-toggle">
@@ -223,6 +222,10 @@
                     <input type="checkbox" name="{{ $field }}" value="1" @checked((bool) $nilai($field, $default))>
                 </label>
             @endforeach
+        </div>
+        <div class="alert" style="margin-top: 18px;" data-assessment-security-policy>
+            <strong>Mode Aman: tahan pada kejadian ketiga</strong>
+            <p style="margin: 5px 0 0;">Pencatatan keluar aplikasi selalu aktif. Pada Android, setiap kehilangan fokus yang terdeteksi dihitung satu kejadian tanpa toleransi durasi. Setelah tiga kejadian, siswa perlu meminta guru/pengawas membuka sesi. Waktu ujian tetap berjalan dan jawaban tersimpan tetap ada.</p>
         </div>
         <div class="alert" style="margin-top: 18px;">
             <strong>Tanpa ruang dan sesi</strong>
