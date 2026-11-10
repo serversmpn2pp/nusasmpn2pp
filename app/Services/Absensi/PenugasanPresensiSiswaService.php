@@ -54,9 +54,6 @@ class PenugasanPresensiSiswaService
         if ($presensi->contains(fn ($p) => (int) $p->tahun_pelajaran_id !== (int) $tahun->id || ! $ids->contains((int) $p->anggota_kelas_id))) {
             throw ValidationException::withMessages(['anggota_kelas_ids' => 'Ada catatan presensi dengan keanggotaan berbeda. Periksa kelas dan tanggal peserta.']);
         }
-        if ($presensi->whereIn('status_kehadiran', ['sakit', 'izin'])->isNotEmpty()) {
-            throw ValidationException::withMessages(['anggota_kelas_ids' => 'Ada catatan Sakit/Izin pada periode ini. Koreksi catatan yang keliru atau sesuaikan peserta/tanggal penugasan terlebih dahulu.']);
-        }
         $tanggal = $this->tanggal($mulai, $selesai);
         if (! $tanggal) {
             throw ValidationException::withMessages(['tanggal_mulai' => 'Tidak ada hari presensi aktif pada rentang ini. Periksa pengaturan hari sekolah.']);
@@ -64,14 +61,32 @@ class PenugasanPresensiSiswaService
         $data = ['tahun_pelajaran_id' => (int) $tahun->id, 'kelas_id' => null, 'cakupan' => 'siswa', 'anggota_kelas_ids' => $ids->all(),
             'tanggal_mulai' => $mulai->toDateString(), 'tanggal_selesai' => $selesai->toDateString(), 'jenis' => 'tugas_sekolah', 'alasan' => trim($input['alasan'])];
         $perSiswa = $anggota->map(fn ($a) => ['anggota' => $a, 'alfa_dibatalkan' => 0]);
+        $perubahanStatus = $presensi->whereIn('status_kehadiran', ['sakit', 'izin'])
+            ->filter(fn ($p) => in_array($p->tanggal->toDateString(), $tanggal, true))
+            ->map(fn ($p) => ['anggota' => $anggota->firstWhere('id', $p->anggota_kelas_id),
+                'tanggal' => $p->tanggal->toDateString(), 'status_sebelum' => $p->status_kehadiran,
+                'riwayat_sebelum' => $this->riwayatSebelum($p)])->values();
         $poin = LaporanPembinaanSiswa::whereIn('anggota_kelas_id', $ids)->where('sumber_laporan', 'absensi_otomatis')
             ->whereDate('tanggal_kejadian', '>=', $data['tanggal_mulai'])->whereDate('tanggal_kejadian', '<=', $data['tanggal_selesai'])->orderBy('id')->get();
         $dampak = ['siswa_dalam_cakupan' => $anggota->count(), 'siswa_terdampak' => $anggota->count(), 'alfa_otomatis_dibatalkan' => 0,
             'hari_aktif_terlewati' => count($tanggal), 'catatan_dipertahankan' => $presensi->count(), 'alfa_manual' => $presensi->where('status_kehadiran', 'alfa')->count(),
-            'hadir_penugasan' => count($tanggal) * $anggota->count(), 'poin_dibatalkan' => (int) $poin->sum('total_poin')];
-        $sidik = hash('sha256', json_encode([$data, $tanggal, $anggota->toArray(), $presensi->toArray(), $poin->toArray()], JSON_THROW_ON_ERROR));
+            'hadir_penugasan' => count($tanggal) * $anggota->count(), 'poin_dibatalkan' => (int) $poin->sum('total_poin'),
+            'sakit_dikoreksi' => $perubahanStatus->where('status_sebelum', 'sakit')->count(),
+            'izin_dikoreksi' => $perubahanStatus->where('status_sebelum', 'izin')->count()];
+        $sidik = hash('sha256', json_encode([$data, $tanggal, $anggota->toArray(), $presensi->toArray(), $poin->toArray(), $perubahanStatus->toArray()], JSON_THROW_ON_ERROR));
 
-        return ['data' => $data, 'tahun' => $tahun, 'kelas' => null, 'dampak' => $dampak, 'sidik' => $sidik, 'perSiswa' => $perSiswa];
+        return ['data' => $data, 'tahun' => $tahun, 'kelas' => null, 'dampak' => $dampak, 'sidik' => $sidik, 'perSiswa' => $perSiswa,
+            'perubahan_status' => $perubahanStatus];
+    }
+
+    private function riwayatSebelum(AbsensiSiswa $absensi): array
+    {
+        $riwayat = RiwayatPerubahanAbsensiSiswa::with('dibuatOleh:id,nama')->where('absensi_siswa_id', $absensi->id)->latest('id')->first();
+
+        return ['presensi_sebelum' => $absensi->only([...self::BIDANG, 'catatan']),
+            'riwayat_sebelum_id' => $riwayat?->id, 'pencatat_sebelum_id' => $riwayat?->dibuat_oleh_pengguna_id,
+            'pencatat_sebelum_nama' => $riwayat?->dibuatOleh?->nama,
+            'waktu_sebelum' => ($riwayat?->created_at ?? $absensi->updated_at)?->toISOString()];
     }
 
     public function tanggal(Carbon $mulai, Carbon $selesai): array
@@ -91,13 +106,28 @@ class PenugasanPresensiSiswaService
             foreach ($this->tanggal($p->tanggal_mulai, $p->tanggal_selesai) as $tanggal) {
                 $absensi = AbsensiSiswa::where('siswa_id', $a->siswa_id)->whereDate('tanggal', $tanggal)->lockForUpdate()->first();
                 $sebelum = $absensi?->only(self::BIDANG) ?? ['dibuat_penugasan' => true, 'status_kehadiran' => 'hadir', 'status_masuk' => null, 'menit_terlambat' => 0, 'sanksi_manual_menit' => 0, 'alasan_hadir_manual' => null, 'sumber' => 'penugasan_sekolah'];
+                $koreksi = $absensi && in_array($absensi->status_kehadiran, ['sakit', 'izin'], true)
+                    ? $this->riwayatSebelum($absensi) + ['dikoreksi_oleh' => $p->dibuat_oleh_pengguna_id, 'dikoreksi_pada' => now()->toISOString()] : null;
+                if ($koreksi) {
+                    $sebelum['koreksi_penugasan'] = $koreksi;
+                }
                 $absensi ??= new AbsensiSiswa(['siswa_id' => $a->siswa_id, 'anggota_kelas_id' => $a->id,
                     'tahun_pelajaran_id' => $a->tahun_pelajaran_id, 'kelas_id' => $a->kelas_id, 'tanggal' => $tanggal, 'sumber' => 'penugasan_sekolah']);
+                if ($koreksi) {
+                    $absensi->fill(['catatan' => 'Koreksi '.ucfirst($sebelum['status_kehadiran']).' menjadi Hadir — Tugas sekolah.', 'sumber' => 'penugasan_sekolah']);
+                }
                 $absensi->fill(['penugasan_presensi_id' => $p->id, 'sebelum_penugasan' => $sebelum, 'status_kehadiran' => 'hadir'])->save();
                 if (! ($sebelum['dibuat_penugasan'] ?? false)) {
+                    $catatanAudit = $p->label();
+                    if ($koreksi) {
+                        $catatanAudit = 'Koreksi '.ucfirst($sebelum['status_kehadiran']).' menjadi Hadir — Tugas sekolah. '.$p->alasan
+                            ."\nCatatan sebelumnya: ".($koreksi['presensi_sebelum']['catatan'] ?: '-')
+                            ."\nPencatat sebelumnya: ".($koreksi['pencatat_sebelum_nama'] ?? 'Tidak tercatat')
+                            .'; waktu: '.($koreksi['waktu_sebelum'] ?? 'Tidak tercatat');
+                    }
                     RiwayatPerubahanAbsensiSiswa::create(['absensi_siswa_id' => $absensi->id, 'siswa_id' => $a->siswa_id, 'tanggal' => $tanggal,
                         'status_sebelum' => $sebelum['status_kehadiran'], 'status_sesudah' => 'hadir', 'sumber' => 'penugasan_sekolah',
-                        'catatan' => $p->label(), 'dibuat_oleh_pengguna_id' => $p->dibuat_oleh_pengguna_id]);
+                        'catatan' => $catatanAudit, 'dibuat_oleh_pengguna_id' => $p->dibuat_oleh_pengguna_id]);
                 }
                 $this->sinkronkan($absensi, $p->dibuat_oleh_pengguna_id);
             }
@@ -136,7 +166,10 @@ class PenugasanPresensiSiswaService
         foreach (AbsensiSiswa::where('penugasan_presensi_id', $p->id)->lockForUpdate()->get() as $a) {
             $snapshot = $a->sebelum_penugasan ?? [];
             $asli = $snapshot;
-            unset($asli['dibuat_penugasan']);
+            unset($asli['dibuat_penugasan'], $asli['koreksi_penugasan']);
+            if (isset($snapshot['koreksi_penugasan']['presensi_sebelum'])) {
+                $asli = $snapshot['koreksi_penugasan']['presensi_sebelum'] + $asli;
+            }
             if (($snapshot['dibuat_penugasan'] ?? false) && ! $a->jam_masuk && ! $a->jam_pulang
                 && ! $a->logScanAbsensi()->where('berhasil', true)->exists()) {
                 // This row only represented the now-cancelled assignment, with no attendance evidence.
@@ -174,17 +207,25 @@ class PenugasanPresensiSiswaService
         $layanan = app(NotifikasiPenggunaService::class);
         foreach ($p->anggotaKelas as $a) {
             $identitas = $a->siswa?->nama_lengkap.' ('.($a->kelas?->nama ?: '-').')';
+            $koreksi = $p->aktif ? AbsensiSiswa::where('penugasan_presensi_id', $p->id)->where('anggota_kelas_id', $a->id)->orderBy('tanggal')
+                ->get(['tanggal', 'sebelum_penugasan'])->filter(fn ($item) => isset($item->sebelum_penugasan['koreksi_penugasan'])) : collect();
+            $rincianKoreksi = $koreksi->map(fn ($item) => ucfirst($item->sebelum_penugasan['koreksi_penugasan']['presensi_sebelum']['status_kehadiran'])
+                .' ('.$item->tanggal->format('d/m/Y').')')->join(', ');
             $penerima = $layanan->penggunaUntukSiswa($a->siswa_id)->merge($layanan->penggunaOrangTuaUntukSiswa($a->siswa_id))->unique('id');
             foreach ($penerima as $akun) {
                 $orangTua = $akun->akunOrangTua();
-                $layanan->kirim($akun, 'informasi', $p->aktif ? 'Penugasan sekolah tercatat' : 'Penugasan sekolah dibatalkan',
-                    ($orangTua ? 'Anak Anda, '.$identitas : 'Anda, '.$identitas).' '.($p->aktif ? 'tercatat Hadir — Tugas sekolah' : 'memiliki pembatalan penugasan sekolah')
+                $subjek = $orangTua ? 'Anak Anda, '.$identitas : 'Anda, '.$identitas;
+                $awal = $koreksi->isNotEmpty() ? $subjek.' yang sebelumnya tercatat '.$rincianKoreksi.' telah dikoreksi menjadi Hadir — Tugas sekolah'
+                    : $subjek.' '.($p->aktif ? 'tercatat Hadir — Tugas sekolah' : 'memiliki pembatalan penugasan sekolah');
+                $layanan->kirim($akun, 'informasi', $koreksi->isNotEmpty() ? 'Koreksi kehadiran: tugas sekolah' : ($p->aktif ? 'Penugasan sekolah tercatat' : 'Penugasan sekolah dibatalkan'),
+                    $awal
                     .' pada '.$p->tanggal_mulai->format('d/m/Y').' s.d. '.$p->tanggal_selesai->format('d/m/Y').'. '.$p->alasan.($p->aktif ? '' : ' Alasan pembatalan: '.$p->alasan_pembatalan)
                     .($p->aktif ? '. Tidak dikenai sanksi keterlambatan atau tidak scan kartu.' : '. Presensi kembali mengikuti catatan dan aturan yang berlaku.'),
                     route($orangTua ? 'presensi-anak.index' : 'notifikasi.index', ['siswa_id' => $a->siswa_id, 'bulan' => $p->tanggal_mulai->format('Y-m')]),
                     'presensi-penugasan:'.$p->id.':'.$a->siswa_id.':'.($p->aktif ? 'aktif' : 'batal'),
                     ['siswa_id' => $a->siswa_id, 'penugasan_presensi_id' => $p->id, 'tanggal_mulai' => $p->tanggal_mulai->toDateString(),
-                        'tanggal_selesai' => $p->tanggal_selesai->toDateString(), 'status_penugasan' => $p->aktif ? 'aktif' : 'batal']);
+                        'tanggal_selesai' => $p->tanggal_selesai->toDateString(), 'status_penugasan' => $p->aktif ? 'aktif' : 'batal',
+                        'koreksi_kehadiran' => $koreksi->isNotEmpty()]);
             }
         }
     }

@@ -31,9 +31,14 @@ ke semua guru/wali kelas). Tidak ada perubahan aplikasi Flutter atau AAB.
   aturan normal.
 - Poin presensi otomatis/legacy yang telanjur keliru disinkronkan, dengan
   transaksi koreksi. Poin pelanggaran lain tidak menjadi sasaran penugasan ini.
-- Catatan Sakit/Izin yang sudah ada harus diperiksa sebelum penetapan. Selama
-  tugas aktif, perubahan menjadi Sakit/Izin/Alfa memerlukan pembatalan tugas
-  terlebih dahulu. Koreksi jam aktual tetap tersedia.
+- Catatan Sakit/Izin pada peserta dan hari penugasan ikut dikoreksi menjadi
+  Hadir — Tugas sekolah. Pratinjau menampilkan jumlah serta rincian siswa,
+  kelas, tanggal, status lama, catatan, dan pencatat sebelumnya. Penetapan
+  memakai konfirmasi pratinjau yang sudah ada; tidak perlu mengoreksi satu per
+  satu. Catatan lama disimpan di salinan dasar serta riwayat, sedangkan tampilan
+  aktif memakai keterangan tugas sekolah.
+- Selama tugas aktif, perubahan menjadi Sakit/Izin/Alfa memerlukan pembatalan
+  tugas terlebih dahulu. Koreksi jam aktual tetap tersedia.
 - Scan sebenarnya tetap disimpan di waktu aktual; tidak mengaktifkan kembali
   sanksi terlambat selama penugasan. Keterangan siswa/orang tua dan notifikasi
   menjelaskan penugasan, tanpa pesan sanksi kartu.
@@ -48,6 +53,9 @@ untuk tugas, tanpa bukti kehadiran, dikeluarkan dari presensi aktif sehingga
 siswa kembali mengikuti perhitungan biasa. Jika ada catatan koreksi pada baris
 tersebut, salinannya tersimpan di **Arsip catatan penugasan yang dibatalkan**.
 Daftar peserta dan alasan pembatalan tetap tersimpan.
+Untuk Sakit/Izin yang dikoreksi oleh penugasan, status dan catatan asal tetap
+dibekukan meskipun kemudian ada scan nyata; pembatalan mengembalikannya dengan
+bukti scan yang tetap tersimpan. Siswa/tanggal di luar penugasan tidak diubah.
 
 Pratinjau terikat akun, kedaluwarsa dalam 15 menit, dan diperiksa ulang saat
 diterapkan. Perubahan peserta/presensi/poin/jadwal membatalkan pratinjau yang
@@ -105,7 +113,22 @@ yang sudah tersedia. Setelah deployment, worker perlu memuat kode terbaru
 mengganti AAB. Pekerjaan ini tidak memeriksa konfigurasi server produksi atau
 mengirim push ke perangkat nyata.
 
+Jika penugasan mengoreksi Sakit/Izin, orang tua mendapat notifikasi **Koreksi
+kehadiran: tugas sekolah**, dengan status/tanggal sebelumnya, status baru,
+identitas anak, dan alasan kegiatan. Push memakai ringkasan koreksi; catatan
+Sakit/Izin lama tidak disalin ke layar kunci. Tidak ada migrasi tambahan untuk
+penyempurnaan ini karena salinan dasar dan riwayat penugasan sudah tersedia.
+
 Verifikasi lanjutan: **43 tes / 412 assertion lulus** untuk notifikasi web/API,
 nama anak, kepemilikan akun, pemetaan halaman native, pesan aktif/pembatalan,
 serta payload FCM tiruan. Log:
 `storage/framework/testing/notifikasi-penugasan-2026-11-10/verified.log`.
+
+Verifikasi koreksi Sakit/Izin: **151 tes / 1.552 assertion lulus**, mencakup
+pratinjau tanpa perubahan data, koreksi terpilih, arsip pencatat/catatan asal,
+pembatalan setelah scan nyata, tanggal di luar hari sekolah, pratinjau basi,
+pengiriman ulang, dan pesan koreksi untuk orang tua. Regresi juga mencakup
+pengecualian lama, presensi manual, poin, scanner, notifikasi web/API/FCM,
+serta evaluasi ibadah. Pratinjau diperiksa di Chrome headless pada 1365/390 px.
+Log dan gambar pemeriksaan:
+`storage/framework/testing/koreksi-tugas-2026-11-10/`.

@@ -8,6 +8,22 @@ use Tests\TestCase;
 
 class IsiPushNotifikasiTest extends TestCase
 {
+    public function test_push_koreksi_kehadiran_tidak_memuat_catatan_sakit_izin_lama(): void
+    {
+        foreach (['/presensi-anak', '/notifikasi'] as $tautan) {
+            $n = new NotifikasiPengguna(['tautan' => $tautan, 'kunci_unik' => 'presensi-penugasan:1:12:aktif',
+                'pesan' => 'Sakit: catatan medis privat siswa', 'data_tambahan' => ['koreksi_kehadiran' => true,
+                    'tanggal_mulai' => '2026-11-10', 'tanggal_selesai' => '2026-11-10']]);
+            $push = app(IsiPushNotifikasiService::class)->untuk($n);
+            $this->assertSame('Koreksi kehadiran: tugas sekolah', $push['title']);
+            $this->assertStringContainsString('dikoreksi menjadi Hadir — Tugas sekolah pada 10/11/2026', $push['body']);
+            $this->assertStringNotContainsString('Sakit', $push['body']);
+            $this->assertStringNotContainsString('medis', $push['body']);
+            $n->kunci_unik = 'presensi-penugasan:1:12:batal';
+            $this->assertSame('Penugasan sekolah dibatalkan', app(IsiPushNotifikasiService::class)->untuk($n)['title']);
+        }
+    }
+
     public function test_push_penugasan_menyebut_tugas_dan_tanggal_tanpa_menyalin_catatan_bebas(): void
     {
         foreach (['aktif', 'batal'] as $status) {

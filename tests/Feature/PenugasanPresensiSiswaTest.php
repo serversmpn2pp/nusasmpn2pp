@@ -12,6 +12,7 @@ use App\Models\PengaturanAbsensi;
 use App\Models\PengaturanPoinKeterlambatan;
 use App\Models\PengecualianPresensiSiswa;
 use App\Models\Pengguna;
+use App\Models\RiwayatPerubahanAbsensiSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Models\TransaksiPoinSiswa;
@@ -167,15 +168,13 @@ class PenugasanPresensiSiswaTest extends TestCase
         $this->assertStringContainsString('Tambahan keterangan kegiatan resmi.', $pivot->riwayat_pembatalan);
     }
 
-    public function test_validasi_peserta_tahun_sakit_izin_dan_hak_akses(): void
+    public function test_validasi_peserta_tahun_dan_hak_akses(): void
     {
         $d = $this->data();
         $this->preview($d, ['anggota_kelas_ids' => []])->assertSessionHasErrors('anggota_kelas_ids');
         $this->preview($d, ['anggota_kelas_ids' => [999999]])->assertSessionHasErrors('anggota_kelas_ids');
         $tahun = TahunPelajaran::create(['nama' => '2027/2028', 'tanggal_mulai' => '2027-07-01', 'tanggal_selesai' => '2028-06-30']);
         $this->preview($d, ['tahun_pelajaran_id' => $tahun->id, 'tanggal_mulai' => '2027-11-10', 'tanggal_selesai' => '2027-11-10'])->assertSessionHasErrors('anggota_kelas_ids');
-        app(KoreksiPresensiSiswaService::class)->koreksi($d['admin'], $d['anggota'][0], ['tanggal' => '2026-11-10', 'status_kehadiran' => 'sakit', 'catatan' => 'Sakit dikonfirmasi orang tua.']);
-        $this->preview($d)->assertSessionHasErrors('anggota_kelas_ids');
         $akun = Pengguna::create(['nama' => 'Siswa', 'username' => 'penugasan.siswa', 'siswa_id' => $d['anggota'][0]->siswa_id, 'kata_sandi' => 'Tes123', 'aktif' => true, 'wajib_ganti_kata_sandi' => false]);
         $this->actingAs($akun)->get(route('pengecualian-presensi.index'))->assertForbidden();
     }
@@ -183,13 +182,115 @@ class PenugasanPresensiSiswaTest extends TestCase
     public function test_rentang_penugasan_mengikuti_hari_sekolah_dan_laporan_tidak_menghitung_hari_mendatang(): void
     {
         $d = $this->data();
-        $this->simpan($this->preview($d, ['tanggal_selesai' => '2026-11-17'])->assertOk()->viewData('token'));
-        $this->assertDatabaseCount('absensi_siswa', 4);
+        app(KoreksiPresensiSiswaService::class)->koreksi($d['admin'], $d['anggota'][0], ['tanggal' => '2026-11-15', 'status_kehadiran' => 'sakit', 'catatan' => 'Catatan di luar hari presensi aktif.']);
+        $this->simpan($this->preview($d, ['tanggal_selesai' => '2026-11-17'])->assertOk()
+            ->assertViewHas('dampak', fn ($r) => $r['sakit_dikoreksi'] === 0 && $r['izin_dikoreksi'] === 0)->viewData('token'));
+        $this->assertDatabaseCount('absensi_siswa', 5);
         $this->assertSame(2, AbsensiSiswa::whereDate('tanggal', '2026-11-17')->count());
         $this->get(route('laporan-absensi.index', ['periode' => 'bulanan', 'bulan' => '2026-11', 'tahun_pelajaran_id' => $d['tahun']->id]))
             ->assertOk()->assertViewHas('ringkasan', fn ($r) => $r['hadir'] === 2);
         $this->batalkan();
-        $this->assertDatabaseCount('absensi_siswa', 0);
+        $this->assertDatabaseCount('absensi_siswa', 1);
+        $this->assertSame('sakit', AbsensiSiswa::whereDate('tanggal', '2026-11-15')->firstOrFail()->status_kehadiran);
+    }
+
+    public function test_pratinjau_dan_penetapan_mengoreksi_sakit_izin_dengan_riwayat_dan_bisa_dipulihkan(): void
+    {
+        $d = $this->data();
+        $koreksi = app(KoreksiPresensiSiswaService::class);
+        foreach ([0 => 'sakit', 1 => 'izin', 2 => 'sakit'] as $i => $status) {
+            $koreksi->koreksi($d['admin'], $d['anggota'][$i], ['tanggal' => '2026-11-10', 'status_kehadiran' => $status,
+                'catatan' => 'Catatan lama privat '.$status.' peserta '.$i]);
+        }
+        $koreksi->koreksi($d['admin'], $d['anggota'][0], ['tanggal' => '2026-11-03', 'status_kehadiran' => 'izin', 'catatan' => 'Izin di luar tanggal penugasan.']);
+        $lama = AbsensiSiswa::whereDate('tanggal', '2026-11-10')->orderBy('anggota_kelas_id')->get()->keyBy('anggota_kelas_id');
+        $riwayatAwal = RiwayatPerubahanAbsensiSiswa::pluck('id')->all();
+        $pencatatAwal = $d['admin']->id;
+        $d['admin'] = Pengguna::create(['nama' => 'Admin Penetapan Tugas', 'username' => 'admin.koreksi.tugas', 'kata_sandi' => 'Tes123',
+            'peran' => 'administrator', 'aktif' => true, 'wajib_ganti_kata_sandi' => false]);
+        $preview = $this->preview($d)->assertOk()->assertViewHas('dampak', fn ($r) => $r['sakit_dikoreksi'] === 1 && $r['izin_dikoreksi'] === 1)
+            ->assertViewHas('perubahan_status', fn ($r) => $r->count() === 2)
+            ->assertSeeText('Koreksi Sakit/Izin menjadi tugas sekolah');
+        file_put_contents(storage_path('framework/testing/penugasan-2026-11-10/preview-correction.html'), $preview->getContent());
+        $this->assertSame('sakit', $lama[$d['anggota'][0]->id]->fresh()->status_kehadiran);
+        $this->simpan($preview->viewData('token'));
+        $this->simpan($preview->viewData('token'));
+        foreach ([0 => 'sakit', 1 => 'izin'] as $i => $status) {
+            $a = $lama[$d['anggota'][$i]->id]->fresh();
+            $this->assertSame('hadir', $a->status_kehadiran);
+            $this->assertSame('tugas_sekolah', $a->status_masuk);
+            $this->assertSame(0, $a->menit_terlambat);
+            $this->assertSame(0, $a->sanksi_manual_menit);
+            $this->assertSame(0, $a->poin_keterlambatan_terhitung);
+            $this->assertNull($a->jam_masuk);
+            $this->assertStringNotContainsString('Catatan lama privat', $a->catatanKehadiran());
+            $arsip = $a->sebelum_penugasan['koreksi_penugasan'];
+            $this->assertSame($status, $arsip['presensi_sebelum']['status_kehadiran']);
+            $this->assertSame('Catatan lama privat '.$status.' peserta '.$i, $arsip['presensi_sebelum']['catatan']);
+            $this->assertSame($pencatatAwal, $arsip['pencatat_sebelum_id']);
+            $this->assertNotEmpty($arsip['waktu_sebelum']);
+            $this->assertSame($d['admin']->id, $arsip['dikoreksi_oleh']);
+            $audit = RiwayatPerubahanAbsensiSiswa::where('absensi_siswa_id', $a->id)->where('sumber', 'penugasan_sekolah')->firstOrFail();
+            $this->assertSame($status, $audit->status_sebelum);
+            $this->assertStringContainsString('Catatan lama privat', $audit->catatan);
+        }
+        $this->assertSame('sakit', $lama[$d['anggota'][2]->id]->fresh()->status_kehadiran);
+        $this->assertSame('izin', AbsensiSiswa::whereDate('tanggal', '2026-11-03')->firstOrFail()->status_kehadiran);
+        $this->assertSame(count($riwayatAwal), RiwayatPerubahanAbsensiSiswa::whereIn('id', $riwayatAwal)->count());
+        $hasil = app(ProsesScanAbsensi::class)->proses($d['anggota'][0]->siswa->nisn, now(), 'masuk');
+        $this->assertTrue($hasil['berhasil']);
+        $this->batalkan();
+        foreach ([0 => 'sakit', 1 => 'izin'] as $i => $status) {
+            $a = $lama[$d['anggota'][$i]->id]->fresh();
+            $this->assertSame($status, $a->status_kehadiran);
+            $this->assertSame('Catatan lama privat '.$status.' peserta '.$i, $a->catatan);
+            $this->assertNull($a->penugasan_presensi_id);
+            $this->assertSame(0, $a->menit_terlambat);
+        }
+        $this->assertSame('07:15:00', $lama[$d['anggota'][0]->id]->fresh()->jam_masuk);
+    }
+
+    public function test_koreksi_sakit_izin_memberi_notifikasi_jelas_kepada_orang_tua(): void
+    {
+        $d = $this->data();
+        $akun = app(AkunOrangTuaService::class)->buat($d['anggota'][0]->siswa);
+        $akun->update(['wajib_ganti_kata_sandi' => false]);
+        app(KoreksiPresensiSiswaService::class)->koreksi($d['admin'], $d['anggota'][0], ['tanggal' => '2026-11-10',
+            'status_kehadiran' => 'sakit', 'catatan' => 'Catatan medis lama privat.']);
+        $token = $this->preview($d)->assertOk()->viewData('token');
+        $this->simpan($token);
+        $this->simpan($token);
+        $items = NotifikasiPengguna::where('pengguna_id', $akun->id)->where('kunci_unik', 'like', 'presensi-penugasan:%')->get();
+        $this->assertCount(1, $items);
+        $n = $items->first();
+        $this->assertSame('Koreksi kehadiran: tugas sekolah', $n->judul);
+        $this->assertStringContainsString('Sakit (10/11/2026)', $n->pesan);
+        $this->assertStringContainsString('dikoreksi menjadi Hadir — Tugas sekolah', $n->pesan);
+        $this->assertStringContainsString('Lomba resmi sekolah', $n->pesan);
+        $this->assertStringNotContainsString('Catatan medis lama', $n->pesan);
+        $push = app(IsiPushNotifikasiService::class)->untuk($n);
+        $this->assertSame('Koreksi kehadiran: tugas sekolah', $push['title']);
+        $this->assertStringContainsString('dikoreksi', $push['body']);
+        $this->assertStringNotContainsString('Sakit', $push['body']);
+        $this->assertStringNotContainsString('medis', $push['body']);
+        $this->actingAs($akun)->get(route('presensi-anak.index', ['bulan' => '2026-11']))->assertOk()
+            ->assertSeeText('Lomba resmi sekolah')->assertDontSeeText('Catatan medis lama');
+    }
+
+    public function test_perubahan_sakit_izin_setelah_pratinjau_memerlukan_pratinjau_baru(): void
+    {
+        $d = $this->data();
+        $layanan = app(KoreksiPresensiSiswaService::class);
+        $layanan->koreksi($d['admin'], $d['anggota'][0], ['tanggal' => '2026-11-10', 'status_kehadiran' => 'sakit', 'catatan' => 'Catatan sakit awal.']);
+        $token = $this->preview($d)->assertOk()->viewData('token');
+        $layanan->koreksi($d['admin'], $d['anggota'][0], ['tanggal' => '2026-11-10', 'status_kehadiran' => 'izin', 'catatan' => 'Catatan izin baru.']);
+        $this->post(route('pengecualian-presensi.store'), ['token' => $token, 'konfirmasi' => 1])->assertSessionHasErrors('token');
+        $this->assertDatabaseCount('pengecualian_presensi_siswa', 0);
+        $this->simpan($this->preview($d)->assertOk()->viewData('token'));
+        $this->batalkan();
+        $a = AbsensiSiswa::where('anggota_kelas_id', $d['anggota'][0]->id)->firstOrFail();
+        $this->assertSame('izin', $a->status_kehadiran);
+        $this->assertSame('Catatan izin baru.', $a->catatan);
     }
 
     public function test_pratinjau_basi_ditolak_dan_kelompok_berbeda_tidak_saling_mengecualikan(): void

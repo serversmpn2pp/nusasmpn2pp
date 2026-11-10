@@ -38,7 +38,7 @@
                 <div class="field wide"><label for="exception-reason">Alasan / dasar penetapan</label><textarea class="textarea" id="exception-reason" name="alasan" rows="3" minlength="10" maxlength="1000" required placeholder="Contoh: PJJ akibat bencana asap sesuai keputusan sekolah.">{{ $nilai('alasan') }}</textarea></div>
             </div>
             <p class="exception-note" id="exception-legacy-note">Hanya alfa otomatis karena tidak scan yang dikecualikan. Catatan scan dan presensi manual tetap berlaku. Siswa tidak otomatis dianggap hadir.</p>
-            <p class="exception-note" id="exception-duty-note" hidden>Peserta dicatat Hadir — Tugas sekolah pada hari presensi aktif, tanpa mengisi jam scan fiktif dan tanpa sanksi keterlambatan/tidak membawa kartu. Catatan Sakit/Izin perlu diperiksa terlebih dahulu. Maksimal 200 siswa dan 31 hari per penetapan.</p>
+            <p class="exception-note" id="exception-duty-note" hidden>Peserta dicatat Hadir — Tugas sekolah pada hari presensi aktif, tanpa mengisi jam scan fiktif dan tanpa sanksi keterlambatan/tidak membawa kartu. Catatan Sakit/Izin pada siswa dan tanggal penugasan ikut dikoreksi; rinciannya ditampilkan di pratinjau dan riwayat lama disimpan. Maksimal 200 siswa dan 31 hari per penetapan.</p>
             <div class="exception-actions"><button class="button button-primary" type="submit" @disabled($tahun->isEmpty())><img src="{{ asset('images/icons/eye.svg') }}" width="18" height="18" alt="" aria-hidden="true"> Pratinjau dampak</button></div>
         </form>
     </section>
@@ -64,6 +64,7 @@
                     <p class="exception-reason">{{ $p->alasan }}</p>
                     <p class="exception-note">Ditetapkan {{ $p->created_at->format('d-m-Y H:i') }} oleh {{ $p->pembuat?->nama ?: 'Akun tidak tersedia' }}. Saat pratinjau: {{ $p->dampak_pratinjau['siswa_terdampak'] }} siswa{{ $p->jenis === 'tugas_sekolah' ? ' terpilih.' : ', '.$p->dampak_pratinjau['alfa_otomatis_dibatalkan'].' alfa otomatis.' }}</p>
                     @if ($p->jenis === 'tugas_sekolah')<p class="exception-note">{{ $p->dampak_pratinjau['hadir_penugasan'] ?? 0 }} catatan hadir penugasan; {{ $p->dampak_pratinjau['poin_dibatalkan'] ?? 0 }} poin presensi dikecualikan saat penetapan.</p>@endif
+                    @if (($p->dampak_pratinjau['sakit_dikoreksi'] ?? 0) + ($p->dampak_pratinjau['izin_dikoreksi'] ?? 0) > 0)<p class="exception-note">Dikoreksi: {{ $p->dampak_pratinjau['sakit_dikoreksi'] ?? 0 }} catatan Sakit dan {{ $p->dampak_pratinjau['izin_dikoreksi'] ?? 0 }} catatan Izin menjadi Hadir — Tugas sekolah.</p>@endif
                     @if (! $p->aktif)
                         <p class="exception-note">Dibatalkan {{ $p->dibatalkan_pada?->format('d-m-Y H:i') }} oleh {{ $p->pembatal?->nama ?: 'Akun tidak tersedia' }}.</p><p class="exception-reason">Alasan pembatalan: {{ $p->alasan_pembatalan }}</p>
                     @else

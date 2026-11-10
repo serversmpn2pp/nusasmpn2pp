@@ -40,6 +40,10 @@ class IsiPushNotifikasiService
             $mulai = $tanggal($data['tanggal_mulai'] ?? null);
             $selesai = $tanggal($data['tanggal_selesai'] ?? null);
             $rentang = $mulai && $selesai ? ' pada '.$mulai.($mulai === $selesai ? '' : ' s.d. '.$selesai) : '';
+            if ($penugasan[1] === 'aktif' && ($data['koreksi_kehadiran'] ?? false) === true) {
+                return $this->pesan('Koreksi kehadiran: tugas sekolah', 'Kehadiran '.($orangTua ? 'anak Anda' : 'Anda')
+                    .' dikoreksi menjadi Hadir — Tugas sekolah'.$rentang.'. Buka NUSA untuk melihat penjelasannya.');
+            }
 
             return $penugasan[1] === 'aktif'
                 ? $this->pesan($orangTua ? 'Penugasan sekolah anak Anda' : 'Penugasan sekolah Anda', $subjek.' mendapat tugas sekolah'.$rentang.'. Buka NUSA untuk melihat kegiatan dan alasannya.')

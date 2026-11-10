@@ -29,10 +29,14 @@
     .exception-table th, .exception-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: .9rem; overflow-wrap: anywhere; }
     .exception-table th { color: var(--muted); background: #f1f5f8; }
     .exception-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    .exception-table[data-duty-correction-table] td:last-child { text-align: left; }
+    .exception-correction-scroll { overflow-x: auto; margin-top: 14px; }
+    .exception-correction-scroll-note { display: none; }
     @media (max-width: 620px) {
         .exception-grid { grid-template-columns: minmax(0, 1fr); }
         .exception-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .exception-item { padding: 16px; }
         .exception-actions .button { width: 100%; }
+        .exception-correction-scroll-note { display: block; }
     }
 </style>
