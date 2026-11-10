@@ -120,7 +120,7 @@ class KoreksiPresensiSiswaService
         $akses = $this->evaluasiAkses($pengguna, $anggotaKelas, $tanggal, $absensiSaatIni);
         abort_unless($akses['dapat'], 403, $akses['alasan']);
 
-        $this->pastikanDataValid($data, $akses['terbatas_hari_ini']);
+        $this->pastikanDataValid($data, $akses['terbatas_hari_ini'], (bool) $absensiSaatIni?->penugasan_presensi_id);
         $ketat = app(PengaturanPoinKeterlambatanService::class)->langsungPada($anggotaKelas->tahun_pelajaran_id, $tanggal);
         $adaPoin = LaporanPembinaanSiswa::where('siswa_id', $anggotaKelas->siswa_id)
             ->where('tahun_pelajaran_id', $anggotaKelas->tahun_pelajaran_id)->whereDate('tanggal_kejadian', $tanggal)
@@ -163,7 +163,7 @@ class KoreksiPresensiSiswaService
             $catatan = filled($data['catatan'] ?? null) ? trim($data['catatan']) : null;
             $adaScanMasuk = $absensi->sumber === 'scan' || ($absensi->exists && $absensi->logScanAbsensi()
                 ->where('jenis_scan', 'masuk')->where('berhasil', true)->exists());
-            $manualTanpaScan = $status === 'hadir' && (! $adaScanMasuk || $absensi->memilikiSanksiManual());
+            $manualTanpaScan = ! $absensi->penugasan_presensi_id && $status === 'hadir' && (! $adaScanMasuk || $absensi->memilikiSanksiManual());
             if ($manualTanpaScan) {
                 $menitTerlambat = max(AbsensiSiswa::SANKSI_MANUAL_MENIT, $pengaturan
                     ? app(HitungKeterlambatanSiswaService::class)->menit($jamMasuk, $pengaturan->jam_masuk, true) : 0);
@@ -220,13 +220,13 @@ class KoreksiPresensiSiswaService
         return $absensi->refresh();
     }
 
-    private function pastikanDataValid(array $data, bool $catatanWajib): void
+    private function pastikanDataValid(array $data, bool $catatanWajib, bool $penugasan = false): void
     {
         if ($catatanWajib && blank($data['catatan'] ?? null)) {
             throw ValidationException::withMessages(['catatan' => 'Catatan koreksi wajib diisi oleh Guru PL.']);
         }
 
-        if ($data['status_kehadiran'] === 'hadir' && blank($data['jam_masuk'] ?? null)) {
+        if (! $penugasan && $data['status_kehadiran'] === 'hadir' && blank($data['jam_masuk'] ?? null)) {
             throw ValidationException::withMessages(['jam_masuk' => 'Jam masuk wajib diisi jika status kehadiran adalah hadir.']);
         }
 

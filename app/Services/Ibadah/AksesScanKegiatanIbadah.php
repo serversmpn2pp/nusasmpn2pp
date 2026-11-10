@@ -12,6 +12,8 @@ use Carbon\CarbonInterface;
 
 class AksesScanKegiatanIbadah
 {
+    public const PESAN_AKSES_SCAN = 'Scan ibadah tersedia untuk administrator, guru PAI, Guru PL, atau guru piket yang bertugas hari ini.';
+
     public function dapatMemindai(
         ?Pengguna $pengguna,
         ?TahunPelajaran $tahunPelajaran = null,
@@ -19,6 +21,10 @@ class AksesScanKegiatanIbadah
     ): bool {
         if (! $pengguna || ! $pengguna->aktif || ! $pengguna->memilikiIzin('ibadah.scan')) {
             return false;
+        }
+
+        if ($pengguna->administrator()) {
+            return true;
         }
 
         if (! $pengguna->pegawai_id) {
@@ -36,6 +42,10 @@ class AksesScanKegiatanIbadah
 
         if (! $tahunPelajaran) {
             return false;
+        }
+
+        if ($this->guruPendidikanAgamaIslam($pengguna, $tahunPelajaran)) {
+            return true;
         }
 
         $waktu = $waktu ? Carbon::instance($waktu) : now();

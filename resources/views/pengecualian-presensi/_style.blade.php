@@ -1,6 +1,9 @@
 <style>
     .exception-section { margin: 0 0 28px; padding-top: 20px; border-top: 1px solid var(--line); }
     .exception-section h2 { margin: 0 0 18px; font-size: 1.05rem; }
+    .exception-student-row[hidden] { display: none !important; }
+    #exception-students[hidden], #exception-class-field[hidden], #exception-duty-note[hidden], #exception-legacy-note[hidden] { display:none !important; }
+    .exception-student-row input { width:18px; height:18px; flex-shrink:0; }
     .exception-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
     .exception-grid .wide { grid-column: 1 / -1; }
     .exception-note { color: var(--muted); font-size: .86rem; line-height: 1.6; margin: 8px 0 0; overflow-wrap: anywhere; }

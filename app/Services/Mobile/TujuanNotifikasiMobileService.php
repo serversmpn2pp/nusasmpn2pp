@@ -17,7 +17,8 @@ class TujuanNotifikasiMobileService
         if ($path === '/presensi-anak') {
             $path = '/kehadiran-anak-saya';
         } elseif ($path === '/notifikasi' && (str_starts_with((string) $notifikasi->kunci_unik, 'presensi-masuk-siswa:')
-            || str_starts_with((string) $notifikasi->kunci_unik, 'presensi-manual-siswa:'))) {
+            || str_starts_with((string) $notifikasi->kunci_unik, 'presensi-manual-siswa:')
+            || str_starts_with((string) $notifikasi->kunci_unik, 'presensi-penugasan:'))) {
             $path = '/kehadiran-saya';
         }
 

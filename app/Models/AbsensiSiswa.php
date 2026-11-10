@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use App\Services\Absensi\PenugasanPresensiSiswaService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AbsensiSiswa extends Model
 {
+    protected static function booted(): void
+    {
+        static::saving(fn (self $absensi) => app(PenugasanPresensiSiswaService::class)->lindungi($absensi));
+    }
+
     public const ALASAN_HADIR_MANUAL = [
         'tidak_membawa_kartu' => 'Tidak membawa kartu pelajar',
         'kartu_hilang' => 'Kartu pelajar hilang',
@@ -38,6 +44,8 @@ class AbsensiSiswa extends Model
         'alasan_hadir_manual',
         'sanksi_manual_menit',
         'aturan_poin_hadir_manual',
+        'penugasan_presensi_id',
+        'sebelum_penugasan',
     ];
 
     protected $casts = [
@@ -48,6 +56,7 @@ class AbsensiSiswa extends Model
         'menit_pulang_cepat' => 'integer',
         'sanksi_manual_menit' => 'integer',
         'aturan_poin_hadir_manual' => 'array',
+        'sebelum_penugasan' => 'array',
     ];
 
     public function memilikiSanksiManual(): bool
@@ -82,7 +91,18 @@ class AbsensiSiswa extends Model
 
     public function catatanKehadiran(): ?string
     {
-        return collect([$this->catatan, $this->keteranganSanksiManual()])->filter()->join("\n") ?: null;
+        return collect([$this->catatan, $this->keteranganSanksiManual(), $this->keteranganPenugasan()])->filter()->join("\n") ?: null;
+    }
+
+    public function penugasanPresensi(): BelongsTo
+    {
+        return $this->belongsTo(PengecualianPresensiSiswa::class, 'penugasan_presensi_id');
+    }
+
+    public function keteranganPenugasan(): ?string
+    {
+        return $this->penugasan_presensi_id && $this->penugasanPresensi?->aktif
+            ? $this->penugasanPresensi->label().'. Dikecualikan dari sanksi keterlambatan dan kewajiban scan kartu.' : null;
     }
 
     public function tahunPelajaran(): BelongsTo

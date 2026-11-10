@@ -17,7 +17,7 @@ class EvaluasiIbadahMingguan
     public function hitung(TahunPelajaran $tahun, KegiatanIbadah $kegiatan, Collection $kelas, CarbonImmutable $awal, CarbonImmutable $akhir): array
     {
         $jadwal = $kegiatan->jadwal()->where('tahun_pelajaran_id', $tahun->id)->where('aktif', true)->get()->keyBy('hari');
-        $pengecualian = PengecualianPresensiSiswa::query()->where('tahun_pelajaran_id', $tahun->id)->where('aktif', true)
+        $pengecualian = PengecualianPresensiSiswa::query()->whereNull('cakupan')->where('tahun_pelajaran_id', $tahun->id)->where('aktif', true)
             ->where('tanggal_mulai', '<', $akhir->addDay()->toDateString())->where('tanggal_selesai', '>=', $awal->toDateString())
             ->where(fn ($q) => $q->whereNull('kelas_id')->orWhereIn('kelas_id', $kelas->keys()))
             ->get(['kelas_id', 'tanggal_mulai', 'tanggal_selesai']);
@@ -49,7 +49,7 @@ class EvaluasiIbadahMingguan
         $catatanSiswaPadaHariItu = fn ($q) => $q->selectRaw('1')
             ->whereColumn($q->getModel()->qualifyColumn('siswa_id'), 'absensi_siswa.siswa_id')
             ->whereColumn($q->getModel()->qualifyColumn('tanggal'), 'absensi_siswa.tanggal')->getQuery();
-        $absensi = AbsensiSiswa::query()->where('tahun_pelajaran_id', $tahun->id)
+        $absensi = AbsensiSiswa::query()->whereNull('penugasan_presensi_id')->where('tahun_pelajaran_id', $tahun->id)
             ->where('status_kehadiran', 'hadir')->whereIn('kelas_id', $kelas->keys())
             ->where('tanggal', '>=', $tanggalPertama)->where('tanggal', '<', $tanggalSesudah)
             ->whereHas('siswa', fn ($q) => $q->where('aktif', true)->when($kegiatan->khususLakiLaki(), fn ($q) => $q->where('jenis_kelamin', 'L')))

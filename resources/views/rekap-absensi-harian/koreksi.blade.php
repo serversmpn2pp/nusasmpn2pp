@@ -14,8 +14,8 @@
             ->join('');
         $statusSaatIni = old('status_kehadiran', $absensi?->status_kehadiran ?? 'alfa');
         $jadwalPulang = $pengaturanAbsensi?->jadwalPulangUntuk($anggotaKelas->siswa?->jenis_kelamin);
-        $tanpaScan = ! $absensi || $absensi->memilikiSanksiManual()
-            || ($absensi->sumber !== 'scan' && ! $absensi->logScanAbsensi()->where('jenis_scan', 'masuk')->where('berhasil', true)->exists());
+        $tanpaScan = !$absensi?->penugasan_presensi_id && (! $absensi || $absensi->memilikiSanksiManual()
+            || ($absensi->sumber !== 'scan' && ! $absensi->logScanAbsensi()->where('jenis_scan', 'masuk')->where('berhasil', true)->exists()));
         $aturanHadirManual = app(\App\Services\Pembinaan\PengaturanPoinKeterlambatanService::class)->aturanHadirManual($anggotaKelas->tahun_pelajaran_id);
     @endphp
 
@@ -94,6 +94,7 @@
 
         <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Data koreksi</h2>
+            @if ($absensi?->penugasan_presensi_id)<p class="help-text">{{ $absensi->keteranganPenugasan() }} Jam masuk hanya diisi bila benar-benar tercatat. Batalkan penugasan terlebih dahulu jika status perlu diubah menjadi Sakit/Izin/Alfa.</p>@endif
 
             <form action="{{ route('rekap-absensi-harian.koreksi.update', $anggotaKelas) }}" method="POST" style="margin-top: 16px;">
                 @csrf
@@ -117,7 +118,7 @@
                     <div class="field">
                         <label for="jam_masuk">Jam masuk</label>
                         <input id="jam_masuk" type="time" step="1" name="jam_masuk" value="{{ old('jam_masuk', $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 8) : '') }}" class="input @error('jam_masuk') is-invalid @enderror">
-                        <p class="help-text">Wajib diisi jika status hadir.</p>
+                        <p class="help-text">{{ $absensi?->penugasan_presensi_id ? 'Isi hanya jika ada jam masuk sebenarnya.' : 'Wajib diisi jika status hadir.' }}</p>
                         @error('jam_masuk')
                             <p class="error-text">{{ $message }}</p>
                         @enderror

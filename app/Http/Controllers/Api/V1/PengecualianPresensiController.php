@@ -26,7 +26,7 @@ class PengecualianPresensiController extends Controller
             'halaman' => ['nullable', 'integer', 'min:1'],
             'per_halaman' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
-        $q = PengecualianPresensiSiswa::query()
+        $q = PengecualianPresensiSiswa::query()->where('jenis', '!=', 'tugas_sekolah')
             ->when($filter['tahun_pelajaran_id'] ?? null, fn ($q, $id) => $q->where('tahun_pelajaran_id', $id))
             ->when($filter['kelas_id'] ?? null, fn ($q, $id) => $q->where(fn ($q) => $q->where('kelas_id', $id)->orWhereNull('kelas_id')))
             ->when(($filter['status'] ?? 'semua') !== 'semua', fn ($q) => $q->where('aktif', $filter['status'] === 'aktif'))
@@ -63,6 +63,7 @@ class PengecualianPresensiController extends Controller
     public function show(Request $request, PengecualianPresensiSiswa $pengecualian): JsonResponse
     {
         $this->layanan->pastikanAkses($request->user());
+        abort_if($pengecualian->jenis === 'tugas_sekolah', 422, 'Penugasan siswa tertentu sementara dikelola melalui NUSA web.');
 
         return $this->json($this->record($pengecualian));
     }
@@ -107,6 +108,7 @@ class PengecualianPresensiController extends Controller
     public function batalkan(Request $request, PengecualianPresensiSiswa $pengecualian): JsonResponse
     {
         $this->layanan->pastikanAkses($request->user());
+        abort_if($pengecualian->jenis === 'tugas_sekolah', 422, 'Penugasan siswa tertentu sementara dikelola melalui NUSA web.');
         $data = $request->validate(['alasan_pembatalan' => ['required', 'string', 'min:10', 'max:1000'],
             'konfirmasi' => ['required', 'accepted']]);
         $this->layanan->batalkan($request->user(), $pengecualian, $data['alasan_pembatalan']);

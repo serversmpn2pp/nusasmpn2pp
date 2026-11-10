@@ -230,6 +230,7 @@ class PoinPresensiOtomatisService
     public function sinkronkanPengecualian(PengecualianPresensiSiswa $pengecualian, ?int $penggunaId): void
     {
         LaporanPembinaanSiswa::whereNotNull('kunci_presensi_otomatis')->where('tahun_pelajaran_id', $pengecualian->tahun_pelajaran_id)
+            ->when($pengecualian->cakupan === 'siswa', fn ($q) => $q->whereIn('anggota_kelas_id', $pengecualian->anggotaKelas->pluck('id')))
             ->when($pengecualian->kelas_id, fn ($q) => $q->where('kelas_id', $pengecualian->kelas_id))
             ->whereBetween('tanggal_kejadian', [$pengecualian->tanggal_mulai->toDateString(), $pengecualian->tanggal_selesai->toDateString()])
             ->orderBy('id')->chunkById(200, function ($laporan) use ($penggunaId) {

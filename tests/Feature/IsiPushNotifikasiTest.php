@@ -8,6 +8,27 @@ use Tests\TestCase;
 
 class IsiPushNotifikasiTest extends TestCase
 {
+    public function test_push_penugasan_menyebut_tugas_dan_tanggal_tanpa_menyalin_catatan_bebas(): void
+    {
+        foreach (['aktif', 'batal'] as $status) {
+            foreach (['/presensi-anak?siswa_id=12&bulan=2026-11', '/notifikasi?siswa_id=12&bulan=2026-11'] as $tautan) {
+                $n = new NotifikasiPengguna(['tautan' => $tautan, 'kunci_unik' => 'presensi-penugasan:1:12:'.$status,
+                    'judul' => 'Nama siswa privat', 'pesan' => 'Alasan bebas rahasia kegiatan siswa',
+                    'data_tambahan' => ['tanggal_mulai' => '2026-11-10', 'tanggal_selesai' => '2026-11-11']]);
+                $push = app(IsiPushNotifikasiService::class)->untuk($n);
+                $this->assertStringContainsString('Penugasan sekolah', $push['title']);
+                $this->assertStringContainsString('10/11/2026 s.d. 11/11/2026', $push['body']);
+                $this->assertStringContainsString($status === 'aktif' ? 'mendapat tugas sekolah' : 'dibatalkan', $push['body']);
+                $this->assertStringNotContainsString('rahasia', $push['body']);
+                $this->assertStringNotContainsString('Nama siswa', $push['body']);
+            }
+        }
+        $n->data_tambahan = ['tanggal_mulai' => '2026-99-99', 'tanggal_selesai' => '<script>'];
+        $push = app(IsiPushNotifikasiService::class)->untuk($n);
+        $this->assertStringNotContainsString('99', $push['body']);
+        $this->assertStringNotContainsString('<script>', $push['body']);
+    }
+
     public function test_pesan_rutin_nilai_siswa_orang_tua_dan_survei_memakai_teks_asli(): void
     {
         foreach ([

@@ -30,7 +30,7 @@ class ProsesScanKegiatanIbadah
         $waktuScan = $waktuScan ? Carbon::instance($waktuScan) : now();
         $tahunPelajaran = TahunPelajaran::query()->where('aktif', true)->orderByDesc('tanggal_mulai')->first();
 
-        abort_unless($this->aksesScan->dapatMemindai($petugas, $tahunPelajaran, $waktuScan), 403);
+        abort_unless($this->aksesScan->dapatMemindai($petugas, $tahunPelajaran, $waktuScan), 403, AksesScanKegiatanIbadah::PESAN_AKSES_SCAN);
 
         if (! $tahunPelajaran) {
             return $this->gagal($jadwal, $isiScan, $waktuScan, $petugas, 'tahun_pelajaran_tidak_ada', 'Tahun pelajaran aktif belum diatur.', null, null, $ipAddress, $userAgent);

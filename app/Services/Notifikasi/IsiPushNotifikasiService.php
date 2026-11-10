@@ -24,6 +24,28 @@ class IsiPushNotifikasiService
             }
         }
 
+        if (preg_match('/^presensi-penugasan:[1-9][0-9]*:[1-9][0-9]*:(aktif|batal)$/', $kunci, $penugasan)
+            && in_array($path, ['/presensi-anak', '/kehadiran-anak-saya', '/notifikasi', '/kehadiran-saya'], true)) {
+            $orangTua = in_array($path, ['/presensi-anak', '/kehadiran-anak-saya'], true);
+            $subjek = $orangTua ? 'Anak Anda' : 'Anda';
+            $data = $notifikasi->data_tambahan ?? [];
+            $tanggal = static function ($nilai): ?string {
+                if (! is_string($nilai) || ! preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', $nilai)) {
+                    return null;
+                }
+                $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $nilai);
+
+                return $d && $d->format('Y-m-d') === $nilai ? $d->format('d/m/Y') : null;
+            };
+            $mulai = $tanggal($data['tanggal_mulai'] ?? null);
+            $selesai = $tanggal($data['tanggal_selesai'] ?? null);
+            $rentang = $mulai && $selesai ? ' pada '.$mulai.($mulai === $selesai ? '' : ' s.d. '.$selesai) : '';
+
+            return $penugasan[1] === 'aktif'
+                ? $this->pesan($orangTua ? 'Penugasan sekolah anak Anda' : 'Penugasan sekolah Anda', $subjek.' mendapat tugas sekolah'.$rentang.'. Buka NUSA untuk melihat kegiatan dan alasannya.')
+                : $this->pesan('Penugasan sekolah dibatalkan', 'Penugasan sekolah '.($orangTua ? 'anak Anda' : 'Anda').$rentang.' dibatalkan. Buka NUSA untuk melihat alasannya.');
+        }
+
         if (preg_match('/^presensi-manual-(siswa|orang-tua):[1-9][0-9]*:[0-9a-f]{20}$/', $kunci, $manual)
             && in_array($path, $manual[1] === 'orang-tua' ? ['/presensi-anak', '/kehadiran-anak-saya'] : ['/notifikasi', '/kehadiran-saya'], true)) {
             $data = $notifikasi->data_tambahan ?? [];
@@ -51,6 +73,9 @@ class IsiPushNotifikasiService
             if (is_string($jam) && preg_match('/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/', $jam)
                 && is_int($menit) && $menit >= 0) {
                 $subjek = $cocok[1] === 'orang-tua' ? 'Anak Anda' : 'Anda';
+                if (($data['penugasan_sekolah'] ?? false) === true) {
+                    return $this->pesan('Kehadiran tugas sekolah tercatat', $subjek.' melakukan scan pukul '.str_replace(':', '.', $jam).' WIB dalam penugasan sekolah, tanpa sanksi keterlambatan.');
+                }
                 $status = $menit > 0 ? "terlambat {$menit} menit" : 'tepat waktu';
 
                 return $this->pesan('Presensi masuk tercatat', "{$subjek} tercatat hadir {$status} pukul ".str_replace(':', '.', $jam).' WIB.');

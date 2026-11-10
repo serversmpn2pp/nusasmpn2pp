@@ -181,7 +181,7 @@ class ScanKegiatanIbadahTest extends TestCase
         $this->assertDatabaseCount('log_scan_kegiatan_ibadah', 2);
     }
 
-    public function test_halaman_scan_hanya_dapat_diakses_guru_pl_dan_guru_yang_sedang_piket(): void
+    public function test_admin_dan_guru_pai_dapat_scan_tanpa_piket_sedangkan_guru_lain_mengikuti_jadwal(): void
     {
         Carbon::setTestNow('2026-08-10 12:00:00');
         $data = $this->dataDasar('senin');
@@ -203,18 +203,28 @@ class ScanKegiatanIbadahTest extends TestCase
         $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
         $akses = app(AksesScanKegiatanIbadah::class);
 
-        $this->assertFalse($akses->dapatMemindai($administrator, $data['tahun'], now()));
-        $this->assertFalse($akses->dapatMemindai($guruPai['akun'], $data['tahun'], now()));
+        $this->assertNull($administrator->pegawai_id);
+        $this->assertTrue($akses->dapatMemindai($administrator, $data['tahun'], now()));
+        $this->assertTrue($akses->dapatMemindai($guruPai['akun'], $data['tahun'], now()));
         $this->assertTrue($akses->dapatMemindai($guruPl['akun'], $data['tahun'], now()));
         $this->assertFalse($akses->dapatMemindai($guruPiket['akun'], $data['tahun'], now()));
 
         $this->actingAs($administrator)
             ->get(route('scan-kegiatan-ibadah.index'))
-            ->assertForbidden();
+            ->assertOk();
+        $this->get(route('beranda'))->assertOk()->assertSee(route('scan-kegiatan-ibadah.index'), false);
 
         $this->actingAs($guruPai['akun'])
             ->get(route('scan-kegiatan-ibadah.index'))
-            ->assertForbidden();
+            ->assertOk();
+        $this->get(route('beranda'))->assertOk()->assertSee(route('scan-kegiatan-ibadah.index'), false);
+        $this->postJson(route('scan-kegiatan-ibadah.store'), [
+            'jadwal_kegiatan_ibadah_id' => $data['jadwal']->id,
+            'isi_scan' => $data['siswa']->nisn,
+        ])->assertOk()->assertJsonPath('berhasil', true);
+
+        $this->actingAs($guruPiket['akun'])->get(route('scan-kegiatan-ibadah.index'))->assertForbidden();
+        $this->get(route('beranda'))->assertOk()->assertDontSee(route('scan-kegiatan-ibadah.index'), false);
 
         JadwalPiketGuru::create([
             'tahun_pelajaran_id' => $data['tahun']->id,
@@ -232,6 +242,31 @@ class ScanKegiatanIbadahTest extends TestCase
         $this->actingAs($guruPiket['akun'])
             ->get(route('scan-kegiatan-ibadah.index'))
             ->assertOk();
+    }
+
+    public function test_guru_pai_memerlukan_penugasan_aktif_dan_izin_scan(): void
+    {
+        Carbon::setTestNow('2026-08-10 12:10:00');
+        $data = $this->dataDasar('senin');
+        $pai = MataPelajaran::create(['kode' => 'PAI_UJI', 'nama' => 'Pendidikan Agama Islam', 'kelompok' => 'Agama', 'aktif' => true]);
+        $guru = $this->buatGuru($data['tahun'], $data['kelas'], $pai, 'Guru PAI Aktif', 'PAI-AKTIF');
+        $akses = app(AksesScanKegiatanIbadah::class);
+        $this->assertTrue($akses->dapatMemindai($guru['akun'], $data['tahun']));
+        $penugasan = GuruMataPelajaran::where('pegawai_id', $guru['pegawai']->id)->firstOrFail();
+        $penugasan->update(['aktif' => false]);
+        $this->assertFalse($akses->dapatMemindai($guru['akun'], $data['tahun']));
+        $penugasan->update(['aktif' => true]);
+        $pai->update(['aktif' => false]);
+        $this->assertFalse($akses->dapatMemindai($guru['akun'], $data['tahun']));
+        $pai->update(['aktif' => true]);
+        $tahunLain = TahunPelajaran::create(['nama' => '2025/2026', 'aktif' => false]);
+        $this->assertFalse($akses->dapatMemindai($guru['akun'], $tahunLain));
+        $guru['akun']->daftarPeran()->detach();
+        $guru['akun']->unsetRelation('daftarPeran');
+        $this->assertFalse($akses->dapatMemindai($guru['akun'], $data['tahun']));
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $administrator->aktif = false;
+        $this->assertFalse($akses->dapatMemindai($administrator, $data['tahun']));
     }
 
     private function dataDasar(string $hari): array

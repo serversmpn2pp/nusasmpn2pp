@@ -71,17 +71,34 @@ class PengecualianPresensiSiswaService
 
                 return $tersimpan;
             }
+            if (($isi['data']['jenis'] ?? null) === 'tugas_sekolah') {
+                $ids = $isi['data']['anggota_kelas_ids'] ?? [];
+                AnggotaKelas::whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
+                AbsensiSiswa::whereIn('anggota_kelas_id', $ids)->whereDate('tanggal', '>=', $isi['data']['tanggal_mulai'])
+                    ->whereDate('tanggal', '<=', $isi['data']['tanggal_selesai'])->orderBy('id')->lockForUpdate()->get();
+            }
             $hasil = $this->hitung($isi['data']);
             if (! hash_equals($isi['sidik'], $hasil['sidik'])) {
                 throw ValidationException::withMessages(['token' => 'Data presensi atau cakupan berubah. Periksa pratinjau terbaru sebelum menerapkan.']);
             }
 
-            return PengecualianPresensiSiswa::create([
-                ...$hasil['data'], 'aktif' => true, 'kunci_pratinjau' => $isi['kunci'],
+            $data = $hasil['data'];
+            $ids = $data['anggota_kelas_ids'] ?? [];
+            unset($data['anggota_kelas_ids']);
+            $p = PengecualianPresensiSiswa::create([
+                ...$data, 'aktif' => true, 'kunci_pratinjau' => $isi['kunci'],
                 'dampak_pratinjau' => $hasil['dampak'], 'dibuat_oleh_pengguna_id' => $pengguna->id,
             ]);
+            if ($p->jenis === 'tugas_sekolah') {
+                app(PenugasanPresensiSiswaService::class)->terapkan($p, $ids);
+            }
+
+            return $p;
         });
         app(PoinPresensiOtomatisService::class)->sinkronkanPengecualian($pengecualian, $pengguna->id);
+        if ($pengecualian->jenis === 'tugas_sekolah') {
+            app(PenugasanPresensiSiswaService::class)->notifikasi($pengecualian);
+        }
 
         return $pengecualian;
     }
@@ -95,13 +112,25 @@ class PengecualianPresensiSiswaService
             if ($p->aktif) {
                 $p->update(['aktif' => false, 'dibatalkan_pada' => now(),
                     'dibatalkan_oleh_pengguna_id' => $pengguna->id, 'alasan_pembatalan' => trim($alasan)]);
+                if ($p->jenis === 'tugas_sekolah') {
+                    app(PenugasanPresensiSiswaService::class)->batalkan($p, $pengguna->id);
+                }
             }
         });
         app(PoinPresensiOtomatisService::class)->sinkronkanPengecualian($pengecualian->fresh(), $pengguna->id);
+        if ($pengecualian->jenis === 'tugas_sekolah') {
+            app(PenugasanPresensiSiswaService::class)->notifikasi($pengecualian->fresh());
+        }
     }
 
     private function hitung(array $data): array
     {
+        if (($data['jenis'] ?? null) === 'tugas_sekolah') {
+            return app(PenugasanPresensiSiswaService::class)->hitung($data);
+        }
+        if (($data['cakupan'] ?? null) === 'siswa' || ! empty($data['anggota_kelas_ids'])) {
+            throw ValidationException::withMessages(['jenis' => 'Cakupan siswa tertentu digunakan untuk penugasan sekolah.']);
+        }
         $tahun = TahunPelajaran::findOrFail($data['tahun_pelajaran_id']);
         $kelas = filled($data['kelas_id'] ?? null) ? Kelas::where('tahun_pelajaran_id', $tahun->id)->find($data['kelas_id']) : null;
         if (filled($data['kelas_id'] ?? null) && ! $kelas) {
@@ -118,7 +147,8 @@ class PengecualianPresensiSiswaService
             'jenis' => $data['jenis'], 'alasan' => trim($data['alasan'])];
         $tumpangTindih = PengecualianPresensiSiswa::where('aktif', true)->where('tahun_pelajaran_id', $tahun->id)
             ->whereDate('tanggal_mulai', '<=', $selesai)->whereDate('tanggal_selesai', '>=', $mulai)
-            ->when($kelas, fn ($q) => $q->where(fn ($q) => $q->whereNull('kelas_id')->orWhere('kelas_id', $kelas->id)))
+            ->when($kelas, fn ($q) => $q->where(fn ($q) => $q->where(fn ($q) => $q->whereNull('cakupan')->where(fn ($q) => $q->whereNull('kelas_id')->orWhere('kelas_id', $kelas->id)))
+                ->orWhereHas('anggotaKelas', fn ($q) => $q->where('kelas_id', $kelas->id))))
             ->exists();
         if ($tumpangTindih) {
             throw ValidationException::withMessages(['tanggal_mulai' => 'Sudah ada pengecualian aktif yang bertumpuk pada tanggal dan cakupan ini. Batalkan aturan lama bila ingin menggantinya.']);

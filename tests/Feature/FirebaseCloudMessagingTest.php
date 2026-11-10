@@ -66,6 +66,25 @@ class FirebaseCloudMessagingTest extends TestCase
         });
     }
 
+    public function test_push_penugasan_orang_tua_memakai_pesan_khusus_dan_tujuan_native_yang_sudah_ada(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['fcm.googleapis.com/*' => Http::response(['name' => 'projects/nusa/messages/penugasan'])]);
+        [$notifikasi, $perangkat] = $this->buatData('/presensi-anak?siswa_id=12&bulan=2026-11');
+        $notifikasi->update(['kunci_unik' => 'presensi-penugasan:1:12:aktif', 'pesan' => 'Nama dan alasan privat',
+            'data_tambahan' => ['tanggal_mulai' => '2026-11-10', 'tanggal_selesai' => '2026-11-10']]);
+        $this->jalankanJob($notifikasi);
+        Http::assertSent(function (Request $request) use ($notifikasi, $perangkat): bool {
+            $pesan = $request['message'];
+
+            return $pesan['token'] === $perangkat->token && $pesan['notification']['title'] === 'Penugasan sekolah anak Anda'
+                && str_contains($pesan['notification']['body'], 'Anak Anda mendapat tugas sekolah pada 10/11/2026')
+                && ! str_contains($pesan['notification']['body'], 'privat')
+                && $pesan['data']['tujuan'] === '/kehadiran-anak-saya?siswa_id=12&bulan=2026-11'
+                && $pesan['data']['notifikasi_id'] === (string) $notifikasi->id;
+        });
+    }
+
     public function test_push_tahfidz_memiliki_pesan_dan_tujuan_untuk_siswa_serta_orang_tua(): void
     {
         Http::preventStrayRequests();

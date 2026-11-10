@@ -27,7 +27,7 @@ class ScanKegiatanIbadahMobileService
         abort_unless(
             $this->aksesScan->dapatMemindai($pengguna, $tahunPelajaran, $waktu),
             403,
-            'Scan ibadah hanya dapat digunakan oleh Guru PL atau guru piket yang bertugas hari ini.',
+            AksesScanKegiatanIbadah::PESAN_AKSES_SCAN,
         );
 
         $jadwal = $this->jadwalHariIni($tahunPelajaran, $waktu);

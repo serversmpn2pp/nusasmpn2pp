@@ -20,7 +20,7 @@ class ScanKegiatanIbadahController extends Controller
             ->where('aktif', true)
             ->orderByDesc('tanggal_mulai')
             ->first();
-        abort_unless($aksesScan->dapatMemindai($request->user(), $tahunPelajaran), 403, 'Halaman scan hanya dapat dibuka oleh Guru PL atau guru piket yang bertugas hari ini.');
+        abort_unless($aksesScan->dapatMemindai($request->user(), $tahunPelajaran), 403, AksesScanKegiatanIbadah::PESAN_AKSES_SCAN);
 
         $hari = $this->hariDariTanggal(now()->dayOfWeekIso);
         $daftarJadwal = collect();

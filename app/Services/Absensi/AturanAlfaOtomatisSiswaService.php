@@ -17,12 +17,13 @@ class AturanAlfaOtomatisSiswaService
 
     public function pengecualianPada(string $tanggal, ?AnggotaKelas $anggota = null): ?PengecualianPresensiSiswa
     {
-        $this->pengecualian ??= PengecualianPresensiSiswa::where('aktif', true)->orderBy('id')->get();
+        $this->pengecualian ??= PengecualianPresensiSiswa::with('anggotaKelas:id')->where('aktif', true)->orderBy('id')->get();
 
         return $this->pengecualian->first(fn ($p) => $p->tanggal_mulai->toDateString() <= $tanggal
             && $p->tanggal_selesai->toDateString() >= $tanggal
             && (! $anggota || (int) $p->tahun_pelajaran_id === (int) $anggota->tahun_pelajaran_id)
-            && ($p->kelas_id === null || ($anggota && (int) $p->kelas_id === (int) $anggota->kelas_id)));
+            && ($p->cakupan === 'siswa' ? ($anggota && $p->anggotaKelas->contains('id', $anggota->id))
+                : ($p->kelas_id === null || ($anggota && (int) $p->kelas_id === (int) $anggota->kelas_id))));
     }
 
     public function statusTanpaCatatan(string $tanggal, array $hariAktif, ?AnggotaKelas $anggota = null, string $menunggu = 'belum_scan'): string
@@ -37,8 +38,10 @@ class AturanAlfaOtomatisSiswaService
             $q->selectRaw('1')->from('pengecualian_presensi_siswa as pengecualian')
                 ->where('pengecualian.aktif', true)
                 ->whereColumn('pengecualian.tahun_pelajaran_id', 'anggota_kelas.tahun_pelajaran_id')
-                ->where(fn ($q) => $q->whereNull('pengecualian.kelas_id')
-                    ->orWhereColumn('pengecualian.kelas_id', 'anggota_kelas.kelas_id'))
+                ->where(fn ($q) => $q->where(fn ($q) => $q->whereNull('pengecualian.cakupan')->where(fn ($q) => $q->whereNull('pengecualian.kelas_id')
+                    ->orWhereColumn('pengecualian.kelas_id', 'anggota_kelas.kelas_id')))
+                    ->orWhereExists(fn ($q) => $q->selectRaw('1')->from('pengecualian_presensi_anggota as target')
+                        ->whereColumn('target.pengecualian_id', 'pengecualian.id')->whereColumn('target.anggota_kelas_id', 'anggota_kelas.id')))
                 ->whereDate('pengecualian.tanggal_mulai', '<=', $tanggal)
                 ->whereDate('pengecualian.tanggal_selesai', '>=', $tanggal);
         }, 'and', ! $dikecualikan);

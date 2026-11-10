@@ -56,6 +56,9 @@ class NotifikasiAbsensiSiswaService
         $status = $menit > 0 ? "terlambat {$menit} menit" : 'tepat waktu';
         $tanggal = $absensi->tanggal->locale('id')->translatedFormat('d F Y');
         $detail = "{$siswa->nama_lengkap} (".($absensi->kelas?->nama ?: '-').") tercatat hadir {$status} pada {$tanggal} pukul ".str_replace(':', '.', $jam).' WIB.';
+        if ($absensi->penugasan_presensi_id) {
+            $detail = $siswa->nama_lengkap.' melakukan scan pada '.$tanggal.' pukul '.$jam.' WIB. '.$absensi->keteranganPenugasan();
+        }
         $parameter = [
             'siswa_id' => $siswa->id,
             'bulan' => $absensi->tanggal->format('Y-m'),
@@ -65,6 +68,9 @@ class NotifikasiAbsensiSiswaService
             'jam_masuk' => $jam,
             'menit_terlambat' => $menit,
         ];
+        if ($absensi->penugasan_presensi_id) {
+            $data['penugasan_sekolah'] = true;
+        }
         $ids = [];
 
         // Relasi identitas menentukan penerima; role dan nomor WhatsApp bukan bukti.

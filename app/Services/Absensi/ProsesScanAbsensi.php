@@ -307,9 +307,11 @@ class ProsesScanAbsensi
                 'sumber' => 'scan',
             ]);
 
-            $pesan = $statusMasuk === 'terlambat'
+            $menitTerlambat = (int) $absensi->menit_terlambat;
+            $statusMasuk = $absensi->status_masuk;
+            $pesan = $absensi->penugasan_presensi_id ? 'Scan masuk tercatat. Siswa dalam penugasan sekolah, tanpa sanksi keterlambatan.' : ($statusMasuk === 'terlambat'
                 ? 'Scan masuk berhasil. Siswa terlambat '.$menitTerlambat.' menit.'
-                : 'Scan masuk berhasil. Siswa hadir tepat waktu.';
+                : 'Scan masuk berhasil. Siswa hadir tepat waktu.');
 
             $log = $this->catatLog(
                 isiScan: $isiScan,
