@@ -13,6 +13,77 @@ class NotifikasiApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_riwayat_dua_puluh_per_halaman_tetap_stabil_saat_notifikasi_baru_masuk(): void
+    {
+        $akun = Pengguna::where('username', 'administrator')->firstOrFail();
+        $ids = [];
+        for ($i = 0; $i < 45; $i++) {
+            $n = $this->buatNotifikasi($akun, 'Riwayat '.$i);
+            $n->forceFill(['created_at' => '2026-10-01 08:00:00', 'dibaca_pada' => $i % 3 === 0 ? now() : null])->save();
+            $ids[] = $n->id;
+        }
+        $rahasia = $this->buatNotifikasi($this->buatPengguna('pemilik-lain'), 'Notifikasi privat akun lain');
+        $this->withToken($this->token($akun));
+        $url = route('api.v1.notifikasi.index');
+        $pertama = $this->getJson($url)->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonCount(20, 'data.items')->assertJsonPath('data.jumlah_belum_dibaca', 30)
+            ->assertJsonPath('data.paginasi.per_halaman', 20)->assertJsonPath('data.paginasi.ada_lagi', true)
+            ->assertDontSee($rahasia->judul);
+        $this->assertSame(array_slice(array_reverse($ids), 0, 20), array_column($pertama->json('data.items'), 'id'));
+        $anchor = $pertama->json('data.paginasi.sebelum_id_berikutnya');
+        $this->assertSame($ids[25], $anchor);
+        NotifikasiPengguna::findOrFail($anchor)->tandaiDibaca();
+        $this->buatNotifikasi($akun, 'Pesan baru ketika riwayat dibuka');
+        $kedua = $this->getJson($url.'?sebelum_id='.$anchor)->assertOk()->assertJsonCount(20, 'data.items');
+        $this->assertSame(array_slice(array_reverse($ids), 20, 20), array_column($kedua->json('data.items'), 'id'));
+        $ketiga = $this->getJson($url.'?sebelum_id='.$kedua->json('data.paginasi.sebelum_id_berikutnya'))
+            ->assertOk()->assertJsonCount(5, 'data.items')->assertJsonPath('data.paginasi.ada_lagi', false)
+            ->assertJsonPath('data.paginasi.sebelum_id_berikutnya', null);
+        $this->assertSame(array_slice(array_reverse($ids), 40), array_column($ketiga->json('data.items'), 'id'));
+        $this->assertNull(NotifikasiPengguna::findOrFail($ids[1])->dibaca_pada);
+        $this->getJson($url.'?sebelum_id='.$rahasia->id)->assertNotFound()->assertDontSee($rahasia->judul);
+    }
+
+    public function test_filter_belum_dibaca_menelusuri_riwayat_dan_baca_semua_mencakup_halaman_lama(): void
+    {
+        $akun = Pengguna::where('username', 'administrator')->firstOrFail();
+        for ($i = 0; $i < 28; $i++) {
+            $n = $this->buatNotifikasi($akun, 'Riwayat baca '.$i);
+            if ($i < 3) {
+                $n->tandaiDibaca();
+            }
+        }
+        $this->withToken($this->token($akun));
+        $url = route('api.v1.notifikasi.index', ['status' => 'belum_dibaca']);
+        $pertama = $this->getJson($url)->assertOk()->assertJsonCount(20, 'data.items')
+            ->assertJsonPath('data.jumlah_belum_dibaca', 25)->assertJsonPath('data.filter.status', 'belum_dibaca');
+        $this->assertSame([true], array_values(array_unique(array_column($pertama->json('data.items'), 'belum_dibaca'))));
+        $anchor = $pertama->json('data.paginasi.sebelum_id_berikutnya');
+        NotifikasiPengguna::findOrFail($anchor)->tandaiDibaca();
+        $this->getJson($url.'&sebelum_id='.$anchor)->assertOk()->assertJsonCount(5, 'data.items')
+            ->assertJsonPath('data.paginasi.ada_lagi', false);
+        $this->patchJson(route('api.v1.notifikasi.baca-semua'))->assertOk()->assertJsonPath('data.jumlah_belum_dibaca', 0);
+        $this->getJson($url)->assertOk()->assertJsonCount(0, 'data.items')->assertJsonPath('data.paginasi.ada_lagi', false);
+        $this->assertSame(28, $akun->notifikasiPengguna()->sudahDibaca()->count());
+    }
+
+    public function test_riwayat_notifikasi_memerlukan_akun_aktif_dan_filter_valid(): void
+    {
+        $url = route('api.v1.notifikasi.index');
+        $this->getJson($url)->assertUnauthorized();
+        $akun = $this->buatPengguna('akun-riwayat');
+        $this->withToken($this->token($akun));
+        $this->getJson($url.'?status=sudah_dibaca')->assertUnprocessable()->assertJsonValidationErrors('status');
+        $this->getJson($url.'?sebelum_id[]=1')->assertUnprocessable()->assertJsonValidationErrors('sebelum_id');
+        $this->getJson($url.'?sebelum_id=-1')->assertUnprocessable();
+        $this->getJson($url.'?sebelum_id=99999999')->assertNotFound();
+        $this->getJson($url.'?pengguna_id=1')->assertOk()->assertJsonCount(0, 'data.items');
+        $akun->update(['wajib_ganti_kata_sandi' => true]);
+        $this->getJson($url)->assertStatus(428);
+        $akun->update(['wajib_ganti_kata_sandi' => false, 'aktif' => false]);
+        $this->getJson($url)->assertUnauthorized();
+    }
+
     public function test_detail_push_hanya_untuk_pemilik_dan_tidak_menandai_baca(): void
     {
         $pengguna = Pengguna::where('username', 'administrator')->firstOrFail();

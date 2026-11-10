@@ -9,6 +9,7 @@ import 'package:nusa/app/app_keys.dart';
 import 'package:nusa/app/router.dart';
 import 'package:nusa/features/student_exam/application/exam_navigation_guard.dart';
 import 'package:nusa/features/home/application/home_controller.dart';
+import 'package:nusa/features/home/application/notification_inbox_controller.dart';
 import 'package:nusa/features/push_notifications/application/push_device_service.dart';
 import 'package:nusa/features/push_notifications/data/push_notification_remote_data_source.dart';
 
@@ -82,6 +83,11 @@ final class NusaPushNotificationRuntime implements PushNotificationRuntime {
       ?..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
+          // An action otherwise keeps the banner visible until dismissed.
+          persist: false,
+          duration: const Duration(seconds: 6),
+          dismissDirection: DismissDirection.horizontal,
+          showCloseIcon: true,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,7 +117,15 @@ final class NusaPushNotificationRuntime implements PushNotificationRuntime {
   }
 
   @override
-  void refreshInbox() => _ref.invalidate(homeControllerProvider);
+  void refreshInbox() {
+    _ref.invalidate(homeControllerProvider);
+    if (_ref.exists(notificationInboxControllerProvider)) {
+      unawaited(
+        _ref.read(notificationInboxControllerProvider.notifier).refresh(),
+      );
+    }
+  }
+
   @override
   void openDestination(String destination) => unawaited(_navigate(destination));
 

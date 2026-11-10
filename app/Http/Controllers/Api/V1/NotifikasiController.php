@@ -4,12 +4,25 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\NotifikasiPengguna;
+use App\Services\Mobile\NotifikasiMobileService;
 use App\Services\Mobile\TujuanNotifikasiMobileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class NotifikasiController extends Controller
 {
+    public function index(Request $request, NotifikasiMobileService $service): JsonResponse
+    {
+        $filter = $request->validate([
+            'status' => ['nullable', Rule::in(['semua', 'belum_dibaca'])],
+            'sebelum_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        return response()->json(['data' => $service->daftar($request->user(), $filter)])
+            ->header('Cache-Control', 'private, no-store');
+    }
+
     public function tujuan(
         Request $request,
         NotifikasiPengguna $notifikasiPengguna,

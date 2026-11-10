@@ -412,6 +412,64 @@ void main() {
     actualRuntime.hideForegroundNotification();
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+    'banner push habis waktu, diusap dua arah, dan ditutup tanpa membuka',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          scaffoldMessengerKey: nusaScaffoldMessengerKey,
+          home: const Scaffold(body: Text('Beranda')),
+        ),
+      );
+      final actualRuntime = container.read(pushNotificationRuntimeProvider);
+      var opened = 0;
+      Future<void> showNotice() async {
+        actualRuntime.showNotification(
+          const PushNotificationTarget(
+            id: 10,
+            title: 'Pelanggaran berpoin telah disahkan',
+            body: 'Hasil pemeriksaan sudah tersedia di halaman Notifikasi.',
+          ),
+          () async => opened++,
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await showNotice();
+      await tester.pump(const Duration(seconds: 5));
+      expect(find.byType(SnackBar), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+      expect(opened, 0);
+
+      for (final offset in [const Offset(450, 0), const Offset(-450, 0)]) {
+        await showNotice();
+        await tester.fling(find.byType(SnackBar), offset, 1000);
+        await tester.pumpAndSettle();
+        expect(find.byType(SnackBar), findsNothing);
+        expect(opened, 0);
+      }
+
+      await showNotice();
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+      expect(opened, 0);
+
+      await showNotice();
+      await tester.tap(find.text('Buka'));
+      await tester.pumpAndSettle();
+      expect(opened, 1);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 final class FakePushRuntime implements PushNotificationRuntime {

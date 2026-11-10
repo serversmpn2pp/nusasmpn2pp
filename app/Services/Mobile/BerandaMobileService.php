@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 class BerandaMobileService
 {
     public function __construct(
-        private readonly TujuanNotifikasiMobileService $tujuanNotifikasi,
+        private readonly NotifikasiMobileService $notifikasi,
         private readonly JadwalHariIniMobileService $jadwalHariIni,
         private readonly KehadiranSayaMobileService $kehadiranSaya,
         private readonly IbadahSayaMobileService $ibadahSaya,
@@ -72,7 +72,7 @@ class BerandaMobileService
                 $piket,
                 $perwalian,
             ),
-            'notifikasi' => $this->notifikasi($pengguna),
+            'notifikasi' => $this->notifikasi->ringkasan($pengguna),
         ];
     }
 
@@ -217,32 +217,6 @@ class BerandaMobileService
                 'tingkat' => $item->tingkat,
                 'jumlah_siswa' => (int) $item->jumlah_siswa,
             ])->values(),
-        ];
-    }
-
-    private function notifikasi(Pengguna $pengguna): array
-    {
-        $query = $pengguna->notifikasiPengguna();
-
-        return [
-            'jumlah_belum_dibaca' => (clone $query)->belumDibaca()->count(),
-            'terbaru' => (clone $query)
-                ->latest('created_at')
-                ->latest('id')
-                ->limit(10)
-                ->get()
-                ->map(fn ($item) => [
-                    'id' => (int) $item->id,
-                    'jenis' => $item->jenis,
-                    'label_jenis' => $item->labelJenis(),
-                    'judul' => $item->judul,
-                    'pesan' => $item->pesan,
-                    'belum_dibaca' => $item->masihBelumDibaca(),
-                    'dibuat_pada' => $item->created_at->toISOString(),
-                    'waktu_relatif' => $item->created_at->locale('id')->diffForHumans(),
-                    'tautan_mobile' => $this->tujuanNotifikasi->untuk($item),
-                ])
-                ->values(),
         ];
     }
 

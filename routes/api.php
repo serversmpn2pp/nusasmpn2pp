@@ -169,6 +169,7 @@ Route::prefix('v1')
             ->middleware('izin:beranda.akses')
             ->name('beranda');
 
+        Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
         Route::patch('/notifikasi/baca-semua', [NotifikasiController::class, 'bacaSemua'])
             ->name('notifikasi.baca-semua');
         Route::patch('/notifikasi/{notifikasiPengguna}/baca', [NotifikasiController::class, 'baca'])

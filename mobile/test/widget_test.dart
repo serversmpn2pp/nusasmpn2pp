@@ -27,7 +27,9 @@ import 'package:nusa/features/grade_weight_scheme/data/grade_weight_scheme_remot
 import 'package:nusa/features/grade_weight_scheme/domain/grade_weight_scheme.dart'
     as weight_scheme;
 import 'package:nusa/features/home/data/home_remote_data_source.dart';
+import 'package:nusa/features/home/data/notification_inbox_remote_data_source.dart';
 import 'package:nusa/features/home/domain/home_dashboard.dart';
+import 'package:nusa/features/home/domain/notification_inbox.dart';
 import 'package:nusa/features/lesson_period/data/lesson_period_remote_data_source.dart';
 import 'package:nusa/features/lesson_period/domain/lesson_period.dart';
 import 'package:nusa/features/login_activity/data/login_activity_remote_data_source.dart';
@@ -2006,6 +2008,7 @@ Widget _buildTestApp({
   HomeRemoteDataSource? homeRemote,
   MenuRemoteDataSource? menuRemote,
 }) {
+  final effectiveHomeRemote = homeRemote ?? _FakeHomeRemoteDataSource();
   return ProviderScope(
     overrides: [
       appConfigProvider.overrideWithValue(
@@ -2017,8 +2020,9 @@ Widget _buildTestApp({
       tokenStorageProvider.overrideWithValue(storage ?? _MemoryTokenStorage()),
       deviceIdentityProvider.overrideWithValue(_FakeDeviceIdentity()),
       authRemoteDataSourceProvider.overrideWithValue(remote),
-      homeRemoteDataSourceProvider.overrideWithValue(
-        homeRemote ?? _FakeHomeRemoteDataSource(),
+      homeRemoteDataSourceProvider.overrideWithValue(effectiveHomeRemote),
+      notificationInboxRemoteDataSourceProvider.overrideWithValue(
+        _FakeInboxRemoteDataSource(effectiveHomeRemote),
       ),
       menuRemoteDataSourceProvider.overrideWithValue(
         menuRemote ?? _FakeMenuRemoteDataSource(),
@@ -2077,6 +2081,37 @@ Widget _buildTestApp({
     ],
     child: const NusaApp(),
   );
+}
+
+final class _FakeInboxRemoteDataSource
+    implements NotificationInboxRemoteDataSource {
+  _FakeInboxRemoteDataSource(this.home);
+  final HomeRemoteDataSource home;
+  @override
+  Future<NotificationInbox> fetch({
+    required String status,
+    int? beforeId,
+  }) async {
+    final summary = (await home.fetchDashboard()).notifications;
+    return NotificationInbox(
+      items: summary.items
+          .where((item) => status != 'belum_dibaca' || item.unread)
+          .toList(),
+      unreadCount: summary.unreadCount,
+    );
+  }
+
+  @override
+  Future<int> markRead(int id) async {
+    await home.markNotificationRead(id);
+    return (await home.fetchDashboard()).notifications.unreadCount;
+  }
+
+  @override
+  Future<int> markAllRead() async {
+    await home.markAllNotificationsRead();
+    return (await home.fetchDashboard()).notifications.unreadCount;
+  }
 }
 
 final class _FakeHomeRemoteDataSource implements HomeRemoteDataSource {

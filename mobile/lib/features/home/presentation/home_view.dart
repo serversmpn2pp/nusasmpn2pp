@@ -6,6 +6,7 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/app_update/presentation/app_update_notice.dart';
 import 'package:nusa/features/auth/application/auth_controller.dart';
 import 'package:nusa/features/home/application/home_controller.dart';
+import 'package:nusa/features/home/application/notification_inbox_controller.dart';
 import 'package:nusa/features/home/presentation/home_dashboard_view.dart';
 import 'package:nusa/features/home/presentation/home_tabs.dart';
 import 'package:nusa/features/home/presentation/widgets/quick_access_editor_sheet.dart';
@@ -198,14 +199,19 @@ class _HomeViewState extends ConsumerState<HomeView> {
             NusaPageFrame(
               title: 'Notifikasi',
               action: IconButton(
-                onPressed: dashboard.isLoading ? null : _refreshDashboard,
+                onPressed:
+                    ref.watch(notificationInboxControllerProvider).isLoading
+                    ? null
+                    : () async {
+                        await ref
+                            .read(notificationInboxControllerProvider.notifier)
+                            .refresh();
+                        if (mounted) ref.invalidate(homeControllerProvider);
+                      },
                 icon: const Icon(Icons.refresh_rounded),
                 tooltip: 'Perbarui',
               ),
-              child: NotificationsPage(
-                dashboard: dashboard,
-                onRefresh: _refreshDashboard,
-              ),
+              child: const NotificationsPage(),
             ),
             NusaPageFrame(
               title: 'Profil',

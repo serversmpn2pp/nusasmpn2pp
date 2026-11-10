@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/home/application/home_controller.dart';
+import 'package:nusa/features/home/application/notification_inbox_controller.dart';
 import 'package:nusa/features/home/domain/home_dashboard.dart';
 import 'package:nusa/features/home/presentation/home_dashboard_view.dart';
 import 'package:nusa/features/home/presentation/widgets/home_components.dart';
@@ -156,14 +157,7 @@ class ActivityPage extends StatelessWidget {
 }
 
 class NotificationsPage extends ConsumerStatefulWidget {
-  const NotificationsPage({
-    required this.dashboard,
-    required this.onRefresh,
-    super.key,
-  });
-
-  final AsyncValue<HomeDashboard> dashboard;
-  final Future<void> Function() onRefresh;
+  const NotificationsPage({super.key});
 
   @override
   ConsumerState<NotificationsPage> createState() => _NotificationsPageState();
@@ -174,15 +168,20 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   bool _markingAllRead = false;
 
   Future<void> _openNotification(AppNotification notification) async {
-    if (_openingNotificationId != null || _markingAllRead) return;
+    if (_openingNotificationId != null ||
+        _markingAllRead ||
+        ref.read(notificationInboxControllerProvider).value?.isLoadingMore ==
+            true) {
+      return;
+    }
 
     setState(() => _openingNotificationId = notification.id);
 
     try {
       if (notification.unread) {
         await ref
-            .read(homeControllerProvider.notifier)
-            .markNotificationRead(notification.id);
+            .read(notificationInboxControllerProvider.notifier)
+            .markRead(notification.id);
       }
 
       if (!mounted) return;
@@ -215,8 +214,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     setState(() => _markingAllRead = true);
     try {
       await ref
-          .read(homeControllerProvider.notifier)
-          .markAllNotificationsRead();
+          .read(notificationInboxControllerProvider.notifier)
+          .markAllRead();
       if (mounted) {
         _showMessage('Semua notifikasi telah ditandai sudah dibaca.');
       }
@@ -239,70 +238,164 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         : 'Notifikasi belum dapat diperbarui. Silakan coba lagi.';
   }
 
+  Future<void> _refresh() async {
+    await ref.read(notificationInboxControllerProvider.notifier).refresh();
+    if (mounted) ref.invalidate(homeControllerProvider);
+  }
+
+  Future<void> _loadMore() async {
+    try {
+      await ref.read(notificationInboxControllerProvider.notifier).loadMore();
+    } catch (error) {
+      if (mounted) _showMessage(_errorMessage(error));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return widget.dashboard.when(
-      loading: () => const NusaLoadingState(),
-      error: (error, stackTrace) =>
-          NusaErrorState(error: error, onRetry: widget.onRefresh),
-      data: (data) => RefreshIndicator(
-        onRefresh: widget.onRefresh,
-        child: ListView(
-          key: const PageStorageKey<String>('notifications-scroll'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${data.notifications.unreadCount} belum dibaca',
-                    style: const TextStyle(
-                      color: NusaColors.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
+    final inbox = ref.watch(notificationInboxControllerProvider);
+    final controller = ref.read(notificationInboxControllerProvider.notifier);
+    final busy =
+        _markingAllRead ||
+        _openingNotificationId != null ||
+        inbox.value?.isLoadingMore == true;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'semua', label: Text('Semua')),
+                ButtonSegment(
+                  value: 'belum_dibaca',
+                  label: Text('Belum dibaca'),
                 ),
-                if (data.notifications.unreadCount > 0)
-                  TextButton.icon(
-                    key: const Key('mark-all-notifications-read'),
-                    onPressed: _markingAllRead || _openingNotificationId != null
-                        ? null
-                        : _markAllRead,
-                    icon: _markingAllRead
-                        ? const SizedBox.square(
-                            dimension: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.done_all_rounded, size: 18),
-                    label: const Text('Tandai semua dibaca'),
-                  ),
               ],
+              selected: {controller.status},
+              onSelectionChanged: busy || inbox.isLoading
+                  ? null
+                  : (value) => controller.filter(value.single),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Ketuk notifikasi untuk membuka halaman terkait.',
-              style: TextStyle(color: NusaColors.textSecondary, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            if (data.notifications.items.isEmpty)
-              const NusaEmptyCard(
-                icon: Icons.notifications_none_rounded,
-                message: 'Belum ada notifikasi untuk Anda.',
-              )
-            else
-              for (final item in data.notifications.items) ...[
-                NotificationCard(
-                  key: Key('notification-${item.id}'),
-                  notification: item,
-                  isOpening: _openingNotificationId == item.id,
-                  onTap: () => _openNotification(item),
-                ),
-                const SizedBox(height: 9),
-              ],
-          ],
+          ),
         ),
-      ),
+        Expanded(
+          child: inbox.when(
+            loading: () => const NusaLoadingState(),
+            error: (error, stackTrace) =>
+                NusaErrorState(error: error, onRetry: _refresh),
+            data: (data) => RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.builder(
+                key: PageStorageKey<String>(
+                  'notifications-scroll-${controller.status}',
+                ),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
+                itemCount: data.items.length + 2,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 10,
+                          children: [
+                            Text(
+                              '${data.unreadCount} belum dibaca',
+                              style: const TextStyle(
+                                color: NusaColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (data.unreadCount > 0)
+                              TextButton.icon(
+                                key: const Key('mark-all-notifications-read'),
+                                onPressed: busy ? null : _markAllRead,
+                                icon: _markingAllRead
+                                    ? const SizedBox.square(
+                                        dimension: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.done_all_rounded,
+                                        size: 18,
+                                      ),
+                                label: const Text('Tandai semua dibaca'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Ketuk notifikasi untuk membuka halaman terkait.',
+                          style: TextStyle(
+                            color: NusaColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    );
+                  }
+                  if (index <= data.items.length) {
+                    final item = data.items[index - 1];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 9),
+                      child: NotificationCard(
+                        key: Key('notification-${item.id}'),
+                        notification: item,
+                        isOpening: _openingNotificationId == item.id,
+                        onTap: () => _openNotification(item),
+                      ),
+                    );
+                  }
+                  if (data.items.isEmpty && data.nextBeforeId == null) {
+                    return NusaEmptyCard(
+                      icon: Icons.notifications_none_rounded,
+                      message: controller.status == 'belum_dibaca'
+                          ? 'Semua notifikasi sudah dibaca.'
+                          : 'Belum ada notifikasi untuk Anda.',
+                    );
+                  }
+                  if (data.nextBeforeId != null) {
+                    return OutlinedButton.icon(
+                      key: const Key('load-older-notifications'),
+                      onPressed: busy ? null : _loadMore,
+                      icon: data.isLoadingMore
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.history_rounded),
+                      label: Text(
+                        data.isLoadingMore
+                            ? 'Memuat...'
+                            : 'Muat notifikasi lebih lama',
+                      ),
+                    );
+                  }
+                  return const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text(
+                      'Semua notifikasi telah ditampilkan.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: NusaColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
