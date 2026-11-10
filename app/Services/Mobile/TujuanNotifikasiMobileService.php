@@ -3,6 +3,7 @@
 namespace App\Services\Mobile;
 
 use App\Models\NotifikasiPengguna;
+use App\Services\Pembinaan\AksesLaporanPembinaanService;
 
 class TujuanNotifikasiMobileService
 {
@@ -226,7 +227,11 @@ class TujuanNotifikasiMobileService
 
         if (str_starts_with($kunci, 'keputusan-bk:')
             || str_starts_with($kunci, 'keputusan-wakil:')) {
-            return '/laporan-saya/'.$laporanId;
+            // Hasil keputusan juga diterima BK/admin, bukan hanya pegawai pelapor.
+            // Laporan Saya tetap dibatasi kepemilikan oleh endpoint detailnya.
+            return app(AksesLaporanPembinaanService::class)->aksesLuas($notifikasi->pengguna)
+                ? '/daftar-laporan-siswa/'.$laporanId
+                : '/laporan-saya/'.$laporanId;
         }
 
         if (str_starts_with($kunci, 'batas-proses:')

@@ -5,12 +5,14 @@ namespace Tests\Feature\Api;
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Models\LaporanPembinaanSiswa;
+use App\Models\NotifikasiPengguna;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -118,6 +120,52 @@ class DaftarLaporanSiswaApiTest extends TestCase
             ->assertOk()
             ->assertJsonFragment(['kode' => 'laporan-saya', 'rute' => '/laporan-saya'])
             ->assertJsonMissing(['kode' => 'daftar-laporan-siswa']);
+    }
+
+    public function test_notifikasi_keputusan_membuka_detail_sesuai_akses_penerima(): void
+    {
+        $data = $this->dataDasar();
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $this->assertNull($admin->pegawai_id);
+        $laporan = $this->buatLaporan($data, $data['akun'], 'PB-NOTIF-DISAHKAN', 'disahkan');
+        $laporanAdmin = $this->buatLaporan($data, $admin, 'PB-NOTIF-ADMIN', 'disahkan');
+
+        $penerima = [[$admin, 'api.v1.laporan-siswa.show', '/daftar-laporan-siswa/'],
+            [$data['akun'], 'api.v1.laporan-saya.show', '/laporan-saya/']];
+        foreach (['bk', 'wakil_pimpinan_kesiswaan'] as $peran) {
+            $pegawai = Pegawai::create(['nama_lengkap' => 'Penerima '.$peran, 'aktif' => true]);
+            $akun = Pengguna::create(['pegawai_id' => $pegawai->id, 'nama' => $pegawai->nama_lengkap,
+                'username' => 'notif-keputusan.'.$peran, 'kata_sandi' => 'KataSandi-Uji-2026',
+                'peran' => 'pegawai', 'aktif' => true, 'wajib_ganti_kata_sandi' => false]);
+            $akun->daftarPeran()->attach(Peran::where('kode', $peran)->firstOrFail());
+            $penerima[] = [$akun, 'api.v1.laporan-siswa.show', '/daftar-laporan-siswa/'];
+        }
+
+        foreach ($penerima as [$akun, $rute, $awalan]) {
+            foreach (['keputusan-bk' => 'pembinaan', 'keputusan-wakil' => 'sahkan'] as $jenis => $keputusan) {
+                $notifikasi = NotifikasiPengguna::create(['pengguna_id' => $akun->id, 'jenis' => 'berhasil',
+                    'judul' => 'Pelanggaran berpoin telah disahkan', 'pesan' => 'Hasil pemeriksaan laporan.',
+                    'tautan' => route('laporan-pembinaan-siswa.show', $laporan, false),
+                    'kunci_unik' => $jenis.':'.$laporan->id.':'.$keputusan.':20261110']);
+                Auth::forgetGuards();
+                $this->withToken($this->token($akun))->getJson(route('api.v1.notifikasi.tujuan', $notifikasi))
+                    ->assertOk()->assertJsonPath('data.tautan_mobile', $awalan.$laporan->id);
+                $this->getJson(route($rute, $laporan))->assertOk()->assertJsonPath('data.laporan.id', $laporan->id);
+                $this->assertNull($notifikasi->fresh()->dibaca_pada);
+            }
+        }
+
+        $notifikasiAdmin = NotifikasiPengguna::create(['pengguna_id' => $admin->id, 'jenis' => 'berhasil',
+            'judul' => 'Pelanggaran berpoin telah disahkan', 'pesan' => 'Laporan dibuat admin tanpa pegawai.',
+            'tautan' => route('laporan-pembinaan-siswa.show', $laporanAdmin, false),
+            'kunci_unik' => 'keputusan-wakil:'.$laporanAdmin->id.':sahkan:20261110']);
+        Auth::forgetGuards();
+        $this->withToken($this->token($admin))->getJson(route('api.v1.notifikasi.tujuan', $notifikasiAdmin))
+            ->assertOk()->assertJsonPath('data.tautan_mobile', '/daftar-laporan-siswa/'.$laporanAdmin->id);
+        $this->getJson(route('api.v1.laporan-siswa.show', $laporanAdmin))->assertOk();
+        $this->getJson(route('api.v1.beranda'))->assertOk()
+            ->assertJsonPath('data.notifikasi.terbaru.0.id', $notifikasiAdmin->id)
+            ->assertJsonPath('data.notifikasi.terbaru.0.tautan_mobile', '/daftar-laporan-siswa/'.$laporanAdmin->id);
     }
 
     public function test_endpoint_memerlukan_token_dan_izin_laporan(): void

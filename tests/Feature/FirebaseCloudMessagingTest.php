@@ -85,6 +85,18 @@ class FirebaseCloudMessagingTest extends TestCase
         });
     }
 
+    public function test_push_keputusan_wakil_untuk_admin_mengarah_ke_detail_laporan_umum(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['fcm.googleapis.com/*' => Http::response(['name' => 'projects/nusa/messages/keputusan'])]);
+        [$notifikasi] = $this->buatData('/laporan-pembinaan-siswa/19');
+        $notifikasi->update(['kunci_unik' => 'keputusan-wakil:19:sahkan:20261110',
+            'judul' => 'Pelanggaran berpoin telah disahkan']);
+        $this->jalankanJob($notifikasi);
+        Http::assertSent(fn (Request $request) => $request['message']['data']['tujuan'] === '/daftar-laporan-siswa/19'
+            && $request['message']['data']['notifikasi_id'] === (string) $notifikasi->id);
+    }
+
     public function test_push_tahfidz_memiliki_pesan_dan_tujuan_untuk_siswa_serta_orang_tua(): void
     {
         Http::preventStrayRequests();
