@@ -29,6 +29,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -234,6 +235,10 @@ class MonitoringTvSiswaTest extends TestCase
 
     public function test_pergantian_hari_dan_minggu_lintas_bulan_memakai_waktu_masuk_laporan(): void
     {
+        config([
+            'cache.default' => 'database',
+            'cache.stores.database' => ['driver' => 'database', 'table' => 'cache'],
+        ]);
         [$tahun, $a] = $this->fondasi();
         $this->laporan($a[0]);
         $this->travelTo(now()->setDate(2026, 11, 1)->setTime(23, 59, 59));
@@ -245,6 +250,15 @@ class MonitoringTvSiswaTest extends TestCase
         $this->travel(2)->seconds();
         $this->getJson(route('monitoring-siswa.data'))->assertOk()->assertJsonPath('ringkasan.laporan', 0)
             ->assertJsonCount(0, 'laporan_terbaru');
+
+        for ($i = 0; $i < 12; $i++) {
+            $this->travel(5)->seconds();
+            $this->getJson(route('monitoring-siswa.data'))->assertOk()->assertJsonPath('diperbarui_pada', now()->toIso8601String());
+        }
+
+        $prefix = Cache::store('database')->getStore()->getPrefix();
+        $this->assertSame([$prefix.'monitoring-tv:v3:siswa'], DB::table('cache')
+            ->whereLike('key', $prefix.'monitoring-tv:%')->pluck('key')->all());
     }
 
     public function test_rincian_dan_foto_memerlukan_perangkat_siswa_bukan_session_atau_scanner(): void

@@ -42,6 +42,7 @@ class CadanganDatabaseTest extends TestCase
             ->assertSee('Buat backup sekarang')
             ->assertSee('Pulihkan dari perangkat')
             ->assertSee('Setiap backup diperiksa agar memuat seluruh tabel PostgreSQL', false)
+            ->assertSee('Backup baru menyertakan struktur tabel cache tanpa isinya.', false)
             ->assertSee('Restore mengganti seluruh struktur database dalam satu transaksi', false)
             ->assertSee('Data yang baru dicatat setelah tanggal backup tidak termasuk di dalam backup lama', false)
             ->assertSee('psql');
@@ -64,6 +65,25 @@ class CadanganDatabaseTest extends TestCase
             ->post(route('cadangan-database.store'))
             ->assertRedirect()
             ->assertSessionHas('berhasil', fn (string $pesan) => str_contains($pesan, 'nusa-db-20260822-020000.dump'));
+    }
+
+    public function test_waktu_file_cadangan_ditampilkan_dalam_zona_waktu_aplikasi(): void
+    {
+        config(['app.timezone' => 'Asia/Jakarta']);
+        $disk = Storage::fake('local');
+        $namaFile = 'nusa-db-20261113-171453.dump';
+        $lokasi = config('cadangan_database.direktori').'/'.$namaFile;
+        $timestamp = Carbon::parse('2026-11-13 10:14:54', 'UTC')->getTimestamp();
+        $disk->put($lokasi, 'PGDMP data-uji');
+        $this->assertTrue(touch($disk->path($lokasi), $timestamp));
+        $this->assertSame($timestamp, app(CadanganDatabaseService::class)->metadataCadangan($namaFile)['waktu']->getTimestamp());
+
+        $administrator = Pengguna::query()->where('username', 'administrator')->firstOrFail();
+        $this->actingAs($administrator)->get(route('cadangan-database.index'))
+            ->assertOk()
+            ->assertSee('13 Nov 2026, 17:14')
+            ->assertSee('13 November 2026, 17:14:54')
+            ->assertDontSee('13 November 2026, 10:14:54');
     }
 
     public function test_restore_memerlukan_password_dan_konfirmasi_yang_tepat(): void

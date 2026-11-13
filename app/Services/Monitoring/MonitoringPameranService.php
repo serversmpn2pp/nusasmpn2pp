@@ -8,7 +8,6 @@ use App\Models\ResponAcaraBukuTamu;
 use App\Models\TahunPelajaran;
 use App\Services\Humas\AcaraBukuTamuService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
 
 class MonitoringPameranService
 {
@@ -45,9 +44,8 @@ class MonitoringPameranService
     {
         $tanggal = $this->tanggal($layar);
         $tahun = TahunPelajaran::where('aktif', true)->orderByDesc('tanggal_mulai')->value('id') ?? 0;
-        $key = 'monitor-pameran:v2:'.$tahun.':'.$tanggal.':'.intdiv(now()->timestamp, 3);
-
-        return Cache::remember($key, 3, fn () => $this->siswa->bangun(true, Carbon::parse($tanggal)));
+        return CacheMonitoringTv::ingat('pameran:'.$tahun.':'.$tanggal, 3,
+            fn () => $this->siswa->bangun(true, Carbon::parse($tanggal)));
     }
 
     public function aktivitas(PerangkatMonitoring $layar, bool $rincian = false): array
@@ -97,9 +95,7 @@ class MonitoringPameranService
     public function pengunjung(PerangkatMonitoring $layar): array
     {
         $acara = $this->acara($layar);
-        $key = 'monitor-pameran-tamu:v2:'.$acara->id.':'.intdiv(now()->timestamp, 3);
-
-        return Cache::remember($key, 3, function () use ($acara) {
+        return CacheMonitoringTv::ingat('pengunjung:'.$acara->id, 3, function () use ($acara) {
             $statistik = $this->tamu->statistik($acara, ['dari' => $acara->mulai_pada->toDateString(), 'sampai' => $acara->selesai_pada->toDateString()]);
             $hariIni = $this->queryPengunjung($acara)->where('created_at', '>=', now()->startOfDay())->where('created_at', '<', now()->addDay()->startOfDay())->count();
 

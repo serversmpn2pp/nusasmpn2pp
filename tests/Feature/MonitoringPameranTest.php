@@ -21,6 +21,8 @@ use App\Services\Monitoring\MonitoringPameranService;
 use App\Services\Monitoring\MonitoringSiswaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -176,7 +178,11 @@ class MonitoringPameranTest extends TestCase
 
     public function test_pengunjung_dibatalkan_dan_acara_lain_tidak_muncul_dan_cache_tiga_detik(): void
     {
-        $this->fondasi();
+        config([
+            'cache.default' => 'database',
+            'cache.stores.database' => ['driver' => 'database', 'table' => 'cache'],
+        ]);
+        [$tahun] = $this->fondasi();
         [$layar] = $this->layar();
         $data = ['kunci_kiriman' => Str::uuid(), 'sidik_kiriman' => str_repeat('a', 64), 'nama' => 'Tamu pertama',
             'kategori' => 'instansi', 'minat' => ['nusa'], 'kepuasan' => 5, 'status' => 'valid'];
@@ -184,11 +190,19 @@ class MonitoringPameranTest extends TestCase
         $lain = $this->acara();
         $lain->respon()->create(array_replace($data, ['nama' => 'ACARA LAIN']));
         $this->getJson(route('monitoring-pameran.pengunjung'))->assertJsonPath('statistik.total', 1);
+        $this->getJson(route('monitoring-pameran.data'))->assertJsonPath('tanggal_data', '2026-10-30');
         $pertama->update(['status' => 'dibatalkan']);
         $layar->acaraBukuTamu->respon()->create(array_replace($data, ['kunci_kiriman' => Str::uuid(), 'nama' => 'Tamu baru']));
+        $this->getJson(route('monitoring-pameran.pengunjung'))->assertJsonPath('terbaru.0.nama', 'Tamu pertama');
         $this->travel(3)->seconds();
         $this->getJson(route('monitoring-pameran.pengunjung'))->assertJsonPath('statistik.total', 1)
             ->assertJsonPath('terbaru.0.nama', 'Tamu baru')->assertDontSee('Tamu pertama')->assertDontSee('ACARA LAIN');
+        $this->getJson(route('monitoring-pameran.data'))->assertJsonPath('diperbarui_pada', now()->toIso8601String());
+        $prefix = Cache::store('database')->getStore()->getPrefix().'monitoring-tv:';
+        $this->assertSame([
+            $prefix.'v3:pameran:'.$tahun->id.':2026-10-30',
+            $prefix.'v3:pengunjung:'.$layar->acara_buku_tamu_id,
+        ], DB::table('cache')->whereLike('key', $prefix.'%')->orderBy('key')->pluck('key')->all());
         $this->getJson(route('monitoring-pameran.pengunjung.rincian', ['jenis' => 'total', 'acara_buku_tamu_id' => $lain->id]))
             ->assertJsonPath('pagination.total', 1)->assertJsonPath('items.0.nama', 'Tamu baru')->assertDontSee('ACARA LAIN');
         $this->layar(['cakupan' => 'siswa']);

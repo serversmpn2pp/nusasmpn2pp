@@ -298,7 +298,7 @@
 
     <div class="alert" style="margin-bottom:18px;">
         <strong>Cadangan database:</strong>
-        Setiap backup diperiksa agar memuat seluruh tabel PostgreSQL yang tersedia saat dibuat, termasuk CBT, analisis soal, rapor STS, siswa, pegawai, nilai, presensi, dan inventaris. Foto serta dokumen PDF tidak termasuk dan perlu dicadangkan sebagai berkas secara terpisah.
+        Setiap backup diperiksa agar memuat seluruh tabel PostgreSQL yang tersedia saat dibuat, termasuk CBT, analisis soal, rapor STS, siswa, pegawai, nilai, presensi, dan inventaris. Backup baru menyertakan struktur tabel cache tanpa isinya. Foto serta dokumen PDF perlu dicadangkan secara terpisah.
     </div>
 
     <div class="stats-grid">

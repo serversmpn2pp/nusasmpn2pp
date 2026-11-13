@@ -25,6 +25,7 @@ use App\Models\UjianCbt;
 use App\Services\Monitoring\AksesMonitorTv;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -141,11 +142,25 @@ class MonitoringTvUjianTest extends TestCase
 
     public function test_sesi_filter_dan_peserta_tanpa_ruang_tetap_terhitung(): void
     {
+        config([
+            'cache.default' => 'database',
+            'cache.stores.database' => ['driver' => 'database', 'table' => 'cache'],
+        ]);
         $d = $this->fondasi();
         $d['peserta'][0]->update(['ruang_ujian_cbt_id' => null]);
         $this->perangkat($d);
-        $this->getJson(route('monitoring-ujian-tv.data', ['sesi_id' => $d['sesi']->id]))->assertOk()->assertJsonPath('ringkasan.total', 8)
+        $url = route('monitoring-ujian-tv.data');
+        $this->getJson($url)->assertOk()->assertJsonPath('sesi_id', null);
+        $this->getJson($url.'?sesi_id='.$d['sesi']->id)->assertOk()->assertJsonPath('ringkasan.total', 8)
+            ->assertJsonPath('sesi_id', $d['sesi']->id)
             ->assertJsonFragment(['nama' => 'Belum ditempatkan']);
+        $this->travel(5)->seconds();
+        $this->getJson($url)->assertOk()->assertJsonPath('sesi_id', null)->assertJsonPath('diperbarui_pada', now()->toIso8601String());
+
+        $prefix = Cache::store('database')->getStore()->getPrefix();
+        $kunci = $prefix.'monitoring-tv:v3:ujian:'.$d['kegiatan']->id.':'.$d['jadwal']->id.':';
+        $this->assertSame([$kunci.'0', $kunci.$d['sesi']->id], DB::table('cache')
+            ->whereLike('key', $prefix.'monitoring-tv:%')->orderBy('key')->pluck('key')->all());
     }
 
     public function test_pencabutan_dan_kegiatan_nonaktif_menolak_sebelum_membaca_cache(): void

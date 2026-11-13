@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\AnggotaKelas;
 use App\Models\TahunPelajaran;
 use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
+use App\Services\Monitoring\CacheMonitoringTv;
 use App\Services\Monitoring\MonitoringSiswaService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +26,7 @@ class MonitoringSiswaController extends Controller
     private function snapshot(MonitoringSiswaService $service): array
     {
         // Share a short-lived snapshot across TV screens; authorization is checked before cache access.
-        return Cache::remember('monitor-tv:v2:'.now()->format('Ymd').':'.intdiv(now()->timestamp, 5), 5,
-            fn () => $service->bangun(true));
+        return CacheMonitoringTv::ingat('siswa', 5, fn () => $service->bangun(true));
     }
 
     public function rincian(Request $request, MonitoringSiswaService $service)
