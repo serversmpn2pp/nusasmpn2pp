@@ -28,6 +28,7 @@ use App\Services\Pembinaan\PoinPresensiOtomatisService;
 use App\Services\Piket\CatatKehadiranSiswaPiketService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -188,6 +189,65 @@ class PresensiManualTanpaKartuTest extends TestCase
         $this->assertSame(0, (int) TransaksiPoinSiswa::sum('poin'));
     }
 
+    public function test_sumber_masuk_manual_dan_scan_pulang_dipisah_pada_web_dan_native(): void
+    {
+        $d = $this->data();
+        $tanggal = '2026-11-05';
+        $d['admin']->update(['nama' => 'Petugas Presensi Uji']);
+        PengaturanAbsensi::where('hari', 'kamis')->update([
+            'jam_scan_pulang_mulai' => '11:00', 'jam_pulang' => '11:20',
+        ]);
+        Carbon::setTestNow($tanggal.' 09:48:21');
+        $absensi = app(KoreksiPresensiSiswaService::class)->koreksi($d['admin'], $d['anggota'], [
+            ...$this->payload(), 'jam_masuk' => '06:22:00', 'alasan_hadir_manual' => 'tidak_membawa_kartu',
+        ]);
+        Carbon::setTestNow($tanggal.' 11:25:03');
+        $scan = app(ProsesScanAbsensi::class)->proses($d['siswa']->nisn, now(), 'pulang');
+        $this->assertTrue($scan['berhasil']);
+        $this->assertSame('scan', $absensi->refresh()->sumber);
+        $sebelumDibaca = $absensi->getAttributes();
+        $parameter = ['anggotaKelas' => $d['anggota'], 'tanggal' => $tanggal];
+        $token = $d['admin']->createToken('Tes sumber presensi', ['mobile'])->plainTextToken;
+
+        $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.index', ['tanggal' => $tanggal]))
+            ->assertOk()
+            ->assertJsonPath('data.items.0.presensi.sumber_masuk_label', 'Input manual')
+            ->assertJsonPath('data.items.0.presensi.sumber_pulang_label', 'Scanner')
+            ->assertJsonPath('data.items.0.presensi.ada_scan_masuk', false)
+            ->assertJsonMissingPath('data.items.0.riwayat');
+
+        $this->getJson(route('api.v1.rekap-presensi-siswa.show', $parameter))
+            ->assertOk()
+            ->assertHeaderContains('Cache-Control', 'no-store')
+            ->assertJsonPath('data.item.presensi.jam_masuk', '06:22')
+            ->assertJsonPath('data.item.presensi.sumber_masuk', 'manual')
+            ->assertJsonPath('data.item.presensi.jam_pulang', '11:25')
+            ->assertJsonPath('data.item.presensi.sumber_pulang', 'scan')
+            ->assertJsonPath('data.riwayat.0.dibuat_oleh', 'Petugas Presensi Uji')
+            ->assertJsonPath('data.riwayat.0.dibuat_pada', $tanggal.'T09:48:21+07:00')
+            ->assertJsonPath('data.riwayat.0.dibuat_pada_label', '05 Nov 2026, 09:48:21 WIB');
+
+        $rekap = $this->actingAs($d['admin'], 'web')->get(route('rekap-absensi-harian.index', ['tanggal' => $tanggal]))
+            ->assertOk()->assertSee(route('rekap-absensi-harian.rincian', $parameter))
+            ->assertSee('06:22')->assertSee('Input manual')->assertSee('11:25')->assertSee('Scanner');
+        $rincian = $this->get(route('rekap-absensi-harian.rincian', $parameter))
+            ->assertOk()->assertHeaderContains('Cache-Control', 'no-store')
+            ->assertSee('06:22')->assertSee('Input manual')->assertSee('11:25')->assertSee('Scanner')
+            ->assertSee('Petugas Presensi Uji')->assertSee('05 Nov 2026, 09:48:21 WIB');
+        $this->get(route('rekap-absensi-harian.koreksi.edit', $parameter))
+            ->assertOk()->assertSee('06:22 &middot; Input manual', false)->assertSee('11:25 &middot; Scanner', false);
+        $this->assertSame($sebelumDibaca, $absensi->fresh()->getAttributes());
+        $this->assertSame(5, $absensi->menit_terlambat);
+        $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
+        $this->assertDatabaseCount('riwayat_perubahan_absensi_siswa', 1);
+
+        if (getenv('NUSA_CAPTURE_REKAP_SUMBER')) {
+            File::ensureDirectoryExists(storage_path('framework/testing/rekap-sumber'));
+            File::put(storage_path('framework/testing/rekap-sumber/rekap.html'), $rekap->getContent());
+            File::put(storage_path('framework/testing/rekap-sumber/rincian.html'), $rincian->getContent());
+        }
+    }
+
     public function test_poin_nol_dihormati_dan_tanpa_pengaturan_memakai_nilai_bawaan_lima_belas(): void
     {
         $d = $this->data();
@@ -269,7 +329,7 @@ class PresensiManualTanpaKartuTest extends TestCase
         $d = $this->data();
         $this->withToken($d['guru']->createToken('Tes piket')->plainTextToken)
             ->getJson(route('api.v1.piket-saya.index'))->assertOk()
-            ->assertJsonCount(2, 'data.aturan_hadir_manual.alasan')
+            ->assertJsonCount(3, 'data.aturan_hadir_manual.alasan')
             ->assertJsonPath('data.aturan_hadir_manual.alasan.0.kode', 'tidak_membawa_kartu')
             ->assertJsonPath('data.aturan_hadir_manual.alasan.1.kode', 'kartu_hilang');
         foreach (['bebas_sanksi', 'input_manual_petugas'] as $alasan) {
@@ -282,6 +342,122 @@ class PresensiManualTanpaKartuTest extends TestCase
                 ->patchJson(route('api.v1.rekap-presensi-siswa.update', $d['anggota']), $this->payload())->assertForbidden();
         }
         $this->assertDatabaseCount('absensi_siswa', 0);
+    }
+
+    public function test_scan_bermasalah_tetap_hadir_tanpa_poin_dan_hanya_verifikator_boleh_menetapkan_hasil(): void
+    {
+        $d = $this->data();
+        $tanggal = '2026-11-05';
+        $d['pengaturan']->update(['aktif' => true, 'otomatis_langsung' => true, 'berlaku_mulai' => $tanggal]);
+        Carbon::setTestNow($tanggal.' 14:15:03');
+        $this->assertTrue(app(ProsesScanAbsensi::class)->proses($d['siswa']->nisn, now(), 'pulang')['berhasil']);
+        $data = ['status_kehadiran' => 'hadir', 'alasan_hadir_manual' => 'scan_bermasalah', 'catatan' => 'Kartu dibawa, mesin gagal.'];
+        $piket = route('api.v1.piket-saya.kehadiran.update', $d['anggota']);
+        $formPiket = $this->actingAs($d['guru'], 'web')->get(route('piket-kehadiran-siswa.index'))->assertOk()
+            ->assertSee('Catat gangguan scan masuk')->assertSee('Scan bermasalah');
+        $this->app['auth']->forgetGuards();
+        $this->withToken($d['guru']->createToken('Tes piket', ['mobile'])->plainTextToken)
+            ->patchJson($piket, $data)->assertUnprocessable()->assertJsonValidationErrors('jam_masuk');
+        $this->patchJson($piket, $data + ['jam_masuk' => '07:15'])->assertOk()->assertJsonPath('data.perlu_verifikasi_scan', true);
+        $this->patchJson($piket, ['status_kehadiran' => 'hadir', 'catatan' => 'Mencoba menetapkan sanksi.'])->assertForbidden();
+        $anggota = $d['anggota'];
+        $absensi = AbsensiSiswa::firstOrFail();
+        $this->assertSame('14:15:03', $absensi->jam_pulang);
+        app(PoinPresensiOtomatisService::class)->sinkronkanAnggota($anggota->id, $tanggal);
+        app(\App\Services\Pembinaan\ProsesPoinKeterlambatanService::class)->sinkronkanAbsensi($absensi);
+        $this->assertSame(0, $absensi->fresh()->menit_terlambat);
+        $this->assertDatabaseCount('transaksi_poin_siswa', 0);
+        $this->assertDatabaseCount('laporan_pembinaan_siswa', 0);
+        $this->assertFalse(NotifikasiPengguna::where('kunci_unik', 'like', 'presensi-manual-%')->exists());
+
+        $d['kelas']->update(['wali_kelas_id' => $d['guru']->pegawai_id]);
+        $d['guru']->daftarPeran()->attach(Peran::where('kode', 'wali_kelas')->firstOrFail());
+        $parameter = ['anggotaKelas' => $anggota, 'tanggal' => $tanggal];
+        $koreksi = route('api.v1.rekap-presensi-siswa.update', $anggota);
+        $hasil = ['tanggal' => $tanggal, 'status_kehadiran' => 'hadir', 'jam_masuk' => '07:15', 'catatan' => 'Petugas membenarkan gangguan.'];
+        $this->app['auth']->forgetGuards();
+        $this->withToken($d['guru']->createToken('Tes wali', ['mobile'])->plainTextToken)->patchJson($koreksi, $hasil + ['hasil_verifikasi_scan' => 'kartu_hilang'])->assertForbidden();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($d['admin']->createToken('Tes admin', ['mobile'])->plainTextToken)
+            ->getJson(route('api.v1.rekap-presensi-siswa.index', ['tanggal' => $tanggal, 'status' => 'perlu_verifikasi']))
+            ->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.presensi.status', 'hadir');
+        $this->getJson(route('api.v1.rekap-presensi-siswa.show', $parameter))->assertOk()
+            ->assertJsonPath('data.item.presensi.sumber_masuk', 'manual')->assertJsonPath('data.item.presensi.sumber_pulang', 'scan')
+            ->assertJsonPath('data.dapat_memverifikasi_scan', true);
+        $this->patchJson($koreksi, $hasil)->assertUnprocessable()->assertJsonValidationErrors('hasil_verifikasi_scan');
+        $this->patchJson($koreksi, $hasil + ['hasil_verifikasi_scan' => 'scan_ditemukan'])->assertUnprocessable();
+
+        $formVerifikasi = $this->actingAs($d['admin'], 'web')->get(route('rekap-absensi-harian.koreksi.edit', $parameter))->assertOk()->assertSee('Simpan hasil verifikasi');
+        $daftar = $this->get(route('rekap-absensi-harian.index', ['tanggal' => $tanggal, 'status' => 'perlu_verifikasi']))
+            ->assertOk()->assertSee('Perlu verifikasi')->assertSee('Siswa Tanpa Kartu');
+        if (getenv('NUSA_CAPTURE_REKAP_SUMBER')) {
+            File::ensureDirectoryExists(storage_path('framework/testing/rekap-sumber'));
+            File::put(storage_path('framework/testing/rekap-sumber/piket-gangguan.html'), $formPiket->getContent());
+            File::put(storage_path('framework/testing/rekap-sumber/rekap-gangguan.html'), $daftar->getContent());
+            File::put(storage_path('framework/testing/rekap-sumber/verifikasi.html'), $formVerifikasi->getContent());
+        }
+        $this->put(route('rekap-absensi-harian.koreksi.update', $anggota), $hasil + ['hasil_verifikasi_scan' => 'gangguan_terkonfirmasi'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $absensi->refresh();
+        $this->assertSame('14:15:03', $absensi->jam_pulang);
+        $this->assertSame(15, $absensi->menit_terlambat);
+        $this->assertSame(0, $absensi->sanksi_manual_menit);
+        $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
+        $this->assertDatabaseHas('riwayat_perubahan_absensi_siswa', ['sumber' => 'verifikasi_scan', 'dibuat_oleh_pengguna_id' => $d['admin']->id]);
+        $this->get(route('rekap-absensi-harian.rincian', $parameter))->assertOk()->assertSee('Gangguan scan terkonfirmasi');
+    }
+
+    public function test_scan_bermasalah_bisa_dikonfirmasi_kartu_hilang_dan_poin_hanya_sekali(): void
+    {
+        $d = $this->data();
+        $service = app(KoreksiPresensiSiswaService::class);
+        $absensi = $service->koreksi($d['admin'], $d['anggota'], $this->payload() + ['alasan_hadir_manual' => 'scan_bermasalah']);
+        $this->assertTrue($absensi->menungguVerifikasiScan());
+        $hasil = $this->payload() + ['hasil_verifikasi_scan' => 'kartu_hilang'];
+        $url = route('api.v1.rekap-presensi-siswa.update', $d['anggota']);
+        $this->withToken($d['admin']->createToken('Tes verifikasi', ['mobile'])->plainTextToken)->patchJson($url, $hasil)
+            ->assertOk()->assertJsonPath('data.perlu_verifikasi_scan', false)->assertJsonPath('data.menit_terlambat', 5);
+        $this->patchJson($url, $hasil)->assertUnprocessable();
+        app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($absensi->fresh());
+        $this->assertSame('kartu_hilang', $absensi->fresh()->alasan_hadir_manual);
+        $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
+        $this->assertDatabaseCount('transaksi_poin_siswa', 1);
+    }
+
+    public function test_scan_susulan_menjadi_bukti_tanpa_mengubah_jam_sebelum_verifikasi(): void
+    {
+        $d = $this->data();
+        $service = app(KoreksiPresensiSiswaService::class);
+        $absensi = $service->koreksi($d['admin'], $d['anggota'], $this->payload() + ['alasan_hadir_manual' => 'scan_bermasalah']);
+        Carbon::setTestNow('2026-11-05 06:58:23');
+        $this->assertTrue(app(ProsesScanAbsensi::class)->proses($d['siswa']->nisn, now(), 'masuk')['berhasil']);
+        $this->assertSame('06:55:00', $absensi->fresh()->jam_masuk);
+        $this->assertTrue($absensi->fresh()->menungguVerifikasiScan());
+        $this->assertDatabaseCount('transaksi_poin_siswa', 0);
+        $absensi = $service->koreksi($d['admin'], $d['anggota'], $this->payload() + ['hasil_verifikasi_scan' => 'scan_ditemukan']);
+        $this->assertSame('06:58:23', $absensi->jam_masuk);
+        $this->assertSame('scan', $absensi->sumber);
+        $this->assertFalse($absensi->menungguVerifikasiScan());
+        $this->assertDatabaseCount('transaksi_poin_siswa', 0);
+    }
+
+    public function test_wakil_kesiswaan_mengoreksi_sanksi_kartu_yang_sudah_tercatat_tanpa_pembatalan_ganda(): void
+    {
+        $d = $this->data();
+        $absensi = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Catatan awal.', 'tidak_membawa_kartu');
+        $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
+        $waka = $this->akun('waka-verifikasi', ['peran' => 'pegawai', 'pegawai_id' => Pegawai::create([
+            'nama_lengkap' => 'Wakil Uji', 'aktif' => true,
+        ])->id]);
+        $waka->daftarPeran()->attach(Peran::where('kode', 'wakil_pimpinan_kesiswaan')->firstOrFail());
+        $service = app(KoreksiPresensiSiswaService::class);
+        $service->koreksi($waka, $d['anggota'], $this->payload() + ['alasan_hadir_manual' => 'scan_bermasalah']);
+        $this->assertSame(0, (int) TransaksiPoinSiswa::sum('poin'));
+        app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($absensi->fresh());
+        $hasil = $service->koreksi($waka, $d['anggota'], $this->payload() + ['hasil_verifikasi_scan' => 'gangguan_terkonfirmasi']);
+        $this->assertFalse($hasil->menungguVerifikasiScan());
+        $this->assertSame(0, (int) TransaksiPoinSiswa::sum('poin'));
+        $this->assertDatabaseCount('transaksi_poin_siswa', 2);
     }
 
     private function payload(): array

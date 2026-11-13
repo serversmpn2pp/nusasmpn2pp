@@ -268,6 +268,7 @@ class DutyAttendanceFormSheet extends StatefulWidget {
 class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
   late String _status;
   late String _reason;
+  TimeOfDay? _arrival;
   late final TextEditingController _notes;
   @override
   void initState() {
@@ -276,7 +277,11 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
         ? widget.student.status
         : 'hadir';
     _notes = TextEditingController(text: widget.student.notes);
-    _reason = ManualAttendanceRule.normalizeReason(widget.student.manualReason);
+    _reason = widget.student.onlyCheckout
+        ? ManualAttendanceRule.scanIssue
+        : widget.rule.supportsScanIssue && widget.student.manualReason == null
+        ? ''
+        : ManualAttendanceRule.normalizeReason(widget.student.manualReason);
   }
 
   @override
@@ -305,35 +310,42 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
               style: const TextStyle(color: NusaColors.textSecondary),
             ),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(
-                  value: 'hadir',
-                  label: Text('Hadir'),
-                  icon: Icon(Icons.check_circle_outline_rounded),
-                ),
-                ButtonSegment(
-                  value: 'sakit',
-                  label: Text('Sakit'),
-                  icon: Icon(Icons.medical_services_outlined),
-                ),
-                ButtonSegment(
-                  value: 'izin',
-                  label: Text('Izin'),
-                  icon: Icon(Icons.assignment_turned_in_outlined),
-                ),
-              ],
-              selected: {_status},
-              onSelectionChanged: (value) =>
-                  setState(() => _status = value.first),
-            ),
+            if (!widget.student.onlyCheckout)
+              SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: 'hadir',
+                    label: Text('Hadir'),
+                    icon: Icon(Icons.check_circle_outline_rounded),
+                  ),
+                  ButtonSegment(
+                    value: 'sakit',
+                    label: Text('Sakit'),
+                    icon: Icon(Icons.medical_services_outlined),
+                  ),
+                  ButtonSegment(
+                    value: 'izin',
+                    label: Text('Izin'),
+                    icon: Icon(Icons.assignment_turned_in_outlined),
+                  ),
+                ],
+                selected: {_status},
+                onSelectionChanged: (value) =>
+                    setState(() => _status = value.first),
+              ),
             const SizedBox(height: 14),
             if (_status == 'hadir') ...[
               NusaDropdownField<String>(
                 fieldKey: const Key('duty-manual-reason'),
                 value: _reason,
-                options: ManualAttendanceRule.reasons.entries
+                options: widget.rule.availableReasons.entries
+                    .where(
+                      (item) => widget.student.onlyCheckout
+                          ? item.key == ManualAttendanceRule.scanIssue
+                          : item.key != ManualAttendanceRule.scanIssue ||
+                                widget.student.manualSanctionNote == null,
+                    )
                     .map(
                       (item) => NusaDropdownOption(
                         value: item.key,
@@ -346,13 +358,33 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
                 ),
                 onChanged: (value) => setState(() => _reason = value!),
               ),
+              if (_reason == ManualAttendanceRule.scanIssue) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  key: const Key('duty-scan-issue-arrival'),
+                  icon: const Icon(Icons.schedule),
+                  label: Text(
+                    _arrival == null
+                        ? 'Jam datang'
+                        : 'Jam datang ${_arrival!.format(context)}',
+                  ),
+                  onPressed: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: _arrival ?? TimeOfDay.now(),
+                    );
+                    if (mounted && time != null) {
+                      setState(() => _arrival = time);
+                    }
+                  },
+                ),
+              ],
               const SizedBox(height: 12),
             ],
             TextField(
               controller: _notes,
               minLines: 3,
               maxLines: 5,
-              autofocus: true,
               decoration: InputDecoration(
                 labelText: 'Keterangan',
                 hintText: switch (_status) {
@@ -363,13 +395,18 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              _status == 'hadir' ? widget.rule.explanation : 'Keterangan wajib diisi dan akan disimpan dalam riwayat perubahan presensi.',
-              style: const TextStyle(
-                fontSize: 11,
-                color: NusaColors.textSecondary,
+            if (_status != 'hadir' || _reason.isNotEmpty)
+              Text(
+                _status == 'hadir'
+                    ? (_reason == ManualAttendanceRule.scanIssue
+                          ? ManualAttendanceRule.pendingExplanation
+                          : widget.rule.explanation)
+                    : 'Keterangan wajib diisi dan akan disimpan dalam riwayat perubahan presensi.',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: NusaColors.textSecondary,
+                ),
               ),
-            ),
             const SizedBox(height: 18),
             NusaPrimaryButton(label: 'Simpan Kehadiran', onPressed: _submit),
           ],
@@ -379,6 +416,20 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
   }
 
   void _submit() {
+    if (_status == 'hadir' && _reason.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih alasan hadir tanpa scan.')),
+      );
+      return;
+    }
+    final scanIssue =
+        _status == 'hadir' && _reason == ManualAttendanceRule.scanIssue;
+    final time = _arrival;
+    if (scanIssue && time == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Isi jam datang.')));
+      return;
+    }
     if (_notes.text.trim().length < 3) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Keterangan minimal 3 karakter.')),
@@ -389,6 +440,9 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
       _status,
       _notes.text.trim(),
       _status == 'hadir' ? _reason : null,
+      scanIssue && time != null
+          ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
+          : null,
     ));
   }
 }

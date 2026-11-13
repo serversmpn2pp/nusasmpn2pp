@@ -263,6 +263,20 @@ class ProsesScanAbsensi
         return DB::transaction(function () use ($isiScan, $parsed, $waktuScan, $siswa, $tahunPelajaran, $anggotaKelas, $pengaturanAbsensi, $ipAddress, $userAgent) {
             $absensi = $this->ambilAtauBuatAbsensi($waktuScan, $siswa, $tahunPelajaran, $anggotaKelas);
 
+            if ($absensi->menungguVerifikasiScan() && ! $absensi->logScanAbsensi()->where('jenis_scan', 'masuk')->where('berhasil', true)->exists()) {
+                $pesan = 'Scan masuk terekam sebagai bukti. Presensi menunggu verifikasi petugas.';
+                $log = $this->catatLog($isiScan, $waktuScan, 'berhasil_masuk', $pesan, true, $parsed['scanner_id'],
+                    $parsed['nisn'], 'masuk', $siswa, $absensi, $ipAddress, $userAgent);
+
+                return $this->hasil(true, 'berhasil_masuk', $pesan, $siswa, $absensi, $log, 'masuk', [
+                    'status_masuk' => $absensi->status_masuk,
+                    'menit_terlambat' => 0,
+                    'scanner_id' => $parsed['scanner_id'],
+                    'nisn' => $parsed['nisn'],
+                    'notifikasi_absensi_id' => null,
+                ]);
+            }
+
             if (in_array($absensi->status_kehadiran, ['sakit', 'izin'], true) && ! $absensi->jam_masuk) {
                 return $this->gagal(
                     isiScan: $isiScan,
@@ -437,7 +451,7 @@ class ProsesScanAbsensi
         $absensi = AbsensiSiswa::query()
             ->whereDate('tanggal', $waktuScan->toDateString())
             ->where('siswa_id', $siswa->id)
-            ->first();
+            ->lockForUpdate()->first();
 
         if ($absensi) {
             return $absensi;

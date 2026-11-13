@@ -219,6 +219,8 @@ class MyDutyStudent {
     this.notes,
     this.checkInTime,
     this.manualReason,
+    this.scanNeedsReview = false,
+    this.onlyCheckout = false,
     this.manualSanctionNote,
   });
   factory MyDutyStudent.fromJson(Map<String, dynamic> json) {
@@ -239,6 +241,8 @@ class MyDutyStudent {
       notes: attendance['catatan'] as String?,
       checkInTime: attendance['jam_masuk'] as String?,
       manualReason: attendance['alasan_hadir_manual'] as String?,
+      scanNeedsReview: attendance['perlu_verifikasi_scan'] as bool? ?? false,
+      onlyCheckout: attendance['hanya_scan_pulang'] as bool? ?? false,
       manualSanctionNote: attendance['keterangan_sanksi_manual'] as String?,
     );
   }
@@ -255,6 +259,8 @@ class MyDutyStudent {
   final String? notes;
   final String? checkInTime;
   final String? manualReason;
+  final bool scanNeedsReview;
+  final bool onlyCheckout;
   final String? manualSanctionNote;
 }
 

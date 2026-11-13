@@ -121,6 +121,8 @@ final class DioStudentAttendanceRecapRemoteDataSource
           'catatan': value.notes.trim(),
           if (value.status == 'hadir' && value.manualReason != null)
             'alasan_hadir_manual': value.manualReason,
+          if (value.scanReviewResult != null)
+            'hasil_verifikasi_scan': value.scanReviewResult,
         },
       );
     } on DioException catch (exception) {

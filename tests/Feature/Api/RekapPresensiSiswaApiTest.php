@@ -11,6 +11,7 @@ use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Services\Absensi\ProsesScanAbsensi;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -50,6 +51,7 @@ class RekapPresensiSiswaApiTest extends TestCase
             ->assertJsonPath('data.ringkasan.hadir', 1)
             ->assertJsonPath('data.ringkasan.belum_scan', 1)
             ->assertJsonPath('data.hak_akses.dapat_pesan_whatsapp', true)
+            ->assertJsonFragment(['sumber_masuk' => 'tidak_diketahui', 'sumber_pulang' => null])
             ->assertJsonFragment(['sumber' => 'scan'])
             ->assertJsonFragment(['status' => 'belum_scan']);
 
@@ -100,6 +102,38 @@ class RekapPresensiSiswaApiTest extends TestCase
         ]);
     }
 
+    public function test_koreksi_jam_masuk_tidak_mengubah_sumber_jam_pulang_yang_tetap_cocok_dengan_scan(): void
+    {
+        Carbon::setTestNow('2026-08-27 06:45:01');
+        $data = $this->dataDasar();
+        $administrator = Pengguna::where('username', 'administrator')->firstOrFail();
+        $token = $this->token($administrator);
+        $scanner = app(ProsesScanAbsensi::class);
+        $this->assertTrue($scanner->proses($data['siswaBelum']->nisn, now(), 'masuk')['berhasil']);
+        Carbon::setTestNow('2026-08-27 14:23:05');
+        $this->assertTrue($scanner->proses($data['siswaBelum']->nisn, now(), 'pulang')['berhasil']);
+        $parameter = ['anggotaKelas' => $data['anggotaBelum'], 'tanggal' => '2026-08-27'];
+
+        $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.show', $parameter))
+            ->assertOk()
+            ->assertJsonPath('data.item.presensi.sumber_masuk', 'scan')
+            ->assertJsonPath('data.item.presensi.sumber_pulang', 'scan')
+            ->assertJsonCount(0, 'data.riwayat');
+
+        $this->patchJson(route('api.v1.rekap-presensi-siswa.update', $data['anggotaBelum']), [
+            'tanggal' => '2026-08-27', 'status_kehadiran' => 'hadir', 'jam_masuk' => '06:35', 'jam_pulang' => '14:23:05',
+            'catatan' => 'Waktu masuk disesuaikan setelah pemeriksaan.',
+        ])->assertOk();
+
+        $this->getJson(route('api.v1.rekap-presensi-siswa.show', $parameter))
+            ->assertOk()
+            ->assertJsonPath('data.item.presensi.sumber', 'manual')
+            ->assertJsonPath('data.item.presensi.sumber_masuk', 'manual')
+            ->assertJsonPath('data.item.presensi.sumber_pulang', 'scan')
+            ->assertJsonPath('data.item.presensi.ada_scan_masuk', true)
+            ->assertJsonPath('data.riwayat.0.sumber', 'koreksi_manual');
+    }
+
     public function test_guru_pl_hanya_mengoreksi_hari_ini_dan_tidak_dapat_mengubah_hasil_scan(): void
     {
         Carbon::setTestNow('2026-08-27 09:00:00');
@@ -135,6 +169,16 @@ class RekapPresensiSiswaApiTest extends TestCase
 
         $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.index', ['tanggal' => '2026-08-26']))
             ->assertForbidden();
+
+        $this->actingAs($guruPl, 'web')->get(route('rekap-absensi-harian.rincian', [
+            'anggotaKelas' => $data['anggotaBelum'], 'tanggal' => '2026-08-26',
+        ]))->assertForbidden();
+
+        $this->get(route('rekap-absensi-harian.rincian', [
+            'anggotaKelas' => $data['anggotaScan'], 'tanggal' => '2026-08-27',
+        ]))->assertOk()->assertDontSee(route('rekap-absensi-harian.koreksi.edit', [
+            'anggotaKelas' => $data['anggotaScan'], 'tanggal' => '2026-08-27',
+        ]));
     }
 
     public function test_wali_kelas_hanya_melihat_rekap_kelas_yang_diampu(): void
@@ -183,6 +227,13 @@ class RekapPresensiSiswaApiTest extends TestCase
         $this->withToken($token)->getJson(route('api.v1.rekap-presensi-siswa.show', [
             'anggotaKelas' => $anggotaLain,
             'tanggal' => '2026-08-27',
+        ]))->assertForbidden();
+
+        $this->actingAs($wali, 'web')->get(route('rekap-absensi-harian.rincian', [
+            'anggotaKelas' => $data['anggotaScan'], 'tanggal' => '2026-08-27',
+        ]))->assertOk();
+        $this->get(route('rekap-absensi-harian.rincian', [
+            'anggotaKelas' => $anggotaLain, 'tanggal' => '2026-08-27',
         ]))->assertForbidden();
     }
 

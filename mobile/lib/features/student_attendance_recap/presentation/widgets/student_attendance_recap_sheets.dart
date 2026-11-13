@@ -97,6 +97,7 @@ class StudentAttendanceDetailSheet extends StatelessWidget {
                     ),
                   ),
                   Container(
+                    constraints: const BoxConstraints(maxWidth: 92),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 9,
                       vertical: 6,
@@ -107,6 +108,7 @@ class StudentAttendanceDetailSheet extends StatelessWidget {
                     ),
                     child: Text(
                       item.statusLabel,
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: color,
                         fontSize: 10,
@@ -154,7 +156,9 @@ class StudentAttendanceDetailSheet extends StatelessWidget {
               if (detail.correction.allowed) ...[
                 const SizedBox(height: 12),
                 NusaPrimaryButton(
-                  label: 'Koreksi Presensi',
+                  label: item.scanNeedsReview
+                      ? 'Verifikasi Scan'
+                      : 'Koreksi Presensi',
                   onPressed: () => Navigator.pop(context, detail),
                 ),
               ],
@@ -172,6 +176,16 @@ class _AttendanceDetailCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final item = detail.record;
+    final showStatusSource =
+        item.checkInTime == null &&
+        item.checkOutTime == null &&
+        const {
+          'otomatis',
+          'pengecualian',
+          'manual',
+          'guru_piket',
+          'penugasan_sekolah',
+        }.contains(item.source);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -181,9 +195,20 @@ class _AttendanceDetailCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _DetailRow(label: 'Sumber data', value: item.sourceLabel),
-          _DetailRow(label: 'Jam masuk', value: item.checkInTime ?? '-'),
-          _DetailRow(label: 'Jam pulang', value: item.checkOutTime ?? '-'),
+          _DetailRow(label: 'Jam masuk', value: item.checkInDisplay),
+          _DetailRow(label: 'Jam pulang', value: item.checkOutDisplay),
+          if (item.scanNeedsReview)
+            const _DetailRow(
+              label: 'Scan bermasalah',
+              value: 'Perlu verifikasi',
+            ),
+          if (item.manualReason == 'gangguan_scan_terverifikasi')
+            const _DetailRow(
+              label: 'Scan bermasalah',
+              value: 'Gangguan terkonfirmasi',
+            ),
+          if (showStatusSource)
+            _DetailRow(label: 'Dasar status', value: item.sourceLabel),
           _DetailRow(
             label: 'Keterlambatan',
             value: item.lateMinutes > 0 ? '${item.lateMinutes} menit' : '-',
@@ -199,7 +224,7 @@ class _AttendanceDetailCard extends StatelessWidget {
             value: detail.scheduleAvailable
                 ? '${detail.officialCheckIn ?? '-'}–${detail.officialCheckOut ?? '-'}'
                 : 'Tidak tersedia',
-            last: item.notes == null,
+            last: item.notes == null && item.manualSanctionNote == null,
           ),
           if (item.notes != null)
             _DetailRow(
@@ -264,63 +289,82 @@ class _HistoryCard extends StatelessWidget {
   const _HistoryCard({required this.history});
   final AttendanceHistoryEntry history;
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: NusaColors.outline),
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: NusaColors.primary.withValues(alpha: .08),
-            borderRadius: BorderRadius.circular(11),
+  Widget build(BuildContext context) {
+    final localizations = MaterialLocalizations.of(context);
+    final localTime = history.createdAt?.toLocal();
+    final waktu =
+        history.createdAtLabel ??
+        (localTime == null
+            ? null
+            : '${localizations.formatCompactDate(localTime)}, '
+                  '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(localTime), alwaysUse24HourFormat: true)}');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: NusaColors.outline),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: NusaColors.primary.withValues(alpha: .08),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: const Icon(
+              Icons.history_rounded,
+              size: 18,
+              color: NusaColors.primary,
+            ),
           ),
-          child: const Icon(
-            Icons.history_rounded,
-            size: 18,
-            color: NusaColors.primary,
-          ),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${_statusLabel(history.beforeStatus)} → ${_statusLabel(history.afterStatus)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                '${history.sourceLabel}${history.createdBy == null ? '' : ' · ${history.createdBy}'}',
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: NusaColors.textSecondary,
-                ),
-              ),
-              if (history.notes?.isNotEmpty == true)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    history.notes!,
-                    style: const TextStyle(fontSize: 11),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_statusLabel(history.beforeStatus)} → ${_statusLabel(history.afterStatus)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
                   ),
                 ),
-            ],
+                Text(
+                  '${history.sourceLabel} · ${history.createdBy ?? 'Akun tidak tercatat'}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: NusaColors.textSecondary,
+                  ),
+                ),
+                if (waktu != null)
+                  Text(
+                    waktu,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: NusaColors.textSecondary,
+                    ),
+                  ),
+                if (history.notes?.isNotEmpty == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      history.notes!,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _InfoBox extends StatelessWidget {
@@ -367,6 +411,16 @@ class _StudentAttendanceCorrectionSheetState
     extends State<StudentAttendanceCorrectionSheet> {
   String? _status;
   late String _manualReason;
+  String? _scanReviewResult;
+  bool get _verifying => widget.detail.record.scanNeedsReview;
+  bool get _hasEvidence => widget.detail.scanEvidenceTime != null;
+  bool get _offerIssueOnly =>
+      !_verifying &&
+      widget.detail.canVerifyScan &&
+      widget.detail.manualRule.supportsScanIssue &&
+      widget.detail.record.hasScannerEntry &&
+      widget.detail.record.checkInSourceLabel != 'Scanner' &&
+      widget.detail.record.manualReason == null;
   late final TextEditingController _checkIn;
   late final TextEditingController _checkOut;
   late final TextEditingController _notes;
@@ -374,13 +428,18 @@ class _StudentAttendanceCorrectionSheetState
   void initState() {
     super.initState();
     final current = widget.detail.record;
-    _manualReason = ManualAttendanceRule.normalizeReason(current.manualReason);
+    _manualReason =
+        _offerIssueOnly ||
+            (widget.detail.manualRule.supportsScanIssue &&
+                current.manualReason == null)
+        ? ''
+        : ManualAttendanceRule.normalizeReason(current.manualReason);
     _status = const {'hadir', 'izin', 'sakit', 'alfa'}.contains(current.status)
         ? current.status
         : null;
     _checkIn = TextEditingController(text: current.checkInTime);
     _checkOut = TextEditingController(text: current.checkOutTime);
-    _notes = TextEditingController(text: current.notes);
+    _notes = TextEditingController(text: _verifying ? null : current.notes);
   }
 
   @override
@@ -396,7 +455,9 @@ class _StudentAttendanceCorrectionSheetState
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final present = _status == 'hadir';
     final manual =
+        !_verifying &&
         present &&
+        widget.detail.record.manualReason != 'gangguan_scan_terverifikasi' &&
         (!widget.detail.record.hasScannerEntry ||
             widget.detail.record.manualReason != null);
     return Padding(
@@ -406,7 +467,7 @@ class _StudentAttendanceCorrectionSheetState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Koreksi Presensi',
+              _verifying ? 'Verifikasi Scan Masuk' : 'Koreksi Presensi',
               style: Theme.of(context).textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
@@ -419,27 +480,70 @@ class _StudentAttendanceCorrectionSheetState
               ),
             ),
             const SizedBox(height: 16),
-            NusaDropdownField<String>(
-              fieldKey: const Key('attendance-correction-status'),
-              value: _status,
-              options: const [
-                NusaDropdownOption(value: 'hadir', label: 'Hadir'),
-                NusaDropdownOption(value: 'izin', label: 'Izin'),
-                NusaDropdownOption(value: 'sakit', label: 'Sakit'),
-                NusaDropdownOption(value: 'alfa', label: 'Alfa'),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Status kehadiran',
-                prefixIcon: Icon(Icons.fact_check_outlined),
+            if (_verifying) ...[
+              NusaDropdownField<String>(
+                fieldKey: const Key('attendance-scan-review-result'),
+                value: _scanReviewResult,
+                options: [
+                  if (_hasEvidence)
+                    const NusaDropdownOption(
+                      value: 'scan_ditemukan',
+                      label: 'Scan masuk ditemukan',
+                    ),
+                  const NusaDropdownOption(
+                    value: 'gangguan_terkonfirmasi',
+                    label: 'Gangguan scan terkonfirmasi',
+                  ),
+                  if (!_hasEvidence) ...const [
+                    NusaDropdownOption(
+                      value: 'tidak_membawa_kartu',
+                      label: 'Terkonfirmasi tidak membawa kartu',
+                    ),
+                    NusaDropdownOption(
+                      value: 'kartu_hilang',
+                      label: 'Terkonfirmasi kartu hilang',
+                    ),
+                  ],
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Hasil verifikasi',
+                ),
+                onChanged: (value) => setState(() {
+                  _scanReviewResult = value;
+                  _checkIn.text = value == 'scan_ditemukan'
+                      ? widget.detail.scanEvidenceTime!
+                      : widget.detail.record.checkInTime ?? '';
+                }),
               ),
-              onChanged: (value) => setState(() {
-                _status = value;
-                if (value != 'hadir') {
-                  _checkIn.clear();
-                  _checkOut.clear();
-                }
-              }),
-            ),
+              const SizedBox(height: 8),
+              _InfoBox(
+                icon: Icons.fact_check_outlined,
+                text: _hasEvidence
+                    ? 'Log scan masuk berhasil: ${widget.detail.scanEvidenceTime} WIB.'
+                    : 'Tidak ditemukan log scan masuk yang berhasil.',
+              ),
+            ] else
+              NusaDropdownField<String>(
+                fieldKey: const Key('attendance-correction-status'),
+                value: _status,
+                options: const [
+                  NusaDropdownOption(value: 'hadir', label: 'Hadir'),
+                  NusaDropdownOption(value: 'izin', label: 'Izin'),
+                  NusaDropdownOption(value: 'sakit', label: 'Sakit'),
+                  NusaDropdownOption(value: 'alfa', label: 'Alfa'),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Status kehadiran',
+                  prefixIcon: Icon(Icons.fact_check_outlined),
+                ),
+                onChanged: (value) => setState(() {
+                  _status = value;
+                  if (value != 'hadir') {
+                    _checkIn.clear();
+                    _checkOut.clear();
+                  }
+                }),
+              ),
             if (present) ...[
               const SizedBox(height: 12),
               Row(
@@ -448,7 +552,9 @@ class _StudentAttendanceCorrectionSheetState
                     child: _TimeField(
                       label: 'Jam masuk',
                       controller: _checkIn,
-                      onTap: () => _pickTime(_checkIn),
+                      onTap: _scanReviewResult == 'scan_ditemukan'
+                          ? null
+                          : () => _pickTime(_checkIn),
                     ),
                   ),
                   const SizedBox(width: 9),
@@ -456,30 +562,48 @@ class _StudentAttendanceCorrectionSheetState
                     child: _TimeField(
                       label: 'Jam pulang',
                       controller: _checkOut,
-                      onTap: () => _pickTime(_checkOut),
+                      onTap: _verifying ? null : () => _pickTime(_checkOut),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Jam masuk wajib diisi. Jam pulang boleh kosong jika siswa belum pulang.',
-                style: TextStyle(fontSize: 10, color: NusaColors.textSecondary),
-              ),
+              if (!_verifying)
+                const Text(
+                  'Jam masuk wajib diisi. Jam pulang boleh kosong jika siswa belum pulang.',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: NusaColors.textSecondary,
+                  ),
+                ),
             ],
-            if (manual) ...[
+            if (manual || (present && _offerIssueOnly)) ...[
               const SizedBox(height: 12),
               NusaDropdownField<String>(
                 fieldKey: const Key('attendance-correction-manual-reason'),
                 value: _manualReason,
-                options: ManualAttendanceRule.reasons.entries
-                    .map(
-                      (entry) => NusaDropdownOption(
-                        value: entry.key,
-                        label: entry.value,
-                      ),
-                    )
-                    .toList(),
+                options: _offerIssueOnly
+                    ? const [
+                        NusaDropdownOption(value: '', label: 'Tidak ada'),
+                        NusaDropdownOption(
+                          value: ManualAttendanceRule.scanIssue,
+                          label: 'Scan bermasalah',
+                        ),
+                      ]
+                    : widget.detail.manualRule.availableReasons.entries
+                          .where(
+                            (entry) =>
+                                entry.key != ManualAttendanceRule.scanIssue ||
+                                widget.detail.canVerifyScan ||
+                                widget.detail.record.manualSanctionNote == null,
+                          )
+                          .map(
+                            (entry) => NusaDropdownOption(
+                              value: entry.key,
+                              label: entry.value,
+                            ),
+                          )
+                          .toList(),
                 decoration: const InputDecoration(
                   labelText: 'Alasan hadir tanpa scan kartu',
                 ),
@@ -487,10 +611,14 @@ class _StudentAttendanceCorrectionSheetState
                     setState(() => _manualReason = value ?? _manualReason),
               ),
               const SizedBox(height: 8),
-              _InfoBox(
-                icon: Icons.info_outline,
-                text: widget.detail.manualRule.explanation,
-              ),
+              if (!_offerIssueOnly ||
+                  _manualReason == ManualAttendanceRule.scanIssue)
+                _InfoBox(
+                  icon: Icons.info_outline,
+                  text: _manualReason == ManualAttendanceRule.scanIssue
+                      ? ManualAttendanceRule.pendingExplanation
+                      : widget.detail.manualRule.explanation,
+                ),
             ],
             const SizedBox(height: 12),
             TextField(
@@ -498,8 +626,8 @@ class _StudentAttendanceCorrectionSheetState
               controller: _notes,
               minLines: 3,
               maxLines: 5,
-              decoration: const InputDecoration(
-                labelText: 'Alasan koreksi',
+              decoration: InputDecoration(
+                labelText: _verifying ? 'Dasar verifikasi' : 'Alasan koreksi',
                 hintText: 'Tuliskan dasar perubahan data presensi',
               ),
             ),
@@ -509,7 +637,10 @@ class _StudentAttendanceCorrectionSheetState
               style: TextStyle(fontSize: 10, color: NusaColors.textSecondary),
             ),
             const SizedBox(height: 18),
-            NusaPrimaryButton(label: 'Simpan Koreksi', onPressed: _submit),
+            NusaPrimaryButton(
+              label: _verifying ? 'Simpan Hasil Verifikasi' : 'Simpan Koreksi',
+              onPressed: _submit,
+            ),
           ],
         ),
       ),
@@ -526,12 +657,26 @@ class _StudentAttendanceCorrectionSheetState
   }
 
   void _submit() {
+    if (_verifying && _scanReviewResult == null) {
+      _message('Pilih hasil verifikasi.');
+      return;
+    }
     if (_status == null) {
       _message('Pilih status kehadiran.');
       return;
     }
     if (_status == 'hadir' && _checkIn.text.isEmpty) {
       _message('Jam masuk wajib diisi untuk status hadir.');
+      return;
+    }
+    if (!_verifying &&
+        !_offerIssueOnly &&
+        _status == 'hadir' &&
+        widget.detail.manualRule.supportsScanIssue &&
+        !widget.detail.record.hasScannerEntry &&
+        _manualReason.isEmpty &&
+        widget.detail.record.manualReason != 'gangguan_scan_terverifikasi') {
+      _message('Pilih alasan hadir tanpa scan.');
       return;
     }
     if (_notes.text.trim().length < 3) {
@@ -545,9 +690,15 @@ class _StudentAttendanceCorrectionSheetState
         checkInTime: _checkIn.text.isEmpty ? null : _checkIn.text,
         checkOutTime: _checkOut.text.isEmpty ? null : _checkOut.text,
         notes: _notes.text.trim(),
+        scanReviewResult: _scanReviewResult,
         manualReason:
-            _status == 'hadir' &&
-                (!widget.detail.record.hasScannerEntry ||
+            !_verifying &&
+                _status == 'hadir' &&
+                _manualReason.isNotEmpty &&
+                widget.detail.record.manualReason !=
+                    'gangguan_scan_terverifikasi' &&
+                (_offerIssueOnly ||
+                    !widget.detail.record.hasScannerEntry ||
                     widget.detail.record.manualReason != null)
             ? _manualReason
             : null,
@@ -568,7 +719,7 @@ class _TimeField extends StatelessWidget {
   });
   final String label;
   final TextEditingController controller;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => TextField(
     controller: controller,

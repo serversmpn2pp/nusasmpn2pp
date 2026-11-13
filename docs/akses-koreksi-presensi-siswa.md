@@ -24,7 +24,22 @@ Peran dan izin yang diperlukan harus aktif. Akun siswa/orang tua yang salah dipa
 - JSON `hak_akses.dapat_koreksi`, `items[].koreksi`, dan `hak_akses` detail mengikuti kebijakan ini. Struktur respons tidak berubah.
 - Permintaan langsung ke URL atau API tidak bisa melewati kebijakan walau pengguna membuka layar lama.
 - Izin lihat/laporan yang memang sah tetap dipertahankan; petugas baca-saja tidak memperoleh tombol koreksi.
-- Tidak ada perubahan Dart, sehingga tidak memerlukan build AAB baru.
+- Migrasi pembatasan izin saja tidak memerlukan build AAB baru.
+
+## Sumber jam dan riwayat
+
+- Di **Rekap Presensi Siswa**, sumber masuk dan pulang ditampilkan terpisah. Label `Scanner` memerlukan log scan berhasil untuk jenis dan jam yang cocok dengan catatan saat ini. Jika sumber tidak bisa dipastikan, tampil `Sumber belum diketahui`.
+- Buka **Rincian** di web atau ketuk kartu siswa di Android untuk melihat nama akun dan waktu pencatatan/koreksi. Rincian mengikuti cakupan baca rekap dan tidak menghitung ulang sanksi.
+- API menambah `presensi.sumber_masuk`, `presensi.sumber_pulang` dan pasangan `*_label`, serta `riwayat[].dibuat_pada_label` pada detail. `sumber` dan `sumber_label` lama tetap tersedia untuk klien terdahulu.
+- Tampilan sumber jam tidak memerlukan migrasi. Android perlu build baru untuk menampilkan kedua sumber; aplikasi versi lama tetap dapat memakai API.
+
+## Scan bermasalah
+
+- Pilih **Hadir > Scan bermasalah**, isi jam datang serta catatan. Siswa tetap hadir dan tidak mendapat sanksi atau poin presensi selama kasus **Perlu verifikasi**. Gunakan pilihan lupa/hilang hanya jika sudah terkonfirmasi.
+- Admin atau Wakil Kesiswaan dengan `absensi.koreksi` dapat menemukan kasus lewat filter **Perlu verifikasi** di rekap tanggal kejadian, lalu membuka **Verifikasi**. Catat dasar keputusan. Jika buktinya kurang, biarkan kasus menunggu.
+- Gunakan log berhasil bila sesuai waktu kedatangan, atau konfirmasi gangguan dengan jam datang sebenarnya. Scan susulan saat menunggu menjadi bukti tanpa langsung mengganti jam masuk. Scan pulang tetap tersimpan dan tidak dianggap bukti masuk.
+- Setelah verifikasi, jam masuk terverifikasi mengikuti aturan keterlambatan biasa. Sanksi minimal dan poin kartu hanya diterapkan jika kartu lupa/hilang terkonfirmasi. Riwayat mencatat hasil, akun, dan waktu.
+- Tidak ada migrasi baru atau pemrosesan ulang massal. Rilis backend sebelum versi Android yang mendukung alur ini.
 
 ## Pemasangan
 

@@ -6,6 +6,7 @@ import 'package:nusa/features/teacher_duty/data/teacher_duty_remote_data_source.
 import 'package:nusa/features/teacher_duty/domain/teacher_duty.dart';
 import 'package:nusa/features/teacher_duty/presentation/my_teacher_duty_view.dart';
 import 'package:nusa/features/teacher_duty/presentation/teacher_duty_schedule_view.dart';
+import 'package:nusa/shared/domain/manual_attendance.dart';
 
 void main() {
   testWidgets('jadwal guru piket rapi pada layar Android sempit', (
@@ -99,6 +100,39 @@ void main() {
     expect(find.text('Hadir'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('guru piket memilih scan bermasalah dan mencatat jam datang', (
+    tester,
+  ) async {
+    final remote = _FakeTeacherDutyRemoteDataSource(supportsScanIssue: true);
+    await _pump(tester, remote, const MyTeacherDutyView());
+    await tester.tap(find.text('Siswa Piket NUSA'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('duty-manual-reason')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Scan bermasalah').last);
+    await tester.pumpAndSettle();
+    expect(find.text(ManualAttendanceRule.pendingExplanation), findsOneWidget);
+    expect(
+      find.textContaining('5 menit keterlambatan dan 15 poin'),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const Key('duty-scan-issue-arrival')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TimePickerDialog), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Keterangan'),
+      'Scanner gagal membaca kartu.',
+    );
+    await tester.ensureVisible(find.text('Simpan Kehadiran'));
+    await tester.tap(find.text('Simpan Kehadiran'));
+    await tester.pumpAndSettle();
+    expect(remote.lastManualReason, ManualAttendanceRule.scanIssue);
+    expect(remote.lastCheckInTime, matches(RegExp(r'^\d{2}:\d{2}$')));
+    expect(find.text('Perlu verifikasi'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pump(
@@ -119,6 +153,9 @@ Future<void> _pump(
 
 final class _FakeTeacherDutyRemoteDataSource
     implements TeacherDutyRemoteDataSource {
+  _FakeTeacherDutyRemoteDataSource({this.supportsScanIssue = false});
+  final bool supportsScanIssue;
+  String? lastCheckInTime;
   static const year = DutyAcademicYear(id: 1, name: '2026/2027', active: true);
   static const dutyDay = DutyDay(code: 'kamis', label: 'Kamis');
   static const teacher = DutyTeacher(
@@ -197,6 +234,7 @@ final class _FakeTeacherDutyRemoteDataSource
           _ => 'Belum scan',
         },
         canRecord: true,
+        scanNeedsReview: lastManualReason == ManualAttendanceRule.scanIssue,
         studentNumber: '26001',
         notes: switch (lastAttendanceStatus) {
           'hadir' => 'Lupa membawa kartu',
@@ -219,6 +257,7 @@ final class _FakeTeacherDutyRemoteDataSource
     page: page,
     hasMore: false,
     classId: classId,
+    manualRule: ManualAttendanceRule(supportsScanIssue: supportsScanIssue),
   );
 
   @override
@@ -227,10 +266,12 @@ final class _FakeTeacherDutyRemoteDataSource
     required String status,
     required String notes,
     String? manualReason,
+    String? checkInTime,
   }) async {
     recordCalls++;
     lastAttendanceStatus = status;
     lastManualReason = manualReason;
+    lastCheckInTime = checkInTime;
   }
 
   @override

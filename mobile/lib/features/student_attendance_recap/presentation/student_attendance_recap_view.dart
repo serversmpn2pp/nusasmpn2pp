@@ -162,6 +162,10 @@ class _StudentAttendanceRecapViewState
                             ),
                             NusaDropdownOption(value: 'hadir', label: 'Hadir'),
                             NusaDropdownOption(
+                              value: 'perlu_verifikasi',
+                              label: 'Perlu verifikasi',
+                            ),
+                            NusaDropdownOption(
                               value: 'belum_scan',
                               label: 'Belum scan',
                             ),
@@ -552,6 +556,7 @@ class _AttendanceCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 radius: 23,
@@ -589,28 +594,32 @@ class _AttendanceCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 7,
-                      children: [
-                        Text(
-                          'Masuk ${item.checkInTime ?? '-'}',
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                        Text(
-                          'Pulang ${item.checkOutTime ?? '-'}',
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                        if (item.lateMinutes > 0)
-                          Text(
-                            '+${item.lateMinutes} menit',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFFD97706),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                      ],
+                    Text(
+                      'Masuk ${item.checkInDisplay}',
+                      style: const TextStyle(fontSize: 11),
                     ),
+                    Text(
+                      'Pulang ${item.checkOutDisplay}',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    if (item.scanNeedsReview)
+                      const Text(
+                        'Perlu verifikasi',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF8A5A04),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    if (item.lateMinutes > 0)
+                      Text(
+                        '+${item.lateMinutes} menit',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFFD97706),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -619,6 +628,7 @@ class _AttendanceCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
+                    constraints: const BoxConstraints(maxWidth: 92),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 5,
@@ -629,6 +639,7 @@ class _AttendanceCard extends StatelessWidget {
                     ),
                     child: Text(
                       item.statusLabel,
+                      textAlign: TextAlign.right,
                       style: TextStyle(
                         color: color,
                         fontSize: 9,
@@ -637,26 +648,14 @@ class _AttendanceCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      Icon(
-                        item.correction.allowed
-                            ? Icons.edit_note_rounded
-                            : Icons.visibility_outlined,
-                        size: 16,
-                        color: item.correction.allowed
-                            ? NusaColors.primary
-                            : NusaColors.textSecondary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        item.sourceLabel,
-                        style: const TextStyle(
-                          fontSize: 8.5,
-                          color: NusaColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    item.correction.allowed
+                        ? Icons.edit_note_rounded
+                        : Icons.visibility_outlined,
+                    size: 16,
+                    color: item.correction.allowed
+                        ? NusaColors.primary
+                        : NusaColors.textSecondary,
                   ),
                 ],
               ),

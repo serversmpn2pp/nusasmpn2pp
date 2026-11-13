@@ -20,7 +20,7 @@ class RekapPresensiSiswaController extends Controller
             'tahun_pelajaran_id' => ['nullable', 'integer', 'exists:tahun_pelajaran,id'],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'status' => ['nullable', Rule::in([
-                'semua', 'hadir', 'izin', 'sakit', 'alfa', 'belum_scan', 'pengecualian', 'terlambat', 'pulang_cepat', 'belum_pulang',
+                'semua', 'hadir', 'izin', 'sakit', 'alfa', 'belum_scan', 'pengecualian', 'terlambat', 'pulang_cepat', 'belum_pulang', 'perlu_verifikasi',
             ])],
             'cari' => ['nullable', 'string', 'max:100'],
             'halaman' => ['nullable', 'integer', 'min:1'],
@@ -62,6 +62,7 @@ class RekapPresensiSiswaController extends Controller
             'jam_pulang' => ['nullable', 'date_format:H:i,H:i:s'],
             'catatan' => ['required', 'string', 'min:3', 'max:2000'],
             'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
+            'hasil_verifikasi_scan' => ['nullable', Rule::in(array_keys(AbsensiSiswa::HASIL_VERIFIKASI_SCAN))],
         ]);
         $absensi = $service->koreksi($request->user(), $anggotaKelas, $data);
 
@@ -70,6 +71,7 @@ class RekapPresensiSiswaController extends Controller
             'data' => [
                 'id' => (int) $absensi->id,
                 'status' => $absensi->status_kehadiran,
+                'perlu_verifikasi_scan' => $absensi->menungguVerifikasiScan(),
                 'menit_terlambat' => (int) $absensi->menit_terlambat,
                 'menit_pulang_cepat' => (int) $absensi->menit_pulang_cepat,
             ],

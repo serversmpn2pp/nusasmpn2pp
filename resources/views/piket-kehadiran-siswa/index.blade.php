@@ -47,7 +47,7 @@
                     $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
                     $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
                     $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
-                    $bolehDicatat = ! $absensi || $absensi->sumber === 'guru_piket';
+                    $bolehDicatat = ! $absensi || $absensi->dapatDicatatPiket();
                 @endphp
                 <tr>
                     <td>{{ $anggotaKelas->firstItem() + $loop->index }}</td>
@@ -76,7 +76,7 @@
                 $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
                 $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
                 $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
-                $bolehDicatat = ! $absensi || $absensi->sumber === 'guru_piket';
+                $bolehDicatat = ! $absensi || $absensi->dapatDicatatPiket();
             @endphp
             <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $anggota->kelas?->nama }} &middot; NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></div>@if($absensi?->catatanKehadiran())<p class="help-text" style="margin-top:10px;">{{ $absensi->catatanKehadiran() }}</p>@endif @if($bolehDicatat) @include('piket-kehadiran-siswa._form-kehadiran') @endif</article>
         @empty
@@ -93,8 +93,16 @@
         document.querySelectorAll('[data-hadir-manual]').forEach(form => {
             const status = form.querySelector('[name="status_kehadiran"]');
             const alasan = form.querySelector('[data-alasan-manual]');
-            const sync = () => { alasan.hidden = status.value !== 'hadir'; alasan.querySelector('select').disabled = alasan.hidden; };
-            status.addEventListener('change', sync); sync();
+            const pilihan = alasan.querySelector('select');
+            const gangguan = form.querySelector('[data-jam-gangguan]');
+            const jam = gangguan.querySelector('input');
+            const sync = () => {
+                alasan.hidden = status.value !== 'hadir'; pilihan.disabled = alasan.hidden; pilihan.required = !alasan.hidden;
+                gangguan.hidden = alasan.hidden || pilihan.value !== 'scan_bermasalah';
+                jam.disabled = gangguan.hidden; jam.required = !gangguan.hidden;
+                form.querySelector('[data-info-sanksi]').hidden = !gangguan.hidden || !pilihan.value;
+            };
+            status.addEventListener('change', sync); pilihan.addEventListener('change', sync); sync();
         });
     </script>
 @endsection

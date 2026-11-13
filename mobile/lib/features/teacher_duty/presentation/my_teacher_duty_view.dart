@@ -200,24 +200,23 @@ class _MyTeacherDutyViewState extends ConsumerState<MyTeacherDutyView> {
   Future<void> _record(MyDutyStudent student) async {
     if (!student.canRecord) {
       _show(
-        student.status == 'hadir'
-            ? 'Siswa sudah scan masuk dan tidak dapat diubah dari menu guru piket.'
-            : 'Presensi ini hanya dapat diubah melalui petugas koreksi yang berwenang.',
+        student.scanNeedsReview ? 'Scan masuk sedang menunggu verifikasi.' : 'Presensi ini hanya dapat diubah melalui petugas koreksi yang berwenang.',
         error: true,
       );
       return;
     }
-    final result = await showModalBottomSheet<(String, String, String?)>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => DutyAttendanceFormSheet(
-        student: student,
-        rule:
-            ref.read(myDutyControllerProvider).value?.manualRule ??
-            const ManualAttendanceRule(),
-      ),
-    );
+    final result =
+        await showModalBottomSheet<(String, String, String?, String?)>(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          builder: (_) => DutyAttendanceFormSheet(
+            student: student,
+            rule:
+                ref.read(myDutyControllerProvider).value?.manualRule ??
+                const ManualAttendanceRule(),
+          ),
+        );
     if (result == null || !mounted) return;
     setState(() => _mutating = true);
     try {
@@ -228,11 +227,14 @@ class _MyTeacherDutyViewState extends ConsumerState<MyTeacherDutyView> {
             status: result.$1,
             notes: result.$2,
             manualReason: result.$3,
+            checkInTime: result.$4,
           );
       await ref.read(myDutyControllerProvider.future);
       if (mounted) {
         _show(
-          'Kehadiran ${student.name} berhasil dicatat sebagai ${result.$1}.',
+          result.$3 == ManualAttendanceRule.scanIssue
+              ? 'Kehadiran ${student.name} dicatat. Scan perlu verifikasi.'
+              : 'Kehadiran ${student.name} berhasil dicatat sebagai ${result.$1}.',
         );
       }
     } catch (error) {
@@ -501,6 +503,15 @@ class _StudentCard extends StatelessWidget {
                         child: Text(
                           student.manualSanctionNote!,
                           style: const TextStyle(fontSize: 10, height: 1.4),
+                        ),
+                      ),
+                    if (student.scanNeedsReview)
+                      const Text(
+                        'Perlu verifikasi',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF8A5A04),
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                   ],

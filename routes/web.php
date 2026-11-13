@@ -1345,6 +1345,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::get('rekap-absensi-harian', [RekapAbsensiHarianController::class, 'index'])
             ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
             ->name('rekap-absensi-harian.index');
+        Route::get('rekap-absensi-harian/{anggotaKelas}/rincian', [RekapAbsensiHarianController::class, 'rincian'])
+            ->middleware('izin:absensi.lihat,absensi.koreksi,absensi.koreksi_hari_ini,absensi.laporan')
+            ->name('rekap-absensi-harian.rincian');
         Route::post('rekap-absensi-harian/proses-poin-keterlambatan', [RekapAbsensiHarianController::class, 'prosesPoinKeterlambatan'])
             ->middleware('izin:poin_siswa.pengaturan,poin_siswa.verifikasi_bk')
             ->name('rekap-absensi-harian.proses-poin-keterlambatan');

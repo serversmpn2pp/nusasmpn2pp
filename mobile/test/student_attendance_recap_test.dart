@@ -6,6 +6,7 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_attendance_recap/data/student_attendance_recap_remote_data_source.dart';
 import 'package:nusa/features/student_attendance_recap/domain/student_attendance_recap.dart';
 import 'package:nusa/features/student_attendance_recap/presentation/student_attendance_recap_view.dart';
+import 'package:nusa/features/student_attendance_recap/presentation/widgets/student_attendance_recap_sheets.dart';
 
 void main() {
   test('parses recap, source, and correction access', () {
@@ -47,9 +48,20 @@ void main() {
 
     expect(page.summary.notScanned, 1);
     expect(page.items.single.source, 'scan');
+    expect(page.items.single.checkInDisplay, '07:10 · Scanner');
+    expect(page.items.single.checkOutDisplay, '-');
     expect(page.items.single.lateMinutes, 10);
     expect(page.items.single.correction.allowed, isTrue);
     expect(page.canCopyWhatsApp, isTrue);
+  });
+
+  test('does not infer scanner from the legacy daily source', () {
+    final record = _recordJson();
+    (record['presensi'] as Map<String, dynamic>).remove('sumber_masuk_label');
+    final parsed = StudentAttendanceRecord.fromJson(record);
+
+    expect(parsed.checkInDisplay, '07:10 · Sumber belum diketahui');
+    expect(parsed.checkOutDisplay, '-');
   });
 
   testWidgets('rekap dan koreksi presensi rapi pada layar Android sempit', (
@@ -110,7 +122,7 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('attendance-record-1')));
     await tester.tap(find.byKey(const Key('attendance-record-1')));
     await tester.pumpAndSettle();
-    expect(find.text('Mesin scanner'), findsWidgets);
+    expect(find.text('07:10 · Scanner'), findsOneWidget);
     await tester.ensureVisible(find.text('Koreksi Presensi'));
     await tester.tap(find.text('Koreksi Presensi'));
     await tester.pumpAndSettle();
@@ -139,6 +151,110 @@ void main() {
     expect(remote.lastStatus, 'sakit');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('rekap dan rincian native menampilkan sumber per jam dan audit', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          studentAttendanceRecapRemoteDataSourceProvider.overrideWithValue(
+            _FakeStudentAttendanceRecapRemoteDataSource(mixedSources: true),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const StudentAttendanceRecapView(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -420));
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const Key('attendance-record-1'));
+    expect(find.text('Masuk 06:22 · Input manual'), findsOneWidget);
+    expect(find.text('Pulang 11:25 · Scanner'), findsOneWidget);
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    expect(find.text('06:22 · Input manual'), findsOneWidget);
+    expect(find.text('11:25 · Scanner'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('28 Agu 2026, 09:48:21 WIB'),
+      100,
+      scrollable: find.descendant(
+        of: find.byType(DraggableScrollableSheet),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(find.text('Koreksi manual · Petugas Presensi Uji'), findsOneWidget);
+    expect(find.text('28 Agu 2026, 09:48:21 WIB'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('verifikator native mengirim hasil dan memakai jam bukti scan', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final item = _recordJson();
+    (item['presensi'] as Map<String, dynamic>)['perlu_verifikasi_scan'] = true;
+    final detail = StudentAttendanceDetail.fromJson({
+      'item': item,
+      'jam_bukti_scan_masuk': '06:22:03',
+      'dapat_memverifikasi_scan': true,
+    });
+    AttendanceCorrectionValue? submitted;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                submitted =
+                    await showModalBottomSheet<AttendanceCorrectionValue>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) =>
+                          StudentAttendanceCorrectionSheet(detail: detail),
+                    );
+              },
+              child: const Text('Buka'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Buka'));
+    await tester.pumpAndSettle();
+    expect(find.text('Verifikasi Scan Masuk'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('attendance-scan-review-result')));
+    await tester.pumpAndSettle();
+    expect(find.text('Terkonfirmasi kartu hilang'), findsNothing);
+    await tester.tap(find.text('Scan masuk ditemukan').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('attendance-correction-notes')),
+      'Log sesuai dengan jam datang.',
+    );
+    await tester.ensureVisible(find.text('Simpan Hasil Verifikasi'));
+    await tester.tap(find.text('Simpan Hasil Verifikasi'));
+    await tester.pumpAndSettle();
+    expect(submitted?.scanReviewResult, 'scan_ditemukan');
+    expect(submitted?.checkInTime, '06:22:03');
+    expect(submitted?.manualReason, isNull);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Map<String, dynamic> _recordJson() => {
@@ -159,6 +275,7 @@ Map<String, dynamic> _recordJson() => {
     'sumber': 'scan',
     'sumber_label': 'Mesin scanner',
     'jam_masuk': '07:10',
+    'sumber_masuk_label': 'Scanner',
     'status_masuk': 'terlambat',
     'menit_terlambat': 10,
     'jam_pulang': null,
@@ -171,6 +288,9 @@ Map<String, dynamic> _recordJson() => {
 
 final class _FakeStudentAttendanceRecapRemoteDataSource
     implements StudentAttendanceRecapRemoteDataSource {
+  _FakeStudentAttendanceRecapRemoteDataSource({this.mixedSources = false});
+
+  final bool mixedSources;
   int correctCalls = 0;
   int whatsAppCalls = 0;
   String lastStatus = 'hadir';
@@ -185,6 +305,15 @@ final class _FakeStudentAttendanceRecapRemoteDataSource
       'sumber_label': lastStatus == 'sakit'
           ? 'Koreksi petugas'
           : 'Mesin scanner',
+      if (mixedSources) ...{
+        'jam_masuk': '06:22',
+        'sumber_masuk_label': 'Input manual',
+        'jam_pulang': '11:25',
+        'sumber_pulang_label': 'Scanner',
+        'ada_scan_masuk': false,
+        'belum_pulang': false,
+        'menit_terlambat': 5,
+      },
     },
   });
 
@@ -238,14 +367,18 @@ final class _FakeStudentAttendanceRecapRemoteDataSource
     scheduleAvailable: true,
     officialCheckIn: '07:00',
     officialCheckOut: '14:00',
-    history: const [
-      AttendanceHistoryEntry(
-        id: 1,
-        beforeStatus: null,
-        afterStatus: 'hadir',
-        sourceLabel: 'Mesin scanner',
-      ),
-    ],
+    history: mixedSources
+        ? [
+            AttendanceHistoryEntry.fromJson({
+              'id': 1,
+              'status_sesudah': 'hadir',
+              'sumber_label': 'Koreksi manual',
+              'dibuat_oleh': 'Petugas Presensi Uji',
+              'dibuat_pada': '2026-08-28T09:48:21+07:00',
+              'dibuat_pada_label': '28 Agu 2026, 09:48:21 WIB',
+            }),
+          ]
+        : const [],
     correction: const AttendanceCorrectionAccess(
       allowed: true,
       todayOnly: false,

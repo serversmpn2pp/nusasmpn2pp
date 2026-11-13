@@ -47,11 +47,12 @@ class PoinPresensiOtomatisService
             // This sanction applies only to newly flagged manual attendance,
             // independently of the regular scan automation's activation date.
             $manual = $absensi?->memilikiSanksiManual() ?? false;
+            $menungguVerifikasi = $absensi?->menungguVerifikasiScan() ?? false;
             $aturanManual = $manual ? app(AturanPresensiManualService::class)->bekukan($absensi) : null;
             if ($manual && $absensi->isDirty('aturan_poin_hadir_manual')) {
                 $absensi->save();
             }
-            $dapatMenambah = $tanggal <= now()->toDateString() && ($manual
+            $dapatMenambah = ! $menungguVerifikasi && $tanggal <= now()->toDateString() && ($manual
                 || ($pengaturan?->aktif && $pengaturan->otomatis_langsung && $pengaturan->berlaku_mulai
                     && $tanggal >= $pengaturan->berlaku_mulai->toDateString()));
             if (! $laporan && ! $dapatMenambah) {
@@ -74,7 +75,7 @@ class PoinPresensiOtomatisService
             if ($manual) {
                 $menit = max($menit, (int) $absensi->sanksi_manual_menit);
             }
-            if ($cakupanValid && $jadwal && ! $pengecualian) {
+            if ($cakupanValid && $jadwal && ! $pengecualian && ! $menungguVerifikasi) {
                 if ($absensi?->status_kehadiran === 'hadir' && $absensi->jam_masuk) {
                     $jenis = $menit > 0 ? 'terlambat' : null;
                 } elseif ((! $absensi || $absensi->status_kehadiran === 'alfa')
@@ -134,7 +135,8 @@ class PoinPresensiOtomatisService
                         : ($manual ? 'Hadir dicatat manual tanpa scan kartu. '
                             .(AbsensiSiswa::ALASAN_HADIR_MANUAL[$absensi->alasan_hadir_manual] ?? 'Input manual petugas')
                             .'. Sanksi minimal '.$absensi->sanksi_manual_menit.' menit; tercatat '.$menit.' menit dan '.$target.' poin. '.$absensi->catatan
-                            : 'Scan masuk pukul '.$absensi->jam_masuk.' melewati batas '.$jadwal->jam_masuk.'. Keterlambatan dihitung sejak detik pertama.'),
+                            : ($absensi->alasan_hadir_manual === AbsensiSiswa::GANGGUAN_SCAN_TERVERIFIKASI ? 'Jam masuk terverifikasi pukul ' : 'Scan masuk pukul ')
+                                .$absensi->jam_masuk.' melewati batas '.$jadwal->jam_masuk.'. Keterlambatan dihitung sejak detik pertama.'),
                 ]);
                 $laporan->butirPelanggaranLaporan()->updateOrCreate(
                     ['laporan_pembinaan_siswa_id' => $laporan->id],
@@ -143,13 +145,17 @@ class PoinPresensiOtomatisService
                         'tingkat' => $butir->tingkat, 'poin' => $target, 'catatan' => 'Aturan poin presensi langsung.'],
                 );
             }
-            $alasan = $target > 0 ? ucfirst($jenis).' otomatis: '.$target.' poin, tanpa persetujuan Wakil Kesiswaan.'
-                : ($pengecualian ? 'Poin dibatalkan karena pengecualian presensi: '.$pengecualian->alasan : 'Poin dibatalkan setelah koreksi presensi atau penerimaan alasan.');
+            $alasan = match (true) {
+                $target > 0 => ucfirst($jenis).' otomatis: '.$target.' poin, tanpa persetujuan Wakil Kesiswaan.',
+                $menungguVerifikasi => 'Poin ditahan karena scan masuk menunggu verifikasi.',
+                $pengecualian !== null => 'Poin dibatalkan karena pengecualian presensi: '.$pengecualian->alasan,
+                default => 'Poin dibatalkan setelah koreksi presensi atau penerimaan alasan.',
+            };
             $berubah = $this->poin->tetapkanPoinPresensi($laporan, $target, $penggunaId, $alasan);
             if ($absensi && ($dapatMenambah || $laporan)) {
                 $nilai = ['status_poin_keterlambatan' => $target > 0 ? 'poin_otomatis' : 'poin_dibatalkan',
                     'poin_keterlambatan_terhitung' => $target, 'poin_keterlambatan_diproses_pada' => now()];
-                if ($absensi->status_kehadiran === 'hadir' && $jadwal) {
+                if ($absensi->status_kehadiran === 'hadir' && $jadwal && ! $menungguVerifikasi) {
                     $nilai += ['menit_terlambat' => $menit, 'status_masuk' => $menit > 0 ? 'terlambat' : 'tepat_waktu'];
                 }
                 $absensi->update($nilai);

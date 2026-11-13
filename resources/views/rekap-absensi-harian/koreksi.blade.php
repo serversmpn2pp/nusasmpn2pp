@@ -6,7 +6,7 @@
 @section('content')
     @php
         $tanggalLabel = \Carbon\Carbon::parse($tanggal)->locale('id')->translatedFormat('d F Y');
-        $formatJam = fn (?string $jam) => $jam ? substr($jam, 0, 5) : '';
+        $formatJam = fn (?string $jam) => $jam ? substr($jam, 0, 5) : '-';
         $inisial = collect(explode(' ', trim($anggotaKelas->siswa?->nama_lengkap ?? 'Siswa')))
             ->filter()
             ->take(2)
@@ -14,18 +14,27 @@
             ->join('');
         $statusSaatIni = old('status_kehadiran', $absensi?->status_kehadiran ?? 'alfa');
         $jadwalPulang = $pengaturanAbsensi?->jadwalPulangUntuk($anggotaKelas->siswa?->jenis_kelamin);
-        $tanpaScan = !$absensi?->penugasan_presensi_id && (! $absensi || $absensi->memilikiSanksiManual()
-            || ($absensi->sumber !== 'scan' && ! $absensi->logScanAbsensi()->where('jenis_scan', 'masuk')->where('berhasil', true)->exists()));
+        $verifikasi = $absensi?->menungguVerifikasiScan() ?? false;
+        $gangguanTerverifikasi = $absensi?->alasan_hadir_manual === \App\Models\AbsensiSiswa::GANGGUAN_SCAN_TERVERIFIKASI;
+        $tanpaScan = ! $absensi?->penugasan_presensi_id && ! $gangguanTerverifikasi && (! $absensi || $absensi->memilikiSanksiManual()
+            || (! $scanMasukBukti && ($absensi->sumber !== 'scan' || ! $absensi->jam_masuk)));
+        $hanyaGangguan = ! $tanpaScan && $dapatMemverifikasi && ! $gangguanTerverifikasi && ! $absensi?->penugasan_presensi_id
+            && $sumberJam['sumber_masuk'] !== 'scan';
         $aturanHadirManual = app(\App\Services\Pembinaan\PengaturanPoinKeterlambatanService::class)->aturanHadirManual($anggotaKelas->tahun_pelajaran_id);
     @endphp
 
     <div class="page-header">
         <div>
             <p class="eyebrow">Presensi</p>
-            <h1 class="page-title">Koreksi presensi</h1>
+            <h1 class="page-title">{{ $verifikasi ? 'Verifikasi scan masuk' : 'Koreksi presensi' }}</h1>
         </div>
 
         <div class="actions">
+            @if ($verifikasi)
+                <a href="{{ route('rekap-absensi-harian.rincian', ['anggotaKelas' => $anggotaKelas, 'tanggal' => $tanggal]) }}" class="button button-muted">
+                    <i data-lucide="history" aria-hidden="true"></i> Rincian dan riwayat
+                </a>
+            @endif
             <a href="{{ route('rekap-absensi-harian.index', [
                 'tanggal' => $tanggal,
                 'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
@@ -52,7 +61,9 @@
     <div class="detail-shell">
         <aside class="panel panel-pad">
             <div class="detail-profile">
+                @unless ($verifikasi)
                 <div class="avatar avatar-lg">{{ mb_strtoupper($inisial ?: 'S') }}</div>
+                @endunless
                 <h2>{{ $anggotaKelas->siswa?->nama_lengkap ?: '-' }}</h2>
                 <p>{{ $anggotaKelas->kelas?->nama ?: '-' }} - {{ $tanggalLabel }}</p>
 
@@ -62,6 +73,7 @@
             </div>
 
             <dl class="quick-facts" style="margin-top: 20px;">
+                @unless ($verifikasi)
                 <div>
                     <dt>NIS</dt>
                     <dd>{{ $anggotaKelas->siswa?->nis ?: '-' }}</dd>
@@ -74,10 +86,13 @@
                     <dt>No. absen</dt>
                     <dd>{{ $anggotaKelas->nomor_absen ?: '-' }}</dd>
                 </div>
-                <div>
-                    <dt>Sumber</dt>
-                    <dd>{{ $absensi ? ucfirst($absensi->sumber) : 'Belum ada catatan' }}</dd>
-                </div>
+                @endunless
+                @foreach (['masuk' => 'Masuk', 'pulang' => 'Pulang'] as $jenis => $label)
+                    <div>
+                        <dt>{{ $label }}</dt>
+                        <dd>{{ $formatJam($absensi?->{'jam_'.$jenis}) }}@if ($sumber = $sumberJam['sumber_'.$jenis.'_label']) &middot; {{ $sumber }}@endif</dd>
+                    </div>
+                @endforeach
             </dl>
 
             @if ($pengaturanAbsensi)
@@ -93,7 +108,10 @@
         </aside>
 
         <section class="panel panel-pad feature-section">
-            <h2 class="panel-title">Data koreksi</h2>
+            <h2 class="panel-title">{{ $verifikasi ? 'Hasil pemeriksaan' : 'Data koreksi' }}</h2>
+            @if ($verifikasi)
+                <p class="help-text">Catatan awal: {{ $absensi->catatan ?: '-' }}</p>
+            @endif
             @if ($absensi?->penugasan_presensi_id)<p class="help-text">{{ $absensi->keteranganPenugasan() }} Jam masuk hanya diisi bila benar-benar tercatat. Batalkan penugasan terlebih dahulu jika status perlu diubah menjadi Sakit/Izin/Alfa.</p>@endif
 
             <form action="{{ route('rekap-absensi-harian.koreksi.update', $anggotaKelas) }}" method="POST" style="margin-top: 16px;">
@@ -102,6 +120,23 @@
                 <input type="hidden" name="tanggal" value="{{ $tanggal }}">
 
                 <div class="form-grid">
+                    @if ($verifikasi)
+                        <input type="hidden" id="status_kehadiran" name="status_kehadiran" value="hadir">
+                        <div class="field span-2">
+                            <p><span class="badge badge-active">Hadir</span> <span class="badge badge-warning">Perlu verifikasi</span></p>
+                            <label for="hasil_verifikasi_scan">Hasil verifikasi</label>
+                            <select id="hasil_verifikasi_scan" name="hasil_verifikasi_scan" class="select" required>
+                                <option value="">Pilih hasil verifikasi</option>
+                                @foreach (\App\Models\AbsensiSiswa::HASIL_VERIFIKASI_SCAN as $kode => $label)
+                                    @if ($kode === 'gangguan_terkonfirmasi' || ($kode === 'scan_ditemukan') === (bool) $scanMasukBukti)
+                                        <option value="{{ $kode }}" @selected(old('hasil_verifikasi_scan') === $kode)>{{ $label }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            <p class="help-text">{{ $scanMasukBukti ? 'Log scan masuk berhasil: '.$scanMasukBukti->waktu_scan->format('H:i:s').' WIB.' : 'Tidak ditemukan log scan masuk yang berhasil.' }}</p>
+                            @error('hasil_verifikasi_scan')<p class="error-text">{{ $message }}</p>@enderror
+                        </div>
+                    @else
                     <div class="field span-2">
                         <label for="status_kehadiran">Status kehadiran</label>
                         <select id="status_kehadiran" name="status_kehadiran" class="select @error('status_kehadiran') is-invalid @enderror" required>
@@ -114,10 +149,11 @@
                             <p class="error-text">{{ $message }}</p>
                         @enderror
                     </div>
+                    @endif
 
                     <div class="field">
                         <label for="jam_masuk">Jam masuk</label>
-                        <input id="jam_masuk" type="time" step="1" name="jam_masuk" value="{{ old('jam_masuk', $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 8) : '') }}" class="input @error('jam_masuk') is-invalid @enderror">
+                        <input id="jam_masuk" type="time" step="1" name="jam_masuk" value="{{ old('jam_masuk', $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 8) : '') }}" class="input @error('jam_masuk') is-invalid @enderror" @required($verifikasi)>
                         <p class="help-text">{{ $absensi?->penugasan_presensi_id ? 'Isi hanya jika ada jam masuk sebenarnya.' : 'Wajib diisi jika status hadir.' }}</p>
                         @error('jam_masuk')
                             <p class="error-text">{{ $message }}</p>
@@ -126,27 +162,32 @@
 
                     <div class="field">
                         <label for="jam_pulang">Jam pulang</label>
-                        <input id="jam_pulang" type="time" step="1" name="jam_pulang" value="{{ old('jam_pulang', $absensi?->jam_pulang ? substr($absensi->jam_pulang, 0, 8) : '') }}" class="input @error('jam_pulang') is-invalid @enderror">
-                        <p class="help-text">Boleh dikosongkan jika siswa belum scan pulang.</p>
+                        <input id="jam_pulang" type="time" step="1" name="jam_pulang" value="{{ old('jam_pulang', $absensi?->jam_pulang ? substr($absensi->jam_pulang, 0, 8) : '') }}" class="input @error('jam_pulang') is-invalid @enderror" @readonly($verifikasi)>
+                        @unless ($verifikasi)<p class="help-text">Boleh dikosongkan jika siswa belum scan pulang.</p>@endunless
                         @error('jam_pulang')
                             <p class="error-text">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    @if ($tanpaScan)
+                    @if (($tanpaScan || $hanyaGangguan) && ! $verifikasi)
                         <div class="field span-2" id="alasan-hadir-manual">
                             <label for="alasan_hadir_manual">Alasan hadir tanpa scan kartu</label>
                             <select id="alasan_hadir_manual" name="alasan_hadir_manual" class="select">
+                                <option value="">{{ $hanyaGangguan ? 'Tidak ada' : 'Pilih alasan' }}</option>
                                 @foreach (\App\Models\AbsensiSiswa::ALASAN_HADIR_MANUAL as $kode => $label)
-                                    <option value="{{ $kode }}" @selected(\App\Models\AbsensiSiswa::normalisasiAlasanHadirManual(old('alasan_hadir_manual', $absensi?->alasan_hadir_manual)) === $kode)>{{ $label }}</option>
+                                    @if (($tanpaScan && $kode !== 'scan_bermasalah') || ($kode === 'scan_bermasalah' && (! $absensi?->memilikiSanksiManual() || $dapatMemverifikasi)))
+                                        <option value="{{ $kode }}" @selected(old('alasan_hadir_manual', $absensi?->alasan_hadir_manual) === $kode)>{{ $label }}</option>
+                                    @endif
                                 @endforeach
                             </select>
-                            <p class="help-text">Hadir manual tanpa scan dikenai minimal {{ $aturanHadirManual['menit_minimal'] }} menit keterlambatan dan {{ $aturanHadirManual['poin'] }} poin untuk pelanggaran “{{ $aturanHadirManual['pelanggaran']['nama'] }}”. Keterlambatan lebih besar tetap dihitung. Poin tidak diterapkan pada hari dengan pengecualian presensi. Orang tua mendapat keterangan alasan dan saran menghubungi admin untuk mendapatkan atau mengganti kartu pelajar.</p>
+                            @unless ($hanyaGangguan)<p class="help-text" id="info-sanksi-kartu">Kartu lupa atau hilang dikenai minimal {{ $aturanHadirManual['menit_minimal'] }} menit keterlambatan dan {{ $aturanHadirManual['poin'] }} poin sesuai pengaturan presensi.</p>@endunless
+                            <p class="help-text" id="info-gangguan-scan" hidden>Hadir · Perlu verifikasi. Poin ditahan.</p>
+                            @error('alasan_hadir_manual')<p class="error-text">{{ $message }}</p>@enderror
                         </div>
                     @endif
                     <div class="field span-2">
-                        <label for="catatan">Catatan{{ ($koreksiHariIniTerbatas ?? false) ? ' *' : '' }}</label>
-                        <textarea id="catatan" name="catatan" class="textarea @error('catatan') is-invalid @enderror" placeholder="Contoh: Izin dokter, lupa membawa kartu, atau koreksi guru piket." @required($koreksiHariIniTerbatas ?? false)>{{ old('catatan', $absensi?->catatan) }}</textarea>
+                        <label for="catatan">{{ $verifikasi ? 'Dasar verifikasi' : 'Catatan' }}</label>
+                        <textarea id="catatan" name="catatan" class="textarea @error('catatan') is-invalid @enderror" @required($verifikasi || ($koreksiHariIniTerbatas ?? false))>{{ old('catatan', $verifikasi ? '' : $absensi?->catatan) }}</textarea>
                         @error('catatan')
                             <p class="error-text">{{ $message }}</p>
                         @enderror
@@ -159,7 +200,7 @@
                         'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
                         'kelas_id' => $anggotaKelas->kelas_id,
                     ]) }}" class="button button-muted">Batal</a>
-                    <button type="submit" class="button button-primary">Simpan koreksi</button>
+                    <button type="submit" class="button button-primary">{{ $verifikasi ? 'Simpan hasil verifikasi' : 'Simpan koreksi' }}</button>
                 </div>
             </form>
         </section>
@@ -169,13 +210,25 @@
         const statusInput = document.getElementById('status_kehadiran');
         const jamMasukInput = document.getElementById('jam_masuk');
         const jamPulangInput = document.getElementById('jam_pulang');
+        const pilihanAlasan = document.getElementById('alasan_hadir_manual');
+        const hasilVerifikasi = document.getElementById('hasil_verifikasi_scan');
+        const jamBukti = @json($scanMasukBukti?->waktu_scan->format('H:i:s'));
+        let jamDiperiksa = jamMasukInput.value;
 
         function sinkronkanJam() {
             const hadir = statusInput.value === 'hadir';
             jamMasukInput.disabled = ! hadir;
             jamPulangInput.disabled = ! hadir;
             const alasan = document.getElementById('alasan-hadir-manual');
-            if (alasan) { alasan.hidden = ! hadir; alasan.querySelector('select').disabled = ! hadir; }
+            if (alasan) {
+                alasan.hidden = !hadir; pilihanAlasan.disabled = !hadir;
+                pilihanAlasan.required = hadir && @json($tanpaScan);
+                const gangguan = hadir && pilihanAlasan.value === 'scan_bermasalah';
+                document.getElementById('info-gangguan-scan').hidden = !gangguan;
+                const infoSanksi = document.getElementById('info-sanksi-kartu');
+                if (infoSanksi) infoSanksi.hidden = gangguan || !pilihanAlasan.value;
+                document.getElementById('catatan').required = gangguan || @json($koreksiHariIniTerbatas ?? false);
+            }
 
             if (! hadir) {
                 jamMasukInput.value = '';
@@ -184,6 +237,16 @@
         }
 
         statusInput.addEventListener('change', sinkronkanJam);
+        pilihanAlasan?.addEventListener('change', sinkronkanJam);
+        function sinkronkanBukti() {
+            if (!hasilVerifikasi) return;
+            const pakaiScan = hasilVerifikasi.value === 'scan_ditemukan';
+            jamMasukInput.readOnly = pakaiScan;
+            jamMasukInput.value = pakaiScan ? jamBukti : jamDiperiksa;
+        }
+        hasilVerifikasi?.addEventListener('change', sinkronkanBukti);
+        jamMasukInput.addEventListener('input', () => { if (!jamMasukInput.readOnly) jamDiperiksa = jamMasukInput.value; });
         sinkronkanJam();
+        sinkronkanBukti();
     </script>
 @endsection

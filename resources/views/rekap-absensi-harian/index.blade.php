@@ -34,6 +34,9 @@
             'manual' => 'Manual',
         ];
         $statusPoinKeterlambatan = function ($absensi, $laporan): array {
+            if ($absensi?->menungguVerifikasiScan()) {
+                return ['Perlu verifikasi', 'badge badge-warning'];
+            }
             if ($laporan) {
                 if ($laporan->kunci_presensi_otomatis && $laporan->status_verifikasi === 'disahkan') {
                     return ['Poin otomatis', 'badge badge-active'];
@@ -440,6 +443,7 @@
                                 $anggota = $item['anggota_kelas'];
                                 $absensi = $item['absensi'];
                                 $status = $item['status_kehadiran'];
+                                $sumberJam = $item['sumber_jam'];
                                 $laporanKeterlambatan = $item['laporan_keterlambatan'];
                                 [$labelPoin, $badgePoin] = $statusPoinKeterlambatan($absensi, $laporanKeterlambatan);
                             @endphp
@@ -448,27 +452,39 @@
                                 <td data-label="Siswa">
                                     <p class="person-name">{{ $anggota->siswa?->nama_lengkap ?: '-' }}</p>
                                     <p class="person-meta">NIS: {{ $teks($anggota->siswa?->nis) }} - NISN: {{ $teks($anggota->siswa?->nisn) }}</p>
+                                    <a href="{{ route('rekap-absensi-harian.rincian', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="text-link">Rincian</a>
                                 </td>
                                 <td data-label="Kelas">{{ $anggota->kelas?->nama ?: '-' }}</td>
                                 <td data-label="Status">
                                     <span class="{{ $badgeStatus($status) }}">{{ $labelStatus[$status] ?? ucfirst($status) }}</span>
+                                    @if ($absensi?->menungguVerifikasiScan())
+                                        <p class="person-meta">Scan bermasalah</p>
+                                    @endif
                                     @if ($item['status_sumber'] === 'pengecualian')
                                         <p class="person-meta">{{ $item['pengecualian']->label() }}</p><p class="person-meta">{{ $item['pengecualian']->alasan }}</p>
                                     @elseif ($item['status_sumber'] === 'inferensi')
                                         <p class="person-meta">Belum ada catatan</p>
                                     @elseif ($item['status_sumber'] === 'otomatis')
                                         <p class="person-meta">Otomatis: hari berakhir tanpa konfirmasi</p>
-                                    @else
-                                        <p class="person-meta">{{ ucfirst($absensi?->sumber ?: 'catatan') }}</p>
                                     @endif
                                 </td>
                                 <td data-label="Masuk">
                                     <p class="person-name">{{ $formatJam($absensi?->jam_masuk) }}</p>
-                                    <p class="person-meta">{{ $labelMasuk[$absensi?->status_masuk] ?? '-' }}</p>
+                                    @if ($sumberJam['sumber_masuk_label'])
+                                        <p class="person-meta">{{ $sumberJam['sumber_masuk_label'] }}</p>
+                                    @endif
+                                    @if (isset($labelMasuk[$absensi?->status_masuk]))
+                                        <p class="person-meta">{{ $labelMasuk[$absensi->status_masuk] }}</p>
+                                    @endif
                                 </td>
                                 <td data-label="Pulang">
                                     <p class="person-name">{{ $formatJam($absensi?->jam_pulang) }}</p>
-                                    <p class="person-meta">{{ $labelPulang[$absensi?->status_pulang] ?? '-' }}</p>
+                                    @if ($sumberJam['sumber_pulang_label'])
+                                        <p class="person-meta">{{ $sumberJam['sumber_pulang_label'] }}</p>
+                                    @endif
+                                    @if (isset($labelPulang[$absensi?->status_pulang]))
+                                        <p class="person-meta">{{ $labelPulang[$absensi->status_pulang] }}</p>
+                                    @endif
                                 </td>
                                 <td data-label="Keterlambatan">
                                     <p class="person-name">{{ $item['terlambat'] > 0 ? $item['terlambat'] . ' menit' : '-' }}</p>
@@ -501,7 +517,7 @@
                                         @if ($item['akses_koreksi']['dapat'])
                                             <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">
                                                 <i data-lucide="square-pen" aria-hidden="true"></i>
-                                                Koreksi
+                                                {{ $absensi?->menungguVerifikasiScan() ? 'Verifikasi' : 'Koreksi' }}
                                             </a>
                                         @else
                                             <span class="badge badge-muted" title="{{ $item['akses_koreksi']['alasan'] }}">{{ ($koreksiHariIniTerbatas ?? false) && $absensi?->sumber === 'scan' ? 'Hasil scan' : 'Tidak berwenang' }}</span>
@@ -524,6 +540,7 @@
                         $anggota = $item['anggota_kelas'];
                         $absensi = $item['absensi'];
                         $status = $item['status_kehadiran'];
+                        $sumberJam = $item['sumber_jam'];
                         $laporanKeterlambatan = $item['laporan_keterlambatan'];
                         [$labelPoin, $badgePoin] = $statusPoinKeterlambatan($absensi, $laporanKeterlambatan);
                     @endphp
@@ -548,11 +565,11 @@
                         <dl class="quick-facts">
                             <div>
                                 <dt>Masuk</dt>
-                                <dd>{{ $formatJam($absensi?->jam_masuk) }}</dd>
+                                <dd>{{ $formatJam($absensi?->jam_masuk) }}@if ($sumberJam['sumber_masuk_label']) &middot; {{ $sumberJam['sumber_masuk_label'] }}@endif</dd>
                             </div>
                             <div>
                                 <dt>Pulang</dt>
-                                <dd>{{ $formatJam($absensi?->jam_pulang) }}</dd>
+                                <dd>{{ $formatJam($absensi?->jam_pulang) }}@if ($sumberJam['sumber_pulang_label']) &middot; {{ $sumberJam['sumber_pulang_label'] }}@endif</dd>
                             </div>
                             <div>
                                 <dt>Terlambat</dt>
@@ -580,15 +597,18 @@
                             <p class="help-text" style="margin-top: 12px;">{{ $absensi->catatanKehadiran() }}</p>
                         @endif
 
-                        @if ($bolehKoreksi)
-                            <div class="actions" style="margin-top: 14px;">
+                        <div class="actions" style="margin-top: 14px;">
+                            <a href="{{ route('rekap-absensi-harian.rincian', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-muted">
+                                <i data-lucide="eye" aria-hidden="true"></i> Rincian
+                            </a>
+                            @if ($bolehKoreksi)
                                 @if ($item['akses_koreksi']['dapat'])
-                                    <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark">Koreksi</a>
+                                    <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark">{{ $absensi?->menungguVerifikasiScan() ? 'Verifikasi' : 'Koreksi' }}</a>
                                 @else
                                     <span class="badge badge-muted" title="{{ $item['akses_koreksi']['alasan'] }}">{{ ($koreksiHariIniTerbatas ?? false) && $absensi?->sumber === 'scan' ? 'Hasil scan' : 'Tidak berwenang' }}</span>
                                 @endif
-                            </div>
-                        @endif
+                            @endif
+                        </div>
                     </article>
                 @empty
                     <div class="empty-state">Belum ada siswa aktif pada pilihan ini.</div>

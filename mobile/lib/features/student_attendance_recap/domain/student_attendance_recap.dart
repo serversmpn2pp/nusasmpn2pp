@@ -105,12 +105,15 @@ class StudentAttendanceRecord {
     this.photoUrl,
     this.checkInTime,
     this.checkOutTime,
+    this.checkInSourceLabel,
+    this.checkOutSourceLabel,
     this.checkInStatus,
     this.checkOutStatus,
     this.notes,
     this.manualReason,
     this.manualSanctionNote,
     this.hasScannerEntry = false,
+    this.scanNeedsReview = false,
   });
   factory StudentAttendanceRecord.fromJson(Map<String, dynamic> json) {
     final student = _map(json['siswa']) ?? const {};
@@ -130,6 +133,8 @@ class StudentAttendanceRecord {
       sourceLabel: attendance['sumber_label'] as String? ?? '-',
       checkInTime: attendance['jam_masuk'] as String?,
       checkOutTime: attendance['jam_pulang'] as String?,
+      checkInSourceLabel: attendance['sumber_masuk_label'] as String?,
+      checkOutSourceLabel: attendance['sumber_pulang_label'] as String?,
       checkInStatus: attendance['status_masuk'] as String?,
       checkOutStatus: attendance['status_pulang'] as String?,
       lateMinutes: _integer(attendance['menit_terlambat']),
@@ -137,6 +142,7 @@ class StudentAttendanceRecord {
       notCheckedOut: attendance['belum_pulang'] as bool? ?? false,
       notes: attendance['catatan'] as String?,
       manualReason: attendance['alasan_hadir_manual'] as String?,
+      scanNeedsReview: attendance['perlu_verifikasi_scan'] as bool? ?? false,
       manualSanctionNote: attendance['keterangan_sanksi_manual'] as String?,
       hasScannerEntry:
           attendance['ada_scan_masuk'] as bool? ??
@@ -159,6 +165,8 @@ class StudentAttendanceRecord {
   final String sourceLabel;
   final String? checkInTime;
   final String? checkOutTime;
+  final String? checkInSourceLabel;
+  final String? checkOutSourceLabel;
   final String? checkInStatus;
   final String? checkOutStatus;
   final int lateMinutes;
@@ -168,7 +176,17 @@ class StudentAttendanceRecord {
   final String? manualReason;
   final String? manualSanctionNote;
   final bool hasScannerEntry;
+  final bool scanNeedsReview;
   final AttendanceCorrectionAccess correction;
+
+  String get checkInDisplay => _timeWithSource(checkInTime, checkInSourceLabel);
+  String get checkOutDisplay =>
+      _timeWithSource(checkOutTime, checkOutSourceLabel);
+
+  static String _timeWithSource(String? time, String? source) {
+    if (time == null || time.isEmpty) return '-';
+    return '$time · ${source ?? 'Sumber belum diketahui'}';
+  }
 }
 
 class StudentAttendanceRecapPage {
@@ -271,6 +289,7 @@ class AttendanceHistoryEntry {
     this.notes,
     this.createdBy,
     this.createdAt,
+    this.createdAtLabel,
   });
   factory AttendanceHistoryEntry.fromJson(Map<String, dynamic> json) =>
       AttendanceHistoryEntry(
@@ -281,6 +300,7 @@ class AttendanceHistoryEntry {
         notes: json['catatan'] as String?,
         createdBy: json['dibuat_oleh'] as String?,
         createdAt: DateTime.tryParse(json['dibuat_pada'] as String? ?? ''),
+        createdAtLabel: json['dibuat_pada_label'] as String?,
       );
   final int id;
   final String? beforeStatus;
@@ -289,6 +309,7 @@ class AttendanceHistoryEntry {
   final String? notes;
   final String? createdBy;
   final DateTime? createdAt;
+  final String? createdAtLabel;
 }
 
 class StudentAttendanceDetail {
@@ -302,6 +323,8 @@ class StudentAttendanceDetail {
     this.officialCheckIn,
     this.officialCheckOut,
     this.manualRule = const ManualAttendanceRule(),
+    this.scanEvidenceTime,
+    this.canVerifyScan = false,
   });
   factory StudentAttendanceDetail.fromJson(Map<String, dynamic> json) {
     final schedule = _map(json['jadwal_presensi']) ?? const {};
@@ -317,6 +340,8 @@ class StudentAttendanceDetail {
       correction: AttendanceCorrectionAccess.fromJson(
         _map(json['hak_akses']) ?? const {},
       ),
+      scanEvidenceTime: json['jam_bukti_scan_masuk'] as String?,
+      canVerifyScan: json['dapat_memverifikasi_scan'] as bool? ?? false,
     );
   }
   final String date;
@@ -328,6 +353,8 @@ class StudentAttendanceDetail {
   final ManualAttendanceRule manualRule;
   final List<AttendanceHistoryEntry> history;
   final AttendanceCorrectionAccess correction;
+  final String? scanEvidenceTime;
+  final bool canVerifyScan;
 }
 
 class AttendanceCorrectionValue {
@@ -337,12 +364,14 @@ class AttendanceCorrectionValue {
     this.checkInTime,
     this.checkOutTime,
     this.manualReason,
+    this.scanReviewResult,
   });
   final String status;
   final String? checkInTime;
   final String? checkOutTime;
   final String notes;
   final String? manualReason;
+  final String? scanReviewResult;
 }
 
 List<T> _list<T>(Object? value, T Function(Map<String, dynamic>) factory) =>

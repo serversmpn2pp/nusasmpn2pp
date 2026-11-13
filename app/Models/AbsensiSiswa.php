@@ -14,9 +14,21 @@ class AbsensiSiswa extends Model
         static::saving(fn (self $absensi) => app(PenugasanPresensiSiswaService::class)->lindungi($absensi));
     }
 
+    public const SCAN_BERMASALAH = 'scan_bermasalah';
+
+    public const GANGGUAN_SCAN_TERVERIFIKASI = 'gangguan_scan_terverifikasi';
+
+    public const HASIL_VERIFIKASI_SCAN = [
+        'scan_ditemukan' => 'Scan masuk ditemukan',
+        'gangguan_terkonfirmasi' => 'Gangguan scan terkonfirmasi',
+        'tidak_membawa_kartu' => 'Terkonfirmasi tidak membawa kartu',
+        'kartu_hilang' => 'Terkonfirmasi kartu hilang',
+    ];
+
     public const ALASAN_HADIR_MANUAL = [
         'tidak_membawa_kartu' => 'Tidak membawa kartu pelajar',
         'kartu_hilang' => 'Kartu pelajar hilang',
+        self::SCAN_BERMASALAH => 'Scan bermasalah',
     ];
 
     public const SANKSI_MANUAL_MENIT = 5;
@@ -61,7 +73,23 @@ class AbsensiSiswa extends Model
 
     public function memilikiSanksiManual(): bool
     {
-        return $this->status_kehadiran === 'hadir' && (int) $this->sanksi_manual_menit > 0;
+        return $this->status_kehadiran === 'hadir' && ! $this->menungguVerifikasiScan() && (int) $this->sanksi_manual_menit > 0;
+    }
+
+    public function menungguVerifikasiScan(): bool
+    {
+        return $this->status_kehadiran === 'hadir' && $this->alasan_hadir_manual === self::SCAN_BERMASALAH;
+    }
+
+    public function dapatDicatatPiket(): bool
+    {
+        return ! $this->menungguVerifikasiScan() && ! $this->penugasan_presensi_id
+            && ($this->sumber === 'guru_piket' || $this->hanyaTercatatPulang());
+    }
+
+    public function hanyaTercatatPulang(): bool
+    {
+        return $this->sumber === 'scan' && ! $this->jam_masuk && (bool) $this->jam_pulang;
     }
 
     public static function normalisasiAlasanHadirManual(?string $alasan): string
@@ -91,7 +119,13 @@ class AbsensiSiswa extends Model
 
     public function catatanKehadiran(): ?string
     {
-        return collect([$this->catatan, $this->keteranganSanksiManual(), $this->keteranganPenugasan()])->filter()->join("\n") ?: null;
+        $verifikasi = match ($this->alasan_hadir_manual) {
+            self::SCAN_BERMASALAH => 'Scan bermasalah. Perlu verifikasi; poin ditahan.',
+            self::GANGGUAN_SCAN_TERVERIFIKASI => 'Gangguan scan terkonfirmasi. Tidak ada sanksi kartu.',
+            default => null,
+        };
+
+        return collect([$this->catatan, $verifikasi, $this->keteranganSanksiManual(), $this->keteranganPenugasan()])->filter()->join("\n") ?: null;
     }
 
     public function penugasanPresensi(): BelongsTo

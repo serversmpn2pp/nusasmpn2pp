@@ -150,11 +150,13 @@ class PiketSayaMobileService
                 'sumber' => $absensi?->sumber,
                 'catatan' => $absensi?->catatan,
                 'alasan_hadir_manual' => $absensi?->alasan_hadir_manual,
+                'perlu_verifikasi_scan' => $absensi?->menungguVerifikasiScan() ?? false,
+                'hanya_scan_pulang' => $absensi?->hanyaTercatatPulang() ?? false,
                 'keterangan_sanksi_manual' => $absensi?->keteranganSanksiManual(),
                 'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),
                 'poin_keterlambatan' => (int) ($absensi?->poin_keterlambatan_terhitung ?? 0),
                 'jam_masuk' => $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 5) : null,
-                'dapat_dicatat' => ! $absensi || $absensi->sumber === 'guru_piket',
+                'dapat_dicatat' => ! $absensi || $absensi->dapatDicatatPiket(),
             ],
         ];
     }

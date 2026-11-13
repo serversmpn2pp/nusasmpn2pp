@@ -80,7 +80,8 @@ class ProsesPoinKeterlambatanService
         $absensiId = $absensi instanceof AbsensiSiswa ? $absensi->id : $absensi;
         $catatan = $absensi instanceof AbsensiSiswa ? $absensi : AbsensiSiswa::findOrFail($absensiId);
         if ($catatan->memilikiSanksiManual()
-            || PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $catatan->tahun_pelajaran_id)->where('otomatis_langsung', true)->exists()
+            || (! $catatan->menungguVerifikasiScan() && PengaturanPoinKeterlambatan::where('tahun_pelajaran_id', $catatan->tahun_pelajaran_id)
+                ->where('otomatis_langsung', true)->exists())
             || LaporanPembinaanSiswa::where('absensi_siswa_id', $absensiId)->whereNotNull('kunci_presensi_otomatis')->exists()) {
             return app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($catatan, $penggunaId);
         }
@@ -101,12 +102,13 @@ class ProsesPoinKeterlambatanService
                 : null;
 
             $menit = max(0, (int) $absensi->menit_terlambat);
-            $hadirDanTerlambat = $absensi->status_kehadiran === 'hadir'
+            $hadirDanTerlambat = ! $absensi->menungguVerifikasiScan() && $absensi->status_kehadiran === 'hadir'
                 && $absensi->status_masuk === 'terlambat'
                 && $menit > 0;
 
             if (! $hadirDanTerlambat) {
-                $dibatalkan = $this->batalkanLaporanAktif($laporanAktif, $penggunaId, 'Data presensi tidak lagi berstatus terlambat.');
+                $dibatalkan = $this->batalkanLaporanAktif($laporanAktif, $penggunaId, $absensi->menungguVerifikasiScan()
+                    ? 'Poin ditahan karena scan masuk menunggu verifikasi.' : 'Data presensi tidak lagi berstatus terlambat.');
                 $this->tandaiAbsensi($absensi, 'tidak_terlambat', 0);
 
                 return ['hasil' => $dibatalkan ? 'dibatalkan' : 'diabaikan', 'laporan_id' => $laporanAktif?->id];
@@ -352,7 +354,8 @@ class ProsesPoinKeterlambatanService
     private function buatKronologi(AbsensiSiswa $absensi, RentangPoinKeterlambatan $rentang): string
     {
         return sprintf(
-            'Rekap presensi mencatat siswa scan masuk pukul %s dan terlambat %d menit. Sistem mengajukan %d poin sesuai rentang %s untuk pemeriksaan BK.',
+            'Rekap presensi mencatat %s pukul %s dan terlambat %d menit. Sistem mengajukan %d poin sesuai rentang %s untuk pemeriksaan BK.',
+            $absensi->alasan_hadir_manual === AbsensiSiswa::GANGGUAN_SCAN_TERVERIFIKASI ? 'jam masuk terverifikasi' : 'scan masuk',
             substr((string) $absensi->jam_masuk, 0, 5),
             $absensi->menit_terlambat,
             $rentang->poin,

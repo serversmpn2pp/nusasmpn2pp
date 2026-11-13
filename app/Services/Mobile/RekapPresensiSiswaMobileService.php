@@ -8,12 +8,12 @@ use App\Models\Kelas;
 use App\Models\LaporanPembinaanSiswa;
 use App\Models\PengaturanAbsensi;
 use App\Models\Pengguna;
-use App\Models\RiwayatPerubahanAbsensiSiswa;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\KoreksiPresensiSiswaService;
 use App\Services\Absensi\RangkumanWhatsappPresensiSiswaService;
+use App\Services\Absensi\RincianPresensiHarianSiswaService;
 use App\Services\Pembinaan\AksesLaporanPembinaanService;
 use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
 use Carbon\Carbon;
@@ -27,6 +27,7 @@ class RekapPresensiSiswaMobileService
         private readonly KoreksiPresensiSiswaService $koreksi,
         private readonly RangkumanWhatsappPresensiSiswaService $rangkumanWhatsapp,
         private readonly AturanAlfaOtomatisSiswaService $aturanAlfa,
+        private readonly RincianPresensiHarianSiswaService $rincianPresensi,
     ) {}
 
     public function daftar(Pengguna $pengguna, array $filter): array
@@ -55,7 +56,13 @@ class RekapPresensiSiswaMobileService
             ->orderBy('id')
             ->paginate(30, ['*'], 'halaman', $halaman);
         $anggota = collect($paginator->items());
-        $absensi = $this->absensiPerSiswa($tanggal, $anggota->pluck('siswa_id'));
+        $absensi = AbsensiSiswa::query()->whereDate('tanggal', $tanggal)->where('tahun_pelajaran_id', $tahunId)
+            ->whereIn('siswa_id', $anggota->pluck('siswa_id'))
+            ->when($kelasId, fn (Builder $query) => $query->where('kelas_id', $kelasId))
+            ->when($cakupanWali, fn (Builder $query) => $query->whereIn('kelas_id', $kelasWaliIds))
+            ->get();
+        $this->rincianPresensi->muatBukti($absensi, $tanggal);
+        $absensi = $absensi->keyBy(fn (AbsensiSiswa $baris) => $baris->siswa_id.':'.$baris->kelas_id);
         $poinPresensi = LaporanPembinaanSiswa::whereNotNull('kunci_presensi_otomatis')
             ->where('tahun_pelajaran_id', $tahunId)->whereDate('tanggal_kejadian', $tanggal)
             ->whereIn('siswa_id', $anggota->pluck('siswa_id'))->get()->keyBy('siswa_id');
@@ -68,7 +75,7 @@ class RekapPresensiSiswaMobileService
                 $pengguna,
                 $item,
                 $tanggal,
-                $absensi->get($item->siswa_id),
+                $absensi->get($item->siswa_id.':'.$item->kelas_id),
                 $hariAktif,
                 $poinPresensi->get($item->siswa_id),
             ))->values(),
@@ -108,20 +115,13 @@ class RekapPresensiSiswaMobileService
     public function detail(Pengguna $pengguna, AnggotaKelas $anggotaKelas, string $tanggal): array
     {
         $tanggal = Carbon::parse($tanggal)->toDateString();
-        $this->koreksi->pastikanTanggalDiizinkan($pengguna, $tanggal);
-        abort_unless($pengguna->dapatMengaksesKelasSebagaiWali($anggotaKelas->kelas_id), 403);
+        $rincian = $this->rincianPresensi->detail($pengguna, $anggotaKelas, $tanggal);
+        $absensi = $rincian['absensi'];
+        $scanMasukBukti = $absensi?->logScanAbsensi->where('siswa_id', $anggotaKelas->siswa_id)
+            ->where('jenis_scan', 'masuk')->sortBy('waktu_scan')->first();
         $anggotaKelas->load(['tahunPelajaran:id,nama,aktif,tanggal_mulai,tanggal_selesai', 'kelas:id,nama,tingkat', 'siswa:id,nama_lengkap,nis,nisn,jenis_kelamin,foto']);
-        $absensi = $this->koreksi->ambilAbsensi($tanggal, $anggotaKelas);
-        $absensi?->loadExists(['logScanAbsensi as scan_masuk_tercatat' => fn ($query) => $query->where('jenis_scan', 'masuk')->where('berhasil', true)]);
-        $akses = $this->koreksi->evaluasiAkses($pengguna, $anggotaKelas, $tanggal, $absensi);
         $hari = array_keys(PengaturanAbsensi::DAFTAR_HARI)[Carbon::parse($tanggal)->isoWeekday() - 1];
         $pengaturan = PengaturanAbsensi::query()->where('hari', $hari)->where('aktif', true)->first();
-        $riwayat = RiwayatPerubahanAbsensiSiswa::query()
-            ->with('dibuatOleh:id,nama,username')
-            ->where('siswa_id', $anggotaKelas->siswa_id)
-            ->whereDate('tanggal', $tanggal)
-            ->latest('id')
-            ->get();
 
         $jadwalPulang = $pengaturan?->jadwalPulangUntuk($anggotaKelas->siswa?->jenis_kelamin);
         $poinPresensi = LaporanPembinaanSiswa::whereNotNull('kunci_presensi_otomatis')
@@ -131,23 +131,16 @@ class RekapPresensiSiswaMobileService
         return [
             'tanggal' => $tanggal,
             'tanggal_label' => Carbon::parse($tanggal)->locale('id')->translatedFormat('l, d F Y'),
-            'item' => $this->item($pengguna, $anggotaKelas, $tanggal, $absensi, $this->aturanAlfa->hariAktif(), $poinPresensi),
+            'item' => $this->item($pengguna, $anggotaKelas, $tanggal, $rincian['absensi'], $this->aturanAlfa->hariAktif(), $poinPresensi),
             'jadwal_presensi' => $pengaturan ? [
                 'tersedia' => true,
                 'jam_masuk' => $pengaturan->formatJam($pengaturan->jam_masuk),
                 'jam_pulang' => $pengaturan->formatJam($jadwalPulang['jam_pulang']),
             ] : ['tersedia' => false, 'jam_masuk' => null, 'jam_pulang' => null],
-            'riwayat' => $riwayat->map(fn (RiwayatPerubahanAbsensiSiswa $item) => [
-                'id' => (int) $item->id,
-                'status_sebelum' => $item->status_sebelum,
-                'status_sesudah' => $item->status_sesudah,
-                'sumber' => $item->sumber,
-                'sumber_label' => $this->labelSumber($item->sumber),
-                'catatan' => $item->catatan,
-                'dibuat_oleh' => $item->dibuatOleh?->nama ?? $item->dibuatOleh?->username,
-                'dibuat_pada' => $item->created_at?->toIso8601String(),
-            ])->values(),
-            'hak_akses' => $akses,
+            'riwayat' => $rincian['riwayat'],
+            'jam_bukti_scan_masuk' => $scanMasukBukti?->waktu_scan->format('H:i:s'),
+            'dapat_memverifikasi_scan' => $rincian['akses']['dapat'] && $this->koreksi->dapatMemverifikasiScan($pengguna),
+            'hak_akses' => $rincian['akses'],
             'aturan_hadir_manual' => app(PengaturanPoinKeterlambatanService::class)->aturanHadirManual($anggotaKelas->tahun_pelajaran_id),
         ];
     }
@@ -304,6 +297,10 @@ class RekapPresensiSiswaMobileService
         } elseif ($status === 'pengecualian') {
             $query->whereDoesntHave('siswa.absensiSiswa', fn (Builder $query) => $query->whereDate('tanggal', $tanggal));
             $this->aturanAlfa->batasiPengecualian($query, $tanggal, true);
+        } elseif ($status === 'perlu_verifikasi') {
+            $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query->whereDate('tanggal', $tanggal)
+                ->whereColumn('absensi_siswa.kelas_id', 'anggota_kelas.kelas_id')
+                ->where('status_kehadiran', 'hadir')->where('alasan_hadir_manual', AbsensiSiswa::SCAN_BERMASALAH));
         } elseif (in_array($status, ['hadir', 'izin', 'sakit'], true)) {
             $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query
                 ->whereDate('tanggal', $tanggal)->where('status_kehadiran', $status));
@@ -318,12 +315,6 @@ class RekapPresensiSiswaMobileService
                 ->whereDate('tanggal', $tanggal)->where('status_kehadiran', 'hadir')
                 ->whereNotNull('jam_masuk')->whereNull('jam_pulang'));
         }
-    }
-
-    private function absensiPerSiswa(string $tanggal, Collection $siswaIds): Collection
-    {
-        return AbsensiSiswa::query()->whereDate('tanggal', $tanggal)
-            ->whereIn('siswa_id', $siswaIds)->get()->keyBy('siswa_id');
     }
 
     private function ringkasan(?int $tahunId, ?int $kelasId, ?array $kelasIds, string $tanggal, array $hariAktif): array
@@ -390,10 +381,13 @@ class RekapPresensiSiswaMobileService
                 'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),
                 'jam_pulang' => $this->formatJam($absensi?->jam_pulang),
                 'status_pulang' => $absensi?->status_pulang,
+                ...$this->rincianPresensi->sumberJam($absensi),
                 'menit_pulang_cepat' => (int) ($absensi?->menit_pulang_cepat ?? 0),
                 'catatan' => $absensi?->catatan,
                 'alasan_hadir_manual' => $absensi?->alasan_hadir_manual,
-                'ada_scan_masuk' => (bool) ($absensi?->scan_masuk_tercatat || ($absensi?->sumber === 'scan' && ! $absensi->memilikiSanksiManual())),
+                'perlu_verifikasi_scan' => $absensi?->menungguVerifikasiScan() ?? false,
+                'ada_scan_masuk' => (bool) ($absensi?->logScanAbsensi->contains(fn ($log) => (int) $log->siswa_id === (int) $absensi->siswa_id && $log->jenis_scan === 'masuk')
+                    || ($absensi?->sumber === 'scan' && $absensi->jam_masuk && ! $absensi->menungguVerifikasiScan() && ! $absensi->memilikiSanksiManual())),
                 'keterangan_sanksi_manual' => $absensi?->keteranganSanksiManual(),
                 'belum_pulang' => $status === 'hadir' && $absensi?->jam_masuk && ! $absensi?->jam_pulang,
             ],
