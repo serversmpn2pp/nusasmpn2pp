@@ -142,6 +142,35 @@
             align-items: end;
         }
 
+        .attendance-recap-table {
+            min-width: 1320px;
+            table-layout: fixed;
+        }
+
+        .attendance-recap-note {
+            overflow-wrap: anywhere;
+        }
+
+        .attendance-recap-wrap:has(.attendance-recap-action) {
+            scroll-padding-inline: 230px 144px;
+        }
+
+        .nusa-admin-shell .content-shell .attendance-recap-action {
+            position: sticky;
+            right: 0;
+            z-index: 2;
+            text-align: center;
+            box-shadow: -1px 0 0 var(--line);
+        }
+
+        .nusa-admin-shell .content-shell .attendance-recap-table th.attendance-recap-action {
+            z-index: 4;
+        }
+
+        .nusa-admin-shell .content-shell .attendance-recap-action .button {
+            white-space: nowrap;
+        }
+
         @media (max-width: 1100px) {
             .attendance-filter-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -373,8 +402,22 @@
                 </p>
             </div>
 
-            <div class="desktop-only table-wrap feature-worktable attendance-worktable" tabindex="0" role="region" aria-label="Rekap presensi harian siswa">
-                <table class="employee-table placement-table" style="min-width: 1320px;">
+            <div class="desktop-only table-wrap feature-worktable attendance-worktable attendance-recap-wrap" tabindex="0" role="region" aria-label="Rekap presensi harian siswa">
+                <table class="employee-table placement-table attendance-recap-table">
+                    <colgroup>
+                        <col style="width: 56px;">
+                        <col style="width: 230px;">
+                        <col style="width: 110px;">
+                        <col style="width: 132px;">
+                        <col style="width: 104px;">
+                        <col style="width: 104px;">
+                        <col style="width: 132px;">
+                        <col style="width: 144px;">
+                        <col>
+                        @if ($bolehKoreksi)
+                            <col style="width: 144px;">
+                        @endif
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>No.</th>
@@ -387,7 +430,7 @@
                             <th>Status poin</th>
                             <th>Catatan</th>
                             @if ($bolehKoreksi)
-                                <th class="text-right">Aksi</th>
+                                <th class="attendance-recap-action" scope="col">Aksi</th>
                             @endif
                         </tr>
                     </thead>
@@ -452,16 +495,17 @@
                                         <p class="person-meta" style="margin-top: 5px;">{{ $absensi->poin_keterlambatan_terhitung }} poin</p>
                                     @endif
                                 </td>
-                                <td data-label="Catatan">{{ $absensi?->catatanKehadiran() ?: '-' }}</td>
+                                <td data-label="Catatan" class="attendance-recap-note">{{ $absensi?->catatanKehadiran() ?: '-' }}</td>
                                 @if ($bolehKoreksi)
-                                    <td data-label="Aksi">
-                                        <div class="actions" style="justify-content: flex-end;">
-                                            @if ($item['akses_koreksi']['dapat'])
-                                                <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">Koreksi</a>
-                                            @else
-                                                <span class="badge badge-muted" title="{{ $item['akses_koreksi']['alasan'] }}">{{ ($koreksiHariIniTerbatas ?? false) && $absensi?->sumber === 'scan' ? 'Hasil scan' : 'Tidak berwenang' }}</span>
-                                            @endif
-                                        </div>
+                                    <td data-label="Aksi" class="attendance-recap-action">
+                                        @if ($item['akses_koreksi']['dapat'])
+                                            <a href="{{ route('rekap-absensi-harian.koreksi.edit', ['anggotaKelas' => $anggota, 'tanggal' => $tanggal]) }}" class="button button-dark button-sm">
+                                                <i data-lucide="square-pen" aria-hidden="true"></i>
+                                                Koreksi
+                                            </a>
+                                        @else
+                                            <span class="badge badge-muted" title="{{ $item['akses_koreksi']['alasan'] }}">{{ ($koreksiHariIniTerbatas ?? false) && $absensi?->sumber === 'scan' ? 'Hasil scan' : 'Tidak berwenang' }}</span>
+                                        @endif
                                     </td>
                                 @endif
                             </tr>
