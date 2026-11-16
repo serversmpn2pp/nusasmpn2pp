@@ -53,6 +53,15 @@ class PaketSoalUjianTerpusatController extends Controller
             $item->setAttribute('boleh_lihat_hasil', $item->ujianCbt?->dapatDiaksesOperasionalOleh($request->user()) ?? false);
         });
 
+        $jadwalPerKegiatan = $jadwal->groupBy('kegiatan_ujian_cbt_id');
+        if (! $tampilanHasil) {
+            $jadwalPerKegiatan = $jadwalPerKegiatan->sortByDesc(function (Collection $daftarJadwal) {
+                $jadwalPertama = $daftarJadwal->first();
+
+                return ($jadwalPertama->kegiatanUjianCbt->tanggal_mulai ?? $jadwalPertama->tanggal)->toDateString();
+            });
+        }
+
         $kegiatanAlur = filled($data['kegiatan'] ?? null)
             ? $jadwal->first()?->kegiatanUjianCbt
             : null;
@@ -63,7 +72,7 @@ class PaketSoalUjianTerpusatController extends Controller
         return view('paket-soal-ujian-terpusat.index', [
             'tampilanHasil' => $tampilanHasil,
             'kegiatanAlur' => $kegiatanAlur,
-            'jadwalPerKegiatan' => $jadwal->groupBy('kegiatan_ujian_cbt_id'),
+            'jadwalPerKegiatan' => $jadwalPerKegiatan,
             'jumlahJadwal' => $jadwal->count(),
             'jumlahSiap' => $jadwal->filter(fn (JadwalUjianCbt $item) => $this->paketSiap($item->ujianCbt))->count(),
             'jumlahDraf' => $jadwal->filter(fn (JadwalUjianCbt $item) => $item->ujianCbt?->status === 'draft')->count(),

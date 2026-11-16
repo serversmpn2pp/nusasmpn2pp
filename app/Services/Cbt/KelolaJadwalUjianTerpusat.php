@@ -19,6 +19,7 @@ class KelolaJadwalUjianTerpusat
 {
     public function __construct(
         private SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
+        private SiapkanFolderSoalUjianTerpusat $folderSoal,
     ) {}
 
     public function tambah(KegiatanUjianCbt $kegiatan, array $data): Collection
@@ -65,6 +66,7 @@ class KelolaJadwalUjianTerpusat
                     'keterangan' => filled($data['keterangan'] ?? null) ? trim($data['keterangan']) : null,
                 ]);
                 $jadwal->kelas()->sync($kelompokTingkat->kelas->modelKeys());
+                $this->folderSoal->untukJadwal($kegiatan, $jadwal);
 
                 return $jadwal;
             });
@@ -149,6 +151,8 @@ class KelolaJadwalUjianTerpusat
 
                 $this->sinkronisasi->sinkronkanJadwal($jadwal->fresh(), $pengguna);
             }
+
+            $this->folderSoal->untukJadwal($kegiatan, $jadwal);
         });
 
         return $jadwal->fresh();

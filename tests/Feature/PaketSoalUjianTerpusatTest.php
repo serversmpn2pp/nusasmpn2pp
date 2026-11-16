@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FolderSoalCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
 use App\Models\JenisUjianCbt;
@@ -16,6 +17,7 @@ use App\Models\SesiKegiatanUjianCbt;
 use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use App\Models\UjianCbt;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use PDO;
 use Tests\TestCase;
@@ -125,6 +127,101 @@ class PaketSoalUjianTerpusatTest extends TestCase
         $paket->refresh();
         $this->assertFalse($paket->acak_soal);
         $this->assertFalse($paket->acak_jawaban);
+    }
+
+    public function test_daftar_paket_menampilkan_ujian_terbaru_dengan_jadwal_tetap_kronologis(): void
+    {
+        $data = $this->buatFondasi();
+        $terbaru = $data['kegiatan']->replicate();
+        $terbaru->fill([
+            'kode' => 'UT-PAKET-002', 'nama' => 'Ujian Desember 2026',
+            'tanggal_mulai' => '2026-12-07', 'tanggal_selesai' => '2026-12-14',
+        ])->save();
+        $tanpaPeriode = $data['kegiatan']->replicate();
+        $tanpaPeriode->fill([
+            'kode' => 'UT-PAKET-003', 'nama' => 'Ujian November 2026',
+            'tanggal_mulai' => null, 'tanggal_selesai' => null,
+        ])->save();
+
+        $jadwal = [];
+        foreach ([[$terbaru, '2026-12-11', '10:00', '11:30'], [$terbaru, '2026-12-11', '07:30', '09:00'], [$tanpaPeriode, '2026-11-05', '07:30', '09:00']]
+            as [$kegiatan, $tanggal, $mulai, $selesai]) {
+            $baris = $data['jadwal']->replicate();
+            $baris->fill([
+                'kegiatan_ujian_cbt_id' => $kegiatan->id, 'sesi_kegiatan_ujian_cbt_id' => null,
+                'tanggal' => $tanggal, 'waktu_mulai' => $mulai, 'waktu_selesai' => $selesai,
+            ])->save();
+            $baris->kelas()->sync([$data['kelas']->id]);
+            $jadwal[] = $baris;
+        }
+
+        $this->actingAs($data['akun_guru'])->get(route('paket-soal-terpusat.index'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                $terbaru->nama,
+                route('paket-soal-terpusat.show', $jadwal[1]),
+                route('paket-soal-terpusat.show', $jadwal[0]),
+                $tanpaPeriode->nama,
+                $data['kegiatan']->nama,
+            ]);
+
+        $this->get(route('paket-soal-terpusat.index', ['tampilan' => 'hasil']))
+            ->assertOk()
+            ->assertSeeInOrder([$data['kegiatan']->nama, $tanpaPeriode->nama, $terbaru->nama]);
+    }
+
+    public function test_panitia_melengkapi_folder_ujian_lama_tanpa_mengubah_folder_dan_soal_yang_sudah_ada(): void
+    {
+        $data = $this->buatFondasi();
+        $kegiatan = $data['kegiatan'];
+        $konteks = ['mata_pelajaran_id' => $data['mapel']->id, 'tingkat' => 8];
+        $lama = FolderSoalCbt::create([...$konteks, 'nama' => $kegiatan->nama]);
+        $soal = $this->buatSoal($data['tahun'], $data['mapel'], 'FOLDER-STS-LAMA', 'Butir yang sudah dikelompokkan.');
+        $lama->soal()->attach($soal);
+        $jadwalLanjutan = $data['jadwal']->replicate();
+        $jadwalLanjutan->fill(['tanggal' => '2026-09-17'])->save();
+
+        $url = route('ujian-terpusat.folder-soal.siapkan', $kegiatan);
+        $halaman = route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]);
+        $this->actingAs($data['akun_guru'])->post($url)->assertForbidden();
+
+        [$pegawaiPanitia, $panitia] = $this->buatAkunPegawai('Panitia Folder', '19880003');
+        $panitia->daftarPeran()->attach(Peran::where('kode', 'panitia_ujian')->value('id'));
+        $this->actingAs($panitia)->post($url)->assertForbidden();
+        PanitiaUjianCbt::create([
+            'kegiatan_ujian_cbt_id' => $kegiatan->id, 'pegawai_id' => $pegawaiPanitia->id,
+            'jabatan' => 'anggota', 'aktif' => true,
+        ]);
+
+        $jadwalWeb = $this->actingAs($panitia)->get($halaman)->assertOk()->assertSee('Lengkapi folder Bank Soal');
+        $this->assertDatabaseCount('folder_soal_cbt', 1);
+        $this->post($url)->assertRedirect($halaman)->assertSessionHas('berhasil', '1 folder Bank Soal baru disiapkan.');
+        $baru = FolderSoalCbt::where('kegiatan_ujian_cbt_id', $kegiatan->id)->firstOrFail();
+        $this->assertSame("{$kegiatan->nama} ({$kegiatan->kode})", $baru->nama);
+        $this->assertEquals($konteks, $baru->only(array_keys($konteks)));
+        $this->assertSame([$soal->id], $lama->soal()->pluck('soal_cbt.id')->all());
+        $this->assertNull($lama->fresh()->kegiatan_ujian_cbt_id);
+        $this->assertFalse($baru->soal()->exists());
+
+        $kegiatan->update(['nama' => 'Judul ujian diperbarui']);
+        $this->post($url)->assertRedirect($halaman)->assertSessionHas('berhasil', 'Tidak ada folder Bank Soal baru yang perlu disiapkan.');
+        $this->assertDatabaseCount('folder_soal_cbt', 2);
+        $this->assertDatabaseCount('soal_cbt', 1);
+        $this->assertDatabaseCount('ujian_cbt', 0);
+
+        $folderUrl = route('soal-cbt.index', ['folder' => $baru->id]);
+        $bankSoalWeb = $this->actingAs($data['akun_guru'])->get(route('soal-cbt.index'))
+            ->assertOk()->assertSee($folderUrl)->assertSeeText($baru->nama);
+        $this->get($folderUrl)->assertOk()->assertDontSeeText($soal->pertanyaan);
+        $data['penugasan']->update(['aktif' => false]);
+        $this->get($folderUrl)->assertForbidden();
+
+        if (getenv('NUSA_CAPTURE_FOLDER_UJIAN')) {
+            $direktori = storage_path('framework/testing/folder-ujian');
+            File::ensureDirectoryExists($direktori);
+            File::put($direktori.'/jadwal.html', $jadwalWeb->getContent());
+            File::put($direktori.'/bank-soal.html', $bankSoalWeb->getContent());
+        }
     }
 
     public function test_pratinjau_paket_memuat_gambar_stimulus_dan_pilihan_seperti_bank_soal(): void

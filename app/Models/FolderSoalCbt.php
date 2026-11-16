@@ -10,7 +10,7 @@ class FolderSoalCbt extends Model
 {
     protected $table = 'folder_soal_cbt';
 
-    protected $fillable = ['mata_pelajaran_id', 'tingkat', 'nama', 'keterangan'];
+    protected $fillable = ['kegiatan_ujian_cbt_id', 'mata_pelajaran_id', 'tingkat', 'nama', 'keterangan'];
 
     public function soal(): BelongsToMany
     {

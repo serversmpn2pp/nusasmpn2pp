@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\JadwalUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Services\Cbt\KelolaJadwalUjianTerpusat;
+use App\Services\Cbt\SiapkanFolderSoalUjianTerpusat;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -65,6 +66,22 @@ class JadwalUjianTerpusatController extends Controller
         return redirect()
             ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
             ->with('berhasil', 'Jadwal ujian berhasil dihapus.');
+    }
+
+    public function siapkanFolderSoal(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        SiapkanFolderSoalUjianTerpusat $folderSoal,
+    ) {
+        $this->pastikanAkses($request, $kegiatanUjianCbt);
+        abort_unless($folderSoal->mendukung($kegiatanUjianCbt), 422);
+        $jumlahBaru = $folderSoal->lengkapi($kegiatanUjianCbt);
+
+        return redirect()
+            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
+            ->with('berhasil', $jumlahBaru > 0
+                ? "{$jumlahBaru} folder Bank Soal baru disiapkan."
+                : 'Tidak ada folder Bank Soal baru yang perlu disiapkan.');
     }
 
     private function pastikanAkses(Request $request, KegiatanUjianCbt $kegiatan): void

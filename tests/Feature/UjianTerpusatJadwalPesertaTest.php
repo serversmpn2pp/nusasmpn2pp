@@ -194,6 +194,17 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         $this->assertSame([1, 2], $jadwal->pluck('urutan')->all());
         $this->assertSame(1, $jadwal[0]->kelas()->count());
         $this->assertSame(1, $jadwal[1]->kelas()->count());
+        $this->assertDatabaseCount('folder_soal_cbt', 2);
+        foreach ([7, 8] as $tingkat) {
+            $this->assertDatabaseHas('folder_soal_cbt', [
+                'kegiatan_ujian_cbt_id' => $kegiatan->id,
+                'mata_pelajaran_id' => $mapel->id,
+                'tingkat' => $tingkat,
+                'nama' => $kegiatan->nama,
+            ]);
+        }
+        $this->assertDatabaseCount('anggota_folder_soal_cbt', 0);
+        $this->assertDatabaseCount('ujian_cbt', 0);
 
         $this->actingAs($admin)
             ->get(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]))

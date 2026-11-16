@@ -649,6 +649,7 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::post('ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}/bangkitkan', [PembagianPesertaUjianTerpusatController::class, 'bangkitkan'])->name('ujian-terpusat.peserta.bangkitkan');
             Route::delete('ujian-terpusat/{kegiatanUjianCbt}/pembagian-peserta/{kelompokPeserta}', [PembagianPesertaUjianTerpusatController::class, 'destroy'])->name('ujian-terpusat.peserta.destroy');
             Route::post('ujian-terpusat/{kegiatanUjianCbt}/jadwal', [JadwalUjianTerpusatController::class, 'store'])->name('ujian-terpusat.jadwal.store');
+            Route::post('ujian-terpusat/{kegiatanUjianCbt}/folder-soal', [JadwalUjianTerpusatController::class, 'siapkanFolderSoal'])->name('ujian-terpusat.folder-soal.siapkan');
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}', [JadwalUjianTerpusatController::class, 'update'])->name('ujian-terpusat.jadwal.update');
             Route::delete('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}', [JadwalUjianTerpusatController::class, 'destroy'])->name('ujian-terpusat.jadwal.destroy');
             Route::put('ujian-terpusat/{kegiatanUjianCbt}/jadwal/{jadwalUjianCbt}/pengawas', [PelaksanaanNilaiUjianTerpusatController::class, 'updatePengawasMassal'])->name('ujian-terpusat.pengawas.massal');

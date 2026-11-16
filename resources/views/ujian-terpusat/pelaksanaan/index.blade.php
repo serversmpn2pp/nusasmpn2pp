@@ -136,6 +136,16 @@
             <h1 class="page-title">{{ $judulTahap }}</h1>
             <p class="page-subtitle">{{ $subjudulTahap }}</p>
         </div>
+        @if ($bolehSiapkanFolderSoal)
+            <div class="actions">
+                <form method="POST" action="{{ route('ujian-terpusat.folder-soal.siapkan', $kegiatan) }}">
+                    @csrf
+                    <button type="submit" class="button button-muted">
+                        <i data-lucide="folder-plus" aria-hidden="true"></i> Lengkapi folder Bank Soal
+                    </button>
+                </form>
+            </div>
+        @endif
     </div>
 
     @if (session('berhasil')) <div class="alert">{{ session('berhasil') }}</div> @endif

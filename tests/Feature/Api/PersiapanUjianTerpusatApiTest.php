@@ -317,6 +317,12 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             ])
             ->assertCreated();
         $jadwalId = $responseJadwal->json('data.id.0');
+        $this->assertDatabaseHas('folder_soal_cbt', [
+            'kegiatan_ujian_cbt_id' => $kegiatan->id,
+            'mata_pelajaran_id' => $mataPelajaran->id,
+            'tingkat' => 7,
+            'nama' => $kegiatan->nama,
+        ]);
 
         $this->withToken($token)
             ->postJson(route('api.v1.ujian-terpusat.jadwal.store', $kegiatan), [
@@ -375,6 +381,7 @@ class PersiapanUjianTerpusatApiTest extends TestCase
             ->deleteJson(route('api.v1.ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal]))
             ->assertOk();
         $this->assertDatabaseMissing('jadwal_ujian_cbt', ['id' => $jadwalId]);
+        $this->assertDatabaseCount('folder_soal_cbt', 1);
 
         $this->withToken($token)
             ->deleteJson(route('api.v1.ujian-terpusat.pembagian-peserta.destroy', [$kegiatan, $kelompok]))

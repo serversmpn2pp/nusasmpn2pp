@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
+use App\Services\Cbt\SiapkanFolderSoalUjianTerpusat;
 use Illuminate\Http\Request;
 
 class PelaksanaanUjianTerpusatController extends Controller
 {
-    public function index(Request $request, KegiatanUjianCbt $kegiatanUjianCbt)
+    public function index(Request $request, KegiatanUjianCbt $kegiatanUjianCbt, SiapkanFolderSoalUjianTerpusat $folderSoal)
     {
         abort_unless($kegiatanUjianCbt->dapatDiaksesOleh($request->user()), 403);
         $tahapAktif = $request->integer('tahap', 5);
@@ -80,12 +81,16 @@ class PelaksanaanUjianTerpusatController extends Controller
             ->filter(fn (MataPelajaran $mataPelajaran) => filled($mataPelajaran->tingkat_tersedia))
             ->values();
 
+        $bolehKelola = $request->user()->memilikiIzin(['cbt.kelola', 'cbt.panitia']);
+
         return view('ujian-terpusat.pelaksanaan.index', [
             'kegiatan' => $kegiatanUjianCbt,
             'daftarKelas' => $daftarKelas,
             'daftarMataPelajaran' => $daftarMataPelajaran,
             'kelompokPerTingkat' => $kegiatanUjianCbt->kelompokPesertaKegiatanUjianCbt->keyBy('tingkat'),
-            'bolehKelola' => $request->user()->memilikiIzin(['cbt.kelola', 'cbt.panitia']),
+            'bolehKelola' => $bolehKelola,
+            'bolehSiapkanFolderSoal' => $tahapAktif === 7 && $bolehKelola
+                && $kegiatanUjianCbt->jadwalUjianCbt->isNotEmpty() && $folderSoal->mendukung($kegiatanUjianCbt),
             'tahapAktif' => $tahapAktif,
         ]);
     }
