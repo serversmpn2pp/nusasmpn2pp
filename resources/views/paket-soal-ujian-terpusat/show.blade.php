@@ -1,311 +1,156 @@
 @extends('layouts.app')
 @section('admin-module', 'ujian-asesmen')
-
-@section('title', 'Susun Paket Soal Terpusat - NUSA')
+@section('title', 'Paket Soal Terpusat - NUSA')
 
 @section('content')
     @php
-        $jumlahDipilih = $soalDipilih->count();
-        $totalBobot = $soalDipilih->sum(fn ($item) => (float) $item->bobot);
         $paketSiap = $paket && in_array($paket->status, ['terjadwal', 'berlangsung', 'selesai'], true);
+        $skorUntuk = fn ($item) => $sedangMenyusun
+            ? $item->skor_maksimal
+            : ($soalDipilih->get($item->id)?->bobot ?? $item->skor_maksimal);
+        $totalBobot = $soal->sum(fn ($item) => (float) $skorUntuk($item));
+        $daftarPaket = route('paket-soal-terpusat.index', ['kegiatan' => $jadwal->kegiatan_ujian_cbt_id]);
+        $parameterSusun = ['jadwalUjianCbt' => $jadwal, 'mode' => 'susun'];
     @endphp
 
-    <style>
-        .package-context { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(260px,.6fr); overflow:hidden; margin-bottom:18px; background:var(--primary); color:#fff; }
-        .package-context-main, .package-context-side { padding:20px 22px; }
-        .package-context-side { border-left:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); }
-        .package-context h2 { margin:2px 0 0; color:#fff; font-size:1.25rem; }
-        .package-context p { margin:6px 0 0; color:rgba(255,255,255,.8); }
-        .package-context .quick-facts { margin-top:14px; }
-        .package-context .quick-facts div { border-color:rgba(255,255,255,.18); background:rgba(255,255,255,.07); }
-        .package-context .quick-facts dt { color:rgba(255,255,255,.7); }
-        .package-context .quick-facts dd { color:#fff; }
-        .package-auto { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
-        .package-auto-item { padding:13px 14px; border:1px solid var(--line); border-radius:7px; background:#fff; }
-        .package-auto-item strong, .package-auto-item span { display:block; }
-        .package-auto-item strong { color:var(--primary-dark); font-size:.78rem; }
-        .package-auto-item span { margin-top:4px; color:var(--muted); font-size:.72rem; font-weight:700; }
-        .shuffle-settings { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; margin-bottom:18px; padding:16px; }
-        .shuffle-setting { display:grid; grid-template-columns:auto minmax(0,1fr); gap:11px; align-items:start; padding:13px 14px; border:1px solid var(--line); border-radius:7px; background:#f8fafc; cursor:pointer; }
-        .shuffle-setting:has(input:checked) { border-color:#8eb8df; background:var(--primary-soft); box-shadow:inset 4px 0 0 var(--primary); }
-        .shuffle-setting input { width:19px; height:19px; margin-top:2px; accent-color:var(--primary); }
-        .shuffle-setting strong,.shuffle-setting span { display:block; }
-        .shuffle-setting strong { color:var(--primary-dark); font-size:.82rem; }
-        .shuffle-setting span { margin-top:4px; color:var(--muted); font-size:.74rem; line-height:1.45; }
-        .question-toolbar { display:grid; grid-template-columns:minmax(220px,1fr) 210px 210px auto; gap:10px; align-items:end; padding:15px 16px; border-bottom:1px solid var(--line); background:#f8fafc; }
-        .question-toolbar-actions { display:flex; gap:7px; }
-        .question-list { display:grid; }
-        .question-row { display:grid; grid-template-columns:28px minmax(0,1fr) 125px 120px 96px 105px; gap:14px; align-items:start; padding:15px 16px; border-bottom:1px solid var(--line); }
-        .question-row:last-child { border-bottom:0; }
-        .question-row.is-selected { background:#f5f9fd; box-shadow:inset 4px 0 0 var(--primary); }
-        .question-row.is-hidden { display:none; }
-        .question-check { width:18px; height:18px; margin-top:3px; accent-color:var(--primary); }
-        .question-main strong, .question-main span { display:block; }
-        .question-main strong { color:var(--primary-dark); font-size:.8rem; }
-        .question-main span { margin-top:5px; color:var(--ink); font-size:.8rem; line-height:1.55; }
-        .question-main small { display:block; margin-top:7px; color:var(--muted); font-size:.7rem; font-weight:700; }
-        .question-meta strong, .question-meta span { display:block; }
-        .question-meta strong { font-size:.75rem; }
-        .question-meta span { margin-top:4px; color:var(--muted); font-size:.7rem; font-weight:700; }
-        .question-preview-action .button { width:100%; min-width:0; }
-        .question-weight label { display:block; margin-bottom:5px; color:var(--muted); font-size:.68rem; font-weight:800; }
-        .package-form-actions { position:sticky; bottom:0; display:flex; justify-content:space-between; gap:12px; align-items:center; margin-top:16px; padding:13px 15px; border:1px solid var(--line); border-radius:7px; background:rgba(255,255,255,.96); box-shadow:0 -8px 24px rgba(15,53,92,.08); z-index:3; }
-        .package-form-summary { display:flex; flex-wrap:wrap; gap:8px; }
-        .package-form-summary span { padding:7px 9px; border-radius:6px; background:var(--primary-soft); color:var(--primary-dark); font-size:.74rem; font-weight:800; }
-        .package-form-buttons { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
-        .question-empty { padding:34px 18px; text-align:center; color:var(--muted); }
-        @media (max-width:1000px) {
-            .package-auto { grid-template-columns:repeat(2,minmax(0,1fr)); }
-            .question-toolbar { grid-template-columns:1fr 1fr; }
-            .question-toolbar-actions { grid-column:1 / -1; }
-            .question-row { grid-template-columns:28px minmax(0,1fr) 96px 105px; }
-            .question-type-meta { grid-column:2; grid-row:2; }
-            .question-status-meta { grid-column:2; grid-row:3; }
-            .question-preview-action { grid-column:3; grid-row:1; }
-            .question-weight { grid-column:4; grid-row:1 / span 3; }
-        }
-        @media (max-width:680px) {
-            .package-context { grid-template-columns:1fr; }
-            .package-context-side { border-top:1px solid rgba(255,255,255,.18); border-left:0; }
-            .package-auto, .question-toolbar, .shuffle-settings { grid-template-columns:1fr; }
-            .question-toolbar-actions { grid-column:auto; }
-            .question-toolbar-actions .button { flex:1 1 0; }
-            .question-row { grid-template-columns:24px minmax(0,1fr); gap:10px; padding:14px; }
-            .question-type-meta,.question-status-meta,.question-preview-action,.question-weight { grid-column:2; grid-row:auto; }
-            .question-preview-action .button { width:auto; }
-            .question-weight { max-width:150px; }
-            .package-form-actions { position:static; display:grid; }
-            .package-form-buttons { display:grid; grid-template-columns:1fr; }
-            .package-form-buttons .button { width:100%; }
-        }
-    </style>
-
+    @include('paket-soal-ujian-terpusat.partials.styles')
     <div class="page-header">
         <div>
-            <p class="eyebrow">Ujian Terpusat · Tahap 8</p>
-            <h1 class="page-title">{{ $bolehKelola ? 'Susun paket soal' : 'Detail paket soal' }}</h1>
-            <p class="page-subtitle">{{ $bolehKelola ? 'Centang soal yang akan dikerjakan siswa. Informasi lainnya sudah diambil dari jadwal.' : 'Panitia dapat memantau isi dan kesiapan paket tanpa mengubah soal.' }}</p>
+            <p class="eyebrow">Ujian Terpusat &middot; Tahap 8</p>
+            <h1 class="page-title">{{ $sedangMenyusun ? 'Susun paket soal' : 'Periksa paket soal' }}</h1>
         </div>
         <div class="actions">
-            @if ($bolehKelola)<a href="{{ route('soal-cbt.index') }}" class="button button-muted">Buka Bank Soal</a>@endif
+            @if ($bolehKelola)
+                <a href="{{ route('paket-soal-terpusat.show', ['jadwalUjianCbt' => $jadwal, 'mode' => $sedangMenyusun ? 'periksa' : 'susun']) }}" class="button button-muted">
+                    <i data-lucide="{{ $sedangMenyusun ? 'eye' : 'pencil' }}" aria-hidden="true"></i>
+                    {{ $sedangMenyusun ? 'Periksa paket' : 'Susun paket' }}
+                </a>
+            @endif
             @if ($paket?->dapatDiaksesOperasionalOleh(auth()->user()))
                 <a href="{{ route('ujian-cbt.hasil.index', $paket) }}" class="button button-muted">Lihat nilai</a>
                 <a href="{{ route('ujian-cbt.hasil.analisis-soal', $paket) }}" class="button button-muted">Analisis soal</a>
             @endif
-            @if ($paketSiap)<a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $jadwal->kegiatan_ujian_cbt_id) }}" class="button button-muted">Pelaksanaan ujian</a>@endif
-            <a href="{{ route('paket-soal-terpusat.index', ['kegiatan' => $jadwal->kegiatan_ujian_cbt_id]) }}" class="button button-primary">Daftar paket</a>
+            @if ($paketSiap)
+                <a href="{{ route('ujian-terpusat.pelaksanaan-nilai.index', $jadwal->kegiatan_ujian_cbt_id) }}" class="button button-muted">Pelaksanaan ujian</a>
+            @endif
+            <a href="{{ $daftarPaket }}" class="button button-muted"><i data-lucide="list" aria-hidden="true"></i> Daftar paket</a>
         </div>
     </div>
 
     @if (session('berhasil')) <div class="alert">{{ session('berhasil') }}</div> @endif
     @if ($errors->any())
-        <div class="alert alert-danger"><strong>Ada bagian yang perlu diperbaiki.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+        <div class="alert alert-danger" role="alert">
+            <strong>Ada bagian yang perlu diperbaiki.</strong>
+            <ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+        </div>
     @endif
 
     @if ($jadwal->kegiatanUjianCbt?->dapatDiaksesOleh(auth()->user()))
         @include('ujian-terpusat.partials.alur', ['kegiatan' => $jadwal->kegiatanUjianCbt, 'tahapAktif' => 8])
     @endif
 
-    <section class="panel package-context">
-        <div class="package-context-main">
-            <p class="eyebrow" style="color:var(--accent);">{{ $jadwal->kegiatanUjianCbt?->nama }}</p>
-            <h2>{{ $jadwal->mataPelajaran?->nama }} · Tingkat {{ $jadwal->tingkat }}</h2>
-            <p>{{ $jadwal->tanggal?->locale('id')->translatedFormat('l, d F Y') }} · {{ $jadwal->sesiKegiatanUjianCbt?->nama }} · {{ $jadwal->labelWaktu() }}</p>
-            <dl class="quick-facts">
-                <div><dt>Kelas</dt><dd>{{ $jadwal->kelas->pluck('nama')->join(', ') }}</dd></div>
-                <div><dt>Durasi ujian</dt><dd>{{ $jadwal->durasiMenit() }} menit</dd></div>
-                <div><dt>Penilaian PGK (ditetapkan admin)</dt><dd>{{ $jadwal->kegiatanUjianCbt?->labelPenilaianPgk() }}</dd></div>
-                <div><dt>Tahun pelajaran</dt><dd>{{ $jadwal->kegiatanUjianCbt?->tahunPelajaran?->nama }}</dd></div>
-            </dl>
-        </div>
-        <div class="package-context-side">
+    <section class="panel panel-pad package-context" aria-labelledby="package-context-title">
+        <div class="package-heading">
+            <div>
+                <p class="eyebrow">{{ $jadwal->kegiatanUjianCbt?->nama }}</p>
+                <h2 id="package-context-title">{{ $jadwal->mataPelajaran?->nama }} &middot; Tingkat {{ $jadwal->tingkat }}</h2>
+                <p>{{ $jadwal->tanggal?->locale('id')->translatedFormat('l, d F Y') }} &middot; {{ $jadwal->sesiKegiatanUjianCbt?->nama }} &middot; {{ $jadwal->labelWaktu() }}</p>
+            </div>
             <span class="badge {{ $paketSiap ? 'badge-active' : ($paket ? 'badge-warning' : 'badge-muted') }}">{{ $paketSiap ? 'Paket siap' : ($paket ? 'Masih draf' : 'Belum disusun') }}</span>
-            <dl class="quick-facts">
-                <div><dt>Soal terpilih</dt><dd data-selected-count>{{ $jumlahDipilih }}</dd></div>
-                <div><dt>Total skor maksimal</dt><dd data-selected-weight>{{ number_format($totalBobot, 2, ',', '.') }}</dd></div>
-                @if ($paket?->token)<div><dt>Token otomatis</dt><dd>{{ $paket->token }}</dd></div>@endif
-            </dl>
         </div>
+        <dl class="package-facts">
+            <div><dt>Kelas</dt><dd>{{ $jadwal->kelas->pluck('nama')->join(', ') }}</dd></div>
+            <div><dt>Durasi ujian</dt><dd>{{ $jadwal->durasiMenit() }} menit</dd></div>
+            <div><dt>Tahun pelajaran</dt><dd>{{ $jadwal->kegiatanUjianCbt?->tahunPelajaran?->nama }}</dd></div>
+            <div><dt>Penilaian PGK</dt><dd>{{ $jadwal->kegiatanUjianCbt?->labelPenilaianPgk() }}</dd></div>
+            @if ($paket?->token)<div><dt>Token otomatis</dt><dd>{{ $paket->token }}</dd></div>@endif
+        </dl>
     </section>
 
-    <div class="package-auto" aria-label="Pengaturan otomatis paket">
-        <div class="package-auto-item"><strong>Jumlah soal</strong><span>Mengikuti jumlah soal yang dicentang.</span></div>
-        <div class="package-auto-item"><strong>Skor soal</strong><span>Mudah 1 · Sedang 2 · Sulit 3 · Sangat Sulit 4.</span></div>
-        <div class="package-auto-item"><strong>Jadwal & durasi</strong><span>Mengikuti tanggal dan jam pada Tahap 7.</span></div>
-        <div class="package-auto-item"><strong>Peserta</strong><span>Mengikuti pembagian kelas dan ruang pada Tahap 6.</span></div>
-        <div class="package-auto-item"><strong>Pengacakan</strong><span>Soal: {{ ($paket?->acak_soal ?? true) ? 'diacak' : 'tetap' }} · Pilihan: {{ ($paket?->acak_jawaban ?? true) ? 'diacak' : 'tetap' }}.</span></div>
-        <div class="package-auto-item"><strong>Komponen nilai</strong><span>Dibuat otomatis saat paket diterbitkan.</span></div>
-    </div>
-
-    @if ($bolehKelola && $jadwal->kegiatanUjianCbt?->jenisUjianCbt?->kode === 'SIMULASI_CBT')
-        <section class="panel panel-pad feature-section" style="margin-bottom:18px;">
-            <h2 class="panel-title">Simulasi CBT</h2>
-            <p class="help-text">Paket bawaan 12 soal umum: masing-masing dua pilihan ganda, pilihan ganda kompleks, benar-salah, menjodohkan, isian singkat, dan numerik. Durasi 20 menit. Tanpa uraian, upload file, dan nilai akademik.</p>
-            <div class="actions" style="margin-top:14px;">
-                <form method="POST" action="{{ route('paket-soal-terpusat.update', $jadwal) }}">
-                    @csrf @method('PUT')
-                    <input type="hidden" name="gunakan_paket_simulasi" value="1">
-                    <input type="hidden" name="acak_soal" value="0">
-                    <input type="hidden" name="acak_jawaban" value="0">
-                    <button class="button button-primary" name="aksi" value="terbitkan">Gunakan paket Simulasi CBT</button>
-                </form>
+    @if ($sedangMenyusun && $jadwal->kegiatanUjianCbt?->jenisUjianCbt?->kode === 'SIMULASI_CBT')
+        <form method="POST" action="{{ route('paket-soal-terpusat.update', $parameterSusun) }}" class="panel panel-pad package-context">
+            @csrf @method('PUT')
+            <input type="hidden" name="gunakan_paket_simulasi" value="1">
+            <input type="hidden" name="acak_soal" value="0">
+            <input type="hidden" name="acak_jawaban" value="0">
+            <div class="package-heading">
+                <div><h2>Simulasi CBT</h2><p>12 soal umum &middot; 20 menit &middot; tanpa nilai akademik</p></div>
+                <button class="button button-muted" name="aksi" value="terbitkan">Gunakan paket Simulasi CBT</button>
             </div>
-        </section>
-    @endif
-
-    @if ($bolehKelola)
-        <form action="{{ route('paket-soal-terpusat.update', $jadwal) }}" method="POST" data-package-form>
-            @csrf
-            @method('PUT')
-
-            <section class="panel shuffle-settings" aria-labelledby="pengaturan-pengacakan">
-                <div style="grid-column:1 / -1;">
-                    <h2 id="pengaturan-pengacakan" class="panel-title">Pengacakan untuk siswa</h2>
-                    <p class="help-text" style="margin-top:4px;">Pengaturan berlaku ketika siswa membuka paket. Urutan tidak berubah saat halaman direfresh.</p>
-                </div>
-                <label class="shuffle-setting">
-                    <input type="hidden" name="acak_soal" value="0">
-                    <input type="checkbox" name="acak_soal" value="1" @checked(old('acak_soal', $paket?->acak_soal ?? true))>
-                    <span><strong>Acak urutan soal</strong><span>Setiap siswa memperoleh urutan soal yang berbeda.</span></span>
-                </label>
-                <label class="shuffle-setting">
-                    <input type="hidden" name="acak_jawaban" value="0">
-                    <input type="checkbox" name="acak_jawaban" value="1" @checked(old('acak_jawaban', $paket?->acak_jawaban ?? true))>
-                    <span><strong>Acak pilihan jawaban</strong><span>Pilihan A-D pada PG dan PG kompleks disusun berbeda untuk setiap siswa.</span></span>
-                </label>
-            </section>
-    @endif
-
-    <section class="panel">
-        @include('soal-cbt.partials.folder-picker-filter', ['koleksiSoal' => $soal])
-        @if ($bolehKelola && $soal->isNotEmpty())
-            <div class="question-toolbar">
-                <div class="field"><label for="cari_soal_paket">Cari soal</label><input id="cari_soal_paket" class="input" placeholder="Kode, topik, atau isi soal" data-question-search></div>
-                <div class="field"><label for="jenis_soal_paket">Jenis soal</label><select id="jenis_soal_paket" class="input" data-question-type><option value="">Semua jenis</option>@foreach($daftarJenisSoal as $kode => $label)<option value="{{ $kode }}">{{ $label }}</option>@endforeach</select></div>
-                <div class="field"><label for="kesulitan_soal_paket">Kesulitan</label><select id="kesulitan_soal_paket" class="input" data-question-difficulty><option value="">Semua kesulitan</option>@foreach($daftarKesulitan as $kode => $label)<option value="{{ $kode }}">{{ $label }}</option>@endforeach</select></div>
-                <div class="question-toolbar-actions"><button type="button" class="button button-muted" data-select-visible>Pilih tampil</button><button type="button" class="button button-muted" data-clear-selection>Kosongkan</button></div>
-            </div>
-        @endif
-
-        <div class="question-list" data-question-list>
-            @forelse ($soal as $item)
-                @php
-                    $relasi = $soalDipilih->get($item->id);
-                    $dipilih = filter_var(old("soal.{$item->id}.dipilih", (bool) $relasi), FILTER_VALIDATE_BOOLEAN);
-                    $skor = $bolehKelola ? $item->skor_maksimal : ($relasi?->bobot ?? $item->skor_maksimal);
-                    $bisaDipilih = $item->aktif && $item->status === 'siap';
-                @endphp
-                <div class="question-row {{ $dipilih ? 'is-selected' : '' }}" data-exam-folders="{{ json_encode($item->folders->modelKeys()) }}" data-question-row data-score="{{ (float) $skor }}" data-type="{{ $item->jenis_soal }}" data-difficulty="{{ $item->tingkat_kesulitan }}" data-search="{{ mb_strtolower($item->kode.' '.$item->topik.' '.$item->materi.' '.strip_tags($item->pertanyaan)) }}">
-                    @if ($bolehKelola)
-                        <input type="hidden" name="soal[{{ $item->id }}][dipilih]" value="0">
-                        <input id="soal_{{ $item->id }}" class="question-check" type="checkbox" name="soal[{{ $item->id }}][dipilih]" value="1" @checked($dipilih) @disabled(! $bisaDipilih) data-question-check>
-                    @else
-                        <span class="question-check" aria-hidden="true">✓</span>
-                    @endif
-                    <label class="question-main" @if($bolehKelola) for="soal_{{ $item->id }}" @endif>
-                        <strong>{{ $item->kode }}</strong>
-                        <span>{{ str(strip_tags($item->pertanyaan))->limit(220) }}</span>
-                        <small>{{ $item->topik ?: ($item->materi ?: 'Tanpa topik') }}</small>
-                    </label>
-                    <div class="question-meta question-type-meta"><strong>{{ $item->labelJenis() }}</strong><span>{{ $item->labelKesulitan() }}</span></div>
-                    <div class="question-meta question-status-meta"><strong>{{ $item->labelKategori() }}</strong><span>{{ $bisaDipilih ? 'Siap digunakan' : 'Tidak aktif' }}</span></div>
-                    <div class="question-preview-action">
-                        <button type="button" class="button button-muted" data-question-preview data-preview-source="preview-soal-{{ $item->id }}">Pratinjau</button>
-                    </div>
-                    <div class="question-weight">
-                        <label>Skor</label>
-                        <strong>{{ number_format((float) $skor, 0, ',', '.') }}</strong>
-                    </div>
-                </div>
-            @empty
-                <div class="question-empty"><strong>{{ $bolehKelola ? 'Belum ada soal siap untuk mapel dan tingkat ini.' : 'Paket belum memiliki soal.' }}</strong>@if($bolehKelola)<p class="help-text" style="margin-top:6px;">Tambahkan atau ubah soal menjadi Siap digunakan melalui Bank Soal.</p>@endif</div>
-            @endforelse
-        </div>
-    </section>
-
-    @if ($bolehKelola)
-        <div class="package-form-actions">
-            <div class="package-form-summary"><span><b data-selected-count>{{ $jumlahDipilih }}</b> soal dipilih</span><span>Total skor <b data-selected-weight>{{ number_format($totalBobot, 2, ',', '.') }}</b></span></div>
-            <div class="package-form-buttons">
-                <a href="{{ route('paket-soal-terpusat.index', ['kegiatan' => $jadwal->kegiatan_ujian_cbt_id]) }}" class="button button-muted">Batal</a>
-                @if ($paketSiap)
-                    <button type="submit" name="aksi" value="draf" class="button button-muted">Kembalikan ke draf</button>
-                    <button type="submit" name="aksi" value="simpan" class="button button-primary">Simpan perubahan</button>
-                @else
-                    <button type="submit" name="aksi" value="draf" class="button button-muted">Simpan draf</button>
-                    <button type="submit" name="aksi" value="terbitkan" class="button button-primary">Terbitkan paket</button>
-                @endif
-            </div>
-        </div>
         </form>
     @endif
 
+    @if ($sedangMenyusun)
+        <form action="{{ route('paket-soal-terpusat.update', $parameterSusun) }}" method="POST" data-package-form>
+            @csrf @method('PUT')
+            <input type="hidden" name="daftar_soal_dikirim" value="1">
+    @endif
+
+    <section class="panel" aria-labelledby="package-questions-title">
+        <div class="package-heading package-section-head">
+            <div>
+                <h2 id="package-questions-title">Soal dalam paket</h2>
+                <p role="status"><b data-package-count>{{ $soal->count() }}</b> soal &middot; Total skor <b data-package-score>{{ number_format($totalBobot, 2, ',', '.') }}</b></p>
+            </div>
+            @if ($sedangMenyusun)
+                <button type="button" class="button button-primary" data-open-bank aria-haspopup="dialog"><i data-lucide="folder-plus" aria-hidden="true"></i> Tambah dari Bank Soal</button>
+            @endif
+        </div>
+        <div class="package-empty" data-package-empty @if ($soal->isNotEmpty()) hidden @endif>Belum ada soal dalam paket ini.</div>
+        <ol class="package-question-list" data-package-list>
+            @foreach ($soal as $item)
+                @include('paket-soal-ujian-terpusat.partials.baris-soal', ['nomor' => $loop->iteration, 'skor' => $skorUntuk($item)])
+            @endforeach
+        </ol>
+    </section>
+
+    @if ($sedangMenyusun)
+            <section class="panel panel-pad package-shuffle" aria-labelledby="package-shuffle-title">
+                <h2 id="package-shuffle-title" class="panel-title">Pengacakan untuk siswa</h2>
+                <div class="package-shuffle-options">
+                    <label>
+                        <input type="hidden" name="acak_soal" value="0">
+                        <input type="checkbox" name="acak_soal" value="1" @checked(old('acak_soal', $paket?->acak_soal ?? true))>
+                        Acak urutan soal
+                    </label>
+                    <label>
+                        <input type="hidden" name="acak_jawaban" value="0">
+                        <input type="checkbox" name="acak_jawaban" value="1" @checked(old('acak_jawaban', $paket?->acak_jawaban ?? true))>
+                        Acak pilihan jawaban
+                    </label>
+                </div>
+            </section>
+
+            <div class="package-form-actions">
+                <a href="{{ $daftarPaket }}" class="button button-muted">Batal</a>
+                <div class="actions">
+                    @if ($paketSiap)
+                        <button type="submit" name="aksi" value="draf" class="button button-muted">Kembalikan ke draf</button>
+                        <button type="submit" name="aksi" value="simpan" class="button button-primary">Simpan perubahan</button>
+                    @else
+                        <button type="submit" name="aksi" value="draf" class="button button-muted">Simpan draf</button>
+                        <button type="submit" name="aksi" value="terbitkan" class="button button-primary">Terbitkan paket</button>
+                    @endif
+                </div>
+            </div>
+        </form>
+        @include('paket-soal-ujian-terpusat.partials.dialog-bank')
+    @elseif ($sudahDikerjakan)
+        <p class="help-text package-lock-note"><i data-lucide="lock" aria-hidden="true"></i> Paket tidak dapat diubah karena sudah dikerjakan peserta.</p>
+    @endif
+
     @include('soal-cbt.partials.preview-styles')
-    @foreach ($soal as $item)
-        @include('soal-cbt.partials.preview-source')
-    @endforeach
-    <dialog class="question-preview-dialog" data-question-preview-dialog aria-label="Pratinjau soal">
+    <dialog class="question-preview-dialog" data-question-preview-dialog aria-labelledby="judul-pratinjau-paket">
         <div class="question-preview-head">
-            <h2>Pratinjau soal</h2>
+            <h2 id="judul-pratinjau-paket">Pratinjau soal</h2>
             <button type="button" class="button button-muted" data-close-question-preview>Tutup</button>
         </div>
         <div class="question-preview-body" data-question-preview-body></div>
     </dialog>
     @push('scripts')
         @vite('resources/js/soal-editor.js')
+        @if ($sedangMenyusun)
+            <script src="{{ asset('js/paket-soal-terpusat.js') }}?v={{ filemtime(public_path('js/paket-soal-terpusat.js')) }}" defer></script>
+        @endif
     @endpush
-
-    @if ($bolehKelola)
-        <script>
-            (() => {
-                const rows = [...document.querySelectorAll('[data-question-row]')];
-                const search = document.querySelector('[data-question-search]');
-                const type = document.querySelector('[data-question-type]');
-                const difficulty = document.querySelector('[data-question-difficulty]');
-                const counters = document.querySelectorAll('[data-selected-count]');
-                const weights = document.querySelectorAll('[data-selected-weight]');
-
-                const refreshSummary = () => {
-                    const selected = rows.filter((row) => row.querySelector('[data-question-check]')?.checked);
-                    const total = selected.reduce((sum, row) => sum + Number(row.dataset.score || 0), 0);
-                    counters.forEach((item) => item.textContent = selected.length);
-                    weights.forEach((item) => item.textContent = total.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                    rows.forEach((row) => {
-                        const check = row.querySelector('[data-question-check]');
-                        row.classList.toggle('is-selected', Boolean(check?.checked));
-                    });
-                };
-
-                const applyFilters = () => {
-                    const keyword = (search?.value || '').trim().toLowerCase();
-                    rows.forEach((row) => {
-                        const visible = (! keyword || row.dataset.search.includes(keyword))
-                            && (! type?.value || row.dataset.type === type.value)
-                            && (! difficulty?.value || row.dataset.difficulty === difficulty.value);
-                        row.classList.toggle('is-hidden', ! visible);
-                    });
-                };
-
-                document.querySelectorAll('[data-question-check]').forEach((input) => input.addEventListener('change', refreshSummary));
-                [search, type, difficulty].forEach((input) => input?.addEventListener(input === search ? 'input' : 'change', applyFilters));
-                document.querySelector('[data-select-visible]')?.addEventListener('click', () => {
-                    rows.filter((row) => ! row.hidden && ! row.classList.contains('is-hidden')).forEach((row) => {
-                        const check = row.querySelector('[data-question-check]');
-                        if (check && ! check.disabled) check.checked = true;
-                    });
-                    refreshSummary();
-                });
-                document.querySelector('[data-clear-selection]')?.addEventListener('click', () => {
-                    rows.forEach((row) => {
-                        const check = row.querySelector('[data-question-check]');
-                        if (check && ! check.disabled) check.checked = false;
-                    });
-                    refreshSummary();
-                });
-
-                applyFilters();
-                refreshSummary();
-            })();
-        </script>
-    @endif
 @endsection

@@ -608,6 +608,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
             Route::get('paket-soal-ujian-terpusat', [PaketSoalUjianTerpusatController::class, 'index'])->name('paket-soal-terpusat.index');
             Route::get('paket-soal-ujian-terpusat/{jadwalUjianCbt}', [PaketSoalUjianTerpusatController::class, 'show'])->name('paket-soal-terpusat.show');
         });
+        Route::get('paket-soal-ujian-terpusat/{jadwalUjianCbt}/bank-soal', [PaketSoalUjianTerpusatController::class, 'bankSoal'])
+            ->middleware('izin:cbt.soal_kelola,cbt.kelola')
+            ->name('paket-soal-terpusat.bank-soal');
         Route::put('paket-soal-ujian-terpusat/{jadwalUjianCbt}', [PaketSoalUjianTerpusatController::class, 'update'])
             ->middleware('izin:cbt.soal_kelola,cbt.kelola')
             ->name('paket-soal-terpusat.update');

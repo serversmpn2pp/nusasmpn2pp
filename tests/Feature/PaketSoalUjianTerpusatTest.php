@@ -50,21 +50,18 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ->assertSee('0 dari 1 paket siap');
 
         $this->actingAs($data['admin'])
-            ->get(route('paket-soal-terpusat.show', $data['jadwal']))
+            ->get(route('paket-soal-terpusat.show', [$data['jadwal'], 'mode' => 'susun']))
             ->assertOk()
             ->assertSee('Susun paket soal')
-            ->assertSee('Informasi lainnya sudah diambil dari jadwal')
+            ->assertSee('Belum ada soal dalam paket ini.')
+            ->assertSee('Tambah dari Bank Soal')
             ->assertSeeText('Durasi ujian')
-            ->assertSeeText('Jadwal & durasi')
-            ->assertSeeText('Mengikuti tanggal dan jam pada Tahap 7.')
             ->assertSee('Pengacakan untuk siswa')
-            ->assertSee('Skor soal')
             ->assertSee('name="acak_soal"', false)
             ->assertSee('name="acak_jawaban"', false)
-            ->assertSee('Pratinjau')
-            ->assertSee('data-question-preview', false)
-            ->assertSee('data-preview-source="preview-soal-'.$soalSatu->id.'"', false)
-            ->assertSee('Benar')
+            ->assertDontSee('Pertanyaan pertama')
+            ->assertDontSee('Pertanyaan kedua')
+            ->assertDontSee('data-package-question data-question-id', false)
             ->assertDontSee('name="mata_pelajaran_id"', false)
             ->assertDontSee('name="tingkat"', false)
             ->assertDontSee('name="jumlah_soal"', false)
@@ -318,10 +315,11 @@ class PaketSoalUjianTerpusatTest extends TestCase
         ]);
 
         $this->actingAs($data['admin'])
-            ->get(route('paket-soal-terpusat.show', $data['jadwal']))
+            ->get(route('paket-soal-terpusat.bank-soal', $data['jadwal']))
             ->assertOk()
-            ->assertSee('id="preview-soal-'.$soal->id.'"', false)
-            ->assertSee('data-preview-source="preview-soal-'.$soal->id.'"', false)
+            ->assertSee('data-question-id="'.$soal->id.'"', false)
+            ->assertSee('data-question-preview-source', false)
+            ->assertSee('data-question-preview aria-haspopup="dialog"', false)
             ->assertSee(Storage::disk('public')->url('soal-cbt/diagram-stimulus.png'))
             ->assertSee(Storage::disk('public')->url('soal-cbt/diagram-jawaban.png'))
             ->assertSee('Diagram untuk soal')
@@ -357,6 +355,10 @@ class PaketSoalUjianTerpusatTest extends TestCase
         $this->actingAs($data['akun_guru'])
             ->get(route('paket-soal-terpusat.show', $data['jadwal']))
             ->assertOk()
+            ->assertSeeText('Belum ada soal dalam paket ini.')
+            ->assertDontSee('SOAL-GURU-001');
+        $this->get(route('paket-soal-terpusat.bank-soal', $data['jadwal']))
+            ->assertOk()
             ->assertSee('SOAL-GURU-001');
         $this->actingAs($data['akun_guru'])
             ->put(route('paket-soal-terpusat.update', $data['jadwal']), [
@@ -365,9 +367,84 @@ class PaketSoalUjianTerpusatTest extends TestCase
             ])
             ->assertRedirect();
 
+        $this->get(route('paket-soal-terpusat.show', $jadwalLain))->assertForbidden();
+        $this->get(route('paket-soal-terpusat.bank-soal', $jadwalLain))->assertForbidden();
+    }
+
+    public function test_modal_bank_menyaring_folder_dan_paket_tetap_mengikuti_urutan_yang_disimpan(): void
+    {
+        $data = $this->buatFondasi();
+        $jadwal = $data['jadwal'];
+        $folderA = FolderSoalCbt::create(['nama' => 'Folder Bilangan', 'mata_pelajaran_id' => $data['mapel']->id, 'tingkat' => 8]);
+        $folderB = FolderSoalCbt::create(['nama' => 'Folder Logika', 'mata_pelajaran_id' => $data['mapel']->id, 'tingkat' => 8]);
+        $satu = $this->buatSoal($data['tahun'], $data['mapel'], 'BANK-A-SATU', 'Berapa nilai masukan dengan angka 0?');
+        $satu->update(['opsi' => ['pilihan' => ['A' => '0', 'B' => '1']]]);
+        $dua = $this->buatSoal($data['tahun'], $data['mapel'], 'BANK-B-DUA', 'Pertanyaan logika kedua.', 'sulit');
+        $tidakDipilih = $this->buatSoal($data['tahun'], $data['mapel'], 'BANK-C-LAIN', 'Pertanyaan tidak masuk paket.');
+        $belumSiap = $this->buatSoal($data['tahun'], $data['mapel'], 'BANK-DRAF', 'Pertanyaan belum siap.');
+        $belumSiap->update(['status' => 'draft']);
+        $tingkatLain = $this->buatSoal($data['tahun'], $data['mapel'], 'BANK-TINGKAT-9', 'Pertanyaan tingkat lain.');
+        $tingkatLain->update(['tingkat' => 9]);
+        $folderA->soal()->attach([$satu->id, $belumSiap->id, $tingkatLain->id]);
+        $folderB->soal()->attach([$dua->id, $tidakDipilih->id]);
+        $url = route('paket-soal-terpusat.show', $jadwal);
+        $urlSusun = route('paket-soal-terpusat.show', [$jadwal, 'mode' => 'susun']);
+        $update = route('paket-soal-terpusat.update', [$jadwal, 'mode' => 'susun']);
+        $this->actingAs($data['akun_guru']);
+
+        $kosong = $this->get($url)->assertOk()->assertSee('Folder Bilangan')->assertSee('Folder Logika')
+            ->assertDontSee('BANK-A-SATU');
+        $bank = $this->get(route('paket-soal-terpusat.bank-soal', $jadwal))->assertOk()
+            ->assertSeeInOrder([$satu->kode, $dua->kode, $tidakDipilih->kode])
+            ->assertDontSee($belumSiap->kode)->assertDontSee($tingkatLain->kode);
+        $bankA = $this->get(route('paket-soal-terpusat.bank-soal', [$jadwal, 'folder' => $folderA->id, 'cari' => '0']))
+            ->assertOk()->assertSee($satu->kode)->assertDontSee($dua->kode)->assertDontSee($tingkatLain->kode);
+        $bankB = $this->get(route('paket-soal-terpusat.bank-soal', [$jadwal, 'folder' => $folderB->id]))
+            ->assertOk()->assertSee($dua->kode)->assertSee($tidakDipilih->kode)->assertDontSee($satu->kode);
+        $this->get(route('paket-soal-terpusat.bank-soal', [$jadwal, 'folder' => $folderB->id, 'kesulitan' => 'sulit']))
+            ->assertOk()->assertSee($dua->kode)->assertDontSee($tidakDipilih->kode);
+        $this->get(route('paket-soal-terpusat.bank-soal', [$jadwal, 'cari' => '0']))
+            ->assertOk()->assertSee($satu->kode)->assertDontSee($dua->kode);
+
+        $this->put($update, [
+            'aksi' => 'draf', 'daftar_soal_dikirim' => '1',
+            'soal' => [$dua->id => ['dipilih' => '1'], $satu->id => ['dipilih' => '1']],
+        ])->assertSessionHasNoErrors()->assertRedirect($urlSusun);
+        $this->get($url)->assertOk()
+            ->assertSeeInOrder([$dua->kode, $satu->kode])->assertDontSee($tidakDipilih->kode);
+        $this->assertSame([$dua->id, $satu->id], $jadwal->refresh()->ujianCbt->soalUjianCbt()->orderBy('nomor_urut')->pluck('soal_cbt_id')->all());
+
+        $this->from($urlSusun)->put($update, ['aksi' => 'terbitkan', 'daftar_soal_dikirim' => '1'])
+            ->assertSessionHasErrors('soal');
+        $this->get($urlSusun)->assertOk()
+            ->assertSee('Belum ada soal dalam paket ini.')->assertDontSee($dua->kode);
+        $periksa = $this->actingAs($data['admin'])->get($url)->assertOk()
+            ->assertSee('Periksa paket soal')->assertSee($urlSusun)
+            ->assertSeeInOrder([$dua->kode, $satu->kode])
+            ->assertDontSee($tidakDipilih->kode)->assertDontSee('data-open-bank', false);
+
+        if (getenv('NUSA_CAPTURE_PAKET_SOAL')) {
+            $direktori = storage_path('framework/testing/paket-soal');
+            File::ensureDirectoryExists($direktori);
+            foreach (['susun' => $kosong, 'bank' => $bank, 'bank-a' => $bankA, 'bank-b' => $bankB, 'periksa' => $periksa] as $nama => $respons) {
+                File::put($direktori.'/'.$nama.'.html', $respons->getContent());
+            }
+        }
+    }
+
+    public function test_bank_soal_dimuat_per_halaman(): void
+    {
+        $data = $this->buatFondasi();
+        foreach (range(1, 21) as $nomor) {
+            $this->buatSoal($data['tahun'], $data['mapel'], sprintf('BANK-PAG-%02d', $nomor), "Pertanyaan halaman {$nomor}.");
+        }
+
         $this->actingAs($data['akun_guru'])
-            ->get(route('paket-soal-terpusat.show', $jadwalLain))
-            ->assertForbidden();
+            ->get(route('paket-soal-terpusat.bank-soal', $data['jadwal']))
+            ->assertOk()->assertSee('BANK-PAG-01')->assertSee('BANK-PAG-20')->assertDontSee('BANK-PAG-21')
+            ->assertSee('Hal. 1 dari 2');
+        $this->get(route('paket-soal-terpusat.bank-soal', [$data['jadwal'], 'halaman' => 2]))
+            ->assertOk()->assertSee('BANK-PAG-21')->assertDontSee('BANK-PAG-20')->assertSee('Hal. 2 dari 2');
     }
 
     public function test_guru_dapat_membuka_hasil_dan_analisis_dari_pusat_cbt_tanpa_akses_pengelolaan_kegiatan(): void
@@ -447,17 +524,26 @@ class PaketSoalUjianTerpusatTest extends TestCase
             'jabatan' => 'anggota',
             'aktif' => true,
         ]);
+        $soal = $this->buatSoal($data['tahun'], $data['mapel'], 'PAKET-PANITIA-1', 'Soal yang dipilih guru.');
+        $this->buatSoal($data['tahun'], $data['mapel'], 'PAKET-PANITIA-2', 'Soal lain belum dipilih.');
+        $this->actingAs($data['akun_guru'])
+            ->put(route('paket-soal-terpusat.update', $data['jadwal']), ['aksi' => 'draf', 'soal' => [$soal->id => ['dipilih' => '1']]])
+            ->assertSessionHasNoErrors();
 
         $this->actingAs($akunPanitia)
             ->get(route('paket-soal-terpusat.index'))
             ->assertOk()
             ->assertSee('Matematika');
         $this->actingAs($akunPanitia)
-            ->get(route('paket-soal-terpusat.show', $data['jadwal']))
+            ->get(route('paket-soal-terpusat.show', [$data['jadwal'], 'mode' => 'susun']))
             ->assertOk()
-            ->assertSee('Panitia dapat memantau')
+            ->assertSee('Periksa paket soal')
+            ->assertSee('Soal yang dipilih guru.')
+            ->assertDontSee('Soal lain belum dipilih.')
             ->assertSee('Pratinjau')
+            ->assertDontSee('data-bank-dialog', false)
             ->assertDontSee('Terbitkan paket');
+        $this->get(route('paket-soal-terpusat.bank-soal', $data['jadwal']))->assertForbidden();
         $this->actingAs($akunPanitia)
             ->put(route('paket-soal-terpusat.update', $data['jadwal']), ['aksi' => 'draf'])
             ->assertForbidden();

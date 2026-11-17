@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FolderSoalCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\JadwalUjianCbt;
 use App\Models\KegiatanUjianCbt;
@@ -71,6 +72,7 @@ class PaketSoalUjianTerpusatController extends Controller
 
         return view('paket-soal-ujian-terpusat.index', [
             'tampilanHasil' => $tampilanHasil,
+            'modePaketAwal' => $this->modePaketAwal($request->user()),
             'kegiatanAlur' => $kegiatanAlur,
             'jadwalPerKegiatan' => $jadwalPerKegiatan,
             'jumlahJadwal' => $jadwal->count(),
@@ -88,47 +90,85 @@ class PaketSoalUjianTerpusatController extends Controller
             'kegiatanUjianCbt.jenisUjianCbt',
             'kegiatanUjianCbt.tahunPelajaran',
             'sesiKegiatanUjianCbt',
-            'mataPelajaran.pengaturanTingkat',
+            'mataPelajaran',
             'kelas',
             'ujianCbt.soalUjianCbt.soalCbt',
         ]);
         $this->pastikanBolehMelihat($request->user(), $jadwalUjianCbt);
         $this->muatDataAlur($jadwalUjianCbt->kegiatanUjianCbt);
 
-        $bolehKelola = $this->bolehMengelola($request->user(), $jadwalUjianCbt);
-        $soalDipilih = $jadwalUjianCbt->ujianCbt?->soalUjianCbt?->keyBy('soal_cbt_id') ?? collect();
-        $soal = SoalCbt::query()
-            ->with('folders')
-            ->where('mata_pelajaran_id', $jadwalUjianCbt->mata_pelajaran_id)
-            ->where('tingkat', $jadwalUjianCbt->tingkat)
-            ->when(
-                $bolehKelola,
-                fn (Builder $query) => $query->where(function (Builder $query) use ($soalDipilih) {
-                    $query->where(fn (Builder $query) => $query->where('aktif', true)->where('status', 'siap'))
-                        ->when($soalDipilih->isNotEmpty(), fn (Builder $query) => $query->orWhereIn('id', $soalDipilih->keys()));
-                }),
-                fn (Builder $query) => $query->whereIn('id', $soalDipilih->keys()),
-            )
-            ->orderBy('jenis_soal')
-            ->orderBy('tingkat_kesulitan')
-            ->orderBy('kode')
-            ->get();
+        $paket = $jadwalUjianCbt->ujianCbt;
+        $sudahDikerjakan = $this->paketSudahDikerjakan($paket);
+        $bolehKelola = $this->bolehMengelola($request->user(), $jadwalUjianCbt) && ! $sudahDikerjakan;
+        $sedangMenyusun = $bolehKelola && $request->query('mode', $this->modePaketAwal($request->user())) === 'susun';
+        $soalDipilih = $paket?->soalUjianCbt?->sortBy('nomor_urut')->keyBy('soal_cbt_id') ?? collect();
+        $soal = $soalDipilih->map(fn ($item) => $item->soalCbt)->filter()->values();
+        $folder = collect();
 
-        $pengaturan = $jadwalUjianCbt->mataPelajaran?->pengaturanUntuk(
-            (int) $jadwalUjianCbt->kegiatanUjianCbt->tahun_pelajaran_id,
-            (int) $jadwalUjianCbt->tingkat,
-        );
+        if ($sedangMenyusun) {
+            $folder = FolderSoalCbt::query()
+                ->where('mata_pelajaran_id', $jadwalUjianCbt->mata_pelajaran_id)
+                ->where('tingkat', $jadwalUjianCbt->tingkat)
+                ->orderBy('nama')->get(['id', 'nama', 'kegiatan_ujian_cbt_id']);
+
+            if ($request->old('daftar_soal_dikirim')) {
+                $ids = $this->idSoalTerpilih((array) $request->old('soal', []));
+                $soalLama = $this->soalDalamCakupan($jadwalUjianCbt)
+                    ->whereKey($ids)
+                    ->where(fn (Builder $query) => $query
+                        ->where(fn (Builder $query) => $query->where('aktif', true)->where('status', 'siap'))
+                        ->orWhereIn('id', $soalDipilih->keys()))
+                    ->get()->keyBy('id');
+                $soal = $ids->map(fn ($id) => $soalLama->get($id))->filter()->values();
+            }
+        }
 
         return view('paket-soal-ujian-terpusat.show', [
             'jadwal' => $jadwalUjianCbt,
-            'paket' => $jadwalUjianCbt->ujianCbt,
+            'paket' => $paket,
             'soal' => $soal,
             'soalDipilih' => $soalDipilih,
             'bolehKelola' => $bolehKelola,
-            'kkm' => $pengaturan?->kkm ?? $jadwalUjianCbt->mataPelajaran?->kkm,
+            'sedangMenyusun' => $sedangMenyusun,
+            'sudahDikerjakan' => $sudahDikerjakan,
+            'folder' => $folder,
             'daftarJenisSoal' => SoalCbt::DAFTAR_JENIS,
             'daftarKesulitan' => SoalCbt::DAFTAR_KESULITAN,
         ]);
+    }
+
+    public function bankSoal(Request $request, JadwalUjianCbt $jadwalUjianCbt)
+    {
+        $jadwalUjianCbt->load(['kegiatanUjianCbt', 'kelas', 'ujianCbt']);
+        abort_unless($this->bolehMengelola($request->user(), $jadwalUjianCbt), 403);
+        abort_if($this->paketSudahDikerjakan($jadwalUjianCbt->ujianCbt), 403);
+
+        $filter = $request->validate([
+            'cari' => ['nullable', 'string', 'max:120'],
+            'folder' => ['nullable', 'regex:/^(belum|[1-9][0-9]{0,17})$/'],
+            'jenis' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_JENIS))],
+            'kesulitan' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_KESULITAN))],
+            'halaman' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $cari = trim($filter['cari'] ?? '');
+        $soal = $this->soalDalamCakupan($jadwalUjianCbt)
+            ->where('aktif', true)->where('status', 'siap')
+            ->with('folders:id,nama')
+            ->when($cari !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
+                ->whereLike('kode', "%{$cari}%")
+                ->orWhereLike('topik', "%{$cari}%")
+                ->orWhereLike('materi', "%{$cari}%")
+                ->orWhereLike('pertanyaan', "%{$cari}%")))
+            ->when($filter['folder'] ?? null, fn (Builder $query, $folder) => $folder === 'belum'
+                ? $query->whereDoesntHave('folders')
+                : $query->whereHas('folders', fn (Builder $query) => $query->whereKey((int) $folder)))
+            ->when($filter['jenis'] ?? null, fn (Builder $query, $jenis) => $query->where('jenis_soal', $jenis))
+            ->when($filter['kesulitan'] ?? null, fn (Builder $query, $kesulitan) => $query->where('tingkat_kesulitan', $kesulitan))
+            ->orderBy('kode')->orderBy('id')
+            ->paginate(20, ['*'], 'halaman');
+
+        return response()->view('paket-soal-ujian-terpusat.partials.hasil-bank', ['soal' => $soal])
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function update(
@@ -158,11 +198,7 @@ class PaketSoalUjianTerpusatController extends Controller
             $this->pastikanPaketBelumDikerjakan($jadwalUjianCbt->ujianCbt);
             $data['soal'] = app(\App\Services\Cbt\PaketSimulasiCbt::class)->siapkan($jadwalUjianCbt);
         }
-        $soalIdsTerpilih = collect($data['soal'] ?? [])
-            ->filter(fn ($item) => filter_var($item['dipilih'] ?? false, FILTER_VALIDATE_BOOLEAN))
-            ->keys()
-            ->map(fn ($id) => (int) $id)
-            ->values();
+        $soalIdsTerpilih = $this->idSoalTerpilih($data['soal'] ?? []);
         $skorSoal = SoalCbt::query()
             ->whereIn('id', $soalIdsTerpilih)
             ->pluck('skor_maksimal', 'id');
@@ -228,7 +264,12 @@ class PaketSoalUjianTerpusatController extends Controller
             ? 'Paket soal berhasil diterbitkan dan siap digunakan pada jadwal ini.'
             : 'Draf paket soal berhasil disimpan.';
 
-        return redirect()->route('paket-soal-terpusat.show', $jadwalUjianCbt)->with('berhasil', $pesan);
+        $parameter = ['jadwalUjianCbt' => $jadwalUjianCbt];
+        if ($request->query('mode') === 'susun') {
+            $parameter['mode'] = 'susun';
+        }
+
+        return redirect()->route('paket-soal-terpusat.show', $parameter)->with('berhasil', $pesan);
     }
 
     private function queryJadwalDalamCakupan(Request $request): Builder
@@ -293,6 +334,11 @@ class PaketSoalUjianTerpusatController extends Controller
             ->values();
     }
 
+    private function modePaketAwal(Pengguna $pengguna): string
+    {
+        return $pengguna->memilikiIzin(['cbt.kelola', 'cbt.panitia']) ? 'periksa' : 'susun';
+    }
+
     private function bolehMengelola(Pengguna $pengguna, JadwalUjianCbt $jadwal): bool
     {
         if ($pengguna->memilikiIzin('cbt.kelola')) {
@@ -328,16 +374,31 @@ class PaketSoalUjianTerpusatController extends Controller
         abort_unless($panitia, 403);
     }
 
+    private function soalDalamCakupan(JadwalUjianCbt $jadwal): Builder
+    {
+        return SoalCbt::query()
+            ->where('mata_pelajaran_id', $jadwal->mata_pelajaran_id)
+            ->where('tingkat', $jadwal->tingkat);
+    }
+
+    private function idSoalTerpilih(array $soal): Collection
+    {
+        return collect($soal)
+            ->filter(fn ($item) => filter_var($item['dipilih'] ?? false, FILTER_VALIDATE_BOOLEAN))
+            ->keys()
+            ->filter(fn ($id) => ctype_digit((string) $id) && (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->unique()->values();
+    }
+
     private function pastikanSoalValid(JadwalUjianCbt $jadwal, Collection $soal): void
     {
         if ($soal->isEmpty()) {
             return;
         }
 
-        $jumlahValid = SoalCbt::query()
+        $jumlahValid = $this->soalDalamCakupan($jadwal)
             ->whereIn('id', $soal->keys())
-            ->where('mata_pelajaran_id', $jadwal->mata_pelajaran_id)
-            ->where('tingkat', $jadwal->tingkat)
             ->where('aktif', true)
             ->where('status', 'siap')
             ->count();
@@ -351,11 +412,16 @@ class PaketSoalUjianTerpusatController extends Controller
 
     private function pastikanPaketBelumDikerjakan(?UjianCbt $paket): void
     {
-        if ($paket?->pesertaUjianCbt()->whereIn('status', ['sedang_mengerjakan', 'selesai'])->exists()) {
+        if ($this->paketSudahDikerjakan($paket)) {
             throw ValidationException::withMessages([
                 'paket' => 'Paket tidak dapat diubah karena sudah dikerjakan oleh peserta.',
             ]);
         }
+    }
+
+    private function paketSudahDikerjakan(?UjianCbt $paket): bool
+    {
+        return $paket?->pesertaUjianCbt()->whereIn('status', ['sedang_mengerjakan', 'selesai'])->exists() ?? false;
     }
 
     private function dataPaketOtomatis(

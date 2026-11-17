@@ -150,6 +150,7 @@
                 @php
                     $paket = $jadwal->ujianCbt;
                     $paketSiap = $paket && in_array($paket->status, ['terjadwal', 'berlangsung', 'selesai'], true);
+                    $langsungSusun = $modePaketAwal === 'susun' && $jadwal->boleh_kelola_paket;
                 @endphp
                 <div class="package-schedule">
                     <div class="package-schedule-date"><strong>{{ $jadwal->tanggal?->locale('id')->translatedFormat('D, d M Y') }}</strong><span>{{ $jadwal->labelWaktu() }} · {{ $jadwal->durasiMenit() }} menit</span></div>
@@ -166,7 +167,7 @@
                     </div>
                     <div class="package-schedule-action">
                         @unless ($tampilanHasil)
-                            <a href="{{ route('paket-soal-terpusat.show', $jadwal) }}" class="button {{ $jadwal->boleh_kelola_paket ? 'button-primary' : 'button-muted' }}">{{ $jadwal->boleh_kelola_paket ? ($paket ? 'Buka paket' : 'Susun paket') : 'Lihat paket' }}</a>
+                            <a href="{{ route('paket-soal-terpusat.show', $jadwal) }}" class="button {{ $langsungSusun ? 'button-primary' : 'button-muted' }}">{{ $langsungSusun ? ($paket ? 'Buka paket' : 'Susun paket') : 'Periksa paket' }}</a>
                         @endunless
                         @if ($jadwal->boleh_lihat_hasil)
                             <a href="{{ route('ujian-cbt.hasil.index', $paket) }}" class="button {{ $tampilanHasil ? 'button-primary' : 'button-muted' }}">Lihat nilai</a>

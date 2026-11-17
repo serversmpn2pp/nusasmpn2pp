@@ -488,58 +488,62 @@ const appendAnswerPreview = (container, type, source = document) => {
     }
 };
 
-document.querySelectorAll('[data-question-preview]').forEach((button) => {
-    button.addEventListener('click', (event) => {
-        event.preventDefault();
-        const template = document.getElementById(button.dataset.previewSource);
-        const source = template ? template.content.cloneNode(true) : document;
-        const dialog = document.querySelector('[data-question-preview-dialog]');
-        const body = dialog?.querySelector('[data-question-preview-body]');
-        const editor = source.querySelector('[data-question-media-editor][data-media-key="utama"]');
-        if (!dialog || !body || !editor) return;
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-question-preview]');
+    if (!button) return;
 
-        body.replaceChildren();
-        const typeInput = source.querySelector('[data-soal-kind]:checked');
-        const typeLabel = typeInput?.closest('label')?.querySelector('strong')?.textContent || 'Soal';
-        const question = document.createElement('article');
-        question.className = 'panel question-card question-preview-exam';
-        const head = document.createElement('div');
-        head.className = 'question-head';
-        const identity = document.createElement('div');
-        identity.style.cssText = 'display:flex;gap:12px;align-items:flex-start';
-        const type = document.createElement('div');
-        type.append(createText('span', typeLabel, 'badge badge-muted'));
-        identity.append(createText('span', '1', 'question-number'), type);
-        const doubt = document.createElement('label');
-        doubt.className = 'check-row';
-        const doubtInput = document.createElement('input');
-        doubtInput.type = 'checkbox';
-        doubtInput.tabIndex = -1;
-        doubt.append(doubtInput, 'Ragu-ragu');
-        head.append(identity, doubt);
-        question.append(head);
+    event.preventDefault();
+    const row = button.closest('[data-package-question]');
+    const template = row?.querySelector('template[data-question-preview-source]')
+        || document.getElementById(button.dataset.previewSource);
+    const source = template ? template.content.cloneNode(true) : document;
+    const dialog = document.querySelector('[data-question-preview-dialog]');
+    const body = dialog?.querySelector('[data-question-preview-body]');
+    const editor = source.querySelector('[data-question-media-editor][data-media-key="utama"]');
+    if (!dialog || !body || !editor) return;
 
-        const stimulus = source.querySelector('[name="stimulus"]')?.value.trim();
-        const stimulusEditor = source.querySelector('[data-question-media-editor][data-media-key="stimulus"]');
-        if (stimulus || stimulusEditor) {
-            const stimulusBox = document.createElement('div');
-            stimulusBox.className = 'stimulus';
-            if (stimulus) stimulusBox.append(createText('div', stimulus));
-            appendPreviewMedia(stimulusBox, stimulusEditor, false, true);
-            if (stimulusBox.childElementCount) question.append(stimulusBox);
-        }
+    body.replaceChildren();
+    const typeInput = source.querySelector('[data-soal-kind]:checked');
+    const typeLabel = typeInput?.closest('label')?.querySelector('strong')?.textContent || 'Soal';
+    const question = document.createElement('article');
+    question.className = 'panel question-card question-preview-exam';
+    const head = document.createElement('div');
+    head.className = 'question-head';
+    const identity = document.createElement('div');
+    identity.style.cssText = 'display:flex;gap:12px;align-items:flex-start';
+    const type = document.createElement('div');
+    type.append(createText('span', typeLabel, 'badge badge-muted'));
+    const position = row?.querySelector('[data-package-position]:not([hidden])')?.textContent || '1';
+    identity.append(createText('span', position, 'question-number'), type);
+    const doubt = document.createElement('label');
+    doubt.className = 'check-row';
+    const doubtInput = document.createElement('input');
+    doubtInput.type = 'checkbox';
+    doubtInput.tabIndex = -1;
+    doubt.append(doubtInput, 'Ragu-ragu');
+    head.append(identity, doubt);
+    question.append(head);
 
-        appendPreviewMedia(question, editor);
-        question.append(createText('h2', source.querySelector('[name="pertanyaan"]')?.value.trim() || 'Isi soal belum ditulis.', 'question-title'));
-        appendAnswerPreview(question, typeInput?.value || 'pilihan_ganda', source);
-        const edit = dialog.querySelector('[data-preview-edit]');
-        if (edit) edit.href = button.dataset.previewEdit || '#';
-        body.append(question);
-        renderInlineMath(question);
+    const stimulus = source.querySelector('[name="stimulus"]')?.value.trim();
+    const stimulusEditor = source.querySelector('[data-question-media-editor][data-media-key="stimulus"]');
+    if (stimulus || stimulusEditor) {
+        const stimulusBox = document.createElement('div');
+        stimulusBox.className = 'stimulus';
+        if (stimulus) stimulusBox.append(createText('div', stimulus));
+        appendPreviewMedia(stimulusBox, stimulusEditor, false, true);
+        if (stimulusBox.childElementCount) question.append(stimulusBox);
+    }
 
-        if (typeof dialog.showModal === 'function') dialog.showModal();
-        else dialog.setAttribute('open', '');
-    });
+    appendPreviewMedia(question, editor);
+    question.append(createText('h2', source.querySelector('[name="pertanyaan"]')?.value.trim() || 'Isi soal belum ditulis.', 'question-title'));
+    appendAnswerPreview(question, typeInput?.value || 'pilihan_ganda', source);
+    const edit = dialog.querySelector('[data-preview-edit]');
+    if (edit) edit.href = button.dataset.previewEdit || '#';
+    body.append(question);
+    renderInlineMath(question);
+
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
 });
 
 document.querySelectorAll('[data-close-question-preview]').forEach((button) => {

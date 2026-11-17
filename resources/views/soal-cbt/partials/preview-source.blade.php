@@ -1,4 +1,4 @@
-<template id="preview-soal-{{ $item->id }}">
+<template @if ($previewDalamBaris ?? false) data-question-preview-source @else id="preview-soal-{{ $item->id }}" @endif>
     <label><input type="radio" data-soal-kind checked value="{{ $item->jenis_soal }}"><strong>{{ $item->labelJenis() }}</strong></label>
     <textarea name="pertanyaan">{{ $item->pertanyaan }}</textarea>
     <textarea name="stimulus">{{ $item->stimulus }}</textarea>
