@@ -162,13 +162,53 @@ class KelolaJadwalUjianTerpusat
     {
         $this->pastikanMilikKegiatan($kegiatan, $jadwal);
 
-        if ($jadwal->ujian_cbt_id || $jadwal->terkunci()) {
-            throw ValidationException::withMessages([
-                'jadwal' => 'Jadwal yang sudah terhubung ke paket atau dikunci tidak dapat dihapus.',
-            ]);
+        DB::transaction(function () use ($kegiatan, $jadwal) {
+            $jadwal = $kegiatan->jadwalUjianCbt()->lockForUpdate()->findOrFail($jadwal->id);
+            $paket = $jadwal->ujianCbt()->lockForUpdate()->first();
+
+            if ($paket?->status === 'draft') {
+                // Tunggu perubahan presensi atau ruang yang sedang disimpan sebelum memeriksa riwayat.
+                $paket->ruangUjianCbt()->orderBy('id')->lockForUpdate()->get(['id']);
+                $paket->pesertaUjianCbt()->orderBy('id')->lockForUpdate()->get(['id']);
+            }
+
+            if ($alasan = $this->alasanTidakDapatDihapus($jadwal)) {
+                throw ValidationException::withMessages(['jadwal' => $alasan]);
+            }
+
+            $paket?->update(['status' => 'nonaktif']);
+            $jadwal->delete();
+        });
+    }
+
+    public function alasanTidakDapatDihapus(JadwalUjianCbt $jadwal): ?string
+    {
+        if ($jadwal->terkunci()) {
+            return 'Jadwal dikunci dan tidak dapat dihapus.';
         }
 
-        $jadwal->delete();
+        if ($jadwal->status === 'selesai') {
+            return 'Jadwal ujian sudah selesai.';
+        }
+
+        if (! $jadwal->ujian_cbt_id) {
+            return null;
+        }
+
+        $jadwal->loadMissing(['ujianCbt' => fn ($query) => $query->denganRingkasanHapusJadwal()]);
+        $paket = $jadwal->ujianCbt;
+
+        return match (true) {
+            ! $paket || ! $paket->ujianTerpusat() || (int) $paket->jadwal_ujian_cbt_count !== 1 => 'Paket bukan milik jadwal ini saja.',
+            in_array($paket->status, ['berlangsung', 'selesai'], true),
+            (bool) $paket->hasil_difinalisasi_pada, (bool) $paket->hasil_dipublikasikan_pada,
+            $paket->ada_riwayat_peserta, $paket->ada_riwayat_ruang,
+            $paket->ada_sesi_selesai => 'Ujian sudah memiliki catatan pelaksanaan.',
+            $paket->soal_ujian_cbt_count > 0 => 'Kosongkan pilihan soal dan simpan draf sebelum menghapus jadwal.',
+            $paket->status === 'terjadwal' => 'Kembalikan paket ke draf sebelum menghapus jadwal.',
+            $paket->status !== 'draft' => 'Paket tidak berstatus draf.',
+            default => null,
+        };
     }
 
     private function dataValid(

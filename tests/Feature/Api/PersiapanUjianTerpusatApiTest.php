@@ -10,6 +10,7 @@ use App\Models\MataPelajaran;
 use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Siswa;
+use App\Models\SoalCbt;
 use App\Models\TahunPelajaran;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -377,11 +378,48 @@ class PersiapanUjianTerpusatApiTest extends TestCase
         $this->assertSame('08:00', substr($jadwal->waktu_mulai, 0, 5));
         $this->assertSame('09:30', substr($jadwal->waktu_selesai, 0, 5));
 
+        $soal = SoalCbt::create([
+            'tahun_pelajaran_id' => $tahun->id, 'mata_pelajaran_id' => $mataPelajaran->id, 'tingkat' => 7,
+            'kode' => 'SOAL-HAPUS-JADWAL', 'jenis_soal' => 'pilihan_ganda', 'kategori' => 'umum', 'tingkat_kesulitan' => 'mudah',
+            'pertanyaan' => 'Soal percobaan', 'opsi' => ['pilihan' => ['A' => 'Benar', 'B' => 'Salah']],
+            'kunci_jawaban' => ['jawaban' => 'A'], 'skor_maksimal' => 1, 'status' => 'siap', 'aktif' => true,
+        ]);
+        $urlPaket = route('api.v1.paket-soal.update', $jadwal);
+        $acak = ['acak_soal' => true, 'acak_jawaban' => true];
+        $this->withToken($token)->postJson($urlPaket, [...$acak, 'aksi' => 'terbitkan', 'soal' => [['id' => $soal->id]]])
+            ->assertOk()->assertJsonPath('data.paket.status', 'terjadwal');
+        $paket = $jadwal->refresh()->ujianCbt;
+        $peserta = $paket->pesertaUjianCbt()->firstOrFail();
+        $this->assertSame(3, $paket->pesertaUjianCbt()->count());
+
+        $this->withToken($token)->postJson($urlPaket, [...$acak, 'aksi' => 'draf', 'soal' => []])
+            ->assertOk()->assertJsonPath('data.paket.status', 'draft');
+        $urlHapus = route('api.v1.ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal]);
+        $urlKegiatan = route('api.v1.ujian-terpusat.show', $kegiatan);
+
+        $peserta->update(['status_kehadiran_ujian' => 'hadir']);
+        $this->withToken($token)->getJson($urlKegiatan)->assertOk()
+            ->assertJsonPath('data.tahap_jadwal.items.0.dapat_dihapus', false);
+        $this->withToken($token)->deleteJson($urlHapus)->assertUnprocessable()->assertJsonValidationErrors('jadwal');
+        $this->assertModelExists($jadwal);
+        $peserta->update(['status_kehadiran_ujian' => 'belum_absen']);
+
+        $ruangUjian = $paket->ruangUjianCbt()->firstOrFail();
+        $ruangUjian->update(['waktu_mulai_aktual' => now()]);
+        $this->withToken($token)->deleteJson($urlHapus)->assertUnprocessable()->assertJsonValidationErrors('jadwal');
+        $ruangUjian->update(['waktu_mulai_aktual' => null]);
+
+        $this->withToken($token)->getJson($urlKegiatan)->assertOk()
+            ->assertJsonPath('data.tahap_jadwal.items.0.dapat_dihapus', true);
         $this->withToken($token)
-            ->deleteJson(route('api.v1.ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal]))
+            ->deleteJson($urlHapus)
             ->assertOk();
         $this->assertDatabaseMissing('jadwal_ujian_cbt', ['id' => $jadwalId]);
         $this->assertDatabaseCount('folder_soal_cbt', 1);
+        $this->assertSame('nonaktif', $paket->fresh()->status);
+        $this->assertSame(3, $paket->pesertaUjianCbt()->count());
+        $this->assertDatabaseCount('penempatan_peserta_ujian_cbt', 3);
+        $this->assertModelExists($soal);
 
         $this->withToken($token)
             ->deleteJson(route('api.v1.ujian-terpusat.pembagian-peserta.destroy', [$kegiatan, $kelompok]))

@@ -136,13 +136,14 @@ class PaketSoalUjianTerpusatController extends Controller
         JadwalUjianCbt $jadwalUjianCbt,
         SinkronkanPelaksanaanUjianTerpusat $sinkronisasi,
     ) {
-        $jadwalUjianCbt->load([
+        $relasiJadwal = [
             'kegiatanUjianCbt.jenisUjianCbt',
             'sesiKegiatanUjianCbt',
             'mataPelajaran.pengaturanTingkat',
             'kelas',
             'ujianCbt',
-        ]);
+        ];
+        $jadwalUjianCbt->load($relasiJadwal);
         abort_unless($this->bolehMengelola($request->user(), $jadwalUjianCbt), 403);
 
         $data = $request->validate([
@@ -168,28 +169,29 @@ class PaketSoalUjianTerpusatController extends Controller
         $soalTerpilih = $soalIdsTerpilih
             ->mapWithKeys(fn ($id) => [$id => (float) $skorSoal->get($id)]);
 
-        $this->pastikanPaketBelumDikerjakan($jadwalUjianCbt->ujianCbt);
-        $this->pastikanSoalValid($jadwalUjianCbt, $soalTerpilih);
-
         if ($data['aksi'] === 'terbitkan' && $soalTerpilih->isEmpty()) {
             throw ValidationException::withMessages([
                 'soal' => 'Pilih minimal satu soal sebelum paket diterbitkan.',
             ]);
         }
 
-        $status = match ($data['aksi']) {
-            'terbitkan' => 'terjadwal',
-            'draf' => 'draft',
-            default => $jadwalUjianCbt->ujianCbt?->status ?? 'draft',
-        };
-        $acakSoal = $request->has('acak_soal')
-            ? $request->boolean('acak_soal')
-            : ($jadwalUjianCbt->ujianCbt?->acak_soal ?? true);
-        $acakJawaban = $request->has('acak_jawaban')
-            ? $request->boolean('acak_jawaban')
-            : ($jadwalUjianCbt->ujianCbt?->acak_jawaban ?? true);
+        $status = DB::transaction(function () use ($request, $jadwalUjianCbt, $soalTerpilih, $data, $relasiJadwal, $sinkronisasi) {
+            $jadwalUjianCbt = JadwalUjianCbt::query()->with($relasiJadwal)->lockForUpdate()->findOrFail($jadwalUjianCbt->id);
+            abort_unless($this->bolehMengelola($request->user(), $jadwalUjianCbt), 403);
+            $this->pastikanPaketBelumDikerjakan($jadwalUjianCbt->ujianCbt);
+            $this->pastikanSoalValid($jadwalUjianCbt, $soalTerpilih);
 
-        DB::transaction(function () use ($request, $jadwalUjianCbt, $soalTerpilih, $status, $acakSoal, $acakJawaban) {
+            $status = match ($data['aksi']) {
+                'terbitkan' => 'terjadwal',
+                'draf' => 'draft',
+                default => $jadwalUjianCbt->ujianCbt?->status ?? 'draft',
+            };
+            $acakSoal = $request->has('acak_soal')
+                ? $request->boolean('acak_soal')
+                : ($jadwalUjianCbt->ujianCbt?->acak_soal ?? true);
+            $acakJawaban = $request->has('acak_jawaban')
+                ? $request->boolean('acak_jawaban')
+                : ($jadwalUjianCbt->ujianCbt?->acak_jawaban ?? true);
             $paketSiap = in_array($status, ['terjadwal', 'berlangsung', 'selesai'], true);
             $paket = $jadwalUjianCbt->ujianCbt ?: new UjianCbt;
             $paket->fill($this->dataPaketOtomatis(
@@ -217,10 +219,10 @@ class PaketSoalUjianTerpusatController extends Controller
                 'ujian_cbt_id' => $paket->id,
                 'status' => $paketSiap ? 'siap' : 'draft',
             ]);
-        });
+            $sinkronisasi->sinkronkanJadwal($jadwalUjianCbt->fresh(), $request->user());
 
-        $jadwalUjianCbt->refresh();
-        $sinkronisasi->sinkronkanJadwal($jadwalUjianCbt, $request->user());
+            return $status;
+        });
 
         $pesan = $status === 'terjadwal'
             ? 'Paket soal berhasil diterbitkan dan siap digunakan pada jadwal ini.'

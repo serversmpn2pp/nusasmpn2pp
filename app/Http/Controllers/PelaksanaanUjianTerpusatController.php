@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\KegiatanUjianCbt;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
+use App\Services\Cbt\KelolaJadwalUjianTerpusat;
 use App\Services\Cbt\SiapkanFolderSoalUjianTerpusat;
 use Illuminate\Http\Request;
 
 class PelaksanaanUjianTerpusatController extends Controller
 {
-    public function index(Request $request, KegiatanUjianCbt $kegiatanUjianCbt, SiapkanFolderSoalUjianTerpusat $folderSoal)
-    {
+    public function index(
+        Request $request,
+        KegiatanUjianCbt $kegiatanUjianCbt,
+        SiapkanFolderSoalUjianTerpusat $folderSoal,
+        KelolaJadwalUjianTerpusat $pengelolaJadwal,
+    ) {
         abort_unless($kegiatanUjianCbt->dapatDiaksesOleh($request->user()), 403);
         $tahapAktif = $request->integer('tahap', 5);
 
@@ -34,7 +39,7 @@ class PelaksanaanUjianTerpusatController extends Controller
                     'sesiKegiatanUjianCbt',
                     'mataPelajaran',
                     'kelas',
-                    'ujianCbt' => fn ($query) => $query->withCount('soalUjianCbt'),
+                    'ujianCbt' => fn ($query) => $query->denganRingkasanHapusJadwal(),
                 ])
                 ->orderBy('tanggal')
                 ->orderBy('waktu_mulai')
@@ -89,6 +94,9 @@ class PelaksanaanUjianTerpusatController extends Controller
             'daftarMataPelajaran' => $daftarMataPelajaran,
             'kelompokPerTingkat' => $kegiatanUjianCbt->kelompokPesertaKegiatanUjianCbt->keyBy('tingkat'),
             'bolehKelola' => $bolehKelola,
+            'alasanHapusJadwal' => $tahapAktif === 7 && $bolehKelola
+                ? $kegiatanUjianCbt->jadwalUjianCbt->mapWithKeys(fn ($jadwal) => [$jadwal->id => $pengelolaJadwal->alasanTidakDapatDihapus($jadwal)])
+                : collect(),
             'bolehSiapkanFolderSoal' => $tahapAktif === 7 && $bolehKelola
                 && $kegiatanUjianCbt->jadwalUjianCbt->isNotEmpty() && $folderSoal->mendukung($kegiatanUjianCbt),
             'tahapAktif' => $tahapAktif,

@@ -129,6 +129,77 @@ class PaketSoalUjianTerpusatTest extends TestCase
         $this->assertFalse($paket->acak_jawaban);
     }
 
+    public function test_admin_dapat_menghapus_jadwal_setelah_soal_dikosongkan_dan_paket_kembali_ke_draf(): void
+    {
+        $data = $this->buatFondasi();
+        $jadwal = $data['jadwal'];
+        $kegiatan = $data['kegiatan'];
+        $jadwalLain = $jadwal->replicate()->fill(['tanggal' => '2026-09-17']);
+        $jadwalLain->save();
+
+        $soal = $this->buatSoal($data['tahun'], $data['mapel'], 'SOAL-UT-HAPUS', 'Soal tetap ada di Bank Soal.');
+        $folder = FolderSoalCbt::create([
+            'nama' => $kegiatan->nama, 'kegiatan_ujian_cbt_id' => $kegiatan->id,
+            'mata_pelajaran_id' => $data['mapel']->id, 'tingkat' => 8,
+        ]);
+        $folder->soal()->attach($soal);
+
+        $halamanJadwal = route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]);
+        $urlHapus = route('ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal]);
+        $formHapus = 'action="'.$urlHapus.'" method="POST" onsubmit="return confirm';
+        $urlPaket = route('paket-soal-terpusat.update', $jadwal);
+
+        $this->actingAs($data['admin'])->put($urlPaket, [
+            'aksi' => 'terbitkan', 'soal' => [$soal->id => ['dipilih' => '1']],
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $paket = $jadwal->refresh()->ujianCbt;
+
+        $this->from($halamanJadwal)->delete($urlHapus)
+            ->assertSessionHasErrors(['jadwal' => 'Kosongkan pilihan soal dan simpan draf sebelum menghapus jadwal.']);
+        $this->assertSame(1, $paket->soalUjianCbt()->count());
+
+        $this->put($urlPaket, ['aksi' => 'simpan', 'soal' => []])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame(0, $paket->soalUjianCbt()->count());
+        $this->get($halamanJadwal)->assertOk()
+            ->assertSeeText('Kembalikan paket ke draf sebelum menghapus jadwal.')
+            ->assertDontSee($formHapus, false);
+        $this->from($halamanJadwal)->delete($urlHapus)->assertSessionHasErrors('jadwal');
+
+        $this->put($urlPaket, ['aksi' => 'draf', 'soal' => []])->assertSessionHasNoErrors()->assertRedirect();
+        $this->get($halamanJadwal)->assertOk()->assertSee($formHapus, false);
+        $this->actingAs($data['akun_guru'])->delete($urlHapus)->assertForbidden();
+        $this->actingAs($data['admin'])->delete($urlHapus)
+            ->assertRedirect($halamanJadwal)->assertSessionHas('berhasil');
+
+        $this->assertModelMissing($jadwal);
+        $this->assertModelExists($jadwalLain);
+        $this->assertModelExists($kegiatan);
+        $this->assertSame('nonaktif', $paket->fresh()->status);
+        $this->assertTrue($folder->soal()->whereKey($soal->id)->exists());
+    }
+
+    public function test_draf_kosong_yang_terkunci_atau_dipakai_jadwal_lain_tidak_dapat_dihapus(): void
+    {
+        $data = $this->buatFondasi();
+        $jadwal = $data['jadwal'];
+        $urlHapus = route('ujian-terpusat.jadwal.destroy', [$data['kegiatan'], $jadwal]);
+        $this->actingAs($data['admin'])->put(route('paket-soal-terpusat.update', $jadwal), ['aksi' => 'draf'])
+            ->assertSessionHasNoErrors()->assertRedirect();
+        $paket = $jadwal->refresh()->ujianCbt;
+
+        $jadwal->update(['dikunci_pada' => now()]);
+        $this->delete($urlHapus)->assertSessionHasErrors(['jadwal' => 'Jadwal dikunci dan tidak dapat dihapus.']);
+        $jadwal->update(['dikunci_pada' => null]);
+
+        $jadwalLain = $jadwal->replicate()->fill(['tanggal' => '2026-09-17']);
+        $jadwalLain->save();
+        $this->delete($urlHapus)->assertSessionHasErrors(['jadwal' => 'Paket bukan milik jadwal ini saja.']);
+
+        $this->assertModelExists($jadwal);
+        $this->assertModelExists($jadwalLain);
+        $this->assertSame('draft', $paket->fresh()->status);
+    }
+
     public function test_daftar_paket_menampilkan_ujian_terbaru_dengan_jadwal_tetap_kronologis(): void
     {
         $data = $this->buatFondasi();

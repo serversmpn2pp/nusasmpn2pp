@@ -109,7 +109,7 @@ class PersiapanUjianTerpusatMobileService
                     'sesiKegiatanUjianCbt',
                     'mataPelajaran',
                     'kelas',
-                    'ujianCbt' => fn ($query) => $query->withCount('soalUjianCbt'),
+                    'ujianCbt' => fn ($query) => $query->denganRingkasanHapusJadwal(),
                 ])
                 ->orderBy('tanggal')->orderBy('waktu_mulai')->orderBy('tingkat'),
         ])->loadCount('jadwalUjianCbt');
@@ -259,7 +259,7 @@ class PersiapanUjianTerpusatMobileService
                             'status' => $jadwal->ujianCbt->status,
                             'jumlah_soal' => (int) $jadwal->ujianCbt->soal_ujian_cbt_count,
                         ] : null,
-                        'dapat_dihapus' => ! $jadwal->ujian_cbt_id && ! $jadwal->terkunci(),
+                        'dapat_dihapus' => $this->pengelolaJadwal->alasanTidakDapatDihapus($jadwal) === null,
                     ];
                 })->values(),
                 'mata_pelajaran' => $daftarMataPelajaran,

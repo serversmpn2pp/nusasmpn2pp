@@ -367,16 +367,26 @@
         <div class="schedule-list">
             @forelse ($kegiatan->jadwalUjianCbt as $jadwal)
                 @php($kelompok=$kelompokPerTingkat->get($jadwal->tingkat))
+                @php($alasanHapus = $alasanHapusJadwal->get($jadwal->id))
                 <div class="schedule-row">
                     <div class="schedule-date"><strong>{{ $jadwal->tanggal?->locale('id')->translatedFormat('D, d M Y') }}</strong><span>{{ $jadwal->labelWaktu() }} · {{ $jadwal->durasiMenit() }} menit</span></div>
                     <span class="schedule-level">T{{ $jadwal->tingkat }}</span>
-                    <div class="schedule-main"><strong>{{ $jadwal->mataPelajaran?->nama ?: 'Mata pelajaran belum diisi' }}</strong><span>{{ $jadwal->sesiKegiatanUjianCbt?->nama }} · {{ $jadwal->kelas->pluck('nama')->join(', ') }}</span></div>
+                    <div class="schedule-main">
+                        <strong>{{ $jadwal->mataPelajaran?->nama ?: 'Mata pelajaran belum diisi' }}</strong>
+                        <span>{{ $jadwal->sesiKegiatanUjianCbt?->nama }} · {{ $jadwal->kelas->pluck('nama')->join(', ') }}</span>
+                        @if ($alasanHapus)<span>{{ $alasanHapus }}</span>@endif
+                    </div>
                     <div class="schedule-room"><strong>{{ $kelompok?->ruangKegiatanUjianCbt->pluck('nama')->join(', ') ?: 'Ruang belum dibagi' }}</strong><span>{{ $kelompok?->jumlah_peserta ?? 0 }} peserta</span></div>
                     @if ($bolehKelola)
                         <div class="schedule-actions">
                             <a href="{{ route('paket-soal-terpusat.show', $jadwal) }}" class="button {{ $jadwal->ujianCbt && in_array($jadwal->ujianCbt->status, ['terjadwal', 'berlangsung', 'selesai'], true) ? 'button-dark' : 'button-muted' }}">Paket</a>
                             <button type="button" class="button button-muted" data-schedule-edit-toggle>Edit</button>
-                            <form action="{{ route('ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal]) }}" method="POST" onsubmit="return confirm('Hapus jadwal {{ $jadwal->mataPelajaran?->nama }} tingkat {{ $jadwal->tingkat }}?')">@csrf @method('DELETE')<button type="submit" class="button button-danger">Hapus</button></form>
+                            @unless ($alasanHapus)
+                                <form action="{{ route('ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal]) }}" method="POST" onsubmit="return confirm(this.dataset.confirm)" data-confirm="Hapus jadwal {{ $jadwal->mataPelajaran?->nama }} tingkat {{ $jadwal->tingkat }}?">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="button button-danger">Hapus</button>
+                                </form>
+                            @endunless
                         </div>
                         <div class="schedule-edit" hidden data-schedule-edit-panel>
                             <form action="{{ route('ujian-terpusat.jadwal.update', [$kegiatan, $jadwal]) }}" method="POST">

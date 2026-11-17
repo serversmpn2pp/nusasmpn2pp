@@ -146,25 +146,25 @@ class PaketSoalMobileService
 
     public function simpan(Pengguna $pengguna, JadwalUjianCbt $jadwal, array $data): array
     {
-        $jadwal->load(['kegiatanUjianCbt.jenisUjianCbt', 'sesiKegiatanUjianCbt', 'mataPelajaran.pengaturanTingkat', 'kelas', 'ujianCbt']);
-        abort_unless($this->bolehMengelola($pengguna, $jadwal), 403);
-        $this->pastikanPaketBelumDikerjakan($jadwal->ujianCbt);
+        $jadwal = DB::transaction(function () use ($pengguna, $jadwal, $data) {
+            $jadwal = JadwalUjianCbt::query()
+                ->with(['kegiatanUjianCbt.jenisUjianCbt', 'sesiKegiatanUjianCbt', 'mataPelajaran.pengaturanTingkat', 'kelas', 'ujianCbt'])
+                ->lockForUpdate()->findOrFail($jadwal->id);
+            abort_unless($this->bolehMengelola($pengguna, $jadwal), 403);
+            $this->pastikanPaketBelumDikerjakan($jadwal->ujianCbt);
 
-        $soalIds = collect($data['soal'] ?? [])->pluck('id')->map(fn ($id) => (int) $id)->values();
-        $skorSoal = SoalCbt::query()->whereIn('id', $soalIds)->pluck('skor_maksimal', 'id');
-        $soalTerpilih = $soalIds->mapWithKeys(fn ($id) => [$id => (float) $skorSoal->get($id)]);
-        $this->pastikanSoalValid($jadwal, $soalTerpilih);
-        if ($data['aksi'] === 'terbitkan' && $soalTerpilih->isEmpty()) {
-            throw ValidationException::withMessages(['soal' => 'Pilih minimal satu soal sebelum paket diterbitkan.']);
-        }
-
-        $status = match ($data['aksi']) {
-            'terbitkan' => 'terjadwal',
-            'draf' => 'draft',
-            default => $jadwal->ujianCbt?->status ?? 'draft',
-        };
-
-        DB::transaction(function () use ($pengguna, $jadwal, $soalTerpilih, $status, $data) {
+            $soalIds = collect($data['soal'] ?? [])->pluck('id')->map(fn ($id) => (int) $id)->values();
+            $skorSoal = SoalCbt::query()->whereIn('id', $soalIds)->pluck('skor_maksimal', 'id');
+            $soalTerpilih = $soalIds->mapWithKeys(fn ($id) => [$id => (float) $skorSoal->get($id)]);
+            $this->pastikanSoalValid($jadwal, $soalTerpilih);
+            if ($data['aksi'] === 'terbitkan' && $soalTerpilih->isEmpty()) {
+                throw ValidationException::withMessages(['soal' => 'Pilih minimal satu soal sebelum paket diterbitkan.']);
+            }
+            $status = match ($data['aksi']) {
+                'terbitkan' => 'terjadwal',
+                'draf' => 'draft',
+                default => $jadwal->ujianCbt?->status ?? 'draft',
+            };
             $siap = in_array($status, ['terjadwal', 'berlangsung', 'selesai'], true);
             $paket = $jadwal->ujianCbt ?: new UjianCbt;
             $paket->fill($this->dataPaketOtomatis($jadwal, $soalTerpilih->count(), $status, (bool) $data['acak_soal'], (bool) $data['acak_jawaban']));
@@ -181,10 +181,11 @@ class PaketSoalMobileService
             }
             $this->sinkronkanKelasDanKomponen($paket, $jadwal, $siap);
             $jadwal->update(['ujian_cbt_id' => $paket->id, 'status' => $siap ? 'siap' : 'draft']);
-        });
+            $jadwal->refresh();
+            $this->sinkronisasi->sinkronkanJadwal($jadwal, $pengguna);
 
-        $jadwal->refresh();
-        $this->sinkronisasi->sinkronkanJadwal($jadwal, $pengguna);
+            return $jadwal;
+        });
 
         return $this->rincian($pengguna, $jadwal);
     }

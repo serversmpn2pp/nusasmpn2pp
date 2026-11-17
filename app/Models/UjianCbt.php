@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -127,6 +128,27 @@ class UjianCbt extends Model
     public function jadwalUjianCbt(): HasMany
     {
         return $this->hasMany(JadwalUjianCbt::class);
+    }
+
+    public function scopeDenganRingkasanHapusJadwal(Builder $query): Builder
+    {
+        return $query->withCount(['soalUjianCbt', 'jadwalUjianCbt'])->withExists([
+            // Pembagian otomatis menyiapkan peserta dan ruang sebelum ujian dipakai.
+            'pesertaUjianCbt as ada_riwayat_peserta' => fn (Builder $query) => $query->where(fn (Builder $query) => $query
+                ->whereNotIn('status', ['aktif', 'nonaktif'])
+                ->orWhere('status_kehadiran_ujian', '!=', 'belum_absen')
+                ->orWhereNotNull(['waktu_mulai', 'waktu_selesai', 'absen_ujian_pada', 'status_susulan', 'nilai_siswa_id', 'nilai_diterapkan_pada'])
+                ->orWhereHas('jawabanPesertaUjianCbt')
+                ->orWhereHas('aktivitasKeamananUjianCbt')
+                ->orWhereHas('riwayatWaktuTambahanUjianCbt')
+                ->orWhereHas('riwayatPembukaanSusulanCbt')),
+            'ruangUjianCbt as ada_riwayat_ruang' => fn (Builder $query) => $query->where(fn (Builder $query) => $query
+                ->whereIn('status', ['berlangsung', 'selesai'])
+                ->orWhereNotNull(['waktu_mulai_aktual', 'waktu_selesai_aktual', 'dikunci_pada', 'berita_acara', 'hambatan', 'tindak_lanjut'])
+                ->orWhereNotNull(['bukti_daftar_hadir_lokasi_file', 'bukti_berita_acara_lokasi_file', 'bukti_diajukan_pada', 'bukti_diperiksa_pada'])
+                ->orWhereHas('buktiRuangUjianCbt')),
+            'sesiUjianCbt as ada_sesi_selesai' => fn (Builder $query) => $query->where('status', 'selesai'),
+        ]);
     }
 
     public function dibuatOleh(): BelongsTo
