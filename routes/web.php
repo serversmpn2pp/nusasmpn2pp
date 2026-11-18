@@ -35,6 +35,7 @@ use App\Http\Controllers\GuruMataPelajaranController;
 use App\Http\Controllers\HasilSurveiSayaController;
 use App\Http\Controllers\ImportPenerimaanBarangController;
 use App\Http\Controllers\InputNilaiController;
+use App\Http\Controllers\InputNilaiKolektifController;
 use App\Http\Controllers\JadwalKegiatanIbadahController;
 use App\Http\Controllers\JadwalKelasSayaController;
 use App\Http\Controllers\JadwalPelajaranController;
@@ -171,6 +172,7 @@ use App\Http\Controllers\SesiKegiatanUjianCbtController;
 use App\Http\Controllers\SesiUjianCbtController;
 use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\SiswaWaliSayaController;
+use App\Http\Controllers\ProfilSiswaTerpaduController;
 use App\Http\Controllers\SkemaBobotNilaiController;
 use App\Http\Controllers\SoalCbtController;
 use App\Http\Controllers\SoalUjianCbtController;
@@ -513,6 +515,11 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::resource('siswa', SiswaController::class)
             ->only(['index', 'show'])
             ->middleware('izin:siswa.lihat,siswa.kelola');
+        Route::prefix('profil-siswa-terpadu')->name('profil-siswa-terpadu.')
+            ->middleware(SesiPengerjaanUjian::class)->controller(ProfilSiswaTerpaduController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{siswa}', 'show')->whereNumber('siswa')->name('show');
+            });
 
         Route::get('kartu-pelajar', [KartuPelajarController::class, 'index'])
             ->middleware('izin:kartu_pelajar.lihat,kartu_pelajar.cetak')
@@ -1242,6 +1249,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
         Route::middleware('izin:nilai.input')->group(function () {
             Route::get('input-nilai', [InputNilaiController::class, 'index'])->name('input-nilai.index');
             Route::post('input-nilai', [InputNilaiController::class, 'store'])->name('input-nilai.store');
+            Route::get('input-nilai/kolektif', [InputNilaiKolektifController::class, 'index'])->name('input-nilai.kolektif');
+            Route::get('input-nilai/kolektif/export-excel', [InputNilaiKolektifController::class, 'export'])->name('input-nilai.kolektif.export');
+            Route::post('input-nilai/kolektif', [InputNilaiKolektifController::class, 'store'])->name('input-nilai.kolektif.store');
             Route::patch('input-nilai/{komponenNilai}/sts-manual', [InputNilaiController::class, 'stsManual'])
                 ->where('komponenNilai', '[0-9]{1,18}')->name('input-nilai.sts-manual');
             Route::patch('publikasi-nilai/{guruMataPelajaran}/{semester}/publikasikan', [PublikasiNilaiController::class, 'publikasikan'])

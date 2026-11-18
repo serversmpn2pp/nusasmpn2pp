@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AnggotaKelas;
 use App\Models\GuruMataPelajaran;
+use App\Models\JenisUjianCbt;
 use App\Models\Kelas;
 use App\Models\KomponenNilai;
 use App\Models\MataPelajaran;
@@ -12,11 +13,18 @@ use App\Models\Pegawai;
 use App\Models\Pengguna;
 use App\Models\Peran;
 use App\Models\PublikasiNilaiSiswa;
+use App\Models\SkemaBobotNilai;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use App\Models\UjianCbt;
+use App\Services\Nilai\RekapNilaiRaporService;
+use App\Support\PenulisExcelNilaiRapor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Testing\TestResponse;
+use SimpleXMLElement;
 use Tests\TestCase;
+use ZipArchive;
 
 class InputNilaiFilterTest extends TestCase
 {
@@ -229,6 +237,285 @@ class InputNilaiFilterTest extends TestCase
         AnggotaKelas::where('kelas_id', $d['kelasA']->id)->delete();
         $response = $this->get(route('input-nilai.index', ['komponen_nilai_id' => $d['formatif']->id]))->assertOk()->assertSee('Belum ada siswa aktif di kelas ini.');
         $this->capture('no-students', $response->getContent());
+    }
+
+    public function test_input_kolektif_hanya_memuat_kolom_terpilih_pada_satu_penugasan_dan_semester(): void
+    {
+        $d = $this->data();
+        $sumatif = $this->komponen($d['mapelA'], 'sumatif', 'Sumatif 1');
+        $d['sts']->forceFill(['sts_manual_difinalisasi_pada' => now()])->save();
+        $this->siswa($d['tahun'], $d['kelasA'], 'Siswa Kedua', '26003', 2);
+        $parameter = [
+            'tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelasA']->id,
+            'guru_mata_pelajaran_id' => $d['mapelA']->id, 'semester' => 'ganjil',
+        ];
+        $this->actingAs($d['guru'])->get(route('input-nilai.index', ['komponen_nilai_id' => $d['formatif']->id]))
+            ->assertOk()->assertSee('Beberapa komponen');
+        $this->get(route('input-nilai.kolektif', $parameter))->assertOk()
+            ->assertSee($sumatif->nama)->assertSee('STS sudah final')->assertDontSee('data-bulk-cell', false);
+        $respons = $this->get(route('input-nilai.kolektif', [...$parameter, 'komponen' => [
+            $d['formatif']->id, $sumatif->id, $d['sts']->id, $d['genap']->id, $d['asing']->id,
+        ]]))->assertOk()
+            ->assertSee('Simpan semua sebagai draf')->assertSee('data-nilai-awal="80.00"', false)
+            ->assertSee($d['siswa']->nama_lengkap)->assertSee('Siswa Kedua')
+            ->assertDontSee($d['genap']->nama)->assertDontSee($d['asing']->nama)->assertDontSee($d['siswaB']->nama_lengkap)
+            ->assertViewHas('komponenDipilih', fn ($items) => $items->modelKeys() === [$d['formatif']->id, $sumatif->id]);
+        $this->capture('kolektif', $respons->getContent());
+    }
+
+    public function test_simpan_kolektif_menjaga_catatan_nilai_lama_dan_membedakan_nol_dari_kosong(): void
+    {
+        $d = $this->data();
+        $sumatif = $this->komponen($d['mapelA'], 'sumatif', 'Sumatif 1');
+        $siswaKedua = $this->siswa($d['tahun'], $d['kelasA'], 'Siswa Kedua', '26003', 2);
+        $lama = $d['formatif']->nilaiSiswa()->firstOrFail();
+        $lama->update(['catatan' => 'Catatan dipertahankan']);
+        $tidakDisentuh = $d['formatif']->nilaiSiswa()->create(['siswa_id' => $siswaKedua->id, 'nilai' => 94]);
+        $publikasi = $d['mapelA']->publikasiNilaiSiswa()->create(['semester' => 'ganjil', 'dipublikasikan' => true, 'dipublikasikan_pada' => now()]);
+
+        $this->actingAs($d['guru']);
+        $this->simpanKolektif($d, [$this->sel($d['formatif'], $d['siswa'], '80', '80.00')])
+            ->assertOk()->assertJsonPath('jumlah', 0)->assertJsonPath('kembali_draf', false);
+        $this->assertTrue($publikasi->fresh()->dipublikasikan);
+
+        $this->simpanKolektif($d, [
+            $this->sel($d['formatif'], $d['siswa'], '0', '80.00'),
+            $this->sel($sumatif, $d['siswa'], '87,50'),
+        ])->assertOk()->assertJsonPath('jumlah', 2)->assertJsonPath('kembali_draf', true);
+        $this->assertSame('0.00', $lama->fresh()->nilai);
+        $this->assertSame('Catatan dipertahankan', $lama->fresh()->catatan);
+        $this->assertSame('87.50', $sumatif->nilaiSiswa()->firstOrFail()->nilai);
+        $this->assertSame('94.00', $tidakDisentuh->fresh()->nilai);
+        $this->assertFalse($publikasi->fresh()->dipublikasikan);
+        $this->assertDatabaseMissing('nilai_siswa', ['komponen_nilai_id' => $sumatif->id, 'siswa_id' => $siswaKedua->id]);
+
+        $this->simpanKolektif($d, [
+            $this->sel($d['formatif'], $d['siswa'], null, '0.00'),
+            $this->sel($sumatif, $d['siswa'], null, '87.50'),
+        ])->assertOk()->assertJsonPath('jumlah', 2);
+        $this->assertNull($lama->fresh()->nilai);
+        $this->assertSame('Catatan dipertahankan', $lama->fresh()->catatan);
+        $this->assertFalse($sumatif->nilaiSiswa()->exists());
+    }
+
+    public function test_kolektif_menolak_batch_tidak_valid_duplikat_atau_yang_sudah_berubah(): void
+    {
+        $d = $this->data();
+        $sumatif = $this->komponen($d['mapelA'], 'sumatif', 'Sumatif 1');
+        $sumatif->nilaiSiswa()->create(['siswa_id' => $d['siswa']->id, 'nilai' => 91]);
+        $valid = $this->sel($d['formatif'], $d['siswa'], '85', '80.00');
+        $this->actingAs($d['guru']);
+        $this->simpanKolektif($d, [$valid, $this->sel($sumatif, $d['siswa'], '101', '91.00')])
+            ->assertUnprocessable()->assertJsonValidationErrors('sel.1');
+        $this->simpanKolektif($d, [$valid, $valid])
+            ->assertUnprocessable()->assertJsonValidationErrors('sel.1');
+        $this->simpanKolektif($d, [$valid, $this->sel($sumatif, $d['siswa'], '93', '88.00')])
+            ->assertUnprocessable()->assertJsonValidationErrors('sel.1')->assertJsonPath('message', 'Nilai ini sudah berubah. Muat ulang untuk memeriksa sebelum menyimpan.');
+        $this->assertSame('80.00', $d['formatif']->nilaiSiswa()->firstOrFail()->nilai);
+        $this->assertSame('91.00', $sumatif->nilaiSiswa()->firstOrFail()->nilai);
+    }
+
+    public function test_kolektif_menolak_penugasan_lain_siswa_lain_sts_final_dan_nilai_cbt(): void
+    {
+        $d = $this->data();
+        $this->actingAs($d['guru']);
+        $this->simpanKolektif($d, [$this->sel($d['asing'], $d['siswa'], '100')], $d['asing']->guru_mata_pelajaran_id)->assertNotFound();
+        foreach (['formatifB', 'genap', 'asing'] as $key) {
+            $this->simpanKolektif($d, [$this->sel($d[$key], $d['siswa'], '100')])
+                ->assertUnprocessable()->assertJsonValidationErrors('perubahan');
+        }
+        $this->simpanKolektif($d, [$this->sel($d['formatif'], $d['siswaB'], '100')])
+            ->assertUnprocessable()->assertJsonValidationErrors('perubahan');
+        $d['sts']->forceFill(['sts_manual_difinalisasi_pada' => now()])->save();
+        $this->simpanKolektif($d, [$this->sel($d['sts'], $d['siswa'], '100')])
+            ->assertUnprocessable()->assertJsonValidationErrors('sel.0');
+        $cbt = UjianCbt::create([
+            'jenis_ujian_cbt_id' => JenisUjianCbt::query()->firstOrFail()->id,
+            'tahun_pelajaran_id' => $d['tahun']->id, 'mata_pelajaran_id' => $d['mapelA']->mata_pelajaran_id,
+            'kode' => 'CBT-TERKAIT', 'nama' => 'Ujian terkait', 'semester' => 'ganjil', 'tingkat' => 8,
+        ]);
+        $cbt->kelasUjianCbt()->create(['kelas_id' => $d['kelasA']->id, 'komponen_nilai_id' => $d['formatif']->id]);
+        $this->simpanKolektif($d, [$this->sel($d['formatif'], $d['siswa'], '100', '80.00')])
+            ->assertUnprocessable()->assertJsonValidationErrors('sel.0')
+            ->assertJsonPath('message', 'Dikelola melalui CBT. Nilai tidak diubah.');
+        $this->assertDatabaseCount('nilai_siswa', 1);
+        $this->assertSame('80.00', $d['formatif']->nilaiSiswa()->firstOrFail()->nilai);
+    }
+
+    public function test_kolektif_menggunakan_predikat_pada_mapel_yang_sesuai(): void
+    {
+        $d = $this->data();
+        $d['mapelA']->mataPelajaran->update(['kelompok' => 'Ekstrakurikuler']);
+        $this->actingAs($d['guru']);
+        $this->simpanKolektif($d, [$this->sel($d['formatif'], $d['siswa'], 'SB')])
+            ->assertOk()->assertJsonPath('jumlah', 1);
+        $this->assertDatabaseHas('nilai_siswa', ['komponen_nilai_id' => $d['formatif']->id, 'nilai' => null, 'predikat' => 'SB']);
+        $this->simpanKolektif($d, [$this->sel($d['formatif'], $d['siswa'], '90', 'SB')])
+            ->assertUnprocessable()->assertJsonValidationErrors('sel.0');
+    }
+
+    public function test_export_excel_mencakup_semua_komponen_aktif_dan_mengikuti_bobot_rapor(): void
+    {
+        $d = $this->data();
+        $tambahan = [
+            [$this->komponen($d['mapelA'], 'formatif', 'Tugas 2'), 0],
+            [$this->komponen($d['mapelA'], 'formatif', 'Tugas 3'), 82.25],
+            [$this->komponen($d['mapelA'], 'sumatif', 'Sumatif 1'), 85],
+            [$this->komponen($d['mapelA'], 'sumatif', 'Sumatif 2'), 91],
+            [$d['sts'], 86.25],
+            [$this->komponen($d['mapelA'], 'sas_saj', 'Sumatif Akhir Semester'), 91],
+        ];
+        foreach ($tambahan as [$komponen, $nilai]) {
+            $komponen->nilaiSiswa()->create(['siswa_id' => $d['siswa']->id, 'nilai' => $nilai]);
+        }
+        $kedua = $this->siswa($d['tahun'], $d['kelasA'], 'Siswa Kedua', '26003', 2);
+        $this->siswa($d['tahun'], $d['kelasA'], 'Siswa Ketiga', '26004', 3);
+        $d['formatif']->nilaiSiswa()->create(['siswa_id' => $kedua->id, 'nilai' => 90]);
+        $this->skemaExport($d, [25, 25, 25, 25], null);
+        $this->skemaExport($d, [40, 25, 15, 20], 8);
+        $jumlahSebelum = NilaiSiswa::count();
+
+        $parameter = ['guru_mata_pelajaran_id' => $d['mapelA']->id, 'semester' => 'ganjil'];
+        $url = route('input-nilai.kolektif.export', $parameter);
+        $this->actingAs($d['guru'])->get(route('input-nilai.kolektif', [
+            ...$parameter, 'tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelasA']->id,
+        ]))->assertOk()->assertSee('Ekspor Excel')->assertSee($url);
+        $respons = $this->get(route('input-nilai.kolektif.export', [...$parameter, 'komponen' => [$d['formatif']->id]]))
+            ->assertOk()->assertHeader('Content-Type', PenulisExcelNilaiRapor::MIME)
+            ->assertDownload('nilai-informatika-viiia-bilingual-ganjil-20262027.xlsx');
+        [$nilai, $bobot] = $this->bacaExport($respons, 'export-nilai');
+
+        $identitas = ['No.', 'Nama', 'Kelas', $d['formatif']->nama, 'Tugas 2', 'Tugas 3',
+            'Sumatif 1', 'Sumatif 2', $d['sts']->nama, 'Sumatif Akhir Semester', 'Nilai Akhir Sementara'];
+        foreach (range('A', 'K') as $index => $huruf) {
+            $this->assertSame($identitas[$index], (string) $this->selExcel($nilai, $huruf.'5')->is->t);
+        }
+        $this->assertSame('Formatif', (string) $this->selExcel($nilai, 'D4')->is->t);
+        $this->assertSame('Sumatif Harian', (string) $this->selExcel($nilai, 'G4')->is->t);
+        $this->assertSame('STS', (string) $this->selExcel($nilai, 'I4')->is->t);
+        $this->assertSame('SAS', (string) $this->selExcel($nilai, 'J4')->is->t);
+        $this->assertSame('0', (string) $this->selExcel($nilai, 'E6')->v);
+        $this->assertFalse(isset($this->selExcel($nilai, 'E7')->v));
+        $this->assertEqualsWithDelta(0.4, (float) $this->selExcel($bobot, 'B2')->v, 0.000001);
+        $this->assertSame('0.2', (string) $this->selExcel($bobot, 'B5')->v);
+        $rumus = (string) $this->selExcel($nilai, 'K6')->f;
+        $this->assertStringContainsString('ROUND(SUM(D6:F6)/COLUMNS(D6:F6),2)*Bobot!$B$2', $rumus);
+        $this->assertStringContainsString('ROUND(SUM(G6:H6)/COLUMNS(G6:H6),2)*Bobot!$B$3', $rumus);
+        $this->assertStringContainsString('ROUND(SUM(J6:J6)/COLUMNS(J6:J6),2)*Bobot!$B$5', $rumus);
+        $this->assertSame('74.77', (string) $this->selExcel($nilai, 'K6')->v);
+        $rekap = app(RekapNilaiRaporService::class)->hitung($d['mapelA']->id, 'ganjil', $d['guru']);
+        $this->assertSame($rekap['rekapNilai']->first()['nilai_akhir'], (float) $this->selExcel($nilai, 'K6')->v);
+        $this->assertSame('12', (string) $this->selExcel($nilai, 'K7')->v);
+        $this->assertStringContainsString('ROUND(SUM(D7:F7)/COLUMNS(D7:F7),2)', (string) $this->selExcel($nilai, 'K7')->f);
+        $this->assertSame('0', (string) $this->selExcel($nilai, 'K8')->v);
+        $this->assertNull($rekap['rekapNilai'][1]['nilai_akhir']);
+        $this->assertNull($rekap['rekapNilai'][2]['nilai_akhir']);
+        $this->assertFalse(isset($this->selExcel($nilai, 'I7')->v));
+        $this->assertFalse(isset($this->selExcel($nilai, 'J7')->v));
+        $this->assertStringNotContainsString('Komponen nonaktif', $nilai->asXML());
+        $this->assertStringNotContainsString($d['genap']->nama, $nilai->asXML());
+        $this->assertDatabaseCount('nilai_siswa', $jumlahSebelum);
+        $this->assertDatabaseCount('publikasi_nilai_siswa', 0);
+    }
+
+    public function test_export_excel_menandai_komponen_yang_belum_dibuat_dan_memerlukan_skema_bobot(): void
+    {
+        $d = $this->data();
+        $this->actingAs($d['guru']);
+        $url = route('input-nilai.kolektif.export', ['guru_mata_pelajaran_id' => $d['mapelA']->id, 'semester' => 'ganjil']);
+        [$nilai, $bobot] = $this->bacaExport($this->get($url)->assertOk());
+        $this->assertFalse(isset($this->selExcel($bobot, 'B2')->v));
+        $this->assertSame('', (string) $this->selExcel($nilai, 'F6')->v);
+        $this->assertStringContainsString('COUNT(Bobot!$B$2:$B$5)=4', (string) $this->selExcel($nilai, 'F6')->f);
+
+        $skema = $this->skemaExport($d, [50, 50, 0, 0], null);
+        [$nilai, $bobot] = $this->bacaExport($this->get($url)->assertOk(), 'export-nilai-komponen-belum-dibuat');
+        $this->assertSame('40', (string) $this->selExcel($nilai, 'F6')->v);
+        $this->assertStringNotContainsString('Bobot!$B$3', (string) $this->selExcel($nilai, 'F6')->f);
+        $this->assertSame('Komponen belum dibuat', (string) $this->selExcel($bobot, 'C3')->is->t);
+        $this->assertSame('Komponen belum dibuat', (string) $this->selExcel($bobot, 'C5')->is->t);
+        $this->assertSame('1', (string) $this->selExcel($bobot, 'C2')->v);
+        $skema->update(['bobot_formatif' => 100, 'bobot_sumatif' => 0]);
+        [$nilai] = $this->bacaExport($this->get($url)->assertOk());
+        $this->assertSame('80', (string) $this->selExcel($nilai, 'F6')->v);
+    }
+
+    public function test_export_excel_membatasi_cakupan_dan_tidak_mengubah_predikat_menjadi_angka(): void
+    {
+        $d = $this->data();
+        $this->actingAs($d['guru']);
+        $this->get(route('input-nilai.kolektif.export', [
+            'guru_mata_pelajaran_id' => $d['asing']->guru_mata_pelajaran_id, 'semester' => 'ganjil',
+        ]))->assertNotFound();
+        $this->getJson(route('input-nilai.kolektif.export', [
+            'guru_mata_pelajaran_id' => $d['mapelA']->id, 'semester' => 'semua',
+        ]))->assertUnprocessable()->assertJsonValidationErrors('semester');
+
+        $d['mapelA']->mataPelajaran->update(['kelompok' => 'Ekstrakurikuler']);
+        $d['formatif']->nilaiSiswa()->firstOrFail()->update(['nilai' => null, 'predikat' => 'SB']);
+        [$nilai] = $this->bacaExport($this->get(route('input-nilai.kolektif.export', [
+            'guru_mata_pelajaran_id' => $d['mapelA']->id, 'semester' => 'ganjil',
+        ]))->assertOk());
+        $this->assertSame('SB', (string) $this->selExcel($nilai, 'D6')->is->t);
+        $this->assertFalse(isset($this->selExcel($nilai, 'F6')->f));
+    }
+
+    private function skemaExport(array $data, array $bobot, ?int $tingkat): SkemaBobotNilai
+    {
+        return SkemaBobotNilai::create([
+            'tahun_pelajaran_id' => $data['tahun']->id, 'semester' => 'ganjil', 'tingkat' => $tingkat,
+            'bobot_formatif' => $bobot[0], 'bobot_sumatif' => $bobot[1],
+            'bobot_sts' => $bobot[2], 'bobot_sas_saj' => $bobot[3], 'aktif' => true,
+        ]);
+    }
+
+    private function bacaExport(TestResponse $respons, ?string $simpan = null): array
+    {
+        $isi = $respons->streamedContent();
+        $nama = tempnam(sys_get_temp_dir(), 'uji-xlsx-');
+        file_put_contents($nama, $isi);
+        try {
+            $zip = new ZipArchive;
+            $this->assertTrue($zip->open($nama));
+            $lembar = [];
+            foreach (['xl/worksheets/sheet1.xml', 'xl/worksheets/sheet2.xml'] as $path) {
+                $xml = new SimpleXMLElement($zip->getFromName($path));
+                $lembar[] = $xml;
+            }
+            $zip->close();
+        } finally {
+            unlink($nama);
+        }
+        if ($simpan && getenv('NUSA_CAPTURE_NILAI_EXPORT')) {
+            $dir = storage_path('framework/testing/input-nilai');
+            File::ensureDirectoryExists($dir);
+            File::put($dir.'/'.$simpan.'.xlsx', $isi);
+        }
+
+        return $lembar;
+    }
+
+    private function selExcel(SimpleXMLElement $sheet, string $ref): SimpleXMLElement
+    {
+        $sheet->registerXPathNamespace('x', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+
+        return $sheet->xpath('//x:c[@r="'.$ref.'"]')[0];
+    }
+
+    private function simpanKolektif(array $data, array $perubahan, ?int $penugasanId = null)
+    {
+        return $this->postJson(route('input-nilai.kolektif.store'), [
+            'guru_mata_pelajaran_id' => $penugasanId ?? $data['mapelA']->id,
+            'semester' => 'ganjil',
+            'perubahan' => $perubahan,
+        ]);
+    }
+
+    private function sel(KomponenNilai $komponen, Siswa $siswa, ?string $nilai, ?string $awal = null): array
+    {
+        return [
+            'komponen_nilai_id' => $komponen->id, 'siswa_id' => $siswa->id, 'nilai' => $nilai, 'nilai_awal' => $awal,
+        ];
     }
 
     private function capture(string $name, string $html): void

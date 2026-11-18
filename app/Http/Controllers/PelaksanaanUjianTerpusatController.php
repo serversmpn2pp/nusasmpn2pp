@@ -23,6 +23,7 @@ class PelaksanaanUjianTerpusatController extends Controller
         if (! in_array($tahapAktif, [5, 6, 7], true)) {
             $tahapAktif = 5;
         }
+        $urutanJadwal = $request->query('urutan_jadwal') === 'pelaksanaan' ? 'pelaksanaan' : 'terbaru';
 
         $kegiatanUjianCbt->load([
             'jenisUjianCbt',
@@ -41,9 +42,10 @@ class PelaksanaanUjianTerpusatController extends Controller
                     'kelas',
                     'ujianCbt' => fn ($query) => $query->denganRingkasanHapusJadwal(),
                 ])
-                ->orderBy('tanggal')
+                ->orderBy('tanggal', $tahapAktif === 7 && $urutanJadwal === 'terbaru' ? 'desc' : 'asc')
                 ->orderBy('waktu_mulai')
-                ->orderBy('tingkat'),
+                ->orderBy('tingkat')
+                ->orderBy('id'),
         ]);
 
         $daftarKelas = Kelas::query()
@@ -100,6 +102,7 @@ class PelaksanaanUjianTerpusatController extends Controller
             'bolehSiapkanFolderSoal' => $tahapAktif === 7 && $bolehKelola
                 && $kegiatanUjianCbt->jadwalUjianCbt->isNotEmpty() && $folderSoal->mendukung($kegiatanUjianCbt),
             'tahapAktif' => $tahapAktif,
+            'urutanJadwal' => $urutanJadwal,
         ]);
     }
 }

@@ -22,18 +22,23 @@ class RekapNilaiRaporService
         }
 
         $daftarGuruMataPelajaran = $this->ambilDaftarGuruMataPelajaran($pengguna);
-        $guruMataPelajaranDipilih = null;
+        $guruMataPelajaranDipilih = $guruMataPelajaranId
+            ? $this->ambilGuruMataPelajaranDipilih($guruMataPelajaranId, $pengguna)
+            : null;
+
+        return compact('daftarGuruMataPelajaran', 'guruMataPelajaranId') + $this->untukPenugasan($guruMataPelajaranDipilih, $semester);
+    }
+
+    // Penugasan harus sudah diperiksa cakupannya oleh pemanggil.
+    public function untukPenugasan(?GuruMataPelajaran $guruMataPelajaranDipilih, string $semester): array
+    {
         $skemaBobotNilai = null;
         $komponenNilai = collect();
         $rekapNilai = collect();
         $jumlahKomponen = $this->templateJumlahKomponen();
         $labelNilaiAkhir = 'SAS/SAJ';
 
-        if ($guruMataPelajaranId) {
-            $guruMataPelajaranDipilih = $this->ambilGuruMataPelajaranDipilih(
-                $guruMataPelajaranId,
-                $pengguna,
-            );
+        if ($guruMataPelajaranDipilih) {
             $kelas = $guruMataPelajaranDipilih->kelas;
             $labelNilaiAkhir = $this->labelNilaiAkhir($kelas?->tingkat);
             $skemaBobotNilai = $this->ambilSkemaBobotNilai(
@@ -62,8 +67,6 @@ class RekapNilaiRaporService
         $rataRataAkhir = $rekapNilai->whereNotNull('nilai_akhir')->avg('nilai_akhir');
 
         return compact(
-            'daftarGuruMataPelajaran',
-            'guruMataPelajaranId',
             'guruMataPelajaranDipilih',
             'semester',
             'skemaBobotNilai',

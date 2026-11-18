@@ -61,11 +61,15 @@
         .level-option-copy strong { color:var(--primary-dark); font-size:.8rem; }
         .level-option-copy span { margin-top:3px; color:var(--muted); font-size:.7rem; font-weight:700; }
         .schedule-builder-actions { display:flex; justify-content:flex-end; margin-top:14px; }
-        .schedule-list { display: grid; gap: 10px; margin-top: 16px; }
+        .schedule-order { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; scroll-margin-top: 90px; }
+        .schedule-order .button { min-height: 40px; min-width: 0; justify-content: center; text-align: center; white-space: normal; }
+        .schedule-list { display: grid; gap: 10px; margin-top: 12px; }
         .schedule-row { display: grid; grid-template-columns: 120px minmax(170px,.85fr) minmax(0,1.15fr) minmax(180px,.8fr) auto; gap: 14px; align-items: center; padding: 13px 14px; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: 7px; background: #fff; }
+        .schedule-row.is-new { border-left-color: var(--accent); scroll-margin-top: 90px; }
         .schedule-date strong, .schedule-date span, .schedule-main strong, .schedule-main span, .schedule-room strong, .schedule-room span { display: block; }
         .schedule-date strong, .schedule-main strong, .schedule-room strong { font-size: .8rem; }
         .schedule-date span, .schedule-main span, .schedule-room span { margin-top: 3px; color: var(--muted); font-size: .72rem; font-weight: 700; }
+        .schedule-main .schedule-new-badge { display: inline-flex; margin-top: 5px; color: var(--accent-text); }
         .schedule-level { display: inline-grid; width: 44px; height: 38px; place-items: center; border-radius: 6px; background: var(--accent-soft); color: var(--accent-text); font-weight: 900; }
         .schedule-actions { display: flex; gap: 7px; }
         .schedule-edit { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -96,15 +100,21 @@
             .schedule-builder-actions .button { width:100%; }
             .distribution-actions { justify-content: stretch; }
             .distribution-actions .button, .distribution-actions form { flex: 1 1 100%; width: 100%; }
+            .schedule-order { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .schedule-order .button { padding-inline: 8px; }
+            .schedule-order svg { flex-shrink: 0; }
             .schedule-row { grid-template-columns: 52px minmax(0,1fr); }
             .schedule-date { grid-column: 1 / -1; }
             .schedule-level { grid-column: 1; }
             .schedule-main { grid-column: 2; }
             .schedule-room { grid-column: 1 / -1; }
-            .schedule-actions { grid-column: 1 / -1; grid-row: auto; }
-            .schedule-actions .button, .schedule-actions form { flex: 1 1 0; }
+            .schedule-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-column: 1 / -1; grid-row: auto; }
+            .schedule-row .schedule-actions .button { width: 100%; min-width: 0; padding-inline: 8px; white-space: nowrap; }
             .central-wizard-actions { align-items:stretch; flex-direction:column-reverse; }
             .central-wizard-actions .button { width:100%; text-align:center; }
+        }
+        @media (max-width: 380px) {
+            .schedule-order .button { flex-direction: column; gap: 4px; }
         }
     </style>
 
@@ -114,6 +124,8 @@
         $sesiSiap = $kegiatan->sesiKegiatanUjianCbt->isNotEmpty();
         $ruangSiap = $kegiatan->ruangKegiatanUjianCbt->isNotEmpty();
         $judulTahap = [5 => 'Penetapan ruang', 6 => 'Pembagian peserta', 7 => 'Jadwal ujian'][$tahapAktif];
+        $parameterUrutanJadwal = $urutanJadwal === 'pelaksanaan' ? ['urutan_jadwal' => 'pelaksanaan'] : [];
+        $jadwalBaru = $tahapAktif === 7 ? session('jadwal_baru', []) : [];
         $subjudulTahap = [
             5 => 'Tentukan kelas, sesi, dan ruang yang digunakan oleh setiap tingkat.',
             6 => 'Bangkitkan pembagian siswa otomatis setelah penetapan ruang selesai.',
@@ -138,7 +150,7 @@
         </div>
         @if ($bolehSiapkanFolderSoal)
             <div class="actions">
-                <form method="POST" action="{{ route('ujian-terpusat.folder-soal.siapkan', $kegiatan) }}">
+                <form method="POST" action="{{ route('ujian-terpusat.folder-soal.siapkan', [$kegiatan, ...$parameterUrutanJadwal]) }}">
                     @csrf
                     <button type="submit" class="button button-muted">
                         <i data-lucide="folder-plus" aria-hidden="true"></i> Lengkapi folder Bank Soal
@@ -148,7 +160,14 @@
         @endif
     </div>
 
-    @if (session('berhasil')) <div class="alert">{{ session('berhasil') }}</div> @endif
+    @if (session('berhasil'))
+        <div class="alert">
+            {{ session('berhasil') }}
+            @if ($jadwalBaru)
+                <a href="#jadwal-{{ $jadwalBaru[0] }}">Lihat jadwal baru</a>
+            @endif
+        </div>
+    @endif
     @if ($errors->any()) <div class="alert alert-danger">{{ $errors->first() }}</div> @endif
 
     <section class="panel execution-hero">
@@ -338,7 +357,7 @@
         </div>
 
         @if ($bolehKelola)
-            <form action="{{ route('ujian-terpusat.jadwal.store', $kegiatan) }}" method="POST" class="schedule-builder" data-schedule-form>
+            <form action="{{ route('ujian-terpusat.jadwal.store', [$kegiatan, ...$parameterUrutanJadwal]) }}" method="POST" class="schedule-builder" data-schedule-form>
                 @csrf
                 <div class="schedule-fields">
                     <div class="field"><label for="tanggal_jadwal">Tanggal ujian</label><input id="tanggal_jadwal" name="tanggal" type="date" min="{{ $kegiatan->tanggal_mulai?->format('Y-m-d') }}" max="{{ $kegiatan->tanggal_selesai?->format('Y-m-d') }}" value="{{ old('tanggal', $kegiatan->tanggal_mulai?->format('Y-m-d')) }}" class="input" required></div>
@@ -364,16 +383,32 @@
             </form>
         @endif
 
+        @if ($kegiatan->jadwalUjianCbt->isNotEmpty())
+            <nav id="urutan-jadwal" class="schedule-order" aria-label="Urutan jadwal ujian">
+                <a href="{{ route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]) }}#urutan-jadwal"
+                    class="button {{ $urutanJadwal === 'terbaru' ? 'button-primary' : 'button-muted' }}"
+                    @if ($urutanJadwal === 'terbaru') aria-current="true" @endif>
+                    <i data-lucide="arrow-down" aria-hidden="true"></i> Tanggal terbaru
+                </a>
+                <a href="{{ route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7, 'urutan_jadwal' => 'pelaksanaan']) }}#urutan-jadwal"
+                    class="button {{ $urutanJadwal === 'pelaksanaan' ? 'button-primary' : 'button-muted' }}"
+                    @if ($urutanJadwal === 'pelaksanaan') aria-current="true" @endif>
+                    <i data-lucide="arrow-up" aria-hidden="true"></i> Urutan pelaksanaan
+                </a>
+            </nav>
+        @endif
         <div class="schedule-list">
             @forelse ($kegiatan->jadwalUjianCbt as $jadwal)
                 @php($kelompok=$kelompokPerTingkat->get($jadwal->tingkat))
                 @php($alasanHapus = $alasanHapusJadwal->get($jadwal->id))
-                <div class="schedule-row">
+                @php($baru = in_array($jadwal->id, $jadwalBaru, true))
+                <div id="jadwal-{{ $jadwal->id }}" class="schedule-row{{ $baru ? ' is-new' : '' }}">
                     <div class="schedule-date"><strong>{{ $jadwal->tanggal?->locale('id')->translatedFormat('D, d M Y') }}</strong><span>{{ $jadwal->labelWaktu() }} · {{ $jadwal->durasiMenit() }} menit</span></div>
                     <span class="schedule-level">T{{ $jadwal->tingkat }}</span>
                     <div class="schedule-main">
                         <strong>{{ $jadwal->mataPelajaran?->nama ?: 'Mata pelajaran belum diisi' }}</strong>
                         <span>{{ $jadwal->sesiKegiatanUjianCbt?->nama }} · {{ $jadwal->kelas->pluck('nama')->join(', ') }}</span>
+                        @if ($baru)<span class="badge badge-warning schedule-new-badge">Baru</span>@endif
                         @if ($alasanHapus)<span>{{ $alasanHapus }}</span>@endif
                     </div>
                     <div class="schedule-room"><strong>{{ $kelompok?->ruangKegiatanUjianCbt->pluck('nama')->join(', ') ?: 'Ruang belum dibagi' }}</strong><span>{{ $kelompok?->jumlah_peserta ?? 0 }} peserta</span></div>
@@ -382,14 +417,14 @@
                             <a href="{{ route('paket-soal-terpusat.show', $jadwal) }}" class="button {{ $jadwal->ujianCbt && in_array($jadwal->ujianCbt->status, ['terjadwal', 'berlangsung', 'selesai'], true) ? 'button-dark' : 'button-muted' }}">Paket</a>
                             <button type="button" class="button button-muted" data-schedule-edit-toggle>Edit</button>
                             @unless ($alasanHapus)
-                                <form action="{{ route('ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal]) }}" method="POST" onsubmit="return confirm(this.dataset.confirm)" data-confirm="Hapus jadwal {{ $jadwal->mataPelajaran?->nama }} tingkat {{ $jadwal->tingkat }}?">
+                                <form action="{{ route('ujian-terpusat.jadwal.destroy', [$kegiatan, $jadwal, ...$parameterUrutanJadwal]) }}" method="POST" onsubmit="return confirm(this.dataset.confirm)" data-confirm="Hapus jadwal {{ $jadwal->mataPelajaran?->nama }} tingkat {{ $jadwal->tingkat }}?">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="button button-danger">Hapus</button>
                                 </form>
                             @endunless
                         </div>
                         <div class="schedule-edit" hidden data-schedule-edit-panel>
-                            <form action="{{ route('ujian-terpusat.jadwal.update', [$kegiatan, $jadwal]) }}" method="POST">
+                            <form action="{{ route('ujian-terpusat.jadwal.update', [$kegiatan, $jadwal, ...$parameterUrutanJadwal]) }}" method="POST">
                                     @csrf @method('PUT')
                                     <div class="field"><label for="tanggal_{{ $jadwal->id }}">Tanggal</label><input id="tanggal_{{ $jadwal->id }}" name="tanggal" type="date" min="{{ $kegiatan->tanggal_mulai?->format('Y-m-d') }}" max="{{ $kegiatan->tanggal_selesai?->format('Y-m-d') }}" value="{{ $jadwal->tanggal?->format('Y-m-d') }}" class="input" required></div>
                                     <div class="field"><label for="mapel_{{ $jadwal->id }}">Mata pelajaran</label><select id="mapel_{{ $jadwal->id }}" name="mata_pelajaran_id" class="input" required>@foreach($daftarMataPelajaran as $mapel) @if(in_array($jadwal->tingkat,$mapel->tingkat_tersedia,true))<option value="{{ $mapel->id }}" @selected($jadwal->mata_pelajaran_id===$mapel->id)>{{ $mapel->nama }}</option>@endif @endforeach</select></div>

@@ -6,6 +6,7 @@ use App\Models\JadwalUjianCbt;
 use App\Models\KegiatanUjianCbt;
 use App\Services\Cbt\KelolaJadwalUjianTerpusat;
 use App\Services\Cbt\SiapkanFolderSoalUjianTerpusat;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -28,8 +29,8 @@ class JadwalUjianTerpusatController extends Controller
         ]);
         $jadwal = $pengelola->tambah($kegiatanUjianCbt, $data);
 
-        return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
+        return $this->kembaliKeJadwal($request, $kegiatanUjianCbt)
+            ->with('jadwal_baru', $jadwal->pluck('id')->all())
             ->with('berhasil', "Jadwal {$jadwal->first()->mataPelajaran?->nama} berhasil ditambahkan untuk {$jadwal->count()} tingkat.");
     }
 
@@ -49,8 +50,7 @@ class JadwalUjianTerpusatController extends Controller
         ]);
         $pengelola->ubah($kegiatanUjianCbt, $jadwalUjianCbt, $data, $request->user());
 
-        return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
+        return $this->kembaliKeJadwal($request, $kegiatanUjianCbt)
             ->with('berhasil', 'Jadwal ujian berhasil diperbarui.');
     }
 
@@ -63,8 +63,7 @@ class JadwalUjianTerpusatController extends Controller
         $this->pastikanAkses($request, $kegiatanUjianCbt);
         $pengelola->hapus($kegiatanUjianCbt, $jadwalUjianCbt);
 
-        return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
+        return $this->kembaliKeJadwal($request, $kegiatanUjianCbt)
             ->with('berhasil', 'Jadwal ujian berhasil dihapus.');
     }
 
@@ -77,11 +76,20 @@ class JadwalUjianTerpusatController extends Controller
         abort_unless($folderSoal->mendukung($kegiatanUjianCbt), 422);
         $jumlahBaru = $folderSoal->lengkapi($kegiatanUjianCbt);
 
-        return redirect()
-            ->route('ujian-terpusat.pelaksanaan.index', [$kegiatanUjianCbt, 'tahap' => 7])
+        return $this->kembaliKeJadwal($request, $kegiatanUjianCbt)
             ->with('berhasil', $jumlahBaru > 0
                 ? "{$jumlahBaru} folder Bank Soal baru disiapkan."
                 : 'Tidak ada folder Bank Soal baru yang perlu disiapkan.');
+    }
+
+    private function kembaliKeJadwal(Request $request, KegiatanUjianCbt $kegiatan): RedirectResponse
+    {
+        $parameter = [$kegiatan, 'tahap' => 7];
+        if ($request->query('urutan_jadwal') === 'pelaksanaan') {
+            $parameter['urutan_jadwal'] = 'pelaksanaan';
+        }
+
+        return redirect()->route('ujian-terpusat.pelaksanaan.index', $parameter);
     }
 
     private function pastikanAkses(Request $request, KegiatanUjianCbt $kegiatan): void

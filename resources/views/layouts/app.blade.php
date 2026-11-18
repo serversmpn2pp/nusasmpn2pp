@@ -2226,6 +2226,19 @@
                 $semuaSidebarSections = $sidebarPegawaiSections;
             }
 
+            if (! $pakaiSidebarSiswa && ! $pakaiSidebarOrangTua
+                && app(\App\Services\ProfilSiswa\AksesProfilSiswaTerpadu::class)->dapatMembuka($penggunaAktif)) {
+                $menuProfilTerpadu = ['label' => 'Profil Siswa Terpadu', 'route' => 'profil-siswa-terpadu.index',
+                    'active' => ['profil-siswa-terpadu.*'], 'icon' => 'contact-round', 'initial' => 'PT', 'izin' => null,
+                    'subgroup' => 'Siswa dan Kelas'];
+                $bagianDataSekolah = array_search('data-sekolah', array_column($semuaSidebarSections, 'id'), true);
+                if ($bagianDataSekolah !== false) {
+                    $semuaSidebarSections[$bagianDataSekolah]['items'][] = $menuProfilTerpadu;
+                } else {
+                    array_splice($semuaSidebarSections, 1, 0, [['id' => 'data-sekolah', 'title' => 'Data Sekolah', 'items' => [$menuProfilTerpadu]]]);
+                }
+            }
+
             $menuSupervisi = $penggunaAktif && ! $pakaiSidebarSiswa && ! $pakaiSidebarOrangTua
                 ? app(\App\Services\Supervisi\AksesSupervisi::class)->menu($penggunaAktif) : [];
             if ($menuSupervisi) {

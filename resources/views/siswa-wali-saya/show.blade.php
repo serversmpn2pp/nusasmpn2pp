@@ -45,6 +45,7 @@
         </div>
         <div class="actions">
             <a href="{{ route('siswa-wali-saya.index') }}" class="button button-muted">Kembali</a>
+            @include('profil-siswa-terpadu._tautan', ['siswa' => $siswa])
             @izin('poin_siswa.lihat')
                 <a href="{{ route('rekap-poin-siswa-wali.show', ['siswa' => $siswa, 'tahun_pelajaran_id' => $tahunPelajaran?->id]) }}" class="button button-primary">Rekap Poin</a>
             @endizin

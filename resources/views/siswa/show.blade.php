@@ -16,6 +16,7 @@
 
         <div class="actions">
             <a href="{{ route('siswa.index') }}" class="button button-muted">Kembali</a>
+            @include('profil-siswa-terpadu._tautan', ['siswa' => $siswa])
             @izin('siswa.kelola')
                 <a href="{{ route('siswa.edit', $siswa) }}" class="button button-dark">Edit</a>
             @endizin

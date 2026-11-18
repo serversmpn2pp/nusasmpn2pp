@@ -178,6 +178,17 @@
         @endizin
     </div>
 
+    @include('input-nilai._mode', [
+        'modeKolektif' => false,
+        'tautanKolektif' => route('input-nilai.kolektif', array_filter([
+            'tahun_pelajaran_id' => $filter['tahun_pelajaran_id'],
+            'kelas_id' => $filter['kelas_id'],
+            'semester' => $filter['semester'] !== 'semua' ? $filter['semester'] : null,
+            'guru_mata_pelajaran_id' => $komponenDipilih?->guru_mata_pelajaran_id,
+        ])),
+        'tautanPerKomponen' => request()->fullUrl(),
+    ])
+
     @if (session('berhasil'))
         <div class="alert">{{ session('berhasil') }}</div>
     @endif

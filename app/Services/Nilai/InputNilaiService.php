@@ -61,12 +61,19 @@ class InputNilaiService
         ];
 
         if ($menggunakanPredikat) {
-            $aturan['predikat.*'] = ['nullable', Rule::in(MataPelajaran::PREDIKAT_NILAI)];
+            $aturan['predikat.*'] = $this->aturanIsiNilai(true);
         } else {
-            $aturan['nilai.*'] = ['nullable', 'numeric', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'min:0', 'max:100'];
+            $aturan['nilai.*'] = $this->aturanIsiNilai(false);
         }
 
         return $aturan;
+    }
+
+    public function aturanIsiNilai(bool $predikat): array
+    {
+        return $predikat
+            ? ['nullable', Rule::in(MataPelajaran::PREDIKAT_NILAI)]
+            : ['nullable', 'numeric', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'min:0', 'max:100'];
     }
 
     public function pesanValidasi(): array

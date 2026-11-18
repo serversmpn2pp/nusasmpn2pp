@@ -13,6 +13,7 @@ use App\Models\RuangKegiatanUjianCbt;
 use App\Models\SesiKegiatanUjianCbt;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
+use Illuminate\Support\Facades\File;
 use PDO;
 use Tests\TestCase;
 
@@ -174,7 +175,7 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         }
 
         $this->actingAs($admin)
-            ->post(route('ujian-terpusat.jadwal.store', $kegiatan), [
+            ->post(route('ujian-terpusat.jadwal.store', [$kegiatan, 'urutan_jadwal' => 'pelaksanaan']), [
                 'tanggal' => '2026-12-01',
                 'mata_pelajaran_id' => $mapel->id,
                 'waktu_mulai' => '07:00',
@@ -182,7 +183,8 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
                 'tingkat' => [7, 8],
                 'keterangan' => 'Hari pertama',
             ])
-            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]));
+            ->assertRedirect(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7, 'urutan_jadwal' => 'pelaksanaan']))
+            ->assertSessionHas('jadwal_baru', fn (array $ids) => count($ids) === 2);
 
         $jadwal = JadwalUjianCbt::query()->orderBy('tingkat')->get();
         $this->assertCount(2, $jadwal);
@@ -206,12 +208,66 @@ class UjianTerpusatJadwalPesertaTest extends TestCase
         $this->assertDatabaseCount('anggota_folder_soal_cbt', 0);
         $this->assertDatabaseCount('ujian_cbt', 0);
 
-        $this->actingAs($admin)
-            ->get(route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7]))
+        $urlJadwal = route('ujian-terpusat.pelaksanaan.index', [$kegiatan, 'tahap' => 7, 'urutan_jadwal' => 'pelaksanaan']);
+        $this->get($urlJadwal)
             ->assertOk()
+            ->assertSee('id="jadwal-'.$jadwal[0]->id.'" class="schedule-row is-new"', false)
+            ->assertSee('id="jadwal-'.$jadwal[1]->id.'" class="schedule-row is-new"', false)
+            ->assertSee('href="#jadwal-'.$jadwal[0]->id.'"', false)
             ->assertSee('Bahasa Indonesia')
             ->assertSee('Ruang 1')
             ->assertSee('Ruang 3');
+        $this->get($urlJadwal)->assertOk()->assertDontSee('class="schedule-row is-new"', false);
+    }
+
+    public function test_jadwal_mengurutkan_tanggal_terbaru_atau_pelaksanaan_dengan_sesi_pagi_tetap_di_atas(): void
+    {
+        [$admin, , $kegiatan, $sesi] = $this->buatFondasi();
+        $mapel = MataPelajaran::create([
+            'kode' => 'MTK-URUT', 'nama' => 'Matematika', 'kkm' => 78, 'aktif' => true,
+        ]);
+
+        $buatJadwal = fn (string $tanggal, string $mulai, string $selesai, int $tingkat) => $kegiatan->jadwalUjianCbt()->create([
+            'sesi_kegiatan_ujian_cbt_id' => $sesi->id,
+            'mata_pelajaran_id' => $mapel->id,
+            'tanggal' => $tanggal,
+            'waktu_mulai' => $mulai,
+            'waktu_selesai' => $selesai,
+            'tingkat' => $tingkat,
+            'status' => 'draft',
+        ]);
+        $sore = $buatJadwal('2026-12-08', '13:00', '14:00', 7);
+        $pagi8 = $buatJadwal('2026-12-08', '07:00', '08:00', 8);
+        $hariPertama = $buatJadwal('2026-12-01', '08:00', '09:00', 7);
+        $pagi7 = $buatJadwal('2026-12-08', '07:00', '08:00', 7);
+
+        $idBaris = fn (JadwalUjianCbt $jadwal) => 'id="jadwal-'.$jadwal->id.'"';
+        $parameter = [$kegiatan, 'tahap' => 7];
+        $urlPelaksanaan = route('ujian-terpusat.pelaksanaan.index', [...$parameter, 'urutan_jadwal' => 'pelaksanaan']);
+
+        $terbaru = $this->actingAs($admin)->get(route('ujian-terpusat.pelaksanaan.index', $parameter))
+            ->assertOk()->assertViewHas('urutanJadwal', 'terbaru')
+            ->assertSeeText('Tanggal terbaru')->assertSeeText('Urutan pelaksanaan')
+            ->assertSeeInOrder([$idBaris($pagi7), $idBaris($pagi8), $idBaris($sore), $idBaris($hariPertama)], false);
+
+        $pelaksanaan = $this->get($urlPelaksanaan)
+            ->assertOk()->assertViewHas('urutanJadwal', 'pelaksanaan')
+            ->assertSeeInOrder([$idBaris($hariPertama), $idBaris($pagi7), $idBaris($pagi8), $idBaris($sore)], false)
+            ->assertSee(route('ujian-terpusat.jadwal.store', [$kegiatan, 'urutan_jadwal' => 'pelaksanaan']))
+            ->assertSee(route('ujian-terpusat.jadwal.update', [$kegiatan, $sore, 'urutan_jadwal' => 'pelaksanaan']));
+
+        $this->get(route('ujian-terpusat.pelaksanaan.index', [...$parameter, 'urutan_jadwal' => 'lainnya']))
+            ->assertOk()->assertViewHas('urutanJadwal', 'terbaru');
+        $this->delete(route('ujian-terpusat.jadwal.destroy', [$kegiatan, $sore, 'urutan_jadwal' => 'pelaksanaan']))
+            ->assertRedirect($urlPelaksanaan);
+        $this->assertModelMissing($sore);
+
+        if (getenv('NUSA_CAPTURE_JADWAL_UJIAN')) {
+            $direktori = storage_path('framework/testing/urutan-jadwal');
+            File::ensureDirectoryExists($direktori);
+            File::put($direktori.'/terbaru.html', $terbaru->getContent());
+            File::put($direktori.'/pelaksanaan.html', $pelaksanaan->getContent());
+        }
     }
 
     public function test_sesi_tidak_memerlukan_jam_dan_jam_jadwal_tidak_mengikuti_sesi_lama(): void
