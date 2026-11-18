@@ -20,6 +20,17 @@ Daftar surah menggunakan nomor 78-114 sesuai [Juz 30](https://quran.com/id/juz/3
 3. Setoran surah yang sama, baik pada pertemuan yang sama maupun berbeda, disimpan sebagai catatan baru. Pengiriman ulang formulir yang sama tidak membuat catatan rangkap.
 4. Pilih **Riwayat** pada siswa untuk melihat tanggal, surah, penilai, nilai, dan catatan setoran. Riwayat lama tetap tersimpan jika keanggotaan atau pembimbing berubah. Administrator dan koordinator dapat melihat pertemuan dan riwayat; pencatatan dilakukan oleh pembimbing yang ditugaskan.
 
+## Input Kolektif
+
+1. Pembimbing membuka pertemuan yang masih terbuka, lalu memilih tab **Input kolektif**. Cara **Per setoran** tetap tersedia untuk pencatatan satu surah dan catatan tambahan.
+2. Pilih beberapa surah Juz 30 dan, bila diperlukan, satu siswa. Tekan **Buka tabel**. Satu baris mewakili satu siswa, satu kolom mewakili satu surah.
+3. Isi nilai baru 0-100, maksimal dua angka desimal. Koma maupun titik diterima. Isian kosong tidak menambah setoran; nilai 0 tetap dicatat. Nilai terakhir dan tanggalnya ditampilkan sebagai acuan, tidak otomatis dimasukkan ke isian baru.
+4. Tekan **Simpan kolektif** sebelum berpindah filter atau halaman. Setiap halaman memuat maksimal 15 siswa agar formulir seluruh 37 surah tetap berada di bawah batas baku 1.000 input PHP. Seluruh nilai pada satu pengiriman disimpan bersama; satu isian tidak valid membatalkan semuanya.
+5. Penyimpanan tidak menimpa riwayat sebelumnya. Siswa yang menyetorkan surah yang sama kembali akan memiliki percobaan baru. Pengiriman ulang formulir yang sama tidak membuat catatan ganda; formulir yang sudah berhasil disimpan tidak dapat dipakai kembali dengan isi berbeda.
+6. Nilai kolektif mengikuti rekap, rapor, dan alur publikasi yang sama dengan input tunggal. Notifikasi siswa dan orang tua tetap dikirim saat pembimbing **Selesaikan pertemuan**, bukan setiap kali tabel disimpan. Pertemuan selesai tidak menerima setoran baru.
+
+Input kolektif hanya tersedia pada web untuk pembimbing kelompok yang masih aktif. Administrator atau koordinator yang bukan pembimbing tidak mendapat hak input tambahan. Migrasi `2026_11_19_000001_buat_batch_setoran_tahfidz.php` menyiapkan penanda pengiriman agar pengiriman ulang aman; tidak mengubah nilai yang sudah ada. Jalankan `php artisan migrate --force` pada server setelah menarik pembaruan. Tidak diperlukan AAB baru.
+
 ## Rekap perkembangan
 
 1. Buka kelompok dan pilih **Rekap perkembangan** untuk melihat siswa yang belum mulai, sedang berjalan, atau sudah menyetor seluruh surah. Ringkasan menghitung anggota yang masih tercatat pada kelompok. Pencarian dan filter hanya mengubah daftar yang tampil.
@@ -66,6 +77,9 @@ Migrasi menyiapkan tabel Tahfidz, daftar surah, dan peran Koordinator Tahfidz. T
 $env:NUSA_CAPTURE_TAHFIDZ='1'
 php artisan test --filter=TahfidzTest
 node tests/Browser/tahfidz.mjs
+$env:NUSA_CAPTURE_TAHFIDZ_KOLEKTIF='1'
+php artisan test --filter=TahfidzKolektifTest
+node tests/Browser/tahfidz-kolektif.mjs
 ```
 
 Pengujian browser memakai HTML yang dirender oleh tes SQLite, bukan kelompok nyata. `PLAYWRIGHT_MODULE` dan `PLAYWRIGHT_CHANNEL` dapat disetel bila Playwright memakai runtime di luar proyek.

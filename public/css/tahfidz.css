@@ -74,6 +74,32 @@
 .tf-rapor-warning { margin: 0; padding: 12px 18px; background: #fff6d9; color: #6c4b10; }
 .tf-rapor-warning a { color: inherit; font-weight: 700; }
 .tf-rapor-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(116px, auto); align-items: center; gap: 12px 20px; padding: 14px 18px; }
+.tf-kolektif-filter { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; }
+.tf-kolektif-filter .field { flex: 1 1 230px; min-width: 0; max-width: 480px; }
+.tf-kolektif-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 14px; color: var(--ui-muted, #445d71); }
+.tf-kolektif-surah { margin: 0 20px 18px; }
+.tf-kolektif-surah summary { min-height: 44px; padding-block: 8px; cursor: pointer; font-weight: 700; }
+.tf-kolektif-surah summary > span { margin-left: 8px; color: #0f766e; }
+.tf-kolektif-surah .tf-target-options { margin-top: 8px; }
+.tf-kolektif-scroll { max-width: 100%; overflow: auto; max-height: 65dvh; overscroll-behavior: contain; scrollbar-gutter: stable; contain: inline-size layout paint; }
+.tf-kolektif-scroll:focus-visible { outline: 2px solid #0f766e; outline-offset: -2px; }
+.tf-kolektif-table { width: 100%; min-width: max-content; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.tf-kolektif-table :is(th, td) { width: 144px; min-width: 144px; max-width: 144px; padding: 12px; border: 0; border-bottom: 1px solid var(--ui-divider, #d5e1ed); border-right: 1px solid var(--ui-divider, #d5e1ed); text-align: left; vertical-align: top; white-space: normal; overflow-wrap: anywhere; }
+.tf-kolektif-table thead th { position: sticky; top: 0; z-index: 2; background: var(--ui-blue-soft, #edf4fa); color: #15477a; font-size: 13px; }
+.tf-kolektif-table .tf-kolektif-student { position: sticky; left: 0; z-index: 1; width: 210px; min-width: 210px; max-width: 210px; background: #fff; }
+.tf-kolektif-table thead .tf-kolektif-student { z-index: 3; background: var(--ui-blue-soft, #edf4fa); }
+.tf-kolektif-table tbody tr:last-child :is(th, td) { border-bottom: 0; }
+.tf-kolektif-table .input { display: block; min-height: 42px; width: 100%; font-variant-numeric: tabular-nums; }
+.tf-kolektif-table .input:not(:placeholder-shown) { border-color: #0f766e; background: #f1faf7; }
+.tf-kolektif-table .input:invalid { border-color: #b42332; }
+.tf-kolektif-reference { display: block; min-height: 40px; margin-top: 7px; color: var(--ui-muted, #445d71); font-size: 12px; font-weight: 400; }
+.tf-kolektif-reference > span { display: block; }
+.tf-kolektif-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+.tf-kolektif-history { display: flex; align-items: center; gap: 4px; margin-top: 7px; width: fit-content; font-size: 12px; font-weight: 600; }
+.tf-kolektif-history svg { width: 14px; height: 14px; }
+.tf-kolektif-save { justify-content: space-between; }
+.tf-kolektif-save > span { font-size: 14px; color: var(--ui-muted, #445d71); }
+.tf-kolektif-error { display: block; color: #b42332; font-size: 12px; margin-top: 6px; }
 
 @media (max-width: 760px) {
     .tf-rekap-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -89,6 +115,8 @@
 }
 
 @media (max-width: 520px) {
+    .tf-kolektif-table .tf-kolektif-student { width: 148px; min-width: 148px; max-width: 148px; }
+    .tf-kolektif-table :is(th, td) { width: 124px; min-width: 124px; max-width: 124px; padding: 10px; }
     .tf-filters, .tf-facts { grid-template-columns: minmax(0, 1fr); }
     .tf-rekap-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tf-meeting-form { grid-template-columns: minmax(0, 1fr); justify-content: stretch; }

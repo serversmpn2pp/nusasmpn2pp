@@ -6,8 +6,10 @@ use App\Models\KelompokTahfidz;
 use App\Models\Pengguna;
 use App\Models\PertemuanTahfidz;
 use App\Models\SetoranTahfidz;
+use App\Models\SurahTahfidz;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class SetoranTahfidzService
@@ -82,6 +84,69 @@ class SetoranTahfidzService
             }
             $pertemuan->update(['selesai_pada' => now(), 'diselesaikan_oleh' => $pengguna->id]);
             $this->notifikasi->pertemuan($pertemuan);
+        });
+    }
+
+    public function simpanKolektif(Pengguna $pengguna, KelompokTahfidz $kelompok, int $pertemuanId, array $data): int
+    {
+        return DB::transaction(function () use ($pengguna, $kelompok, $pertemuanId, $data) {
+            // Kunci yang sama dengan input tunggal, penugasan, dan penyelesaian pertemuan.
+            $kelompok = $this->kunciKelompok($pengguna, $kelompok);
+            $pertemuan = $kelompok->pertemuan()->findOrFail($pertemuanId);
+            $surah = SurahTahfidz::whereBetween('nomor', [78, 114])->whereIn('nomor', $data['surah'])->pluck('nomor')->all();
+            $baris = [];
+            foreach ($data['nilai'] as $anggotaId => $daftar) {
+                if (! preg_match('/^[1-9]\d*$/D', (string) $anggotaId)) {
+                    throw ValidationException::withMessages(['nilai' => 'Daftar siswa tidak valid. Muat ulang tabel.']);
+                }
+                foreach ($daftar as $nomor => $nilai) {
+                    if (! preg_match('/^[1-9]\d*$/D', (string) $nomor) || ! in_array((int) $nomor, $surah, true)) {
+                        throw ValidationException::withMessages(['nilai' => 'Nilai hanya boleh diisi untuk surah Juz 30 yang dipilih.']);
+                    }
+                    if ($nilai === null || (is_string($nilai) && trim($nilai) === '')) {
+                        continue;
+                    }
+                    $baris[] = [
+                        'anggota_tahfidz_id' => (int) $anggotaId,
+                        'nomor_surah' => (int) $nomor,
+                        'nilai' => number_format((float) $nilai, 2, '.', ''),
+                        'penilai_id' => $pengguna->id,
+                    ];
+                }
+            }
+            if ($baris === []) {
+                throw ValidationException::withMessages(['nilai' => 'Isi minimal satu nilai untuk disimpan. Nilai kosong tidak dicatat sebagai setoran.']);
+            }
+
+            usort($baris, fn ($a, $b) => [$a['anggota_tahfidz_id'], $a['nomor_surah']] <=> [$b['anggota_tahfidz_id'], $b['nomor_surah']]);
+            $sidik = hash('sha256', json_encode($baris, JSON_THROW_ON_ERROR));
+            $token = strtolower($data['token_batch']);
+            $batch = DB::table('batch_setoran_tahfidz')->where('pertemuan_tahfidz_id', $pertemuan->id)->where('token', $token)->first();
+            if ($batch) {
+                if ((int) $batch->penilai_id !== (int) $pengguna->id || ! hash_equals($batch->sidik, $sidik)) {
+                    throw ValidationException::withMessages(['token_batch' => 'Formulir ini sudah disimpan dengan isian berbeda. Muat ulang tabel untuk setoran baru.']);
+                }
+
+                return (int) $batch->jumlah;
+            }
+            if ($pertemuan->selesai_pada) {
+                throw ValidationException::withMessages(['pertemuan' => 'Pertemuan sudah selesai. Setoran baru tidak dapat ditambahkan.']);
+            }
+            $pesertaIds = array_map('intval', array_keys($data['nilai']));
+            if ($this->peserta($kelompok)->whereKey($pesertaIds)->count() !== count($pesertaIds)) {
+                throw ValidationException::withMessages(['nilai' => 'Daftar siswa berubah. Pilih anggota aktif dari kelompok ini dan muat ulang tabel.']);
+            }
+            if (! empty($data['siswa']) && collect($baris)->contains(fn ($row) => $row['anggota_tahfidz_id'] !== (int) $data['siswa'])) {
+                throw ValidationException::withMessages(['nilai' => 'Isian tidak sesuai dengan siswa yang dipilih.']);
+            }
+
+            $pertemuan->setoran()->createMany(array_map(fn ($row) => $row + ['token_setoran' => (string) Str::uuid()], $baris));
+            DB::table('batch_setoran_tahfidz')->insert([
+                'pertemuan_tahfidz_id' => $pertemuan->id, 'penilai_id' => $pengguna->id,
+                'token' => $token, 'sidik' => $sidik, 'jumlah' => count($baris), 'created_at' => now(),
+            ]);
+
+            return count($baris);
         });
     }
 

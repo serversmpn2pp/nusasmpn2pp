@@ -3,6 +3,7 @@
 use App\Http\Controllers\PertemuanTahfidzController;
 use App\Http\Controllers\RaporTahfidzController;
 use App\Http\Controllers\RekapTahfidzController;
+use App\Http\Controllers\SetoranKolektifTahfidzController;
 use App\Http\Controllers\TahfidzAnakController;
 use App\Http\Controllers\TahfidzController;
 use App\Http\Controllers\WisudaTahfidzController;
@@ -29,6 +30,13 @@ Route::prefix('tahfidz/{kelompok}')->name('tahfidz.')->middleware('akun_pegawai'
         Route::post('/pertemuan/{pertemuan}/setoran', 'simpan')->whereNumber('pertemuan')
             ->middleware('throttle:120,1,tahfidz-setoran:')->name('setoran.store');
         Route::get('/anggota/{anggota}/riwayat', 'riwayat')->whereNumber('anggota')->name('anggota.riwayat');
+    });
+
+Route::prefix('tahfidz/{kelompok}/pertemuan/{pertemuan}/kolektif')->name('tahfidz.kolektif.')
+    ->middleware('akun_pegawai')->whereNumber(['kelompok', 'pertemuan'])
+    ->controller(SetoranKolektifTahfidzController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->middleware('throttle:30,1,tahfidz-kolektif:')->name('store');
     });
 
 Route::prefix('tahfidz')->name('tahfidz.')->middleware('akun_pegawai')->group(function () {

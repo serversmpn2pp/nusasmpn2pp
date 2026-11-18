@@ -2254,7 +2254,7 @@
                 && app(\App\Services\Tahfidz\AksesTahfidz::class)->lihat($penggunaAktif)) {
                 $menuTahfidz = [
                     ['label' => 'Tahfidz', 'route' => 'tahfidz.index',
-                        'active' => ['tahfidz.index', 'tahfidz.show', 'tahfidz.create', 'tahfidz.edit', 'tahfidz.surah', 'tahfidz.anggota.*', 'tahfidz.pertemuan.*', 'tahfidz.rekap.*', 'tahfidz.wisuda.*'],
+                        'active' => ['tahfidz.index', 'tahfidz.show', 'tahfidz.create', 'tahfidz.edit', 'tahfidz.surah', 'tahfidz.anggota.*', 'tahfidz.pertemuan.*', 'tahfidz.kolektif.*', 'tahfidz.rekap.*', 'tahfidz.wisuda.*'],
                         'initial' => 'TH', 'icon' => 'book-open', 'izin' => null, 'subgroup' => 'Penilaian'],
                     ['label' => 'Rapor Tahfidz', 'route' => 'tahfidz.rapor.index', 'active' => ['tahfidz.rapor.*'],
                         'initial' => 'RT', 'icon' => 'file-text', 'izin' => null, 'subgroup' => 'Penilaian'],
