@@ -6,6 +6,7 @@ use App\Models\AbsensiSiswa;
 use App\Models\AnggotaKelas;
 use App\Models\Kelas;
 use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
+use App\Services\Piket\AksesCatatanPresensiPiketService;
 use App\Services\Piket\CatatKehadiranSiswaPiketService;
 use App\Services\Piket\GuruPiketHariIniService;
 use Illuminate\Http\Request;
@@ -69,6 +70,11 @@ class PiketKehadiranSiswaController extends Controller
             ->whereIn('siswa_id', $anggotaKelas->getCollection()->pluck('siswa_id'))
             ->get()
             ->keyBy('siswa_id');
+        $aksesCatatan = app(AksesCatatanPresensiPiketService::class);
+        $aksesCatatan->muatBukti($absensiPerSiswa, $tanggal);
+        $rincianPerSiswa = $anggotaKelas->getCollection()->mapWithKeys(fn ($anggota) => [
+            $anggota->siswa_id => $aksesCatatan->rincian($absensiPerSiswa->get($anggota->siswa_id), $anggota),
+        ]);
         $cakupanAnggota = AnggotaKelas::query()
             ->where('tahun_pelajaran_id', $tahunPelajaranAktif->id)
             ->where('status_keanggotaan', 'aktif')
@@ -90,6 +96,7 @@ class PiketKehadiranSiswaController extends Controller
             'cari' => $cari,
             'anggotaKelas' => $anggotaKelas,
             'absensiPerSiswa' => $absensiPerSiswa,
+            'rincianPerSiswa' => $rincianPerSiswa,
             'aturanHadirManual' => app(PengaturanPoinKeterlambatanService::class)->aturanHadirManual($tahunPelajaranAktif->id),
             'ringkasan' => [
                 'total' => $jumlahSiswa,

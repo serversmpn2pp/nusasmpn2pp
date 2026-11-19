@@ -40,7 +40,9 @@ class GuruPiketHariIniService
     public function jadwalHariIni(?Pengguna $pengguna, TahunPelajaran $tahunPelajaran): ?JadwalPiketGuru
     {
         $kodeHari = $this->kodeHariIni();
-        if (! $pengguna?->pegawai_id || ! $kodeHari || ! $this->guruMapelAktif($pengguna, $tahunPelajaran)) {
+        if (! $pengguna?->aktif || ! $pengguna->pegawai_id || ! $pengguna->pegawai?->aktif
+            || $pengguna->akunSiswa() || $pengguna->akunOrangTua()
+            || ! $kodeHari || ! $this->guruMapelAktif($pengguna, $tahunPelajaran)) {
             return null;
         }
 
@@ -54,6 +56,7 @@ class GuruPiketHariIniService
 
     public function pastikanSedangPiket(?Pengguna $pengguna, TahunPelajaran $tahunPelajaran): JadwalPiketGuru
     {
+        abort_unless($pengguna?->memilikiIzin('piket_guru.catat_kehadiran'), 403, 'Akun tidak memiliki izin pencatatan kehadiran piket.');
         $jadwal = $this->jadwalHariIni($pengguna, $tahunPelajaran);
 
         abort_unless($jadwal, 403, 'Pencatatan hanya dapat dilakukan oleh guru yang sedang bertugas piket hari ini.');

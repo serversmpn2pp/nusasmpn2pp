@@ -10,7 +10,22 @@
         .attendance-form[open] summary { margin-bottom:10px; }
         .attendance-form-fields { display:grid; gap:8px; }
         .attendance-form-fields textarea { min-height:70px; }
+        .picket-evidence { display:grid; gap:4px; min-width:160px; margin-bottom:8px; font-size:13px; overflow-wrap:anywhere; }
+        .picket-evidence small { color:var(--muted); }
+        .picket-lock-reason { display:block; max-width:280px; color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+        .picket-desktop .table-wrap { contain:inline-size layout paint; }
+        .picket-desktop .employee-table { min-width:1080px; table-layout:fixed; }
+        .picket-desktop :is(th,td):nth-child(1) { width:48px; }
+        .picket-desktop :is(th,td):nth-child(2) { width:200px; }
+        .picket-desktop :is(th,td):nth-child(3) { width:92px; }
+        .picket-desktop :is(th,td):nth-child(4) { width:88px; }
+        .picket-desktop :is(th,td):nth-child(6) { width:300px; }
+        .picket-desktop .badge { white-space:nowrap; }
         .picket-mobile-list { display:none; }
+        .picket-mobile-list .mobile-card { background:var(--panel,#fff); border:1px solid var(--line); border-radius:6px; padding:14px; min-width:0; }
+        .picket-mobile-list .mobile-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+        .picket-mobile-list .mobile-card-head > div { min-width:0; }
+        .picket-mobile-list .mobile-card-head .badge { flex:none; width:fit-content; white-space:nowrap; }
         @media(max-width:820px){ .picket-desktop { display:none; } .picket-mobile-list { display:grid; gap:12px; } }
     </style>
 
@@ -47,19 +62,20 @@
                     $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
                     $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
                     $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
-                    $bolehDicatat = ! $absensi || $absensi->dapatDicatatPiket();
+                    $rincianPiket = $rincianPerSiswa->get($anggota->siswa_id);
+                    $bolehDicatat = $rincianPiket['dapat_dicatat'];
                 @endphp
                 <tr>
                     <td>{{ $anggotaKelas->firstItem() + $loop->index }}</td>
                     <td><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></td>
                     <td>{{ $anggota->kelas?->nama }}</td>
                     <td><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></td>
-                    <td>{{ $absensi?->catatanKehadiran() ?: '-' }}</td>
+                    <td>@include('piket-kehadiran-siswa._rincian'){{ $absensi?->catatanKehadiran() ?: '-' }}</td>
                     <td>
                         @if ($bolehDicatat)
                             @include('piket-kehadiran-siswa._form-kehadiran')
                         @else
-                            <span class="person-meta">Tidak dapat diubah dari piket</span>
+                            <span class="picket-lock-reason">{{ $rincianPiket['alasan_terkunci'] }}</span>
                         @endif
                     </td>
                 </tr>
@@ -76,9 +92,19 @@
                 $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
                 $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
                 $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
-                $bolehDicatat = ! $absensi || $absensi->dapatDicatatPiket();
+                $rincianPiket = $rincianPerSiswa->get($anggota->siswa_id);
+                $bolehDicatat = $rincianPiket['dapat_dicatat'];
             @endphp
-            <article class="mobile-card"><div class="mobile-card-head"><div><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $anggota->kelas?->nama }} &middot; NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></div>@if($absensi?->catatanKehadiran())<p class="help-text" style="margin-top:10px;">{{ $absensi->catatanKehadiran() }}</p>@endif @if($bolehDicatat) @include('piket-kehadiran-siswa._form-kehadiran') @endif</article>
+            <article class="mobile-card">
+                <div class="mobile-card-head"><div><p class="person-name">{{ $anggota->siswa?->nama_lengkap }}</p><p class="person-meta">{{ $anggota->kelas?->nama }} &middot; NISN {{ $anggota->siswa?->nisn ?: '-' }}</p></div><span class="badge {{ $kelasBadge }}">{{ $labelStatus }}</span></div>
+                @include('piket-kehadiran-siswa._rincian')
+                @if($absensi?->catatanKehadiran())<p class="help-text" style="margin-top:10px;">{{ $absensi->catatanKehadiran() }}</p>@endif
+                @if($bolehDicatat)
+                    @include('piket-kehadiran-siswa._form-kehadiran')
+                @else
+                    <p class="picket-lock-reason">{{ $rincianPiket['alasan_terkunci'] }}</p>
+                @endif
+            </article>
         @empty
             <div class="panel empty-state">Tidak ada siswa sesuai filter.</div>
         @endforelse
@@ -98,9 +124,10 @@
             const jam = gangguan.querySelector('input');
             const sync = () => {
                 alasan.hidden = status.value !== 'hadir'; pilihan.disabled = alasan.hidden; pilihan.required = !alasan.hidden;
-                gangguan.hidden = alasan.hidden || pilihan.value !== 'scan_bermasalah';
-                jam.disabled = gangguan.hidden; jam.required = !gangguan.hidden;
-                form.querySelector('[data-info-sanksi]').hidden = !gangguan.hidden || !pilihan.value;
+                gangguan.hidden = alasan.hidden;
+                jam.disabled = gangguan.hidden; jam.required = !gangguan.hidden && pilihan.value === 'scan_bermasalah';
+                form.querySelector('[data-info-verifikasi]').hidden = pilihan.value !== 'scan_bermasalah';
+                form.querySelector('[data-info-sanksi]').hidden = alasan.hidden || pilihan.value === 'scan_bermasalah' || !pilihan.value;
             };
             status.addEventListener('change', sync); pilihan.addEventListener('change', sync); sync();
         });

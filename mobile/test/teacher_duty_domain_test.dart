@@ -2,6 +2,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nusa/features/teacher_duty/domain/teacher_duty.dart';
 
 void main() {
+  test('parses separate sources and the reason a duty record is locked', () {
+    final student = MyDutyStudent.fromJson({
+      'anggota_kelas_id': 12,
+      'siswa': {'nama': 'Murid Simulasi'},
+      'kelas': {'nama': 'VII.A'},
+      'presensi': {
+        'status': 'hadir',
+        'dapat_dicatat': false,
+        'jam_masuk': '06:22',
+        'jam_pulang': '14:40',
+        'sumber_masuk_label': 'Input manual',
+        'sumber_pulang_label': 'Scanner',
+        'alasan_terkunci': 'Keputusan verifikasi scan dilindungi.',
+        'pencatat_terakhir': {
+          'nama': 'Petugas Simulasi',
+          'waktu_label': '19/11/2026 09:48:00',
+        },
+      },
+    });
+    expect(student.checkInSourceLabel, 'Input manual');
+    expect(student.checkOutSourceLabel, 'Scanner');
+    expect(student.checkOutTime, '14:40');
+    expect(student.lastRecordedBy, 'Petugas Simulasi');
+    expect(student.lastRecordedAt, '19/11/2026 09:48:00');
+    expect(student.lockReason, 'Keputusan verifikasi scan dilindungi.');
+    expect(MyDutyStudent.fromJson({}).lastRecordedBy, isNull);
+  });
+
   test('parses teacher duty schedule catalog', () {
     final catalog = DutyScheduleCatalog.fromJson({
       'items': [

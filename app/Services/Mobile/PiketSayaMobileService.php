@@ -9,13 +9,17 @@ use App\Models\Kelas;
 use App\Models\Pengguna;
 use App\Models\Siswa;
 use App\Services\Pembinaan\PengaturanPoinKeterlambatanService;
+use App\Services\Piket\AksesCatatanPresensiPiketService;
 use App\Services\Piket\GuruPiketHariIniService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 
 class PiketSayaMobileService
 {
-    public function __construct(private readonly GuruPiketHariIniService $piket) {}
+    public function __construct(
+        private readonly GuruPiketHariIniService $piket,
+        private readonly AksesCatatanPresensiPiketService $akses,
+    ) {}
 
     public function halaman(Pengguna $pengguna, array $filter): array
     {
@@ -29,7 +33,8 @@ class PiketSayaMobileService
             ->orderByRaw("case hari when 'senin' then 1 when 'selasa' then 2 when 'rabu' then 3 when 'kamis' then 4 when 'jumat' then 5 when 'sabtu' then 6 else 7 end")
             ->get();
         $guruMapelAktif = $this->piket->guruMapelAktif($pengguna, $tahun);
-        $dapatMencatat = $guruMapelAktif && $jadwalSaya->contains('hari', $kodeHari);
+        $dapatMencatat = $pengguna->memilikiIzin('piket_guru.catat_kehadiran')
+            && (bool) $this->piket->jadwalHariIni($pengguna, $tahun);
         $kelas = Kelas::query()
             ->where('tahun_pelajaran_id', $tahun->id)
             ->where('aktif', true)
@@ -96,6 +101,7 @@ class PiketSayaMobileService
         $anggota = collect($paginator->items());
         $absensi = AbsensiSiswa::query()->whereDate('tanggal', $tanggal)
             ->whereIn('siswa_id', $anggota->pluck('siswa_id'))->get()->keyBy('siswa_id');
+        $this->akses->muatBukti($absensi, $tanggal);
 
         return [
             'items' => $anggota->map(fn (AnggotaKelas $item) => $this->siswa($item, $absensi->get($item->siswa_id)))->values(),
@@ -143,6 +149,7 @@ class PiketSayaMobileService
             ] : null,
             'kelas' => $anggota->kelas ? ['id' => (int) $anggota->kelas->id, 'nama' => $anggota->kelas->nama] : null,
             'presensi' => [
+                ...$this->akses->rincian($absensi, $anggota),
                 'status' => $absensi?->status_kehadiran ?? 'belum_scan',
                 'status_label' => match ($absensi?->status_kehadiran) {
                     'hadir' => 'Hadir', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa', default => 'Belum scan',
@@ -151,12 +158,11 @@ class PiketSayaMobileService
                 'catatan' => $absensi?->catatan,
                 'alasan_hadir_manual' => $absensi?->alasan_hadir_manual,
                 'perlu_verifikasi_scan' => $absensi?->menungguVerifikasiScan() ?? false,
-                'hanya_scan_pulang' => $absensi?->hanyaTercatatPulang() ?? false,
                 'keterangan_sanksi_manual' => $absensi?->keteranganSanksiManual(),
                 'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),
                 'poin_keterlambatan' => (int) ($absensi?->poin_keterlambatan_terhitung ?? 0),
                 'jam_masuk' => $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 5) : null,
-                'dapat_dicatat' => ! $absensi || $absensi->dapatDicatatPiket(),
+                'jam_pulang' => $absensi?->jam_pulang ? substr($absensi->jam_pulang, 0, 5) : null,
             ],
         ];
     }

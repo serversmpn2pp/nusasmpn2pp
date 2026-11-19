@@ -222,6 +222,12 @@ class MyDutyStudent {
     this.scanNeedsReview = false,
     this.onlyCheckout = false,
     this.manualSanctionNote,
+    this.checkOutTime,
+    this.checkInSourceLabel,
+    this.checkOutSourceLabel,
+    this.lockReason,
+    this.lastRecordedBy,
+    this.lastRecordedAt,
   });
   factory MyDutyStudent.fromJson(Map<String, dynamic> json) {
     final student = _map(json['siswa']) ?? const {};
@@ -244,6 +250,13 @@ class MyDutyStudent {
       scanNeedsReview: attendance['perlu_verifikasi_scan'] as bool? ?? false,
       onlyCheckout: attendance['hanya_scan_pulang'] as bool? ?? false,
       manualSanctionNote: attendance['keterangan_sanksi_manual'] as String?,
+      checkOutTime: attendance['jam_pulang'] as String?,
+      checkInSourceLabel: attendance['sumber_masuk_label'] as String?,
+      checkOutSourceLabel: attendance['sumber_pulang_label'] as String?,
+      lockReason: attendance['alasan_terkunci'] as String?,
+      lastRecordedBy: _map(attendance['pencatat_terakhir'])?['nama'] as String?,
+      lastRecordedAt:
+          _map(attendance['pencatat_terakhir'])?['waktu_label'] as String?,
     );
   }
   final int classMemberId;
@@ -262,6 +275,12 @@ class MyDutyStudent {
   final bool scanNeedsReview;
   final bool onlyCheckout;
   final String? manualSanctionNote;
+  final String? checkOutTime;
+  final String? checkInSourceLabel;
+  final String? checkOutSourceLabel;
+  final String? lockReason;
+  final String? lastRecordedBy;
+  final String? lastRecordedAt;
 }
 
 class MyDutyDashboard {

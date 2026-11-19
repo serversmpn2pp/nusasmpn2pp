@@ -200,7 +200,10 @@ class _MyTeacherDutyViewState extends ConsumerState<MyTeacherDutyView> {
   Future<void> _record(MyDutyStudent student) async {
     if (!student.canRecord) {
       _show(
-        student.scanNeedsReview ? 'Scan masuk sedang menunggu verifikasi.' : 'Presensi ini hanya dapat diubah melalui petugas koreksi yang berwenang.',
+        student.lockReason ??
+            (student.scanNeedsReview
+                ? 'Scan masuk sedang menunggu verifikasi.'
+                : 'Presensi ini hanya dapat diubah melalui petugas koreksi yang berwenang.'),
         error: true,
       );
       return;
@@ -487,6 +490,42 @@ class _StudentCard extends StatelessWidget {
                         fontSize: 11,
                       ),
                     ),
+                    if (student.checkInTime != null ||
+                        student.checkInSourceLabel != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          'Masuk ${student.checkInTime ?? '-'} · ${student.checkInSourceLabel ?? 'Sumber belum diketahui'}',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    if (student.checkOutTime != null)
+                      Text(
+                        'Pulang ${student.checkOutTime} · ${student.checkOutSourceLabel ?? 'Sumber belum diketahui'}',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    if (student.lastRecordedBy != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Pencatat terakhir: ${student.lastRecordedBy}\n${student.lastRecordedAt ?? '-'}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: NusaColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    if (!student.canRecord && student.lockReason != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          student.lockReason!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: NusaColors.textSecondary,
+                          ),
+                        ),
+                      ),
                     if (student.notes?.isNotEmpty == true)
                       Padding(
                         padding: const EdgeInsets.only(top: 3),

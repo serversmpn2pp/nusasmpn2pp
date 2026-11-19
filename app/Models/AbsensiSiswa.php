@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\Absensi\PenugasanPresensiSiswaService;
+use App\Services\Piket\AksesCatatanPresensiPiketService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -83,8 +84,7 @@ class AbsensiSiswa extends Model
 
     public function dapatDicatatPiket(): bool
     {
-        return ! $this->menungguVerifikasiScan() && ! $this->penugasan_presensi_id
-            && ($this->sumber === 'guru_piket' || $this->hanyaTercatatPulang());
+        return app(AksesCatatanPresensiPiketService::class)->rincian($this)['dapat_dicatat'];
     }
 
     public function hanyaTercatatPulang(): bool

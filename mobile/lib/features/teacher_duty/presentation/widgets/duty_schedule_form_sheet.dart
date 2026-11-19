@@ -282,6 +282,19 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
         : widget.rule.supportsScanIssue && widget.student.manualReason == null
         ? ''
         : ManualAttendanceRule.normalizeReason(widget.student.manualReason);
+    final parts = widget.student.checkInTime?.split(':');
+    if (parts != null && parts.length >= 2) {
+      final hour = int.tryParse(parts[0]);
+      final minute = int.tryParse(parts[1]);
+      if (hour != null &&
+          minute != null &&
+          hour >= 0 &&
+          hour < 24 &&
+          minute >= 0 &&
+          minute < 60) {
+        _arrival = TimeOfDay(hour: hour, minute: minute);
+      }
+    }
   }
 
   @override
@@ -310,7 +323,8 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
               style: const TextStyle(color: NusaColors.textSecondary),
             ),
             const SizedBox(height: 16),
-            if (!widget.student.onlyCheckout)
+            if (!widget.student.onlyCheckout &&
+                widget.student.checkOutTime == null)
               SegmentedButton<String>(
                 showSelectedIcon: false,
                 segments: const [
@@ -358,27 +372,25 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
                 ),
                 onChanged: (value) => setState(() => _reason = value!),
               ),
-              if (_reason == ManualAttendanceRule.scanIssue) ...[
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  key: const Key('duty-scan-issue-arrival'),
-                  icon: const Icon(Icons.schedule),
-                  label: Text(
-                    _arrival == null
-                        ? 'Jam datang'
-                        : 'Jam datang ${_arrival!.format(context)}',
-                  ),
-                  onPressed: () async {
-                    final time = await showTimePicker(
-                      context: context,
-                      initialTime: _arrival ?? TimeOfDay.now(),
-                    );
-                    if (mounted && time != null) {
-                      setState(() => _arrival = time);
-                    }
-                  },
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                key: const Key('duty-scan-issue-arrival'),
+                icon: const Icon(Icons.schedule),
+                label: Text(
+                  _arrival == null
+                      ? 'Jam datang'
+                      : 'Jam datang ${_arrival!.format(context)}',
                 ),
-              ],
+                onPressed: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: _arrival ?? TimeOfDay.now(),
+                  );
+                  if (mounted && time != null) {
+                    setState(() => _arrival = time);
+                  }
+                },
+              ),
               const SizedBox(height: 12),
             ],
             TextField(
@@ -440,7 +452,7 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
       _status,
       _notes.text.trim(),
       _status == 'hadir' ? _reason : null,
-      scanIssue && time != null
+      _status == 'hadir' && time != null
           ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
           : null,
     ));

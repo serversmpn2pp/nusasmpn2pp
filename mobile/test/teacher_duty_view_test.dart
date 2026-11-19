@@ -9,6 +9,76 @@ import 'package:nusa/features/teacher_duty/presentation/teacher_duty_schedule_vi
 import 'package:nusa/shared/domain/manual_attendance.dart';
 
 void main() {
+  testWidgets('piket menampilkan sumber, pencatat, dan alasan kunci', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final remote = _FakeTeacherDutyRemoteDataSource(
+      studentOverride: const MyDutyStudent(
+        classMemberId: 10,
+        name: 'Murid Simulasi Terkunci',
+        initials: 'MS',
+        schoolClass: 'VII.A',
+        status: 'hadir',
+        statusLabel: 'Hadir',
+        canRecord: false,
+        checkInTime: '06:22',
+        checkOutTime: '14:40',
+        checkInSourceLabel: 'Scanner',
+        checkOutSourceLabel: 'Scanner',
+        lockReason: 'Ada bukti scan masuk berhasil.',
+        lastRecordedBy: 'Petugas Simulasi',
+        lastRecordedAt: '19/11/2026 09:48:00',
+      ),
+    );
+    await _pump(tester, remote, const MyTeacherDutyView());
+    expect(find.text('Masuk 06:22 · Scanner'), findsOneWidget);
+    expect(find.text('Pulang 14:40 · Scanner'), findsOneWidget);
+    expect(find.textContaining('Petugas Simulasi'), findsOneWidget);
+    await tester.tap(find.text('Murid Simulasi Terkunci'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ada bukti scan masuk berhasil.'), findsWidgets);
+    expect(remote.recordCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('koreksi masuk manual menjaga jam datang setelah scan pulang', (
+    tester,
+  ) async {
+    final remote = _FakeTeacherDutyRemoteDataSource(
+      studentOverride: const MyDutyStudent(
+        classMemberId: 10,
+        name: 'Murid Manual Simulasi',
+        initials: 'MM',
+        schoolClass: 'VII.A',
+        status: 'hadir',
+        statusLabel: 'Hadir',
+        canRecord: true,
+        checkInTime: '06:22',
+        checkOutTime: '14:40',
+        checkInSourceLabel: 'Input manual',
+        checkOutSourceLabel: 'Scanner',
+        manualReason: 'tidak_membawa_kartu',
+        notes: 'Kartu tertinggal di rumah.',
+      ),
+    );
+    await _pump(tester, remote, const MyTeacherDutyView());
+    await tester.tap(find.text('Murid Manual Simulasi'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SegmentedButton<String>), findsNothing);
+    expect(find.textContaining('Jam datang'), findsOneWidget);
+    await tester.ensureVisible(find.text('Simpan Kehadiran'));
+    await tester.tap(find.text('Simpan Kehadiran'));
+    await tester.pumpAndSettle();
+    expect(remote.lastAttendanceStatus, 'hadir');
+    expect(remote.lastCheckInTime, '06:22');
+    expect(remote.recordCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('jadwal guru piket rapi pada layar Android sempit', (
     tester,
   ) async {
@@ -153,7 +223,11 @@ Future<void> _pump(
 
 final class _FakeTeacherDutyRemoteDataSource
     implements TeacherDutyRemoteDataSource {
-  _FakeTeacherDutyRemoteDataSource({this.supportsScanIssue = false});
+  _FakeTeacherDutyRemoteDataSource({
+    this.supportsScanIssue = false,
+    this.studentOverride,
+  });
+  final MyDutyStudent? studentOverride;
   final bool supportsScanIssue;
   String? lastCheckInTime;
   static const year = DutyAcademicYear(id: 1, name: '2026/2027', active: true);
@@ -221,28 +295,29 @@ final class _FakeTeacherDutyRemoteDataSource
     activeSubjectTeacher: true,
     canRecordToday: true,
     items: [
-      MyDutyStudent(
-        classMemberId: 10,
-        name: 'Siswa Piket NUSA',
-        initials: 'SP',
-        schoolClass: 'VII.A',
-        status: lastAttendanceStatus,
-        statusLabel: switch (lastAttendanceStatus) {
-          'hadir' => 'Hadir',
-          'sakit' => 'Sakit',
-          'izin' => 'Izin',
-          _ => 'Belum scan',
-        },
-        canRecord: true,
-        scanNeedsReview: lastManualReason == ManualAttendanceRule.scanIssue,
-        studentNumber: '26001',
-        notes: switch (lastAttendanceStatus) {
-          'hadir' => 'Lupa membawa kartu',
-          'sakit' => 'Demam',
-          'izin' => 'Izin dari orang tua',
-          _ => null,
-        },
-      ),
+      studentOverride ??
+          MyDutyStudent(
+            classMemberId: 10,
+            name: 'Siswa Piket NUSA',
+            initials: 'SP',
+            schoolClass: 'VII.A',
+            status: lastAttendanceStatus,
+            statusLabel: switch (lastAttendanceStatus) {
+              'hadir' => 'Hadir',
+              'sakit' => 'Sakit',
+              'izin' => 'Izin',
+              _ => 'Belum scan',
+            },
+            canRecord: true,
+            scanNeedsReview: lastManualReason == ManualAttendanceRule.scanIssue,
+            studentNumber: '26001',
+            notes: switch (lastAttendanceStatus) {
+              'hadir' => 'Lupa membawa kartu',
+              'sakit' => 'Demam',
+              'izin' => 'Izin dari orang tua',
+              _ => null,
+            },
+          ),
     ],
     summary: MyDutySummary(
       total: 1,

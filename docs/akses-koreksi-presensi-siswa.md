@@ -15,6 +15,15 @@ Izin koreksi tidak cukup berdiri sendiri. `KoreksiPresensiSiswaService` memeriks
 
 Wali kelas yang juga menjadi BK atau Waka Kurikulum tidak memperoleh cakupan koreksi seluruh kelas. Cakupan lihat rekap yang lebih luas karena tugas lain tidak sama dengan kewenangan mengubah presensi. Hanya administrator atau Waka Kesiswaan yang mendapat cakupan koreksi seluruh kelas.
 
+### Koreksi Terbatas Guru Piket
+
+- Pada hari tugas, guru piket dengan izin `piket_guru.catat_kehadiran` dapat mencatat siswa yang belum tercatat dan memperbaiki catatan manual hari ini, termasuk catatan yang awalnya dibuat melalui koreksi manual Admin/wali kelas. Akun, pegawai, kelas, siswa, dan keanggotaan harus aktif pada tahun pelajaran aktif.
+- Web dan API memakai `AksesCatatanPresensiPiketService` untuk status tombol dan pemeriksaan penyimpanan. Catatan dengan bukti scan masuk berhasil tetap terkunci meskipun sumber hariannya kemudian berlabel manual. Catatan lama dengan sumber scanner tanpa bukti manual juga tetap dilindungi.
+- Scan pulang tidak menghilangkan bukti input masuk manual: sumber masuk dan pulang ditentukan terpisah dari log scan dan riwayat koreksi. Jam, status, dan menit pulang yang sudah tersimpan dipertahankan ketika masuk manual diperbaiki. Jika jam pulang sudah ada, perubahan menjadi Sakit/Izin harus melalui Admin/Wakil Kesiswaan.
+- Scan bermasalah yang menunggu atau sudah memiliki keputusan verifikasi, serta penugasan sekolah, tidak dapat diubah melalui piket. Kasus yang hanya memiliki scan pulang hanya bisa dicatat sebagai gangguan scan masuk untuk diverifikasi, bukan langsung diberi sanksi kartu.
+- Jam datang manual dapat diperbaiki dengan alasan wajib. Jam tidak boleh berada di masa depan atau melewati jam pulang. Riwayat mencatat akun dan waktu koreksi; aturan dan sinkronisasi poin yang sudah ada tetap dipakai, termasuk pembatalan poin bila status dikoreksi menjadi Sakit/Izin.
+- Respons API mempertahankan `dapat_dicatat` dan menambah `sumber_masuk_label`, `sumber_pulang_label`, `jam_pulang`, `alasan_terkunci`, serta `pencatat_terakhir`. Android lama tetap menerima perbaikan izin tombol dari server; tampilan rincian dan formulir baru memerlukan rilis aplikasi native yang diperbarui. Tidak ada migrasi database untuk perubahan ini.
+
 Peran dan izin yang diperlukan harus aktif. Akun siswa/orang tua yang salah dipasangi role tidak dapat mengoreksi presensi. Semua koreksi tetap melalui perhitungan keterlambatan, sinkronisasi poin, dan riwayat yang sudah ada. Batas hasil scan diperiksa lagi setelah catatan dikunci dalam transaksi.
 
 ## Web dan Android

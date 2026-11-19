@@ -16,7 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class CatatKehadiranSiswaPiketService
 {
-    public function __construct(private readonly GuruPiketHariIniService $piket) {}
+    public function __construct(
+        private readonly GuruPiketHariIniService $piket,
+        private readonly AksesCatatanPresensiPiketService $akses,
+    ) {}
 
     public function catat(Pengguna $pengguna, AnggotaKelas $anggotaKelas, string $status, string $catatan, ?string $alasan = null, ?string $jamDatang = null): AbsensiSiswa
     {
@@ -25,12 +28,15 @@ class CatatKehadiranSiswaPiketService
 
         abort_unless(
             (int) $anggotaKelas->tahun_pelajaran_id === (int) $tahunPelajaran->id
-                && $anggotaKelas->status_keanggotaan === 'aktif',
+                && $anggotaKelas->status_keanggotaan === 'aktif'
+                && $anggotaKelas->siswa?->aktif && $anggotaKelas->kelas?->aktif,
             404,
         );
 
         return DB::transaction(function () use ($pengguna, $anggotaKelas, $tahunPelajaran, $status, $catatan, $alasan, $jamDatang) {
-            AnggotaKelas::whereKey($anggotaKelas->id)->lockForUpdate()->firstOrFail();
+            $anggotaKelas = AnggotaKelas::whereKey($anggotaKelas->id)->lockForUpdate()->firstOrFail();
+            abort_unless($anggotaKelas->status_keanggotaan === 'aktif' && $anggotaKelas->siswa?->aktif && $anggotaKelas->kelas?->aktif, 404);
+            $this->piket->pastikanSedangPiket($pengguna, $tahunPelajaran);
             $tanggal = now()->toDateString();
             $absensi = AbsensiSiswa::query()
                 ->whereDate('tanggal', $tanggal)
@@ -38,7 +44,14 @@ class CatatKehadiranSiswaPiketService
                 ->lockForUpdate()
                 ->first();
 
-            abort_if($absensi?->menungguVerifikasiScan(), 403, 'Kasus sedang menunggu verifikasi Admin atau Wakil Kesiswaan.');
+            $akses = $this->akses->rincian($absensi, $anggotaKelas);
+            abort_unless($akses['dapat_dicatat'], 403, $akses['alasan_terkunci']);
+            if ($akses['hanya_scan_pulang'] && ($status !== 'hadir' || $alasan !== AbsensiSiswa::SCAN_BERMASALAH)) {
+                throw ValidationException::withMessages(['alasan_hadir_manual' => 'Scan pulang sudah tercatat. Catat gangguan scan masuk untuk diverifikasi petugas.']);
+            }
+            if ($status !== 'hadir' && $absensi?->jam_pulang) {
+                throw ValidationException::withMessages(['status_kehadiran' => 'Jam pulang sudah tercatat. Perubahan menjadi Sakit atau Izin harus melalui Admin atau Wakil Kesiswaan.']);
+            }
             $menunggu = $status === 'hadir' && $alasan === AbsensiSiswa::SCAN_BERMASALAH;
             if ($menunggu && ($absensi?->memilikiSanksiManual() || $absensi?->penugasan_presensi_id)) {
                 throw ValidationException::withMessages(['alasan_hadir_manual' => 'Laporkan koreksi catatan ini kepada Admin atau Wakil Kesiswaan.']);
@@ -47,21 +60,9 @@ class CatatKehadiranSiswaPiketService
                 throw ValidationException::withMessages(['jam_masuk' => 'Jam datang dan keterangan gangguan scan wajib diisi.']);
             }
 
-            if ($absensi?->jam_masuk && $absensi->sumber !== 'guru_piket') {
-                throw ValidationException::withMessages([
-                    'status_kehadiran' => 'Siswa sudah melakukan scan masuk sehingga tidak dapat dikoreksi dari menu guru piket.',
-                ]);
-            }
-
-            if ($absensi && ($absensi->penugasan_presensi_id || ($absensi->sumber !== 'guru_piket' && ! ($menunggu && $absensi->hanyaTercatatPulang())))) {
-                throw ValidationException::withMessages([
-                    'status_kehadiran' => 'Kehadiran siswa sudah dicatat oleh petugas lain. Gunakan fitur koreksi presensi yang berwenang untuk mengubahnya.',
-                ]);
-            }
-
             $statusSebelum = $absensi?->status_kehadiran;
-            $jamMasuk = $menunggu ? $jamDatang : ($status === 'hadir' ? ($absensi?->jam_masuk ?: now()->format('H:i:s')) : null);
-            if ($menunggu && ((strlen($jamMasuk) === 5 ? $jamMasuk.':00' : $jamMasuk) > now()->format('H:i:s')
+            $jamMasuk = $status === 'hadir' ? ($jamDatang ?: ($absensi?->jam_masuk ?: now()->format('H:i:s'))) : null;
+            if ($jamMasuk && ((strlen($jamMasuk) === 5 ? $jamMasuk.':00' : $jamMasuk) > now()->format('H:i:s')
                 || ($absensi?->jam_pulang && substr($jamMasuk, 0, 5) > substr($absensi->jam_pulang, 0, 5)))) {
                 throw ValidationException::withMessages(['jam_masuk' => 'Jam datang tidak boleh melewati jam sekarang atau jam pulang.']);
             }
@@ -84,9 +85,9 @@ class CatatKehadiranSiswaPiketService
                 'alasan_hadir_manual' => $status === 'hadir'
                     ? AbsensiSiswa::normalisasiAlasanHadirManual($alasan ?? $absensi->alasan_hadir_manual) : null,
                 'sanksi_manual_menit' => $menit > 0 ? AbsensiSiswa::SANKSI_MANUAL_MENIT : 0,
-                'jam_pulang' => $menunggu ? $absensi->jam_pulang : null,
-                'status_pulang' => $menunggu ? $absensi->status_pulang : null,
-                'menit_pulang_cepat' => $menunggu ? (int) $absensi->menit_pulang_cepat : 0,
+                'jam_pulang' => $absensi->jam_pulang,
+                'status_pulang' => $absensi->status_pulang,
+                'menit_pulang_cepat' => (int) $absensi->menit_pulang_cepat,
                 'status_kehadiran' => $status,
                 'sumber' => 'guru_piket',
                 'catatan' => trim($catatan),
