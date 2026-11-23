@@ -4,7 +4,51 @@ Upload key dibuat dan disimpan oleh pengelola sekolah pada komputer pengembang,
 bukan server Laravel. Kunci tersebut berbeda dari service-account Firebase.
 Jangan memasukkan keystore, password, atau `key.properties` ke Git/chat.
 
-## AAB terbaru — 1.0.8+9 dibangun ulang, 9 November 2026
+## AAB terbaru: 1.0.10+11, 24 November 2026
+
+Nama rilis: **1.0.10 (11)**. File distribusi:
+[app-release-1.0.10-11.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.10-11.aab).
+Ukuran **99.502.825 byte** (99,5 MB / 94,9 MiB). Salinan distribusi identik
+dengan `mobile/build/app/outputs/bundle/release/app-release.aab`.
+Sumber: commit `b54c7d7`, dengan kenaikan versi di `mobile/pubspec.yaml`.
+Build release memakai `APP_ENV=production`, API HTTPS sekolah
+`https://nusa.smpn2padangpanjang.sch.id/api/v1/`, dan upload key yang sama
+dengan 1.0.9.
+
+SHA-256:
+
+```text
+38e37f39062288f71e24987382b98cd65b0902b772cff4a5e3e0823cf112405f
+```
+
+- [Catatan singkat Play Console (`<id>`)](catatan-rilis-1.0.10.txt).
+- [Perubahan lengkap dan persiapan backend](perubahan-android-1.0.10.md).
+- Pemeriksaan: **978 tes Flutter** dan **84 tes backend terpilih** (1.279
+  assertion) lulus; analyzer bersih dan `pubspec.lock` tidak berubah.
+- Manifest berisi `id.sch.smpn2padangpanjang.nusa`, **1.0.10 / code 11**,
+  min SDK 24 dan target SDK 36. Sertifikat upload, `bundletool validate`,
+  validasi JAR, tanda tangan, CRC ZIP, dan pemeriksaan duplikasi lulus.
+- Konfigurasi `PAGE_ALIGNMENT_16K`, segmen LOAD dari 14 ELF 64-bit, dan
+  `zipalign -c -P 16` pada APK diagnostik lulus. Penanda layar fitur baru
+  dan alamat API produksi ada pada tiga ABI; aset kartu dan Juz 30 cocok
+  dengan berkas sumber.
+
+Log pemeriksaan ada di `mobile/build/aab-validation-1.0.10-11/`. AAB belum
+diunggah; Play Console, perangkat fisik, serta migrasi database produksi
+tidak disentuh. Deploy backend sebelum menguji versi ini melalui internal
+testing.
+
+## Riwayat AAB: 1.0.9+10, 13 November 2026
+
+[app-release-1.0.9-10.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.9-10.aab)
+tetap disimpan tanpa perubahan. Manifest dan checksum arsip dikonfirmasi
+sebelum build berikutnya. Ukuran **97.978.006 byte**.
+
+```text
+73d7b787e04a76aea5e8a3e60fe81182ead9c43828b0ab1ccdd9f852d806867c
+```
+
+## Riwayat AAB — 1.0.8+9 dibangun ulang, 9 November 2026
 
 File distribusi:
 [app-release-1.0.8-9.aab](D:/nusasmpn2pp/mobile/build/releases/app-release-1.0.8-9.aab).

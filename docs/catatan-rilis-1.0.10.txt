@@ -1,0 +1,7 @@
+<id>
+Input kolektif nilai Tahfidz per siswa, termasuk pilihan semua 37 surah Juz 30.
+Kartu pelajar mengikuti desain baku web dan dapat diunduh sebagai PNG atau PDF dua sisi.
+Presensi tanpa kartu memilih status datang tanpa tambahan 5 menit; poin kartu dan scanner tetap terpisah.
+Rumus matematika lebih terbaca pada soal ujian dan Bank Soal.
+Bank Soal dapat difilter berdasarkan folder dan diurutkan dari terbaru atau terlama.
+</id>
