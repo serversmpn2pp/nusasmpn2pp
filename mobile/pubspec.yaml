@@ -74,10 +74,15 @@ flutter:
     - assets/images/school-login-header.webp
     - assets/images/logo-padang-panjang.png
     - assets/images/logo-smpn2pp.png
+    - assets/images/kartu-pelajar/
     - assets/fonts/
     - assets/quran/
 
   fonts:
+    - family: InstrumentSansCard
+      fonts:
+        - asset: assets/fonts/InstrumentSans-Bold.ttf
+          weight: 700
     - family: AmiriQuran
       fonts:
         - asset: assets/fonts/AmiriQuran-Regular.ttf

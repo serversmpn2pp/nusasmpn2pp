@@ -3,28 +3,29 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-abstract interface class StudentCardImageSaver {
+abstract interface class StudentCardFileSaver {
   Future<bool> save({required String fileName, required Uint8List bytes});
 }
 
-final class DeviceStudentCardImageSaver implements StudentCardImageSaver {
+final class DeviceStudentCardFileSaver implements StudentCardFileSaver {
   @override
   Future<bool> save({
     required String fileName,
     required Uint8List bytes,
   }) async {
+    final pdf = fileName.endsWith('.pdf');
     final uri = await FilePicker.saveFile(
       fileName: fileName,
       bytes: bytes,
-      mimeType: 'image/png',
+      mimeType: pdf ? 'application/pdf' : 'image/png',
       type: FileType.custom,
-      allowedExtensions: const ['png'],
+      allowedExtensions: [pdf ? 'pdf' : 'png'],
       dialogTitle: 'Simpan kartu pelajar',
     );
     return uri != null;
   }
 }
 
-final studentCardImageSaverProvider = Provider<StudentCardImageSaver>(
-  (ref) => DeviceStudentCardImageSaver(),
+final studentCardFileSaverProvider = Provider<StudentCardFileSaver>(
+  (ref) => DeviceStudentCardFileSaver(),
 );

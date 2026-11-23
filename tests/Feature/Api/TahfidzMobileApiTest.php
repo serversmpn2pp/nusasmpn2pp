@@ -109,6 +109,72 @@ class TahfidzMobileApiTest extends TestCase
         $this->getJson(route('api.v1.notifikasi.tujuan', $s))->assertForbidden();
     }
 
+    public function test_setoran_kolektif_native_menerima_semua_pilihan_nol_dan_desimal_tanpa_menimpa_riwayat(): void
+    {
+        $d = $this->data();
+        $p = $this->meeting($d);
+        $this->getJson($p)->assertOk()->assertJsonPath('data.catat_kolektif', true)
+            ->assertJsonCount(37, 'data.surah');
+        $this->postJson($p.'/setoran', $this->deposit($d, 112))->assertOk();
+        $anggota = $d['anggota']->id;
+        $payload = $this->kolektif($d, [78 => '0', 112 => '92,25', 113 => '', 114 => '100']);
+        $url = $p.'/kolektif';
+
+        $this->postJson($url, $payload)->assertOk()->assertJsonPath('data.jumlah_setoran', 3)
+            ->assertHeaderContains('Cache-Control', 'no-store');
+        $this->postJson($url, $payload)->assertOk()->assertJsonPath('data.jumlah_setoran', 3);
+        $this->postJson($url, [...$payload, 'nilai' => [$anggota => [78 => 80]]])
+            ->assertUnprocessable()->assertJsonValidationErrors('token_batch');
+        $this->assertDatabaseCount('batch_setoran_tahfidz', 1);
+        $this->assertDatabaseCount('setoran_tahfidz', 4);
+        foreach ([78 => 0, 112 => 92.25, 114 => 100] as $nomor => $nilai) {
+            $this->assertDatabaseHas('setoran_tahfidz', [
+                'anggota_tahfidz_id' => $anggota, 'nomor_surah' => $nomor, 'nilai' => $nilai, 'penilai_id' => $d['guru']->id,
+            ]);
+        }
+        $this->assertDatabaseHas('setoran_tahfidz', ['anggota_tahfidz_id' => $anggota, 'nomor_surah' => 112, 'nilai' => 88.5]);
+        $this->assertDatabaseMissing('setoran_tahfidz', ['anggota_tahfidz_id' => $anggota, 'nomor_surah' => 113]);
+        $this->assertDatabaseCount('notifikasi_pengguna', 0);
+        $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak')->assertOk()->assertJsonPath('data.sudah', 0);
+
+        $this->login($d['guru'])->postJson($p.'/selesaikan')->assertOk();
+        $this->getJson($p)->assertOk()->assertJsonPath('data.catat_kolektif', false);
+        $this->postJson($url, $this->kolektif($d, [113 => 80]))
+            ->assertUnprocessable()->assertJsonValidationErrors('pertemuan');
+        $this->login($d['parent'])->getJson('/api/v1/tahfidz-anak')->assertOk()->assertJsonPath('data.sudah', 3);
+    }
+
+    public function test_setoran_kolektif_native_membatasi_satu_anggota_aktif_dan_menolak_batch_tidak_valid(): void
+    {
+        $d = $this->data();
+        $url = $this->meeting($d).'/kolektif';
+        $anggota = $d['anggota']->id;
+        app(KelompokTahfidzService::class)->simpanAnggota($d['lain'], [$d['siswaLain']->id], $d['lain']->versi);
+        $lain = $d['lain']->anggotaAktif()->sole()->id;
+        $payload = $this->kolektif($d, [112 => 90]);
+
+        $this->postJson($url, [...$payload, 'nilai' => [$anggota => [112 => 90], $lain => [113 => 90]]])
+            ->assertUnprocessable()->assertJsonValidationErrors('nilai');
+        $this->postJson($url, [...$payload, 'siswa' => $lain])
+            ->assertUnprocessable()->assertJsonValidationErrors('nilai');
+        $this->postJson($url, [...$payload, 'siswa' => $lain, 'nilai' => [$lain => [112 => 90]]])
+            ->assertUnprocessable()->assertJsonValidationErrors('nilai');
+        $this->postJson($url, [...$payload, 'surah' => [112], 'nilai' => [$anggota => [113 => 90]]])
+            ->assertUnprocessable()->assertJsonValidationErrors('nilai');
+        $this->postJson($url, $this->kolektif($d, [112 => 90, 113 => '100,01']))
+            ->assertUnprocessable()->assertJsonValidationErrors('nilai.'.$anggota.'.113');
+        $this->postJson($url, $this->kolektif($d, [112 => '']))
+            ->assertUnprocessable()->assertJsonValidationErrors('nilai');
+        $this->login($d['guruLain'])->postJson($url, $payload)->assertNotFound();
+        foreach ([$d['koordinator'], $d['parent'], $d['akunSiswa']] as $user) {
+            $this->login($user)->postJson($url, $payload)->assertForbidden();
+        }
+        app(KelompokTahfidzService::class)->simpanAnggota($d['group'], [], $d['group']->versi);
+        $this->login($d['guru'])->postJson($url, $payload)->assertUnprocessable()->assertJsonValidationErrors('nilai');
+        $this->assertDatabaseCount('setoran_tahfidz', 0);
+        $this->assertDatabaseCount('batch_setoran_tahfidz', 0);
+    }
+
     #[DataProvider('statusPenerimaSiswa')]
     public function test_notifikasi_hanya_untuk_identitas_siswa_dan_wali_aktif_yang_terkait(array $status, bool $menerima): void
     {
@@ -210,9 +276,8 @@ class TahfidzMobileApiTest extends TestCase
         $p = $this->meeting($d);
         $student = '/api/v1/tahfidz/'.$d['group']->id.'/anggota/'.$d['anggota']->id;
         $this->postJson($student.'/verifikasi')->assertUnprocessable();
-        foreach (range(78, 114) as $surah) {
-            $this->postJson($p.'/setoran', $this->deposit($d, $surah))->assertOk();
-        }
+        $this->postJson($p.'/kolektif', $this->kolektif($d, array_fill_keys(range(78, 114), 90)))
+            ->assertOk()->assertJsonPath('data.jumlah_setoran', 37);
         $this->postJson($student.'/verifikasi')->assertOk();
         $l = KelulusanTahfidz::sole();
         $this->login($d['koordinator'])->postJson('/api/v1/tahfidz/wisuda', ['nama' => 'Wisuda Tahfidz', 'tanggal' => '2026-11-05', 'lokasi' => 'Sekolah', 'kepala_sekolah' => 'Kepala Sekolah Uji'])->assertOk();
@@ -306,6 +371,12 @@ class TahfidzMobileApiTest extends TestCase
     private function deposit(array $d, int $surah): array
     {
         return ['anggota_tahfidz_id' => $d['anggota']->id, 'nomor_surah' => $surah, 'nilai' => '88,50', 'catatan' => 'Catatan rahasia pembimbing', 'token_setoran' => (string) Str::uuid()];
+    }
+
+    private function kolektif(array $d, array $nilai): array
+    {
+        return ['siswa' => $d['anggota']->id, 'surah' => range(78, 114),
+            'token_batch' => (string) Str::uuid(), 'nilai' => [$d['anggota']->id => $nilai]];
     }
 
     private function data(): array

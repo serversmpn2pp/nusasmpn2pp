@@ -98,7 +98,7 @@ class TahfidzMobileController extends Controller
         $catat = ! $p->selesai_pada && $this->akses->catat($request->user(), $g);
         $setoran = $p->setoran()->with(['anggota.siswa', 'surah', 'penilai', 'pertemuan'])->latest('id')->paginate(20);
 
-        return $this->json(['kelompok' => $this->group($g), 'pertemuan' => $this->meeting($p), 'catat' => $catat,
+        return $this->json(['kelompok' => $this->group($g), 'pertemuan' => $this->meeting($p), 'catat' => $catat, 'catat_kolektif' => $catat,
             'peserta' => $catat ? $layanan->peserta($g)->with('siswa')->get()->map(fn ($a) => ['id' => $a->id, 'nama' => $a->siswa->nama_lengkap])->sortBy('nama')->values() : [],
             'surah' => $catat ? SurahTahfidz::orderBy('nomor')->get(['nomor', 'nama']) : [],
             'items' => $setoran->map(fn ($s) => $this->deposit($s)), 'paginasi' => $this->pages($setoran)]);

@@ -9,11 +9,28 @@ use App\Models\Pengguna;
 use App\Models\Siswa;
 use App\Models\TahunPelajaran;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class KartuIdentitasBelakangTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_aset_kartu_pelajar_android_sama_dengan_aset_baku_web(): void
+    {
+        foreach (['front.jpg', 'back.jpg', 'default-user.png'] as $file) {
+            $this->assertFileEquals(
+                public_path('images/kartu-pelajar/'.$file),
+                base_path('mobile/assets/images/kartu-pelajar/'.$file),
+            );
+        }
+        foreach (['logo-smpn2pp.png', 'logo-nusa.png'] as $file) {
+            $this->assertFileEquals(
+                public_path('images/kartu-pelajar/'.$file),
+                base_path('mobile/assets/images/'.$file),
+            );
+        }
+    }
 
     public function test_bagian_belakang_kartu_pelajar_menampilkan_nama_dan_nisn(): void
     {
@@ -31,10 +48,12 @@ class KartuIdentitasBelakangTest extends TestCase
             'aktif' => true,
         ]);
         $siswa = Siswa::create([
-            'nama_lengkap' => 'Anugrah Emmanuel Harianja',
+            'nama_lengkap' => 'Anugrah Kartu Pelajar Mobile',
             'nis' => '260001',
-            'nisn' => '0131201150',
+            'nisn' => '0000000001',
             'jenis_kelamin' => 'L',
+            'tempat_lahir' => 'Padang Panjang',
+            'tanggal_lahir' => '2012-11-03',
             'aktif' => true,
         ]);
         AnggotaKelas::create([
@@ -45,7 +64,7 @@ class KartuIdentitasBelakangTest extends TestCase
             'status_keanggotaan' => 'aktif',
         ]);
 
-        $this->actingAs(Pengguna::where('username', 'administrator')->firstOrFail())
+        $response = $this->actingAs(Pengguna::where('username', 'administrator')->firstOrFail())
             ->get(route('kartu-pelajar.index', [
                 'tahun_pelajaran_id' => $tahun->id,
                 'kelas_id' => $kelas->id,
@@ -54,8 +73,8 @@ class KartuIdentitasBelakangTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder([
                 'class="qr-name-card"',
-                'Anugrah Emmanuel Harianja',
-                'NISN 0131201150',
+                'Anugrah Kartu Pelajar Mobile',
+                'NISN 0000000001',
             ], false)
             ->assertSee('.qr-code-card svg rect', false)
             ->assertSee('fill: #fff;', false)
@@ -66,6 +85,11 @@ class KartuIdentitasBelakangTest extends TestCase
             ->assertSee('data-card-side="depan"', false)
             ->assertSee('data-card-side="belakang"', false)
             ->assertSeeInOrder(['Pilih format kartu', 'PDF', 'PNG', 'JPEG']);
+        if (getenv('NUSA_CAPTURE_STUDENT_CARD')) {
+            $folder = storage_path('framework/testing/student-card');
+            File::ensureDirectoryExists($folder);
+            File::put($folder.'/web.html', $response->getContent());
+        }
     }
 
     public function test_bagian_belakang_kartu_pegawai_menampilkan_nama_dan_nip(): void

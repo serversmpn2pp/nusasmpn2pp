@@ -60,6 +60,7 @@ class SetoranKolektifTahfidzController extends Controller
     public function store(Request $request, int $kelompok, int $pertemuan)
     {
         [$kelompok, $pertemuan] = $this->konteks($request, $kelompok, $pertemuan);
+        $api = $request->is('api/*');
         $nilai = $request->input('nilai');
         if (is_array($nilai)) {
             $request->merge(['nilai' => array_map(fn ($daftar) => is_array($daftar)
@@ -69,8 +70,9 @@ class SetoranKolektifTahfidzController extends Controller
         $data = $request->validate([
             ...$this->aturanFilter(),
             'surah' => ['required', 'array', 'list', 'min:1', 'max:37'],
+            'siswa' => [$api ? 'required' : 'nullable', 'integer', 'min:1'],
             'token_batch' => ['required', 'uuid'],
-            'nilai' => ['required', 'array', 'min:1', 'max:'.self::SISWA_PER_HALAMAN],
+            'nilai' => ['required', 'array', 'min:1', 'max:'.($api ? 1 : self::SISWA_PER_HALAMAN)],
             'nilai.*' => ['required', 'array', 'min:1', 'max:37'],
             'nilai.*.*' => ['nullable', 'numeric', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/D', 'between:0,100'],
         ], [
@@ -79,11 +81,16 @@ class SetoranKolektifTahfidzController extends Controller
             'nilai.*.*.numeric' => 'Isian nilai harus berupa angka.',
         ]);
         $jumlah = $this->layanan->simpanKolektif($request->user(), $kelompok, $pertemuan->id, $data);
+        $pesan = $jumlah.' setoran berhasil disimpan. Riwayat sebelumnya tetap tersimpan.';
+        if ($api) {
+            return response()->json(['data' => ['jumlah_setoran' => $jumlah], 'pesan' => $pesan])
+                ->header('Cache-Control', 'private, no-store');
+        }
 
         return redirect()->route('tahfidz.kolektif.index', [
             'kelompok' => $kelompok, 'pertemuan' => $pertemuan,
             'surah' => $data['surah'], 'siswa' => $data['siswa'] ?? null, 'page' => $data['page'] ?? null,
-        ])->with('berhasil', $jumlah.' setoran berhasil disimpan. Riwayat sebelumnya tetap tersimpan.');
+        ])->with('berhasil', $pesan);
     }
 
     private function aturanFilter(): array

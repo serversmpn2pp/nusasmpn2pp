@@ -5,6 +5,7 @@ Menu berada di **Akademik → Penilaian** untuk pegawai yang berwenang. Siswa me
 ## Alur
 
 - Pembimbing melihat kelompok yang ditugaskan kepadanya, membuka pertemuan, memilih siswa/surah, mencatat nilai 0–100 dan catatan, melihat riwayat/perkembangan, serta menyelesaikan pertemuan. Rangkuman dan perkembangan orang tua tersedia setelah pertemuan selesai.
+- Di pertemuan terbuka, **Input Kolektif per Siswa** menyimpan nilai beberapa surah untuk satu siswa. Pilih sebagian atau gunakan **Pilih semua surah** untuk membuka kolom seluruh 37 surah Juz 30. Nilai kosong dilewati, nilai 0 tetap disimpan, dan setoran sebelumnya tidak ditimpa. Input satu surah tetap tersedia.
 - Setiap formulir setoran memiliki UUID yang dipertahankan saat mencoba simpan ulang setelah kegagalan jaringan. Layanan yang sama dengan web mencegah percobaan ganda dan menolak setoran baru setelah pertemuan selesai.
 - Koordinator/administrator yang memiliki kewenangan Tahfidz mengelola kelompok dan anggota lintas kelas, target rapor per tingkat, publikasi/penarikan rapor, acara wisuda, serta penerbitan/publikasi/penarikan sertifikat.
 - Perubahan kelompok/anggota memakai versi server. Daftar anggota yang disimpan selalu lengkap, termasuk pilihan yang tidak sedang terlihat karena pencarian. Siswa yang sudah berada dalam kelompok aktif lain tidak dapat dimasukkan diam-diam.
@@ -25,6 +26,7 @@ Seluruh endpoint berada dalam `/api/v1`, memerlukan bearer token dengan kemampua
 - `GET|PUT /tahfidz/{kelompok}/anggota` — pilihan dan simpan anggota lengkap dengan versi.
 - `POST /tahfidz/{kelompok}/pertemuan`, `GET /tahfidz/{kelompok}/pertemuan/{pertemuan}`.
 - `POST /tahfidz/{kelompok}/pertemuan/{pertemuan}/setoran|selesaikan`.
+- `POST /tahfidz/{kelompok}/pertemuan/{pertemuan}/kolektif` menerima satu ID anggota pada `siswa`, daftar nomor `surah`, `nilai` yang dikunci menurut anggota lalu nomor surah, dan UUID `token_batch`. Respons berisi `data.jumlah_setoran`. Tombol Android mengikuti `catat_kolektif` dari detail pertemuan.
 - `GET /tahfidz/{kelompok}/anggota/{anggota}` — perkembangan, riwayat, pratinjau rapor dan kelulusan.
 - `GET /tahfidz/{kelompok}/rapor` — seluruh dokumen rapor kelompok; tidak memublikasikan dokumen.
 - `POST /tahfidz/{kelompok}/anggota/{anggota}/rapor/publikasi|verifikasi`.
@@ -50,7 +52,7 @@ Verifikasi pada perangkat setelah deploy: login pada akun siswa dan wali yang te
 
 Deploy backend/API dan bersihkan cache (`php artisan optimize:clear`) sebelum memakai build mobile baru. Jalankan migrasi standar jika modul Tahfidz web belum dipasang pada server. Jika memakai queue worker untuk push, jalankan `php artisan queue:restart` setelah deploy. Tidak ada dependensi atau migrasi tambahan khusus integrasi mobile ini.
 
-Fitur ini sudah dikemas pada **AAB 1.0.7+8 (5 November 2026)**. Pengguna perlu memperbarui aplikasi agar mendapat layar native Tahfidz. Berkas AAB, catatan perubahan, dan hasil validasi ada di [panduan rilis Android](D:/nusasmpn2pp/docs/rilis-android-play-store.md).
+Layar native Tahfidz awal dikemas pada **AAB 1.0.7+8 (5 November 2026)**. Untuk input kolektif, deploy backend terlebih dahulu dan rilis AAB baru; pembaruan ini memakai tabel batch yang sudah dipakai oleh web. Berkas AAB, catatan perubahan, dan hasil validasi rilis ada di [panduan rilis Android](D:/nusasmpn2pp/docs/rilis-android-play-store.md).
 
 ## Teks Arab dan font
 

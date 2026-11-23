@@ -55,6 +55,19 @@ media layar. Nama tambahan tidak dicetak; wadah gulir admin dibebaskan ketika
 mencetak agar kartu tidak terpotong. Ekspor tetap menggunakan elemen
 `data-card-side` yang sama, tanpa menyertakan bingkai/nama tambahan.
 
+### Kartu Pelajar Android
+
+Pratinjau Android mengikuti layout baku di `resources/views/kartu-pelajar/index.blade.php`.
+Latar depan, latar belakang, dan gambar pengganti foto pada
+`mobile/assets/images/kartu-pelajar/` disalin dari `public/images/kartu-pelajar/`.
+Jika desain web berubah, perbarui juga aset dan ukuran komponennya di Android.
+
+Pada pratinjau pilih **Unduh Kartu** untuk menyimpan PNG salah satu sisi atau
+PDF dua halaman berukuran 53,98 x 85,60 mm per sisi. Berkas hanya berisi kartu,
+tanpa judul atau kontrol aplikasi. Unduhan tetap memerlukan izin
+`kartu_pelajar.cetak`. Pembaruan ini memerlukan AAB baru, tanpa perubahan API
+atau migrasi database.
+
 ## Verifikasi
 
 `TampilanDataSekolahTest` mencakup seluruh halaman, keadaan kosong, pagination,

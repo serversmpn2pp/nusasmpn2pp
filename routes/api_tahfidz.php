@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\TahfidzMobileController;
 use App\Http\Controllers\PertemuanTahfidzController;
 use App\Http\Controllers\RaporTahfidzController;
+use App\Http\Controllers\SetoranKolektifTahfidzController;
 use App\Http\Controllers\TahfidzController;
 use App\Http\Controllers\WisudaTahfidzController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,7 @@ Route::prefix('tahfidz')->name('tahfidz.')->group(function () {
         Route::post('/pertemuan', [PertemuanTahfidzController::class, 'buka'])->middleware('throttle:30,1,tahfidz-pertemuan:')->name('pertemuan.store');
         Route::get('/pertemuan/{pertemuan}', [TahfidzMobileController::class, 'pertemuan'])->whereNumber('pertemuan')->name('pertemuan');
         Route::post('/pertemuan/{pertemuan}/setoran', [PertemuanTahfidzController::class, 'simpan'])->whereNumber('pertemuan')->middleware('throttle:120,1,tahfidz-setoran:')->name('setoran.store');
+        Route::post('/pertemuan/{pertemuan}/kolektif', [SetoranKolektifTahfidzController::class, 'store'])->whereNumber('pertemuan')->middleware('throttle:30,1,tahfidz-kolektif:')->name('kolektif.store');
         Route::post('/pertemuan/{pertemuan}/selesaikan', [PertemuanTahfidzController::class, 'selesaikan'])->whereNumber('pertemuan')->middleware('throttle:30,1,tahfidz-selesai:')->name('pertemuan.selesaikan');
         Route::get('/anggota/{anggota}', [TahfidzMobileController::class, 'siswa'])->whereNumber('anggota')->name('siswa');
         Route::post('/anggota/{anggota}/rapor/publikasi', [RaporTahfidzController::class, 'publikasi'])->whereNumber('anggota')->middleware('throttle:60,1,tahfidz-publikasi:')->name('rapor.publikasi');

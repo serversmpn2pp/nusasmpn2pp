@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -7,10 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nusa/core/errors/app_exception.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_card/application/student_card_controller.dart';
-import 'package:nusa/features/student_card/data/student_card_image_saver.dart';
+import 'package:nusa/features/student_card/data/student_card_file_saver.dart';
+import 'package:nusa/features/student_card/data/student_card_pdf.dart';
 import 'package:nusa/features/student_card/domain/student_card.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+
+import 'student_card_artwork.dart';
 
 class StudentCardView extends ConsumerStatefulWidget {
   const StudentCardView({super.key});
@@ -280,8 +283,6 @@ class _StudentCardViewState extends ConsumerState<StudentCardView> {
   }
 }
 
-enum StudentCardSide { front, back }
-
 class StudentCardPreviewView extends ConsumerStatefulWidget {
   const StudentCardPreviewView({
     required this.student,
@@ -299,11 +300,67 @@ class StudentCardPreviewView extends ConsumerStatefulWidget {
       _StudentCardPreviewViewState();
 }
 
+enum _StudentCardFormat { pdf, frontPng, backPng }
+
 class _StudentCardPreviewViewState
     extends ConsumerState<StudentCardPreviewView> {
-  final _captureKey = GlobalKey();
+  final _captureKeys = {
+    for (final side in StudentCardSide.values) side: GlobalKey(),
+  };
   StudentCardSide _side = StudentCardSide.front;
+  ImageProvider _photo = StudentCardArtwork.defaultPhoto;
+  bool _imagesRequested = false;
+  bool _loadingImages = true;
   bool _saving = false;
+  String? _imageError;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_imagesRequested) {
+      _imagesRequested = true;
+      unawaited(_loadImages());
+    }
+  }
+
+  Future<void> _loadImages() async {
+    final url = widget.student.photoUrl;
+    final ImageProvider photo = url?.isNotEmpty == true
+        ? NetworkImage(url!)
+        : StudentCardArtwork.defaultPhoto;
+    try {
+      await Future.wait([
+        _preload(StudentCardArtwork.frontBackground),
+        _preload(StudentCardArtwork.backBackground),
+        _preload(StudentCardArtwork.schoolLogo),
+        _preload(StudentCardArtwork.nusaLogo),
+        _preload(photo),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _photo = photo;
+        _imageError = null;
+        _loadingImages = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _imageError =
+            'Gambar kartu belum termuat. Coba lagi sebelum mengunduh.';
+        _loadingImages = false;
+      });
+    }
+  }
+
+  Future<void> _preload(ImageProvider image) async {
+    var failed = false;
+    await precacheImage(
+      image,
+      context,
+      onError: (_, _) => failed = true,
+    ).timeout(const Duration(seconds: 15));
+    if (failed) throw StateError('Gambar kartu tidak tersedia.');
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -311,110 +368,226 @@ class _StudentCardPreviewViewState
     appBar: AppBar(title: const Text('Pratinjau Kartu')),
     body: SafeArea(
       top: false,
-      child: ListView(
+      bottom: !widget.canPrint,
+      child: SingleChildScrollView(
         key: const PageStorageKey<String>('student-card-preview'),
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-        children: [
-          _PreviewHeader(student: widget.student),
-          const SizedBox(height: 12),
-          Center(
-            child: SegmentedButton<StudentCardSide>(
-              key: const Key('student-card-side-selector'),
-              segments: const [
-                ButtonSegment(
-                  value: StudentCardSide.front,
-                  icon: Icon(Icons.school_outlined),
-                  label: Text('Depan'),
-                ),
-                ButtonSegment(
-                  value: StudentCardSide.back,
-                  icon: Icon(Icons.qr_code_rounded),
-                  label: Text('Belakang'),
-                ),
-              ],
-              selected: {_side},
-              onSelectionChanged: (selection) {
-                setState(() => _side = selection.first);
-              },
-            ),
-          ),
-          const SizedBox(height: 14),
-          Center(
-            child: RepaintBoundary(
-              key: _captureKey,
-              child: _StudentIdentityCard(
-                key: ValueKey(_side),
-                student: widget.student,
-                side: _side,
-                aspectRatio: widget.cardSize.aspectRatio,
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _PreviewHeader(student: widget.student),
+            const SizedBox(height: 12),
+            Center(
+              child: SegmentedButton<StudentCardSide>(
+                key: const Key('student-card-side-selector'),
+                segments: const [
+                  ButtonSegment(
+                    value: StudentCardSide.front,
+                    icon: Icon(Icons.school_outlined),
+                    label: Text('Depan'),
+                  ),
+                  ButtonSegment(
+                    value: StudentCardSide.back,
+                    icon: Icon(Icons.qr_code_rounded),
+                    label: Text('Belakang'),
+                  ),
+                ],
+                selected: {_side},
+                onSelectionChanged: _saving
+                    ? null
+                    : (selection) {
+                        setState(() => _side = selection.first);
+                      },
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          _ReadinessNote(student: widget.student),
-          const SizedBox(height: 12),
-          if (widget.canPrint)
-            SizedBox(
-              width: double.infinity,
+            const SizedBox(height: 14),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 330),
+                child: AspectRatio(
+                  aspectRatio: widget.cardSize.aspectRatio,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: SizedBox(
+                      width:
+                          widget.cardSize.widthMillimeter *
+                          studentCardPixelsPerMm,
+                      height:
+                          widget.cardSize.heightMillimeter *
+                          studentCardPixelsPerMm,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Paint both faces at the same scale for a two-sided export.
+                          for (final side in [
+                            ...StudentCardSide.values.where(
+                              (side) => side != _side,
+                            ),
+                            _side,
+                          ])
+                            ExcludeSemantics(
+                              key: ValueKey(side),
+                              excluding: side != _side,
+                              child: RepaintBoundary(
+                                key: _captureKeys[side],
+                                child: StudentCardArtwork(
+                                  student: widget.student,
+                                  side: side,
+                                  photo: _photo,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _ReadinessNote(student: widget.student),
+            if (_imageError != null) ...[
+              const SizedBox(height: 8),
+              Text(_imageError!, textAlign: TextAlign.center),
+              TextButton.icon(
+                onPressed: _loadingImages
+                    ? null
+                    : () {
+                        setState(() {
+                          _loadingImages = true;
+                          _imageError = null;
+                        });
+                        unawaited(_loadImages());
+                      },
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Muat ulang gambar'),
+              ),
+            ],
+            if (!widget.canPrint) ...[
+              const SizedBox(height: 12),
+              const _ViewOnlyNotice(),
+            ],
+          ],
+        ),
+      ),
+    ),
+    bottomNavigationBar: !widget.canPrint
+        ? null
+        : SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: FilledButton.icon(
-                key: const Key('save-student-card-png'),
-                onPressed: _saving ? null : _savePng,
-                icon: _saving
+                key: const Key('download-student-card'),
+                onPressed: _saving || _loadingImages || _imageError != null
+                    ? null
+                    : _chooseFormat,
+                icon: _saving || _loadingImages
                     ? const SizedBox.square(
                         dimension: 17,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.download_rounded),
                 label: Text(
                   _saving
                       ? 'Menyimpan...'
-                      : 'Simpan PNG Sisi ${_side == StudentCardSide.front ? 'Depan' : 'Belakang'}',
+                      : _loadingImages
+                      ? 'Menyiapkan kartu...'
+                      : 'Unduh Kartu',
                 ),
               ),
-            )
-          else
-            const _ViewOnlyNotice(),
-          const SizedBox(height: 8),
-          if (widget.canPrint)
-            const Text(
-              'Untuk mencetak dua sisi, simpan sisi depan dan belakang secara bergantian.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: NusaColors.textSecondary, fontSize: 10.5),
             ),
-        ],
-      ),
-    ),
+          ),
   );
 
-  Future<void> _savePng() async {
+  Future<void> _chooseFormat() async {
+    final format = await showModalBottomSheet<_StudentCardFormat>(
+      context: context,
+      useSafeArea: true,
+      builder: (sheet) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (format, label, icon) in [
+              (
+                _StudentCardFormat.pdf,
+                'PDF dua sisi',
+                Icons.picture_as_pdf_outlined,
+              ),
+              (
+                _StudentCardFormat.frontPng,
+                'PNG sisi depan',
+                Icons.image_outlined,
+              ),
+              (
+                _StudentCardFormat.backPng,
+                'PNG sisi belakang',
+                Icons.qr_code_rounded,
+              ),
+            ])
+              ListTile(
+                leading: Icon(icon),
+                title: Text(label),
+                onTap: () => Navigator.pop(sheet, format),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (mounted && format != null) await _save(format);
+  }
+
+  Future<void> _save(_StudentCardFormat format) async {
+    if (_saving || _loadingImages || _imageError != null || !widget.canPrint) {
+      return;
+    }
     setState(() => _saving = true);
     try {
-      final boundary =
-          _captureKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
-      if (boundary == null) {
-        throw StateError('Pratinjau kartu belum siap.');
-      }
-      final image = await boundary.toImage(pixelRatio: 3);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-      if (byteData == null) throw StateError('Gambar kartu belum terbentuk.');
-      final side = _side == StudentCardSide.front ? 'depan' : 'belakang';
+      final front = _captureKeys[StudentCardSide.front]!.currentContext!;
+      await Scrollable.ensureVisible(front, alignment: .5);
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+
+      final isPdf = format == _StudentCardFormat.pdf;
+      final side = format == _StudentCardFormat.backPng
+          ? StudentCardSide.back
+          : StudentCardSide.front;
+      final name = 'kartu-pelajar-${_slug(widget.student.name)}';
+      final fileName = isPdf
+          ? '$name.pdf'
+          : '$name-${side == StudentCardSide.front ? 'depan' : 'belakang'}.png';
+      final bytes = isPdf
+          ? await buildStudentCardPdf(
+              size: widget.cardSize,
+              front: await _capture(StudentCardSide.front),
+              back: await _capture(StudentCardSide.back),
+            )
+          : await _capture(side);
+      if (!mounted) return;
       final saved = await ref
-          .read(studentCardImageSaverProvider)
-          .save(
-            fileName: 'kartu-pelajar-${_slug(widget.student.name)}-$side.png',
-            bytes: byteData.buffer.asUint8List(),
-          );
-      if (!mounted || !saved) return;
-      _showMessage('Kartu sisi $side berhasil disimpan.');
-    } catch (error) {
-      if (mounted) _showMessage('Kartu belum berhasil disimpan. Coba kembali.');
+          .read(studentCardFileSaverProvider)
+          .save(fileName: fileName, bytes: bytes);
+      if (mounted && saved) _showMessage('Kartu pelajar berhasil disimpan.');
+    } catch (_) {
+      if (mounted) _showMessage('Kartu belum berhasil disimpan. Coba lagi.');
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<Uint8List> _capture(StudentCardSide side) async {
+    final boundary =
+        _captureKeys[side]!.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
+    if (boundary == null) throw StateError('Pratinjau kartu belum siap.');
+    final image = await boundary.toImage(pixelRatio: 4);
+    try {
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (data == null) throw StateError('Gambar kartu belum terbentuk.');
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } finally {
+      image.dispose();
     }
   }
 
@@ -694,405 +867,6 @@ class _PreviewHeader extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-}
-
-class _StudentIdentityCard extends StatelessWidget {
-  const _StudentIdentityCard({
-    required this.student,
-    required this.side,
-    required this.aspectRatio,
-    super.key,
-  });
-
-  final StudentCardPerson student;
-  final StudentCardSide side;
-  final double aspectRatio;
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final width = constraints.maxWidth.clamp(0.0, 330.0);
-      return SizedBox(
-        width: width,
-        height: width / aspectRatio,
-        child: FittedBox(
-          fit: BoxFit.fill,
-          child: SizedBox(
-            width: 330,
-            height: 330 / aspectRatio,
-            child: side == StudentCardSide.front
-                ? _StudentCardFront(student: student)
-                : _StudentCardBack(student: student),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-class _StudentCardFront extends StatelessWidget {
-  const _StudentCardFront({required this.student});
-
-  final StudentCardPerson student;
-
-  @override
-  Widget build(BuildContext context) => _CardBackground(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(23, 22, 23, 20),
-      child: Column(
-        children: [
-          _CardLogo(size: 58),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
-            decoration: BoxDecoration(
-              color: NusaColors.primary.withValues(alpha: 0.82),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: NusaColors.accent, width: 1.4),
-            ),
-            child: const Text(
-              'KARTU PELAJAR',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Container(
-            width: 137,
-            height: 161,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: NusaColors.accent,
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x55000000),
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                color: Colors.white,
-                child: student.photoUrl?.isNotEmpty == true
-                    ? Image.network(
-                        student.photoUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _CardPhotoFallback(initials: student.initials),
-                      )
-                    : _CardPhotoFallback(initials: student.initials),
-              ),
-            ),
-          ),
-          const SizedBox(height: 19),
-          SizedBox(
-            width: 282,
-            height: 30,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                student.name.toUpperCase(),
-                maxLines: 1,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w900,
-                  shadows: [Shadow(color: Colors.black38, blurRadius: 5)],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              student.nisnLabel,
-              style: const TextStyle(
-                color: NusaColors.primary,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(height: 9),
-          Text(
-            student.birthLabel,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const Spacer(),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            decoration: BoxDecoration(
-              color: NusaColors.accent,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: const Text(
-              'SMP NEGERI 2 PADANG PANJANG',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: NusaColors.primary,
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _StudentCardBack extends StatelessWidget {
-  const _StudentCardBack({required this.student});
-
-  final StudentCardPerson student;
-
-  @override
-  Widget build(BuildContext context) => _CardBackground(
-    reverse: true,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
-      child: Column(
-        children: [
-          _CardLogo(size: 76, rounded: true),
-          const SizedBox(height: 11),
-          const Text(
-            'PRESENSI SISWA NUSA',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Container(
-            width: 246,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x44000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 9),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                SizedBox(
-                  width: 178,
-                  height: 178,
-                  child: student.canMakeQr && student.qrData != null
-                      ? QrImageView(
-                          key: const Key('student-card-qr'),
-                          data: student.qrData!,
-                          version: QrVersions.auto,
-                          padding: EdgeInsets.zero,
-                          backgroundColor: Colors.white,
-                        )
-                      : const _QrUnavailable(),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: 214,
-                  height: 24,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      student.name.toUpperCase(),
-                      maxLines: 1,
-                      style: const TextStyle(
-                        color: NusaColors.primary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-                Text(
-                  student.nisnLabel,
-                  style: const TextStyle(
-                    color: Color(0xFF385873),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'Scan QR ini untuk layanan presensi siswa\nSMP Negeri 2 Padang Panjang.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              height: 1.3,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _CardBackground extends StatelessWidget {
-  const _CardBackground({required this.child, this.reverse = false});
-
-  final Widget child;
-  final bool reverse;
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(20),
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: reverse ? Alignment.bottomLeft : Alignment.topLeft,
-          end: reverse ? Alignment.topRight : Alignment.bottomRight,
-          colors: const [
-            Color(0xFF062E58),
-            NusaColors.primary,
-            Color(0xFF0A5C9F),
-          ],
-        ),
-        border: Border.all(color: Colors.white54, width: 1.2),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Positioned(
-            top: -72,
-            left: -65,
-            child: Container(
-              width: 190,
-              height: 190,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-                border: Border.all(color: NusaColors.accent, width: 1.2),
-              ),
-            ),
-          ),
-          Positioned(
-            right: -82,
-            bottom: -84,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06),
-                border: Border.all(color: NusaColors.accent, width: 1.2),
-              ),
-            ),
-          ),
-          child,
-        ],
-      ),
-    ),
-  );
-}
-
-class _CardLogo extends StatelessWidget {
-  const _CardLogo({required this.size, this.rounded = false});
-
-  final double size;
-  final bool rounded;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    padding: EdgeInsets.all(size * 0.11),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      shape: rounded ? BoxShape.rectangle : BoxShape.circle,
-      borderRadius: rounded ? BorderRadius.circular(size * 0.22) : null,
-      border: Border.all(color: NusaColors.accent, width: 1.5),
-      boxShadow: const [
-        BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
-      ],
-    ),
-    child: Image.asset('assets/images/logo-nusa.png', fit: BoxFit.contain),
-  );
-}
-
-class _CardPhotoFallback extends StatelessWidget {
-  const _CardPhotoFallback({required this.initials});
-
-  final String initials;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    color: const Color(0xFFE8F1FA),
-    alignment: Alignment.center,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.person_rounded, size: 65, color: NusaColors.primary),
-        const SizedBox(height: 5),
-        Text(
-          initials.isEmpty ? 'SW' : initials,
-          style: const TextStyle(
-            color: NusaColors.primary,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _QrUnavailable extends StatelessWidget {
-  const _QrUnavailable();
-
-  @override
-  Widget build(BuildContext context) => const DecoratedBox(
-    decoration: BoxDecoration(color: Color(0xFFF2F5F8)),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.qr_code_2_rounded, size: 70, color: NusaColors.outline),
-        SizedBox(height: 7),
-        Text(
-          'QR BELUM TERSEDIA',
-          style: TextStyle(
-            color: NusaColors.textSecondary,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        SizedBox(height: 3),
-        Text(
-          'NISN harus berupa angka',
-          style: TextStyle(color: NusaColors.textSecondary, fontSize: 8),
-        ),
-      ],
     ),
   );
 }

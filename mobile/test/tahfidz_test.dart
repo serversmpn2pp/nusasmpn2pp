@@ -43,7 +43,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('tahfidz-field-nomor_surah')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('114. An-Nas').last);
+      final anNas = find.text('114. An-Nas').last;
+      await tester.ensureVisible(anNas);
+      await tester.pumpAndSettle();
+      await tester.tap(anNas);
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('tahfidz-field-nilai')),
@@ -71,6 +74,127 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'input kolektif memilih 37 surah, menjaga isian jauh, dan retry satu batch',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 650));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final remote = _FakeTahfidz()..failFirstDeposit = true;
+      await _openCollective(tester, remote);
+      await tester.tap(
+        find.widgetWithText(CheckboxListTile, 'Pilih semua surah'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('37 dari 37 dipilih'), findsOneWidget);
+      await tester.tap(find.text('Terapkan Pilihan'));
+      await tester.pumpAndSettle();
+      expect(find.text('37 surah dipilih'), findsOneWidget);
+
+      final save = find.byKey(const Key('tahfidz-kolektif-simpan'));
+      final first = find.byKey(const Key('tahfidz-kolektif-nilai-78'));
+      final last = find.byKey(const Key('tahfidz-kolektif-nilai-114'));
+      final scroll = find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Isi minimal satu nilai untuk disimpan.'),
+        findsOneWidget,
+      );
+      expect(remote.writes, isEmpty);
+      await tester.enterText(first, '101');
+      await tester.scrollUntilVisible(last, 320, scrollable: scroll);
+      await tester.enterText(last, '88,5');
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Periksa nilai An-Naba'), findsOneWidget);
+      expect(remote.writes, isEmpty);
+      await tester.scrollUntilVisible(first, -320, scrollable: scroll);
+      await tester.enterText(first, '0');
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Koneksi terputus'), findsOneWidget);
+      expect(find.text('2 dari 37 nilai terisi'), findsOneWidget);
+
+      final write = remote.writes.single;
+      final data = tfMap(write['data']);
+      expect(write['path'], 'tahfidz/1/pertemuan/2/kolektif');
+      expect(data['siswa'], 7);
+      expect(data['surah'], [for (var n = 78; n <= 114; n++) n]);
+      expect(data['nilai'], {
+        '7': {'78': '0', '114': '88.5'},
+      });
+      expect(data['token_batch'], isNotEmpty);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(remote.writes, hasLength(2));
+      expect(remote.writes.last, write);
+      expect(
+        remote.reads.where((path) => path == 'tahfidz/1/pertemuan/2'),
+        hasLength(2),
+      );
+      expect(find.text('2 setoran berhasil disimpan.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'input kolektif menerima pilihan sebagian dan tidak memindahkan draf ke siswa lain',
+    (tester) async {
+      final remote = _FakeTahfidz();
+      await _openCollective(tester, remote);
+      await tester.tap(find.byKey(const Key('tahfidz-kolektif-surah-78')));
+      await tester.tap(find.byKey(const Key('tahfidz-kolektif-surah-79')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Terapkan Pilihan'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 surah dipilih'), findsOneWidget);
+      final first = find.byKey(const Key('tahfidz-kolektif-nilai-78'));
+      final second = find.byKey(const Key('tahfidz-kolektif-nilai-79'));
+      await tester.enterText(first, '95');
+      final student = find.byKey(const Key('tahfidz-kolektif-siswa'));
+      await tester.tap(student);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bima'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ganti siswa?'), findsOneWidget);
+      await tester.tap(find.text('Batal'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(first).controller!.text, '95');
+
+      await tester.tap(student);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bima'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ganti siswa'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(first).controller!.text, isEmpty);
+      await tester.enterText(second, '80');
+      await tester.tap(find.byKey(const Key('tahfidz-kolektif-simpan')));
+      await tester.pumpAndSettle();
+      final data = tfMap(remote.writes.single['data']);
+      expect(data['siswa'], 8);
+      expect(data['surah'], [78, 79]);
+      expect(data['nilai'], {
+        '8': {'79': '80'},
+      });
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('input kolektif tersembunyi pada pertemuan selesai', (
+    tester,
+  ) async {
+    final remote = _FakeTahfidz()..meetingClosed = true;
+    await _pump(tester, remote, const TfMeetingView(1, 2));
+    expect(find.text('Input Kolektif per Siswa'), findsNothing);
+    expect(find.text('Catat Setoran'), findsNothing);
+  });
 
   testWidgets(
     'pencarian anggota mempertahankan pilihan siswa yang tidak terlihat',
@@ -206,6 +330,18 @@ Future<void> _pump(
   if (settle) await tester.pumpAndSettle();
 }
 
+Future<void> _openCollective(WidgetTester tester, _FakeTahfidz remote) async {
+  await _pump(tester, remote, const TfMeetingView(1, 2));
+  await tester.tap(find.text('Input Kolektif per Siswa'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('tahfidz-kolektif-siswa')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Alya'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Pilih Surah'));
+  await tester.pumpAndSettle();
+}
+
 const _report = <String, dynamic>{
   'nama': 'Bima',
   'kelas': 'VII.A',
@@ -244,6 +380,7 @@ class _FakeTahfidz extends TahfidzRepository {
   final reads = <String>[];
   final writes = <TfData>[];
   bool failFirstDeposit = false;
+  bool meetingClosed = false;
   Completer<TfData>? pendingChild;
   TfData? lastStudentQuery;
   @override
@@ -294,12 +431,20 @@ class _FakeTahfidz extends TahfidzRepository {
     if (path == 'tahfidz/1/pertemuan/2') {
       return {
         'kelompok': {'nama': 'Kelompok Al-Ikhlas'},
-        'pertemuan': {'id': 2, 'tanggal': '2026-11-05', 'selesai': false},
-        'catat': true,
+        'pertemuan': {
+          'id': 2,
+          'tanggal': '2026-11-05',
+          'selesai': meetingClosed,
+        },
+        'catat': !meetingClosed,
+        'catat_kolektif': !meetingClosed,
         'peserta': [
           {'id': 7, 'nama': 'Alya'},
+          {'id': 8, 'nama': 'Bima'},
         ],
         'surah': [
+          {'nomor': 78, 'nama': 'An-Naba'},
+          for (var n = 79; n < 114; n++) {'nomor': n, 'nama': 'Surah $n'},
           {'nomor': 114, 'nama': 'An-Nas'},
         ],
         'items': [],
@@ -338,6 +483,10 @@ class _FakeTahfidz extends TahfidzRepository {
     });
     if (failFirstDeposit && writes.length == 1) {
       throw const NetworkException('Koneksi terputus. Coba simpan lagi.');
+    }
+    if (path.endsWith('/kolektif')) {
+      final batch = tfMap(data?['nilai']);
+      return {'jumlah_setoran': tfMap(batch.values.single).length};
     }
     return {'id': 2};
   }

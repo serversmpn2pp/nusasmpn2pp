@@ -4,6 +4,7 @@ import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
 import '../data/tahfidz_repository.dart';
 import '../domain/tahfidz.dart';
+import 'tahfidz_collective_deposit_view.dart';
 import 'tahfidz_document.dart';
 import 'tahfidz_forms.dart';
 import 'tahfidz_widgets.dart';
@@ -294,6 +295,7 @@ class TfMeetingView extends StatelessWidget {
         if (data['catat'] == true)
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
               TfAction('Catat Setoran', () async {
                 final saved = await tfEdit(
@@ -331,6 +333,26 @@ class TfMeetingView extends StatelessWidget {
                 );
                 if (saved != null) await reload();
               }, icon: Icons.edit_note_rounded),
+              if (data['catat_kolektif'] == true &&
+                  tfItems(data['peserta']).isNotEmpty &&
+                  tfItems(data['surah']).isNotEmpty)
+                TfAction('Input Kolektif per Siswa', () async {
+                  final saved = await Navigator.of(context).push<int>(
+                    MaterialPageRoute(
+                      builder: (_) => TfCollectiveDepositView(
+                        path: 'tahfidz/$groupId/pertemuan/$id/kolektif',
+                        meetingLabel:
+                            '${tfText(tfMap(data['kelompok'])['nama'])} · ${tfDate(p['tanggal'])}',
+                        students: tfItems(data['peserta']),
+                        surahs: tfItems(data['surah']),
+                      ),
+                    ),
+                  );
+                  if (saved != null && context.mounted) {
+                    tfMessage(context, '$saved setoran berhasil disimpan.');
+                    await reload();
+                  }
+                }, icon: Icons.playlist_add_rounded),
               TfAction(
                 'Selesaikan Pertemuan',
                 () async {
