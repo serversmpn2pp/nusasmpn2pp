@@ -26,7 +26,11 @@
     .question-preview-exam .matching-answer-bank > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .question-preview-exam .matching-answer-option { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 7px; align-items: start; border: 1px solid rgba(21, 71, 122, .14); border-radius: 7px; background: #fff; padding: 8px 9px; color: #344054; font-size: .88rem; font-weight: 700; }
     .question-preview-exam .matching-answer-bank b { color: var(--primary-dark); }
-    .question-preview-exam .matching-select { min-width: 250px; }
+    .question-preview-exam .matching-row { display: flex; flex-wrap: wrap; }
+    .question-preview-exam .matching-row > div { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; align-items: start; flex: 1 1 220px; min-width: 0; }
+    .question-preview-exam .matching-row .option-text { overflow-wrap: anywhere; }
+    .question-preview-exam .matching-row .question-media-content { grid-column: 2; }
+    .question-preview-exam .matching-select { flex: 1 1 250px; min-width: 0; max-width: 100%; }
     .question-preview-exam .check-row { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .9rem; font-weight: 900; }
     .question-preview-exam .check-row input { width: 18px; height: 18px; accent-color: var(--accent); }
     .question-preview-exam .field { display: grid; gap: 7px; margin-top: 14px; }
@@ -64,8 +68,7 @@
         .question-preview-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
         .question-preview-head .button { width: auto; min-width: 74px; }
         .question-preview-exam { min-height: 0; padding: 17px; }
-        .question-preview-exam .statement-row, .question-preview-exam .matching-row { grid-template-columns: 1fr; }
+        .question-preview-exam .statement-row { grid-template-columns: 1fr; }
         .question-preview-exam .matching-answer-bank > div { grid-template-columns: 1fr; }
-        .question-preview-exam .matching-select { min-width: 0; }
     }
 </style>

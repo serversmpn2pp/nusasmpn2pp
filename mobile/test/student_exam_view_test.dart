@@ -1474,6 +1474,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 750));
 
     expect(remote.lastAnswer, {'1': 'Hertz'});
+
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is DropdownMenuItem<String> &&
+            widget.value == _matchingFormula,
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 750));
+    expect(remote.lastAnswer, {'1': _matchingFormula});
+    expect(find.text('Pilihan D'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1820,6 +1833,8 @@ Map<String, dynamic> _confirmationJson() => {
   'dapat_dimulai': true,
 };
 
+const _matchingFormula = r'\(\frac{1}{2}\pi\) rad';
+
 Map<String, dynamic> _runningJson({
   bool withMatching = false,
   bool withUpload = false,
@@ -1882,6 +1897,7 @@ Map<String, dynamic> _runningJson({
           {'kode': 'A', 'teks': 'Sekon'},
           {'kode': 'B', 'teks': 'Hertz'},
           {'kode': 'C', 'teks': 'Newton'},
+          {'kode': 'D', 'teks': _matchingFormula},
         ],
         'pernyataan': [],
         'pasangan': [

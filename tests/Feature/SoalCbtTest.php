@@ -511,6 +511,49 @@ class SoalCbtTest extends TestCase
         }
     }
 
+    public function test_pratinjau_menjodohkan_memuat_semua_pasangan_dan_pengecoh_tanpa_mengubah_soal(): void
+    {
+        [$tahun, $mapel] = $this->buatDataAkademik();
+        $this->actingAs(Pengguna::where('username', 'administrator')->firstOrFail());
+        $kiri = ['LAN (Local Area Network)', 'WAN (Wide Area Network)', 'Topologi Star (Bintang)', 'Topologi Bus'];
+        $kanan = [
+            'Menghubungkan perangkat dalam area terbatas seperti sekolah atau gedung.',
+            'Menghubungkan jaringan komputer antarwilayah, negara, atau benua.',
+            'Semua komputer terhubung ke satu perangkat pusat seperti Switch atau Hub.',
+            'Semua komputer dihubungkan ke satu kabel utama dengan terminator di kedua ujungnya.',
+        ];
+        $pengecoh = ['Menghubungkan beberapa lokasi dalam satu kota dengan jarak sekitar 10 sampai 50 kilometer.', '0'];
+        $this->post(route('soal-cbt.store'), [
+            ...$this->dataSoal($tahun, $mapel, 'PREVIEW-MENJODOHKAN'),
+            'jenis_soal' => 'menjodohkan',
+            'pertanyaan' => 'Jodohkan istilah jaringan komputer dengan deskripsi yang sesuai.',
+            'pasangan_kiri' => $kiri,
+            'pasangan_kanan' => $kanan,
+            'pengecoh_menjodohkan' => $pengecoh,
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $soal = SoalCbt::where('kode', 'PREVIEW-MENJODOHKAN')->firstOrFail();
+        $opsiAwal = $soal->opsi;
+        $kunciAwal = $soal->kunci_jawaban;
+        $halaman = [
+            'bank' => $this->get(route('soal-cbt.index', ['mata_pelajaran_id' => $mapel->id, 'tingkat' => 8])),
+            'editor' => $this->get(route('soal-cbt.edit', $soal)),
+        ];
+        foreach ($halaman as $nama => $response) {
+            $response->assertOk()->assertSee('data-question-preview', false)->assertSee('data-question-preview-body', false);
+            foreach ([...$kiri, ...$kanan, ...$pengecoh] as $teks) {
+                $response->assertSee($teks);
+            }
+            if (getenv('NUSA_MATCHING_PREVIEW_FIXTURE')) {
+                $folder = storage_path('framework/testing/matching-preview');
+                File::ensureDirectoryExists($folder);
+                File::put($folder.'/'.$nama.'.html', $response->getContent());
+            }
+        }
+        $this->assertSame($opsiAwal, $soal->fresh()->opsi);
+        $this->assertSame($kunciAwal, $soal->fresh()->kunci_jawaban);
+    }
+
     public function test_ringkasan_bank_soal_mengikuti_mapel_tingkat_dan_hak_akses(): void
     {
         [$tahun, $mapel, $pegawai] = $this->buatDataAkademik();

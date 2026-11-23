@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/student_exam/domain/student_exam.dart';
+import 'package:nusa/features/student_exam/presentation/exam_math_text.dart';
 import 'package:nusa/features/student_exam/presentation/exam_question_image.dart';
 
 class StudentExamQuestionView extends StatelessWidget {
@@ -81,7 +82,7 @@ class StudentExamQuestionView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (question.stimulus?.trim().isNotEmpty == true)
-                      Text(question.stimulus!),
+                      ExamMathText(question.stimulus!),
                     if (hasStudentExamMedia(question.stimulusMedia)) ...[
                       if (question.stimulus?.trim().isNotEmpty == true)
                         const SizedBox(height: 10),
@@ -96,7 +97,7 @@ class StudentExamQuestionView extends StatelessWidget {
               StudentExamQuestionMedia(media: question.media),
             ],
             const SizedBox(height: 18),
-            Text(
+            ExamMathText(
               question.question,
               style: const TextStyle(
                 fontSize: 16,
@@ -287,7 +288,7 @@ class StudentExamQuestionView extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text(option.text),
+                              ExamMathText(option.text),
                               if (hasStudentExamMedia(option.media)) ...[
                                 const SizedBox(height: 8),
                                 StudentExamQuestionMedia(media: option.media),
@@ -321,7 +322,7 @@ class StudentExamQuestionView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                ExamMathText(
                   '${statement.number}. ${statement.text}',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
@@ -379,7 +380,7 @@ class StudentExamQuestionView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
+                      ExamMathText(
                         '${option.label}. ${option.text}',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
@@ -399,7 +400,7 @@ class StudentExamQuestionView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
+                ExamMathText(
                   '${pair.number}. ${pair.left}',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
@@ -417,17 +418,29 @@ class StudentExamQuestionView extends StatelessWidget {
                       ? question.answer[pair.number]
                       : null,
                   isExpanded: true,
-                  items: question.options
-                      .map(
-                        (option) => DropdownMenuItem<String>(
-                          value: option.text,
-                          child: Text(
+                  itemHeight: null,
+                  items: [
+                    for (final option in question.options)
+                      DropdownMenuItem<String>(
+                        value: option.text,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: ExamMathText(
                             '${option.label}. ${option.text}',
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      )
-                      .toList(growable: false),
+                      ),
+                  ],
+                  selectedItemBuilder: (_) => [
+                    for (final option in question.options)
+                      Text(
+                        ExamMathText.containsFormula(option.text)
+                            ? 'Pilihan ${option.label}'
+                            : '${option.label}. ${option.text}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
                   onChanged: (value) {
                     final answer = {...question.answer};
                     if (value == null || value.isEmpty) {
@@ -479,7 +492,7 @@ class StudentExamQuestionMedia extends StatelessWidget {
         if (image.caption?.isNotEmpty == true)
           Padding(
             padding: const EdgeInsets.only(top: 5),
-            child: Text(
+            child: ExamMathText(
               image.caption!,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -493,7 +506,7 @@ class StudentExamQuestionMedia extends StatelessWidget {
         if (table.title?.isNotEmpty == true)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
+            child: ExamMathText(
               table.title!,
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
@@ -516,7 +529,7 @@ class StudentExamQuestionMedia extends StatelessWidget {
                       ),
                       (index) => Padding(
                         padding: const EdgeInsets.all(8),
-                        child: Text(
+                        child: ExamMathText(
                           index < entry.$2.length ? entry.$2[index] : '',
                           style: TextStyle(
                             fontWeight: entry.$1 == 0
@@ -561,7 +574,7 @@ class StudentExamQuestionMedia extends StatelessWidget {
         if (formula.caption?.isNotEmpty == true)
           Padding(
             padding: const EdgeInsets.only(top: 5),
-            child: Text(
+            child: ExamMathText(
               formula.caption!,
               textAlign: TextAlign.center,
               style: const TextStyle(

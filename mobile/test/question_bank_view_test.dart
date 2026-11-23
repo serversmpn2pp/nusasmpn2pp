@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -161,42 +162,44 @@ void main() {
     );
   }
 
-  testWidgets(
-    'detail memuat gambar stimulus, soal dan pilihan pada layar sempit',
-    (tester) async {
-      tester.view.physicalSize = const Size(320, 740);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final http = QuestionImageHttp()..install();
-      addTearDown(http.uninstall);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            questionBankRemoteDataSourceProvider.overrideWithValue(
-              _FakeQuestionBankRemoteDataSource(images: true),
-            ),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.light,
-            home: const QuestionBankDetailView(questionId: 7),
+  testWidgets('detail memuat gambar dan rumus di teks soal pada layar sempit', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final http = QuestionImageHttp()..install();
+    addTearDown(http.uninstall);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          questionBankRemoteDataSourceProvider.overrideWithValue(
+            _FakeQuestionBankRemoteDataSource(images: true),
           ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const QuestionBankDetailView(questionId: 7),
         ),
-      );
-      await _finishImages(tester);
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
-      await _finishImages(tester);
-      expect(find.byType(ExamQuestionImage), findsWidgets);
-      await tester.drag(find.byType(ListView), const Offset(0, -450));
-      await _finishImages(tester);
-      expect(
-        http.requests.map((url) => url.path),
-        containsAll(['/stimulus.png', '/utama.png', '/pilihan_A.png']),
-      );
-      expect(find.text('Muat Ulang Gambar'), findsNothing);
-      http.uninstall();
-    },
-  );
+      ),
+    );
+    await _finishImages(tester);
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await _finishImages(tester);
+    expect(find.byType(ExamQuestionImage), findsWidgets);
+    expect(find.byType(Math), findsOneWidget);
+    expect(tester.widget<Math>(find.byType(Math)).parseError, isNull);
+    await tester.drag(find.byType(ListView), const Offset(0, -450));
+    await _finishImages(tester);
+    expect(
+      http.requests.map((url) => url.path),
+      containsAll(['/stimulus.png', '/utama.png', '/pilihan_A.png']),
+    );
+    expect(find.text('Muat Ulang Gambar'), findsNothing);
+    expect(tester.takeException(), isNull);
+    http.uninstall();
+  });
 
   testWidgets('editor menyesuaikan bentuk jawaban tanpa overflow', (
     tester,
@@ -528,6 +531,7 @@ Map<String, dynamic> _detailWithImagesJson() {
     },
   };
   json['stimulus_media'] = image('stimulus');
+  json['pertanyaan'] = r'Satuan \(f = \frac{n}{t}\) adalah ....';
   json['media'] = image('utama');
   ((json['jawaban'] as Map)['opsi'] as List).first['media'] = image(
     'pilihan_A',

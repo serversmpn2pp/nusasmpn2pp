@@ -6,6 +6,7 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/question_bank/application/question_bank_controller.dart';
 import 'package:nusa/features/question_bank/domain/question_bank.dart';
 import 'package:nusa/features/student_exam/domain/student_exam.dart';
+import 'package:nusa/features/student_exam/presentation/exam_math_text.dart';
 import 'package:nusa/features/student_exam/presentation/student_exam_question_view.dart';
 
 class QuestionBankDetailView extends ConsumerWidget {
@@ -277,7 +278,10 @@ class _ContentCard extends StatelessWidget {
             const SizedBox(height: 13),
             const _Label('Stimulus'),
             const SizedBox(height: 5),
-            Text(question.stimulus!, style: const TextStyle(height: 1.5)),
+            ExamMathText(
+              question.stimulus!,
+              style: const TextStyle(height: 1.5),
+            ),
           ],
           if (_hasMedia(question.stimulusMedia)) ...[
             const SizedBox(height: 13),
@@ -290,9 +294,11 @@ class _ContentCard extends StatelessWidget {
           const SizedBox(height: 14),
           const _Label('Pertanyaan'),
           const SizedBox(height: 5),
-          SelectableText(
-            question.question,
-            style: const TextStyle(fontSize: 14, height: 1.55),
+          SelectionArea(
+            child: ExamMathText(
+              question.question,
+              style: const TextStyle(fontSize: 14, height: 1.55),
+            ),
           ),
           const Divider(height: 26),
           Wrap(
@@ -361,7 +367,7 @@ class _AnswerCard extends StatelessWidget {
           else ...[
             const _Label('Kunci jawaban'),
             const SizedBox(height: 5),
-            Text(
+            ExamMathText(
               _hasText(question.answer.textKey)
                   ? question.answer.textKey!
                   : 'Diperiksa manual',
@@ -372,7 +378,10 @@ class _AnswerCard extends StatelessWidget {
             const Divider(height: 24),
             const _Label('Rubrik pemeriksaan'),
             const SizedBox(height: 5),
-            Text(question.answer.rubric!, style: const TextStyle(height: 1.45)),
+            ExamMathText(
+              question.answer.rubric!,
+              style: const TextStyle(height: 1.45),
+            ),
           ],
         ],
       ),
@@ -423,7 +432,7 @@ class _AnswerRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(text, style: const TextStyle(fontSize: 12)),
+              ExamMathText(text, style: const TextStyle(fontSize: 12)),
               if (_hasMedia(media)) ...[
                 const SizedBox(height: 8),
                 _BankMedia(media: media),
@@ -465,7 +474,7 @@ class _PairRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(pair.left, style: const TextStyle(fontSize: 12)),
+              ExamMathText(pair.left, style: const TextStyle(fontSize: 12)),
               if (_hasMedia(pair.leftMedia)) _BankMedia(media: pair.leftMedia),
             ],
           ),
@@ -482,7 +491,7 @@ class _PairRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              ExamMathText(
                 pair.right,
                 textAlign: TextAlign.end,
                 style: const TextStyle(
@@ -533,7 +542,7 @@ class _TextCard extends StatelessWidget {
         children: [
           _CardTitle(icon: icon, title: title),
           const SizedBox(height: 11),
-          Text(text, style: const TextStyle(height: 1.5)),
+          ExamMathText(text, style: const TextStyle(height: 1.5)),
         ],
       ),
     ),
