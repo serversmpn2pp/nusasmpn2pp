@@ -1244,6 +1244,9 @@ Route::middleware(['auth', 'identitas_sesi'])->group(function () {
 
         Route::resource('skema-bobot-nilai', SkemaBobotNilaiController::class)
             ->middleware('izin:nilai.skema_kelola');
+        Route::post('komponen-nilai/kolektif', [KomponenNilaiController::class, 'storeKolektif'])
+            ->middleware('izin:nilai.komponen_kelola')
+            ->name('komponen-nilai.store-kolektif');
         Route::resource('komponen-nilai', KomponenNilaiController::class)
             ->middleware('izin:nilai.komponen_kelola');
         Route::middleware('izin:nilai.input')->group(function () {

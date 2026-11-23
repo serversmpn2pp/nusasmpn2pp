@@ -4832,6 +4832,7 @@ final class _FakeGradeComponentRemoteDataSource
     required String type,
     required String status,
     required int page,
+    String dateOrder = 'terbaru',
     int perPage = 15,
   }) async {
     final needle = search.trim().toLowerCase();
@@ -4877,6 +4878,7 @@ final class _FakeGradeComponentRemoteDataSource
         semester: semester,
         type: type,
         status: status,
+        dateOrder: dateOrder,
       ),
       pagination: grade_component.ComponentPagination(
         page: page,
@@ -4890,8 +4892,12 @@ final class _FakeGradeComponentRemoteDataSource
   }
 
   @override
-  Future<void> create(grade_component.GradeComponentFormValue value) async {
+  Future<String> create(
+    grade_component.GradeComponentFormValue value, {
+    required bool collective,
+  }) async {
     _items.add(_itemFromValue(id: 602, value: value));
+    return 'Komponen nilai berhasil ditambahkan.';
   }
 
   @override
@@ -4942,7 +4948,7 @@ final class _FakeGradeComponentRemoteDataSource
     name: value.name,
     assessmentDate: value.assessmentDate,
     assessmentDateLabel: value.assessmentDate,
-    order: value.order,
+    order: _items.where((item) => item.id == id).firstOrNull?.order ?? 0,
     active: value.active,
     notes: value.notes,
   );

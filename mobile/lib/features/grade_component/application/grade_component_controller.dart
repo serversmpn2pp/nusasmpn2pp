@@ -12,6 +12,7 @@ class GradeComponentController extends AsyncNotifier<GradeComponentPage> {
   String _semester = 'semua';
   String _type = 'semua';
   String _status = 'semua';
+  String _dateOrder = 'terbaru';
   int _requestVersion = 0;
   Timer? _debounce;
 
@@ -54,6 +55,12 @@ class GradeComponentController extends AsyncNotifier<GradeComponentPage> {
     await refresh();
   }
 
+  Future<void> sortByDate(String value) async {
+    if (_dateOrder == value) return;
+    _dateOrder = value;
+    await refresh();
+  }
+
   Future<void> refresh() async {
     final current = state.value;
     _academicYearId ??= current?.filter.academicYearId;
@@ -70,8 +77,9 @@ class GradeComponentController extends AsyncNotifier<GradeComponentPage> {
   Future<void> loadMore() async {
     final current = state.value;
     if (current == null || !current.pagination.hasNextPage) return;
+    final version = _requestVersion;
     final next = await _fetch(page: current.pagination.page + 1);
-    state = AsyncData(current.append(next));
+    if (version == _requestVersion) state = AsyncData(current.append(next));
   }
 
   Future<GradeComponentPage> _fetch({required int page}) => _guard(
@@ -83,6 +91,7 @@ class GradeComponentController extends AsyncNotifier<GradeComponentPage> {
           semester: _semester,
           type: _type,
           status: _status,
+          dateOrder: _dateOrder,
           page: page,
         ),
   );
@@ -112,8 +121,14 @@ class GradeComponentActions {
 
   final Ref _ref;
 
-  Future<void> create(GradeComponentFormValue value) =>
-      _guard(() => _ref.read(gradeComponentRepositoryProvider).create(value));
+  Future<String> create(
+    GradeComponentFormValue value, {
+    required bool collective,
+  }) => _guard(
+    () => _ref
+        .read(gradeComponentRepositoryProvider)
+        .create(value, collective: collective),
+  );
 
   Future<void> update({
     required int id,
@@ -127,9 +142,9 @@ class GradeComponentActions {
   Future<void> deactivate(int id) =>
       _guard(() => _ref.read(gradeComponentRepositoryProvider).deactivate(id));
 
-  Future<void> _guard(Future<void> Function() operation) async {
+  Future<T> _guard<T>(Future<T> Function() operation) async {
     try {
-      await operation();
+      return await operation();
     } on UnauthorizedException {
       await _ref.read(authControllerProvider.notifier).logout();
       rethrow;

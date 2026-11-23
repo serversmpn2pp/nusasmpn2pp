@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -27,6 +28,14 @@ class KomponenNilai extends Model
         'aktif' => 'boolean',
         'sts_manual_difinalisasi_pada' => 'datetime',
     ];
+
+    public function scopeUrutTanggal(Builder $query, string $urutan = 'terbaru'): Builder
+    {
+        return $query->orderByRaw('komponen_nilai.tanggal_penilaian IS NULL')
+            ->orderBy('komponen_nilai.tanggal_penilaian', $urutan === 'terlama' ? 'asc' : 'desc')
+            ->orderBy('komponen_nilai.nama')
+            ->orderBy('komponen_nilai.id');
+    }
 
     public function batalkanFinalisasiStsManual(): void
     {

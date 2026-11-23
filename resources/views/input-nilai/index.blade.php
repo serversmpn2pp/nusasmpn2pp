@@ -6,7 +6,7 @@
 @section('content')
     <style>
         .grade-filter { margin-bottom:24px; padding:20px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-        .input-nilai-filter { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+        .input-nilai-filter { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:16px; }
         .input-nilai-filter .field, .grade-component .field { min-width:0; }
         .grade-component { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:16px; padding-top:18px; margin-top:18px; border-top:1px solid var(--line); }
         .grade-component .actions { display:flex; flex-wrap:wrap; gap:8px; }
@@ -132,6 +132,7 @@
                 $filter['jenis_komponen'] === 'semua' ? $item->labelJenis() : null,
                 $filter['semester'] === 'semua' ? ucfirst($item->semester) : null,
                 $item->nama,
+                $item->tanggal_penilaian?->format('d-m-Y'),
             ])->filter()->join(' - ');
         };
 
@@ -184,6 +185,7 @@
             'tahun_pelajaran_id' => $filter['tahun_pelajaran_id'],
             'kelas_id' => $filter['kelas_id'],
             'semester' => $filter['semester'] !== 'semua' ? $filter['semester'] : null,
+            'urut_tanggal' => $filter['urut_tanggal'],
             'guru_mata_pelajaran_id' => $komponenDipilih?->guru_mata_pelajaran_id,
         ])),
         'tautanPerKomponen' => request()->fullUrl(),
@@ -239,6 +241,13 @@
                     @foreach (\App\Support\FilterInputNilai::JENIS as $key => $label)
                         <option value="{{ $key }}" @selected($filter['jenis_komponen'] === $key)>{{ $label }}</option>
                     @endforeach
+                </select>
+            </div>
+            <div class="field">
+                <label for="urut_tanggal">Urut tanggal penilaian</label>
+                <select id="urut_tanggal" name="urut_tanggal" class="select" data-grade-filter>
+                    <option value="terbaru" @selected($filter['urut_tanggal'] === 'terbaru')>Terbaru dahulu</option>
+                    <option value="terlama" @selected($filter['urut_tanggal'] === 'terlama')>Terlama dahulu</option>
                 </select>
             </div>
         </div>

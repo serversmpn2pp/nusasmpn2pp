@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SimpanKomponenNilaiKolektifRequest;
 use App\Models\KomponenNilai;
 use App\Services\Mobile\KomponenNilaiMobileService;
 use App\Services\Nilai\KomponenNilaiService;
@@ -20,6 +21,7 @@ class KomponenNilaiController extends Controller
             'semester' => ['nullable', Rule::in(['semua', 'ganjil', 'genap'])],
             'jenis_komponen' => ['nullable', Rule::in(['semua', 'formatif', 'sumatif', 'sts', 'sas_saj'])],
             'status' => ['nullable', Rule::in(['semua', 'aktif', 'nonaktif'])],
+            'urut_tanggal' => ['nullable', Rule::in(['terbaru', 'terlama'])],
             'halaman' => ['nullable', 'integer', 'min:1'],
             'per_halaman' => ['nullable', 'integer', 'min:5', 'max:50'],
         ]);
@@ -52,6 +54,16 @@ class KomponenNilaiController extends Controller
         );
 
         return $this->tanpaCache(['pesan' => 'Komponen nilai berhasil diperbarui.']);
+    }
+
+    public function storeKolektif(SimpanKomponenNilaiKolektifRequest $request, KomponenNilaiService $service): JsonResponse
+    {
+        $hasil = $service->tambahKolektif($request->user(), $request->validated());
+
+        return $this->tanpaCache([
+            'pesan' => $service->pesanHasilKolektif($hasil),
+            'data' => $hasil,
+        ])->setStatusCode($hasil['dibuat'] === [] ? 200 : 201);
     }
 
     public function destroy(

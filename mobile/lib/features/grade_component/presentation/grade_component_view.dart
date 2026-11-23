@@ -35,6 +35,28 @@ class _GradeComponentViewState extends ConsumerState<GradeComponentView> {
       appBar: AppBar(
         title: const Text('Komponen Nilai'),
         actions: [
+          if (current?.canCreateCollectively == true)
+            PopupMenuButton<String>(
+              key: const Key('grade-component-date-sort'),
+              tooltip: 'Urut tanggal penilaian',
+              icon: const Icon(Icons.sort_rounded),
+              enabled: !components.isLoading && !_mutating,
+              initialValue: current!.filter.dateOrder,
+              onSelected: ref
+                  .read(gradeComponentControllerProvider.notifier)
+                  .sortByDate,
+              itemBuilder: (context) => [
+                for (final (value, label) in [
+                  ('terbaru', 'Terbaru dahulu'),
+                  ('terlama', 'Terlama dahulu'),
+                ])
+                  CheckedPopupMenuItem(
+                    value: value,
+                    checked: current.filter.dateOrder == value,
+                    child: Text(label),
+                  ),
+              ],
+            ),
           IconButton(
             tooltip: 'Perbarui',
             onPressed: components.isLoading
@@ -49,7 +71,10 @@ class _GradeComponentViewState extends ConsumerState<GradeComponentView> {
               key: const Key('add-grade-component'),
               onPressed: _mutating || current!.assignments.isEmpty
                   ? null
-                  : () => _openForm(assignments: current.assignments),
+                  : () => _openForm(
+                      assignments: current.assignments,
+                      collective: current.canCreateCollectively,
+                    ),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Tambah'),
             )
@@ -124,25 +149,34 @@ class _GradeComponentViewState extends ConsumerState<GradeComponentView> {
   Future<void> _openForm({
     required List<GradeComponentAssignment> assignments,
     GradeComponent? existing,
+    bool collective = false,
   }) async {
     final value = await showModalBottomSheet<GradeComponentFormValue>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) =>
-          GradeComponentFormSheet(assignments: assignments, existing: existing),
+      builder: (context) => GradeComponentFormSheet(
+        assignments:
+            existing != null &&
+                !assignments.any((item) => item.id == existing.assignment.id)
+            ? [...assignments, existing.assignment]
+            : assignments,
+        existing: existing,
+        collective: collective,
+      ),
     );
     if (value == null || !mounted) return;
 
     await _runMutation(
-      successMessage: existing == null
-          ? 'Komponen nilai berhasil ditambahkan.'
-          : 'Komponen nilai berhasil diperbarui.',
-      operation: existing == null
-          ? () => ref.read(gradeComponentActionsProvider).create(value)
-          : () => ref
-                .read(gradeComponentActionsProvider)
-                .update(id: existing.id, value: value),
+      showResult: collective,
+      operation: () async {
+        final actions = ref.read(gradeComponentActionsProvider);
+        if (existing == null) {
+          return actions.create(value, collective: collective);
+        }
+        await actions.update(id: existing.id, value: value);
+        return 'Komponen nilai berhasil diperbarui.';
+      },
     );
   }
 
@@ -178,24 +212,43 @@ class _GradeComponentViewState extends ConsumerState<GradeComponentView> {
     if (!confirmed || !mounted) return;
 
     await _runMutation(
-      successMessage: 'Komponen nilai berhasil dinonaktifkan.',
-      operation: () =>
-          ref.read(gradeComponentActionsProvider).deactivate(item.id),
+      operation: () async {
+        await ref.read(gradeComponentActionsProvider).deactivate(item.id);
+        return 'Komponen nilai berhasil dinonaktifkan.';
+      },
     );
   }
 
   Future<void> _runMutation({
-    required String successMessage,
-    required Future<void> Function() operation,
+    required Future<String> Function() operation,
+    bool showResult = false,
   }) async {
     setState(() => _mutating = true);
     try {
-      await operation();
+      final message = await operation();
+      if (!mounted) return;
       await ref.read(gradeComponentControllerProvider.notifier).refresh();
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(successMessage)));
+      if (showResult) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Hasil simpan komponen'),
+            content: Text(message),
+            scrollable: true,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tutup'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+      }
     } catch (error) {
       if (mounted) _showError(error);
     } finally {
@@ -521,8 +574,7 @@ class _ComponentCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${item.typeLabel} · ${item.semesterLabel}'
-                        '${item.order > 0 ? ' · Urutan ${item.order}' : ''}',
+                        '${item.typeLabel} · ${item.semesterLabel}',
                         style: TextStyle(
                           color: color,
                           fontSize: 10,

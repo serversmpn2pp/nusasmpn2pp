@@ -5,6 +5,7 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/grade_entry/data/grade_entry_remote_data_source.dart';
 import 'package:nusa/features/grade_entry/domain/grade_entry.dart';
 import 'package:nusa/features/grade_entry/presentation/grade_entry_view.dart';
+import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
 void main() {
   testWidgets('input nilai menyimpan perubahan dan mempublikasikan nilai', (
@@ -51,6 +52,50 @@ void main() {
 
     expect(remote.published, isTrue);
     expect(find.text('Sudah dipublikasikan'), findsOneWidget);
+  });
+
+  testWidgets('mengurutkan pilihan komponen tidak mengganti komponen aktif', (
+    tester,
+  ) async {
+    final remote = _FakeGradeEntryRemoteDataSource(otherComponentValueCount: 1);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          gradeEntryRemoteDataSourceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const GradeEntryView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final componentFilter = find.byWidgetPredicate(
+      (widget) =>
+          widget is NusaDropdownField<int> &&
+          widget.fieldKey == const Key('grade-entry-component-filter'),
+    );
+    expect(
+      tester
+          .widget<NusaDropdownField<int>>(componentFilter)
+          .options
+          .map((item) => item.value),
+      [602, 601],
+    );
+    final fetchCount = remote.requestedComponentIds.length;
+
+    await tester.tap(find.byKey(const Key('grade-entry-date-sort')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.ancestor(
+        of: find.text('Terlama dahulu'),
+        matching: find.byType(CheckedPopupMenuItem<bool>),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<NusaDropdownField<int>>(componentFilter);
+    expect(field.options.map((item) => item.value), [601, 602]);
+    expect(field.value, 601);
+    expect(remote.requestedComponentIds.length, fetchCount);
+    expect(tester.takeException(), isNull);
   });
 
   for (final hasOtherGrade in [false, true]) {
@@ -298,6 +343,7 @@ final class _FakeGradeEntryRemoteDataSource
           type: 'formatif',
           typeLabel: 'Formatif',
           name: 'Kuis Aljabar Mobile',
+          assessmentDate: '2026-09-01',
           order: 1,
         ),
         if (otherComponentValueCount > 0)
@@ -308,6 +354,7 @@ final class _FakeGradeEntryRemoteDataSource
             type: 'sumatif',
             typeLabel: 'Sumatif',
             name: 'Sumatif Mobile',
+            assessmentDate: '2026-09-15',
             order: 2,
           ),
       ],

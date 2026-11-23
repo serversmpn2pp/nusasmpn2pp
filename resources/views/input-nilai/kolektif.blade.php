@@ -8,6 +8,7 @@
             'tahun_pelajaran_id' => $tahunId,
             'semester' => $semester,
             'kelas_id' => $kelasId,
+            'urut_tanggal' => $urutTanggal,
         ]);
         $perKomponen = route('input-nilai.index', [
             ...$cakupan,
@@ -77,6 +78,16 @@
                     @endforeach
                 </select>
             </div>
+            <div class="field">
+                <label for="bulk-urut-tanggal">Urut tanggal penilaian</label>
+                <select id="bulk-urut-tanggal" name="urut_tanggal" class="select">
+                    <option value="terbaru" @selected($urutTanggal === 'terbaru')>Terbaru dahulu</option>
+                    <option value="terlama" @selected($urutTanggal === 'terlama')>Terlama dahulu</option>
+                </select>
+            </div>
+            @foreach ($komponenDipilih as $komponen)
+                <input type="hidden" name="komponen[]" value="{{ $komponen->id }}" data-bulk-selected>
+            @endforeach
             <noscript><button type="submit" class="button button-muted">Muat pilihan</button></noscript>
         </form>
 
@@ -100,7 +111,7 @@
                             <label class="bulk-grade-option">
                                 <input type="checkbox" name="komponen[]" value="{{ $komponen->id }}"
                                     @checked($komponenDipilih->contains('id', $komponen->id)) @disabled($terkunci)>
-                                <span><strong>{{ $komponen->nama }}</strong><small>{{ $komponen->labelJenis() }}</small>
+                                <span><strong>{{ $komponen->nama }}</strong><small>{{ $komponen->labelJenis() }}{{ $komponen->tanggal_penilaian ? ' - '.$komponen->tanggal_penilaian->format('d-m-Y') : '' }}</small>
                                     @if ($terkunci)<small class="bulk-grade-locked"><i data-lucide="lock" aria-hidden="true"></i> {{ $terkunci }}</small>@endif
                                 </span>
                             </label>

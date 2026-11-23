@@ -16,6 +16,7 @@ class FilterInputNilai
             'semester' => ['nullable', Rule::in(['semua', 'ganjil', 'genap'])],
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'jenis_komponen' => ['nullable', Rule::in(['semua', ...array_keys(self::JENIS)])],
+            'urut_tanggal' => ['nullable', Rule::in(['terbaru', 'terlama'])],
         ];
     }
 

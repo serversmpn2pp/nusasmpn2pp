@@ -23,7 +23,13 @@ class PenulisExcelNilaiRapor
         $bobot = collect($jenis)->map(fn ($label, $kode) => $predikat || ! $skema ? null : $skema->{'bobot_'.$kode} / 100);
         $bobotValid = $bobot->every(fn ($nilai) => $nilai !== null && $nilai >= 0) && round($bobot->sum(), 10) === 1.0;
 
-        $komponen = collect(array_keys($jenis))->flatMap(fn ($kode) => $laporan['komponenNilai']->where('jenis_komponen', $kode))->values();
+        $komponenUrut = $laporan['komponenNilai']->sortBy(fn ($item) => [
+            $item->tanggal_penilaian === null,
+            $item->tanggal_penilaian?->toDateString(),
+            $item->nama,
+            $item->id,
+        ]);
+        $komponen = collect(array_keys($jenis))->flatMap(fn ($kode) => $komponenUrut->where('jenis_komponen', $kode))->values();
         if ($komponen->count() > 16380) {
             throw new RuntimeException('Jumlah komponen melebihi batas kolom Excel.');
         }

@@ -34,7 +34,7 @@ class InputNilaiFilterTest extends TestCase
     {
         $d = $this->data();
         $this->actingAs($d['guru'])->get(route('input-nilai.index'))->assertOk()
-            ->assertViewHas('filter', ['tahun_pelajaran_id' => $d['tahun']->id, 'semester' => 'ganjil', 'kelas_id' => null, 'jenis_komponen' => 'semua'])
+            ->assertViewHas('filter', ['tahun_pelajaran_id' => $d['tahun']->id, 'semester' => 'ganjil', 'kelas_id' => null, 'jenis_komponen' => 'semua', 'urut_tanggal' => 'terbaru'])
             ->assertViewHas('daftarKomponenNilai', fn ($items) => $items->pluck('id')->sort()->values()->all() === collect([$d['formatif']->id, $d['sts']->id, $d['formatifB']->id])->sort()->values()->all())
             ->assertViewHas('kelas', fn ($items) => $items->pluck('id')->all() === [$d['kelasA']->id, $d['kelasB']->id])
             ->assertDontSee('Komponen guru lain')->assertDontSee('Komponen nonaktif')->assertDontSee('Penugasan nonaktif');
@@ -64,7 +64,7 @@ class InputNilaiFilterTest extends TestCase
         $d = $this->data();
         $this->actingAs($d['guru'])->get(route('input-nilai.index', ['komponen_nilai_id' => $d['lama']->id]))
             ->assertOk()->assertViewHas('komponenDipilih', fn ($item) => $item->id === $d['lama']->id)
-            ->assertViewHas('filter', ['tahun_pelajaran_id' => $d['tahunLama']->id, 'semester' => 'genap', 'kelas_id' => $d['kelasLama']->id, 'jenis_komponen' => 'formatif']);
+            ->assertViewHas('filter', ['tahun_pelajaran_id' => $d['tahunLama']->id, 'semester' => 'genap', 'kelas_id' => $d['kelasLama']->id, 'jenis_komponen' => 'formatif', 'urut_tanggal' => 'terbaru']);
     }
 
     public function test_komponen_yang_tidak_cocok_dengan_filter_dikosongkan(): void
@@ -118,7 +118,7 @@ class InputNilaiFilterTest extends TestCase
         $response = $this->actingAs($d['guru'])->post(route('input-nilai.store'), ['komponen_nilai_id' => $d['formatif']->id, 'filter' => $filter, 'nilai' => [$d['siswa']->id => '88.25']]);
         $response->assertRedirect(route('input-nilai.index', ['komponen_nilai_id' => $d['formatif']->id, ...$filter]));
         $this->get($response->headers->get('Location'))->assertOk()
-            ->assertViewHas('filter', ['tahun_pelajaran_id' => null, 'semester' => 'semua', 'kelas_id' => null, 'jenis_komponen' => 'semua'])
+            ->assertViewHas('filter', ['tahun_pelajaran_id' => null, 'semester' => 'semua', 'kelas_id' => null, 'jenis_komponen' => 'semua', 'urut_tanggal' => 'terbaru'])
             ->assertViewHas('daftarKomponenNilai', fn ($items) => $items->count() === 5);
     }
 
@@ -130,7 +130,7 @@ class InputNilaiFilterTest extends TestCase
             ->post(route('input-nilai.store'), ['komponen_nilai_id' => $d['formatif']->id, 'filter' => $filter, 'nilai' => [$d['siswa']->id => '101'], 'catatan' => [$d['siswa']->id => 'Belum disimpan']])
             ->assertSessionHasErrors('nilai.'.$d['siswa']->id);
         $response = $this->get(route('input-nilai.index', ['komponen_nilai_id' => $d['formatif']->id]));
-        $response->assertOk()->assertViewHas('filter', ['tahun_pelajaran_id' => $d['tahun']->id, 'semester' => 'ganjil', 'kelas_id' => null, 'jenis_komponen' => 'semua'])
+        $response->assertOk()->assertViewHas('filter', ['tahun_pelajaran_id' => $d['tahun']->id, 'semester' => 'ganjil', 'kelas_id' => null, 'jenis_komponen' => 'semua', 'urut_tanggal' => 'terbaru'])
             ->assertSee('value="101"', false)->assertSee('value="Belum disimpan"', false)->assertSee('data-saved-value="80,00"', false);
         $this->assertDatabaseHas('nilai_siswa', ['komponen_nilai_id' => $d['formatif']->id, 'siswa_id' => $d['siswa']->id, 'nilai' => 80]);
     }
@@ -416,6 +416,61 @@ class InputNilaiFilterTest extends TestCase
         $this->assertStringNotContainsString($d['genap']->nama, $nilai->asXML());
         $this->assertDatabaseCount('nilai_siswa', $jumlahSebelum);
         $this->assertDatabaseCount('publikasi_nilai_siswa', 0);
+    }
+
+    public function test_komponen_kolektif_terpisah_per_kelas_dan_kolom_kosong_menurunkan_nilai_sementara(): void
+    {
+        $d = $this->data();
+        $a = $d['mapelA'];
+        $b = $d['formatifB']->guruMataPelajaran;
+        $d['formatif']->update(['tanggal_penilaian' => '2026-10-04', 'urutan' => 1]);
+        $d['formatifB']->nilaiSiswa()->create(['siswa_id' => $d['siswaB']->id, 'nilai' => 92]);
+        $this->skemaExport($d, [100, 0, 0, 0], null);
+        $this->actingAs($d['guru']);
+
+        $form = $this->get(route('komponen-nilai.create'))
+            ->assertOk()->assertDontSee('Urutan tampil')->assertDontSee('IX.C')
+            ->assertSee('value="2026-10-04"', false)
+            ->assertSee('Pilih semua kelas yang diampu');
+        $this->capture('komponen-kelas', $form->getContent());
+        $this->get(route('komponen-nilai.edit', $d['formatif']))->assertOk()->assertDontSee('Urutan tampil');
+
+        $url = fn (GuruMataPelajaran $item) => route('input-nilai.kolektif.export', [
+            'guru_mata_pelajaran_id' => $item->id, 'semester' => 'ganjil', 'urut_tanggal' => 'terbaru',
+        ]);
+        [$sebelum] = $this->bacaExport($this->get($url($a))->assertOk());
+        $this->assertSame('80', (string) $this->selExcel($sebelum, 'F6')->v);
+
+        $this->post(route('komponen-nilai.store-kolektif'), [
+            'guru_mata_pelajaran_ids' => [$a->id, $b->id], 'semester' => 'ganjil', 'jenis_komponen' => 'formatif',
+            'nama' => 'Proyek awal', 'tanggal_penilaian' => '2026-09-12', 'aktif' => '1',
+        ])->assertRedirect(route('komponen-nilai.index'))->assertSessionHas('berhasil', fn ($pesan) => str_contains($pesan, '2 kelas'));
+        $baruA = $a->komponenNilai()->where('nama', 'Proyek awal')->firstOrFail();
+        $baruB = $b->komponenNilai()->where('nama', 'Proyek awal')->firstOrFail();
+        $this->assertNotSame($baruA->id, $baruB->id);
+        $this->assertDatabaseCount('nilai_siswa', 2);
+
+        [$excelA] = $this->bacaExport($this->get($url($a))->assertOk());
+        [$excelB] = $this->bacaExport($this->get($url($b))->assertOk());
+        foreach ([$excelA, $excelB] as $excel) {
+            $this->assertSame('Proyek awal', (string) $this->selExcel($excel, 'D5')->is->t);
+            $this->assertFalse(isset($this->selExcel($excel, 'D6')->v));
+        }
+        $this->assertSame($d['formatif']->nama, (string) $this->selExcel($excelA, 'E5')->is->t);
+        $this->assertSame('STS', (string) $this->selExcel($excelA, 'F4')->is->t);
+        $this->assertSame('80', (string) $this->selExcel($excelA, 'E6')->v);
+        $this->assertSame('92', (string) $this->selExcel($excelB, 'E6')->v);
+        $this->assertSame('40', (string) $this->selExcel($excelA, 'G6')->v);
+        $this->assertSame('46', (string) $this->selExcel($excelB, 'F6')->v);
+        $this->assertStringContainsString('ROUND(SUM(D6:E6)/COLUMNS(D6:E6),2)', (string) $this->selExcel($excelA, 'G6')->f);
+
+        $this->get(route('input-nilai.index', $this->filter($d)))
+            ->assertOk()->assertViewHas('daftarKomponenNilai', fn ($items) => $items->modelKeys() === [$d['formatif']->id, $baruA->id]);
+        $this->get(route('input-nilai.kolektif', [
+            'tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelasA']->id,
+            'guru_mata_pelajaran_id' => $a->id, 'semester' => 'ganjil', 'urut_tanggal' => 'terlama',
+            'komponen' => [$d['formatif']->id, $baruA->id],
+        ]))->assertOk()->assertViewHas('komponenDipilih', fn ($items) => $items->modelKeys() === [$baruA->id, $d['formatif']->id]);
     }
 
     public function test_export_excel_menandai_komponen_yang_belum_dibuat_dan_memerlukan_skema_bobot(): void

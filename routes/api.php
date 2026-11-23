@@ -1078,6 +1078,9 @@ Route::prefix('v1')
         Route::post('/komponen-nilai', [KomponenNilaiController::class, 'store'])
             ->middleware('izin:nilai.komponen_kelola')
             ->name('komponen-nilai.store');
+        Route::post('/komponen-nilai/kolektif', [KomponenNilaiController::class, 'storeKolektif'])
+            ->middleware('izin:nilai.komponen_kelola')
+            ->name('komponen-nilai.store-kolektif');
         Route::patch('/komponen-nilai/{komponenNilai}', [KomponenNilaiController::class, 'update'])
             ->middleware('izin:nilai.komponen_kelola')
             ->name('komponen-nilai.update');

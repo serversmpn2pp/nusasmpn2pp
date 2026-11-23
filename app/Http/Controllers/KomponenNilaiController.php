@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SimpanKomponenNilaiKolektifRequest;
 use App\Models\KomponenNilai;
 use App\Models\TahunPelajaran;
 use App\Services\Nilai\KomponenNilaiService;
@@ -19,6 +20,7 @@ class KomponenNilaiController extends Controller
         $semester = $request->input('semester', 'semua');
         $jenis = $request->input('jenis_komponen', 'semua');
         $tahunPelajaranId = $request->input('tahun_pelajaran_id');
+        $urutTanggal = $request->input('urut_tanggal') === 'terlama' ? 'terlama' : 'terbaru';
 
         if (! in_array($status, ['semua', 'aktif', 'nonaktif'], true)) {
             $status = 'semua';
@@ -76,11 +78,7 @@ class KomponenNilaiController extends Controller
                         });
                 });
             })
-            ->orderByDesc('aktif')
-            ->orderBy('semester')
-            ->orderBy('jenis_komponen')
-            ->orderBy('urutan')
-            ->orderBy('nama')
+            ->urutTanggal($urutTanggal)
             ->paginate(10)
             ->withQueryString();
 
@@ -96,6 +94,7 @@ class KomponenNilaiController extends Controller
             'status',
             'semester',
             'jenis',
+            'urutTanggal',
             'jumlahKomponenNilai',
             'jumlahAktif',
             'jumlahNonaktif',
@@ -118,6 +117,14 @@ class KomponenNilaiController extends Controller
         return redirect()
             ->route('komponen-nilai.show', $komponenNilai)
             ->with('berhasil', 'Komponen nilai berhasil ditambahkan.');
+    }
+
+    public function storeKolektif(SimpanKomponenNilaiKolektifRequest $request)
+    {
+        $hasil = $this->service->tambahKolektif($request->user(), $request->validated());
+
+        return redirect()->route('komponen-nilai.index')
+            ->with($hasil['dibuat'] === [] ? 'peringatan' : 'berhasil', $this->service->pesanHasilKolektif($hasil));
     }
 
     public function show(Request $request, KomponenNilai $komponenNilai)
@@ -166,11 +173,14 @@ class KomponenNilaiController extends Controller
 
     private function dataForm(Request $request, array $tambahan = []): array
     {
+        $penugasan = isset($tambahan['komponenNilai'])
+            ? $this->service->queryGuruMataPelajaranDalamCakupan($request->user())
+                ->where(fn ($query) => $query->where('aktif', true)->orWhere('id', $tambahan['komponenNilai']->guru_mata_pelajaran_id))
+            : $this->service->queryPenugasanUntukTambah($request->user());
+
         return array_merge([
-            'guruMataPelajaran' => $this->service
-                ->queryGuruMataPelajaranDalamCakupan($request->user())
+            'guruMataPelajaran' => $penugasan
                 ->with(['tahunPelajaran', 'kelas', 'mataPelajaran', 'pegawai'])
-                ->where('aktif', true)
                 ->orderByDesc(
                     TahunPelajaran::select('aktif')
                         ->whereColumn('tahun_pelajaran.id', 'guru_mata_pelajaran.tahun_pelajaran_id')
@@ -181,6 +191,8 @@ class KomponenNilaiController extends Controller
                         ->whereColumn('tahun_pelajaran.id', 'guru_mata_pelajaran.tahun_pelajaran_id')
                         ->limit(1)
                 )
+                ->orderBy('mata_pelajaran_id')
+                ->orderBy('kelas_id')
                 ->get(),
         ], $tambahan);
     }

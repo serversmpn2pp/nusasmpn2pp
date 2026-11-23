@@ -7,6 +7,7 @@ class GradeComponentPage {
     required this.filter,
     required this.pagination,
     required this.canManage,
+    this.canCreateCollectively = false,
   });
 
   factory GradeComponentPage.fromJson(Map<String, dynamic> json) =>
@@ -24,6 +25,8 @@ class GradeComponentPage {
         filter: GradeComponentFilter.fromJson(_map(json['filter'])),
         pagination: ComponentPagination.fromJson(_map(json['paginasi'])),
         canManage: _map(json['hak_akses'])['dapat_kelola'] as bool? ?? false,
+        canCreateCollectively:
+            _map(json['hak_akses'])['dapat_tambah_kolektif'] as bool? ?? false,
       );
 
   final List<GradeComponent> items;
@@ -33,6 +36,7 @@ class GradeComponentPage {
   final GradeComponentFilter filter;
   final ComponentPagination pagination;
   final bool canManage;
+  final bool canCreateCollectively;
 
   GradeComponentPage append(GradeComponentPage next) => GradeComponentPage(
     items: [...items, ...next.items],
@@ -42,6 +46,7 @@ class GradeComponentPage {
     filter: next.filter,
     pagination: next.pagination,
     canManage: next.canManage,
+    canCreateCollectively: next.canCreateCollectively,
   );
 }
 
@@ -220,6 +225,7 @@ class GradeComponentFilter {
     required this.type,
     required this.status,
     this.academicYearId,
+    this.dateOrder = 'terbaru',
   });
 
   factory GradeComponentFilter.fromJson(Map<String, dynamic> json) =>
@@ -229,6 +235,7 @@ class GradeComponentFilter {
         semester: json['semester'] as String? ?? 'semua',
         type: json['jenis_komponen'] as String? ?? 'semua',
         status: json['status'] as String? ?? 'semua',
+        dateOrder: json['urut_tanggal'] as String? ?? 'terbaru',
       );
 
   final String search;
@@ -236,6 +243,7 @@ class GradeComponentFilter {
   final String semester;
   final String type;
   final String status;
+  final String dateOrder;
 }
 
 class ComponentPagination {
@@ -265,32 +273,32 @@ class ComponentPagination {
 
 class GradeComponentFormValue {
   const GradeComponentFormValue({
-    required this.assignmentId,
+    required this.assignmentIds,
     required this.semester,
     required this.type,
     required this.name,
-    required this.order,
     required this.active,
     this.assessmentDate,
     this.notes,
   });
 
-  final int assignmentId;
+  final List<int> assignmentIds;
   final String semester;
   final String type;
   final String name;
   final String? assessmentDate;
-  final int order;
   final bool active;
   final String? notes;
 
-  Map<String, dynamic> toJson() => {
-    'guru_mata_pelajaran_id': assignmentId,
+  Map<String, dynamic> toJson({bool collective = false}) => {
+    if (collective)
+      'guru_mata_pelajaran_ids': assignmentIds
+    else
+      'guru_mata_pelajaran_id': assignmentIds.single,
     'semester': semester,
     'jenis_komponen': type,
     'nama': name.trim(),
     'tanggal_penilaian': assessmentDate,
-    'urutan': order,
     'aktif': active,
     'keterangan': notes?.trim().isEmpty == true ? null : notes?.trim(),
   };

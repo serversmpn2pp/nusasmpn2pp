@@ -1,5 +1,5 @@
 <style>
-    .bulk-grade-context { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .bulk-grade-context { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
     .bulk-grade-context .field, .bulk-grade-context .select { min-width: 0; width: 100%; }
     .bulk-grade-pick { margin-bottom: 16px; }
     .bulk-grade-pick summary { padding: 14px 16px; cursor: pointer; font-weight: 800; }

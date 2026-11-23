@@ -27,6 +27,7 @@ class InputNilaiKolektifController extends Controller
             'kelas_id' => ['nullable', 'integer', 'min:1'],
             'guru_mata_pelajaran_id' => ['nullable', 'integer', 'min:1'],
             'semester' => ['nullable', Rule::in(['ganjil', 'genap'])],
+            'urut_tanggal' => ['nullable', Rule::in(['terbaru', 'terlama'])],
             'komponen' => ['nullable', 'array', 'list', 'max:'.InputNilaiKolektifService::MAKS_KOMPONEN],
             'komponen.*' => ['required', 'integer', 'min:1', 'distinct'],
         ]);
@@ -36,6 +37,7 @@ class InputNilaiKolektifController extends Controller
             ->orderByDesc('aktif')->orderByDesc('tanggal_mulai')->orderByDesc('id')->get();
         $tahunId = $daftarTahun->firstWhere('id', $filter['tahun_pelajaran_id'] ?? null)?->id ?? $daftarTahun->first()?->id;
         $semester = $filter['semester'] ?? (now()->month >= 7 ? 'ganjil' : 'genap');
+        $urutTanggal = $filter['urut_tanggal'] ?? 'terbaru';
         $cakupan->where('tahun_pelajaran_id', $tahunId);
         $daftarKelas = Kelas::query()->whereIn('id', (clone $cakupan)->select('kelas_id'))
             ->orderBy('tingkat')->orderBy('nama')->orderBy('id')->get();
@@ -47,7 +49,7 @@ class InputNilaiKolektifController extends Controller
 
         $daftarKomponen = $penugasan
             ? $penugasan->komponenNilai()->where('aktif', true)->where('semester', $semester)
-                ->withExists('kelasUjianCbt')->orderBy('jenis_komponen')->orderBy('urutan')->orderBy('nama')->orderBy('id')->get()
+                ->withExists('kelasUjianCbt')->urutTanggal($urutTanggal)->get()
             : collect();
         if ($penugasan) {
             $daftarKomponen->each(fn ($item) => $item->setRelation('guruMataPelajaran', $penugasan));
@@ -65,7 +67,7 @@ class InputNilaiKolektifController extends Controller
         $dipublikasikan = $penugasan?->publikasiNilaiSiswa()->where('semester', $semester)->where('dipublikasikan', true)->exists() ?? false;
 
         return view('input-nilai.kolektif', compact(
-            'daftarTahun', 'tahunId', 'semester', 'daftarKelas', 'kelasId', 'daftarPenugasan', 'penugasan',
+            'daftarTahun', 'tahunId', 'semester', 'urutTanggal', 'daftarKelas', 'kelasId', 'daftarPenugasan', 'penugasan',
             'daftarKomponen', 'alasanTerkunci', 'komponenDipilih', 'anggota', 'nilaiSiswa', 'predikat', 'dipublikasikan',
         ));
     }

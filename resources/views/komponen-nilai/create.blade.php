@@ -13,7 +13,7 @@
         <a href="{{ route('komponen-nilai.index') }}" class="button button-muted">Kembali</a>
     </div>
 
-    <form action="{{ route('komponen-nilai.store') }}" method="POST">
+    <form action="{{ route('komponen-nilai.store-kolektif') }}" method="POST" data-form-komponen-kolektif>
         @csrf
         @include('komponen-nilai.partials.form', ['tombol' => 'Simpan komponen'])
     </form>

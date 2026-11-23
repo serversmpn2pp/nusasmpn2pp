@@ -20,15 +20,74 @@ class KomponenNilaiService
             $pengguna,
             $data['guru_mata_pelajaran_id'],
         );
-        $this->pastikanNamaUnik($data);
-        $this->pastikanStsDanSasTunggal($data);
 
         return DB::transaction(function () use ($data) {
-            $komponen = KomponenNilai::create($data);
-            $this->tandaiPublikasiDraf($komponen);
+            $this->kunciPenugasan([$data['guru_mata_pelajaran_id']]);
+            $this->pastikanNamaUnik($data);
+            $this->pastikanStsDanSasTunggal($data);
 
-            return $komponen;
+            return $this->buatKomponen($data);
         });
+    }
+
+    public function tambahKolektif(Pengguna $pengguna, array $data): array
+    {
+        return DB::transaction(function () use ($pengguna, $data) {
+            $ids = $data['guru_mata_pelajaran_ids'];
+            $penugasan = $this->queryPenugasanUntukTambah($pengguna)
+                ->whereKey($ids)
+                ->with('kelas:id,nama')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            abort_unless($penugasan->count() === count($ids), 403, 'Ada kelas yang tidak dapat dipilih dari penugasan Anda.');
+
+            $konteks = $penugasan->groupBy(fn (GuruMataPelajaran $item) => implode(':', [
+                $item->tahun_pelajaran_id, $item->mata_pelajaran_id, $item->pegawai_id,
+            ]));
+            if ($konteks->count() !== 1 || $penugasan->unique('kelas_id')->count() !== $penugasan->count()) {
+                throw ValidationException::withMessages([
+                    'guru_mata_pelajaran_ids' => 'Pilih kelas untuk guru, mata pelajaran, dan tahun pelajaran yang sama.',
+                ]);
+            }
+
+            $hasil = ['dibuat' => [], 'dilewati' => []];
+            foreach ($penugasan->sortBy('kelas.nama', SORT_NATURAL | SORT_FLAG_CASE) as $item) {
+                $rincian = ['kelas_id' => (int) $item->kelas_id, 'kelas' => $item->kelas->nama];
+                $dataKomponen = $this->rapikanData(['guru_mata_pelajaran_id' => $item->id] + $data);
+                try {
+                    $this->pastikanNamaUnik($dataKomponen);
+                    $this->pastikanStsDanSasTunggal($dataKomponen);
+                } catch (ValidationException $exception) {
+                    $hasil['dilewati'][] = $rincian + ['alasan' => $exception->validator->errors()->first()];
+
+                    continue;
+                }
+
+                $komponen = $this->buatKomponen($dataKomponen);
+                $hasil['dibuat'][] = $rincian + ['komponen_nilai_id' => (int) $komponen->id];
+            }
+
+            return $hasil;
+        });
+    }
+
+    public function pesanHasilKolektif(array $hasil): string
+    {
+        $dibuat = count($hasil['dibuat']);
+        $pesan = $dibuat > 0
+            ? 'Komponen dibuat untuk '.$dibuat.' kelas: '.implode(', ', array_column($hasil['dibuat'], 'kelas')).'.'
+            : 'Tidak ada komponen baru yang dibuat.';
+
+        if ($hasil['dilewati'] !== []) {
+            $pesan .= ' Dilewati: '.collect($hasil['dilewati'])
+                ->groupBy('alasan')
+                ->map(fn ($kelas, $alasan) => $kelas->pluck('kelas')->implode(', ').' ('.rtrim($alasan, '.').')')
+                ->implode('; ').'.';
+        }
+
+        return $pesan;
     }
 
     public function ubah(
@@ -36,16 +95,18 @@ class KomponenNilaiService
         KomponenNilai $komponen,
         array $data,
     ): void {
-        $data = $this->rapikanData($data);
+        $data = $this->rapikanData($data, (int) $komponen->urutan);
         $this->pastikanBolehAksesKomponen($pengguna, $komponen);
         $this->pastikanBolehAksesGuruMataPelajaran(
             $pengguna,
             $data['guru_mata_pelajaran_id'],
         );
-        $this->pastikanNamaUnik($data, $komponen);
-        $this->pastikanStsDanSasTunggal($data, $komponen);
 
         DB::transaction(function () use ($komponen, $data) {
+            $this->kunciPenugasan([$komponen->guru_mata_pelajaran_id, $data['guru_mata_pelajaran_id']]);
+            $this->pastikanNamaUnik($data, $komponen);
+            $this->pastikanStsDanSasTunggal($data, $komponen);
+
             $cakupanLama = [
                 'guru_mata_pelajaran_id' => (int) $komponen->guru_mata_pelajaran_id,
                 'semester' => $komponen->semester,
@@ -100,6 +161,14 @@ class KomponenNilaiService
             );
     }
 
+    public function queryPenugasanUntukTambah(Pengguna $pengguna): Builder
+    {
+        return $this->queryGuruMataPelajaranDalamCakupan($pengguna)
+            ->where('aktif', true)
+            ->whereHas('kelas', fn (Builder $query) => $query->where('aktif', true)
+                ->whereColumn('kelas.tahun_pelajaran_id', 'guru_mata_pelajaran.tahun_pelajaran_id'));
+    }
+
     public function pastikanBolehAksesKomponen(
         Pengguna $pengguna,
         KomponenNilai $komponen,
@@ -132,7 +201,7 @@ class KomponenNilaiService
         );
     }
 
-    private function rapikanData(array $data): array
+    private function rapikanData(array $data, int $urutanLama = 0): array
     {
         return [
             'guru_mata_pelajaran_id' => (int) $data['guru_mata_pelajaran_id'],
@@ -142,12 +211,25 @@ class KomponenNilaiService
             'tanggal_penilaian' => filled($data['tanggal_penilaian'] ?? null)
                 ? $data['tanggal_penilaian']
                 : null,
-            'urutan' => (int) ($data['urutan'] ?? 0),
+            'urutan' => (int) ($data['urutan'] ?? $urutanLama),
             'aktif' => (bool) $data['aktif'],
             'keterangan' => filled($data['keterangan'] ?? null)
                 ? trim((string) $data['keterangan'])
                 : null,
         ];
+    }
+
+    private function kunciPenugasan(array $ids): void
+    {
+        GuruMataPelajaran::query()->whereKey($ids)->orderBy('id')->lockForUpdate()->get(['id']);
+    }
+
+    private function buatKomponen(array $data): KomponenNilai
+    {
+        $komponen = KomponenNilai::create($data);
+        $this->tandaiPublikasiDraf($komponen);
+
+        return $komponen;
     }
 
     private function pastikanNamaUnik(

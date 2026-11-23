@@ -83,10 +83,6 @@
                         <dt>Tanggal penilaian</dt>
                         <dd>{{ $komponenNilai->tanggal_penilaian ? $komponenNilai->tanggal_penilaian->format('d-m-Y') : '-' }}</dd>
                     </div>
-                    <div class="detail-item">
-                        <dt>Urutan tampil</dt>
-                        <dd>{{ $komponenNilai->urutan }}</dd>
-                    </div>
                     <div class="detail-item span-2">
                         <dt>Keterangan</dt>
                         <dd style="white-space: pre-line;">{{ $teks($komponenNilai->keterangan) }}</dd>

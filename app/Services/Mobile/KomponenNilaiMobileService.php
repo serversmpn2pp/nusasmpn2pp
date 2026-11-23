@@ -19,6 +19,7 @@ class KomponenNilaiMobileService
         $status = $filter['status'] ?? 'semua';
         $semester = $filter['semester'] ?? 'semua';
         $jenis = $filter['jenis_komponen'] ?? 'semua';
+        $urutTanggal = $filter['urut_tanggal'] ?? 'terbaru';
         $tahunPelajaranId = isset($filter['tahun_pelajaran_id'])
             ? (int) $filter['tahun_pelajaran_id']
             : null;
@@ -54,11 +55,7 @@ class KomponenNilaiMobileService
                             ->whereRaw('LOWER(nama) LIKE ?', [$pola]));
                 });
             })
-            ->orderByDesc('aktif')
-            ->orderBy('semester')
-            ->orderBy('jenis_komponen')
-            ->orderBy('urutan')
-            ->orderBy('nama')
+            ->urutTanggal($urutTanggal)
             ->paginate($perHalaman, ['*'], 'halaman', $halaman);
 
         return [
@@ -86,6 +83,7 @@ class KomponenNilaiMobileService
                 'semester' => $semester,
                 'jenis_komponen' => $jenis,
                 'status' => $status,
+                'urut_tanggal' => $urutTanggal,
             ],
             'paginasi' => [
                 'halaman' => $paginator->currentPage(),
@@ -96,6 +94,7 @@ class KomponenNilaiMobileService
             ],
             'hak_akses' => [
                 'dapat_kelola' => $pengguna->memilikiIzin('nilai.komponen_kelola'),
+                'dapat_tambah_kolektif' => $pengguna->memilikiIzin('nilai.komponen_kelola'),
             ],
         ];
     }
@@ -103,14 +102,13 @@ class KomponenNilaiMobileService
     private function referensiPenugasan(Pengguna $pengguna)
     {
         return $this->komponenNilai
-            ->queryGuruMataPelajaranDalamCakupan($pengguna)
+            ->queryPenugasanUntukTambah($pengguna)
             ->with([
                 'tahunPelajaran:id,nama,aktif',
                 'kelas:id,nama,tingkat',
                 'mataPelajaran:id,kode,nama',
                 'pegawai:id,nama_lengkap,nip',
             ])
-            ->where('aktif', true)
             ->orderByDesc(
                 TahunPelajaran::select('aktif')
                     ->whereColumn('tahun_pelajaran.id', 'guru_mata_pelajaran.tahun_pelajaran_id')

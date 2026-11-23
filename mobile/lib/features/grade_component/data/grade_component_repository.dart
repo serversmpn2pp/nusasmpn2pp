@@ -13,6 +13,7 @@ class GradeComponentRepository {
     required String semester,
     required String type,
     required String status,
+    required String dateOrder,
     required int page,
   }) => _remote.fetch(
     search: search,
@@ -20,10 +21,14 @@ class GradeComponentRepository {
     semester: semester,
     type: type,
     status: status,
+    dateOrder: dateOrder,
     page: page,
   );
 
-  Future<void> create(GradeComponentFormValue value) => _remote.create(value);
+  Future<String> create(
+    GradeComponentFormValue value, {
+    required bool collective,
+  }) => _remote.create(value, collective: collective);
 
   Future<void> update({
     required int id,

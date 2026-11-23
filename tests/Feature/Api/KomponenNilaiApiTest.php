@@ -26,6 +26,7 @@ class KomponenNilaiApiTest extends TestCase
         $this->withToken($this->token($pengguna))
             ->getJson(route('api.v1.komponen-nilai.index'))
             ->assertForbidden();
+        $this->postJson(route('api.v1.komponen-nilai.store-kolektif'))->assertForbidden();
     }
 
     public function test_daftar_memuat_filter_ringkasan_dan_referensi_penugasan(): void
@@ -104,6 +105,10 @@ class KomponenNilaiApiTest extends TestCase
         ]);
         $this->assertSame('2026-09-12', $komponen->fresh()->tanggal_penilaian->toDateString());
         $this->assertFalse($publikasi->fresh()->dipublikasikan);
+
+        unset($payload['urutan']);
+        $this->withToken($token)->patchJson(route('api.v1.komponen-nilai.update', $komponen), $payload)->assertOk();
+        $this->assertSame(4, $komponen->fresh()->urutan);
 
         $this->withToken($token)
             ->deleteJson(route('api.v1.komponen-nilai.destroy', $komponen))
@@ -216,6 +221,98 @@ class KomponenNilaiApiTest extends TestCase
             'nama' => 'Diagnostik Web',
             'aktif' => true,
         ]);
+    }
+
+    public function test_kolektif_menyimpan_hanya_kelas_yang_belum_memiliki_komponen(): void
+    {
+        $data = $this->dataAkademik();
+        $a = $data['penugasan'];
+        $b = $this->buatPenugasan($data['tahun'], $this->buatKelas($data['tahun'], 'VIII.B', 8), $a->mataPelajaran, $data['guru']);
+        $guru = $this->guruKolektif($data['guru']);
+        $url = route('api.v1.komponen-nilai.store-kolektif');
+        $this->withToken($this->token($guru));
+
+        foreach (['formatif', 'sts', 'sas_saj'] as $jenis) {
+            $nama = 'Penilaian '.$jenis;
+            $lama = $this->buatKomponen($a, 'ganjil', $jenis, $jenis === 'formatif' ? $nama : 'Nilai lama '.$jenis);
+            $publikasi = fn (GuruMataPelajaran $penugasan) => PublikasiNilaiSiswa::updateOrCreate([
+                'guru_mata_pelajaran_id' => $penugasan->id, 'semester' => 'ganjil',
+            ], ['dipublikasikan' => true, 'dipublikasikan_pada' => now(), 'dipublikasikan_oleh_pengguna_id' => $guru->id]);
+            $publikasiA = $publikasi($a);
+            $publikasiB = $publikasi($b);
+            $payload = $this->payload($a, 'ganjil', $jenis, $nama) + ['guru_mata_pelajaran_ids' => [$b->id, $a->id]];
+            $payload['tanggal_penilaian'] = '2026-10-12';
+
+            $this->postJson($url, $payload)->assertCreated()
+                ->assertJsonCount(1, 'data.dibuat')->assertJsonPath('data.dibuat.0.kelas', 'VIII.B')
+                ->assertJsonCount(1, 'data.dilewati')->assertJsonPath('data.dilewati.0.kelas', $a->kelas->nama);
+            $this->assertTrue($publikasiA->fresh()->dipublikasikan);
+            $this->assertFalse($publikasiB->fresh()->dipublikasikan);
+            $this->assertSame(1, $lama->fresh()->urutan);
+            $baru = $b->komponenNilai()->where('nama', $nama)->firstOrFail();
+            $this->assertSame('2026-10-12', $baru->tanggal_penilaian->toDateString());
+            $this->assertSame(0, $baru->urutan);
+            $this->postJson($url, $payload)->assertOk()->assertJsonCount(0, 'data.dibuat')->assertJsonCount(2, 'data.dilewati');
+        }
+        $this->assertDatabaseCount('komponen_nilai', 6);
+        $this->assertDatabaseCount('nilai_siswa', 0);
+    }
+
+    public function test_kolektif_menolak_batch_di_luar_penugasan_aktif_atau_berbeda_konteks(): void
+    {
+        $data = $this->dataAkademik();
+        $a = $data['penugasan'];
+        $guru = $this->guruKolektif($data['guru']);
+        $kelasNonaktif = $this->buatKelas($data['tahun'], 'VIII.NONAKTIF', 8);
+        $kelasNonaktif->update(['aktif' => false]);
+        $penugasanKelasNonaktif = $this->buatPenugasan($data['tahun'], $kelasNonaktif, $a->mataPelajaran, $data['guru']);
+        $nonaktif = $this->buatPenugasan($data['tahun'], $this->buatKelas($data['tahun'], 'VIII.SELESAI', 8), $a->mataPelajaran, $data['guru']);
+        $nonaktif->update(['aktif' => false]);
+        $mapelLain = $this->buatPenugasan($data['tahun'], $a->kelas, $data['penugasan_lain']->mataPelajaran, $data['guru']);
+        $tahunLama = TahunPelajaran::create(['nama' => '2025/2026 Komponen', 'aktif' => false]);
+        $lama = $this->buatPenugasan($tahunLama, $this->buatKelas($tahunLama, 'VIII.LAMA', 8), $a->mataPelajaran, $data['guru']);
+        $url = route('api.v1.komponen-nilai.store-kolektif');
+        $this->withToken($this->token($guru));
+
+        $this->getJson(route('api.v1.komponen-nilai.index'))->assertOk()
+            ->assertJsonPath('data.hak_akses.dapat_tambah_kolektif', true)->assertJsonCount(3, 'data.guru_mata_pelajaran');
+        foreach ([$data['penugasan_lain'], $penugasanKelasNonaktif, $nonaktif] as $luar) {
+            $this->postJson($url, $this->payload($a, 'ganjil', 'formatif', 'Kuis Kolektif') + [
+                'guru_mata_pelajaran_ids' => [$a->id, $luar->id],
+            ])->assertForbidden();
+        }
+        foreach ([$mapelLain, $lama] as $beda) {
+            $this->postJson($url, $this->payload($a, 'ganjil', 'formatif', 'Kuis Kolektif') + [
+                'guru_mata_pelajaran_ids' => [$a->id, $beda->id],
+            ])->assertUnprocessable()->assertJsonValidationErrors('guru_mata_pelajaran_ids');
+        }
+        $this->assertDatabaseCount('komponen_nilai', 0);
+    }
+
+    public function test_urutan_komponen_mengikuti_tanggal_dan_menempatkan_tanggal_kosong_terakhir(): void
+    {
+        $admin = Pengguna::where('username', 'administrator')->firstOrFail();
+        $penugasan = $this->dataAkademik()['penugasan'];
+        $kosong = $this->buatKomponen($penugasan, 'ganjil', 'formatif', 'A tanpa tanggal');
+        $baru = $this->buatKomponen($penugasan, 'ganjil', 'sts', 'B terbaru', false);
+        $baru->update(['tanggal_penilaian' => '2026-10-15', 'urutan' => 9]);
+        $lama = $this->buatKomponen($penugasan, 'ganjil', 'formatif', 'C terlama');
+        $lama->update(['tanggal_penilaian' => '2026-09-15']);
+        $this->withToken($this->token($admin));
+
+        foreach (['terbaru' => [$baru->id, $lama->id, $kosong->id], 'terlama' => [$lama->id, $baru->id, $kosong->id]] as $urut => $ids) {
+            $filter = $urut === 'terlama' ? ['urut_tanggal' => $urut] : [];
+            $this->getJson(route('api.v1.komponen-nilai.index', $filter))->assertOk()
+                ->assertJsonPath('data.filter.urut_tanggal', $urut)->assertJsonPath('data.items', fn ($items) => array_column($items, 'id') === $ids);
+        }
+    }
+
+    private function guruKolektif(Pegawai $pegawai): Pengguna
+    {
+        $guru = $this->buatPengguna('Guru Uji Kolektif', 'guru.uji.kolektif', $pegawai);
+        $guru->daftarPeran()->attach(Peran::where('kode', 'guru_mapel')->firstOrFail());
+
+        return $guru;
     }
 
     private function dataAkademik(): array

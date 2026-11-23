@@ -1,8 +1,8 @@
 @php
     $komponenNilai = $komponenNilai ?? null;
     $nilai = fn (string $field, mixed $default = '') => old($field, $komponenNilai?->{$field} ?? $default);
-    $tanggal = function (string $field) use ($nilai) {
-        $value = $nilai($field);
+    $tanggal = function (string $field) use ($nilai, $komponenNilai) {
+        $value = $nilai($field, $komponenNilai === null ? now()->toDateString() : '');
 
         return $value instanceof \Carbon\CarbonInterface ? $value->format('Y-m-d') : $value;
     };
@@ -38,15 +38,16 @@
     </aside>
 
     <div class="section-stack">
-        <section class="panel panel-pad feature-section">
-            <h2 class="panel-title">Penugasan Guru</h2>
-            <div class="form-grid">
-                <div class="field span-2">
+        @if ($komponenNilai === null)
+            @include('komponen-nilai.partials.pilih-kelas')
+        @else
+            <section class="panel panel-pad feature-section">
+                <h2 class="panel-title">Penugasan Guru</h2>
+                <div class="field">
                     <label for="guru_mata_pelajaran_id">Guru mata pelajaran</label>
-                    <select id="guru_mata_pelajaran_id" name="guru_mata_pelajaran_id" class="{{ $selectClass('guru_mata_pelajaran_id') }}" required autofocus>
-                        <option value="">Pilih guru mata pelajaran</option>
+                    <select id="guru_mata_pelajaran_id" name="guru_mata_pelajaran_id" class="{{ $selectClass('guru_mata_pelajaran_id') }}" required>
                         @foreach ($guruMataPelajaran as $item)
-                            <option value="{{ $item->id }}" @selected((string) $nilai('guru_mata_pelajaran_id', $guruMataPelajaranDipilih ?? '') === (string) $item->id)>
+                            <option value="{{ $item->id }}" @selected((string) $nilai('guru_mata_pelajaran_id') === (string) $item->id)>
                                 {{ $item->tahunPelajaran?->nama ?: '-' }} - {{ $item->kelas?->nama ?: '-' }} - {{ $item->mataPelajaran?->nama ?: '-' }} - {{ $item->pegawai?->nama_lengkap ?: '-' }}
                             </option>
                         @endforeach
@@ -54,10 +55,9 @@
                     @error('guru_mata_pelajaran_id')
                         <p class="error-text">{{ $message }}</p>
                     @enderror
-                    <p class="help-text">Komponen nilai dibuat berdasarkan kelas dan mata pelajaran yang diampu.</p>
                 </div>
-            </div>
-        </section>
+            </section>
+        @endif
 
         <section class="panel panel-pad feature-section">
             <h2 class="panel-title">Informasi Komponen</h2>
@@ -104,17 +104,9 @@
                     @enderror
                 </div>
 
-                <div class="field">
-                    <label for="urutan">Urutan tampil</label>
-                    <input id="urutan" name="urutan" type="number" min="0" max="999" value="{{ $nilai('urutan') }}" placeholder="Contoh: 1" class="{{ $inputClass('urutan') }}">
-                    @error('urutan')
-                        <p class="error-text">{{ $message }}</p>
-                    @enderror
-                </div>
-
                 <div class="field span-2">
                     <label for="keterangan">Keterangan</label>
-                    <textarea id="keterangan" name="keterangan" class="{{ $textareaClass('keterangan') }}">{{ $nilai('keterangan') }}</textarea>
+                    <textarea id="keterangan" name="keterangan" class="{{ $textareaClass('keterangan') }}" @if ($komponenNilai === null) maxlength="2000" @endif>{{ $nilai('keterangan') }}</textarea>
                     @error('keterangan')
                         <p class="error-text">{{ $message }}</p>
                     @enderror
@@ -124,7 +116,7 @@
 
         <div class="form-actions">
             <a href="{{ route('komponen-nilai.index') }}" class="button button-muted">Batal</a>
-            <button type="submit" class="button button-primary">{{ $tombol ?? 'Simpan' }}</button>
+            <button type="submit" class="button button-primary" @disabled($komponenNilai === null && $guruMataPelajaran->isEmpty())>{{ $tombol ?? 'Simpan' }}</button>
         </div>
     </div>
 </div>

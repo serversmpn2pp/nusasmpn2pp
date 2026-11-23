@@ -1,4 +1,4 @@
-// Fixtures: NUSA_CAPTURE_NILAI_UI=1 php artisan test --filter=InputNilaiFilterTest
+// Fixtures: NUSA_CAPTURE_NILAI_UI=1 php artisan test --filter='InputNilaiFilterTest|StsManualTest'
 import assert from 'node:assert/strict';
 import {readFile, mkdir} from 'node:fs/promises';
 import {resolve, sep, extname} from 'node:path';
@@ -17,6 +17,14 @@ try {
         if (url.pathname === '/input-nilai') {
             submissions.push({method:request.method(),params:Object.fromEntries(url.searchParams),body:request.postData()});
             name = request.method() === 'POST' || url.searchParams.get('komponen_nilai_id') ? 'selected' : url.searchParams.get('jenis_komponen') === 'sas_saj' ? 'empty' : 'filtered';
+        }
+        if (url.pathname === '/komponen-nilai/kolektif' && request.method() === 'POST') {
+            submissions.push({method:request.method(),body:request.postData()});
+            return route.fulfill({contentType:'text/html',body:'<p>Komponen tersimpan</p>'});
+        }
+        if (url.pathname === '/input-nilai/kolektif' && request.method() === 'GET') {
+            submissions.push({method:request.method(),params:url.searchParams});
+            name = 'kolektif';
         }
         if (url.pathname.startsWith('/publikasi-nilai/')) {
             submissions.push({method:request.method(),body:request.postData()});
@@ -40,13 +48,13 @@ try {
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Halaman melebar ${name}@${width}`);
             assert.ok(await page.locator('.grade-filter').evaluate(el => el.scrollWidth <= el.clientWidth + 1), `Filter melebar ${name}@${width}`);
             assert.ok(await page.getByRole('button',{name:'Buka nilai',exact:true}).isVisible());
-            assert.equal(await page.locator('[data-grade-filter]').count(),4);
+            assert.equal(await page.locator('[data-grade-filter]').count(),5);
             assert.equal(await page.locator('#komponen_nilai_id').evaluate(el => el.required),false);
             const clipped = await page.locator('.grade-filter .button:visible, .grade-filter label, .grade-component-count').evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2).map(el => el.textContent.trim()));
             assert.deepEqual(clipped,[],`Teks terpotong ${name}@${width}`);
             if (['selected','published','unsaved','wide','wide-published','predikat','manual-draft','manual-final','manual-cbt'].includes(name)) {
                 assert.ok(await page.locator('[data-grade-form]').isVisible());
-                assert.equal(await page.locator('[data-grade-form] [name^="filter["]').count(),4);
+                assert.equal(await page.locator('[data-grade-form] [name^="filter["]').count(),5);
                 assert.equal(await page.locator('[data-grade-unsaved]').isVisible(),name === 'unsaved');
                 const layout = await page.locator('.grade-workspace').evaluate(workspace => {
                     const overview = workspace.querySelector('.grade-overview'), entry = workspace.querySelector('.grade-entry');
@@ -116,6 +124,13 @@ try {
     await page.getByRole('button',{name:'Buka nilai',exact:true}).click();
     await navigation;
     assert.ok(submissions.at(-1).params.komponen_nilai_id);
+    await page.goto('http://localhost/audit/selected');
+    const selectedComponent = await page.locator('#komponen_nilai_id').inputValue();
+    navigation = page.waitForURL('**/input-nilai?**');
+    await page.locator('#urut_tanggal').selectOption('terlama');
+    await navigation;
+    assert.equal(submissions.at(-1).params.urut_tanggal,'terlama');
+    assert.equal(submissions.at(-1).params.komponen_nilai_id,selectedComponent);
     await page.goto('http://localhost/audit/selected');
     navigation = page.waitForURL('**/input-nilai?**');
     await page.locator('#jenis_komponen').selectOption('sts');
@@ -199,6 +214,50 @@ try {
     assert.equal(manualBody.get('filter[jenis_komponen]'),'sts');
     await page.goto('http://localhost/audit/manual-final');
     assert.ok(await page.getByRole('button',{name:'Jadikan draf STS',exact:true}).isVisible());
+
+    await page.goto('http://localhost/audit/kolektif');
+    const collectiveIds = await page.locator('[data-bulk-selected]').evaluateAll(inputs => inputs.map(input => input.value));
+    navigation = page.waitForURL('**/input-nilai/kolektif?**');
+    await page.locator('#bulk-urut-tanggal').selectOption('terlama');
+    await navigation;
+    assert.equal(submissions.at(-1).params.get('urut_tanggal'),'terlama');
+    assert.deepEqual(submissions.at(-1).params.getAll('komponen[]'),collectiveIds);
+
+    for (const [width,height] of [[320,740],[390,844],[1366,900]]) {
+        await page.setViewportSize({width,height});
+        await page.goto('http://localhost/audit/komponen-kelas');
+        const checked = page.locator('[data-kelompok-kelas]:visible input[name="guru_mata_pelajaran_ids[]"]');
+        const all = page.getByRole('checkbox',{name:'Pilih semua kelas yang diampu'});
+        const save = page.getByRole('button',{name:'Simpan komponen'});
+        assert.equal(await checked.count(),2);
+        assert.equal(await page.locator('[name="urutan"]').count(),0);
+        assert.ok(await save.isDisabled());
+        await checked.first().check();
+        assert.equal(await all.evaluate(input => input.indeterminate),true);
+        await all.click();
+        const ids = await checked.evaluateAll(inputs => inputs.filter(input => input.checked).map(input => input.value));
+        assert.equal(ids.length,2);
+        await page.locator('#komponen-tahun').selectOption({label:'2025/2026'});
+        assert.equal(await checked.count(),1);
+        assert.ok(await page.getByRole('checkbox',{name:'VII.A',exact:true}).isVisible());
+        assert.ok(await save.isDisabled());
+        await page.locator('#komponen-tahun').selectOption({label:'2026/2027 (aktif)'});
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Form melebar pada ${width}px`);
+        const clipped = await page.locator('[data-kelompok-kelas]:visible .status-toggle span').evaluateAll(labels => labels.filter(label => label.scrollWidth > label.clientWidth + 1).map(label => label.textContent));
+        assert.deepEqual(clipped,[],`Nama kelas terpotong pada ${width}px`);
+        if (width !== 320) await page.screenshot({path:`${output}/komponen-kelas-${width}.png`});
+
+        await page.locator('#semester').selectOption('ganjil');
+        await page.locator('#jenis_komponen').selectOption('formatif');
+        await page.locator('#nama').fill('Proyek lintas kelas');
+        const submit = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname === '/komponen-nilai/kolektif');
+        await save.click();
+        const data = new URLSearchParams((await submit).postData());
+        assert.deepEqual(data.getAll('guru_mata_pelajaran_ids[]'), ids);
+        assert.equal(data.get('nama'),'Proyek lintas kelas');
+        assert.equal(data.get('tanggal_penilaian'),'2026-10-04');
+        assert.ok(!data.has('urutan'));
+    }
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({result:'passed',widths:sizes.map(([width]) => width),pages:13,checks:['filters','direct-component','empty-state','no-overflow','horizontal-overview','full-width-table','no-table-horizontal-scroll','32-students','predikat-input','dependent-year-class','unsaved-cancel','unsaved-confirm','save-filters','decimal-input','publication-guard','sts-manual-dirty-guard','sts-manual-confirmation','sts-manual-submit']}));
+    console.log(JSON.stringify({result:'passed',widths:sizes.map(([width]) => width),pages:15,checks:['filters','direct-component','empty-state','no-overflow','horizontal-overview','full-width-table','no-table-horizontal-scroll','32-students','predikat-input','dependent-year-class','date-sort','collective-date-sort','component-creation','unsaved-cancel','unsaved-confirm','save-filters','decimal-input','publication-guard','sts-manual-dirty-guard','sts-manual-confirmation','sts-manual-submit']}));
 } finally { await browser.close(); }

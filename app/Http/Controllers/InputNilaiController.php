@@ -41,6 +41,7 @@ class InputNilaiController extends Controller
         ], $filter);
         $filter['semester'] ??= 'semua';
         $filter['jenis_komponen'] ??= 'semua';
+        $filter['urut_tanggal'] ??= 'terbaru';
         $kelas = Kelas::whereIn('id', (clone $penugasan)
             ->when($filter['tahun_pelajaran_id'], fn ($q, $id) => $q->where('tahun_pelajaran_id', $id))->select('kelas_id'))
             ->orderBy('tingkat')->orderBy('nama')->orderBy('id')->get();
@@ -189,10 +190,7 @@ class InputNilaiController extends Controller
             ->when($filter['kelas_id'], fn ($q, $id) => $q->whereHas('guruMataPelajaran', fn ($q) => $q->where('kelas_id', $id)))
             ->when($filter['semester'] !== 'semua', fn ($q) => $q->where('semester', $filter['semester']))
             ->when($filter['jenis_komponen'] !== 'semua', fn ($q) => $q->where('jenis_komponen', $filter['jenis_komponen']))
-            ->orderBy('semester')
-            ->orderBy('jenis_komponen')
-            ->orderBy('urutan')
-            ->orderBy('nama')
+            ->urutTanggal($filter['urut_tanggal'])
             ->get();
     }
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/grade_component/domain/grade_component.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
@@ -8,11 +7,13 @@ class GradeComponentFormSheet extends StatefulWidget {
   const GradeComponentFormSheet({
     required this.assignments,
     this.existing,
+    this.collective = false,
     super.key,
   });
 
   final List<GradeComponentAssignment> assignments;
   final GradeComponent? existing;
+  final bool collective;
 
   @override
   State<GradeComponentFormSheet> createState() =>
@@ -21,43 +22,56 @@ class GradeComponentFormSheet extends StatefulWidget {
 
 class _GradeComponentFormSheetState extends State<GradeComponentFormSheet> {
   late int? _assignmentId;
+  int? _yearId;
+  String? _subjectId;
+  final _selectedAssignments = <int>{};
   late String _semester;
   late String _type;
   late bool _active;
   late DateTime? _assessmentDate;
   late final TextEditingController _nameController;
-  late final TextEditingController _orderController;
   late final TextEditingController _notesController;
   String? _error;
 
   bool get _editing => widget.existing != null;
+  bool get _collective => widget.collective && !_editing;
+
+  Map<String, List<GradeComponentAssignment>> get _subjects {
+    final groups = <String, List<GradeComponentAssignment>>{};
+    for (final assignment in widget.assignments) {
+      if (assignment.academicYear.id == _yearId) {
+        final key = '${assignment.subject.id}:${assignment.employee.id}';
+        (groups[key] ??= []).add(assignment);
+      }
+    }
+    return groups;
+  }
 
   @override
   void initState() {
     super.initState();
     final existing = widget.existing;
-    _assignmentId =
-        existing?.assignment.id ??
+    final preferred =
         widget.assignments
             .where((item) => item.academicYear.active)
-            .firstOrNull
-            ?.id ??
-        widget.assignments.firstOrNull?.id;
+            .firstOrNull ??
+        widget.assignments.firstOrNull;
+    _assignmentId = existing?.assignment.id ?? preferred?.id;
+    _yearId = preferred?.academicYear.id;
+    if (_collective) _resetSubject();
     _semester = existing?.semester ?? 'ganjil';
     _type = existing?.type ?? 'formatif';
     _active = existing?.active ?? true;
-    _assessmentDate = existing?.assessmentDate == null
-        ? null
-        : DateTime.tryParse(existing!.assessmentDate!);
+    _assessmentDate = existing == null
+        ? DateUtils.dateOnly(DateTime.now())
+        : DateTime.tryParse(existing.assessmentDate ?? '');
     _nameController = TextEditingController(text: existing?.name);
-    _orderController = TextEditingController(text: '${existing?.order ?? 1}');
     _notesController = TextEditingController(text: existing?.notes);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _orderController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -107,51 +121,25 @@ class _GradeComponentFormSheetState extends State<GradeComponentFormSheet> {
               key: const Key('grade-component-form-scroll'),
               padding: const EdgeInsets.all(16),
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: NusaColors.surfaceBlue,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        color: NusaColors.primary,
-                      ),
-                      SizedBox(width: 9),
-                      Expanded(
-                        child: Text(
-                          'Pilih penugasan guru, lalu tentukan komponen yang '
-                          'akan muncul pada halaman input nilai siswa.',
-                          style: TextStyle(
-                            color: NusaColors.textSecondary,
-                            fontSize: 11,
-                            height: 1.35,
-                          ),
+                if (_collective)
+                  ..._classFields()
+                else
+                  NusaDropdownField<int>(
+                    fieldKey: const Key('grade-component-form-assignment'),
+                    value: _assignmentId,
+                    decoration: const InputDecoration(
+                      labelText: 'Guru mata pelajaran',
+                      prefixIcon: Icon(Icons.co_present_rounded),
+                    ),
+                    options: [
+                      for (final assignment in widget.assignments)
+                        NusaDropdownOption(
+                          value: assignment.id,
+                          label: assignment.label,
                         ),
-                      ),
                     ],
+                    onChanged: (value) => setState(() => _assignmentId = value),
                   ),
-                ),
-                const SizedBox(height: 14),
-                NusaDropdownField<int>(
-                  fieldKey: const Key('grade-component-form-assignment'),
-                  value: _assignmentId,
-                  decoration: const InputDecoration(
-                    labelText: 'Guru mata pelajaran',
-                    prefixIcon: Icon(Icons.co_present_rounded),
-                  ),
-                  options: [
-                    for (final assignment in widget.assignments)
-                      NusaDropdownOption(
-                        value: assignment.id,
-                        label: assignment.label,
-                      ),
-                  ],
-                  onChanged: (value) => setState(() => _assignmentId = value),
-                ),
                 const SizedBox(height: 11),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,27 +200,7 @@ class _GradeComponentFormSheetState extends State<GradeComponentFormSheet> {
                   ),
                 ),
                 const SizedBox(height: 11),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _dateField()),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: TextField(
-                        key: const Key('grade-component-form-order'),
-                        controller: _orderController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Urutan tampil',
-                          prefixIcon: Icon(Icons.format_list_numbered_rounded),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                _dateField(),
                 const SizedBox(height: 6),
                 SwitchListTile.adaptive(
                   key: const Key('grade-component-form-active'),
@@ -272,26 +240,26 @@ class _GradeComponentFormSheetState extends State<GradeComponentFormSheet> {
                     ),
                   ),
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    _error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 key: const Key('save-grade-component'),
-                onPressed: _submit,
+                onPressed: _collective && _selectedAssignments.isEmpty
+                    ? null
+                    : _submit,
                 icon: const Icon(Icons.save_outlined),
                 label: Text(_editing ? 'Simpan Perubahan' : 'Simpan Komponen'),
               ),
@@ -302,13 +270,125 @@ class _GradeComponentFormSheetState extends State<GradeComponentFormSheet> {
     ),
   );
 
+  void _resetSubject() {
+    final subjects = _subjects;
+    _selectSubject(subjects.length == 1 ? subjects.keys.single : null);
+  }
+
+  void _selectSubject(String? value) {
+    _subjectId = value;
+    _selectedAssignments.clear();
+    final classes = _subjects[value];
+    if (classes?.length == 1) _selectedAssignments.add(classes!.single.id);
+  }
+
+  List<Widget> _classFields() {
+    final years = {
+      for (final item in widget.assignments)
+        item.academicYear.id: item.academicYear,
+    };
+    final subjects = _subjects;
+    final classes = [...?subjects[_subjectId]]
+      ..sort((a, b) => a.schoolClass.name.compareTo(b.schoolClass.name));
+    final showTeacher =
+        subjects.values.map((items) => items.first.employee.id).toSet().length >
+        1;
+    final count = _selectedAssignments.length;
+
+    return [
+      NusaDropdownField<int>(
+        fieldKey: const Key('grade-component-form-year'),
+        value: _yearId,
+        decoration: const InputDecoration(labelText: 'Tahun pelajaran'),
+        options: [
+          for (final year in years.values)
+            NusaDropdownOption(
+              value: year.id,
+              label: '${year.name}${year.active ? ' (aktif)' : ''}',
+            ),
+        ],
+        onChanged: (value) => setState(() {
+          _yearId = value;
+          _resetSubject();
+        }),
+      ),
+      const SizedBox(height: 11),
+      NusaDropdownField<String>(
+        fieldKey: const Key('grade-component-form-subject'),
+        value: _subjectId,
+        decoration: const InputDecoration(labelText: 'Mata pelajaran'),
+        options: [
+          for (final entry in subjects.entries)
+            NusaDropdownOption(
+              value: entry.key,
+              label:
+                  '${entry.value.first.subject.name}${showTeacher ? ' - ${entry.value.first.employee.name}' : ''}',
+            ),
+        ],
+        onChanged: (value) => setState(() => _selectSubject(value)),
+      ),
+      if (classes.isNotEmpty) ...[
+        const SizedBox(height: 4),
+        CheckboxListTile(
+          key: const Key('grade-component-all-classes'),
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          dense: true,
+          tristate: true,
+          title: const Text('Pilih semua kelas yang diampu'),
+          subtitle: Text('$count dari ${classes.length} kelas dipilih'),
+          value: count == classes.length
+              ? true
+              : count == 0
+              ? false
+              : null,
+          onChanged: (_) => setState(() {
+            _selectedAssignments.clear();
+            if (count != classes.length) {
+              _selectedAssignments.addAll(classes.map((item) => item.id));
+            }
+          }),
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) => Wrap(
+            spacing: 8,
+            children: [
+              for (final item in classes)
+                SizedBox(
+                  width: constraints.maxWidth < 280
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth - 8) / 2,
+                  child: CheckboxListTile(
+                    key: Key('grade-component-class-${item.id}'),
+                    title: Text(item.schoolClass.name),
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: _selectedAssignments.contains(item.id),
+                    onChanged: (value) => setState(() {
+                      if (value == true) {
+                        _selectedAssignments.add(item.id);
+                      } else {
+                        _selectedAssignments.remove(item.id);
+                      }
+                    }),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    ];
+  }
+
   Widget _dateField() => InkWell(
     key: const Key('grade-component-form-date'),
     borderRadius: BorderRadius.circular(14),
     onTap: _pickDate,
     child: InputDecorator(
       decoration: InputDecoration(
-        labelText: 'Tanggal',
+        labelText: 'Tanggal penilaian',
         prefixIcon: const Icon(Icons.event_rounded),
         suffixIcon: _assessmentDate == null
             ? null
@@ -338,31 +418,27 @@ class _GradeComponentFormSheetState extends State<GradeComponentFormSheet> {
 
   void _submit() {
     final name = _nameController.text.trim();
-    final order = int.tryParse(_orderController.text.trim());
-    if (_assignmentId == null) {
-      setState(() => _error = 'Guru mata pelajaran wajib dipilih.');
+    final assignmentIds = _collective
+        ? _selectedAssignments.toList()
+        : [?_assignmentId];
+    if (assignmentIds.isEmpty) {
+      setState(() => _error = 'Pilih minimal satu kelas.');
       return;
     }
     if (name.isEmpty) {
       setState(() => _error = 'Nama komponen wajib diisi.');
       return;
     }
-    if (order == null || order < 0 || order > 999) {
-      setState(() => _error = 'Urutan tampil harus berada pada rentang 0–999.');
-      return;
-    }
-
     Navigator.pop(
       context,
       GradeComponentFormValue(
-        assignmentId: _assignmentId!,
+        assignmentIds: assignmentIds,
         semester: _semester,
         type: _type,
         name: name,
         assessmentDate: _assessmentDate == null
             ? null
             : _apiDate(_assessmentDate!),
-        order: order,
         active: _active,
         notes: _notesController.text.trim().isEmpty
             ? null

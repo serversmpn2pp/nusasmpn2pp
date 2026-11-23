@@ -12,10 +12,14 @@ abstract interface class GradeComponentRemoteDataSource {
     required String type,
     required String status,
     required int page,
+    String dateOrder = 'terbaru',
     int perPage = 15,
   });
 
-  Future<void> create(GradeComponentFormValue value);
+  Future<String> create(
+    GradeComponentFormValue value, {
+    required bool collective,
+  });
 
   Future<void> update({
     required int id,
@@ -39,6 +43,7 @@ final class DioGradeComponentRemoteDataSource
     required String type,
     required String status,
     required int page,
+    String dateOrder = 'terbaru',
     int perPage = 15,
   }) async {
     try {
@@ -50,6 +55,7 @@ final class DioGradeComponentRemoteDataSource
           'semester': semester,
           'jenis_komponen': type,
           'status': status,
+          'urut_tanggal': dateOrder,
           'halaman': page,
           'per_halaman': perPage,
         },
@@ -63,35 +69,41 @@ final class DioGradeComponentRemoteDataSource
   }
 
   @override
-  Future<void> create(GradeComponentFormValue value) =>
-      _send(path: 'komponen-nilai', method: 'POST', value: value);
-
-  @override
-  Future<void> update({
-    required int id,
-    required GradeComponentFormValue value,
-  }) => _send(path: 'komponen-nilai/$id', method: 'PATCH', value: value);
-
-  @override
-  Future<void> deactivate(int id) async {
+  Future<String> create(
+    GradeComponentFormValue value, {
+    required bool collective,
+  }) async {
     try {
-      await _dio.delete<Map<String, dynamic>>('komponen-nilai/$id');
+      final response = await _dio.post<Map<String, dynamic>>(
+        collective ? 'komponen-nilai/kolektif' : 'komponen-nilai',
+        data: value.toJson(collective: collective),
+      );
+      return response.data?['pesan'] as String? ??
+          'Komponen nilai berhasil ditambahkan.';
     } on DioException catch (exception) {
       throw mapDioException(exception);
     }
   }
 
-  Future<void> _send({
-    required String path,
-    required String method,
+  @override
+  Future<void> update({
+    required int id,
     required GradeComponentFormValue value,
   }) async {
     try {
-      await _dio.request<Map<String, dynamic>>(
-        path,
+      await _dio.patch<Map<String, dynamic>>(
+        'komponen-nilai/$id',
         data: value.toJson(),
-        options: Options(method: method),
       );
+    } on DioException catch (exception) {
+      throw mapDioException(exception);
+    }
+  }
+
+  @override
+  Future<void> deactivate(int id) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>('komponen-nilai/$id');
     } on DioException catch (exception) {
       throw mapDioException(exception);
     }

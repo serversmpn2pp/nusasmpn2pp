@@ -31,7 +31,10 @@
     </div>
 
     @if (session('berhasil'))
-        <div class="alert">{{ session('berhasil') }}</div>
+        <div class="alert" role="status">{{ session('berhasil') }}</div>
+    @endif
+    @if (session('peringatan'))
+        <div class="alert alert-warning" role="status">{{ session('peringatan') }}</div>
     @endif
 
     <form action="{{ route('komponen-nilai.index') }}" method="GET" class="feature-filter panel panel-pad" style="margin-bottom: 24px;">
@@ -82,6 +85,14 @@
                 </select>
             </div>
 
+            <div class="field">
+                <label for="urut_tanggal">Urut tanggal penilaian</label>
+                <select id="urut_tanggal" name="urut_tanggal" class="select">
+                    <option value="terbaru" @selected($urutTanggal === 'terbaru')>Terbaru dahulu</option>
+                    <option value="terlama" @selected($urutTanggal === 'terlama')>Terlama dahulu</option>
+                </select>
+            </div>
+
             <div class="actions">
                 <button type="submit" class="button button-dark">Terapkan</button>
                 <a href="{{ route('komponen-nilai.index') }}" class="button button-muted">Reset</a>
@@ -108,7 +119,7 @@
                         <tr>
                             <td>
                                 <p class="person-name">{{ $item->nama }}</p>
-                                <p class="person-meta">{{ $item->labelJenis() }}{{ $item->urutan ? ' - Urutan ' . $item->urutan : '' }}</p>
+                                <p class="person-meta">{{ $item->labelJenis() }}</p>
                             </td>
                             <td>
                                 <p class="person-name">{{ $item->guruMataPelajaran?->mataPelajaran?->nama ?: '-' }}</p>

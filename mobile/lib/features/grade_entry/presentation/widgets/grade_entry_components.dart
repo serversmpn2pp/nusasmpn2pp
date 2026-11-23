@@ -4,7 +4,7 @@ import 'package:nusa/core/theme/app_theme.dart';
 import 'package:nusa/features/grade_entry/domain/grade_entry.dart';
 import 'package:nusa/shared/widgets/nusa_form_widgets.dart';
 
-class GradeEntryFilters extends StatelessWidget {
+class GradeEntryFilters extends StatefulWidget {
   const GradeEntryFilters({
     required this.page,
     required this.enabled,
@@ -21,89 +21,143 @@ class GradeEntryFilters extends StatelessWidget {
   final ValueChanged<int?> onComponentChanged;
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.tune_rounded, size: 19, color: NusaColors.primary),
-              SizedBox(width: 7),
-              Text(
-                'Pilih Penilaian',
-                style: TextStyle(
-                  color: NusaColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+  State<GradeEntryFilters> createState() => _GradeEntryFiltersState();
+}
+
+class _GradeEntryFiltersState extends State<GradeEntryFilters> {
+  bool _oldestFirst = false;
+
+  int _compareComponents(GradeEntryComponent a, GradeEntryComponent b) {
+    final dateA = a.assessmentDate;
+    final dateB = b.assessmentDate;
+    if (dateA != null && dateB != null) {
+      final order = _oldestFirst
+          ? dateA.compareTo(dateB)
+          : dateB.compareTo(dateA);
+      if (order != 0) return order;
+    } else if (dateA != dateB) {
+      return dateA == null ? 1 : -1;
+    }
+    final nameOrder = a.name.compareTo(b.name);
+    return nameOrder == 0 ? a.id.compareTo(b.id) : nameOrder;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final page = widget.page;
+    final enabled = widget.enabled;
+    final components = [...page.components]..sort(_compareComponents);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.tune_rounded,
+                  size: 19,
+                  color: NusaColors.primary,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          NusaDropdownField<int>(
-            fieldKey: const Key('grade-entry-assignment-filter'),
-            value: page.filter.assignmentId,
-            enabled: enabled,
-            menuMaxHeight: 330,
-            decoration: const InputDecoration(
-              labelText: 'Guru · kelas · mata pelajaran',
-              prefixIcon: Icon(Icons.co_present_rounded),
-            ),
-            options: [
-              for (final assignment in page.assignments)
-                NusaDropdownOption(
-                  value: assignment.id,
-                  label: assignment.label,
+                const SizedBox(width: 7),
+                const Text(
+                  'Pilih Penilaian',
+                  style: TextStyle(
+                    color: NusaColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-            ],
-            onChanged: onAssignmentChanged,
-          ),
-          const SizedBox(height: 9),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 2,
-                child: NusaDropdownField<String>(
-                  fieldKey: const Key('grade-entry-semester-filter'),
-                  value: page.filter.semester,
-                  enabled: enabled,
-                  decoration: const InputDecoration(labelText: 'Semester'),
-                  options: const [
-                    NusaDropdownOption(value: 'ganjil', label: 'Ganjil'),
-                    NusaDropdownOption(value: 'genap', label: 'Genap'),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) onSemesterChanged(value);
-                  },
-                ),
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                flex: 3,
-                child: NusaDropdownField<int>(
-                  fieldKey: const Key('grade-entry-component-filter'),
-                  value: page.filter.componentId,
-                  enabled: enabled,
-                  decoration: const InputDecoration(labelText: 'Komponen'),
-                  options: [
-                    for (final component in page.components)
-                      NusaDropdownOption(
-                        value: component.id,
-                        label: component.label,
+                const Spacer(),
+                if (components.length > 1)
+                  PopupMenuButton<bool>(
+                    key: const Key('grade-entry-date-sort'),
+                    tooltip: 'Urut tanggal penilaian',
+                    icon: const Icon(Icons.sort_rounded),
+                    enabled: enabled,
+                    initialValue: _oldestFirst,
+                    onSelected: (value) => setState(() => _oldestFirst = value),
+                    itemBuilder: (context) => [
+                      CheckedPopupMenuItem(
+                        value: false,
+                        checked: !_oldestFirst,
+                        child: const Text('Terbaru dahulu'),
                       ),
-                  ],
-                  onChanged: onComponentChanged,
-                ),
+                      CheckedPopupMenuItem(
+                        value: true,
+                        checked: _oldestFirst,
+                        child: const Text('Terlama dahulu'),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            NusaDropdownField<int>(
+              fieldKey: const Key('grade-entry-assignment-filter'),
+              value: page.filter.assignmentId,
+              enabled: enabled,
+              menuMaxHeight: 330,
+              decoration: const InputDecoration(
+                labelText: 'Guru · kelas · mata pelajaran',
+                prefixIcon: Icon(Icons.co_present_rounded),
               ),
-            ],
-          ),
-        ],
+              options: [
+                for (final assignment in page.assignments)
+                  NusaDropdownOption(
+                    value: assignment.id,
+                    label: assignment.label,
+                  ),
+              ],
+              onChanged: widget.onAssignmentChanged,
+            ),
+            const SizedBox(height: 9),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: NusaDropdownField<String>(
+                    fieldKey: const Key('grade-entry-semester-filter'),
+                    value: page.filter.semester,
+                    enabled: enabled,
+                    decoration: const InputDecoration(labelText: 'Semester'),
+                    options: const [
+                      NusaDropdownOption(value: 'ganjil', label: 'Ganjil'),
+                      NusaDropdownOption(value: 'genap', label: 'Genap'),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) widget.onSemesterChanged(value);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  flex: 3,
+                  child: NusaDropdownField<int>(
+                    fieldKey: const Key('grade-entry-component-filter'),
+                    value: page.filter.componentId,
+                    enabled: enabled,
+                    decoration: const InputDecoration(labelText: 'Komponen'),
+                    options: [
+                      for (final component in components)
+                        NusaDropdownOption(
+                          value: component.id,
+                          label: component.label,
+                        ),
+                    ],
+                    onChanged: widget.onComponentChanged,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class GradeEntrySummaryCard extends StatelessWidget {

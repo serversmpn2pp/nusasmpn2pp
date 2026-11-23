@@ -4,6 +4,7 @@
         const name = event.target.name;
         if (name === 'tahun_pelajaran_id') context.elements.kelas_id.value = '';
         if (name === 'tahun_pelajaran_id' || name === 'kelas_id') context.elements.guru_mata_pelajaran_id.value = '';
+        context.querySelectorAll('[data-bulk-selected]').forEach(input => { input.disabled = name !== 'urut_tanggal'; });
         context.requestSubmit();
     });
 

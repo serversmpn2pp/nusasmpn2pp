@@ -128,9 +128,7 @@ class InputNilaiMobileService
             ->where('guru_mata_pelajaran_id', $guruMataPelajaranId)
             ->where('semester', $semester)
             ->where('aktif', true)
-            ->orderBy('jenis_komponen')
-            ->orderBy('urutan')
-            ->orderBy('nama')
+            ->urutTanggal()
             ->get();
     }
 
