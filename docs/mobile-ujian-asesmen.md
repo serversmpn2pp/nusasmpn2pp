@@ -41,6 +41,12 @@ Tiga modul dapat dibuka langsung dari Menu → Ujian & Asesmen, atau dari kartu 
 
 Katalog tunggal `config/cbt_mobile.php` memasok metadata tiga pintasan menu utama dan tujuh alat pada API `GET /api/v1/pusat-cbt`. Alat lainnya adalah Bank Soal, Asesmen Kelas, Paket Soal, dan Presensi Ujian. Simulasi CBT web, Rapor STS, dan Leger STS tidak ditandai sebagai fitur native baru oleh pembaruan ini.
 
+## Folder dan urutan Bank Soal
+
+- `GET /api/v1/bank-soal` menerima `folder=semua`, `folder=belum`, atau ID folder. `referensi.folder` berisi nama, mapel, tingkat, dan jumlah soal pada folder yang boleh dibuka. Guru mapel tetap dibatasi pada pasangan mapel dan tingkat yang diajar.
+- Web dan API membaca `urutan=terbaru` (default) atau `urutan=terlama`. Pengurutan dilakukan menurut `created_at` sebelum paginasi; mengedit soal lama tidak mengubah posisinya berdasarkan tanggal pembuatan.
+- Android dapat membuka dan memfilter folder yang sudah ada. Pembuatan folder dan pengelompokan soal tetap di web. Terapkan backend terlebih dahulu, lalu rilis AAB baru untuk kontrol native. Tidak ada migrasi baru.
+
 ## Kontrak pusat CBT
 
 - `pengelolaan.alat` tetap tersedia untuk kompatibilitas aplikasi lama. Setiap alat memiliki `kode`, `label`, `deskripsi`, `kelompok`, `status`, `rute`, dan `api`.

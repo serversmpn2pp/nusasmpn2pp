@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -48,6 +49,11 @@ class SoalCbt extends Model
         'arsip' => 'Arsip',
     ];
 
+    public const DAFTAR_URUTAN = [
+        'terbaru' => 'Terbaru ke terlama',
+        'terlama' => 'Terlama ke terbaru',
+    ];
+
     protected $fillable = [
         'tahun_pelajaran_id',
         'mata_pelajaran_id',
@@ -81,6 +87,15 @@ class SoalCbt extends Model
         'skor_maksimal' => 'decimal:2',
         'aktif' => 'boolean',
     ];
+
+    public function scopeUrutPembuatan(Builder $query, string $urutan): Builder
+    {
+        $arah = $urutan === 'terlama' ? 'asc' : 'desc';
+
+        return $query->orderByRaw('case when created_at is null then 1 else 0 end')
+            ->orderBy('created_at', $arah)
+            ->orderBy('id', $arah);
+    }
 
     public function tahunPelajaran(): BelongsTo
     {

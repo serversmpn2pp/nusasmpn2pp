@@ -21,6 +21,8 @@ class BankSoalController extends Controller
             'tingkat' => ['nullable', Rule::in(['semua', 7, 8, 9, '7', '8', '9'])],
             'jenis_soal' => ['nullable', Rule::in(['semua', ...array_keys(SoalCbt::DAFTAR_JENIS)])],
             'status' => ['nullable', Rule::in(['semua', ...array_keys(SoalCbt::DAFTAR_STATUS)])],
+            'folder' => ['nullable', 'string', 'regex:/\A(?:semua|belum|[1-9][0-9]{0,17})\z/'],
+            'urutan' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_URUTAN))],
             'halaman' => ['nullable', 'integer', 'min:1'],
             'per_halaman' => ['nullable', 'integer', 'min:5', 'max:30'],
         ]);

@@ -13,8 +13,12 @@ class QuestionBankController extends AsyncNotifier<QuestionBankPage> {
   String _grade = 'semua';
   String _type = 'semua';
   String _status = 'semua';
+  String _folder = 'semua';
+  QuestionBankOrder _order = QuestionBankOrder.newest;
   int _version = 0;
   Timer? _debounce;
+
+  bool get hasFolderFilter => _folder != 'semua';
 
   @override
   Future<QuestionBankPage> build() {
@@ -33,6 +37,7 @@ class QuestionBankController extends AsyncNotifier<QuestionBankPage> {
   }
 
   Future<void> filterContext(String? value) async {
+    _folder = 'semua';
     if (value == null || value.isEmpty) {
       _subjectId = null;
       _grade = 'semua';
@@ -54,22 +59,44 @@ class QuestionBankController extends AsyncNotifier<QuestionBankPage> {
     await refresh();
   }
 
+  Future<void> filterFolder(String value) async {
+    if (_folder == value) return;
+    _folder = value;
+    await refresh();
+  }
+
+  Future<void> filterOrder(QuestionBankOrder order) async {
+    if (_order == order) return;
+    _order = order;
+    await refresh();
+  }
+
   Future<void> refresh() async {
     final version = ++_version;
     state = const AsyncLoading();
     try {
       final result = await _fetch(1);
-      if (version == _version) state = AsyncData(result);
+      if (!ref.mounted || version != _version) return;
+      _subjectId = result.filter.subjectId;
+      _grade = result.filter.grade;
+      state = AsyncData(result);
     } catch (error, stackTrace) {
-      if (version == _version) state = AsyncError(error, stackTrace);
+      if (ref.mounted && version == _version) {
+        state = AsyncError(error, stackTrace);
+      }
     }
   }
 
   Future<void> loadMore() async {
     final current = state.value;
-    if (current == null || !current.pagination.hasNextPage) return;
+    if (current == null || state.isLoading || !current.pagination.hasNextPage) {
+      return;
+    }
+    final version = _version;
     final next = await _fetch(current.pagination.page + 1);
-    state = AsyncData(current.append(next));
+    if (ref.mounted && version == _version && identical(state.value, current)) {
+      state = AsyncData(current.append(next));
+    }
   }
 
   Future<void> archive(int id) async {
@@ -96,11 +123,15 @@ class QuestionBankController extends AsyncNotifier<QuestionBankPage> {
     () => ref
         .read(questionBankRepositoryProvider)
         .fetch(
-          query: _query,
-          subjectId: _subjectId,
-          grade: _grade,
-          type: _type,
-          status: _status,
+          filter: QuestionBankFilter(
+            query: _query,
+            subjectId: _subjectId,
+            grade: _grade,
+            type: _type,
+            status: _status,
+            folder: _folder,
+            order: _order,
+          ),
           page: page,
         ),
   );

@@ -367,6 +367,7 @@ class QuestionBankReferences {
     required this.difficulties,
     required this.categories,
     required this.statuses,
+    this.folders,
   });
 
   factory QuestionBankReferences.fromJson(Map<String, dynamic> json) =>
@@ -379,6 +380,9 @@ class QuestionBankReferences {
         ),
         categories: _list(json['kategori'], QuestionOptionReference.fromJson),
         statuses: _list(json['status'], QuestionOptionReference.fromJson),
+        folders: json['folder'] is List
+            ? _list(json['folder'], QuestionFolder.fromJson)
+            : null,
       );
 
   final List<QuestionContext> contexts;
@@ -386,6 +390,31 @@ class QuestionBankReferences {
   final List<QuestionOptionReference> difficulties;
   final List<QuestionOptionReference> categories;
   final List<QuestionOptionReference> statuses;
+  final List<QuestionFolder>? folders;
+}
+
+class QuestionFolder {
+  const QuestionFolder({
+    required this.id,
+    required this.name,
+    required this.subjectName,
+    required this.grade,
+    required this.questionCount,
+  });
+
+  factory QuestionFolder.fromJson(Map<String, dynamic> json) => QuestionFolder(
+    id: _integer(json['id']),
+    name: json['nama'] as String? ?? '-',
+    subjectName: json['nama_mata_pelajaran'] as String? ?? '-',
+    grade: _integer(json['tingkat']),
+    questionCount: _integer(json['jumlah_soal']),
+  );
+
+  final int id;
+  final String name;
+  final String subjectName;
+  final int grade;
+  final int questionCount;
 }
 
 class QuestionContext {
@@ -452,6 +481,18 @@ class QuestionAcademicYear {
   final String name;
 }
 
+enum QuestionBankOrder {
+  newest('terbaru', 'Terbaru ke terlama'),
+  oldest('terlama', 'Terlama ke terbaru');
+
+  const QuestionBankOrder(this.code, this.label);
+  final String code;
+  final String label;
+
+  static QuestionBankOrder fromCode(Object? code) =>
+      code == oldest.code ? oldest : newest;
+}
+
 class QuestionBankFilter {
   const QuestionBankFilter({
     required this.query,
@@ -459,6 +500,8 @@ class QuestionBankFilter {
     required this.type,
     required this.status,
     this.subjectId,
+    this.folder = 'semua',
+    this.order = QuestionBankOrder.newest,
   });
   factory QuestionBankFilter.fromJson(Map<String, dynamic> json) =>
       QuestionBankFilter(
@@ -467,12 +510,16 @@ class QuestionBankFilter {
         grade: json['tingkat']?.toString() ?? 'semua',
         type: json['jenis_soal'] as String? ?? 'semua',
         status: json['status'] as String? ?? 'semua',
+        folder: json['folder']?.toString() ?? 'semua',
+        order: QuestionBankOrder.fromCode(json['urutan']),
       );
   final String query;
   final int? subjectId;
   final String grade;
   final String type;
   final String status;
+  final String folder;
+  final QuestionBankOrder order;
 }
 
 class QuestionBankPagination {

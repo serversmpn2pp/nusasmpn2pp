@@ -27,6 +27,7 @@ class SoalCbtController extends Controller
             'jenis_soal' => ['nullable', Rule::in(['semua', ...array_keys(SoalCbt::DAFTAR_JENIS)])],
             'status' => ['nullable', Rule::in(['semua', ...array_keys(SoalCbt::DAFTAR_STATUS)])],
             'folder' => ['nullable', 'string', 'max:30', 'regex:/\A(?:semua|belum|[0-9]+)\z/'],
+            'urutan' => ['nullable', Rule::in(array_keys(SoalCbt::DAFTAR_URUTAN))],
         ]);
 
         $pengguna = $request->user();
@@ -38,6 +39,7 @@ class SoalCbtController extends Controller
         $jenisSoal = $data['jenis_soal'] ?? 'semua';
         $status = $data['status'] ?? 'semua';
         $folderFilter = $data['folder'] ?? 'semua';
+        $urutan = $data['urutan'] ?? 'terbaru';
         $folderAktif = null;
         if (ctype_digit($folderFilter)) {
             $folderAktif = FolderSoalCbt::findOrFail($folderFilter);
@@ -71,8 +73,7 @@ class SoalCbtController extends Controller
                         ->orWhereHas('mataPelajaran', fn ($query) => $query->where('nama', 'like', '%'.$kataKunci.'%'));
                 });
             })
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
+            ->urutPembuatan($urutan)
             ->paginate(12)
             ->withQueryString();
 
@@ -83,9 +84,11 @@ class SoalCbtController extends Controller
             'tingkat' => $tingkat,
             'jenisSoal' => $jenisSoal,
             'status' => $status,
+            'urutan' => $urutan,
             'daftarMataPelajaran' => $bisaLihatSemua ? $this->semuaMataPelajaran() : $this->mataPelajaranCakupan($request),
             'daftarJenisSoal' => SoalCbt::DAFTAR_JENIS,
             'daftarStatus' => SoalCbt::DAFTAR_STATUS,
+            'daftarUrutan' => SoalCbt::DAFTAR_URUTAN,
             'jumlahSoal' => (int) $jumlahPerStatus->sum(),
             'jumlahSiap' => (int) ($jumlahPerStatus['siap'] ?? 0),
             'jumlahDraft' => (int) ($jumlahPerStatus['draft'] ?? 0),

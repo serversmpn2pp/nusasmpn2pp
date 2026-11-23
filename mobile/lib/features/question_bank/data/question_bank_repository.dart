@@ -9,20 +9,9 @@ class QuestionBankRepository {
   Future<StudentExamQuestion> preview(int id) => _remote.preview(id);
 
   Future<QuestionBankPage> fetch({
-    required String query,
-    required int? subjectId,
-    required String grade,
-    required String type,
-    required String status,
+    required QuestionBankFilter filter,
     required int page,
-  }) => _remote.fetch(
-    query: query,
-    subjectId: subjectId,
-    grade: grade,
-    type: type,
-    status: status,
-    page: page,
-  );
+  }) => _remote.fetch(filter: filter, page: page);
 
   Future<BankQuestionDetail> detail(int id) => _remote.detail(id);
   Future<BankQuestionDetail> create(QuestionFormValue value) =>

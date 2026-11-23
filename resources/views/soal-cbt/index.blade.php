@@ -20,12 +20,18 @@
         @media(max-width:1000px) { .stats-grid.bank-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         .soal-filter-grid {
             display: grid;
-            grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr) minmax(170px, .72fr) 140px auto;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(162px, .9fr) minmax(190px, 1fr) auto;
             gap: 12px;
             align-items: end;
         }
 
-        @media (max-width: 1180px) {
+        @media (max-width: 1280px) {
+            .soal-filter-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 900px) {
             .soal-filter-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -79,13 +85,13 @@
         <div class="soal-filter-grid">
             <div class="field">
                 <label for="kata_kunci">Cari soal</label>
-                <input id="kata_kunci" name="kata_kunci" type="search" value="{{ $kataKunci }}" placeholder="Materi atau isi pertanyaan" class="input" data-bank-question-search>
+                <input id="kata_kunci" name="kata_kunci" type="search" value="{{ $kataKunci }}" placeholder="Cari isi soal" class="input" data-bank-question-search>
             </div>
 
             <div class="field">
                 <label for="konteks_bank_soal">Bank soal</label>
                 <select id="konteks_bank_soal" class="select" data-bank-question-context>
-                    <option value="">Semua mata pelajaran dan tingkat</option>
+                    <option value="">Semua bank soal</option>
                     @foreach ($daftarKonteks as $konteks)
                         <option value="{{ $konteks['kunci'] }}" data-mata-pelajaran-id="{{ $konteks['mata_pelajaran_id'] }}" data-tingkat="{{ $konteks['tingkat'] }}" @selected($kunciKonteks === $konteks['kunci'])>{{ $konteks['label'] }}</option>
                     @endforeach
@@ -110,6 +116,15 @@
                     <option value="semua">Semua</option>
                     @foreach ($daftarStatus as $kode => $label)
                         <option value="{{ $kode }}" @selected($status === $kode)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="urutan_soal">Urutkan soal</label>
+                <select id="urutan_soal" name="urutan" class="select" data-bank-question-auto>
+                    @foreach ($daftarUrutan as $kode => $label)
+                        <option value="{{ $kode }}" @selected($urutan === $kode)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>

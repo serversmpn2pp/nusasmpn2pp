@@ -11,11 +11,7 @@ import 'package:nusa/features/student_exam/domain/student_exam.dart';
 
 abstract interface class QuestionBankRemoteDataSource {
   Future<QuestionBankPage> fetch({
-    required String query,
-    required int? subjectId,
-    required String grade,
-    required String type,
-    required String status,
+    required QuestionBankFilter filter,
     required int page,
   });
 
@@ -33,22 +29,20 @@ final class DioQuestionBankRemoteDataSource
 
   @override
   Future<QuestionBankPage> fetch({
-    required String query,
-    required int? subjectId,
-    required String grade,
-    required String type,
-    required String status,
+    required QuestionBankFilter filter,
     required int page,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         'bank-soal',
         queryParameters: {
-          if (query.trim().isNotEmpty) 'kata_kunci': query.trim(),
-          'mata_pelajaran_id': ?subjectId,
-          'tingkat': grade,
-          'jenis_soal': type,
-          'status': status,
+          if (filter.query.isNotEmpty) 'kata_kunci': filter.query,
+          'mata_pelajaran_id': ?filter.subjectId,
+          'tingkat': filter.grade,
+          'jenis_soal': filter.type,
+          'status': filter.status,
+          'folder': filter.folder,
+          'urutan': filter.order.code,
           'halaman': page,
           'per_halaman': 12,
         },

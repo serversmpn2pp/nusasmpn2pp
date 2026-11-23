@@ -31,6 +31,7 @@ class _QuestionBankListViewState extends ConsumerState<QuestionBankListView> {
   Widget build(BuildContext context) {
     final state = ref.watch(questionBankControllerProvider);
     final current = state.value;
+    final controller = ref.read(questionBankControllerProvider.notifier);
     return Scaffold(
       backgroundColor: NusaColors.background,
       appBar: AppBar(
@@ -171,20 +172,18 @@ class _QuestionBankListViewState extends ConsumerState<QuestionBankListView> {
               child: state.when(
                 loading: () => current == null
                     ? const Center(child: CircularProgressIndicator())
-                    : _QuestionResults(
-                        page: current,
-                        loadingMore: _loadingMore,
-                        onRefresh: _refresh,
-                        onLoadMore: _loadMore,
-                      ),
-                error: (error, stackTrace) =>
-                    _ErrorState(message: _message(error), onRetry: _refresh),
-                data: (page) => _QuestionResults(
-                  page: page,
-                  loadingMore: _loadingMore,
-                  onRefresh: _refresh,
-                  onLoadMore: _loadMore,
+                    : _results(current),
+                error: (error, stackTrace) => _ErrorState(
+                  message: _message(error),
+                  onRetry: _refresh,
+                  onShowAll:
+                      controller.hasFolderFilter &&
+                          error is NetworkException &&
+                          (error.statusCode == 403 || error.statusCode == 404)
+                      ? () => controller.filterFolder('semua')
+                      : null,
                 ),
+                data: _results,
               ),
             ),
           ],
@@ -195,6 +194,18 @@ class _QuestionBankListViewState extends ConsumerState<QuestionBankListView> {
 
   Future<void> _refresh() =>
       ref.read(questionBankControllerProvider.notifier).refresh();
+
+  Widget _results(QuestionBankPage page) {
+    final controller = ref.read(questionBankControllerProvider.notifier);
+    return _QuestionResults(
+      page: page,
+      loadingMore: _loadingMore,
+      onRefresh: _refresh,
+      onLoadMore: _loadMore,
+      onFolderChanged: controller.filterFolder,
+      onOrderChanged: controller.filterOrder,
+    );
+  }
 
   Future<void> _loadMore() async {
     if (_loadingMore) return;
@@ -270,53 +281,62 @@ class _QuestionResults extends StatelessWidget {
     required this.loadingMore,
     required this.onRefresh,
     required this.onLoadMore,
+    required this.onFolderChanged,
+    required this.onOrderChanged,
   });
   final QuestionBankPage page;
   final bool loadingMore;
   final Future<void> Function() onRefresh;
   final Future<void> Function() onLoadMore;
+  final ValueChanged<String> onFolderChanged;
+  final ValueChanged<QuestionBankOrder> onOrderChanged;
 
   @override
   Widget build(BuildContext context) {
-    if (page.items.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: onRefresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          children: const [
-            SizedBox(height: 60),
-            Icon(
-              Icons.quiz_outlined,
-              size: 52,
-              color: NusaColors.textSecondary,
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Belum ada soal CBT',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Ubah filter atau tambahkan soal baru.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: NusaColors.textSecondary, fontSize: 11),
-            ),
-          ],
-        ),
-      );
-    }
-
+    final folders = page.references.folders;
+    final headerCount = folders == null ? 0 : 1;
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView.separated(
-        key: const PageStorageKey<String>('question-bank-results'),
+        key: PageStorageKey((
+          'question-bank-results',
+          page.filter.folder,
+          page.filter.order,
+        )),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 5, 16, 100),
-        itemCount: page.items.length + 1,
+        itemCount: headerCount + page.items.length + 1,
         separatorBuilder: (context, index) => const SizedBox(height: 9),
-        itemBuilder: (context, index) {
+        itemBuilder: (context, position) {
+          if (folders != null && position == 0) {
+            return _QuestionBrowseTools(
+              folders: folders,
+              filter: page.filter,
+              onFolderChanged: onFolderChanged,
+              onOrderChanged: onOrderChanged,
+            );
+          }
+          final index = position - headerCount;
+          if (page.items.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.fromLTRB(16, 36, 16, 16),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.quiz_outlined,
+                    size: 48,
+                    color: NusaColors.textSecondary,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Tidak ada soal yang cocok',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+            );
+          }
           if (index == page.items.length) {
             if (!page.pagination.hasNextPage) {
               return Padding(
@@ -349,6 +369,170 @@ class _QuestionResults extends StatelessWidget {
       ),
     );
   }
+}
+
+class _QuestionBrowseTools extends StatelessWidget {
+  const _QuestionBrowseTools({
+    required this.folders,
+    required this.filter,
+    required this.onFolderChanged,
+    required this.onOrderChanged,
+  });
+
+  final List<QuestionFolder> folders;
+  final QuestionBankFilter filter;
+  final ValueChanged<String> onFolderChanged;
+  final ValueChanged<QuestionBankOrder> onOrderChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeFolder = folders
+        .where((folder) => folder.id.toString() == filter.folder)
+        .firstOrNull;
+    final label = filter.folder == 'belum'
+        ? 'Belum dikelompokkan'
+        : activeFolder?.name ?? 'Folder bank soal';
+    final style = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 46),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      backgroundColor: NusaColors.surface,
+      side: const BorderSide(color: NusaColors.outline),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    );
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            key: const Key('question-bank-folder-filter'),
+            onPressed: () => _chooseFolder(context),
+            style: style,
+            icon: const Icon(Icons.folder_open_outlined, size: 18),
+            label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+        const SizedBox(width: 8),
+        MenuAnchor(
+          menuChildren: [
+            for (final order in QuestionBankOrder.values)
+              MenuItemButton(
+                key: Key('question-bank-order-${order.code}'),
+                leadingIcon: Icon(
+                  filter.order == order
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  size: 18,
+                ),
+                onPressed: () => onOrderChanged(order),
+                child: Text(order.label),
+              ),
+          ],
+          builder: (context, menu, child) => Tooltip(
+            message: 'Urutkan soal',
+            child: OutlinedButton.icon(
+              key: const Key('question-bank-order-filter'),
+              onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+              style: style,
+              icon: const Icon(Icons.sort_rounded, size: 18),
+              label: Text(
+                filter.order == QuestionBankOrder.newest
+                    ? 'Terbaru'
+                    : 'Terlama',
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _chooseFolder(BuildContext context) async {
+    final value = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: 0.72,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text(
+                  'Folder bank soal',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                trailing: IconButton(
+                  tooltip: 'Tutup daftar folder',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: folders.length + 2 + (folders.isEmpty ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return _folderTile(
+                        context,
+                        'semua',
+                        'Semua soal',
+                        Icons.inventory_2_outlined,
+                      );
+                    }
+                    if (index == 1) {
+                      return _folderTile(
+                        context,
+                        'belum',
+                        'Belum dikelompokkan',
+                        Icons.folder_off_outlined,
+                      );
+                    }
+                    if (folders.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'Belum ada folder untuk bank soal ini.',
+                          style: TextStyle(color: NusaColors.textSecondary),
+                        ),
+                      );
+                    }
+                    final folder = folders[index - 2];
+                    return _folderTile(
+                      context,
+                      folder.id.toString(),
+                      folder.name,
+                      Icons.folder_outlined,
+                      subtitle:
+                          '${folder.subjectName} · Kelas ${folder.grade} · ${folder.questionCount} soal',
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (value != null && context.mounted) onFolderChanged(value);
+  }
+
+  Widget _folderTile(
+    BuildContext context,
+    String value,
+    String label,
+    IconData icon, {
+    String? subtitle,
+  }) => ListTile(
+    key: Key('question-bank-folder-$value'),
+    selected: filter.folder == value,
+    selectedTileColor: NusaColors.surfaceBlue,
+    leading: Icon(icon),
+    title: Text(label),
+    subtitle: subtitle == null ? null : Text(subtitle),
+    trailing: filter.folder == value ? const Icon(Icons.check_rounded) : null,
+    onTap: () => Navigator.of(context).pop(value),
+  );
 }
 
 class _QuestionCard extends StatelessWidget {
@@ -480,9 +664,14 @@ class _Pill extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.onRetry,
+    this.onShowAll,
+  });
   final String message;
   final Future<void> Function() onRetry;
+  final VoidCallback? onShowAll;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -499,6 +688,8 @@ class _ErrorState extends StatelessWidget {
             onPressed: onRetry,
             child: const Text('Coba Lagi'),
           ),
+          if (onShowAll != null)
+            TextButton(onPressed: onShowAll, child: const Text('Semua Soal')),
         ],
       ),
     ),

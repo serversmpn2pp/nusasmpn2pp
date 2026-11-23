@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\FolderSoalCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
@@ -307,6 +308,60 @@ class BankSoalApiTest extends TestCase
         $this->assertDatabaseCount('soal_cbt', 0);
     }
 
+    public function test_daftar_bank_soal_mobile_mendukung_folder_dan_urutan_tanggal_pembuatan(): void
+    {
+        [, , $mapel] = $this->fondasiAkademik();
+        $this->withToken($this->token(Pengguna::where('username', 'administrator')->firstOrFail()));
+        $folder = FolderSoalCbt::create(['mata_pelajaran_id' => $mapel->id, 'tingkat' => 8, 'nama' => 'Sumatif Akhir Semester']);
+        $kosong = FolderSoalCbt::create(['mata_pelajaran_id' => $mapel->id, 'tingkat' => 8, 'nama' => 'Ulangan Bab 1']);
+        foreach (range(1, 7) as $nomor) {
+            $soal = new SoalCbt($this->dataSoalModel($mapel, 'URUT-'.$nomor));
+            $soal->created_at = match ($nomor) {
+                1 => '2026-09-01 08:00:00',
+                2, 3 => '2026-10-02 08:00:00',
+                default => '2026-10-01 08:00:00',
+            };
+            $soal->updated_at = $nomor === 1 ? '2026-11-20 08:00:00' : '2026-11-01 08:00:00';
+            $soal->save();
+            if ($nomor < 7) {
+                $folder->soal()->attach($soal);
+            }
+        }
+        SoalCbt::where('kode', 'URUT-6')->update(['created_at' => null]);
+
+        $parameter = ['per_halaman' => 5, 'status' => 'siap', 'kata_kunci' => 'URUT'];
+        $this->getJson(route('api.v1.bank-soal.index', $parameter))
+            ->assertOk()->assertJsonPath('data.filter.urutan', 'terbaru')
+            ->assertJsonPath('data.filter.folder', 'semua')
+            ->assertJsonPath('data.items.0.kode', 'URUT-3')
+            ->assertJsonPath('data.referensi.folder.0', [
+                'id' => $folder->id,
+                'nama' => 'Sumatif Akhir Semester',
+                'nama_mata_pelajaran' => 'Matematika',
+                'tingkat' => 8,
+                'jumlah_soal' => 6,
+            ])
+            ->assertJsonPath('data.referensi.folder.1.jumlah_soal', 0);
+
+        $diFolder = $parameter + ['folder' => $folder->id, 'urutan' => 'terlama'];
+        $hasil = $this->getJson(route('api.v1.bank-soal.index', $diFolder))->assertOk()
+            ->assertJsonPath('data.filter.folder', (string) $folder->id)
+            ->assertJsonPath('data.filter.mata_pelajaran_id', $mapel->id)
+            ->assertJsonPath('data.filter.tingkat', '8')
+            ->assertJsonPath('data.filter.urutan', 'terlama')
+            ->assertJsonPath('data.paginasi.total', 6)
+            ->assertJsonPath('data.paginasi.ada_halaman_berikutnya', true);
+        $this->assertSame(['URUT-1', 'URUT-4', 'URUT-5', 'URUT-2', 'URUT-3'], array_column($hasil->json('data.items'), 'kode'));
+        $this->getJson(route('api.v1.bank-soal.index', $diFolder + ['halaman' => 2]))->assertOk()
+            ->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.kode', 'URUT-6');
+        $this->getJson(route('api.v1.bank-soal.index', ['folder' => 'belum']))->assertOk()
+            ->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.kode', 'URUT-7');
+        $this->getJson(route('api.v1.bank-soal.index', ['folder' => $kosong->id]))->assertOk()->assertJsonCount(0, 'data.items');
+        $this->getJson(route('api.v1.bank-soal.index', ['folder' => 999999]))->assertNotFound();
+        $this->getJson(route('api.v1.bank-soal.index', ['urutan' => 'acak', 'folder' => 'folder-tidak-valid']))
+            ->assertUnprocessable()->assertJsonValidationErrors(['urutan', 'folder']);
+    }
+
     public function test_guru_hanya_melihat_dan_mengubah_bank_soal_yang_diajar(): void
     {
         [$tahun, $kelas, $mapel, $pegawai] = $this->fondasiAkademik();
@@ -329,6 +384,10 @@ class BankSoalApiTest extends TestCase
         $guru->daftarPeran()->attach(Peran::where('kode', 'guru_mapel')->firstOrFail());
         $soalSendiri = SoalCbt::create($this->dataSoalModel($mapel, 'SOAL-GURU-001'));
         $soalLain = SoalCbt::create($this->dataSoalModel($mapelLain, 'SOAL-LAIN-001'));
+        $folderSendiri = FolderSoalCbt::create(['mata_pelajaran_id' => $mapel->id, 'tingkat' => 8, 'nama' => 'Folder mapel sendiri']);
+        $folderLain = FolderSoalCbt::create(['mata_pelajaran_id' => $mapelLain->id, 'tingkat' => 8, 'nama' => 'Folder mapel lain']);
+        $tingkatLain = FolderSoalCbt::create(['mata_pelajaran_id' => $mapel->id, 'tingkat' => 7, 'nama' => 'Folder tingkat lain']);
+        $folderSendiri->soal()->attach([$soalSendiri->id, $soalLain->id]);
         $token = $this->token($guru);
 
         $this->withToken($token)
@@ -336,7 +395,16 @@ class BankSoalApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.ringkasan.total', 1)
             ->assertJsonPath('data.items.0.id', $soalSendiri->id)
+            ->assertJsonCount(1, 'data.referensi.folder')
+            ->assertJsonPath('data.referensi.folder.0.id', $folderSendiri->id)
+            ->assertJsonPath('data.referensi.folder.0.jumlah_soal', 1)
             ->assertJsonMissing(['id' => $soalLain->id]);
+
+        $this->getJson(route('api.v1.bank-soal.index', ['folder' => $folderSendiri->id]))
+            ->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $soalSendiri->id);
+        foreach ([$folderLain, $tingkatLain] as $folder) {
+            $this->getJson(route('api.v1.bank-soal.index', ['folder' => $folder->id]))->assertForbidden();
+        }
 
         $this->withToken($token)
             ->getJson(route('api.v1.bank-soal.show', $soalLain))

@@ -8,11 +8,15 @@ const browser = await chromium.launch({ headless:true, channel:process.env.PLAYW
 try {
     const page = await browser.newPage();
     const html = await readFile('storage/logs/cbt-bank-summary.html', 'utf8');
+    const oldestHtml = await readFile('storage/logs/cbt-bank-terlama.html', 'utf8');
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', async route => {
         const url = new URL(route.request().url());
-        if (url.pathname === '/soal-cbt') return route.fulfill({ contentType:'text/html', body:html });
+        if (url.pathname === '/soal-cbt') return route.fulfill({
+            contentType: 'text/html',
+            body: url.searchParams.get('urutan') === 'terlama' ? oldestHtml : html,
+        });
         const root = resolve('public');
         const file = resolve(root, '.' + decodeURIComponent(url.pathname));
         if (!file.startsWith(root + sep)) return route.abort();
@@ -21,7 +25,7 @@ try {
         } catch { return route.fulfill({ status:404, body:'' }); }
     });
     await page.goto('http://localhost/soal-cbt');
-    for (const width of [390, 768, 1024, 1366, 1600]) {
+    for (const width of [320, 390, 768, 1024, 1280, 1366, 1600]) {
         await page.setViewportSize({ width, height:900 });
         const cards = await page.locator('.bank-summary .stat').evaluateAll(nodes => nodes.map(node => {
             const rect = node.getBoundingClientRect();
@@ -33,6 +37,14 @@ try {
             assert.ok(Math.abs(card.width - cards[0].width) < 1 && Math.abs(card.height - cards[0].height) < 1, `Unequal cards at ${width}`);
         }
         assert.deepEqual(await page.locator('.bank-summary .stat-value').allTextContents(), ['15', '13', '1', '15']);
+        const filtersFit = await page.locator('.soal-filter-grid').evaluate(grid => {
+            const bounds = grid.getBoundingClientRect();
+            return [...grid.children].every(field => {
+                const box = field.getBoundingClientRect();
+                return box.left >= bounds.left - 1 && box.right <= Math.min(bounds.right + 1, innerWidth);
+            });
+        });
+        assert.ok(filtersFit, `Bank filters overflow at ${width}px`);
         if (width === 1366) await page.screenshot({ path:'storage/logs/cbt-bank-summary.png', fullPage:true });
     }
     await page.locator('[data-question-preview]').first().click();
@@ -56,6 +68,24 @@ try {
     await checks.nth(0).check();
     await checks.nth(1).check();
     assert.equal(await page.locator('[data-question-preview-body] .option-card input:checked').count(), 2);
+    await page.locator('[data-close-question-preview]').click();
+
+    const sort = page.getByLabel('Urutkan soal');
+    const firstCode = page.locator('.desktop-only tbody .person-name').first();
+    assert.equal(await sort.inputValue(), 'terbaru');
+    assert.equal(await firstCode.textContent(), 'RINGKASAN-3');
+    await sort.selectOption('terlama');
+    await page.waitForURL(url => url.searchParams.get('urutan') === 'terlama');
+    const query = new URL(page.url()).searchParams;
+    assert.ok(query.get('mata_pelajaran_id'));
+    assert.equal(query.get('tingkat'), '8');
+    assert.equal(query.get('folder'), 'semua');
+    assert.equal(await sort.inputValue(), 'terlama');
+    assert.equal(await firstCode.textContent(), 'SOAL-CBT-UJI-001');
+    assert.match(await page.getByRole('link', { name: 'Berikutnya', exact: true }).getAttribute('href'), /urutan=terlama/);
+    await sort.selectOption('terbaru');
+    await page.waitForURL(url => url.searchParams.get('urutan') === 'terbaru');
+    assert.equal(await firstCode.textContent(), 'RINGKASAN-3');
     assert.deepEqual(errors, []);
-    console.log('PASS: four equal cards, correct totals, no clipped cards at five viewport widths.');
+    console.log('PASS: Bank Soal summary, query-aware sorting, preview, and filters at seven viewport widths.');
 } finally { await browser.close(); }

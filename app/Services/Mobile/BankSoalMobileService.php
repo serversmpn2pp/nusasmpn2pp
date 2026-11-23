@@ -2,6 +2,7 @@
 
 namespace App\Services\Mobile;
 
+use App\Models\FolderSoalCbt;
 use App\Models\GuruMataPelajaran;
 use App\Models\MataPelajaran;
 use App\Models\Pengguna;
@@ -56,12 +57,37 @@ class BankSoalMobileService
         $tingkat = $filter['tingkat'] ?? 'semua';
         $jenisSoal = $filter['jenis_soal'] ?? 'semua';
         $status = $filter['status'] ?? 'semua';
+        $folderFilter = $filter['folder'] ?? 'semua';
+        $urutan = $filter['urutan'] ?? 'terbaru';
         $halaman = (int) ($filter['halaman'] ?? 1);
         $perHalaman = (int) ($filter['per_halaman'] ?? 12);
 
         if ($mataPelajaranId && ! $bisaLihatSemua) {
             abort_unless(in_array($mataPelajaranId, $mapelIds, true), 403);
         }
+
+        $folderAktif = null;
+        if (ctype_digit($folderFilter)) {
+            $folderAktif = FolderSoalCbt::findOrFail($folderFilter);
+            abort_unless($bisaLihatSemua || $daftarKonteks->contains(fn (array $konteks) => (
+                $konteks['mata_pelajaran_id'] === (int) $folderAktif->mata_pelajaran_id
+                && $konteks['tingkat'] === (int) $folderAktif->tingkat
+            )), 403);
+            $mataPelajaranId = (int) $folderAktif->mata_pelajaran_id;
+            $tingkat = (int) $folderAktif->tingkat;
+        }
+
+        $daftarFolder = FolderSoalCbt::query()
+            ->when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks))
+            ->when($mataPelajaranId, fn ($query, $id) => $query->where('mata_pelajaran_id', $id))
+            ->when($tingkat !== 'semua', fn ($query) => $query->where('tingkat', (int) $tingkat))
+            ->with('mataPelajaran:id,nama')
+            ->withCount(['soal' => fn (Builder $query) => $query
+                ->whereColumn('soal_cbt.mata_pelajaran_id', 'folder_soal_cbt.mata_pelajaran_id')
+                ->whereColumn('soal_cbt.tingkat', 'folder_soal_cbt.tingkat')])
+            ->orderBy('nama')
+            ->orderBy('id')
+            ->get();
 
         $cakupan = SoalCbt::query()
             ->when(! $bisaLihatSemua, fn (Builder $query) => $this->batasiSoalPadaKonteks($query, $daftarKonteks));
@@ -70,6 +96,8 @@ class BankSoalMobileService
             ->withCount('soalUjianCbt')
             ->when($mataPelajaranId, fn ($query, $id) => $query->where('mata_pelajaran_id', $id))
             ->when($tingkat !== 'semua', fn ($query) => $query->where('tingkat', (int) $tingkat))
+            ->when($folderAktif, fn ($query) => $query->whereHas('folders', fn ($folder) => $folder->whereKey($folderAktif->id)))
+            ->when($folderFilter === 'belum', fn ($query) => $query->whereDoesntHave('folders'))
             ->when($jenisSoal !== 'semua', fn ($query) => $query->where('jenis_soal', $jenisSoal))
             ->when($status !== 'semua', fn ($query) => $query->where('status', $status))
             ->when($kataKunci !== '', function ($query) use ($kataKunci) {
@@ -82,8 +110,7 @@ class BankSoalMobileService
                         ->orWhereHas('mataPelajaran', fn ($query) => $query->whereRaw('LOWER(nama) LIKE ?', [$pola]));
                 });
             })
-            ->latest('updated_at')
-            ->latest('id')
+            ->urutPembuatan($urutan)
             ->paginate($perHalaman, ['*'], 'halaman', $halaman);
 
         return [
@@ -94,13 +121,15 @@ class BankSoalMobileService
                 'arsip' => (clone $cakupan)->where('status', 'arsip')->count(),
             ],
             'items' => collect($paginator->items())->map(fn (SoalCbt $soal) => $this->ringkas($soal))->values(),
-            'referensi' => $this->referensi($pengguna),
+            'referensi' => $this->referensi($daftarKonteks, $daftarFolder),
             'filter' => [
                 'kata_kunci' => $kataKunci,
                 'mata_pelajaran_id' => $mataPelajaranId,
                 'tingkat' => (string) $tingkat,
                 'jenis_soal' => $jenisSoal,
                 'status' => $status,
+                'folder' => $folderFilter,
+                'urutan' => $urutan,
             ],
             'paginasi' => [
                 'halaman' => $paginator->currentPage(),
@@ -190,10 +219,17 @@ class BankSoalMobileService
         $soal->update(['status' => 'arsip', 'aktif' => false]);
     }
 
-    private function referensi(Pengguna $pengguna): array
+    private function referensi(Collection $daftarKonteks, Collection $daftarFolder): array
     {
         return [
-            'konteks' => $this->konteksBankSoal($pengguna),
+            'konteks' => $daftarKonteks,
+            'folder' => $daftarFolder->map(fn (FolderSoalCbt $folder) => [
+                'id' => (int) $folder->id,
+                'nama' => $folder->nama,
+                'nama_mata_pelajaran' => $folder->mataPelajaran?->nama,
+                'tingkat' => (int) $folder->tingkat,
+                'jumlah_soal' => (int) $folder->soal_count,
+            ]),
             'jenis_soal' => $this->pilihan(SoalCbt::DAFTAR_JENIS),
             'tingkat_kesulitan' => $this->pilihan(SoalCbt::DAFTAR_KESULITAN),
             'kategori' => $this->pilihan(SoalCbt::DAFTAR_KATEGORI),

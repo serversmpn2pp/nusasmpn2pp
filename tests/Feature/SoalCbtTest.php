@@ -560,11 +560,17 @@ class SoalCbtTest extends TestCase
         $admin = Pengguna::where('username', 'administrator')->firstOrFail();
         $this->actingAs($admin)->post(route('soal-cbt.store'), $this->dataSoal($tahun, $mapel))->assertRedirect();
         $contoh = SoalCbt::firstOrFail();
-        $contoh->update(['status' => 'siap']);
+        $contoh->forceFill([
+            'status' => 'siap',
+            'created_at' => '2026-09-01 08:00:00',
+            'updated_at' => '2026-11-20 08:00:00',
+        ])->save();
         foreach (range(2, 15) as $nomor) {
             $soal = $contoh->replicate();
             $soal->kode = 'RINGKASAN-'.$nomor;
             $soal->status = $nomor === 14 ? 'draft' : ($nomor === 15 ? 'arsip' : 'siap');
+            $soal->created_at = in_array($nomor, [2, 3], true) ? '2026-10-02 08:00:00' : '2026-10-01 08:00:00';
+            $soal->updated_at = '2026-11-01 08:00:00';
             $soal->save();
         }
         $lain = $contoh->replicate();
@@ -580,9 +586,20 @@ class SoalCbtTest extends TestCase
         $halaman = $this->get(route('soal-cbt.index', $filter))->assertOk()
             ->assertViewHas('jumlahSoal', 15)->assertViewHas('jumlahSiap', 13)->assertViewHas('jumlahDraft', 1)
             ->assertViewHas('soalCbt', fn ($soal) => $soal->total() === 15 && $soal->count() === 12)
+            ->assertViewHas('urutan', 'terbaru')
+            ->assertSeeInOrder(['RINGKASAN-3', 'RINGKASAN-2', 'RINGKASAN-15'])
             ->assertSeeText('Sesuai filter');
+        $terlama = $this->get(route('soal-cbt.index', $filter + ['urutan' => 'terlama']))->assertOk()
+            ->assertViewHas('urutan', 'terlama')
+            ->assertViewHas('soalCbt', fn ($soal) => $soal->first()->is($contoh) && $soal->last()->kode === 'RINGKASAN-14')
+            ->assertSee('urutan=terlama');
+        $this->get(route('soal-cbt.index', $filter + ['urutan' => 'terlama', 'page' => 2]))->assertOk()
+            ->assertViewHas('soalCbt', fn ($soal) => $soal->pluck('kode')->all() === ['RINGKASAN-15', 'RINGKASAN-2', 'RINGKASAN-3']);
+        $this->getJson(route('soal-cbt.index', $filter + ['urutan' => 'acak']))
+            ->assertUnprocessable()->assertJsonValidationErrors('urutan');
         if (getenv('CBT_BANK_FIXTURE')) {
             file_put_contents(storage_path('logs/cbt-bank-summary.html'), $halaman->getContent());
+            file_put_contents(storage_path('logs/cbt-bank-terlama.html'), $terlama->getContent());
         }
         $this->get(route('soal-cbt.index', $filter + ['status' => 'draft']))->assertOk()
             ->assertViewHas('jumlahSoal', 15)->assertViewHas('jumlahSiap', 13)
@@ -593,6 +610,9 @@ class SoalCbtTest extends TestCase
         $folder->soal()->attach($contoh);
         $this->get(route('soal-cbt.index', ['folder' => $folder->id]))->assertOk()
             ->assertViewHas('jumlahSoal', 15)->assertViewHas('soalCbt', fn ($soal) => $soal->total() === 1);
+        $folder->soal()->attach(SoalCbt::where('kode', 'RINGKASAN-2')->value('id'));
+        $this->get(route('soal-cbt.index', ['folder' => $folder->id, 'urutan' => 'terlama', 'status' => 'siap', 'kata_kunci' => 'Getaran']))
+            ->assertOk()->assertViewHas('soalCbt', fn ($soal) => $soal->pluck('kode')->all() === [$contoh->kode, 'RINGKASAN-2']);
         $this->get(route('soal-cbt.index'))->assertOk()->assertViewHas('jumlahSoal', 17);
         $guru = Pengguna::create(['pegawai_id' => $pegawai->id, 'nama' => 'Guru ringkasan', 'username' => 'guru-ringkasan', 'kata_sandi' => 'secret', 'peran' => 'pegawai', 'aktif' => true, 'akun_sistem' => false]);
         $guru->daftarPeran()->sync([Peran::where('kode', 'guru_mapel')->value('id')]);

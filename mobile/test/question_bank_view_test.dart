@@ -1,9 +1,13 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nusa/core/theme/app_theme.dart';
+import 'package:nusa/features/question_bank/application/question_bank_controller.dart';
 import 'package:nusa/features/question_bank/data/question_bank_remote_data_source.dart';
 import 'package:nusa/features/question_bank/domain/question_bank.dart';
 import 'package:nusa/features/question_bank/presentation/question_bank_form_view.dart';
@@ -71,8 +75,130 @@ void main() {
     );
     expect(find.byKey(const Key('question-bank-add')), findsOneWidget);
     expect(find.byKey(const Key('question-bank-preview-7')), findsOneWidget);
+    expect(find.byKey(const Key('question-bank-folder-filter')), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('folder dan urutan Bank Soal dikirim bersama filter API', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final requests = <Map<String, dynamic>>[];
+    final dio = _browseDio((query) async => requests.add(query));
+    addTearDown(dio.close);
+    const folder = Key('question-bank-folder-filter');
+    const order = Key('question-bank-order-filter');
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          questionBankRemoteDataSourceProvider.overrideWithValue(
+            DioQuestionBankRemoteDataSource(dio),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const QuestionBankListView(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(requests.single['urutan'], 'terbaru');
+    expect(find.byKey(const Key('question-bank-item-8')), findsOneWidget);
+    expect(find.text('Terbaru'), findsOneWidget);
+
+    Future<void> tap(Key key) async {
+        final target = find.byKey(key);
+        await tester.ensureVisible(target);
+        await tester.pumpAndSettle();
+        await tester.tap(target);
+      await tester.pumpAndSettle();
+    }
+
+    await tap(folder);
+    expect(find.text('Matematika · Kelas 8 · 2 soal'), findsOneWidget);
+    expect(find.text('Matematika · Kelas 8 · 0 soal'), findsOneWidget);
+    await tap(const Key('question-bank-folder-12'));
+    expect(find.text('Tidak ada soal yang cocok'), findsOneWidget);
+    await tap(folder);
+    await tap(const Key('question-bank-folder-11'));
+    expect(requests.last, containsPair('folder', '11'));
+    expect(find.byKey(const Key('question-bank-item-9')), findsNothing);
+    await tap(order);
+    await tap(const Key('question-bank-order-terlama'));
+    expect(requests.last, containsPair('urutan', 'terlama'));
+    expect(requests.last, containsPair('folder', '11'));
+    expect(requests.last, containsPair('mata_pelajaran_id', 3));
+    expect(requests.last, containsPair('halaman', 1));
+    expect(
+      find.byKey(const Key('question-bank-item-7')).hitTestable(),
+      findsOneWidget,
+    );
+
+    await tap(folder);
+    await tap(const Key('question-bank-folder-belum'));
+    expect(
+      find.byKey(const Key('question-bank-item-9')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(requests.last, containsPair('folder', 'belum'));
+    expect(requests.last, containsPair('urutan', 'terlama'));
+    await tap(const Key('question-bank-context-filter'));
+    await tester.tap(find.text('Semua mata pelajaran dan tingkat').last);
+    await tester.pumpAndSettle();
+    expect(requests.last, containsPair('folder', 'semua'));
+    expect(requests.last, containsPair('urutan', 'terlama'));
+    expect(requests.last.containsKey('mata_pelajaran_id'), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  test(
+    'halaman lambat dari urutan lama tidak tercampur setelah urutan diubah',
+    () async {
+      final started = Completer<void>();
+      final release = Completer<void>();
+      final dio = _browseDio((query) async {
+        if (query['halaman'] == 2 && query['urutan'] == 'terbaru') {
+          started.complete();
+          await release.future;
+        }
+      });
+      final container = ProviderContainer(
+        overrides: [
+          questionBankRemoteDataSourceProvider.overrideWithValue(
+            DioQuestionBankRemoteDataSource(dio),
+          ),
+        ],
+      );
+      addTearDown(dio.close);
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        questionBankControllerProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await container.read(questionBankControllerProvider.future);
+      final controller = container.read(
+        questionBankControllerProvider.notifier,
+      );
+      final pending = controller.loadMore();
+      await started.future;
+      await controller.filterOrder(QuestionBankOrder.oldest);
+      release.complete();
+      await pending;
+
+      var page = container.read(questionBankControllerProvider).requireValue;
+      expect(page.filter.order, QuestionBankOrder.oldest);
+      expect(page.items.map((item) => item.id), [7, 9]);
+      expect(page.pagination.page, 1);
+      await controller.loadMore();
+      page = container.read(questionBankControllerProvider).requireValue;
+      expect(page.items.map((item) => item.id), [7, 9, 8]);
+      expect(page.pagination.hasNextPage, isFalse);
+    },
+  );
 
   for (final fromDetail in [false, true]) {
     testWidgets(
@@ -359,11 +485,7 @@ class _FakeQuestionBankRemoteDataSource
 
   @override
   Future<QuestionBankPage> fetch({
-    required String query,
-    required int? subjectId,
-    required String grade,
-    required String type,
-    required String status,
+    required QuestionBankFilter filter,
     required int page,
   }) async => QuestionBankPage.fromJson(_pageJson());
 
@@ -408,6 +530,78 @@ class _FakeQuestionBankRemoteDataSource
 
   @override
   Future<void> archive(int id) async {}
+}
+
+Dio _browseDio(Future<void> Function(Map<String, dynamic>) record) {
+  final dio = Dio(BaseOptions(baseUrl: 'https://nusa.test/api/v1/'));
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final query = options.queryParameters;
+        await record(query);
+        final folder = query['folder'];
+        final subject = folder == '11' || folder == '12'
+            ? 3
+            : query['mata_pelajaran_id'];
+        final ids = switch (folder) {
+          '11' => [7, 8],
+          '12' => <int>[],
+          'belum' => [9],
+          _ => [7, 9, 8],
+        };
+        final ordered = query['urutan'] == 'terlama'
+            ? ids
+            : ids.reversed.toList();
+        final page = query['halaman'] as int;
+        final base = _pageJson();
+        handler.resolve(
+          Response(
+            requestOptions: options,
+            data: {
+              'data': {
+                ...base,
+                'items': [
+                  for (final id in ordered.skip((page - 1) * 2).take(2))
+                    {..._questionJson(), 'id': id, 'kode': 'SOAL-$id'},
+                ],
+                'referensi': {
+                  ...base['referensi'] as Map<String, dynamic>,
+                  'folder': [
+                    {
+                      'id': 11,
+                      'nama': 'Sumatif Akhir Semester (SAS) Semester Ganjil Tahun Pelajaran 2026/2027',
+                      'nama_mata_pelajaran': 'Matematika',
+                      'tingkat': 8,
+                      'jumlah_soal': 2,
+                    },
+                    {
+                      'id': 12,
+                      'nama': 'Folder tanpa soal',
+                      'nama_mata_pelajaran': 'Matematika',
+                      'tingkat': 8,
+                      'jumlah_soal': 0,
+                    },
+                  ],
+                },
+                'filter': {
+                  ...query,
+                  'mata_pelajaran_id': subject,
+                  'tingkat': subject == 3 ? '8' : 'semua',
+                },
+                'paginasi': {
+                  'halaman': page,
+                  'halaman_terakhir': ids.length > 2 ? 2 : 1,
+                  'total': ids.length,
+                  'ada_halaman_berikutnya': page == 1 && ids.length > 2,
+                },
+              },
+            },
+          ),
+        );
+      },
+    ),
+  );
+  return dio;
 }
 
 Map<String, dynamic> _pageJson() => {
