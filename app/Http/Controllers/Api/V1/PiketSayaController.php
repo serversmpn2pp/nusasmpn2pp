@@ -35,6 +35,7 @@ class PiketSayaController extends Controller
             'status_kehadiran' => ['required', Rule::in(['hadir', 'sakit', 'izin'])],
             'catatan' => ['required', 'string', 'min:3', 'max:500'],
             'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
+            'status_masuk_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::STATUS_MASUK_MANUAL))],
             'jam_masuk' => ['nullable', 'date_format:H:i,H:i:s'],
         ]);
         $absensi = $service->catat(
@@ -44,11 +45,13 @@ class PiketSayaController extends Controller
             $data['catatan'],
             $data['alasan_hadir_manual'] ?? null,
             $data['jam_masuk'] ?? null,
+            $data['status_masuk_manual'] ?? null,
         );
 
         return response()->json([
             'pesan' => 'Kehadiran siswa berhasil dicatat oleh guru piket.',
-            'data' => ['id' => (int) $absensi->id, 'status' => $absensi->status_kehadiran, 'perlu_verifikasi_scan' => $absensi->menungguVerifikasiScan()],
+            'data' => ['id' => (int) $absensi->id, 'status' => $absensi->status_kehadiran,
+                'status_masuk' => $absensi->status_masuk, 'perlu_verifikasi_scan' => $absensi->menungguVerifikasiScan()],
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 }

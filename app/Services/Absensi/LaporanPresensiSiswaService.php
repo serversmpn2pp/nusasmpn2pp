@@ -114,15 +114,17 @@ class LaporanPresensiSiswaService
                 'tanggal' => $tanggal, 'tanggal_label' => $hari->translatedFormat('D, d M Y'),
                 'hari_label' => $hari->translatedFormat('l'), 'tanggal_panjang' => $hari->translatedFormat('d F Y'),
                 'status' => $status,
-                'status_label' => match ($status) {
+                'status_label' => $presensi?->labelHadirManualTanpaJam() ?? match ($status) {
                     'hadir' => 'Hadir', 'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa',
                     'pengecualian' => $pengecualian?->label() ?? 'Pengecualian presensi', default => 'Belum dikonfirmasi',
                 },
                 'inferensi' => $presensi === null, 'alfa_otomatis' => $presensi === null && $status === 'alfa',
                 'jam_masuk' => $presensi?->jam_masuk ? mb_substr($presensi->jam_masuk, 0, 5) : null,
                 'jam_pulang' => $presensi?->jam_pulang ? mb_substr($presensi->jam_pulang, 0, 5) : null,
-                'belum_pulang' => $status === 'hadir' && $presensi?->jam_masuk && ! $presensi?->jam_pulang,
+                'belum_pulang' => $status === 'hadir' && $presensi?->masukTercatat() && ! $presensi?->jam_pulang,
                 'menit_terlambat' => (int) ($presensi?->menit_terlambat ?? 0),
+                'terlambat' => $presensi?->terlambatMasuk() ?? false,
+                'label_durasi_terlambat' => $presensi?->labelDurasiTerlambat(),
                 'menit_pulang_cepat' => (int) ($presensi?->menit_pulang_cepat ?? 0),
                 'sumber' => $presensi?->sumber,
                 'sumber_label' => $presensi ? ($presensi->sumber === 'scan' ? 'Scan presensi' : 'Catatan petugas')
@@ -248,7 +250,7 @@ class LaporanPresensiSiswaService
             }
             $jumlahHari = count($tanggalAnggota) - $status['pengecualian'];
             $hadir = $status['hadir'];
-            $terlambat = $absensi->where('menit_terlambat', '>', 0);
+            $terlambat = $absensi->filter(fn (AbsensiSiswa $presensi) => $presensi->terlambatMasuk());
             $pulangCepat = $absensi->where('menit_pulang_cepat', '>', 0);
 
             return [

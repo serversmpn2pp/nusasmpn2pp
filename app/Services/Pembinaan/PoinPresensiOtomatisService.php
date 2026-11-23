@@ -13,6 +13,7 @@ use App\Models\PengecualianPresensiSiswa;
 use App\Models\PenugasanGuruWaliSiswa;
 use App\Services\Absensi\AturanAlfaOtomatisSiswaService;
 use App\Services\Absensi\HitungKeterlambatanSiswaService;
+use App\Services\Notifikasi\NotifikasiAbsensiSiswaService;
 use App\Services\Notifikasi\NotifikasiPenggunaService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -47,6 +48,7 @@ class PoinPresensiOtomatisService
             // This sanction applies only to newly flagged manual attendance,
             // independently of the regular scan automation's activation date.
             $manual = $absensi?->memilikiSanksiManual() ?? false;
+            $tanpaJam = $absensi?->hadirManualTanpaJam() ?? false;
             $menungguVerifikasi = $absensi?->menungguVerifikasiScan() ?? false;
             $aturanManual = $manual ? app(AturanPresensiManualService::class)->bekukan($absensi) : null;
             if ($manual && $absensi->isDirty('aturan_poin_hadir_manual')) {
@@ -72,11 +74,13 @@ class PoinPresensiOtomatisService
             $jenis = null;
             $menit = $absensi?->status_kehadiran === 'hadir' && $absensi->jam_masuk && $jadwal
                 ? app(HitungKeterlambatanSiswaService::class)->menit($absensi->jam_masuk, $jadwal->jam_masuk, true) : 0;
-            if ($manual) {
+            if ($manual && ! $tanpaJam) {
                 $menit = max($menit, (int) $absensi->sanksi_manual_menit);
             }
             if ($cakupanValid && $jadwal && ! $pengecualian && ! $menungguVerifikasi) {
-                if ($absensi?->status_kehadiran === 'hadir' && $absensi->jam_masuk) {
+                if ($tanpaJam) {
+                    $jenis = LaporanPembinaanSiswa::PRESENSI_TANPA_KARTU;
+                } elseif ($absensi?->status_kehadiran === 'hadir' && $absensi->jam_masuk) {
                     $jenis = $menit > 0 ? 'terlambat' : null;
                 } elseif ((! $absensi || $absensi->status_kehadiran === 'alfa')
                     && $aturan->menjadiAlfa($tanggal, $hariAktif, $anggota)) {
@@ -92,7 +96,7 @@ class PoinPresensiOtomatisService
             }
             if (! $laporan && $target <= 0) {
                 if ($absensi && $dapatMenambah) {
-                    $absensi->update(['status_poin_keterlambatan' => $pengecualian ? 'pengecualian_presensi' : 'tidak_terlambat',
+                    $absensi->update(['status_poin_keterlambatan' => $pengecualian ? 'pengecualian_presensi' : ($tanpaJam ? 'tanpa_poin' : 'tidak_terlambat'),
                         'poin_keterlambatan_terhitung' => 0, 'poin_keterlambatan_diproses_pada' => now()]);
                 }
 
@@ -129,14 +133,17 @@ class PoinPresensiOtomatisService
                     'kunci_presensi_otomatis' => $kunci, 'jenis_presensi_otomatis' => $jenis,
                     'absensi_siswa_id' => $absensi?->id, 'waktu_kejadian' => $absensi?->jam_masuk,
                     'kategori_pembinaan_siswa_id' => $butir->kategori_pembinaan_siswa_id,
-                    'tingkat' => $butir->tingkat, 'menit_terlambat_tercatat' => $menit,
+                    'tingkat' => $butir->tingkat, 'menit_terlambat_tercatat' => $tanpaJam ? null : $menit,
                     'diproses_otomatis_pada' => now(),
-                    'kronologi' => $jenis === 'alfa' ? 'Hari sekolah berakhir tanpa kehadiran atau keterangan yang sah.'
+                    'kronologi' => $tanpaJam
+                        ? $absensi->labelHadirManualTanpaJam().' (input manual). '.AbsensiSiswa::ALASAN_HADIR_TANPA_KARTU[$absensi->alasan_hadir_manual]
+                            .'. Tercatat '.$target.' poin pelanggaran kartu.'
+                        : ($jenis === 'alfa' ? 'Hari sekolah berakhir tanpa kehadiran atau keterangan yang sah.'
                         : ($manual ? 'Hadir dicatat manual tanpa scan kartu. '
                             .(AbsensiSiswa::ALASAN_HADIR_MANUAL[$absensi->alasan_hadir_manual] ?? 'Input manual petugas')
                             .'. Sanksi minimal '.$absensi->sanksi_manual_menit.' menit; tercatat '.$menit.' menit dan '.$target.' poin. '.$absensi->catatan
                             : ($absensi->alasan_hadir_manual === AbsensiSiswa::GANGGUAN_SCAN_TERVERIFIKASI ? 'Jam masuk terverifikasi pukul ' : 'Scan masuk pukul ')
-                                .$absensi->jam_masuk.' melewati batas '.$jadwal->jam_masuk.'. Keterlambatan dihitung sejak detik pertama.'),
+                                .$absensi->jam_masuk.' melewati batas '.$jadwal->jam_masuk.'. Keterlambatan dihitung sejak detik pertama.')),
                 ]);
                 $laporan->butirPelanggaranLaporan()->updateOrCreate(
                     ['laporan_pembinaan_siswa_id' => $laporan->id],
@@ -146,6 +153,7 @@ class PoinPresensiOtomatisService
                 );
             }
             $alasan = match (true) {
+                $target > 0 && $tanpaJam => 'Presensi tanpa kartu: '.$target.' poin otomatis, tanpa persetujuan Wakil Kesiswaan.',
                 $target > 0 => ucfirst($jenis).' otomatis: '.$target.' poin, tanpa persetujuan Wakil Kesiswaan.',
                 $menungguVerifikasi => 'Poin ditahan karena scan masuk menunggu verifikasi.',
                 $pengecualian !== null => 'Poin dibatalkan karena pengecualian presensi: '.$pengecualian->alasan,
@@ -155,7 +163,7 @@ class PoinPresensiOtomatisService
             if ($absensi && ($dapatMenambah || $laporan)) {
                 $nilai = ['status_poin_keterlambatan' => $target > 0 ? 'poin_otomatis' : 'poin_dibatalkan',
                     'poin_keterlambatan_terhitung' => $target, 'poin_keterlambatan_diproses_pada' => now()];
-                if ($absensi->status_kehadiran === 'hadir' && $jadwal && ! $menungguVerifikasi) {
+                if ($absensi->status_kehadiran === 'hadir' && $jadwal && ! $menungguVerifikasi && ! $tanpaJam && ! $absensi->penugasan_presensi_id) {
                     $nilai += ['menit_terlambat' => $menit, 'status_masuk' => $menit > 0 ? 'terlambat' : 'tepat_waktu'];
                 }
                 $absensi->update($nilai);
@@ -260,6 +268,12 @@ class PoinPresensiOtomatisService
 
     private function kirimNotifikasi(LaporanPembinaanSiswa $laporan): void
     {
+        if ($laporan->jenis_presensi_otomatis === LaporanPembinaanSiswa::PRESENSI_TANPA_KARTU
+            && $laporan->total_poin > 0 && $laporan->absensiSiswa?->hadirManualTanpaJam()) {
+            app(NotifikasiAbsensiSiswaService::class)->jadwalkanHadirManual($laporan->absensiSiswa);
+
+            return;
+        }
         $keteranganManual = $laporan->absensiSiswa?->keteranganSanksiManual();
         $penerima = $this->notifikasi->penggunaUntukSiswa($laporan->siswa_id)
             ->merge($this->notifikasi->penggunaOrangTuaUntukSiswa($laporan->siswa_id))->unique('id');

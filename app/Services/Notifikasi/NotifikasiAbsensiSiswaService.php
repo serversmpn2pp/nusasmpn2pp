@@ -20,9 +20,11 @@ class NotifikasiAbsensiSiswaService
         if (! $absensi->siswa) {
             return;
         }
-        $detail = $absensi->siswa->nama_lengkap.' ('.($absensi->kelas?->nama ?: '-').') tercatat hadir melalui input manual pada '
-            .$absensi->tanggal->format('d/m/Y').' pukul '.substr((string) $absensi->jam_masuk, 0, 5).' WIB. '
-            .$absensi->keteranganSanksiManual();
+        $tanpaJam = $absensi->hadirManualTanpaJam();
+        $kehadiran = $tanpaJam ? mb_strtolower($absensi->labelHadirManualTanpaJam()) : 'hadir';
+        $waktu = $tanpaJam ? '' : ' pukul '.substr((string) $absensi->jam_masuk, 0, 5).' WIB';
+        $detail = $absensi->siswa->nama_lengkap.' ('.($absensi->kelas?->nama ?: '-').') tercatat '.$kehadiran.' melalui input manual pada '
+            .$absensi->tanggal->format('d/m/Y').$waktu.'. '.$absensi->keteranganSanksiManual();
         $parameter = ['siswa_id' => $absensi->siswa_id, 'bulan' => $absensi->tanggal->format('Y-m')];
         $versi = substr(hash('sha256', $detail), 0, 20);
         foreach ([
@@ -38,7 +40,9 @@ class NotifikasiAbsensiSiswaService
                     "presensi-manual-{$jenis}:{$absensi->id}:{$versi}",
                     $parameter + ['absensi_siswa_id' => $absensi->id, 'alasan_hadir_manual' => $absensi->alasan_hadir_manual,
                         'pelanggaran_hadir_manual' => $absensi->aturan_poin_hadir_manual['nama'] ?? null,
-                        'menit_terlambat' => $absensi->menit_terlambat, 'poin_keterlambatan' => $absensi->poin_keterlambatan_terhitung]);
+                        'status_masuk_manual' => $tanpaJam ? $absensi->status_masuk : null,
+                        'menit_terlambat' => $tanpaJam ? null : $absensi->menit_terlambat,
+                        'poin_keterlambatan' => $absensi->poin_keterlambatan_terhitung]);
             }
         }
     }

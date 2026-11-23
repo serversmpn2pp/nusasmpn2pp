@@ -117,9 +117,11 @@ class PiketKehadiranSiswaController extends Controller
             'status_kehadiran' => ['required', Rule::in(['hadir', 'sakit', 'izin'])],
             'catatan' => ['required', 'string', 'min:3', 'max:500'],
             'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
+            'status_masuk_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::STATUS_MASUK_MANUAL))],
             'jam_masuk' => ['nullable', 'date_format:H:i,H:i:s'],
         ]);
-        $service->catat($request->user(), $anggotaKelas, $data['status_kehadiran'], $data['catatan'], $data['alasan_hadir_manual'] ?? null, $data['jam_masuk'] ?? null);
+        $service->catat($request->user(), $anggotaKelas, $data['status_kehadiran'], $data['catatan'],
+            $data['alasan_hadir_manual'] ?? null, $data['jam_masuk'] ?? null, $data['status_masuk_manual'] ?? null);
 
         return back()->with('berhasil', 'Kehadiran siswa berhasil dicatat oleh guru piket.');
     }

@@ -204,6 +204,14 @@ class DutyClass {
   final String name;
 }
 
+typedef DutyAttendanceValue = ({
+  String status,
+  String notes,
+  String? manualReason,
+  String? checkInTime,
+  String? manualCheckInStatus,
+});
+
 class MyDutyStudent {
   const MyDutyStudent({
     required this.classMemberId,
@@ -218,6 +226,8 @@ class MyDutyStudent {
     this.photoUrl,
     this.notes,
     this.checkInTime,
+    this.checkInStatus,
+    this.manualWithoutTime = false,
     this.manualReason,
     this.scanNeedsReview = false,
     this.onlyCheckout = false,
@@ -246,6 +256,8 @@ class MyDutyStudent {
       photoUrl: student['foto_url'] as String?,
       notes: attendance['catatan'] as String?,
       checkInTime: attendance['jam_masuk'] as String?,
+      checkInStatus: attendance['status_masuk'] as String?,
+      manualWithoutTime: attendance['hadir_manual_tanpa_jam'] == true,
       manualReason: attendance['alasan_hadir_manual'] as String?,
       scanNeedsReview: attendance['perlu_verifikasi_scan'] as bool? ?? false,
       onlyCheckout: attendance['hanya_scan_pulang'] as bool? ?? false,
@@ -271,6 +283,8 @@ class MyDutyStudent {
   final String? photoUrl;
   final String? notes;
   final String? checkInTime;
+  final String? checkInStatus;
+  final bool manualWithoutTime;
   final String? manualReason;
   final bool scanNeedsReview;
   final bool onlyCheckout;

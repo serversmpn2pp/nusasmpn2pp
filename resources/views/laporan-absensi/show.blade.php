@@ -118,7 +118,7 @@
                                 <td><span class="badge {{ $badgeStatus($baris['status']) }}">{{ $baris['status_label'] }}</span><p class="presensi-source">{{ $baris['sumber_label'] }}</p></td>
                                 <td>{{ $baris['jam_masuk'] ?: '-' }}</td>
                                 <td>{{ $baris['jam_pulang'] ?: '-' }}@if ($baris['belum_pulang'])<p class="person-meta">Belum scan pulang</p>@endif</td>
-                                <td>@if ($baris['menit_terlambat'] > 0)<span class="presensi-late">{{ $baris['menit_terlambat'] }} menit</span>@else<span class="muted">-</span>@endif</td>
+                                <td><span class="{{ $baris['terlambat'] ? 'presensi-late' : 'muted' }}">{{ $baris['label_durasi_terlambat'] ?? '-' }}</span></td>
                                 <td><p class="presensi-note">{{ $baris['catatan'] ?: '-' }}</p>@if ($baris['menit_pulang_cepat'] > 0)<p class="person-meta">Pulang cepat {{ $baris['menit_pulang_cepat'] }} menit</p>@endif</td>
                             </tr>
                         @endforeach
@@ -133,7 +133,7 @@
                         <dl class="quick-facts">
                             <div><dt>Datang</dt><dd>{{ $baris['jam_masuk'] ?: '-' }}</dd></div>
                             <div><dt>Pulang</dt><dd>{{ $baris['jam_pulang'] ?: '-' }}@if ($baris['belum_pulang'])<p class="person-meta">Belum scan pulang</p>@endif</dd></div>
-                            <div><dt>Terlambat</dt><dd class="{{ $baris['menit_terlambat'] > 0 ? 'presensi-late' : '' }}">{{ $baris['menit_terlambat'] > 0 ? $baris['menit_terlambat'].' menit' : '-' }}</dd></div>
+                            <div><dt>Terlambat</dt><dd class="{{ $baris['terlambat'] ? 'presensi-late' : '' }}">{{ $baris['label_durasi_terlambat'] ?? '-' }}</dd></div>
                         </dl>
                         @if ($baris['catatan'])<p class="presensi-note">{{ $baris['catatan'] }}</p>@endif
                         @if ($baris['menit_pulang_cepat'] > 0)<p class="person-meta">Pulang cepat {{ $baris['menit_pulang_cepat'] }} menit</p>@endif

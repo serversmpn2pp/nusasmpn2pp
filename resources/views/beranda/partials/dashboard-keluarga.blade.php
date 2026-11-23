@@ -4,14 +4,14 @@
     $labelDashboard = $modeOrangTua ? 'Dashboard Orang Tua' : 'Dashboard Siswa';
     $urlNilai = $modeOrangTua ? route('akademik-anak.index', ['tab' => 'nilai']) : route('nilai-saya.index');
     $urlPoin = $modeOrangTua ? route('pembinaan-poin-anak.index') : route('progress-kasus-siswa.index');
-    $labelKehadiranHariIni = match ($absensiHariIni?->status_kehadiran) {
+    $labelKehadiranHariIni = $absensiHariIni?->labelHadirManualTanpaJam() ?? match ($absensiHariIni?->status_kehadiran) {
         'hadir' => $absensiHariIni->menit_terlambat > 0
             ? 'Hadir, terlambat '.$absensiHariIni->menit_terlambat.' menit'
             : ($absensiHariIni->jam_masuk ? 'Hadir tepat waktu' : 'Hadir'),
         'sakit' => 'Sakit', 'izin' => 'Izin', 'alfa' => 'Alfa',
         default => $kodeHari === 'minggu' ? 'Hari Minggu' : 'Belum tercatat',
     };
-    $warnaPresensi = $absensiHariIni?->status_kehadiran === 'hadir' && ! $absensiHariIni->menit_terlambat ? 'teal' : 'amber';
+    $warnaPresensi = $absensiHariIni?->status_kehadiran === 'hadir' && ! $absensiHariIni->terlambatMasuk() ? 'teal' : 'amber';
 @endphp
 
 <div class="family-home account-home" data-family-dashboard data-family-mode="{{ $modeOrangTua ? 'orang-tua' : 'siswa' }}">
@@ -124,7 +124,7 @@
                 <div class="ph-presensi">
                     <div class="ph-presensi-main"><span>Jam masuk</span><strong>{{ $jam($absensiHariIni?->jam_masuk) }}</strong><small>{{ $labelKehadiranHariIni }}</small></div>
                     <dl class="ph-facts">
-                        <div><dt>Keterlambatan</dt><dd>{{ $absensiHariIni ? $angka(max(0, (int) $absensiHariIni->menit_terlambat)).' menit' : '-' }}</dd></div>
+                        <div><dt>Keterlambatan</dt><dd>{{ $absensiHariIni?->labelDurasiTerlambat() ?? '-' }}</dd></div>
                         <div><dt>Jam pulang</dt><dd>{{ $absensiHariIni?->jam_pulang ? $jam($absensiHariIni->jam_pulang) : 'Belum tercatat' }}</dd></div>
                         <div><dt>Pulang cepat</dt><dd>{{ $absensiHariIni ? $angka(max(0, (int) $absensiHariIni->menit_pulang_cepat)).' menit' : '-' }}</dd></div>
                     </dl>

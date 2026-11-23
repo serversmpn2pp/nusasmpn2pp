@@ -47,7 +47,9 @@ class KoreksiPresensiGuruPiketTest extends TestCase
         $this->put(route('piket-kehadiran-siswa.update', $anggota), $this->isian())->assertRedirect()->assertSessionHasNoErrors();
         $this->patchJson(route('api.v1.piket-saya.kehadiran.update', $anggota), $this->isian('06:23'))->assertOk();
         $this->assertDatabaseCount('absensi_siswa', 1);
-        $this->assertDatabaseHas('absensi_siswa', ['id' => $absensi->id, 'jam_masuk' => '06:23', 'sumber' => 'guru_piket']);
+        $this->assertDatabaseHas('absensi_siswa', [
+            'id' => $absensi->id, 'jam_masuk' => null, 'status_masuk' => 'tepat_waktu', 'sumber' => 'guru_piket',
+        ]);
         $this->assertDatabaseHas('riwayat_perubahan_absensi_siswa', ['absensi_siswa_id' => $absensi->id,
             'sumber' => 'guru_piket', 'dibuat_oleh_pengguna_id' => $guru->id]);
     }

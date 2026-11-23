@@ -16,8 +16,8 @@
         $jadwalPulang = $pengaturanAbsensi?->jadwalPulangUntuk($anggotaKelas->siswa?->jenis_kelamin);
         $verifikasi = $absensi?->menungguVerifikasiScan() ?? false;
         $gangguanTerverifikasi = $absensi?->alasan_hadir_manual === \App\Models\AbsensiSiswa::GANGGUAN_SCAN_TERVERIFIKASI;
-        $tanpaScan = ! $absensi?->penugasan_presensi_id && ! $gangguanTerverifikasi && (! $absensi || $absensi->memilikiSanksiManual()
-            || (! $scanMasukBukti && ($absensi->sumber !== 'scan' || ! $absensi->jam_masuk)));
+        $tanpaScan = ! $absensi?->penugasan_presensi_id && ! $gangguanTerverifikasi && ! $scanMasukBukti
+            && (! $absensi || $absensi->memilikiSanksiManual() || $absensi->sumber !== 'scan' || ! $absensi->jam_masuk);
         $hanyaGangguan = ! $tanpaScan && $dapatMemverifikasi && ! $gangguanTerverifikasi && ! $absensi?->penugasan_presensi_id
             && $sumberJam['sumber_masuk'] !== 'scan';
         $aturanHadirManual = app(\App\Services\Pembinaan\PengaturanPoinKeterlambatanService::class)->aturanHadirManual($anggotaKelas->tahun_pelajaran_id);
@@ -151,7 +151,10 @@
                     </div>
                     @endif
 
-                    <div class="field">
+                    @if ($tanpaScan || ($verifikasi && ! $scanMasukBukti))
+                        @include('rekap-absensi-harian._pilihan-status-masuk-manual')
+                    @endif
+                    <div class="field" id="field-jam-masuk">
                         <label for="jam_masuk">Jam masuk</label>
                         <input id="jam_masuk" type="time" step="1" name="jam_masuk" value="{{ old('jam_masuk', $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 8) : '') }}" class="input @error('jam_masuk') is-invalid @enderror" @required($verifikasi)>
                         <p class="help-text">{{ $absensi?->penugasan_presensi_id ? 'Isi hanya jika ada jam masuk sebenarnya.' : 'Wajib diisi jika status hadir.' }}</p>
@@ -180,7 +183,7 @@
                                     @endif
                                 @endforeach
                             </select>
-                            @unless ($hanyaGangguan)<p class="help-text" id="info-sanksi-kartu">Kartu lupa atau hilang dikenai minimal {{ $aturanHadirManual['menit_minimal'] }} menit keterlambatan dan {{ $aturanHadirManual['poin'] }} poin sesuai pengaturan presensi.</p>@endunless
+                            @unless ($hanyaGangguan)<p class="help-text" id="info-sanksi-kartu">{{ $aturanHadirManual['poin'] }} poin tanpa kartu sesuai pengaturan presensi. Poin ini terpisah dari status masuk.</p>@endunless
                             <p class="help-text" id="info-gangguan-scan" hidden>Hadir · Perlu verifikasi. Poin ditahan.</p>
                             @error('alasan_hadir_manual')<p class="error-text">{{ $message }}</p>@enderror
                         </div>
@@ -212,18 +215,29 @@
         const jamPulangInput = document.getElementById('jam_pulang');
         const pilihanAlasan = document.getElementById('alasan_hadir_manual');
         const hasilVerifikasi = document.getElementById('hasil_verifikasi_scan');
+        const statusManual = document.querySelector('[data-status-masuk-manual]');
+        const pilihanStatusManual = statusManual?.querySelector('select');
         const jamBukti = @json($scanMasukBukti?->waktu_scan->format('H:i:s'));
         let jamDiperiksa = jamMasukInput.value;
 
         function sinkronkanJam() {
             const hadir = statusInput.value === 'hadir';
-            jamMasukInput.disabled = ! hadir;
+            const gangguan = hadir && pilihanAlasan?.value === 'scan_bermasalah';
+            const verifikasiTanpaKartu = ['tidak_membawa_kartu', 'kartu_hilang'].includes(hasilVerifikasi?.value);
+            const tanpaJam = hadir && (verifikasiTanpaKartu || (!hasilVerifikasi && @json($tanpaScan) && !gangguan));
+            jamMasukInput.disabled = !hadir || tanpaJam;
+            jamMasukInput.required = !jamMasukInput.disabled && !@json((bool) $absensi?->penugasan_presensi_id);
+            document.getElementById('field-jam-masuk').hidden = jamMasukInput.disabled;
+            if (statusManual) {
+                statusManual.hidden = !tanpaJam;
+                pilihanStatusManual.disabled = !tanpaJam;
+                pilihanStatusManual.required = tanpaJam;
+            }
             jamPulangInput.disabled = ! hadir;
             const alasan = document.getElementById('alasan-hadir-manual');
             if (alasan) {
                 alasan.hidden = !hadir; pilihanAlasan.disabled = !hadir;
                 pilihanAlasan.required = hadir && @json($tanpaScan);
-                const gangguan = hadir && pilihanAlasan.value === 'scan_bermasalah';
                 document.getElementById('info-gangguan-scan').hidden = !gangguan;
                 const infoSanksi = document.getElementById('info-sanksi-kartu');
                 if (infoSanksi) infoSanksi.hidden = gangguan || !pilihanAlasan.value;
@@ -243,6 +257,7 @@
             const pakaiScan = hasilVerifikasi.value === 'scan_ditemukan';
             jamMasukInput.readOnly = pakaiScan;
             jamMasukInput.value = pakaiScan ? jamBukti : jamDiperiksa;
+            sinkronkanJam();
         }
         hasilVerifikasi?.addEventListener('change', sinkronkanBukti);
         jamMasukInput.addEventListener('input', () => { if (!jamMasukInput.readOnly) jamDiperiksa = jamMasukInput.value; });

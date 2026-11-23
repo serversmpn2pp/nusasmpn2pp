@@ -106,6 +106,7 @@ class TeacherDutyRemoteDataSource {
     required String notes,
     String? manualReason,
     String? checkInTime,
+    String? manualCheckInStatus,
   }) async {
     try {
       await _dio.patch<Map<String, dynamic>>(
@@ -116,6 +117,7 @@ class TeacherDutyRemoteDataSource {
           if (status == 'hadir' && manualReason != null)
             'alasan_hadir_manual': manualReason,
           'jam_masuk': ?checkInTime,
+          'status_masuk_manual': ?manualCheckInStatus,
         },
       );
     } on DioException catch (exception) {

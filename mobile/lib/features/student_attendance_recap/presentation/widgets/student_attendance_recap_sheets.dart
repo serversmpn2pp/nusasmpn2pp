@@ -195,7 +195,10 @@ class _AttendanceDetailCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _DetailRow(label: 'Jam masuk', value: item.checkInDisplay),
+          _DetailRow(
+            label: item.manualWithoutTime ? 'Status datang' : 'Jam masuk',
+            value: item.checkInDisplay,
+          ),
           _DetailRow(label: 'Jam pulang', value: item.checkOutDisplay),
           if (item.scanNeedsReview)
             const _DetailRow(
@@ -209,10 +212,7 @@ class _AttendanceDetailCard extends StatelessWidget {
             ),
           if (showStatusSource)
             _DetailRow(label: 'Dasar status', value: item.sourceLabel),
-          _DetailRow(
-            label: 'Keterlambatan',
-            value: item.lateMinutes > 0 ? '${item.lateMinutes} menit' : '-',
-          ),
+          _DetailRow(label: 'Keterlambatan', value: item.lateDurationLabel),
           _DetailRow(
             label: 'Pulang cepat',
             value: item.earlyLeaveMinutes > 0
@@ -412,8 +412,23 @@ class _StudentAttendanceCorrectionSheetState
   String? _status;
   late String _manualReason;
   String? _scanReviewResult;
+  String? _manualCheckInStatus;
+  bool get _present => _status == 'hadir';
   bool get _verifying => widget.detail.record.scanNeedsReview;
   bool get _hasEvidence => widget.detail.scanEvidenceTime != null;
+  bool get _onAssignment =>
+      widget.detail.record.checkInStatus == 'tugas_sekolah';
+  bool get _regularManual =>
+      !_verifying &&
+      _present &&
+      !_onAssignment &&
+      !widget.detail.record.hasScannerEntry &&
+      widget.detail.record.manualReason != 'gangguan_scan_terverifikasi';
+  bool get _withoutCard =>
+      _present &&
+      (_verifying
+          ? ManualAttendanceRule.reasons.containsKey(_scanReviewResult)
+          : _regularManual && _manualReason != ManualAttendanceRule.scanIssue);
   bool get _offerIssueOnly =>
       !_verifying &&
       widget.detail.canVerifyScan &&
@@ -429,11 +444,12 @@ class _StudentAttendanceCorrectionSheetState
     super.initState();
     final current = widget.detail.record;
     _manualReason =
-        _offerIssueOnly ||
-            (widget.detail.manualRule.supportsScanIssue &&
-                current.manualReason == null)
-        ? ''
-        : ManualAttendanceRule.normalizeReason(current.manualReason);
+        ManualAttendanceRule.reasons.containsKey(current.manualReason)
+        ? current.manualReason!
+        : '';
+    if (current.manualWithoutTime) {
+      _manualCheckInStatus = current.checkInStatus;
+    }
     _status = const {'hadir', 'izin', 'sakit', 'alfa'}.contains(current.status)
         ? current.status
         : null;
@@ -453,13 +469,6 @@ class _StudentAttendanceCorrectionSheetState
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    final present = _status == 'hadir';
-    final manual =
-        !_verifying &&
-        present &&
-        widget.detail.record.manualReason != 'gangguan_scan_terverifikasi' &&
-        (!widget.detail.record.hasScannerEntry ||
-            widget.detail.record.manualReason != null);
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 16, 20, bottom + 20),
       child: SingleChildScrollView(
@@ -544,44 +553,13 @@ class _StudentAttendanceCorrectionSheetState
                   }
                 }),
               ),
-            if (present) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _TimeField(
-                      label: 'Jam masuk',
-                      controller: _checkIn,
-                      onTap: _scanReviewResult == 'scan_ditemukan'
-                          ? null
-                          : () => _pickTime(_checkIn),
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: _TimeField(
-                      label: 'Jam pulang',
-                      controller: _checkOut,
-                      onTap: _verifying ? null : () => _pickTime(_checkOut),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (!_verifying)
-                const Text(
-                  'Jam masuk wajib diisi. Jam pulang boleh kosong jika siswa belum pulang.',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: NusaColors.textSecondary,
-                  ),
-                ),
-            ],
-            if (manual || (present && _offerIssueOnly)) ...[
+            if (_regularManual || (_present && _offerIssueOnly)) ...[
               const SizedBox(height: 12),
               NusaDropdownField<String>(
                 fieldKey: const Key('attendance-correction-manual-reason'),
-                value: _manualReason,
+                value: _manualReason.isEmpty && !_offerIssueOnly
+                    ? null
+                    : _manualReason,
                 options: _offerIssueOnly
                     ? const [
                         NusaDropdownOption(value: '', label: 'Tidak ada'),
@@ -611,14 +589,58 @@ class _StudentAttendanceCorrectionSheetState
                     setState(() => _manualReason = value ?? _manualReason),
               ),
               const SizedBox(height: 8),
-              if (!_offerIssueOnly ||
-                  _manualReason == ManualAttendanceRule.scanIssue)
+              if (_manualReason.isNotEmpty &&
+                  (!_offerIssueOnly ||
+                      _manualReason == ManualAttendanceRule.scanIssue))
                 _InfoBox(
                   icon: Icons.info_outline,
                   text: _manualReason == ManualAttendanceRule.scanIssue
                       ? ManualAttendanceRule.pendingExplanation
                       : widget.detail.manualRule.explanation,
                 ),
+            ],
+            if (_present) ...[
+              const SizedBox(height: 12),
+              if (_withoutCard)
+                NusaDropdownField<String>(
+                  fieldKey: const Key('attendance-correction-entry-status'),
+                  value: _manualCheckInStatus,
+                  options: ManualAttendanceRule.arrivalStatuses.entries
+                      .map(
+                        (entry) => NusaDropdownOption(
+                          value: entry.key,
+                          label: entry.value,
+                        ),
+                      )
+                      .toList(),
+                  decoration: const InputDecoration(labelText: 'Status datang'),
+                  onChanged: (value) =>
+                      setState(() => _manualCheckInStatus = value),
+                ),
+              if (_withoutCard) const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (!_withoutCard) ...[
+                    Expanded(
+                      child: _TimeField(
+                        label: 'Jam masuk',
+                        controller: _checkIn,
+                        onTap: _scanReviewResult == 'scan_ditemukan'
+                            ? null
+                            : () => _pickTime(_checkIn),
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                  ],
+                  Expanded(
+                    child: _TimeField(
+                      label: 'Jam pulang',
+                      controller: _checkOut,
+                      onTap: _verifying ? null : () => _pickTime(_checkOut),
+                    ),
+                  ),
+                ],
+              ),
             ],
             const SizedBox(height: 12),
             TextField(
@@ -665,18 +687,20 @@ class _StudentAttendanceCorrectionSheetState
       _message('Pilih status kehadiran.');
       return;
     }
-    if (_status == 'hadir' && _checkIn.text.isEmpty) {
-      _message('Jam masuk wajib diisi untuk status hadir.');
+    if (_regularManual && _manualReason.isEmpty) {
+      _message('Pilih alasan hadir tanpa scan.');
       return;
     }
-    if (!_verifying &&
-        !_offerIssueOnly &&
-        _status == 'hadir' &&
-        widget.detail.manualRule.supportsScanIssue &&
-        !widget.detail.record.hasScannerEntry &&
-        _manualReason.isEmpty &&
-        widget.detail.record.manualReason != 'gangguan_scan_terverifikasi') {
-      _message('Pilih alasan hadir tanpa scan.');
+    if (_withoutCard && !widget.detail.manualRule.supportsArrivalStatus) {
+      _message(ManualAttendanceRule.serverUpdateNeeded);
+      return;
+    }
+    if (_withoutCard && _manualCheckInStatus == null) {
+      _message('Pilih status datang.');
+      return;
+    }
+    if (_present && !_withoutCard && !_onAssignment && _checkIn.text.isEmpty) {
+      _message('Jam masuk wajib diisi untuk status hadir.');
       return;
     }
     if (_notes.text.trim().length < 3) {
@@ -687,19 +711,17 @@ class _StudentAttendanceCorrectionSheetState
       context,
       AttendanceCorrectionValue(
         status: _status!,
-        checkInTime: _checkIn.text.isEmpty ? null : _checkIn.text,
+        checkInTime: _withoutCard || _checkIn.text.isEmpty
+            ? null
+            : _checkIn.text,
+        manualCheckInStatus: _withoutCard ? _manualCheckInStatus : null,
         checkOutTime: _checkOut.text.isEmpty ? null : _checkOut.text,
         notes: _notes.text.trim(),
         scanReviewResult: _scanReviewResult,
         manualReason:
-            !_verifying &&
-                _status == 'hadir' &&
+            _present &&
                 _manualReason.isNotEmpty &&
-                widget.detail.record.manualReason !=
-                    'gangguan_scan_terverifikasi' &&
-                (_offerIssueOnly ||
-                    !widget.detail.record.hasScannerEntry ||
-                    widget.detail.record.manualReason != null)
+                (_offerIssueOnly || _regularManual)
             ? _manualReason
             : null,
       ),

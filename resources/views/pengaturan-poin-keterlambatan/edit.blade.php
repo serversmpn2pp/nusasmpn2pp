@@ -90,7 +90,7 @@
                     @endforeach
                 </select>
             </div>
-            <p class="help-text">Poin mengikuti master saat presensi baru dicatat. Riwayat lama menyimpan salinan aturan dan poinnya. Minimal 5 menit atau keterlambatan sebenarnya yang lebih besar tetap tercatat; pengecualian presensi tetap berlaku.</p>
+            <p class="help-text">Poin mengikuti master saat presensi baru dicatat. Status masuk dipilih petugas tanpa mencatat jam atau menit keterlambatan. Riwayat lama menyimpan salinan aturan dan poinnya; pengecualian presensi tetap berlaku.</p>
         </section>
 
         <section class="panel panel-pad feature-section" id="legacy-late-settings" style="margin-top: 18px;">

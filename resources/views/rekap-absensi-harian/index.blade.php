@@ -59,7 +59,8 @@
                 'otomatis_nonaktif' => ['Otomatis nonaktif', 'badge badge-muted'],
                 'laporan_dibatalkan' => ['Dibatalkan', 'badge badge-muted'],
                 'laporan_tidak_terbukti' => ['Tidak terbukti', 'badge badge-muted'],
-                default => [(int) ($absensi?->menit_terlambat ?? 0) > 0 ? 'Belum diproses' : '-', 'badge badge-muted'],
+                'tanpa_poin' => ['Tanpa poin', 'badge badge-muted'],
+                default => [$absensi?->terlambatMasuk() ? 'Belum diproses' : '-', 'badge badge-muted'],
             };
         };
         $bolehLihatLaporanPoin = auth()->user()?->memilikiIzin(['bk.lihat', 'bk.kelola', 'poin_siswa.lapor', 'poin_siswa.lihat']) ?? false;
@@ -487,7 +488,7 @@
                                     @endif
                                 </td>
                                 <td data-label="Keterlambatan">
-                                    <p class="person-name">{{ $item['terlambat'] > 0 ? $item['terlambat'] . ' menit' : '-' }}</p>
+                                    <p class="person-name">{{ $absensi?->labelDurasiTerlambat() ?? '-' }}</p>
                                     <p class="person-meta">
                                         @if (! $absensi)
                                             -
@@ -573,7 +574,7 @@
                             </div>
                             <div>
                                 <dt>Terlambat</dt>
-                                <dd>{{ $item['terlambat'] > 0 ? $item['terlambat'] . ' menit' : '-' }}</dd>
+                                <dd>{{ $absensi?->labelDurasiTerlambat() ?? '-' }}</dd>
                             </div>
                             <div>
                                 <dt>Pulang cepat</dt>
@@ -581,7 +582,7 @@
                             </div>
                         </dl>
 
-                        @if ($item['terlambat'] > 0 || $laporanKeterlambatan)
+                        @if ($item['is_terlambat'] || $absensi?->hadirManualTanpaJam() || $laporanKeterlambatan)
                             <div style="align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px;">
                                 <span class="{{ $badgePoin }}">{{ $labelPoin }}</span>
                                 @if ($laporanKeterlambatan)

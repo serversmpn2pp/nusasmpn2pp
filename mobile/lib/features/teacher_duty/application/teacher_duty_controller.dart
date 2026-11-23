@@ -175,6 +175,7 @@ class TeacherDutyActions {
     required String notes,
     String? manualReason,
     String? checkInTime,
+    String? manualCheckInStatus,
   }) => _guard(() async {
     await _ref
         .read(teacherDutyRepositoryProvider)
@@ -184,6 +185,7 @@ class TeacherDutyActions {
           notes: notes,
           manualReason: manualReason,
           checkInTime: checkInTime,
+          manualCheckInStatus: manualCheckInStatus,
         );
     _ref.invalidate(myDutyControllerProvider);
   });

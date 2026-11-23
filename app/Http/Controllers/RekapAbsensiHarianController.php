@@ -169,6 +169,7 @@ class RekapAbsensiHarianController extends Controller
             'jam_pulang' => ['nullable', 'date_format:H:i,H:i:s'],
             'catatan' => [$koreksiHariIniTerbatas ? 'required' : 'nullable', 'string', 'max:2000'],
             'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
+            'status_masuk_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::STATUS_MASUK_MANUAL))],
             'hasil_verifikasi_scan' => ['nullable', Rule::in(array_keys(AbsensiSiswa::HASIL_VERIFIKASI_SCAN))],
         ], [
             'catatan.required' => 'Catatan koreksi wajib diisi oleh Guru PL.',
@@ -297,8 +298,9 @@ class RekapAbsensiHarianController extends Controller
                 'sumber_jam' => $this->rincianPresensi->sumberJam($absen),
                 'pengecualian' => $pengecualian,
                 'terlambat' => (int) ($absen?->menit_terlambat ?? 0),
+                'is_terlambat' => $absen?->terlambatMasuk() ?? false,
                 'pulang_cepat' => (int) ($absen?->menit_pulang_cepat ?? 0),
-                'belum_pulang' => $statusKehadiran === 'hadir' && $absen?->jam_masuk && ! $absen?->jam_pulang,
+                'belum_pulang' => $statusKehadiran === 'hadir' && $absen?->masukTercatat() && ! $absen?->jam_pulang,
                 'akses_koreksi' => $this->koreksiPresensi->evaluasiAkses($pengguna, $anggota, $tanggal, $absen, true),
             ];
         });
@@ -343,7 +345,7 @@ class RekapAbsensiHarianController extends Controller
             'izin' => $rekapAbsensi->where('status_kehadiran', 'izin')->count(),
             'sakit' => $rekapAbsensi->where('status_kehadiran', 'sakit')->count(),
             'alfa' => $rekapAbsensi->where('status_kehadiran', 'alfa')->count(),
-            'terlambat' => $rekapAbsensi->where('terlambat', '>', 0)->count(),
+            'terlambat' => $rekapAbsensi->where('is_terlambat', true)->count(),
             'pulang_cepat' => $rekapAbsensi->where('pulang_cepat', '>', 0)->count(),
             'belum_pulang' => $rekapAbsensi->where('belum_pulang', true)->count(),
         ];
@@ -355,7 +357,7 @@ class RekapAbsensiHarianController extends Controller
             'hadir', 'izin', 'sakit', 'alfa', 'belum_scan', 'pengecualian' => $rekapAbsensi
                 ->where('status_kehadiran', $status)
                 ->values(),
-            'terlambat' => $rekapAbsensi->where('terlambat', '>', 0)->values(),
+            'terlambat' => $rekapAbsensi->where('is_terlambat', true)->values(),
             'perlu_verifikasi' => $rekapAbsensi->filter(fn ($item) => $item['absensi']?->menungguVerifikasiScan())->values(),
             'pulang_cepat' => $rekapAbsensi->where('pulang_cepat', '>', 0)->values(),
             'belum_pulang' => $rekapAbsensi->where('belum_pulang', true)->values(),

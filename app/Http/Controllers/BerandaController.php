@@ -126,7 +126,7 @@ class BerandaController extends Controller
             'izin' => (clone $absensiHariIni)->where('status_kehadiran', 'izin')->count(),
             'sakit' => (clone $absensiHariIni)->where('status_kehadiran', 'sakit')->count(),
             'alfa' => (clone $absensiHariIni)->where('status_kehadiran', 'alfa')->count(),
-            'terlambat' => (clone $absensiHariIni)->where('menit_terlambat', '>', 0)->count(),
+            'terlambat' => (clone $absensiHariIni)->terlambatMasuk()->count(),
             'pulang_cepat' => (clone $absensiHariIni)->where('menit_pulang_cepat', '>', 0)->count(),
             'belum_scan' => max($jumlahSiswaDipantau - $jumlahAbsensiSiswaTercatat, 0),
             'scan_berhasil' => LogScanAbsensi::query()
@@ -215,7 +215,7 @@ class BerandaController extends Controller
         $siswaTerlambatHariIni = AbsensiSiswa::query()
             ->with(['siswa:id,nama_lengkap,nisn', 'kelas:id,nama'])
             ->whereDate('tanggal', $tanggalHariIni)
-            ->where('menit_terlambat', '>', 0)
+            ->terlambatMasuk()
             ->orderByDesc('menit_terlambat')
             ->limit(5)
             ->get();
@@ -366,7 +366,7 @@ class BerandaController extends Controller
             'sakit' => (int) ($jumlahStatusBulan['sakit'] ?? 0),
             'izin' => (int) ($jumlahStatusBulan['izin'] ?? 0),
             'alfa' => (int) ($jumlahStatusBulan['alfa'] ?? 0),
-            'terlambat' => (clone $absensiBulan)->where('menit_terlambat', '>', 0)->count(),
+            'terlambat' => (clone $absensiBulan)->terlambatMasuk()->count(),
             'menit_terlambat' => (int) (clone $absensiBulan)->sum('menit_terlambat'),
             'pulang_cepat' => (clone $absensiBulan)->where('menit_pulang_cepat', '>', 0)->count(),
             'total_catatan' => (int) $jumlahStatusBulan->sum(),
@@ -692,7 +692,7 @@ class BerandaController extends Controller
             'sakit' => (int) ($jumlahStatusSiswaWaliBulan['sakit'] ?? 0),
             'izin' => (int) ($jumlahStatusSiswaWaliBulan['izin'] ?? 0),
             'alfa' => (int) ($jumlahStatusSiswaWaliBulan['alfa'] ?? 0),
-            'terlambat' => (clone $absensiSiswaWaliBulan)->where('menit_terlambat', '>', 0)->count(),
+            'terlambat' => (clone $absensiSiswaWaliBulan)->terlambatMasuk()->count(),
             'pulang_cepat' => (clone $absensiSiswaWaliBulan)->where('menit_pulang_cepat', '>', 0)->count(),
         ];
 

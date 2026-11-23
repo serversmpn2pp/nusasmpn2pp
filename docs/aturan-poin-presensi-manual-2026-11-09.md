@@ -15,7 +15,7 @@ pencatatan baru memakai 20; pencatatan lama tetap 10. Mengganti pilihan jenis
 pelanggaran juga hanya berlaku pada pencatatan berikutnya.
 
 - Aturan manual terpisah dari poin keterlambatan scan biasa dan poin alfa.
-- Tetap minimal 5 menit; keterlambatan sebenarnya yang lebih besar digunakan.
+- Sejak pembaruan presensi manual tanpa kartu, petugas memilih status datang tanpa mengisi jam; aturan minimal 5 menit hanya berlaku pada riwayat lama. Lihat [alur terbaru presensi manual](presensi-manual-tanpa-kartu.md).
 - Satu kejadian manual tidak mendapat tambahan poin terlambat biasa lagi.
 - Alasan tetap hanya “Tidak membawa kartu pelajar” dan “Kartu pelajar hilang”.
 - Pengecualian presensi, penerimaan alasan, koreksi Sakit/Izin, dan pembatalan

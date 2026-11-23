@@ -84,7 +84,11 @@
         <div class="alert"><strong>Mode lihat saja.</strong> Laporan siswa tingkat {{ $laporanPembinaanSiswa->kelas?->tingkat ?: '-' }} ini ditangani Guru BK tingkat lain. Anda tetap dapat melihat seluruh perkembangan, tetapi tidak dapat mengubah atau memprosesnya.</div>
     @endif
     @if($laporanPembinaanSiswa->kunci_presensi_otomatis)
-        <div class="alert"><strong>Poin presensi otomatis.</strong> {{ $laporanPembinaanSiswa->jenis_presensi_otomatis === 'alfa' ? 'Alfa setelah hari sekolah berakhir.' : 'Terlambat melewati jam masuk.' }} Tidak menunggu persetujuan Wakil Kesiswaan.</div>
+        <div class="alert"><strong>Poin presensi otomatis.</strong> {{ match ($laporanPembinaanSiswa->jenis_presensi_otomatis) {
+            'alfa' => 'Alfa setelah hari sekolah berakhir.',
+            \App\Models\LaporanPembinaanSiswa::PRESENSI_TANPA_KARTU => 'Kehadiran dicatat manual karena kartu tidak dibawa atau hilang.',
+            default => 'Terlambat melewati jam masuk.',
+        } }} Tidak menunggu persetujuan Wakil Kesiswaan.</div>
     @elseif($laporanPembinaanSiswa->berasalDariAbsensi())
         <div class="alert"><strong>Laporan otomatis dari presensi.</strong> Tercatat terlambat {{ $laporanPembinaanSiswa->menit_terlambat_tercatat }} menit. Perubahan waktu dilakukan melalui koreksi rekap presensi.</div>
     @endif

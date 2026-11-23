@@ -15,7 +15,8 @@ class PengaturanPoinKeterlambatanService
         $jenis = app(AturanPresensiManualService::class)->aturan($tahunPelajaranId);
 
         return [
-            'menit_minimal' => AbsensiSiswa::SANKSI_MANUAL_MENIT,
+            'menit_minimal' => 0,
+            'pilih_status_masuk' => true,
             'poin' => (int) $jenis['poin'],
             'pelanggaran' => $jenis,
             'alasan' => collect(AbsensiSiswa::ALASAN_HADIR_MANUAL)->map(fn ($label, $kode) => ['kode' => $kode, 'label' => $label])->values()->all(),

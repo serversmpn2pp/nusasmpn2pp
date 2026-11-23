@@ -12,7 +12,7 @@ import 'package:nusa/shared/domain/manual_attendance.dart';
 void main() {
   test('aturan dari server dan keterangan sanksi dibaca tanpa menimpa catatan petugas', () {
     final detail = StudentAttendanceDetail.fromJson({
-      'aturan_hadir_manual': {'menit_minimal': 5, 'poin': 20},
+      'aturan_hadir_manual': {'pilih_status_masuk': true, 'poin': 20},
       'item': {
         'presensi': {
           'sumber': 'scan',
@@ -24,6 +24,11 @@ void main() {
       },
     });
     expect(detail.manualRule.points, 20);
+    expect(detail.manualRule.supportsArrivalStatus, isTrue);
+    expect(
+      ManualAttendanceRule.fromJson({'menit_minimal': 5}).supportsArrivalStatus,
+      isFalse,
+    );
     expect(detail.record.hasScannerEntry, isFalse);
     expect(detail.record.manualReason, 'kartu_hilang');
     expect(detail.record.notes, 'Dikonfirmasi petugas.');
@@ -61,6 +66,7 @@ void main() {
         status: 'hadir',
         notes: 'Dikonfirmasi.',
         manualReason: 'kartu_hilang',
+        manualCheckInStatus: 'terlambat',
       );
       await TeacherDutyRemoteDataSource(dio).recordAttendance(
         classMemberId: 1,
@@ -75,7 +81,7 @@ void main() {
         value: const AttendanceCorrectionValue(
           status: 'hadir',
           notes: 'Dikonfirmasi.',
-          checkInTime: '06:55:00',
+          manualCheckInStatus: 'tepat_waktu',
           manualReason: 'tidak_membawa_kartu',
         ),
       );
@@ -89,6 +95,8 @@ void main() {
         ),
       );
       expect((requests[0].data as Map)['alasan_hadir_manual'], 'kartu_hilang');
+      expect((requests[0].data as Map)['status_masuk_manual'], 'terlambat');
+      expect((requests[0].data as Map).containsKey('jam_masuk'), isFalse);
       expect(
         (requests[1].data as Map).containsKey('alasan_hadir_manual'),
         isFalse,
@@ -97,6 +105,8 @@ void main() {
         (requests[2].data as Map)['alasan_hadir_manual'],
         'tidak_membawa_kartu',
       );
+      expect((requests[2].data as Map)['status_masuk_manual'], 'tepat_waktu');
+      expect((requests[2].data as Map)['jam_masuk'], isNull);
       expect(
         (requests[3].data as Map).containsKey('alasan_hadir_manual'),
         isFalse,
@@ -138,7 +148,7 @@ void main() {
                             'tanggal': '2026-11-05',
                             'tanggal_label': 'Kamis, 5 November 2026',
                             'aturan_hadir_manual': {
-                              'menit_minimal': 5,
+                              'pilih_status_masuk': true,
                               'poin': 20,
                             },
                             'item': {
@@ -163,10 +173,7 @@ void main() {
       );
       await tester.tap(find.text('Koreksi'));
       await tester.pumpAndSettle();
-      expect(
-        find.textContaining('5 menit keterlambatan dan 20 poin'),
-        findsOneWidget,
-      );
+      expect(find.text('Jam masuk'), findsNothing);
       final reason = find.byKey(
         const Key('attendance-correction-manual-reason'),
       );
@@ -177,11 +184,24 @@ void main() {
         find.text(ManualAttendanceRule.reasons['kartu_hilang']!).last,
       );
       await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Aturan tanpa kartu: 20 poin'),
+        findsOneWidget,
+      );
+      final status = find.byKey(
+        const Key('attendance-correction-entry-status'),
+      );
+      await tester.ensureVisible(status);
+      await tester.tap(status);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hadir tepat waktu').last);
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Simpan Koreksi'));
       await tester.tap(find.text('Simpan Koreksi'));
       await tester.pumpAndSettle();
       expect(result?.manualReason, 'kartu_hilang');
-      expect(result?.checkInTime, '06:55');
+      expect(result?.manualCheckInStatus, 'tepat_waktu');
+      expect(result?.checkInTime, isNull);
       expect(tester.takeException(), isNull);
     },
   );

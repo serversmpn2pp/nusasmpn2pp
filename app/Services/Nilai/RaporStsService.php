@@ -160,7 +160,7 @@ class RaporStsService
                 ];
             });
             $rekaman = $presensi->get($siswa->siswa_id, collect())->unique(fn ($p) => $p->tanggal->toDateString());
-            $terlambat = $rekaman->where('status_kehadiran', 'hadir')->where('menit_terlambat', '>', 0);
+            $terlambat = $rekaman->filter(fn (AbsensiSiswa $presensi) => $presensi->terlambatMasuk());
             $keterlambatan = ['jumlah' => $terlambat->count(), 'total_menit' => (int) $terlambat->sum('menit_terlambat')];
             $sumber = [
                 'awal' => $pengaturan->tanggal_awal_presensi->toDateString(),

@@ -175,7 +175,6 @@ class KoreksiPresensiSiswaService
                 throw ValidationException::withMessages(['hasil_verifikasi_scan' => 'Pilih hasil verifikasi. Kasus tetap menunggu jika bukti belum cukup.']);
             }
 
-            $this->pastikanDataValid($data, $akses['terbatas_hari_ini'], (bool) $absensi->penugasan_presensi_id);
             $statusSebelum = $absensi->exists ? $absensi->status_kehadiran : null;
             $status = $data['status_kehadiran'];
             $jamMasuk = $status === 'hadir' ? ($data['jam_masuk'] ?? null) : null;
@@ -194,9 +193,15 @@ class KoreksiPresensiSiswaService
                 || $absensi->alasan_hadir_manual === AbsensiSiswa::GANGGUAN_SCAN_TERVERIFIKASI)) {
                 abort_unless($this->dapatMemverifikasiScan($pengguna), 403);
             }
-            $adaScanMasuk = $logMasuk || ($absensi->sumber === 'scan' && $absensi->jam_masuk);
+            $adaScanMasuk = $logMasuk || ($absensi->sumber === 'scan' && $absensi->jam_masuk
+                && ! $absensi->memilikiSanksiManual() && ! $absensi->menungguVerifikasiScan());
             $manualTanpaScan = ! $absensi->penugasan_presensi_id && $status === 'hadir' && ! $menunggu && ! $gangguan
-                && (in_array($hasilVerifikasi, ['tidak_membawa_kartu', 'kartu_hilang'], true) || ! $adaScanMasuk || $absensi->memilikiSanksiManual());
+                && ! $adaScanMasuk;
+            $this->pastikanDataValid($data, $akses['terbatas_hari_ini'], (bool) $absensi->penugasan_presensi_id || $manualTanpaScan);
+            $statusMasukManual = $data['status_masuk_manual'] ?? null;
+            if ($manualTanpaScan && $statusMasukManual !== null) {
+                $jamMasuk = null;
+            }
             $jamPulang = $menunggu ? ($absensi->jam_pulang ?? $jamPulang) : $jamPulang;
             $this->pastikanWaktuPulang($jamMasuk, $jamPulang);
             if (($menunggu || $hasilVerifikasi !== null) && Carbon::parse($tanggal.' '.$jamMasuk)->isFuture()) {
@@ -204,32 +209,32 @@ class KoreksiPresensiSiswaService
             }
             [$statusMasuk, $menitTerlambat] = $menunggu ? ['manual', 0] : $this->hitungStatusMasuk($jamMasuk, $pengaturan, $ketat);
             [$statusPulang, $menitPulangCepat] = $this->hitungStatusPulang($jamPulang, $pengaturan, $anggotaKelas->siswa?->jenis_kelamin);
-            if ($manualTanpaScan) {
-                $menitTerlambat = max(AbsensiSiswa::SANKSI_MANUAL_MENIT, $pengaturan
-                    ? app(HitungKeterlambatanSiswaService::class)->menit($jamMasuk, $pengaturan->jam_masuk, true) : 0);
-                $statusMasuk = 'terlambat';
-            }
+            $masuk = $manualTanpaScan
+                ? app(HadirManualTanpaKartuService::class)->dataMasuk($statusMasukManual,
+                    $hasilVerifikasi ?? $data['alasan_hadir_manual'] ?? $absensi->alasan_hadir_manual, $jamMasuk, $pengaturan)
+                : [
+                    'jam_masuk' => $jamMasuk,
+                    'status_masuk' => $statusMasuk,
+                    'menit_terlambat' => $menitTerlambat,
+                    'alasan_hadir_manual' => match (true) {
+                        $menunggu => AbsensiSiswa::SCAN_BERMASALAH,
+                        $gangguan => AbsensiSiswa::GANGGUAN_SCAN_TERVERIFIKASI,
+                        default => null,
+                    },
+                    'sanksi_manual_menit' => 0,
+                ];
 
             $absensi->fill([
                 'tahun_pelajaran_id' => $anggotaKelas->tahun_pelajaran_id,
                 'kelas_id' => $anggotaKelas->kelas_id,
                 'anggota_kelas_id' => $anggotaKelas->id,
-                'jam_masuk' => $jamMasuk,
-                'status_masuk' => $statusMasuk,
-                'menit_terlambat' => $menitTerlambat,
+                ...$masuk,
                 'jam_pulang' => $jamPulang,
                 'status_pulang' => $statusPulang,
                 'menit_pulang_cepat' => $menitPulangCepat,
                 'status_kehadiran' => $status,
                 'sumber' => $hasilVerifikasi === 'scan_ditemukan' ? 'scan' : 'manual',
                 'catatan' => $catatan,
-                'alasan_hadir_manual' => match (true) {
-                    $menunggu => AbsensiSiswa::SCAN_BERMASALAH,
-                    $gangguan => AbsensiSiswa::GANGGUAN_SCAN_TERVERIFIKASI,
-                    $manualTanpaScan => AbsensiSiswa::normalisasiAlasanHadirManual($hasilVerifikasi ?? $data['alasan_hadir_manual'] ?? $absensi->alasan_hadir_manual),
-                    default => null,
-                },
-                'sanksi_manual_menit' => $manualTanpaScan ? AbsensiSiswa::SANKSI_MANUAL_MENIT : 0,
             ]);
             if ($manualTanpaScan) {
                 app(AturanPresensiManualService::class)->bekukan($absensi);
@@ -268,13 +273,13 @@ class KoreksiPresensiSiswaService
         return $absensi->refresh();
     }
 
-    private function pastikanDataValid(array $data, bool $catatanWajib, bool $penugasan = false): void
+    private function pastikanDataValid(array $data, bool $catatanWajib, bool $bolehTanpaJam = false): void
     {
         if ($catatanWajib && blank($data['catatan'] ?? null)) {
             throw ValidationException::withMessages(['catatan' => 'Catatan koreksi wajib diisi oleh Guru PL.']);
         }
 
-        if (! $penugasan && $data['status_kehadiran'] === 'hadir' && blank($data['jam_masuk'] ?? null)) {
+        if (! $bolehTanpaJam && $data['status_kehadiran'] === 'hadir' && blank($data['jam_masuk'] ?? null)) {
             throw ValidationException::withMessages(['jam_masuk' => 'Jam masuk wajib diisi jika status kehadiran adalah hadir.']);
         }
     }

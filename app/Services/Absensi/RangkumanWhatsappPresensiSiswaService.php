@@ -10,8 +10,8 @@ class RangkumanWhatsappPresensiSiswaService
     public function buat(string $tanggal, string $labelCakupan, array $ringkasan, Collection $rekapAbsensi): string
     {
         $tanggalLabel = Carbon::parse($tanggal)->locale('id')->translatedFormat('d F Y');
-        $hadirTepatWaktu = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'hadir' && (int) $item['terlambat'] === 0);
-        $terlambat = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'hadir' && (int) $item['terlambat'] > 0);
+        $hadir = $rekapAbsensi->where('status_kehadiran', 'hadir');
+        [$terlambat, $hadirTepatWaktu] = $hadir->partition(fn (array $item) => $item['absensi']?->terlambatMasuk() ?? (int) $item['terlambat'] > 0);
         $izin = $rekapAbsensi->where('status_kehadiran', 'izin');
         $sakit = $rekapAbsensi->where('status_kehadiran', 'sakit');
         $alfa = $rekapAbsensi->filter(fn (array $item) => $item['status_kehadiran'] === 'alfa' && $item['status_sumber'] !== 'inferensi');
@@ -38,7 +38,10 @@ class RangkumanWhatsappPresensiSiswaService
             $baris[] = 'Pengecualian scan (bukan alfa): '.$pengecualian->count();
         }
 
-        $this->tambahkanBagian($baris, 'Terlambat', $terlambat, fn (array $item) => $this->barisSiswa($item, $this->formatJam($item['absensi']?->jam_masuk).' - terlambat '.$item['terlambat'].' menit'));
+        $this->tambahkanBagian($baris, 'Terlambat', $terlambat, fn (array $item) => $this->barisSiswa($item,
+            $item['absensi']?->hadirManualTanpaJam()
+                ? 'Input manual, durasi tidak tercatat'
+                : $this->formatJam($item['absensi']?->jam_masuk).' - terlambat '.$item['terlambat'].' menit'));
         $this->tambahkanBagian($baris, 'Sakit', $sakit, fn (array $item) => $this->barisSiswa($item, $item['absensi']?->catatan ?: 'Sakit'));
         $this->tambahkanBagian($baris, 'Izin', $izin, fn (array $item) => $this->barisSiswa($item, $item['absensi']?->catatan ?: 'Izin'));
         $this->tambahkanBagian($baris, 'Alfa', $alfa, fn (array $item) => $this->barisSiswa($item, $item['absensi']?->catatan ?: 'Alfa'));

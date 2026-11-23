@@ -268,6 +268,7 @@ class DutyAttendanceFormSheet extends StatefulWidget {
 class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
   late String _status;
   late String _reason;
+  String? _manualCheckInStatus;
   TimeOfDay? _arrival;
   late final TextEditingController _notes;
   @override
@@ -277,11 +278,14 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
         ? widget.student.status
         : 'hadir';
     _notes = TextEditingController(text: widget.student.notes);
-    _reason = widget.student.onlyCheckout
+    _reason =
+        widget.student.onlyCheckout ||
+            widget.student.manualReason == ManualAttendanceRule.scanIssue
         ? ManualAttendanceRule.scanIssue
-        : widget.rule.supportsScanIssue && widget.student.manualReason == null
-        ? ''
-        : ManualAttendanceRule.normalizeReason(widget.student.manualReason);
+        : widget.student.manualReason ?? '';
+    if (widget.student.manualWithoutTime) {
+      _manualCheckInStatus = widget.student.checkInStatus;
+    }
     final parts = widget.student.checkInTime?.split(':');
     if (parts != null && parts.length >= 2) {
       final hour = int.tryParse(parts[0]);
@@ -352,7 +356,7 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
             if (_status == 'hadir') ...[
               NusaDropdownField<String>(
                 fieldKey: const Key('duty-manual-reason'),
-                value: _reason,
+                value: _reason.isEmpty ? null : _reason,
                 options: widget.rule.availableReasons.entries
                     .where(
                       (item) => widget.student.onlyCheckout
@@ -373,24 +377,41 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
                 onChanged: (value) => setState(() => _reason = value!),
               ),
               const SizedBox(height: 10),
-              OutlinedButton.icon(
-                key: const Key('duty-scan-issue-arrival'),
-                icon: const Icon(Icons.schedule),
-                label: Text(
-                  _arrival == null
-                      ? 'Jam datang'
-                      : 'Jam datang ${_arrival!.format(context)}',
+              if (_reason == ManualAttendanceRule.scanIssue)
+                OutlinedButton.icon(
+                  key: const Key('duty-scan-issue-arrival'),
+                  icon: const Icon(Icons.schedule),
+                  label: Text(
+                    _arrival == null
+                        ? 'Jam datang'
+                        : 'Jam datang ${_arrival!.format(context)}',
+                  ),
+                  onPressed: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: _arrival ?? TimeOfDay.now(),
+                    );
+                    if (mounted && time != null) {
+                      setState(() => _arrival = time);
+                    }
+                  },
+                )
+              else if (_reason.isNotEmpty)
+                NusaDropdownField<String>(
+                  fieldKey: const Key('duty-manual-entry-status'),
+                  value: _manualCheckInStatus,
+                  options: ManualAttendanceRule.arrivalStatuses.entries
+                      .map(
+                        (entry) => NusaDropdownOption(
+                          value: entry.key,
+                          label: entry.value,
+                        ),
+                      )
+                      .toList(),
+                  decoration: const InputDecoration(labelText: 'Status datang'),
+                  onChanged: (value) =>
+                      setState(() => _manualCheckInStatus = value),
                 ),
-                onPressed: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: _arrival ?? TimeOfDay.now(),
-                  );
-                  if (mounted && time != null) {
-                    setState(() => _arrival = time);
-                  }
-                },
-              ),
               const SizedBox(height: 12),
             ],
             TextField(
@@ -436,6 +457,20 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
     }
     final scanIssue =
         _status == 'hadir' && _reason == ManualAttendanceRule.scanIssue;
+    final withoutCard = _status == 'hadir' && !scanIssue;
+    if (withoutCard &&
+        (!widget.rule.supportsArrivalStatus || _manualCheckInStatus == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.rule.supportsArrivalStatus
+                ? 'Pilih status datang.'
+                : ManualAttendanceRule.serverUpdateNeeded,
+          ),
+        ),
+      );
+      return;
+    }
     final time = _arrival;
     if (scanIssue && time == null) {
       ScaffoldMessenger.of(context)
@@ -448,13 +483,15 @@ class _DutyAttendanceFormSheetState extends State<DutyAttendanceFormSheet> {
       );
       return;
     }
-    Navigator.pop(context, (
-      _status,
-      _notes.text.trim(),
-      _status == 'hadir' ? _reason : null,
-      _status == 'hadir' && time != null
+    final DutyAttendanceValue value = (
+      status: _status,
+      notes: _notes.text.trim(),
+      manualReason: _status == 'hadir' ? _reason : null,
+      checkInTime: scanIssue && time != null
           ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
           : null,
-    ));
+      manualCheckInStatus: withoutCard ? _manualCheckInStatus : null,
+    );
+    Navigator.pop(context, value);
   }
 }

@@ -62,7 +62,7 @@
         status.append(element('span', item.status, `tag ${tone}`));
         waktu.append(element('time', item.waktu || '-'));
         let extra = item.jenis || item.kegiatan || '-';
-        if (item.terlambat) extra = item.menit > 0 ? `Terlambat ${fmt(item.menit)} menit` : 'Terlambat < 1 menit';
+        if (item.terlambat) extra = item.durasi_tidak_tercatat ? 'Terlambat (durasi tidak tercatat)' : (item.menit > 0 ? `Terlambat ${fmt(item.menit)} menit` : 'Terlambat < 1 menit');
         if (item.poin !== undefined) extra = `${item.poin > 0 && jenis !== 'poin' ? '+' : ''}${fmt(item.poin)} poin`;
         const keterangan = element('td', extra);
         [kelas,status,waktu,keterangan].forEach((cell, index) => { cell.dataset.label = ['Kelas','Status','Waktu','Keterangan'][index]; });

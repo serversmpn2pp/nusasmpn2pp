@@ -82,6 +82,9 @@ class RincianPresensiHarianSiswaService
 
     private function sumberPada(AbsensiSiswa $absensi, string $jenis): ?string
     {
+        if ($jenis === 'masuk' && $absensi->hadirManualTanpaJam()) {
+            return 'manual';
+        }
         $jam = $absensi->{'jam_'.$jenis};
         if (! $jam) {
             return null;

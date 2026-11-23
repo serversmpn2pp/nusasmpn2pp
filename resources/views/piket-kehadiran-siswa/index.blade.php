@@ -60,7 +60,7 @@
                 @php
                     $absensi = $absensiPerSiswa->get($anggota->siswa_id);
                     $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
-                    $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
+                    $labelStatus = $absensi?->labelHadirManualTanpaJam() ?? (['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni));
                     $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
                     $rincianPiket = $rincianPerSiswa->get($anggota->siswa_id);
                     $bolehDicatat = $rincianPiket['dapat_dicatat'];
@@ -90,7 +90,7 @@
             @php
                 $absensi = $absensiPerSiswa->get($anggota->siswa_id);
                 $statusHariIni = $absensi?->status_kehadiran ?? 'belum_scan';
-                $labelStatus = ['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni);
+                $labelStatus = $absensi?->labelHadirManualTanpaJam() ?? (['belum_scan'=>'Belum scan','hadir'=>'Hadir','sakit'=>'Sakit','izin'=>'Izin','alfa'=>'Alfa'][$statusHariIni] ?? ucfirst($statusHariIni));
                 $kelasBadge = match($statusHariIni){'hadir'=>'badge-active','sakit','izin'=>'badge-warning','alfa'=>'badge-danger',default=>'badge-muted'};
                 $rincianPiket = $rincianPerSiswa->get($anggota->siswa_id);
                 $bolehDicatat = $rincianPiket['dapat_dicatat'];
@@ -119,15 +119,20 @@
         document.querySelectorAll('[data-hadir-manual]').forEach(form => {
             const status = form.querySelector('[name="status_kehadiran"]');
             const alasan = form.querySelector('[data-alasan-manual]');
-            const pilihan = alasan.querySelector('select');
+            const pilihan = alasan.querySelector('[name="alasan_hadir_manual"]');
+            const statusManual = form.querySelector('[data-status-masuk-manual]');
+            const pilihanStatusManual = statusManual.querySelector('select');
             const gangguan = form.querySelector('[data-jam-gangguan]');
             const jam = gangguan.querySelector('input');
             const sync = () => {
                 alasan.hidden = status.value !== 'hadir'; pilihan.disabled = alasan.hidden; pilihan.required = !alasan.hidden;
-                gangguan.hidden = alasan.hidden;
-                jam.disabled = gangguan.hidden; jam.required = !gangguan.hidden && pilihan.value === 'scan_bermasalah';
-                form.querySelector('[data-info-verifikasi]').hidden = pilihan.value !== 'scan_bermasalah';
-                form.querySelector('[data-info-sanksi]').hidden = alasan.hidden || pilihan.value === 'scan_bermasalah' || !pilihan.value;
+                gangguan.hidden = alasan.hidden || pilihan.value !== 'scan_bermasalah';
+                jam.disabled = gangguan.hidden; jam.required = !gangguan.hidden;
+                statusManual.hidden = alasan.hidden || pilihan.value === 'scan_bermasalah';
+                pilihanStatusManual.disabled = statusManual.hidden;
+                pilihanStatusManual.required = !statusManual.hidden;
+                form.querySelector('[data-info-verifikasi]').hidden = gangguan.hidden;
+                form.querySelector('[data-info-sanksi]').hidden = statusManual.hidden || !pilihan.value;
             };
             status.addEventListener('change', sync); pilihan.addEventListener('change', sync); sync();
         });

@@ -62,6 +62,7 @@ class RekapPresensiSiswaController extends Controller
             'jam_pulang' => ['nullable', 'date_format:H:i,H:i:s'],
             'catatan' => ['required', 'string', 'min:3', 'max:2000'],
             'alasan_hadir_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::ALASAN_HADIR_MANUAL))],
+            'status_masuk_manual' => ['nullable', Rule::in(array_keys(AbsensiSiswa::STATUS_MASUK_MANUAL))],
             'hasil_verifikasi_scan' => ['nullable', Rule::in(array_keys(AbsensiSiswa::HASIL_VERIFIKASI_SCAN))],
         ]);
         $absensi = $service->koreksi($request->user(), $anggotaKelas, $data);
@@ -71,6 +72,7 @@ class RekapPresensiSiswaController extends Controller
             'data' => [
                 'id' => (int) $absensi->id,
                 'status' => $absensi->status_kehadiran,
+                'status_masuk' => $absensi->status_masuk,
                 'perlu_verifikasi_scan' => $absensi->menungguVerifikasiScan(),
                 'menit_terlambat' => (int) $absensi->menit_terlambat,
                 'menit_pulang_cepat' => (int) $absensi->menit_pulang_cepat,

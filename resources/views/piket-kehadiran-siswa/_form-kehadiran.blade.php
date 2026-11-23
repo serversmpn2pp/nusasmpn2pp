@@ -20,11 +20,12 @@
                     @endif
                 @endforeach
             </select>
+            @include('rekap-absensi-harian._pilihan-status-masuk-manual')
             <div data-jam-gangguan hidden>
                 <label>Jam datang <input type="time" name="jam_masuk" class="input" value="{{ $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 5) : '' }}" disabled></label>
                 <p class="help-text" data-info-verifikasi hidden>Hadir &middot; Perlu verifikasi. Poin ditahan.</p>
             </div>
-            <p class="help-text" data-info-sanksi>Kartu lupa atau hilang dikenai minimal {{ $aturanHadirManual['menit_minimal'] }} menit keterlambatan dan {{ $aturanHadirManual['poin'] }} poin sesuai pengaturan presensi.</p>
+            <p class="help-text" data-info-sanksi hidden>{{ $aturanHadirManual['poin'] }} poin tanpa kartu sesuai pengaturan presensi. Poin ini terpisah dari status masuk.</p>
         </div>
         <textarea name="catatan" class="textarea" required placeholder="Keterangan petugas">{{ $absensi?->catatan }}</textarea>
         <button class="button button-primary button-sm" type="submit">Simpan</button>

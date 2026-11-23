@@ -7,7 +7,7 @@ use App\Models\AnggotaKelas;
 use App\Models\PengaturanAbsensi;
 use App\Models\Pengguna;
 use App\Models\RiwayatPerubahanAbsensiSiswa;
-use App\Services\Absensi\HitungKeterlambatanSiswaService;
+use App\Services\Absensi\HadirManualTanpaKartuService;
 use App\Services\Notifikasi\NotifikasiAbsensiSiswaService;
 use App\Services\Pembinaan\AturanPresensiManualService;
 use App\Services\Pembinaan\ProsesPoinKeterlambatanService;
@@ -21,7 +21,7 @@ class CatatKehadiranSiswaPiketService
         private readonly AksesCatatanPresensiPiketService $akses,
     ) {}
 
-    public function catat(Pengguna $pengguna, AnggotaKelas $anggotaKelas, string $status, string $catatan, ?string $alasan = null, ?string $jamDatang = null): AbsensiSiswa
+    public function catat(Pengguna $pengguna, AnggotaKelas $anggotaKelas, string $status, string $catatan, ?string $alasan = null, ?string $jamDatang = null, ?string $statusMasukManual = null): AbsensiSiswa
     {
         $tahunPelajaran = $this->piket->tahunPelajaranAktif();
         $this->piket->pastikanSedangPiket($pengguna, $tahunPelajaran);
@@ -33,7 +33,7 @@ class CatatKehadiranSiswaPiketService
             404,
         );
 
-        return DB::transaction(function () use ($pengguna, $anggotaKelas, $tahunPelajaran, $status, $catatan, $alasan, $jamDatang) {
+        return DB::transaction(function () use ($pengguna, $anggotaKelas, $tahunPelajaran, $status, $catatan, $alasan, $jamDatang, $statusMasukManual) {
             $anggotaKelas = AnggotaKelas::whereKey($anggotaKelas->id)->lockForUpdate()->firstOrFail();
             abort_unless($anggotaKelas->status_keanggotaan === 'aktif' && $anggotaKelas->siswa?->aktif && $anggotaKelas->kelas?->aktif, 404);
             $this->piket->pastikanSedangPiket($pengguna, $tahunPelajaran);
@@ -61,16 +61,21 @@ class CatatKehadiranSiswaPiketService
             }
 
             $statusSebelum = $absensi?->status_kehadiran;
-            $jamMasuk = $status === 'hadir' ? ($jamDatang ?: ($absensi?->jam_masuk ?: now()->format('H:i:s'))) : null;
+            $jamMasuk = $status === 'hadir' && ($menunggu || $statusMasukManual === null) ? $jamDatang : null;
             if ($jamMasuk && ((strlen($jamMasuk) === 5 ? $jamMasuk.':00' : $jamMasuk) > now()->format('H:i:s')
                 || ($absensi?->jam_pulang && substr($jamMasuk, 0, 5) > substr($absensi->jam_pulang, 0, 5)))) {
                 throw ValidationException::withMessages(['jam_masuk' => 'Jam datang tidak boleh melewati jam sekarang atau jam pulang.']);
             }
             $jadwal = PengaturanAbsensi::where('hari', $this->piket->kodeHariIni())->where('aktif', true)->first();
-            $menit = $status === 'hadir' && ! $menunggu
-                ? max(AbsensiSiswa::SANKSI_MANUAL_MENIT, $jadwal
-                    ? app(HitungKeterlambatanSiswaService::class)->menit($jamMasuk, $jadwal->jam_masuk, true) : 0)
-                : 0;
+            $masuk = $status === 'hadir' && ! $menunggu
+                ? app(HadirManualTanpaKartuService::class)->dataMasuk($statusMasukManual, $alasan ?? $absensi?->alasan_hadir_manual, $jamMasuk, $jadwal)
+                : [
+                    'jam_masuk' => $jamMasuk,
+                    'status_masuk' => $menunggu ? 'manual' : null,
+                    'menit_terlambat' => 0,
+                    'alasan_hadir_manual' => $menunggu ? AbsensiSiswa::SCAN_BERMASALAH : null,
+                    'sanksi_manual_menit' => 0,
+                ];
             $absensi ??= new AbsensiSiswa([
                 'tanggal' => $tanggal,
                 'siswa_id' => $anggotaKelas->siswa_id,
@@ -79,12 +84,7 @@ class CatatKehadiranSiswaPiketService
                 'tahun_pelajaran_id' => $tahunPelajaran->id,
                 'kelas_id' => $anggotaKelas->kelas_id,
                 'anggota_kelas_id' => $anggotaKelas->id,
-                'jam_masuk' => $jamMasuk,
-                'status_masuk' => $menunggu ? 'manual' : ($status === 'hadir' ? 'terlambat' : null),
-                'menit_terlambat' => $menit,
-                'alasan_hadir_manual' => $status === 'hadir'
-                    ? AbsensiSiswa::normalisasiAlasanHadirManual($alasan ?? $absensi->alasan_hadir_manual) : null,
-                'sanksi_manual_menit' => $menit > 0 ? AbsensiSiswa::SANKSI_MANUAL_MENIT : 0,
+                ...$masuk,
                 'jam_pulang' => $absensi->jam_pulang,
                 'status_pulang' => $absensi->status_pulang,
                 'menit_pulang_cepat' => (int) $absensi->menit_pulang_cepat,

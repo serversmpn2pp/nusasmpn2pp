@@ -67,7 +67,7 @@
         const pagination = paginate(container, items, innerHeight < 900 ? 2 : 3, latePage, item => {
             const row = node('div', undefined, 'late-row'), person = node('div');
             person.append(node('strong', item.nama), node('small', item.kelas));
-            row.append(person, node('b', item.menit > 0 ? `${fmt(item.menit)} mnt` : '< 1 mnt'));
+            row.append(person, node('b', item.durasi_tidak_tercatat ? 'Tanpa durasi' : (item.menit > 0 ? `${fmt(item.menit)} mnt` : '< 1 mnt')));
             return row;
         });
         latePage = pagination.page;

@@ -105,7 +105,7 @@ class JadwalGuruPiketTest extends TestCase
         ]);
     }
 
-    public function test_guru_piket_mencatat_jam_input_dan_scan_ulang_tidak_menghapus_sanksi_manual(): void
+    public function test_guru_piket_mencatat_status_tanpa_jam_dan_scan_ulang_tidak_menimpa_catatan(): void
     {
         Carbon::setTestNow('2026-08-13 08:00:00');
         $data = $this->dataDasar();
@@ -123,6 +123,8 @@ class JadwalGuruPiketTest extends TestCase
 
         $this->put(route('piket-kehadiran-siswa.update', $data['anggota']), [
             'status_kehadiran' => 'hadir',
+            'status_masuk_manual' => 'terlambat',
+            'alasan_hadir_manual' => 'tidak_membawa_kartu',
             'catatan' => 'Lupa membawa kartu dan kehadirannya dikonfirmasi guru piket.',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -130,8 +132,8 @@ class JadwalGuruPiketTest extends TestCase
             'siswa_id' => $data['siswa']->id,
             'status_kehadiran' => 'hadir',
             'status_masuk' => 'terlambat',
-            'jam_masuk' => '08:00:00',
-            'sanksi_manual_menit' => 5,
+            'jam_masuk' => null,
+            'sanksi_manual_menit' => 0,
             'sumber' => 'guru_piket',
         ]);
 
@@ -158,7 +160,7 @@ class JadwalGuruPiketTest extends TestCase
             'siswa_id' => $data['siswa']->id,
             'status_kehadiran' => 'hadir',
             'status_masuk' => 'terlambat',
-            'jam_masuk' => '08:00:00',
+            'jam_masuk' => null,
             'sumber' => 'guru_piket',
         ]);
     }

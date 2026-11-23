@@ -293,12 +293,14 @@ class ProsesScanAbsensi
                 );
             }
 
-            if ($absensi->jam_masuk) {
+            if ($absensi->jam_masuk || $absensi->hadirManualTanpaJam()) {
                 return $this->gagal(
                     isiScan: $isiScan,
                     waktuScan: $waktuScan,
                     statusScan: 'sudah_scan_masuk',
-                    pesan: $this->pesanSudahTercatat('masuk', $absensi->jam_masuk),
+                    pesan: $absensi->hadirManualTanpaJam()
+                        ? 'Kehadiran masuk sudah dicatat manual. Hubungi petugas jika perlu dikoreksi.'
+                        : $this->pesanSudahTercatat('masuk', $absensi->jam_masuk),
                     scannerId: $parsed['scanner_id'],
                     nisn: $parsed['nisn'],
                     jenisScan: 'masuk',

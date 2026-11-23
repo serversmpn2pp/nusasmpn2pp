@@ -10,6 +10,8 @@ class LaporanPembinaanSiswa extends Model
 {
     protected $table = 'laporan_pembinaan_siswa';
 
+    public const PRESENSI_TANPA_KARTU = 'tanpa_kartu';
+
     public const DAFTAR_TINGKAT = [
         'ringan' => 'Ringan',
         'sedang' => 'Sedang',

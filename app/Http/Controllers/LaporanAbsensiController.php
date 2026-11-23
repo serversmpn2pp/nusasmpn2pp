@@ -24,7 +24,7 @@ class LaporanAbsensiController extends Controller
         $statusRincian = $data['status_rincian'] ?? 'semua';
         $semuaRincian = $detail['rincian'];
         $rincian = $semuaRincian->filter(fn ($baris) => match ($statusRincian) {
-            'semua' => true, 'terlambat' => $baris['menit_terlambat'] > 0, default => $baris['status'] === $statusRincian,
+            'semua' => true, 'terlambat' => $baris['terlambat'], default => $baris['status'] === $statusRincian,
         })->sortByDesc('tanggal')->values();
 
         return response()->view('laporan-absensi.show', [

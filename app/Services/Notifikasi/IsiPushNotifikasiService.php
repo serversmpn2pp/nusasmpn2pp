@@ -58,9 +58,19 @@ class IsiPushNotifikasiService
                 ?? ($kodeAlasan === 'input_manual_petugas' ? 'Kehadiran dicatat manual tanpa scan kartu' : null);
             $poin = $data['poin_keterlambatan'] ?? null;
             $menit = $data['menit_terlambat'] ?? null;
+            $statusManual = $data['status_masuk_manual'] ?? null;
+            $jenis = $data['pelanggaran_hadir_manual'] ?? null;
+            $jenis = is_string($jenis) ? mb_substr(preg_replace('/[\r\n]+/', ' ', $jenis), 0, 100) : null;
+            if (is_string($kodeAlasan) && isset(AbsensiSiswa::ALASAN_HADIR_TANPA_KARTU[$kodeAlasan])
+                && is_string($statusManual) && isset(AbsensiSiswa::STATUS_MASUK_MANUAL[$statusManual])
+                && is_int($poin) && $poin >= 0) {
+                $kehadiran = mb_strtolower(AbsensiSiswa::STATUS_MASUK_MANUAL[$statusManual]);
+                $poinKartu = $poin > 0 ? "Tercatat {$poin} poin pelanggaran kartu." : 'Tidak ada poin pelanggaran kartu yang diterapkan.';
+
+                return $this->pesan('Kehadiran dicatat manual',
+                    ($manual[1] === 'orang-tua' ? 'Anak Anda' : 'Anda').' dicatat '.$kehadiran.'. '.$alasan.'. '.$poinKartu.($jenis ? ' Pelanggaran: '.$jenis.'.' : ''));
+            }
             if ($alasan && is_int($poin) && $poin >= 0 && is_int($menit) && $menit >= 5) {
-                $jenis = $data['pelanggaran_hadir_manual'] ?? null;
-                $jenis = is_string($jenis) ? mb_substr(preg_replace('/[\r\n]+/', ' ', $jenis), 0, 100) : null;
 
                 return $this->pesan('Kehadiran dicatat manual',
                     ($manual[1] === 'orang-tua' ? 'Anak Anda' : 'Anda').' hadir tanpa scan: '.$alasan

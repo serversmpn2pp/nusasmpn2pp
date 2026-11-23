@@ -152,7 +152,7 @@ class _LatePointSettingFormSheetState extends State<LatePointSettingFormSheet> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Diterapkan sekali, terpisah dari keterlambatan scan biasa. Poin mengikuti master saat presensi dicatat; riwayat lama tetap tersimpan. Minimal 5 menit atau keterlambatan sebenarnya yang lebih besar tetap tercatat.',
+                  'Diterapkan sekali, terpisah dari keterlambatan scan biasa. Petugas memilih status datang tanpa mengisi jam. Poin mengikuti master saat presensi dicatat; riwayat lama tetap tersimpan.',
                   style: TextStyle(fontSize: 11.5, height: 1.4),
                 ),
                 const Divider(height: 28),

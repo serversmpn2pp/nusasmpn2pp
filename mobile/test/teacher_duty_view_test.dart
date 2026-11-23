@@ -45,39 +45,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('koreksi masuk manual menjaga jam datang setelah scan pulang', (
-    tester,
-  ) async {
-    final remote = _FakeTeacherDutyRemoteDataSource(
-      studentOverride: const MyDutyStudent(
-        classMemberId: 10,
-        name: 'Murid Manual Simulasi',
-        initials: 'MM',
-        schoolClass: 'VII.A',
-        status: 'hadir',
-        statusLabel: 'Hadir',
-        canRecord: true,
-        checkInTime: '06:22',
-        checkOutTime: '14:40',
-        checkInSourceLabel: 'Input manual',
-        checkOutSourceLabel: 'Scanner',
-        manualReason: 'tidak_membawa_kartu',
-        notes: 'Kartu tertinggal di rumah.',
-      ),
-    );
-    await _pump(tester, remote, const MyTeacherDutyView());
-    await tester.tap(find.text('Murid Manual Simulasi'));
-    await tester.pumpAndSettle();
-    expect(find.byType(SegmentedButton<String>), findsNothing);
-    expect(find.textContaining('Jam datang'), findsOneWidget);
-    await tester.ensureVisible(find.text('Simpan Kehadiran'));
-    await tester.tap(find.text('Simpan Kehadiran'));
-    await tester.pumpAndSettle();
-    expect(remote.lastAttendanceStatus, 'hadir');
-    expect(remote.lastCheckInTime, '06:22');
-    expect(remote.recordCalls, 1);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'koreksi masuk manual mengingat status datang setelah scan pulang',
+    (tester) async {
+      final remote = _FakeTeacherDutyRemoteDataSource(
+        studentOverride: const MyDutyStudent(
+          classMemberId: 10,
+          name: 'Murid Manual Simulasi',
+          initials: 'MM',
+          schoolClass: 'VII.A',
+          status: 'hadir',
+          statusLabel: 'Hadir',
+          canRecord: true,
+          checkInStatus: 'tepat_waktu',
+          manualWithoutTime: true,
+          checkOutTime: '14:40',
+          checkInSourceLabel: 'Input manual',
+          checkOutSourceLabel: 'Scanner',
+          manualReason: 'tidak_membawa_kartu',
+          notes: 'Kartu tertinggal di rumah.',
+        ),
+      );
+      await _pump(tester, remote, const MyTeacherDutyView());
+      await tester.tap(find.text('Murid Manual Simulasi'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SegmentedButton<String>), findsNothing);
+      expect(find.textContaining('Jam datang'), findsNothing);
+      expect(find.text('Hadir tepat waktu'), findsOneWidget);
+      await tester.ensureVisible(find.text('Simpan Kehadiran'));
+      await tester.tap(find.text('Simpan Kehadiran'));
+      await tester.pumpAndSettle();
+      expect(remote.lastAttendanceStatus, 'hadir');
+      expect(remote.lastCheckInTime, isNull);
+      expect(remote.lastManualCheckInStatus, 'tepat_waktu');
+      expect(remote.recordCalls, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('jadwal guru piket rapi pada layar Android sempit', (
     tester,
@@ -143,10 +147,6 @@ void main() {
 
     expect(find.text('Catat Kehadiran'), findsOneWidget);
     expect(find.text('Hadir'), findsWidgets);
-    expect(
-      find.textContaining('5 menit keterlambatan dan 15 poin'),
-      findsOneWidget,
-    );
     await tester.ensureVisible(find.byKey(const Key('duty-manual-reason')));
     await tester.tap(find.byKey(const Key('duty-manual-reason')));
     await tester.pumpAndSettle();
@@ -155,6 +155,14 @@ void main() {
       findsNothing,
     );
     await tester.tap(find.text('Kartu pelajar hilang').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Aturan tanpa kartu: 15 poin'), findsOneWidget);
+    expect(find.byKey(const Key('duty-scan-issue-arrival')), findsNothing);
+    final arrivalStatus = find.byKey(const Key('duty-manual-entry-status'));
+    await tester.ensureVisible(arrivalStatus);
+    await tester.tap(arrivalStatus);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hadir terlambat').last);
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, 'Keterangan'),
@@ -167,6 +175,8 @@ void main() {
     expect(remote.recordCalls, 1);
     expect(remote.lastAttendanceStatus, 'hadir');
     expect(remote.lastManualReason, 'kartu_hilang');
+    expect(remote.lastManualCheckInStatus, 'terlambat');
+    expect(remote.lastCheckInTime, isNull);
     expect(find.text('Hadir'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
@@ -182,10 +192,7 @@ void main() {
     await tester.tap(find.text('Scan bermasalah').last);
     await tester.pumpAndSettle();
     expect(find.text(ManualAttendanceRule.pendingExplanation), findsOneWidget);
-    expect(
-      find.textContaining('5 menit keterlambatan dan 15 poin'),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('duty-manual-entry-status')), findsNothing);
     await tester.tap(find.byKey(const Key('duty-scan-issue-arrival')));
     await tester.pumpAndSettle();
     expect(find.byType(TimePickerDialog), findsOneWidget);
@@ -200,6 +207,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(remote.lastManualReason, ManualAttendanceRule.scanIssue);
     expect(remote.lastCheckInTime, matches(RegExp(r'^\d{2}:\d{2}$')));
+    expect(remote.lastManualCheckInStatus, isNull);
     expect(find.text('Perlu verifikasi'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -230,6 +238,7 @@ final class _FakeTeacherDutyRemoteDataSource
   final MyDutyStudent? studentOverride;
   final bool supportsScanIssue;
   String? lastCheckInTime;
+  String? lastManualCheckInStatus;
   static const year = DutyAcademicYear(id: 1, name: '2026/2027', active: true);
   static const dutyDay = DutyDay(code: 'kamis', label: 'Kamis');
   static const teacher = DutyTeacher(
@@ -342,11 +351,13 @@ final class _FakeTeacherDutyRemoteDataSource
     required String notes,
     String? manualReason,
     String? checkInTime,
+    String? manualCheckInStatus,
   }) async {
     recordCalls++;
     lastAttendanceStatus = status;
     lastManualReason = manualReason;
     lastCheckInTime = checkInTime;
+    lastManualCheckInStatus = manualCheckInStatus;
   }
 
   @override

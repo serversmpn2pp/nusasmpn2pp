@@ -89,7 +89,9 @@ class PenugasanPresensiSiswaTest extends TestCase
         $d = $this->data();
         $layanan = app(KoreksiPresensiSiswaService::class);
         foreach ([0, 2] as $i) {
-            $layanan->koreksi($d['admin'], $d['anggota'][$i], $this->koreksi());
+            $layanan->koreksi($d['admin'], $d['anggota'][$i], array_replace($this->koreksi(), [
+                'jam_masuk' => null, 'status_masuk_manual' => 'terlambat',
+            ]));
         }
         $lama = AbsensiSiswa::where('anggota_kelas_id', $d['anggota'][0]->id)->firstOrFail();
         $this->assertSame(15, $lama->poin_keterlambatan_terhitung);
@@ -101,7 +103,9 @@ class PenugasanPresensiSiswaTest extends TestCase
         $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
         $this->batalkan();
         $this->assertSame(15, $lama->fresh()->poin_keterlambatan_terhitung);
-        $this->assertSame(5, $lama->fresh()->sanksi_manual_menit);
+        $this->assertSame(0, $lama->fresh()->sanksi_manual_menit);
+        $this->assertNull($lama->fresh()->jam_masuk);
+        $this->assertSame('terlambat', $lama->fresh()->status_masuk);
         $this->assertSame('kartu_hilang', $lama->fresh()->alasan_hadir_manual);
         $this->assertSame(30, (int) TransaksiPoinSiswa::sum('poin'));
     }

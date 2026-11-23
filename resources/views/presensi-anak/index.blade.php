@@ -466,7 +466,7 @@
                                     <div class="child-attendance-card-grid">
                                         <div class="child-attendance-fact"><span>Jam masuk</span><strong>{{ $formatJam($absensi?->jam_masuk) }}</strong></div>
                                         <div class="child-attendance-fact"><span>Jam pulang</span><strong>{{ $formatJam($absensi?->jam_pulang) }}</strong></div>
-                                        <div class="child-attendance-fact"><span>Keterlambatan</span><strong>{{ ($absensi?->menit_terlambat ?? 0) > 0 ? $absensi->menit_terlambat.' menit' : '-' }}</strong></div>
+                                        <div class="child-attendance-fact"><span>Keterlambatan</span><strong>{{ $absensi?->labelDurasiTerlambat() ?? '-' }}</strong></div>
                                         <div class="child-attendance-fact"><span>Pulang cepat</span><strong>{{ ($absensi?->menit_pulang_cepat ?? 0) > 0 ? $absensi->menit_pulang_cepat.' menit' : '-' }}</strong></div>
                                     </div>
                                     @if ($absensi?->catatanKehadiran())

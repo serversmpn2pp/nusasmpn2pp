@@ -114,6 +114,7 @@ class StudentAttendanceRecord {
     this.manualSanctionNote,
     this.hasScannerEntry = false,
     this.scanNeedsReview = false,
+    this.manualWithoutTime = false,
   });
   factory StudentAttendanceRecord.fromJson(Map<String, dynamic> json) {
     final student = _map(json['siswa']) ?? const {};
@@ -143,6 +144,7 @@ class StudentAttendanceRecord {
       notes: attendance['catatan'] as String?,
       manualReason: attendance['alasan_hadir_manual'] as String?,
       scanNeedsReview: attendance['perlu_verifikasi_scan'] as bool? ?? false,
+      manualWithoutTime: attendance['hadir_manual_tanpa_jam'] == true,
       manualSanctionNote: attendance['keterangan_sanksi_manual'] as String?,
       hasScannerEntry:
           attendance['ada_scan_masuk'] as bool? ??
@@ -177,9 +179,17 @@ class StudentAttendanceRecord {
   final String? manualSanctionNote;
   final bool hasScannerEntry;
   final bool scanNeedsReview;
+  final bool manualWithoutTime;
   final AttendanceCorrectionAccess correction;
 
-  String get checkInDisplay => _timeWithSource(checkInTime, checkInSourceLabel);
+  String get checkInDisplay => manualWithoutTime
+      ? '${checkInStatus == 'terlambat' ? 'Terlambat' : 'Tepat waktu'} · Input manual'
+      : _timeWithSource(checkInTime, checkInSourceLabel);
+  String get lateDurationLabel => lateMinutes > 0
+      ? '$lateMinutes menit'
+      : manualWithoutTime && checkInStatus == 'terlambat'
+      ? 'Durasi tidak tercatat'
+      : '-';
   String get checkOutDisplay =>
       _timeWithSource(checkOutTime, checkOutSourceLabel);
 
@@ -365,12 +375,14 @@ class AttendanceCorrectionValue {
     this.checkOutTime,
     this.manualReason,
     this.scanReviewResult,
+    this.manualCheckInStatus,
   });
   final String status;
   final String? checkInTime;
   final String? checkOutTime;
   final String notes;
   final String? manualReason;
+  final String? manualCheckInStatus;
   final String? scanReviewResult;
 }
 

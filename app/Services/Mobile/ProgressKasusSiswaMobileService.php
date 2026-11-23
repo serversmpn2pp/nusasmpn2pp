@@ -99,9 +99,11 @@ class ProgressKasusSiswaMobileService
                 'jenis_laporan' => $laporan->jenis_laporan,
                 'label_jenis_laporan' => $laporan->labelJenisLaporan(),
                 'waktu_kejadian' => $laporan->waktuKejadianRingkas(),
-                'sumber' => $laporan->berasalDariAbsensi()
-                    ? 'Presensi keterlambatan'
-                    : 'Laporan pegawai',
+                'sumber' => match (true) {
+                    $laporan->jenis_presensi_otomatis === LaporanPembinaanSiswa::PRESENSI_TANPA_KARTU => 'Presensi tanpa kartu',
+                    $laporan->berasalDariAbsensi() => 'Presensi keterlambatan',
+                    default => 'Laporan pegawai',
+                },
                 'kronologi' => $laporan->kronologi,
             ]),
             'tahapan' => collect([
@@ -205,9 +207,11 @@ class ProgressKasusSiswaMobileService
         return [
             'id' => (int) $laporan->id,
             'nomor_laporan' => $laporan->nomor_laporan,
-            'judul' => $laporan->berasalDariAbsensi()
-                ? 'Catatan keterlambatan dari presensi'
-                : 'Laporan kejadian siswa',
+            'judul' => match (true) {
+                $laporan->jenis_presensi_otomatis === LaporanPembinaanSiswa::PRESENSI_TANPA_KARTU => 'Catatan presensi tanpa kartu',
+                $laporan->berasalDariAbsensi() => 'Catatan keterlambatan dari presensi',
+                default => 'Laporan kejadian siswa',
+            },
             'tanggal_kejadian' => $laporan->tanggal_kejadian?->toDateString(),
             'tempat_kejadian' => $laporan->tempat_kejadian,
             'kelas' => $laporan->kelas ? [

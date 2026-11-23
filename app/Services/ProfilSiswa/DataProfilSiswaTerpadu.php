@@ -173,17 +173,17 @@ class DataProfilSiswaTerpadu
             'riwayatPerubahan' => fn ($q) => $q->where('siswa_id', $siswa->id)->with('dibuatOleh:id,nama')->latest('id')
                 ->select('id', 'absensi_siswa_id', 'siswa_id', 'tanggal', 'sumber', 'status_sesudah', 'dibuat_oleh_pengguna_id', 'created_at'),
         ])->latest('tanggal')->latest('id')->paginate(20, ['id', 'kelas_id', 'siswa_id', 'tanggal', 'status_kehadiran', 'jam_masuk', 'jam_pulang',
-            'menit_terlambat', 'menit_pulang_cepat', 'sumber', 'alasan_hadir_manual', 'sanksi_manual_menit'])->through(function (AbsensiSiswa $row) {
+            'status_masuk', 'menit_terlambat', 'menit_pulang_cepat', 'sumber', 'alasan_hadir_manual', 'sanksi_manual_menit'])->through(function (AbsensiSiswa $row) {
             $row->setRelation('logScanAbsensi', $row->logScanAbsensi->filter(fn ($log) => $log->tanggal?->isSameDay($row->tanggal)));
             $row->setRelation('riwayatPerubahan', $row->riwayatPerubahan->filter(fn ($log) => $log->tanggal?->isSameDay($row->tanggal)));
             $sumber = $this->sumberPresensi->sumberJam($row);
             $koreksi = $row->riwayatPerubahan->whereIn('sumber', ['koreksi_manual', 'guru_piket']);
             $menitMasuk = $row->menit_terlambat > 0 ? $row->menit_terlambat.($row->memilikiSanksiManual()
-                ? ' menit tercatat (sanksi tanpa kartu)' : ' menit terlambat') : null;
+                ? ' menit tercatat (sanksi tanpa kartu)' : ' menit terlambat') : $row->labelDurasiTerlambat();
 
             return [
                 [$row->tanggal->translatedFormat('d F Y'), $row->kelas?->nama],
-                [$this->label($row->status_kehadiran), $row->menungguVerifikasiScan() ? 'Perlu verifikasi scan' : null],
+                [$row->labelHadirManualTanpaJam() ?? $this->label($row->status_kehadiran), $row->menungguVerifikasiScan() ? 'Perlu verifikasi scan' : null],
                 [$this->jam($row->jam_masuk), $sumber['sumber_masuk_label'], $menitMasuk],
                 [$this->jam($row->jam_pulang), $sumber['sumber_pulang_label'], $row->menit_pulang_cepat > 0 ? $row->menit_pulang_cepat.' menit lebih awal' : null],
                 $koreksi->map(fn ($log) => ($log->dibuatOleh?->nama ?? 'Akun tidak tercatat').' ('.$log->created_at?->format('d/m/Y H:i').')')->all(),

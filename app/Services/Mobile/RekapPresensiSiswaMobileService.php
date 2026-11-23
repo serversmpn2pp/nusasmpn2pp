@@ -190,7 +190,7 @@ class RekapPresensiSiswaMobileService
                 'pengecualian' => $pengecualian,
                 'terlambat' => (int) ($presensi?->menit_terlambat ?? 0),
                 'pulang_cepat' => (int) ($presensi?->menit_pulang_cepat ?? 0),
-                'belum_pulang' => $status === 'hadir' && $presensi?->jam_masuk && ! $presensi?->jam_pulang,
+                'belum_pulang' => $status === 'hadir' && $presensi?->masukTercatat() && ! $presensi?->jam_pulang,
             ];
         });
         $kelasDipilih = $kelasId ? $kelas->firstWhere('id', $kelasId) : null;
@@ -306,14 +306,14 @@ class RekapPresensiSiswaMobileService
                 ->whereDate('tanggal', $tanggal)->where('status_kehadiran', $status));
         } elseif ($status === 'terlambat') {
             $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query
-                ->whereDate('tanggal', $tanggal)->where('menit_terlambat', '>', 0));
+                ->whereDate('tanggal', $tanggal)->terlambatMasuk());
         } elseif ($status === 'pulang_cepat') {
             $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query
                 ->whereDate('tanggal', $tanggal)->where('menit_pulang_cepat', '>', 0));
         } elseif ($status === 'belum_pulang') {
             $query->whereHas('siswa.absensiSiswa', fn (Builder $query) => $query
                 ->whereDate('tanggal', $tanggal)->where('status_kehadiran', 'hadir')
-                ->whereNotNull('jam_masuk')->whereNull('jam_pulang'));
+                ->masukTercatat()->whereNull('jam_pulang'));
         }
     }
 
@@ -338,10 +338,10 @@ class RekapPresensiSiswaMobileService
             'alfa' => (clone $absensi)->where('status_kehadiran', 'alfa')->count() + $alfaOtomatis,
             'belum_scan' => max($total - $tercatat - $alfaOtomatis - $pengecualian, 0),
             'pengecualian' => $pengecualian,
-            'terlambat' => (clone $absensi)->where('menit_terlambat', '>', 0)->count(),
+            'terlambat' => (clone $absensi)->terlambatMasuk()->count(),
             'pulang_cepat' => (clone $absensi)->where('menit_pulang_cepat', '>', 0)->count(),
             'belum_pulang' => (clone $absensi)->where('status_kehadiran', 'hadir')
-                ->whereNotNull('jam_masuk')->whereNull('jam_pulang')->count(),
+                ->masukTercatat()->whereNull('jam_pulang')->count(),
         ];
     }
 
@@ -372,12 +372,13 @@ class RekapPresensiSiswaMobileService
             'presensi' => [
                 'id' => $absensi?->id ? (int) $absensi->id : null,
                 'status' => $status,
-                'status_label' => $status === 'pengecualian' ? $pengecualian->label() : $this->labelStatus($status),
+                'status_label' => $absensi?->labelHadirManualTanpaJam() ?? ($status === 'pengecualian' ? $pengecualian->label() : $this->labelStatus($status)),
                 'sumber' => $absensi?->sumber ?? ($pengecualian ? 'pengecualian' : ($alfaOtomatis ? 'otomatis' : 'inferensi')),
                 'sumber_label' => $absensi ? $this->labelSumber($absensi->sumber) : ($pengecualian ? $pengecualian->label() : ($alfaOtomatis ? 'Hari berakhir tanpa konfirmasi' : 'Belum ada catatan')),
                 'pengecualian' => $pengecualian ? ['id' => $pengecualian->id, 'jenis' => $pengecualian->jenis, 'alasan' => $pengecualian->alasan] : null,
                 'jam_masuk' => $this->formatJam($absensi?->jam_masuk),
                 'status_masuk' => $absensi?->status_masuk,
+                'hadir_manual_tanpa_jam' => $absensi?->hadirManualTanpaJam() ?? false,
                 'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),
                 'jam_pulang' => $this->formatJam($absensi?->jam_pulang),
                 'status_pulang' => $absensi?->status_pulang,
@@ -389,7 +390,7 @@ class RekapPresensiSiswaMobileService
                 'ada_scan_masuk' => (bool) ($absensi?->logScanAbsensi->contains(fn ($log) => (int) $log->siswa_id === (int) $absensi->siswa_id && $log->jenis_scan === 'masuk')
                     || ($absensi?->sumber === 'scan' && $absensi->jam_masuk && ! $absensi->menungguVerifikasiScan() && ! $absensi->memilikiSanksiManual())),
                 'keterangan_sanksi_manual' => $absensi?->keteranganSanksiManual(),
-                'belum_pulang' => $status === 'hadir' && $absensi?->jam_masuk && ! $absensi?->jam_pulang,
+                'belum_pulang' => $status === 'hadir' && $absensi?->masukTercatat() && ! $absensi?->jam_pulang,
             ],
             'koreksi' => $akses,
             'poin_presensi' => $poinPresensi ? [

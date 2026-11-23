@@ -41,7 +41,7 @@ class MonitoringSiswaService
         $pasangan = $anggota->keyBy(fn ($a) => $a->siswa_id.'|'.$a->kelas_id);
         $presensi = AbsensiSiswa::where('tahun_pelajaran_id', $tahun?->id ?? 0)->whereDate('tanggal', $tanggal)
             ->whereIn('siswa_id', $ids)->latest('id')
-            ->get(['id', 'siswa_id', 'kelas_id', 'status_kehadiran', 'status_masuk', 'menit_terlambat', 'jam_masuk', 'updated_at'])
+            ->get(['id', 'siswa_id', 'kelas_id', 'status_kehadiran', 'status_masuk', 'menit_terlambat', 'jam_masuk', 'alasan_hadir_manual', 'updated_at'])
             ->filter(fn ($p) => $pasangan->has($p->siswa_id.'|'.$p->kelas_id))->unique('siswa_id')->keyBy('siswa_id');
         $hariAktif = $aturan->hariAktif();
         $kodeHari = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'][$waktu->isoWeekday() - 1];
@@ -69,13 +69,15 @@ class MonitoringSiswaService
                         'hadir' => 'Hadir', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alfa' => 'Alfa',
                         'pengecualian' => 'Tanpa kewajiban scan', default => 'Belum tercatat',
                     },
-                    'terlambat' => $key === 'hadir' && ($p->menit_terlambat > 0 || $p->status_masuk === 'terlambat'),
+                    'terlambat' => $p?->terlambatMasuk() ?? false,
+                    'durasi_tidak_tercatat' => $p?->hadirManualTanpaJam() && $p->terlambatMasuk(),
                     'menit' => (int) ($p?->menit_terlambat ?? 0)]);
             }
-            if ($key === 'hadir' && ($p->menit_terlambat > 0 || $p->status_masuk === 'terlambat')) {
+            if ($p?->terlambatMasuk()) {
                 $ringkasan['terlambat']++;
                 $kelas[$k]['terlambat']++;
                 $terlambat->push(['nama' => $a->siswa->nama_lengkap, 'kelas' => $a->kelas->nama, 'menit' => $p->menit_terlambat,
+                    'durasi_tidak_tercatat' => $p->hadirManualTanpaJam(),
                     ...($tanggalData ? ['_siswa' => $a->siswa_id] : [])]);
             }
         }

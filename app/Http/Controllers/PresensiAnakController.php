@@ -204,7 +204,7 @@ class PresensiAnakController extends Controller
                     'tanggal' => Carbon::parse($tanggal),
                     'absensi' => $catatan,
                     'status' => $status,
-                    'label_status' => $status === 'pengecualian' ? $pengecualian->label() : $this->labelStatusSekolah($status),
+                    'label_status' => $catatan?->labelHadirManualTanpaJam() ?? ($status === 'pengecualian' ? $pengecualian->label() : $this->labelStatusSekolah($status)),
                     'pengecualian' => $pengecualian,
                 ];
             })
@@ -217,7 +217,7 @@ class PresensiAnakController extends Controller
             'izin' => $riwayat->where('status', 'izin')->count(),
             'alfa' => $riwayat->where('status', 'alfa')->count(),
             'belum_tercatat' => $riwayat->where('status', 'belum_tercatat')->count(),
-            'terlambat' => $absensi->where('menit_terlambat', '>', 0)->count(),
+            'terlambat' => $absensi->filter(fn (AbsensiSiswa $presensi) => $presensi->terlambatMasuk())->count(),
             'menit_terlambat' => (int) $absensi->sum('menit_terlambat'),
             'pulang_cepat' => $absensi->where('menit_pulang_cepat', '>', 0)->count(),
         ];

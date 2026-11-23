@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\Absensi\PenugasanPresensiSiswaService;
 use App\Services\Piket\AksesCatatanPresensiPiketService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,13 +27,20 @@ class AbsensiSiswa extends Model
         'kartu_hilang' => 'Terkonfirmasi kartu hilang',
     ];
 
-    public const ALASAN_HADIR_MANUAL = [
+    public const ALASAN_HADIR_TANPA_KARTU = [
         'tidak_membawa_kartu' => 'Tidak membawa kartu pelajar',
         'kartu_hilang' => 'Kartu pelajar hilang',
+    ];
+
+    public const ALASAN_HADIR_MANUAL = [
+        ...self::ALASAN_HADIR_TANPA_KARTU,
         self::SCAN_BERMASALAH => 'Scan bermasalah',
     ];
 
-    public const SANKSI_MANUAL_MENIT = 5;
+    public const STATUS_MASUK_MANUAL = [
+        'tepat_waktu' => 'Hadir tepat waktu',
+        'terlambat' => 'Hadir terlambat',
+    ];
 
     protected $table = 'absensi_siswa';
 
@@ -74,7 +82,51 @@ class AbsensiSiswa extends Model
 
     public function memilikiSanksiManual(): bool
     {
-        return $this->status_kehadiran === 'hadir' && ! $this->menungguVerifikasiScan() && (int) $this->sanksi_manual_menit > 0;
+        return $this->hadirManualTanpaJam()
+            || ($this->status_kehadiran === 'hadir' && ! $this->menungguVerifikasiScan() && (int) $this->sanksi_manual_menit > 0);
+    }
+
+    public function hadirManualTanpaJam(): bool
+    {
+        return $this->status_kehadiran === 'hadir' && ! $this->jam_masuk
+            && isset(self::ALASAN_HADIR_TANPA_KARTU[$this->alasan_hadir_manual], self::STATUS_MASUK_MANUAL[$this->status_masuk]);
+    }
+
+    public function terlambatMasuk(): bool
+    {
+        return $this->status_kehadiran === 'hadir' && ($this->status_masuk === 'terlambat' || $this->menit_terlambat > 0);
+    }
+
+    public function scopeTerlambatMasuk(Builder $query): Builder
+    {
+        return $query->where('status_kehadiran', 'hadir')
+            ->where(fn (Builder $q) => $q->where('status_masuk', 'terlambat')->orWhere('menit_terlambat', '>', 0));
+    }
+
+    public function scopeMasukTercatat(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q->whereNotNull('jam_masuk')->orWhere(fn (Builder $q) => $q
+            ->where('status_kehadiran', 'hadir')->whereIn('alasan_hadir_manual', array_keys(self::ALASAN_HADIR_TANPA_KARTU))
+            ->whereIn('status_masuk', array_keys(self::STATUS_MASUK_MANUAL))));
+    }
+
+    public function masukTercatat(): bool
+    {
+        return (bool) $this->jam_masuk || $this->hadirManualTanpaJam();
+    }
+
+    public function labelDurasiTerlambat(): ?string
+    {
+        if (! $this->terlambatMasuk()) {
+            return null;
+        }
+
+        return $this->menit_terlambat > 0 ? $this->menit_terlambat.' menit' : 'Durasi tidak tercatat';
+    }
+
+    public function labelHadirManualTanpaJam(): ?string
+    {
+        return $this->hadirManualTanpaJam() ? self::STATUS_MASUK_MANUAL[$this->status_masuk] : null;
     }
 
     public function menungguVerifikasiScan(): bool
@@ -89,7 +141,7 @@ class AbsensiSiswa extends Model
 
     public function hanyaTercatatPulang(): bool
     {
-        return $this->sumber === 'scan' && ! $this->jam_masuk && (bool) $this->jam_pulang;
+        return $this->sumber === 'scan' && ! $this->jam_masuk && ! $this->hadirManualTanpaJam() && (bool) $this->jam_pulang;
     }
 
     public static function normalisasiAlasanHadirManual(?string $alasan): string
@@ -104,13 +156,19 @@ class AbsensiSiswa extends Model
         }
         $alasan = self::ALASAN_HADIR_MANUAL[$this->alasan_hadir_manual] ?? 'Kehadiran dicatat manual tanpa scan kartu';
         $poin = (int) $this->poin_keterlambatan_terhitung;
+        $jenis = $this->aturan_poin_hadir_manual['nama'] ?? null;
+        if ($this->hadirManualTanpaJam()) {
+            $keterangan = $poin > 0 ? "Siswa mendapat {$poin} poin pelanggaran kartu."
+                : ($this->poin_keterlambatan_diproses_pada ? 'Tidak ada poin pelanggaran kartu yang diterapkan.' : 'Poin tanpa kartu mengikuti pengaturan sekolah.');
+
+            return $alasan.'. '.($jenis ? 'Pelanggaran: '.$jenis.'. ' : '').$keterangan.' Segera hubungi admin sekolah untuk mendapatkan atau mengganti kartu pelajar.';
+        }
+
         $keteranganPoin = $poin > 0
             ? "Siswa mendapat {$poin} poin pelanggaran karena hadir dicatat manual tanpa scan kartu."
             : ($this->poin_keterlambatan_diproses_pada
                 ? 'Poin keterlambatan tidak diterapkan atau telah dibatalkan sesuai ketentuan presensi.'
                 : 'Poin keterlambatan mengikuti pengaturan presensi sekolah.');
-
-        $jenis = $this->aturan_poin_hadir_manual['nama'] ?? null;
 
         return $alasan.'. '.($jenis ? 'Pelanggaran: '.$jenis.'. ' : '').'Sanksi keterlambatan minimal '.(int) $this->sanksi_manual_menit
             .' menit; keterlambatan tercatat '.(int) $this->menit_terlambat.' menit. '.$keteranganPoin
@@ -125,7 +183,7 @@ class AbsensiSiswa extends Model
             default => null,
         };
 
-        return collect([$this->catatan, $verifikasi, $this->keteranganSanksiManual(), $this->keteranganPenugasan()])->filter()->join("\n") ?: null;
+        return collect([$this->catatan, $verifikasi, $this->labelHadirManualTanpaJam(), $this->keteranganSanksiManual(), $this->keteranganPenugasan()])->filter()->join("\n") ?: null;
     }
 
     public function penugasanPresensi(): BelongsTo

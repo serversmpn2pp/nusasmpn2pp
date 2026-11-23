@@ -117,6 +117,7 @@ final class DioStudentAttendanceRecapRemoteDataSource
           'tanggal': date,
           'status_kehadiran': value.status,
           'jam_masuk': value.status == 'hadir' ? value.checkInTime : null,
+          'status_masuk_manual': ?value.manualCheckInStatus,
           'jam_pulang': value.status == 'hadir' ? value.checkOutTime : null,
           'catatan': value.notes.trim(),
           if (value.status == 'hadir' && value.manualReason != null)

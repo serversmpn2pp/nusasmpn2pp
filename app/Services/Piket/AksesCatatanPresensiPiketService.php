@@ -27,7 +27,7 @@ class AksesCatatanPresensiPiketService
         $sumber = $this->rincian->sumberJam($absensi);
         $riwayat = $absensi?->riwayatPerubahan?->where('siswa_id', $absensi->siswa_id)->sortByDesc('id') ?? collect();
         $terakhir = $riwayat->first();
-        $hanyaPulang = $absensi && ! $absensi->jam_masuk && (bool) $absensi->jam_pulang;
+        $hanyaPulang = $absensi && ! $absensi->jam_masuk && ! $absensi->hadirManualTanpaJam() && (bool) $absensi->jam_pulang;
         $alasan = null;
 
         if ($absensi) {

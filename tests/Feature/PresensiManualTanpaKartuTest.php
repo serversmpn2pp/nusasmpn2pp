@@ -8,6 +8,7 @@ use App\Models\GuruMataPelajaran;
 use App\Models\JadwalPiketGuru;
 use App\Models\JenisPelanggaranSiswa;
 use App\Models\Kelas;
+use App\Models\LaporanPembinaanSiswa;
 use App\Models\MataPelajaran;
 use App\Models\NotifikasiPengguna;
 use App\Models\OrangTuaWali;
@@ -52,48 +53,85 @@ class PresensiManualTanpaKartuTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_piket_memberi_minimal_lima_menit_dan_poin_sekali_meski_scan_otomatis_nonaktif(): void
+    public function test_piket_mencatat_tepat_waktu_tanpa_jam_dan_memberi_poin_sekali_meski_scan_otomatis_nonaktif(): void
     {
         $d = $this->data();
         $service = app(CatatKehadiranSiswaPiketService::class);
-        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'tidak_membawa_kartu');
-        $this->assertSame('06:55:00', $a->jam_masuk);
-        $this->assertSame(5, $a->menit_terlambat);
+        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'tidak_membawa_kartu', statusMasukManual: 'tepat_waktu');
+        $this->assertNull($a->jam_masuk);
+        $this->assertSame('tepat_waktu', $a->status_masuk);
+        $this->assertSame(0, $a->menit_terlambat);
+        $this->assertSame(0, $a->sanksi_manual_menit);
         $this->assertSame(15, $a->poin_keterlambatan_terhitung);
         Carbon::setTestNow('2026-11-05 08:30:00');
-        $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'tidak_membawa_kartu');
+        $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'tidak_membawa_kartu', statusMasukManual: 'tepat_waktu');
         app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($a->fresh());
-        $this->assertSame('06:55:00', $a->fresh()->jam_masuk);
+        $this->assertNull($a->fresh()->jam_masuk);
+        $this->assertSame('tepat_waktu', $a->fresh()->status_masuk);
         $this->assertDatabaseCount('laporan_pembinaan_siswa', 1);
+        $this->assertDatabaseHas('laporan_pembinaan_siswa', [
+            'jenis_presensi_otomatis' => LaporanPembinaanSiswa::PRESENSI_TANPA_KARTU,
+            'menit_terlambat_tercatat' => null, 'waktu_kejadian' => null, 'total_poin' => 15,
+        ]);
         $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
         $this->assertDatabaseCount('transaksi_poin_siswa', 1);
         $this->assertSame(2, NotifikasiPengguna::where('kunci_unik', 'like', 'presensi-manual-%')->count());
     }
 
-    public function test_keterlambatan_sebenarnya_yang_lebih_besar_tetap_dihitung_dan_poin_mengikuti_pengaturan(): void
+    public function test_hadir_manual_terlambat_tanpa_durasi_memakai_poin_kartu_bukan_poin_scan(): void
     {
         $d = $this->data();
         $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_UJI', 'nama' => 'Kartu pelajar hilang', 'tingkat' => 'ringan', 'poin' => 20, 'aktif' => true]);
         $d['pengaturan']->update(['poin_terlambat' => 80, 'pelanggaran_hadir_manual_id' => $jenis->id]);
         Carbon::setTestNow('2026-11-05 07:18:01');
-        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Kartu hilang.', 'kartu_hilang');
-        $this->assertSame('07:18:01', $a->jam_masuk);
-        $this->assertSame(19, $a->menit_terlambat);
+        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Kartu hilang.', 'kartu_hilang', statusMasukManual: 'terlambat');
+        $this->assertNull($a->jam_masuk);
+        $this->assertSame('terlambat', $a->status_masuk);
+        $this->assertSame(0, $a->menit_terlambat);
+        $this->assertSame('Durasi tidak tercatat', $a->labelDurasiTerlambat());
         $this->assertSame(20, $a->poin_keterlambatan_terhitung);
         $this->assertStringContainsString('20 poin', $a->catatanKehadiran());
         $this->assertStringContainsString('Kartu pelajar hilang', $a->catatanKehadiran());
+        $this->assertSame(20, (int) TransaksiPoinSiswa::sum('poin'));
+
+        $filter = ['tanggal' => '2026-11-05', 'status' => 'terlambat'];
+        $this->withToken($d['admin']->createToken('Tes rekap', ['mobile'])->plainTextToken)
+            ->getJson(route('api.v1.rekap-presensi-siswa.index', $filter))
+            ->assertOk()->assertJsonPath('data.ringkasan.terlambat', 1)
+            ->assertJsonPath('data.items.0.presensi.status_masuk', 'terlambat')
+            ->assertJsonPath('data.items.0.presensi.hadir_manual_tanpa_jam', true);
+        $this->actingAs($d['admin'], 'web')->get(route('rekap-absensi-harian.index', $filter))
+            ->assertOk()->assertSee('Durasi tidak tercatat');
+    }
+
+    public function test_scan_masuk_terlambat_tetap_mencatat_jam_asli_dan_poin_scan(): void
+    {
+        $d = $this->data();
+        $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_UJI', 'nama' => 'Aturan kartu', 'tingkat' => 'ringan', 'poin' => 5, 'aktif' => true]);
+        $d['pengaturan']->update(['aktif' => true, 'otomatis_langsung' => true, 'berlaku_mulai' => '2026-11-05',
+            'poin_terlambat' => 15, 'pelanggaran_hadir_manual_id' => $jenis->id]);
+        Carbon::setTestNow('2026-11-05 07:05:00');
+        $this->assertTrue(app(ProsesScanAbsensi::class)->proses($d['siswa']->nisn, now(), 'masuk')['berhasil']);
+        $a = AbsensiSiswa::firstOrFail();
+        $this->assertSame('07:05:00', $a->jam_masuk);
+        $this->assertSame(5, $a->menit_terlambat);
+        $this->assertFalse($a->hadirManualTanpaJam());
+        $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
+        $this->assertDatabaseHas('laporan_pembinaan_siswa', ['jenis_presensi_otomatis' => 'terlambat', 'total_poin' => 15]);
     }
 
     public function test_koreksi_admin_dari_api_dan_web_memakai_aturan_sama_tanpa_poin_ganda(): void
     {
         $d = $this->data();
-        $payload = $this->payload() + ['alasan_hadir_manual' => 'kartu_hilang', 'sanksi_manual_menit' => 0, 'poin_keterlambatan_terhitung' => 0];
+        $payload = $this->payloadManual('tepat_waktu') + ['alasan_hadir_manual' => 'kartu_hilang', 'sanksi_manual_menit' => 5, 'poin_keterlambatan_terhitung' => 0];
         $this->withToken($d['admin']->createToken('Tes presensi')->plainTextToken)
             ->patchJson(route('api.v1.rekap-presensi-siswa.update', $d['anggota']), $payload)->assertOk();
         $this->actingAs($d['admin'])->put(route('rekap-absensi-harian.koreksi.update', $d['anggota']), $payload)
             ->assertRedirect()->assertSessionHasNoErrors();
         $a = AbsensiSiswa::firstOrFail();
-        $this->assertSame(5, $a->menit_terlambat);
+        $this->assertNull($a->jam_masuk);
+        $this->assertSame('tepat_waktu', $a->status_masuk);
+        $this->assertSame(0, $a->menit_terlambat);
         $this->assertSame(15, $a->poin_keterlambatan_terhitung);
         $this->assertSame('kartu_hilang', $a->alasan_hadir_manual);
         $this->assertDatabaseCount('transaksi_poin_siswa', 1);
@@ -103,7 +141,7 @@ class PresensiManualTanpaKartuTest extends TestCase
     {
         $d = $this->data();
         $service = app(CatatKehadiranSiswaPiketService::class);
-        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Konfirmasi awal.', 'kartu_hilang');
+        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Konfirmasi awal.', 'kartu_hilang', statusMasukManual: 'terlambat');
         $service->catat($d['guru'], $d['anggota'], 'sakit', 'Ternyata tidak hadir; surat sakit diterima.');
         $a->refresh();
         $this->assertNull($a->jam_masuk);
@@ -138,7 +176,7 @@ class PresensiManualTanpaKartuTest extends TestCase
         PengecualianPresensiSiswa::create(['tahun_pelajaran_id' => $d['tahun']->id, 'tanggal_mulai' => '2026-11-05',
             'tanggal_selesai' => '2026-11-05', 'jenis' => 'pjj', 'alasan' => 'PJJ bencana asap', 'aktif' => true,
             'kunci_pratinjau' => (string) Str::uuid(), 'dampak_pratinjau' => []]);
-        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
+        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang', statusMasukManual: 'tepat_waktu');
         $this->assertSame(0, $a->poin_keterlambatan_terhitung);
         $this->assertStringNotContainsString('mendapat 15 poin', $a->catatanKehadiran());
         $this->assertDatabaseCount('transaksi_poin_siswa', 0);
@@ -147,11 +185,13 @@ class PresensiManualTanpaKartuTest extends TestCase
     public function test_alasan_dan_poin_tampil_untuk_siswa_dan_orang_tua_terhubung_saja(): void
     {
         $d = $this->data();
-        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Catatan privat petugas.', 'kartu_hilang');
+        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Catatan privat petugas.', 'kartu_hilang', statusMasukManual: 'terlambat');
         foreach ([$d['akunSiswa'], $d['orangTua']] as $akun) {
             $this->withToken($akun->createToken('Tes kehadiran')->plainTextToken)
                 ->getJson(route('api.v1.kehadiran-saya', ['siswa_id' => $d['siswa']->id, 'bulan' => '2026-11']))
-                ->assertOk()->assertJsonPath('data.hari_ini.menit_terlambat', 5)
+                ->assertOk()->assertJsonPath('data.hari_ini.menit_terlambat', 0)
+                ->assertJsonPath('data.hari_ini.label_status', 'Hadir terlambat')
+                ->assertJsonPath('data.hari_ini.jam_masuk', null)
                 ->assertJsonPath('data.riwayat.0.poin_keterlambatan', 15)
                 ->assertJsonPath('data.hari_ini.keterangan_sanksi_manual', $a->keteranganSanksiManual());
         }
@@ -162,8 +202,13 @@ class PresensiManualTanpaKartuTest extends TestCase
         foreach ($items as $n) {
             $this->assertStringContainsString('15 poin', $n->pesan);
             $this->assertStringContainsString('Kartu pelajar hilang', $n->pesan);
+            $this->assertStringContainsString('hadir terlambat', $n->pesan);
+            $this->assertStringNotContainsString('menit', $n->pesan);
+            $this->assertStringNotContainsString('pukul', $n->pesan);
             $push = app(IsiPushNotifikasiService::class)->untuk($n);
             $this->assertStringContainsString('15 poin', $push['body']);
+            $this->assertStringContainsString('hadir terlambat', $push['body']);
+            $this->assertStringNotContainsString('menit', $push['body']);
             $this->assertStringNotContainsString('privat', $push['body']);
             $this->assertStringNotContainsString($d['siswa']->nama_lengkap, $push['body']);
             $this->assertStringStartsWith($n->pengguna_id === $d['orangTua']->id ? '/kehadiran-anak-saya?' : '/kehadiran-saya?', app(TujuanNotifikasiMobileService::class)->untuk($n));
@@ -174,16 +219,19 @@ class PresensiManualTanpaKartuTest extends TestCase
     public function test_scan_pulang_tidak_menghilangkan_sanksi_manual_dan_koreksi_izin_membatalkannya(): void
     {
         $d = $this->data();
-        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'tidak_membawa_kartu');
+        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'tidak_membawa_kartu', statusMasukManual: 'tepat_waktu');
         Carbon::setTestNow('2026-11-05 14:15:00');
         $scan = app(ProsesScanAbsensi::class)->proses($d['siswa']->nisn, now(), 'pulang');
         $this->assertTrue($scan['berhasil']);
         $this->assertSame('scan', $a->fresh()->sumber);
-        $this->assertSame(5, $a->fresh()->menit_terlambat);
+        $this->assertSame('tepat_waktu', $a->fresh()->status_masuk);
+        $this->assertSame(0, $a->fresh()->menit_terlambat);
         $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
         $service = app(KoreksiPresensiSiswaService::class);
-        $service->koreksi($d['admin'], $d['anggota'], $this->payload());
-        $this->assertSame(5, $a->fresh()->sanksi_manual_menit);
+        $service->koreksi($d['admin'], $d['anggota'], $this->payloadManual('terlambat') + ['jam_pulang' => '14:15:00']);
+        $this->assertNull($a->fresh()->jam_masuk);
+        $this->assertSame('terlambat', $a->fresh()->status_masuk);
+        $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
         $service->koreksi($d['admin'], $d['anggota'], ['tanggal' => '2026-11-05', 'status_kehadiran' => 'izin', 'catatan' => 'Koreksi setelah konfirmasi orang tua.']);
         $this->assertSame(0, $a->fresh()->poin_keterlambatan_terhitung);
         $this->assertSame(0, (int) TransaksiPoinSiswa::sum('poin'));
@@ -198,9 +246,8 @@ class PresensiManualTanpaKartuTest extends TestCase
             'jam_scan_pulang_mulai' => '11:00', 'jam_pulang' => '11:20',
         ]);
         Carbon::setTestNow($tanggal.' 09:48:21');
-        $absensi = app(KoreksiPresensiSiswaService::class)->koreksi($d['admin'], $d['anggota'], [
-            ...$this->payload(), 'jam_masuk' => '06:22:00', 'alasan_hadir_manual' => 'tidak_membawa_kartu',
-        ]);
+        $absensi = app(KoreksiPresensiSiswaService::class)->koreksi($d['admin'], $d['anggota'],
+            $this->payloadManual('tepat_waktu') + ['alasan_hadir_manual' => 'tidak_membawa_kartu']);
         Carbon::setTestNow($tanggal.' 11:25:03');
         $scan = app(ProsesScanAbsensi::class)->proses($d['siswa']->nisn, now(), 'pulang');
         $this->assertTrue($scan['berhasil']);
@@ -219,7 +266,8 @@ class PresensiManualTanpaKartuTest extends TestCase
         $this->getJson(route('api.v1.rekap-presensi-siswa.show', $parameter))
             ->assertOk()
             ->assertHeaderContains('Cache-Control', 'no-store')
-            ->assertJsonPath('data.item.presensi.jam_masuk', '06:22')
+            ->assertJsonPath('data.item.presensi.jam_masuk', null)
+            ->assertJsonPath('data.item.presensi.status_masuk', 'tepat_waktu')
             ->assertJsonPath('data.item.presensi.sumber_masuk', 'manual')
             ->assertJsonPath('data.item.presensi.jam_pulang', '11:25')
             ->assertJsonPath('data.item.presensi.sumber_pulang', 'scan')
@@ -229,15 +277,15 @@ class PresensiManualTanpaKartuTest extends TestCase
 
         $rekap = $this->actingAs($d['admin'], 'web')->get(route('rekap-absensi-harian.index', ['tanggal' => $tanggal]))
             ->assertOk()->assertSee(route('rekap-absensi-harian.rincian', $parameter))
-            ->assertSee('06:22')->assertSee('Input manual')->assertSee('11:25')->assertSee('Scanner');
+            ->assertSee('Tepat waktu')->assertSee('Input manual')->assertSee('11:25')->assertSee('Scanner');
         $rincian = $this->get(route('rekap-absensi-harian.rincian', $parameter))
             ->assertOk()->assertHeaderContains('Cache-Control', 'no-store')
-            ->assertSee('06:22')->assertSee('Input manual')->assertSee('11:25')->assertSee('Scanner')
+            ->assertSee('Hadir tepat waktu')->assertSee('Input manual')->assertSee('11:25')->assertSee('Scanner')
             ->assertSee('Petugas Presensi Uji')->assertSee('05 Nov 2026, 09:48:21 WIB');
-        $this->get(route('rekap-absensi-harian.koreksi.edit', $parameter))
-            ->assertOk()->assertSee('06:22 &middot; Input manual', false)->assertSee('11:25 &middot; Scanner', false);
+        $formKoreksi = $this->get(route('rekap-absensi-harian.koreksi.edit', $parameter))
+            ->assertOk()->assertSee('Input manual')->assertSee('11:25 &middot; Scanner', false);
         $this->assertSame($sebelumDibaca, $absensi->fresh()->getAttributes());
-        $this->assertSame(5, $absensi->menit_terlambat);
+        $this->assertSame(0, $absensi->menit_terlambat);
         $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
         $this->assertDatabaseCount('riwayat_perubahan_absensi_siswa', 1);
 
@@ -245,6 +293,7 @@ class PresensiManualTanpaKartuTest extends TestCase
             File::ensureDirectoryExists(storage_path('framework/testing/rekap-sumber'));
             File::put(storage_path('framework/testing/rekap-sumber/rekap.html'), $rekap->getContent());
             File::put(storage_path('framework/testing/rekap-sumber/rincian.html'), $rincian->getContent());
+            File::put(storage_path('framework/testing/rekap-sumber/koreksi.html'), $formKoreksi->getContent());
         }
     }
 
@@ -254,14 +303,14 @@ class PresensiManualTanpaKartuTest extends TestCase
         $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_NOL', 'nama' => 'Pengecualian poin kartu', 'tingkat' => 'ringan', 'poin' => 0, 'aktif' => true]);
         $d['pengaturan']->update(['pelanggaran_hadir_manual_id' => $jenis->id]);
         $service = app(CatatKehadiranSiswaPiketService::class);
-        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
+        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang', statusMasukManual: 'tepat_waktu');
         $this->assertSame(0, $a->poin_keterlambatan_terhitung);
         $this->assertDatabaseCount('transaksi_poin_siswa', 0);
         $d['pengaturan']->delete();
-        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
+        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang', statusMasukManual: 'tepat_waktu');
         $this->assertSame(0, $a->poin_keterlambatan_terhitung);
         Carbon::setTestNow('2026-11-12 06:55:00');
-        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
+        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang', statusMasukManual: 'tepat_waktu');
         $this->assertSame(15, $a->poin_keterlambatan_terhitung);
     }
 
@@ -271,7 +320,7 @@ class PresensiManualTanpaKartuTest extends TestCase
         $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_DINAMIS', 'nama' => 'Tidak membawa kartu', 'tingkat' => 'ringan', 'poin' => 10, 'aktif' => true]);
         $d['pengaturan']->update(['pelanggaran_hadir_manual_id' => $jenis->id, 'poin_terlambat' => 35]);
         $service = app(CatatKehadiranSiswaPiketService::class);
-        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'tidak_membawa_kartu');
+        $a = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'tidak_membawa_kartu', statusMasukManual: 'tepat_waktu');
         $this->assertSame(10, $a->poin_keterlambatan_terhitung);
         $this->assertSame('Tidak membawa kartu', $a->aturan_poin_hadir_manual['nama']);
         $jenis->update(['poin' => 25, 'nama' => 'Kartu belum dipindai']);
@@ -280,7 +329,7 @@ class PresensiManualTanpaKartuTest extends TestCase
         $this->assertStringContainsString('Tidak membawa kartu', $a->fresh()->keteranganSanksiManual());
         $this->assertDatabaseCount('transaksi_poin_siswa', 1);
         Carbon::setTestNow('2026-11-12 06:55:00');
-        $baru = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dicatat petugas.', 'kartu_hilang');
+        $baru = $service->catat($d['guru'], $d['anggota'], 'hadir', 'Dicatat petugas.', 'kartu_hilang', statusMasukManual: 'terlambat');
         $this->assertSame(25, $baru->poin_keterlambatan_terhitung);
         $this->assertSame('Kartu belum dipindai', $baru->aturan_poin_hadir_manual['nama']);
         $this->assertSame(35, $d['pengaturan']->fresh()->poin_terlambat);
@@ -295,7 +344,7 @@ class PresensiManualTanpaKartuTest extends TestCase
         $d = $this->data();
         $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_LAMA', 'nama' => 'Aturan kartu lama', 'tingkat' => 'ringan', 'poin' => 20, 'aktif' => true]);
         $d['pengaturan']->update(['pelanggaran_hadir_manual_id' => $jenis->id, 'poin_terlambat' => 20]);
-        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi petugas.', 'kartu_hilang');
+        $a = $this->catatManualLama($d);
         $transaksi = TransaksiPoinSiswa::all()->toJson();
         $migration = require base_path('database/migrations/2026_11_09_000002_aturan_poin_presensi_manual.php');
         $migration->down();
@@ -307,6 +356,8 @@ class PresensiManualTanpaKartuTest extends TestCase
         $this->assertSame($transaksi, TransaksiPoinSiswa::all()->toJson());
         app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($a);
         $this->assertSame(20, $a->fresh()->poin_keterlambatan_terhitung);
+        $this->assertSame('06:55:00', $a->fresh()->jam_masuk);
+        $this->assertSame(5, $a->fresh()->menit_terlambat);
     }
 
     public function test_migrasi_mempertahankan_poin_nol_yang_sudah_diproses(): void
@@ -314,7 +365,7 @@ class PresensiManualTanpaKartuTest extends TestCase
         $d = $this->data();
         $jenis = JenisPelanggaranSiswa::create(['kode' => 'KARTU_LAMA_NOL', 'nama' => 'Kartu tanpa poin', 'tingkat' => 'ringan', 'poin' => 0, 'aktif' => true]);
         $d['pengaturan']->update(['pelanggaran_hadir_manual_id' => $jenis->id, 'poin_terlambat' => 15]);
-        $a = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Dikonfirmasi.', 'kartu_hilang');
+        $a = $this->catatManualLama($d);
         $migration = require base_path('database/migrations/2026_11_09_000002_aturan_poin_presensi_manual.php');
         $migration->down();
         $migration->up();
@@ -330,6 +381,7 @@ class PresensiManualTanpaKartuTest extends TestCase
         $this->withToken($d['guru']->createToken('Tes piket')->plainTextToken)
             ->getJson(route('api.v1.piket-saya.index'))->assertOk()
             ->assertJsonCount(3, 'data.aturan_hadir_manual.alasan')
+            ->assertJsonPath('data.aturan_hadir_manual.pilih_status_masuk', true)
             ->assertJsonPath('data.aturan_hadir_manual.alasan.0.kode', 'tidak_membawa_kartu')
             ->assertJsonPath('data.aturan_hadir_manual.alasan.1.kode', 'kartu_hilang');
         foreach (['bebas_sanksi', 'input_manual_petugas'] as $alasan) {
@@ -337,6 +389,9 @@ class PresensiManualTanpaKartuTest extends TestCase
                 'status_kehadiran' => 'hadir', 'catatan' => 'Dikonfirmasi.', 'alasan_hadir_manual' => $alasan,
             ])->assertUnprocessable()->assertJsonValidationErrors('alasan_hadir_manual');
         }
+        $this->patchJson(route('api.v1.piket-saya.kehadiran.update', $d['anggota']), [
+            'status_kehadiran' => 'hadir', 'catatan' => 'Dikonfirmasi.', 'alasan_hadir_manual' => 'tidak_membawa_kartu',
+        ])->assertUnprocessable()->assertJsonValidationErrors('status_masuk_manual');
         foreach ([$d['akunSiswa'], $d['orangTua']] as $akun) {
             $this->withToken($akun->createToken('Tes akses')->plainTextToken)
                 ->patchJson(route('api.v1.rekap-presensi-siswa.update', $d['anggota']), $this->payload())->assertForbidden();
@@ -413,13 +468,15 @@ class PresensiManualTanpaKartuTest extends TestCase
         $service = app(KoreksiPresensiSiswaService::class);
         $absensi = $service->koreksi($d['admin'], $d['anggota'], $this->payload() + ['alasan_hadir_manual' => 'scan_bermasalah']);
         $this->assertTrue($absensi->menungguVerifikasiScan());
-        $hasil = $this->payload() + ['hasil_verifikasi_scan' => 'kartu_hilang'];
+        $hasil = $this->payloadManual('tepat_waktu') + ['hasil_verifikasi_scan' => 'kartu_hilang'];
         $url = route('api.v1.rekap-presensi-siswa.update', $d['anggota']);
         $this->withToken($d['admin']->createToken('Tes verifikasi', ['mobile'])->plainTextToken)->patchJson($url, $hasil)
-            ->assertOk()->assertJsonPath('data.perlu_verifikasi_scan', false)->assertJsonPath('data.menit_terlambat', 5);
+            ->assertOk()->assertJsonPath('data.perlu_verifikasi_scan', false)
+            ->assertJsonPath('data.menit_terlambat', 0)->assertJsonPath('data.status_masuk', 'tepat_waktu');
         $this->patchJson($url, $hasil)->assertUnprocessable();
         app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($absensi->fresh());
         $this->assertSame('kartu_hilang', $absensi->fresh()->alasan_hadir_manual);
+        $this->assertNull($absensi->fresh()->jam_masuk);
         $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
         $this->assertDatabaseCount('transaksi_poin_siswa', 1);
     }
@@ -444,7 +501,7 @@ class PresensiManualTanpaKartuTest extends TestCase
     public function test_wakil_kesiswaan_mengoreksi_sanksi_kartu_yang_sudah_tercatat_tanpa_pembatalan_ganda(): void
     {
         $d = $this->data();
-        $absensi = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Catatan awal.', 'tidak_membawa_kartu');
+        $absensi = app(CatatKehadiranSiswaPiketService::class)->catat($d['guru'], $d['anggota'], 'hadir', 'Catatan awal.', 'tidak_membawa_kartu', statusMasukManual: 'tepat_waktu');
         $this->assertSame(15, (int) TransaksiPoinSiswa::sum('poin'));
         $waka = $this->akun('waka-verifikasi', ['peran' => 'pegawai', 'pegawai_id' => Pegawai::create([
             'nama_lengkap' => 'Wakil Uji', 'aktif' => true,
@@ -463,6 +520,25 @@ class PresensiManualTanpaKartuTest extends TestCase
     private function payload(): array
     {
         return ['tanggal' => '2026-11-05', 'status_kehadiran' => 'hadir', 'jam_masuk' => '06:55:00', 'catatan' => 'Dikonfirmasi petugas sekolah.'];
+    }
+
+    private function payloadManual(string $status): array
+    {
+        return array_replace($this->payload(), ['jam_masuk' => null, 'status_masuk_manual' => $status]);
+    }
+
+    private function catatManualLama(array $d): AbsensiSiswa
+    {
+        $absensi = AbsensiSiswa::create([
+            'tahun_pelajaran_id' => $d['tahun']->id, 'kelas_id' => $d['kelas']->id,
+            'anggota_kelas_id' => $d['anggota']->id, 'siswa_id' => $d['siswa']->id,
+            'tanggal' => '2026-11-05', 'jam_masuk' => '06:55:00', 'sumber' => 'guru_piket',
+            'status_kehadiran' => 'hadir', 'status_masuk' => 'terlambat', 'menit_terlambat' => 5,
+            'sanksi_manual_menit' => 5, 'alasan_hadir_manual' => 'kartu_hilang',
+        ]);
+        app(PoinPresensiOtomatisService::class)->sinkronkanAbsensi($absensi);
+
+        return $absensi->refresh();
     }
 
     private function data(): array

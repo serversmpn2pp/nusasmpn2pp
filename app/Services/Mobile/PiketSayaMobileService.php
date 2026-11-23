@@ -162,6 +162,8 @@ class PiketSayaMobileService
                 'menit_terlambat' => (int) ($absensi?->menit_terlambat ?? 0),
                 'poin_keterlambatan' => (int) ($absensi?->poin_keterlambatan_terhitung ?? 0),
                 'jam_masuk' => $absensi?->jam_masuk ? substr($absensi->jam_masuk, 0, 5) : null,
+                'status_masuk' => $absensi?->status_masuk,
+                'hadir_manual_tanpa_jam' => $absensi?->hadirManualTanpaJam() ?? false,
                 'jam_pulang' => $absensi?->jam_pulang ? substr($absensi->jam_pulang, 0, 5) : null,
             ],
         ];

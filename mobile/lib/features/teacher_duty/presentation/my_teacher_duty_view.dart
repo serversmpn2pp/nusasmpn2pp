@@ -208,18 +208,17 @@ class _MyTeacherDutyViewState extends ConsumerState<MyTeacherDutyView> {
       );
       return;
     }
-    final result =
-        await showModalBottomSheet<(String, String, String?, String?)>(
-          context: context,
-          isScrollControlled: true,
-          useSafeArea: true,
-          builder: (_) => DutyAttendanceFormSheet(
-            student: student,
-            rule:
-                ref.read(myDutyControllerProvider).value?.manualRule ??
-                const ManualAttendanceRule(),
-          ),
-        );
+    final result = await showModalBottomSheet<DutyAttendanceValue>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => DutyAttendanceFormSheet(
+        student: student,
+        rule:
+            ref.read(myDutyControllerProvider).value?.manualRule ??
+            const ManualAttendanceRule(),
+      ),
+    );
     if (result == null || !mounted) return;
     setState(() => _mutating = true);
     try {
@@ -227,17 +226,18 @@ class _MyTeacherDutyViewState extends ConsumerState<MyTeacherDutyView> {
           .read(teacherDutyActionsProvider)
           .record(
             classMemberId: student.classMemberId,
-            status: result.$1,
-            notes: result.$2,
-            manualReason: result.$3,
-            checkInTime: result.$4,
+            status: result.status,
+            notes: result.notes,
+            manualReason: result.manualReason,
+            checkInTime: result.checkInTime,
+            manualCheckInStatus: result.manualCheckInStatus,
           );
       await ref.read(myDutyControllerProvider.future);
       if (mounted) {
         _show(
-          result.$3 == ManualAttendanceRule.scanIssue
+          result.manualReason == ManualAttendanceRule.scanIssue
               ? 'Kehadiran ${student.name} dicatat. Scan perlu verifikasi.'
-              : 'Kehadiran ${student.name} berhasil dicatat sebagai ${result.$1}.',
+              : 'Kehadiran ${student.name} berhasil dicatat.',
         );
       }
     } catch (error) {
@@ -490,12 +490,15 @@ class _StudentCard extends StatelessWidget {
                         fontSize: 11,
                       ),
                     ),
-                    if (student.checkInTime != null ||
+                    if (student.manualWithoutTime ||
+                        student.checkInTime != null ||
                         student.checkInSourceLabel != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 5),
                         child: Text(
-                          'Masuk ${student.checkInTime ?? '-'} · ${student.checkInSourceLabel ?? 'Sumber belum diketahui'}',
+                          student.manualWithoutTime
+                              ? '${ManualAttendanceRule.arrivalStatuses[student.checkInStatus] ?? 'Hadir'} · Input manual'
+                              : 'Masuk ${student.checkInTime ?? '-'} · ${student.checkInSourceLabel ?? 'Sumber belum diketahui'}',
                           style: const TextStyle(fontSize: 11),
                         ),
                       ),

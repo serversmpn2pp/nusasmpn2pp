@@ -77,7 +77,7 @@
                         <dd><strong>{{ $jam ? substr($jam, 0, 5) : '-' }}</strong>@if ($sumber) &middot; {{ $sumber }}@endif</dd>
                     </div>
                 @endforeach
-                <div><dt>Keterlambatan</dt><dd>{{ $absensi?->menit_terlambat ? $absensi->menit_terlambat.' menit' : '-' }}</dd></div>
+                <div><dt>Keterlambatan</dt><dd>{{ $absensi?->labelDurasiTerlambat() ?? '-' }}</dd></div>
                 <div><dt>Pulang cepat</dt><dd>{{ $absensi?->menit_pulang_cepat ? $absensi->menit_pulang_cepat.' menit' : '-' }}</dd></div>
             </dl>
             @php($catatan = $absensi?->catatanKehadiran())
